@@ -701,7 +701,7 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
      const apparentValues = data.map(d => d.apparent || d.temp);
      minVal = Math.min(minVal, ...apparentValues) - 2;
      maxVal = Math.max(maxVal, ...apparentValues) + 2;
-  } else if (layer === 'rain' || layer === 'cloud' || layer === 'humidity') {
+  } else if (layer === 'rain' || layer === 'cloud') {
     minVal = 0;
     maxVal = 100;
   } else if (layer === 'wind') {
@@ -804,7 +804,7 @@ const HourlyForecastChart = ({ data, unit, lang = 'ca' }) => {
   if (!data || data.length === 0) return null;
   return (
     <div className="w-full overflow-x-auto custom-scrollbar relative" onMouseLeave={() => setHoveredIndex(null)}>
-      <div className="min-w-[600px] md:min-w-full space-y-1">
+      <div className="min-w-[220%] md:min-w-full space-y-3 pr-4">
         <SingleHourlyChart data={data} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={150} lang={lang} />
         <SingleHourlyChart data={data} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
         <SingleHourlyChart data={data} layer="cloud" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
@@ -1279,7 +1279,7 @@ export default function MeteoIA() {
               </div>
             )}
 
-            <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
+            <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-6 relative overflow-hidden backdrop-blur-md shadow-2xl group">
                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
                <div className="relative z-10">
                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -1371,7 +1371,7 @@ export default function MeteoIA() {
                  <div className="col-span-2 md:col-span-2"><PollenWidget data={aqiData?.current} lang={lang} /></div>
               </div>
 
-              <div className="lg:col-span-2 bg-slate-900/40 border border-white/10 rounded-3xl p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
+              <div className="lg:col-span-2 bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
                    <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400"/> {t.trend24h}</h3>
                  </div>

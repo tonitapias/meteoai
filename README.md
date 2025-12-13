@@ -21,6 +21,7 @@ La **nova generació d'aplicacions meteorològiques**. MeteoToni AI combina dade
 
 Aquest projecte ha estat desenvolupat utilitzant les últimes tecnologies web:
 
+<<<<<<< HEAD
 * [**React**](https://reactjs.org/): Llibreria principal per a la interfície d'usuari.  
 * [**Tailwind CSS**](https://tailwindcss.com/): Framework d'estils per a un disseny ràpid, responsive i modern ("Mobile First").  
 * [**Lucide React**](https://lucide.dev/): Iconografia vectorial lleugera i elegant.  
@@ -44,3 +45,8 @@ Les contribucions són benvingudes\! Si tens idees per millorar l'algorisme de p
 Aquest projecte està sota la llicència **MIT**. Ets lliure d'utilitzar-lo, modificar-lo i distribuir-lo.
 
 Creat amb ❤️ per **Toni**
+=======
+## **📄 Llicència**
+
+Aquest projecte creat per en Toni és de codi obert i està disponible sota la llicència [MIT](https://www.google.com/search?q=LICENSE).
+>>>>>>> 58e0eafcb4b2053c2b1696dac3b4c8891ddad1ac
