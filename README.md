@@ -1,16 +1,52 @@
-# React + Vite
+# **Meteo Toni Ai 🌤️🤖**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Una aplicació meteorològica d'última generació, **desenvolupada per en Toni**, construïda amb React. Combina dades precises en temps real amb un motor d'anàlisi intel·ligent per oferir prediccions, alertes de risc i consells personalitzats en una interfície moderna i fluida.
 
-Currently, two official plugins are available:
+## **✨ Característiques Principals**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### **🧠 Intel·ligència Meteorològica**
 
-## React Compiler
+* **Anàlisi de Context**: Generació automàtica de resums (ex: "Dia perfecte per sortir", "Risc de nevades").  
+* **Consells Dinàmics**: Recomanacions de roba (tèrmica, impermeable) i seguretat (cadenes, hidratació) basades en la sensació tèrmica i les condicions adverses.  
+* **Sistema d'Avisos Multicapa**: Detecció proactiva de riscos com tempestes elèctriques, vent fort, calor/fred extrem i mala qualitat de l'aire.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### **📊 Visualització Avançada**
 
-## Expanding the ESLint configuration
+* **Gràfics Multicapa Interactius**: Alterna fàcilment entre les corbes de **Temperatura**, **Pluja** i **Vent** amb un sol clic.  
+* **Diferenciació Pluja/Neu**: El sistema detecta automàticament si precipitarà neu o aigua i adapta les icones, els colors i els avisos (Mode Neu en tons cian).  
+* **Indicadors Circulars (Gauges)**: Visualització ràpida de la velocitat del vent, pressió atmosfèrica i índex AQI.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### **📱 Experiència d'Usuari (UX)**
+
+* **Disseny "Glassmorphism"**: Estètica moderna amb fons animats que canvien segons el temps (dia/nit, pluja, sol).  
+* **Totalment Adaptable (Responsive)**:  
+  * *Escriptori*: Panells en graella i gràfics grans.  
+  * *Mòbil*: Llistes verticals, modals lliscants i controls tàctils optimitzats.  
+* **Gestió de Favorits**: Desa les teves ciutats preferides i accedeix-hi ràpidament.  
+* **Conversió d'Unitats**: Canvi instantani entre Celsius (ºC) i Fahrenheit (ºF).
+
+## **🛠️ Tecnologies Utilitzades**
+
+* **Frontend**: React 18 (Hooks: useState, useEffect, useMemo).  
+* **Estils**: Tailwind CSS (Animacions, degradats, disseny responsive).  
+* **Icones**: Lucide React (Iconografia vectorial animada).  
+* **Dades**: [Open-Meteo API](https://open-meteo.com/) (Geocoding, Forecast, Air Quality).
+
+## **🚀 Com executar el projecte d'en Toni**
+
+1. **Clona el repositori:**  
+   git clone \[https://github.com/tonitapias/meteoai.git\](https://github.com/tonitapias/meteoai.git)  
+   cd meteoai
+
+2. **Instal·la les dependències:**  
+   npm install
+
+3. **Inicia l'aplicació en local:**  
+   npm run dev
+
+4. **Publicar a GitHub Pages (Opcional):**  
+   npm run deploy
+
+## **📄 Llicència**
+
+Aquest projecte creat per en Toni és de codi obert i està disponible sota la llicència [MIT](https://www.google.com/search?q=LICENSE).
