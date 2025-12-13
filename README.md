@@ -1,52 +1,46 @@
-# **Meteo Toni Ai 🌤️🤖**
+# **🌍 MeteoToni AI**
 
-Una aplicació meteorològica d'última generació, **desenvolupada per en Toni**, construïda amb React. Combina dades precises en temps real amb un motor d'anàlisi intel·ligent per oferir prediccions, alertes de risc i consells personalitzats en una interfície moderna i fluida.
+La **nova generació d'aplicacions meteorològiques**. MeteoToni AI combina dades climàtiques precises d'Open-Meteo amb una interfície moderna, intuïtiva i potenciada amb Intel·ligència Artificial per oferir resums i consells personalitzats.
 
 ## **✨ Característiques Principals**
 
-### **🧠 Intel·ligència Meteorològica**
-
-* **Anàlisi de Context**: Generació automàtica de resums (ex: "Dia perfecte per sortir", "Risc de nevades").  
-* **Consells Dinàmics**: Recomanacions de roba (tèrmica, impermeable) i seguretat (cadenes, hidratació) basades en la sensació tèrmica i les condicions adverses.  
-* **Sistema d'Avisos Multicapa**: Detecció proactiva de riscos com tempestes elèctriques, vent fort, calor/fred extrem i mala qualitat de l'aire.
-
-### **📊 Visualització Avançada**
-
-* **Gràfics Multicapa Interactius**: Alterna fàcilment entre les corbes de **Temperatura**, **Pluja** i **Vent** amb un sol clic.  
-* **Diferenciació Pluja/Neu**: El sistema detecta automàticament si precipitarà neu o aigua i adapta les icones, els colors i els avisos (Mode Neu en tons cian).  
-* **Indicadors Circulars (Gauges)**: Visualització ràpida de la velocitat del vent, pressió atmosfèrica i índex AQI.
-
-### **📱 Experiència d'Usuari (UX)**
-
-* **Disseny "Glassmorphism"**: Estètica moderna amb fons animats que canvien segons el temps (dia/nit, pluja, sol).  
-* **Totalment Adaptable (Responsive)**:  
-  * *Escriptori*: Panells en graella i gràfics grans.  
-  * *Mòbil*: Llistes verticals, modals lliscants i controls tàctils optimitzats.  
-* **Gestió de Favorits**: Desa les teves ciutats preferides i accedeix-hi ràpidament.  
-* **Conversió d'Unitats**: Canvi instantani entre Celsius (ºC) i Fahrenheit (ºF).
+* **🤖 Anàlisi Intel·ligent**: Generació automàtica de resums del temps i consells de salut (roba, hidratació, paraigua) basats en múltiples variables.  
+* **🌍 Multi-idioma**: Suport complet per a **Català 🇦🇩, Castellà 🇪🇸, Anglès 🇬🇧 i Francès 🇫🇷** amb detecció automàtica i persistència de preferències.  
+* **🌡️ Dades Ultra-precises**:  
+  * Temperatura actual i sensació tèrmica.  
+  * Previsió horària detallada (24h) amb gràfiques apilades (Temp, Pluja, Núvols, Humitat, Vent).  
+  * Previsió a 7 dies amb rangs tèrmics visuals.  
+* **🤧 Salut i Al·lèrgies**: Panell exclusiu amb **nivells de pol·len** en temps real (Gramínies, Olivera, Bedoll, etc.) i Índex de Qualitat de l'Aire (AQI).  
+* **🌑 Astronomia Avançada**:  
+  * Fase lunar amb càlcul matemàtic precís i icones realistes.  
+  * Arc solar interactiu amb compte enrere per a la sortida/posta de sol.  
+* **❄️ Efectes Visuals**: Fons dinàmics i partícules de pluja/neu animades segons el temps actual.  
+* **📍 Geolocalització i Cerca**: Cerca intel·ligent de ciutats a tot el món o detecció automàtica per GPS.
 
 ## **🛠️ Tecnologies Utilitzades**
 
-* **Frontend**: React 18 (Hooks: useState, useEffect, useMemo).  
-* **Estils**: Tailwind CSS (Animacions, degradats, disseny responsive).  
-* **Icones**: Lucide React (Iconografia vectorial animada).  
-* **Dades**: [Open-Meteo API](https://open-meteo.com/) (Geocoding, Forecast, Air Quality).
+Aquest projecte ha estat desenvolupat utilitzant les últimes tecnologies web:
 
-## **🚀 Com executar el projecte d'en Toni**
+* [**React**](https://reactjs.org/): Llibreria principal per a la interfície d'usuari.  
+* [**Tailwind CSS**](https://tailwindcss.com/): Framework d'estils per a un disseny ràpid, responsive i modern ("Mobile First").  
+* [**Lucide React**](https://lucide.dev/): Iconografia vectorial lleugera i elegant.  
+* [**Open-Meteo API**](https://open-meteo.com/): Font de dades meteorològiques gratuïta i d'alta precisió (sense clau API).  
+* [**Nominatim (OpenStreetMap)**](https://nominatim.org/): Per a la geocodificació i cerca de llocs.
 
-1. **Clona el repositori:**  
-   git clone \[https://github.com/tonitapias/meteoai.git\](https://github.com/tonitapias/meteoai.git)  
-   cd meteoai
+## 
 
-2. **Instal·la les dependències:**  
-   npm install
+## **🤝 Contribució**
 
-3. **Inicia l'aplicació en local:**  
-   npm run dev
+Les contribucions són benvingudes\! Si tens idees per millorar l'algorisme de predicció, afegir nous idiomes o millorar el disseny:
 
-4. **Publicar a GitHub Pages (Opcional):**  
-   npm run deploy
+1. Fes un Fork del projecte.  
+2. Crea una branca per a la teva millora (git checkout \-b feature/NovaMillora).  
+3. Fes Commit dels canvis (git commit \-m 'Afegida nova gràfica de pressió').  
+4. Fes Push a la branca (git push origin feature/NovaMillora).  
+5. Obre un Pull Request.
 
 ## **📄 Llicència**
 
-Aquest projecte creat per en Toni és de codi obert i està disponible sota la llicència [MIT](https://www.google.com/search?q=LICENSE).
+Aquest projecte està sota la llicència **MIT**. Ets lliure d'utilitzar-lo, modificar-lo i distribuir-lo.
+
+Creat amb ❤️ per **Toni**
