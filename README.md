@@ -32,21 +32,6 @@ Una aplicació meteorològica d'última generació, **desenvolupada per en Toni*
 * **Icones**: Lucide React (Iconografia vectorial animada).  
 * **Dades**: [Open-Meteo API](https://open-meteo.com/) (Geocoding, Forecast, Air Quality).
 
-## **🚀 Com executar el projecte d'en Toni**
-
-1. **Clona el repositori:**  
-   git clone \[https://github.com/tonitapias/meteoai.git\](https://github.com/tonitapias/meteoai.git)  
-   cd meteoai
-
-2. **Instal·la les dependències:**  
-   npm install
-
-3. **Inicia l'aplicació en local:**  
-   npm run dev
-
-4. **Publicar a GitHub Pages (Opcional):**  
-   npm run deploy
-
 ## **📄 Llicència**
 
 Aquest projecte creat per en Toni és de codi obert i està disponible sota la llicència [MIT](https://www.google.com/search?q=LICENSE).
