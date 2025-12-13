@@ -558,7 +558,7 @@ export default function MeteoIA() {
                <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 animate-[pulse_4s_ease-in-out_infinite]">
                  <BrainCircuit className="w-6 h-6 text-white"/>
                </div>
-               <span className="font-bold text-xl tracking-tight">Meteo<span className="text-indigo-400">AI</span> Pro</span>
+               <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
              </div>
              <button 
                   onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
@@ -653,7 +653,7 @@ export default function MeteoIA() {
               <div className="inline-flex p-6 rounded-full bg-indigo-500/10 mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
                 <CloudSun className="w-16 h-16 text-indigo-400 animate-pulse" />
               </div>
-              <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni AI Pro</h2>
+              <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni Ai</h2>
               <p className="text-slate-400 max-w-md mx-auto">La previsió meteorològica reinventada amb Intel·ligència Artificial.</p>
            </div>
         )}
