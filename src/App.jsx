@@ -1692,8 +1692,8 @@ export default function MeteoIA() {
                      <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200 font-medium">
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
-                        {/* CORRECTED: Use TimeZone from API for accurate local time */}
-                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', timeZone: weatherData.timezone})}</span>
+                        {/* CORRECTED: Removed timezone prop from display to avoid double shift */}
+                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
                         <button onClick={() => fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} className="flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70">
                           <RefreshCw className="w-3.5 h-3.5"/> <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
