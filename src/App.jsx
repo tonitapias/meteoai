@@ -327,28 +327,31 @@ const TRANSLATIONS = {
     },
     modeBasic: "Basic",
     modeExpert: "Expert",
-    rainStarting: "Rain starting in {min} min. ",
-    rainStopping: "Rain stopping in {min} min. ",
-    rainPersistent: "Persistent rain for the next hour. ",
-    descClear: "Completely clear skies. ",
-    descClouds: "Partly cloudy skies. ",
-    descOvercast: "Overcast and gray skies. ",
-    descRainLight: "Light drizzle or scattered showers. ",
-    descRainMod: "Moderate rain expected. ",
-    descRainHeavy: "Episodes of heavy rain. ",
-    descStorm: "Thunderstorm conditions. ",
-    descSnow: "Snowfall expected. ",
     
-    thermalFreezing: "Freezing conditions. ",
-    thermalCold: "Cold weather. ",
-    thermalMild: "Pleasant temperature. ",
-    thermalWarm: "Warm weather. ",
-    thermalHot: "Intense heat. ",
-    
-    contextWind: "Strong wind increases wind chill. ",
-    contextHumid: "High humidity causes mugginess. ",
-    contextStable: "Stable and calm conditions.",
-    
+    // AI Advanced Texts (Data-Driven)
+    aiStatus: "Currently {desc} with {temp}°C. ",
+    aiFeelsLikeHigh: "Feels warmer ({feels}°C) due to humidity. ",
+    aiFeelsLikeLow: "Wind of {speed} km/h lowers feels like to {feels}°C. ",
+    aiRainNow: "It is raining ({precip} mm/h). ",
+    aiRainSoon: "Rain expected in {min} minutes. ",
+    aiRainStop: "Rain stopping in {min} minutes. ",
+    aiDailySummary: "Highs of {max}°C and lows of {min}°C today. ",
+    aiUVWarning: "Watch out for UV index {uv} at noon. ",
+
+    wmo: {
+      0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
+      45: "fog", 48: "depositing rime fog",
+      51: "light drizzle", 53: "moderate drizzle", 55: "dense drizzle",
+      56: "light freezing drizzle", 57: "dense freezing drizzle",
+      61: "slight rain", 63: "moderate rain", 65: "heavy rain",
+      66: "light freezing rain", 67: "heavy freezing rain",
+      71: "slight snow fall", 73: "moderate snow fall", 75: "heavy snow fall",
+      77: "snow grains",
+      80: "slight rain showers", 81: "moderate rain showers", 82: "violent rain showers",
+      85: "slight snow showers", 86: "heavy snow showers",
+      95: "thunderstorm", 96: "thunderstorm with slight hail", 99: "thunderstorm with heavy hail"
+    },
+
     alertStorm: "High electrical risk and heavy rain.",
     alertSnow: "Caution: Accumulated snow forecast.",
     alertWindExtreme: "Hurricane-force winds. Danger.",
@@ -446,38 +449,41 @@ const TRANSLATIONS = {
     },
     modeBasic: "Basique",
     modeExpert: "Expert",
-    rainStarting: "Pluie imminente dans {min} minutes. ",
-    rainStopping: "La pluie s'arrêtera dans {min} minutes. ",
-    rainPersistent: "Pluie persistante pour l'heure. ",
-    descClear: "Ciel complètement dégagé. ",
-    descClouds: "Ciel partiellement nuageux. ",
-    descOvercast: "Ciel couvert et gris. ",
-    descRainLight: "Bruine faible ou éparse. ",
-    descRainMod: "Pluie modérée prévue. ",
-    descRainHeavy: "Épisodes de pluie intense. ",
-    descStorm: "Conditions orageuses. ",
-    descSnow: "Chutes de neige prévues. ",
     
-    thermalFreezing: "Ambiance glaciale. ",
-    thermalCold: "Ambiance froide. ",
-    thermalMild: "Température agréable. ",
-    thermalWarm: "Ambiance chaude. ",
-    thermalHot: "Chaleur intense. ",
-    
-    contextWind: "Le vent fort augmente la sensation de froid. ",
-    contextHumid: "L'humidité élevée provoque une lourdeur. ",
-    contextStable: "Conditions stables et calmes.",
-    
+    // AI Advanced Texts (Data-Driven)
+    aiStatus: "Actuellement {desc} avec {temp}°C. ",
+    aiFeelsLikeHigh: "Ressenti plus chaud ({feels}°C) à cause de l'humidité. ",
+    aiFeelsLikeLow: "Le vent de {speed} km/h abaisse le ressenti à {feels}°C. ",
+    aiRainNow: "Il pleut ({precip} mm/h). ",
+    aiRainSoon: "Pluie attendue dans {min} minutes. ",
+    aiRainStop: "La pluie s'arrêtera dans {min} minutes. ",
+    aiDailySummary: "Maximales de {max}°C et minimales de {min}°C aujourd'hui. ",
+    aiUVWarning: "Attention à l'indice UV {uv} à midi. ",
+
+    wmo: {
+      0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "couvert",
+      45: "brouillard", 48: "brouillard givrant",
+      51: "bruine légère", 53: "bruine modérée", 55: "bruine dense",
+      56: "bruine verglaçante légère", 57: "bruine verglaçante dense",
+      61: "pluie faible", 63: "pluie modérée", 65: "pluie forte",
+      66: "pluie verglaçante légère", 67: "pluie verglaçante forte",
+      71: "chute de neige faible", 73: "chute de neige modérée", 75: "chute de neige forte",
+      77: "grains de neige",
+      80: "averses de pluie faibles", 81: "averses de pluie modérées", 82: "averses violentes",
+      85: "averses de neige faibles", 86: "averses de neige fortes",
+      95: "orage", 96: "orage avec grêle légère", 99: "orage avec grêle forte"
+    },
+
     alertStorm: "Risque électrique élevé et fortes pluies.",
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
-    alertHeatExtreme: "Chaleur extrême. Évitez le soleil.",
+    alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
     alertHeatHigh: "Températures élevées. Hydratez-vous.",
-    alertColdExtreme: "Froid sévère. Risque de gelures.",
-    alertColdHigh: "Gelées. Chaussées glissantes.",
+    alertColdExtreme: "Froid extrême. Risque d'hypothermie.",
+    alertColdHigh: "Gelées. Prudence sur la route.",
     alertRain: "Précipitations abondantes.",
-    alertAir: "Air très nocif. Évitez l'extérieur.",
+    alertAir: "Qualité de l'air médiocre.",
     tipHydration: "Hydratation",
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
@@ -649,7 +655,7 @@ const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
   const sunY = cy - r * Math.sin(angle); 
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-between backdrop-blur-sm relative h-full min-h-[140px]">
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
        <div className="w-full flex justify-between items-center text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
           <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400"/> {t.sunrise}</span>
           <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400"/></span>
@@ -1103,7 +1109,8 @@ export default function MeteoIA() {
     }
 
     // 1. MAIN STATUS (DATA DRIVEN)
-    const weatherDesc = tr.wmo[code] || "temps variable";
+    // Check if wmo exists, otherwise fallback to empty string to avoid crash
+    const weatherDesc = (tr.wmo && tr.wmo[code]) || "temps variable";
     summaryParts.push(tr.aiStatus.replace('{desc}', weatherDesc).replace('{temp}', Math.round(temp)));
 
     // 2. PRECIPITATION NOWCAST
@@ -1686,7 +1693,7 @@ export default function MeteoIA() {
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
                         {/* CORRECTED: Use TimeZone from API for accurate local time */}
-                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', timeZone: weatherData.timezone})}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
                         <button onClick={() => fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} className="flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70">
                           <RefreshCw className="w-3.5 h-3.5"/> <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
