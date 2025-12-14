@@ -354,7 +354,7 @@ const TRANSLATIONS = {
     alertWindExtreme: "Hurricane-force winds. Danger.",
     alertWindHigh: "Strong gusts. Watch objects.",
     alertHeatExtreme: "Extreme heat. Avoid sun.",
-    alertHeatHigh: "High temperatures. Hydrate.",
+    alertHeatHigh: "High temperatures. Stay hydrated.",
     alertColdExtreme: "Severe cold. Frostbite risk.",
     alertColdHigh: "Frost. Slippery roads.",
     alertRain: "Heavy rainfall.",
@@ -472,10 +472,10 @@ const TRANSLATIONS = {
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
-    alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
+    alertHeatExtreme: "Chaleur extrême. Évitez le soleil.",
     alertHeatHigh: "Températures élevées. Hydratez-vous.",
-    alertColdExtreme: "Froid extrême. Risque d'hypothermie.",
-    alertColdHigh: "Gelées. Prudence sur la route.",
+    alertColdExtreme: "Froid sévère. Risque de gelures.",
+    alertColdHigh: "Gelées. Chaussées glissantes.",
     alertRain: "Précipitations abondantes.",
     alertAir: "Air très nocif. Évitez l'extérieur.",
     tipHydration: "Hydratation",
@@ -483,7 +483,8 @@ const TRANSLATIONS = {
     tipWindbreaker: "Coupe-vent",
     tipMugginess: "Lourd",
     tipUmbrella: "Parapluie",
-    tipCalm: "Journée calme",
+    tipSunscreen: "Écran solaire",
+    tipCalm: "Profitez",
     moonPhases: {
       new: "Nouvelle Lune",
       waxingCrescent: "Premier Croissant",
@@ -1685,7 +1686,7 @@ export default function MeteoIA() {
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
                         {/* CORRECTED: Use TimeZone from API for accurate local time */}
-                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', timeZone: weatherData.timezone})}</span>
+                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
                         <button onClick={() => fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} className="flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70">
                           <RefreshCw className="w-3.5 h-3.5"/> <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
