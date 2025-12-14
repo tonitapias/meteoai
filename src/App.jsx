@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, Wind, Droplets, MapPin, Sun, Cloud, CloudRain, 
-  CloudLightning, Snowflake, CloudFog, CloudSun, BrainCircuit, 
+  CloudLightning, Snowflake, CloudFog, CloudSun, CloudMoon, BrainCircuit, 
   Activity, AlertTriangle, X, Sunrise, Sunset, Umbrella, Eye,
   LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
   ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, Calendar, Clock,
@@ -17,13 +17,15 @@ const TRANSLATIONS = {
     now: "Ara",
     updatedNow: "Actualitzat ara",
     feelsLike: "Sensació de",
-    aiAnalysis: "Anàlisi Intel·ligent",
-    aiConfidence: "IA Alta",
-    generatingTips: "Generant consells...",
+    aiAnalysis: "Anàlisi Detallat",
+    aiConfidence: "Precisió Alta",
+    aiConfidenceMod: "Precisió Mitjana",
+    aiConfidenceLow: "Precisió Baixa",
+    generatingTips: "Analitzant dades...",
     trend24h: "Tendència 24h",
     temp: "Temperatura",
     rain: "Pluja",
-    wind: "Vent (Ràfegues --)",
+    wind: "Vent",
     cloud: "Cobertura de Núvols",
     humidity: "Humitat",
     forecast7days: "Previsió 7 Dies",
@@ -78,27 +80,51 @@ const TRANSLATIONS = {
     },
     modeBasic: "Bàsic",
     modeExpert: "Expert",
-    aiSummaryClear: "Cel serè i condicions òptimes. Aprofita per sortir! ",
-    aiSummaryClouds: "Intervals de núvols passatgers sense complicacions. ",
-    aiSummaryStorm: "Tempesta elèctrica. Busca refugi. ",
-    aiSummarySnow: "Previsió de neu. ",
-    aiSummaryRain: "Possibilitat de precipitacions. ",
-    aiSummaryUnstable: "Temps inestable. ",
+    
+    // AI Advanced Texts (Data-Driven)
+    aiStatus: "Actualment tenim {desc} amb {temp}°C. ",
+    aiFeelsLikeHigh: "La sensació és superior ({feels}°C) degut a la humitat. ",
+    aiFeelsLikeLow: "El vent de {speed} km/h fa baixar la sensació a {feels}°C. ",
+    aiRainNow: "Està plovent ({precip} mm/h). ",
+    aiRainSoon: "S'espera pluja en {min} minuts. ",
+    aiRainStop: "La pluja s'aturarà en {min} minuts. ",
+    aiDailySummary: "Màximes de {max}°C i mínimes de {min}°C per avui. ",
+    aiUVWarning: "Atenció a l'índex UV {uv} al migdia. ",
+    
+    // WMO Codes Descriptions
+    wmo: {
+      0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
+      45: "boira", 48: "boira gebradora",
+      51: "plugim lleuger", 53: "plugim moderat", 55: "plugim dens",
+      56: "plugim gebrador lleuger", 57: "plugim gebrador dens",
+      61: "pluja lleugera", 63: "pluja moderada", 65: "pluja forta",
+      66: "pluja gebradora lleugera", 67: "pluja gebradora forta",
+      71: "nevada lleugera", 73: "nevada moderada", 75: "nevada forta",
+      77: "ruixats de neu",
+      80: "ruixats de pluja lleugers", 81: "ruixats de pluja moderats", 82: "ruixats violents",
+      85: "ruixats de neu lleugers", 86: "ruixats de neu forts",
+      95: "tempesta", 96: "tempesta amb calamarsa lleugera", 99: "tempesta amb calamarsa forta"
+    },
+
     alertStorm: "Risc elèctric elevat i pluges intenses.",
     alertSnow: "Precaució: Neu acumulada prevista.",
-    alertWindExtreme: "Vent molt fort. Perill.",
-    alertWindHigh: "Ràfegues fortes.",
-    alertHeatExtreme: "Calor extrema. Perill de cop de calor.",
+    alertWindExtreme: "Vent huracanat. Perill extrem a l'exterior.",
+    alertWindHigh: "Ràfegues fortes. Compte objectes.",
+    alertHeatExtreme: "Calor extrema. Evita el sol.",
     alertHeatHigh: "Temperatures altes. Hidrata't.",
-    alertColdExtreme: "Fred extrem. Risc d'hipotèrmia.",
-    alertColdHigh: "Glaçades. Compte al conduir.",
+    alertColdExtreme: "Fred sever. Risc congelació.",
+    alertColdHigh: "Glaçades. Calçades relliscoses.",
     alertRain: "Precipitacions abundants.",
-    alertAir: "Aire molt perjudicial. Evita exterior.",
-    tipHydration: "Hidratació",
+    alertAir: "Qualitat de l'aire deficient.",
+    
+    tipHydration: "Bebe aigua",
     tipThermal: "Roba tèrmica",
-    tipMugginess: "Xafogor",
+    tipWindbreaker: "Tallavents",
+    tipMugginess: "Roba fresca",
     tipUmbrella: "Paraigua",
-    tipCalm: "Dia tranquil",
+    tipSunscreen: "Crema solar",
+    tipCalm: "Gaudeix",
+    
     moonPhases: {
       new: "Lluna Nova",
       waxingCrescent: "Creixent",
@@ -116,13 +142,15 @@ const TRANSLATIONS = {
     now: "Ahora",
     updatedNow: "Actualizado ahora",
     feelsLike: "Sensación de",
-    aiAnalysis: "Análisis Inteligente",
-    aiConfidence: "IA Alta",
-    generatingTips: "Generando consejos...",
+    aiAnalysis: "Análisis Detallado",
+    aiConfidence: "Precisión Alta",
+    aiConfidenceMod: "Precisión Media",
+    aiConfidenceLow: "Precisión Baja",
+    generatingTips: "Procesando datos...",
     trend24h: "Tendencia 24h",
     temp: "Temperatura",
     rain: "Lluvia",
-    wind: "Viento (Ráfagas --)",
+    wind: "Viento",
     cloud: "Cobertura de Nubes",
     humidity: "Humedad",
     forecast7days: "Previsión 7 Días",
@@ -177,27 +205,48 @@ const TRANSLATIONS = {
     },
     modeBasic: "Básico",
     modeExpert: "Experto",
-    aiSummaryClear: "Cielo despejado y condiciones óptimas. ¡Aprovecha para salir! ",
-    aiSummaryClouds: "Intervalos de nubes pasajeras sin complicaciones. ",
-    aiSummaryStorm: "Tormenta eléctrica. Busca refugio. ",
-    aiSummarySnow: "Previsión de nieve. ",
-    aiSummaryRain: "Posibilidad de precipitaciones. ",
-    aiSummaryUnstable: "Tiempo inestable. ",
+    
+    // AI Advanced Texts (Data-Driven)
+    aiStatus: "Actualmente tenemos {desc} con {temp}°C. ",
+    aiFeelsLikeHigh: "La sensación es mayor ({feels}°C) debido a la humedad. ",
+    aiFeelsLikeLow: "El viento de {speed} km/h baja la sensación a {feels}°C. ",
+    aiRainNow: "Está lloviendo ({precip} mm/h). ",
+    aiRainSoon: "Se espera lluvia en {min} minutos. ",
+    aiRainStop: "La lluvia parará en {min} minutos. ",
+    aiDailySummary: "Máximas de {max}°C y mínimas de {min}°C para hoy. ",
+    aiUVWarning: "Atención al índice UV {uv} al mediodía. ",
+
+    wmo: {
+      0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
+      45: "niebla", 48: "niebla helada",
+      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna densa",
+      56: "llovizna helada ligera", 57: "llovizna helada densa",
+      61: "lluvia ligera", 63: "lluvia moderada", 65: "lluvia fuerte",
+      66: "lluvia helada ligera", 67: "lluvia helada fuerte",
+      71: "nevada ligera", 73: "nevada moderada", 75: "nevada fuerte",
+      77: "chubascos de nieve",
+      80: "chubascos ligeros", 81: "chubascos moderados", 82: "chubascos violentos",
+      85: "chubascos de nieve ligeros", 86: "chubascos de nieve fuertes",
+      95: "tormenta", 96: "tormenta con granizo ligero", 99: "tormenta con granizo fuerte"
+    },
+    
     alertStorm: "Riesgo eléctrico elevado y lluvias intensas.",
     alertSnow: "Precaución: Nieve acumulada prevista.",
-    alertWindExtreme: "Viento muy fuerte. Peligro.",
-    alertWindHigh: "Ráfagas fuertes.",
-    alertHeatExtreme: "Calor extremo. Peligro de golpe de calor.",
-    alertHeatHigh: "Temperaturas altas. Hidrátate.",
-    alertColdExtreme: "Frío extremo. Riesgo de hipotermia.",
-    alertColdHigh: "Heladas. Cuidado al conducir.",
+    alertWindExtreme: "Viento huracanado. Peligro exterior.",
+    alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
+    alertHeatExtreme: "Calor extremo. Evita el sol.",
+    alertHeatHigh: "Temperatures altas. Hidrátate.",
+    alertColdExtreme: "Frío severo. Riesgo congelación.",
+    alertColdHigh: "Heladas. Calzadas resbaladizas.",
     alertRain: "Precipitaciones abundantes.",
-    alertAir: "Aire muy perjudicial. Evita exterior.",
-    tipHydration: "Hidratación",
+    alertAir: "Calidad del aire deficiente.",
+    tipHydration: "Bebe agua",
     tipThermal: "Ropa térmica",
-    tipMugginess: "Bochorno",
+    tipWindbreaker: "Cortavientos",
+    tipMugginess: "Ropa fresca",
     tipUmbrella: "Paraguas",
-    tipCalm: "Día tranquilo",
+    tipSunscreen: "Protector solar",
+    tipCalm: "Disfruta",
     moonPhases: {
       new: "Luna Nueva",
       waxingCrescent: "Creciente",
@@ -215,9 +264,11 @@ const TRANSLATIONS = {
     now: "Now",
     updatedNow: "Updated now",
     feelsLike: "Feels like",
-    aiAnalysis: "Smart Analysis",
-    aiConfidence: "High AI",
-    generatingTips: "Generating tips...",
+    aiAnalysis: "Detailed Analysis",
+    aiConfidence: "High Accuracy",
+    aiConfidenceMod: "Medium Accuracy",
+    aiConfidenceLow: "Low Accuracy",
+    generatingTips: "Analyzing data...",
     trend24h: "24h Trend",
     temp: "Temperature",
     rain: "Rain",
@@ -276,27 +327,45 @@ const TRANSLATIONS = {
     },
     modeBasic: "Basic",
     modeExpert: "Expert",
-    aiSummaryClear: "Clear skies and optimal conditions. Enjoy the outdoors! ",
-    aiSummaryClouds: "Passing cloud intervals without complications. ",
-    aiSummaryStorm: "Thunderstorm. Seek shelter. ",
-    aiSummarySnow: "Snow forecast. ",
-    aiSummaryRain: "Chance of precipitation. ",
-    aiSummaryUnstable: "Unstable weather. ",
+    rainStarting: "Rain starting in {min} min. ",
+    rainStopping: "Rain stopping in {min} min. ",
+    rainPersistent: "Persistent rain for the next hour. ",
+    descClear: "Completely clear skies. ",
+    descClouds: "Partly cloudy skies. ",
+    descOvercast: "Overcast and gray skies. ",
+    descRainLight: "Light drizzle or scattered showers. ",
+    descRainMod: "Moderate rain expected. ",
+    descRainHeavy: "Episodes of heavy rain. ",
+    descStorm: "Thunderstorm conditions. ",
+    descSnow: "Snowfall expected. ",
+    
+    thermalFreezing: "Freezing conditions. ",
+    thermalCold: "Cold weather. ",
+    thermalMild: "Pleasant temperature. ",
+    thermalWarm: "Warm weather. ",
+    thermalHot: "Intense heat. ",
+    
+    contextWind: "Strong wind increases wind chill. ",
+    contextHumid: "High humidity causes mugginess. ",
+    contextStable: "Stable and calm conditions.",
+    
     alertStorm: "High electrical risk and heavy rain.",
     alertSnow: "Caution: Accumulated snow forecast.",
-    alertWindExtreme: "Very strong wind. Danger.",
-    alertWindHigh: "Strong gusts.",
-    alertHeatExtreme: "Extreme heat. Heat stroke danger.",
-    alertHeatHigh: "High temperatures. Stay hydrated.",
-    alertColdExtreme: "Extreme cold. Hypothermia risk.",
-    alertColdHigh: "Frost. Drive carefully.",
+    alertWindExtreme: "Hurricane-force winds. Danger.",
+    alertWindHigh: "Strong gusts. Watch objects.",
+    alertHeatExtreme: "Extreme heat. Avoid sun.",
+    alertHeatHigh: "High temperatures. Hydrate.",
+    alertColdExtreme: "Severe cold. Frostbite risk.",
+    alertColdHigh: "Frost. Slippery roads.",
     alertRain: "Heavy rainfall.",
-    alertAir: "Very harmful air. Avoid outdoors.",
-    tipHydration: "Hydration",
+    alertAir: "Poor air quality.",
+    tipHydration: "Drink water",
     tipThermal: "Thermal wear",
-    tipMugginess: "Muggy",
+    tipWindbreaker: "Windbreaker",
+    tipMugginess: "Light clothes",
     tipUmbrella: "Umbrella",
-    tipCalm: "Calm day",
+    tipSunscreen: "Sunscreen",
+    tipCalm: "Enjoy",
     moonPhases: {
       new: "New Moon",
       waxingCrescent: "Waxing Crescent",
@@ -314,9 +383,11 @@ const TRANSLATIONS = {
     now: "Maintenant",
     updatedNow: "Mis à jour",
     feelsLike: "Ressenti",
-    aiAnalysis: "Analyse Intelligente",
-    aiConfidence: "IA Élevée",
-    generatingTips: "Génération de conseils...",
+    aiAnalysis: "Analyse Détaillée",
+    aiConfidence: "Précision Élevée",
+    aiConfidenceMod: "Précision Moyenne",
+    aiConfidenceLow: "Précision Faible",
+    generatingTips: "Traitement des données...",
     trend24h: "Tendance 24h",
     temp: "Température",
     rain: "Pluie",
@@ -375,16 +446,32 @@ const TRANSLATIONS = {
     },
     modeBasic: "Basique",
     modeExpert: "Expert",
-    aiSummaryClear: "Ciel clair et conditions optimales. Profitez de l'extérieur ! ",
-    aiSummaryClouds: "Passages nuageux sans complications. ",
-    aiSummaryStorm: "Orage. Cherchez un abri. ",
-    aiSummarySnow: "Prévisions de neige. ",
-    aiSummaryRain: "Possibilité de précipitations. ",
-    aiSummaryUnstable: "Temps instable. ",
+    rainStarting: "Pluie imminente dans {min} minutes. ",
+    rainStopping: "La pluie s'arrêtera dans {min} minutes. ",
+    rainPersistent: "Pluie persistante pour l'heure. ",
+    descClear: "Ciel complètement dégagé. ",
+    descClouds: "Ciel partiellement nuageux. ",
+    descOvercast: "Ciel couvert et gris. ",
+    descRainLight: "Bruine faible ou éparse. ",
+    descRainMod: "Pluie modérée prévue. ",
+    descRainHeavy: "Épisodes de pluie intense. ",
+    descStorm: "Conditions orageuses. ",
+    descSnow: "Chutes de neige prévues. ",
+    
+    thermalFreezing: "Ambiance glaciale. ",
+    thermalCold: "Ambiance froide. ",
+    thermalMild: "Température agréable. ",
+    thermalWarm: "Ambiance chaude. ",
+    thermalHot: "Chaleur intense. ",
+    
+    contextWind: "Le vent fort augmente la sensation de froid. ",
+    contextHumid: "L'humidité élevée provoque une lourdeur. ",
+    contextStable: "Conditions stables et calmes.",
+    
     alertStorm: "Risque électrique élevé et fortes pluies.",
     alertSnow: "Attention : Neige accumulée prévue.",
-    alertWindExtreme: "Vent très fort. Danger.",
-    alertWindHigh: "Rafales fortes.",
+    alertWindExtreme: "Vent d'ouragan. Danger extrême.",
+    alertWindHigh: "Rafales fortes. Attention aux objets.",
     alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
     alertHeatHigh: "Températures élevées. Hydratez-vous.",
     alertColdExtreme: "Froid extrême. Risque d'hypothermie.",
@@ -393,6 +480,7 @@ const TRANSLATIONS = {
     alertAir: "Air très nocif. Évitez l'extérieur.",
     tipHydration: "Hydratation",
     tipThermal: "Vêtements thermiques",
+    tipWindbreaker: "Coupe-vent",
     tipMugginess: "Lourd",
     tipUmbrella: "Parapluie",
     tipCalm: "Journée calme",
@@ -457,7 +545,6 @@ const TypewriterText = ({ text }) => {
 
 // --- HELPERS DATES I HORES ---
 
-// Calcula una data "falsa" que en fer-li .toString() o .getHours() mostri l'hora del lloc remot basat en la Zona Horària
 const getShiftedDate = (timezone) => {
   const now = new Date();
   const targetTimeStr = now.toLocaleString("en-US", { timeZone: timezone });
@@ -925,15 +1012,15 @@ export default function MeteoIA() {
   const getUnitLabel = () => unit === 'F' ? '°F' : '°C';
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
-  const getWeatherIcon = (code, className = "w-6 h-6") => {
-    if (code === 0) return <Sun className={`${className} text-yellow-400 animate-[spin_12s_linear_infinite]`} />;
-    if (code >= 1 && code <= 3) return <CloudSun className={`${className} text-orange-300 animate-pulse`} />;
-    if (code >= 45 && code <= 48) return <CloudFog className={`${className} text-gray-400 animate-pulse`} />;
-    if (code >= 51 && code <= 67) return <CloudRain className={`${className} text-blue-400 animate-bounce`} />;
-    if (code >= 71 && code <= 77) return <Snowflake className={`${className} text-cyan-200 animate-[spin_3s_linear_infinite]`} />; 
-    if (code >= 85 && code <= 86) return <Snowflake className={`${className} text-cyan-200 animate-pulse`} />; 
-    if (code >= 95) return <CloudLightning className={`${className} text-purple-400 animate-pulse`} />;
-    return <Cloud className={`${className} text-gray-300 animate-[pulse_4s_ease-in-out_infinite]`} />;
+  const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1) => {
+     if (code === 0) return isDay ? <Sun className={`${className} text-yellow-400 animate-[spin_12s_linear_infinite]`} /> : <Moon className={`${className} text-slate-300`} />;
+     if (code >= 1 && code <= 3) return isDay ? <CloudSun className={`${className} text-orange-300 animate-pulse`} /> : <CloudMoon className={`${className} text-slate-400`} />;
+     if (code >= 45 && code <= 48) return <CloudFog className={`${className} text-gray-400 animate-pulse`} />;
+     if (code >= 51 && code <= 67) return <CloudRain className={`${className} text-blue-400 animate-bounce`} />;
+     if (code >= 71 && code <= 77) return <Snowflake className={`${className} text-cyan-200 animate-[spin_3s_linear_infinite]`} />; 
+     if (code >= 85 && code <= 86) return <Snowflake className={`${className} text-cyan-200 animate-pulse`} />; 
+     if (code >= 95) return <CloudLightning className={`${className} text-purple-400 animate-pulse`} />;
+     return <Cloud className={`${className} text-gray-300 animate-[pulse_4s_ease-in-out_infinite]`} />;
   };
   
   const getLangCodeForAPI = (l) => l; 
@@ -956,13 +1043,6 @@ export default function MeteoIA() {
     if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
     if (isSnowCode(code)) return "from-slate-800 via-slate-700 to-cyan-950"; 
     if (code >= 51) return "from-slate-800 via-slate-900 to-blue-950"; 
-    
-    // Twilight check (Sunset/Sunrise +/- 1 hour)
-    if (weatherData && weatherData.daily && weatherData.daily.sunrise) {
-       const now = new Date().getTime(); // Use user local time for background as it's user experience
-       // We need to compare with local sunrise time... tricky with timezone=auto.
-       // Let's use isDay from current which is accurate from API.
-    }
     
     if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
     if (code === 0 && !isDay) return "from-slate-950 via-indigo-950 to-purple-950"; 
@@ -993,6 +1073,7 @@ export default function MeteoIA() {
   const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca') => {
     const tr = TRANSLATIONS[language];
     const feelsLike = current.apparent_temperature;
+    const temp = current.temperature_2m;
     const humidity = current.relative_humidity_2m;
     const rainProb = daily.precipitation_probability_max[0];
     const snowSum = daily.snowfall_sum && daily.snowfall_sum[0];
@@ -1001,38 +1082,106 @@ export default function MeteoIA() {
     const code = current.weather_code;
     const maxTemp = daily.temperature_2m_max[0];
     const minTemp = daily.temperature_2m_min[0];
+    const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
+    const uvMax = daily.uv_index_max[0];
     
-    let summary = "";
+    let summaryParts = [];
     let tips = [];
-    let confidence = tr.aiConfidence;
+    let confidenceLevel = 'high';
+    let confidenceText = tr.aiConfidence;
     let alerts = []; 
 
-    if (code === 0) summary = tr.aiSummaryClear;
-    else if (code < 4) summary = tr.aiSummaryClouds;
-    else if (code >= 95) { summary = tr.aiSummaryStorm; }
-    else if (isSnowCode(code) || (snowSum > 0)) { summary = `${tr.aiSummarySnow}(${snowSum}cm). `; }
-    else if (code >= 51) summary = `${tr.aiSummaryRain}${precipSum > 1 ? ` (${Math.round(precipSum)}mm)` : ''}. `;
-    else summary = tr.aiSummaryUnstable;
+    // CONFIDENCE LOGIC
+    if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
+        confidenceLevel = 'medium';
+        confidenceText = tr.aiConfidenceMod;
+    }
+    if (code >= 95 || windSpeed > 60 || precip15 > 2) {
+        confidenceLevel = 'low';
+        confidenceText = tr.aiConfidenceLow;
+    }
 
+    // 1. MAIN STATUS (DATA DRIVEN)
+    const weatherDesc = tr.wmo[code] || "temps variable";
+    summaryParts.push(tr.aiStatus.replace('{desc}', weatherDesc).replace('{temp}', Math.round(temp)));
+
+    // 2. PRECIPITATION NOWCAST
+    if (precip15 > 0.1 && code < 50) {
+       summaryParts.push(tr.aiRainSoon.replace('{min}', 15));
+    } else if (code >= 50 && precip15 === 0) {
+       summaryParts.push(tr.aiRainStop.replace('{min}', 15));
+    } else if (code >= 51) {
+       // If raining, showing intensity could be nice if we had precise rate, but precip15 is 15min sum
+       // Just keep status
+    }
+
+    // 3. THERMAL CONTEXT & WIND CHILL
+    const deltaTemp = temp - feelsLike;
+    if (deltaTemp > 3 && windSpeed > 10) {
+       summaryParts.push(tr.aiFeelsLikeLow.replace('{speed}', Math.round(windSpeed)).replace('{feels}', Math.round(feelsLike)));
+    } else if (feelsLike > temp + 2 && humidity > 60) {
+       summaryParts.push(tr.aiFeelsLikeHigh.replace('{feels}', Math.round(feelsLike)));
+    }
+
+    // 4. DAILY OUTLOOK
+    summaryParts.push(tr.aiDailySummary.replace('{max}', Math.round(maxTemp)).replace('{min}', Math.round(minTemp)));
+
+    // 5. UV WARNING IF HIGH
+    if (uvMax > 6) {
+       summaryParts.push(tr.aiUVWarning.replace('{uv}', Math.round(uvMax)));
+    }
+
+    // ALERTS & TIPS LOGIC (Refined)
     if (code >= 95) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
-    if (isSnowCode(code) || snowSum > 2) alerts.push({ type: tr.snow, msg: `${tr.alertSnow} ${snowSum}cm.`, level: 'high', tips: "Cadenes" });
-    if (windSpeed > 80) alerts.push({ type: tr.wind, msg: `${tr.alertWindExtreme} (${Math.round(windSpeed)} km/h).`, level: 'high' });
-    else if (windSpeed > 50) alerts.push({ type: tr.wind, msg: `${tr.alertWindHigh} (${Math.round(windSpeed)} km/h).`, level: 'warning' });
-    if (maxTemp > 38) alerts.push({ type: tr.sun, msg: tr.alertHeatExtreme, level: 'high' });
-    else if (maxTemp > 32) alerts.push({ type: tr.sun, msg: tr.alertHeatHigh, level: 'warning' });
-    if (minTemp < -5) alerts.push({ type: 'Fred', msg: tr.alertColdExtreme, level: 'high' });
-    else if (minTemp < 0) alerts.push({ type: 'Fred', msg: tr.alertColdHigh, level: 'warning' });
-    if (rainProb > 80 && (code >= 61 || precipSum > 20)) alerts.push({ type: tr.rain, msg: `${tr.alertRain} (${Math.round(precipSum)}L).`, level: 'warning' });
-    if (aqiValue > 150) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'high' });
+    if (isSnowCode(code) || snowSum > 2) {
+       alerts.push({ type: tr.snow, msg: `${tr.alertSnow} ${snowSum}cm.`, level: 'high', tips: "Cadenes" });
+       tips.push(tr.tipThermal);
+    }
+    
+    if (windSpeed > 80) {
+      alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
+      tips.push(tr.tipWindbreaker);
+    } else if (windSpeed > 40) {
+      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
+      tips.push(tr.tipWindbreaker);
+    }
 
-    if (feelsLike > 32) tips.push(tr.tipHydration);
-    if (feelsLike < 5) tips.push(tr.tipThermal);
-    if (humidity > 80 && maxTemp > 25) tips.push(tr.tipMugginess);
-    if ((rainProb > 50 || precipSum > 0.5) && !isSnowCode(code)) tips.push(tr.tipUmbrella);
-    if (alerts.length === 0) tips.push(tr.tipCalm);
+    if (temp > 35) {
+      alerts.push({ type: tr.sun, msg: tr.alertHeatExtreme, level: 'high' });
+      tips.push(tr.tipHydration);
+    } else if (temp > 30) {
+      alerts.push({ type: tr.sun, msg: tr.alertHeatHigh, level: 'warning' });
+      tips.push(tr.tipHydration);
+    }
 
+    if (temp < -5) {
+      alerts.push({ type: 'Fred', msg: tr.alertColdExtreme, level: 'high' });
+      tips.push(tr.tipThermal);
+    } else if (temp < 2) {
+      alerts.push({ type: 'Fred', msg: tr.alertColdHigh, level: 'warning' });
+      tips.push(tr.tipThermal);
+    }
+
+    if (rainProb > 70 || precipSum > 10) {
+       if (precipSum > 30) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
+       tips.push(tr.tipUmbrella);
+    } else if (rainProb > 30) {
+       tips.push(tr.tipUmbrella);
+    }
+
+    if (aqiValue > 100) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
+    
+    // Default tips if none
+    if (tips.length === 0) {
+       if (temp > 15 && temp < 25) tips.push(tr.tipCalm);
+       else if (temp >= 25) tips.push(tr.tipSunscreen);
+       else tips.push(tr.tipThermal);
+    }
+
+    // Deduplicate and slice tips
     tips = [...new Set(tips)].slice(0, 4);
-    return { text: summary, tips, confidence, alerts };
+    
+    return { text: summaryParts.join(" "), tips, confidence: confidenceText, confidenceLevel, alerts };
   };
 
   useEffect(() => {
@@ -1099,7 +1248,7 @@ export default function MeteoIA() {
     setQuery(""); 
     
     try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match`;
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation`;
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`)
@@ -1107,7 +1256,11 @@ export default function MeteoIA() {
       if (!weatherRes.ok) throw new Error(`Error satèl·lit: ${weatherRes.status}`);
       const weatherData = await weatherRes.json();
       const aqiData = await aqiRes.json();
-      const analysis = generateAIPrediction(weatherData.current, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang);
+      
+      // Pass minutely data to AI
+      const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
+
+      const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang);
       setTimeout(() => setAiAnalysis(analysis), 800); 
       setWeatherData({ ...weatherData, location: { name, country, latitude: lat, longitude: lon } });
       setAqiData(aqiData);
@@ -1119,7 +1272,8 @@ export default function MeteoIA() {
   
   useEffect(() => {
      if(weatherData && aqiData) {
-         const analysis = generateAIPrediction(weatherData.current, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang);
+         const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
+         const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang);
          setAiAnalysis(analysis);
      }
   }, [lang, weatherData, aqiData]);
@@ -1134,15 +1288,26 @@ export default function MeteoIA() {
 
   const chartData = useMemo(() => {
     if (!weatherData) return [];
-    const currentHour = new Date().getHours();
-    const now = new Date();
-    const foundIndex = weatherData.hourly.time.findIndex(t => new Date(t) > now);
-    let startIndex = 0;
-    if (foundIndex !== -1) startIndex = Math.max(0, foundIndex - 1);
     
-    // Now we need to find the startIndex relative to the Shifted Time (Local time of the place)
-    // The API hourly times are local to the timezone requested (timezone=auto)
+    // Utilitzem l'hora desplaçada (local del lloc) per saber on comença la gràfica
+    const nowLocalHour = shiftedNow.getHours();
+    
+    // Busquem l'índex que correspon a l'hora actual (o la següent) a la llista horària
+    // La llista horària d'Open-Meteo comença a les 00:00 del dia actual (o ahir depenent de la petició).
+    // Com que hem demanat `timezone=auto`, les strings d'hora (hourly.time) ja venen en hora local del lloc.
+    // Per tant, només hem de buscar quina string té l'hora igual a la nostra hora local calculada.
+    
+    // Simplificació robusta: comparació de strings ISO parcials?
+    // Opció "shifted":
+    
+    let startIndex = 0;
+    // Busquem l'índex on l'hora de l'array (parsejada com a local) sigui >= l'hora local "fake" que hem calculat.
+    // Com que `shiftedNow` és una data "mentidera" que té l'hora correcta si la imprimim en local...
     const nowTime = shiftedNow.getTime();
+    
+    // Per comparar, hem de convertir les strings de l'API a dates "mentideres" també (timestamps locals).
+    // new Date("...T14:00").getTime() ja ens dona això.
+    
     const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
     if (idx !== -1) startIndex = Math.max(0, idx);
 
@@ -1157,6 +1322,7 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startIndex + i],
       humidity: weatherData.hourly.relative_humidity_2m[startIndex + i], 
       uv: weatherData.hourly.uv_index[startIndex + i], // ADDED UV
+      isDay: weatherData.hourly.is_day[startIndex + i], // ADDED IS_DAY FOR HOURLY
       time: weatherData.hourly.time[startIndex + i],
       code: weatherData.hourly.weather_code[startIndex + i]
     }));
@@ -1200,12 +1366,12 @@ export default function MeteoIA() {
       rain: weatherData.hourly.precipitation_probability[startHour + i],
       precip: weatherData.hourly.precipitation[startHour + i], 
       wind: weatherData.hourly.wind_speed_10m[startHour + i],
-      gusts: weatherData.hourly.wind_gusts_10m[startHour + i],
       windDir: weatherData.hourly.wind_direction_10m[startHour + i],
       cloud: weatherData.hourly.cloud_cover[startHour + i],
       humidity: weatherData.hourly.relative_humidity_2m[startHour + i],
       uv: weatherData.hourly.uv_index[startHour + i],
       time: weatherData.hourly.time[startHour + i],
+      isDay: weatherData.hourly.is_day[startHour + i],
       code: weatherData.hourly.weather_code[startHour + i]
     }));
     
@@ -1254,7 +1420,7 @@ export default function MeteoIA() {
                   {dayHourlyData.filter((_, i) => i % 3 === 0).map((h, i) => (
                      <div key={i} className="flex flex-col items-center min-w-[3rem]">
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                        <div className="my-1 scale-75">{getWeatherIcon(h.code)}</div>
+                        <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay)}</div>
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                         {/* ADDED RAIN INFO */}
                         <div className="flex flex-col items-center mt-1 h-6 justify-start">
@@ -1518,8 +1684,8 @@ export default function MeteoIA() {
                      <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200 font-medium">
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
-                        {/* CORRECTED: Removed timezone from toLocaleTimeString to prevent double-shift */}
-                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                        {/* CORRECTED: Use TimeZone from API for accurate local time */}
+                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', timeZone: weatherData.timezone})}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
                         <button onClick={() => fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} className="flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70">
                           <RefreshCw className="w-3.5 h-3.5"/> <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
@@ -1528,7 +1694,7 @@ export default function MeteoIA() {
                    </div>
                    <div className="flex flex-col items-end self-end md:self-auto">
                       <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
-                        {getWeatherIcon(weatherData.current.weather_code, "w-16 h-16 md:w-24 md:h-24")}
+                        {getWeatherIcon(weatherData.current.weather_code, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day)}
                       </div>
                       <span className="text-lg md:text-xl font-medium text-slate-200 mt-2">
                          {weatherData.current.weather_code === 0 ? t.clear : isSnowCode(weatherData.current.weather_code) ? t.snow : weatherData.current.weather_code < 4 ? t.cloudy : t.rainy}
@@ -1559,7 +1725,17 @@ export default function MeteoIA() {
                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
                          <BrainCircuit className="w-4 h-4 animate-pulse" /> {t.aiAnalysis}
                        </div>
-                       {aiAnalysis && <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">{t.aiConfidence}</span>}
+                       
+                       {/* FIX: Check aiAnalysis before accessing confidenceLevel */}
+                       {aiAnalysis && (
+                           <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                              aiAnalysis.confidenceLevel === 'high' ? 'text-green-400 border-green-500/30 bg-green-500/10' :
+                              aiAnalysis.confidenceLevel === 'medium' ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' :
+                              'text-red-400 border-red-500/30 bg-red-500/10'
+                           }`}>
+                              {aiAnalysis.confidence}
+                           </span>
+                       )}
                      </div>
                      
                      {aiAnalysis ? (
@@ -1695,16 +1871,16 @@ export default function MeteoIA() {
             {viewMode === 'basic' && (
                <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
                  <h3 className="font-bold text-white flex items-center gap-2 mb-4"><Clock className="w-4 h-4 text-indigo-400"/> {t.hourlyEvolution} (24h)</h3>
-                 <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar">
+                 <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
                     {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
-                       <div key={i} className="flex flex-col items-center min-w-[3.5rem]">
-                          <span className="text-xs text-slate-400 mb-1">{new Date(h.time).getHours()}h</span>
-                          <div className="my-1 scale-90">{getWeatherIcon(h.code)}</div>
-                          <span className="text-sm font-bold text-white">{Math.round(h.temp)}°</span>
+                       <div key={i} className="flex flex-col items-center min-w-[3rem]">
+                          <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
+                          <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay)}</div>
+                          <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                           {/* ADDED RAIN INFO */}
                           <div className="flex flex-col items-center mt-1 h-6 justify-start">
-                             {h.rain > 0 && <span className="text-[10px] text-blue-300 font-bold">{h.rain}%</span>}
-                             {h.precip > 0 && <span className="text-[9px] text-cyan-200">{h.precip}mm</span>}
+                             {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
+                             {h.precip > 0 && <span className="text-[9px] text-cyan-400">{h.precip}mm</span>}
                           </div>
                        </div>
                     ))}
