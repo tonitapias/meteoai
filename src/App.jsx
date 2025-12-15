@@ -6,7 +6,7 @@ import {
   LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
   ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, Calendar, Clock,
   Layers, ThermometerSnowflake, AlertCircle, CloudSnow, Moon, Compass, Globe, Flower2,
-  LayoutTemplate, LayoutDashboard 
+  LayoutTemplate, LayoutDashboard, GitGraph
 } from 'lucide-react';
 
 // --- SISTEMA DE TRADUCCIONS ---
@@ -82,6 +82,10 @@ const TRANSLATIONS = {
     modeExpert: "Extens", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsió Immediata (1h)",
+    modelsLegend: "Comparativa Models",
+    modelBest: "Consens",
+    modelGfs: "GFS (EUA)",
+    modelIcon: "ICON (Alemanya)",
     
     // AI Advanced Texts (Data-Driven - RENOVATS)
     aiIntroMorning: "Bon dia. ",
@@ -224,6 +228,10 @@ const TRANSLATIONS = {
     modeExpert: "Extendido", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsión Inmediata (1h)",
+    modelsLegend: "Comparativa Modelos",
+    modelBest: "Consenso",
+    modelGfs: "GFS (EEUU)",
+    modelIcon: "ICON (Alemania)",
     
     aiIntroMorning: "Buenos días. ",
     aiIntroAfternoon: "Buenas tardes. ",
@@ -363,6 +371,10 @@ const TRANSLATIONS = {
     modeExpert: "Extended",
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     preciseRain: "Minute-by-Minute Forecast (1h)",
+    modelsLegend: "Model Comparison",
+    modelBest: "Consensus",
+    modelGfs: "GFS (USA)",
+    modelIcon: "ICON (Germany)",
     
     aiIntroMorning: "Good morning. ",
     aiIntroAfternoon: "Good afternoon. ",
@@ -502,6 +514,10 @@ const TRANSLATIONS = {
     modeExpert: "Étendu", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Prévisions Minute par Minute (1h)",
+    modelsLegend: "Comparaison Modèles",
+    modelBest: "Consensus",
+    modelGfs: "GFS (USA)",
+    modelIcon: "ICON (Allemagne)",
     
     aiIntroMorning: "Bonjour. ",
     aiIntroAfternoon: "Bonne après-midi. ",
@@ -886,8 +902,8 @@ const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }
   )
 };
 
-// --- SINGLE CHART ---
-const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, height = 140, lang = 'ca', shiftedNow }) => {
+// --- SINGLE CHART (MULTI-MODEL SUPPORT) ---
+const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 140, lang = 'ca', shiftedNow }) => {
   if (!data || data.length === 0) return null;
   const t = TRANSLATIONS[lang];
 
@@ -905,15 +921,27 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
   const paddingX = 20;
   const paddingY = 30;
 
+  // Gather values from ALL models to set Scale
   const values = data.map(d => d[dataKey]);
-  let minVal = Math.min(...values);
-  let maxVal = Math.max(...values);
+  let allValues = [...values];
+  
+  if (comparisonData && comparisonData.gfs) {
+     const gfsVals = comparisonData.gfs.map(d => d[dataKey]);
+     allValues = [...allValues, ...gfsVals];
+  }
+  if (comparisonData && comparisonData.icon) {
+     const iconVals = comparisonData.icon.map(d => d[dataKey]);
+     allValues = [...allValues, ...iconVals];
+  }
+
+  let minVal = Math.min(...allValues);
+  let maxVal = Math.max(...allValues);
 
   if (layer === 'temp') {
-     const apparentValues = data.map(d => d.apparent || d.temp);
-     minVal = Math.min(minVal, ...apparentValues) - 2;
-     maxVal = Math.max(maxVal, ...apparentValues) + 2;
-  } else if (layer === 'rain' || layer === 'cloud') {
+     // Ensure buffer for temp
+     minVal -= 2;
+     maxVal += 2;
+  } else if (layer === 'rain' || layer === 'cloud' || layer === 'humidity') {
     minVal = 0;
     maxVal = 100;
   } else if (layer === 'wind') {
@@ -923,18 +951,15 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
   
   const range = maxVal - minVal || 1;
 
-  const points = data.map((d, i) => {
-    const x = paddingX + (i / (data.length - 1)) * (width - 2 * paddingX);
-    const val = d[dataKey];
-    const y = height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
-    
-    let yApparent = 0;
-    if (layer === 'temp') {
-      const valApp = d.apparent || val;
-      yApparent = height - paddingY - ((valApp - minVal) / range) * (height - 2 * paddingY);
-    }
-    return { x, y, value: val, yApparent, apparent: d.apparent, ...d };
-  });
+  // Helper to calculate Y for any value
+  const calcY = (val) => height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
+
+  const points = data.map((d, i) => ({
+    x: paddingX + (i / (data.length - 1)) * (width - 2 * paddingX),
+    y: calcY(d[dataKey]),
+    value: d[dataKey],
+    ...d
+  }));
 
   const buildSmoothPath = (pts, keyY = 'y') => {
     if (pts.length === 0) return "";
@@ -948,10 +973,31 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
     return d;
   };
 
+  // Main Line
   const linePath = buildSmoothPath(points, 'y');
-  const apparentPath = layer === 'temp' ? buildSmoothPath(points, 'yApparent') : '';
   const areaPath = `${linePath} L ${width - paddingX},${height} L ${paddingX},${height} Z`;
-  const maxPrecipInChart = layer === 'rain' ? Math.max(...data.map(d => d.precip || 0), 5) : 0; 
+
+  // Secondary Lines (Comparison)
+  let gfsPath = "";
+  let iconPath = "";
+
+  if (comparisonData) {
+      if (comparisonData.gfs && comparisonData.gfs.length > 0) {
+          const gfsPoints = comparisonData.gfs.map((d, i) => ({
+              x: paddingX + (i / (comparisonData.gfs.length - 1)) * (width - 2 * paddingX),
+              y: calcY(d[dataKey])
+          }));
+          gfsPath = buildSmoothPath(gfsPoints, 'y');
+      }
+      if (comparisonData.icon && comparisonData.icon.length > 0) {
+          const iconPoints = comparisonData.icon.map((d, i) => ({
+              x: paddingX + (i / (comparisonData.icon.length - 1)) * (width - 2 * paddingX),
+              y: calcY(d[dataKey])
+          }));
+          iconPath = buildSmoothPath(iconPoints, 'y');
+      }
+  }
+
   const hoverData = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : null;
 
   return (
@@ -959,7 +1005,6 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
       <div className="absolute top-2 left-4 text-xs font-bold text-slate-400 uppercase tracking-wider z-10 flex items-center gap-2">
          <span className={`w-2 h-2 rounded-full`} style={{backgroundColor: currentConfig.color}}></span>
          {currentConfig.title}
-         {layer === 'temp' && <span className="text-[10px] text-slate-500 flex items-center gap-1 ml-2"><span className="w-3 h-0.5 border-t border-slate-500 border-dashed"></span> {t.feelsLike}</span>}
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto drop-shadow-lg" preserveAspectRatio="none">
         <defs>
@@ -969,42 +1014,36 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
           </linearGradient>
         </defs>
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-        {layer === 'rain' && points.map((p, i) => {
-            const barHeight = ((p.precip || 0) / maxPrecipInChart) * (height - paddingY);
-            return (<g key={`bar-${i}`}>{barHeight > 0 && (<rect x={p.x - 6} y={height - paddingY - barHeight} width="12" height={barHeight} fill="#60a5fa" opacity="0.3" rx="2" />)}</g>);
-        })}
+        
+        {/* Fill Area (Main Model only) */}
         <path d={areaPath} fill={`url(#gradient-${layer})`} />
+
+        {/* Comparison Lines (Rendered before Main so Main is on top) */}
+        {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />}
+        {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />}
+
+        {/* Main Line */}
         <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        {layer === 'temp' && (
-           <path d={apparentPath} fill="none" stroke={currentConfig.color} strokeWidth="1.5" strokeDasharray="4 4" strokeOpacity="0.6" strokeLinecap="round" strokeLinejoin="round" />
-        )}
+        
+        {/* Interactivity Overlay */}
         {points.map((p, i) => (
           <g key={i} onMouseEnter={() => setHoveredIndex(i)}>
             <rect x={p.x - (width / points.length / 2)} y={0} width={width / points.length} height={height} fill="transparent" className="cursor-crosshair"/>
-            {/* Wind Arrows */}
-            {layer === 'wind' && (i % 2 === 0) && (
-               <g transform={`translate(${p.x}, ${height - 15}) rotate(${p.windDir || 0})`}>
-                 <path d="M0 -4 L3 4 L0 2 L-3 4 Z" fill="#64748b" />
-               </g>
-            )}
-            
-            {/* Hour Labels for ALL charts */}
+            {/* Hour Labels */}
             {(i % (points.length > 12 ? 3 : 1) === 0) && (
               <text x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">{new Date(p.time).getHours()}h</text>
             )}
           </g>
         ))}
+
         {hoverData && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
             <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
-            {layer === 'temp' && ( <circle cx={hoverData.x} cy={hoverData.yApparent} r="3" fill="#0f172a" stroke={currentConfig.color} strokeWidth="2" /> )}
             <g transform={`translate(${Math.min(width - 60, Math.max(60, hoverData.x))}, ${Math.min(height - 40, Math.max(20, hoverData.y - 35))})`}>
-               <rect x="-40" y="-22" width="80" height={layer === 'temp' ? 44 : 34} rx="6" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" />
+               <rect x="-40" y="-22" width="80" height={34} rx="6" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" />
                <text x="0" y="0" dy="5" textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">{Math.round(hoverData.value)}{unit}</text>
-               {layer === 'temp' && ( <text x="0" y="16" textAnchor="middle" fill="#94a3b8" fontSize="10">{t.feelsLike}: {Math.round(hoverData.apparent)}°</text> )}
             </g>
-            {layer === 'rain' && hoverData.precip > 0 && ( <text x={hoverData.x + 8} y={height - paddingY - 5} textAnchor="start" fill="#93c5fd" fontSize="11" fontWeight="bold">{hoverData.precip}mm</text> )}
           </g>
         )}
       </svg>
@@ -1012,17 +1051,36 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
   );
 };
 
-const HourlyForecastChart = ({ data, unit, lang = 'ca', shiftedNow }) => {
+const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedNow }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const t = TRANSLATIONS[lang];
+
   if (!data || data.length === 0) return null;
+  
   return (
     <div className="w-full overflow-x-auto custom-scrollbar relative" onMouseLeave={() => setHoveredIndex(null)}>
       <div className="min-w-[220%] md:min-w-full space-y-3 pr-4">
-        <SingleHourlyChart data={data} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={150} lang={lang} />
-        <SingleHourlyChart data={data} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-        <SingleHourlyChart data={data} layer="cloud" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-        <SingleHourlyChart data={data} layer="humidity" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-        <SingleHourlyChart data={data} layer="wind" unit="km/h" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
+        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={150} lang={lang} />
+        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
+        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="cloud" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
+        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="wind" unit="km/h" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
+      </div>
+
+      {/* LEGEND FOR MULTI-MODEL */}
+      <div className="flex justify-center items-center gap-4 mt-4 pt-2 border-t border-white/5">
+           <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{t.modelsLegend}:</span>
+           <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-indigo-500 border border-indigo-400"></div>
+              <span className="text-xs text-slate-300">{t.modelBest}</span>
+           </div>
+           <div className="flex items-center gap-1.5">
+              <div className="w-3 h-0.5 bg-green-400"></div>
+              <span className="text-xs text-slate-300">{t.modelGfs}</span>
+           </div>
+           <div className="flex items-center gap-1.5">
+              <div className="w-3 h-0.5 bg-amber-400"></div>
+              <span className="text-xs text-slate-300">{t.modelIcon}</span>
+           </div>
       </div>
     </div>
   );
@@ -1430,6 +1488,75 @@ export default function MeteoIA() {
     } else { setError("Geolocalització no suportada."); }
   };
 
+  // NORMALIZE MULTI-MODEL DATA helper
+  const normalizeModelData = (data) => {
+     // If we request multiple models, Open-Meteo suffixes variables with model name
+     // e.g. temperature_2m_best_match, temperature_2m_ecmwf_ifs4
+     // We want to extract 'best_match' (or standard) as main, and others as comparison
+     
+     const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] } };
+     
+     // 1. Process Current (Usually straightforward or just Best Match)
+     Object.keys(data.current).forEach(key => {
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
+           result.current[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.current[key];
+        } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
+           result.current[key] = data.current[key];
+        }
+     });
+
+     // 2. Process Daily (Same logic)
+     Object.keys(data.daily).forEach(key => {
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
+           result.daily[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.daily[key];
+        } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
+           result.daily[key] = data.daily[key];
+        }
+     });
+
+     // 3. Process Hourly & Build Comparison
+     // Initialize arrays
+     const gfsHourly = [];
+     const iconHourly = [];
+     const len = data.hourly.time.length;
+     
+     for (let i = 0; i < len; i++) {
+        gfsHourly.push({});
+        iconHourly.push({});
+     }
+
+     Object.keys(data.hourly).forEach(key => {
+        const val = data.hourly[key];
+        
+        // MAIN DATA (Best Match / ECMWF)
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
+           result.hourly[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = val;
+        } 
+        // METADATA
+        else if (key === 'time' || key === 'is_day') {
+           result.hourly[key] = val;
+        }
+        // GFS
+        else if (key.includes('_gfs_seamless')) {
+           const cleanKey = key.replace('_gfs_seamless', '');
+           val.forEach((v, i) => gfsHourly[i][cleanKey] = v);
+        }
+        // ICON
+        else if (key.includes('_icon_seamless')) {
+            const cleanKey = key.replace('_icon_seamless', '');
+            val.forEach((v, i) => iconHourly[i][cleanKey] = v);
+        }
+     });
+
+     result.hourlyComparison.gfs = gfsHourly;
+     result.hourlyComparison.icon = iconHourly;
+     
+     // Fallback if strict suffixing wasn't present (e.g. standard request)
+     if (Object.keys(result.current).length === 0) return data;
+     
+     return { ...data, ...result };
+  };
+
   const fetchWeatherByCoords = async (lat, lon, name, country = "") => {
     setLoading(true);
     setError(null);
@@ -1439,19 +1566,22 @@ export default function MeteoIA() {
     setQuery(""); 
     
     try {
-      // MODIFICACIÓ CLAU: 'best_match' usa automàticament els models ECMWF, GFS i ICON segons la regió
-      // No cal especificar-los manualment per obtenir el "consenso" (és l'opció més robusta)
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation,weather_code`;
+      // REQUEST ALL 3 MAJOR MODELS: ECMWF (Best Match default), GFS, ICON
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
       
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`)
       ]);
+      
       if (!weatherRes.ok) throw new Error(`Error satèl·lit: ${weatherRes.status}`);
-      const weatherData = await weatherRes.json();
+      const rawWeatherData = await weatherRes.json();
       const aqiData = await aqiRes.json();
       
-      setWeatherData({ ...weatherData, location: { name, country, latitude: lat, longitude: lon } });
+      // NORMALIZE DATA FOR APP CONSUMPTION
+      const processedWeatherData = normalizeModelData(rawWeatherData);
+
+      setWeatherData({ ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } });
       setAqiData(aqiData);
     } catch (err) {
       console.error(err);
@@ -1471,24 +1601,14 @@ export default function MeteoIA() {
   // DADES DE PRECISIÓ (Next Hour)
   // Busquem les dades minutely que corresponen a "Ara"
   const minutelyPreciseData = useMemo(() => {
-    if (!weatherData || !weatherData.minutely_15) return [];
+    // GUARD ADDED: Prevent slice error if minutely_15 or precipitation is missing
+    if (!weatherData || !weatherData.minutely_15 || !weatherData.minutely_15.precipitation) return [];
     
     // Convertim l'hora actual (shifted) a timestamp per buscar
     const currentMs = shiftedNow.getTime();
     
-    // MODIFIED: Find index of the interval that COVERS the current time
-    // minutely_15 times are usually start times of intervals.
-    // e.g. 10:00, 10:15. If now is 10:10, we want the 10:00 interval (index 0 if array starts at 10:00).
-    // Array.findIndex finds the first element satisfying condition.
-    // We want the last element that is <= currentMs.
-    // Equivalent: First element > currentMs, minus 1.
-    
     const times = weatherData.minutely_15.time.map(t => new Date(t).getTime());
     let idx = times.findIndex(t => t > currentMs);
-    
-    // If idx is 0, it means all times are in future (unlikely for current forecast response).
-    // If idx is -1, all times are past or current is after last slot.
-    // The current interval is at idx - 1.
     let currentIdx = (idx === -1) ? times.length - 1 : Math.max(0, idx - 1);
     
     // Return slice starting from current interval
@@ -1521,18 +1641,10 @@ export default function MeteoIA() {
         hourlyPrecip = weatherData.hourly.precipitation[hourIdx] || 0;
     }
 
-    // RAIN OVERRIDE LOGIC
-    // Force Rain if:
-    // - Current API says > 0mm
-    // - Minutely radar says > 0mm (now)
-    // - Hourly forecast says > 0.1mm for this hour
-    // - Hourly probability is High (>45%) AND we are currently "Cloudy" (models often hide rain in clouds)
-    
     const hasRainData = currentPrecip > 0 || immediateRain > 0 || hourlyPrecip > 0.1;
     const highRainRisk = hourlyRainProb >= 45; // Baixem umbral per ser més sensibles (usuari vol "afinar")
 
     if ((hasRainData || highRainRisk) && currentCode < 50) {
-        // Return slight rain (61) or drizzle (51) depending on intensity/prob
         if (hourlyPrecip > 2 || immediateRain > 1) return 63; // Moderate
         return 61; // Slight rain fallback
     }
@@ -1552,7 +1664,8 @@ export default function MeteoIA() {
 
 
   const chartData = useMemo(() => {
-    if (!weatherData) return [];
+    // GUARD ADDED: Prevent slice error if hourly data is incomplete
+    if (!weatherData || !weatherData.hourly || !weatherData.hourly.temperature_2m || !weatherData.hourly.time) return [];
     
     // Utilitzem l'hora desplaçada (local del lloc) per saber on comença la gràfica
     const nowLocalHour = shiftedNow.getHours();
@@ -1563,22 +1676,54 @@ export default function MeteoIA() {
     const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
     let startIndex = 0;
     if (idx !== -1) startIndex = Math.max(0, idx);
+    const endIndex = startIndex + 24;
 
-    return weatherData.hourly.temperature_2m.slice(startIndex, startIndex + 24).map((temp, i) => ({
+    const mainData = weatherData.hourly.temperature_2m.slice(startIndex, endIndex).map((temp, i) => ({
       temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
       apparent: unit === 'F' ? Math.round((weatherData.hourly.apparent_temperature[startIndex + i] * 9/5) + 32) : weatherData.hourly.apparent_temperature[startIndex + i],
       rain: weatherData.hourly.precipitation_probability[startIndex + i],
       precip: weatherData.hourly.precipitation[startIndex + i], 
       wind: weatherData.hourly.wind_speed_10m[startIndex + i],
-      gusts: weatherData.hourly.wind_gusts_10m[startIndex + i], // ADDED GUSTS
+      gusts: weatherData.hourly.wind_gusts_10m[startIndex + i],
       windDir: weatherData.hourly.wind_direction_10m[startIndex + i], 
       cloud: weatherData.hourly.cloud_cover[startIndex + i],
       humidity: weatherData.hourly.relative_humidity_2m[startIndex + i], 
-      uv: weatherData.hourly.uv_index[startIndex + i], // ADDED UV
-      isDay: weatherData.hourly.is_day[startIndex + i], // ADDED IS_DAY FOR HOURLY
+      uv: weatherData.hourly.uv_index[startIndex + i],
+      isDay: weatherData.hourly.is_day[startIndex + i],
       time: weatherData.hourly.time[startIndex + i],
       code: weatherData.hourly.weather_code[startIndex + i]
     }));
+
+    return mainData;
+  }, [weatherData, unit, shiftedNow]);
+
+  // PREPARE COMPARISON DATA SLICES
+  const comparisonData = useMemo(() => {
+      if (!weatherData || !weatherData.hourlyComparison) return null;
+      
+      const nowTime = shiftedNow.getTime();
+      const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
+      let startIndex = 0;
+      if (idx !== -1) startIndex = Math.max(0, idx);
+      const endIndex = startIndex + 24;
+
+      const sliceModel = (modelData) => {
+         if(!modelData) return [];
+         return modelData.slice(startIndex, endIndex).map((d, i) => ({
+             temp: unit === 'F' ? Math.round((d.temperature_2m * 9/5) + 32) : d.temperature_2m,
+             rain: d.precipitation_probability,
+             wind: d.wind_speed_10m,
+             cloud: d.cloud_cover,
+             humidity: d.relative_humidity_2m,
+             time: weatherData.hourly.time[startIndex + i]
+         }));
+      };
+
+      return {
+          gfs: sliceModel(weatherData.hourlyComparison.gfs),
+          icon: sliceModel(weatherData.hourlyComparison.icon)
+      };
+
   }, [weatherData, unit, shiftedNow]);
 
   const weeklyExtremes = useMemo(() => {
@@ -1606,7 +1751,9 @@ export default function MeteoIA() {
   };
 
   const DayDetailModal = () => {
-    if (selectedDayIndex === null || !weatherData) return null;
+    // GUARD ADDED: Prevent crash if hourly data is missing
+    if (selectedDayIndex === null || !weatherData || !weatherData.hourly || !weatherData.hourly.temperature_2m) return null;
+    
     const dayIdx = selectedDayIndex;
     const dateStr = weatherData.daily.time[dayIdx];
 
@@ -1656,7 +1803,7 @@ export default function MeteoIA() {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Conditional Hourly Chart in Modal */}
+            {/* Conditional Hourly Chart in Modal - PASS COMPARISON DATA IF EXPERT */}
             {viewMode === 'expert' && (
               <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
                 <div className="flex items-center justify-between mb-4">
@@ -1664,6 +1811,7 @@ export default function MeteoIA() {
                      <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution}
                    </div>
                 </div>
+                {/* NOTA: Modal charts may be cluttered with comparison, but we can pass it if we want full consistency. For now, keep it simple in modal or use same component */}
                 <HourlyForecastChart data={dayHourlyData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
               </div>
             )}
@@ -2114,9 +2262,14 @@ export default function MeteoIA() {
                   <div className="lg:col-span-2 bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
                        <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
+                       {/* Badge Indicating Multi-Model */}
+                       <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/20 rounded-full border border-indigo-500/30">
+                          <GitGraph className="w-3 h-3 text-indigo-300" />
+                          <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">{t.modeExpert} - 3 Models</span>
+                       </div>
                      </div>
                      
-                     <HourlyForecastChart data={chartData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
+                     <HourlyForecastChart data={chartData} comparisonData={comparisonData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
 
                      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
                   </div>
