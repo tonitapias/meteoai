@@ -536,6 +536,25 @@ const WeatherParticles = ({ code }) => {
   );
 };
 
+// --- ICONA VARIABLE: SOL/LLUNA + NÚVOL + LLAMP ---
+const VariableWeatherIcon = ({ isDay, className, ...props }) => {
+  return (
+    <div className={`${className} relative flex items-center justify-center`} {...props}>
+      {/* Sun/Moon Layer - Offset to Top Right */}
+      <div className="absolute top-[-10%] right-[-10%] w-[55%] h-[55%] z-0">
+         {isDay ? (
+           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[spin_12s_linear_infinite]" strokeWidth={2} />
+         ) : (
+           <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
+         )}
+      </div>
+      
+      {/* Main Cloud Layer with Lightning */}
+      <CloudLightning className="w-full h-full text-purple-400 fill-purple-400/20 animate-pulse relative z-10" strokeWidth={2} />
+    </div>
+  );
+};
+
 // --- Subcomponent Efecte Escriptura Corregit ---
 const TypewriterText = ({ text }) => {
   const [displayedText, setDisplayedText] = useState('');
@@ -1080,8 +1099,8 @@ export default function MeteoIA() {
     // 85-86: Ruixats de neu
     if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
 
-    // 95-99: Tempesta
-    if (code >= 95) return <CloudLightning {...commonProps} className={`${commonProps.className} text-purple-400 fill-purple-400/20 animate-pulse`} />;
+    // 95-99: Tempesta (Custom Icon with Sun/Moon + Cloud + Lightning)
+    if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
     
     // Fallback
     return <Cloud {...commonProps} className={`${commonProps.className} text-gray-300 fill-gray-300/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
