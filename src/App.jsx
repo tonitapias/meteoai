@@ -6,7 +6,7 @@ import {
   LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
   ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, Calendar, Clock,
   Layers, ThermometerSnowflake, AlertCircle, CloudSnow, Moon, Compass, Globe, Flower2,
-  LayoutTemplate, LayoutDashboard, GitGraph
+  LayoutTemplate, LayoutDashboard, GitGraph, Mountain
 } from 'lucide-react';
 
 // --- SISTEMA DE TRADUCCIONS MILLORAT ---
@@ -28,6 +28,7 @@ const TRANSLATIONS = {
     wind: "Vent",
     cloud: "Cobertura",
     humidity: "Humitat",
+    snowLevel: "Cota de neu",
     forecast7days: "Previsió 7 Dies",
     today: "Avui",
     detailedForecast: "Previsió detallada",
@@ -177,6 +178,7 @@ const TRANSLATIONS = {
     wind: "Viento",
     cloud: "Cobertura",
     humidity: "Humedad",
+    snowLevel: "Cota de nieve",
     forecast7days: "Previsión 7 Días",
     today: "Hoy",
     detailedForecast: "Previsión detallada",
@@ -322,6 +324,7 @@ const TRANSLATIONS = {
     wind: "Wind",
     cloud: "Cloud Cover",
     humidity: "Humidity",
+    snowLevel: "Snow Level",
     forecast7days: "7-Day Forecast",
     today: "Today",
     detailedForecast: "Detailed Forecast",
@@ -467,6 +470,7 @@ const TRANSLATIONS = {
     wind: "Vent",
     cloud: "Couverture",
     humidity: "Humidité",
+    snowLevel: "Limite neige",
     forecast7days: "Prévisions 7 Jours",
     today: "Aujourd'hui",
     detailedForecast: "Prévisions détaillées",
@@ -921,7 +925,8 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
     rain: { key: 'rain', color: '#3b82f6', gradientStart: '#3b82f6', title: t.rainProb },
     wind: { key: 'wind', color: '#2dd4bf', gradientStart: '#2dd4bf', title: t.wind },
     cloud: { key: 'cloud', color: '#94a3b8', gradientStart: '#94a3b8', title: t.cloud },
-    humidity: { key: 'humidity', color: '#22d3ee', gradientStart: '#22d3ee', title: t.humidity }
+    humidity: { key: 'humidity', color: '#22d3ee', gradientStart: '#22d3ee', title: t.humidity },
+    snowLevel: { key: 'snowLevel', color: '#e2e8f0', gradientStart: '#cbd5e1', title: t.snowLevel }
   };
 
   const currentConfig = layersConfig[layer];
@@ -931,15 +936,15 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   const paddingY = 30;
 
   // Gather values from ALL models to set Scale
-  const values = data.map(d => d[dataKey]);
+  const values = data.map(d => d[dataKey] || 0);
   let allValues = [...values];
   
   if (comparisonData && comparisonData.gfs) {
-     const gfsVals = comparisonData.gfs.map(d => d[dataKey]);
+     const gfsVals = comparisonData.gfs.map(d => d[dataKey] || 0);
      allValues = [...allValues, ...gfsVals];
   }
   if (comparisonData && comparisonData.icon) {
-     const iconVals = comparisonData.icon.map(d => d[dataKey]);
+     const iconVals = comparisonData.icon.map(d => d[dataKey] || 0);
      allValues = [...allValues, ...iconVals];
   }
 
@@ -956,6 +961,9 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   } else if (layer === 'wind') {
     minVal = 0; 
     maxVal = Math.max(maxVal, 20);
+  } else if (layer === 'snowLevel') {
+    minVal = Math.max(0, minVal - 500);
+    maxVal = maxVal + 500;
   }
   
   const range = maxVal - minVal || 1;
@@ -965,8 +973,8 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
 
   const points = data.map((d, i) => ({
     x: paddingX + (i / (data.length - 1)) * (width - 2 * paddingX),
-    y: calcY(d[dataKey]),
-    value: d[dataKey],
+    y: calcY(d[dataKey] || 0),
+    value: d[dataKey] || 0,
     ...d
   }));
 
@@ -990,18 +998,18 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   let gfsPath = "";
   let iconPath = "";
 
-  if (comparisonData) {
+  if (comparisonData && layer !== 'snowLevel') { // Skip compare for snowLevel mostly to avoid clutter
       if (comparisonData.gfs && comparisonData.gfs.length > 0) {
           const gfsPoints = comparisonData.gfs.map((d, i) => ({
               x: paddingX + (i / (comparisonData.gfs.length - 1)) * (width - 2 * paddingX),
-              y: calcY(d[dataKey])
+              y: calcY(d[dataKey] || 0)
           }));
           gfsPath = buildSmoothPath(gfsPoints, 'y');
       }
       if (comparisonData.icon && comparisonData.icon.length > 0) {
           const iconPoints = comparisonData.icon.map((d, i) => ({
               x: paddingX + (i / (comparisonData.icon.length - 1)) * (width - 2 * paddingX),
-              y: calcY(d[dataKey])
+              y: calcY(d[dataKey] || 0)
           }));
           iconPath = buildSmoothPath(iconPoints, 'y');
       }
@@ -1071,8 +1079,8 @@ const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedN
       <div className="min-w-[220%] md:min-w-full space-y-3 pr-4">
         <SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={150} lang={lang} />
         <SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="cloud" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
         <SingleHourlyChart data={data} comparisonData={comparisonData} layer="wind" unit="km/h" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
+        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="snowLevel" unit="m" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
       </div>
 
       {/* LEGEND FOR MULTI-MODEL */}
@@ -1552,8 +1560,8 @@ export default function MeteoIA() {
         if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
            result.hourly[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = val;
         } 
-        // METADATA
-        else if (key === 'time' || key === 'is_day') {
+        // METADATA or Standard Vars without suffixes
+        else if (key === 'time' || key === 'is_day' || key === 'freezing_level_height') {
            result.hourly[key] = val;
         }
         // GFS
@@ -1587,7 +1595,8 @@ export default function MeteoIA() {
     
     try {
       // REQUEST ALL 3 MAJOR MODELS: ECMWF (Best Match default), GFS, ICON
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
+      // ADDED freezing_level_height TO hourly REQUEST
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
       
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
@@ -1709,6 +1718,7 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startIndex + i],
       humidity: weatherData.hourly.relative_humidity_2m[startIndex + i], 
       uv: weatherData.hourly.uv_index[startIndex + i],
+      snowLevel: weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[startIndex + i] : 0,
       isDay: weatherData.hourly.is_day[startIndex + i],
       time: weatherData.hourly.time[startIndex + i],
       code: weatherData.hourly.weather_code[startIndex + i]
@@ -1801,6 +1811,7 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startHour + i],
       humidity: weatherData.hourly.relative_humidity_2m[startHour + i],
       uv: weatherData.hourly.uv_index[startHour + i],
+      snowLevel: weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[startHour + i] : 0,
       time: weatherData.hourly.time[startHour + i],
       isDay: weatherData.hourly.is_day[startHour + i],
       code: weatherData.hourly.weather_code[startHour + i]
@@ -1832,6 +1843,11 @@ export default function MeteoIA() {
     const precipSum = weatherData.daily.precipitation_sum[dayIdx];
     const snowSum = weatherData.daily.snowfall_sum[dayIdx];
     const uvIndex = weatherData.daily.uv_index_max[dayIdx];
+
+    // Calculate Min/Max Snow Level for the day
+    const freezingLevels = dayHourlyData.map(d => d.snowLevel).filter(val => val !== undefined && val !== null);
+    const minSnowLevel = freezingLevels.length ? Math.min(...freezingLevels) : 0;
+    const maxSnowLevel = freezingLevels.length ? Math.max(...freezingLevels) : 0;
 
     return (
       <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setSelectedDayIndex(null)}>
@@ -1897,6 +1913,13 @@ export default function MeteoIA() {
               
               <DetailStat label={t.windMax} value={`${weatherData.daily.wind_speed_10m_max[dayIdx]} km/h`} icon={<Wind className="w-4 h-4 text-teal-400 drop-shadow-sm fill-teal-400/20" strokeWidth={2.5}/>} />
               
+              {/* Snow Level Stat */}
+              <DetailStat 
+                 label={t.snowLevel + " (0°)"} 
+                 value={`${Math.round(minSnowLevel)} - ${Math.round(maxSnowLevel)}m`} 
+                 icon={<Mountain className="w-4 h-4 text-stone-400 drop-shadow-sm fill-stone-400/20" strokeWidth={2.5}/>} 
+              />
+
               {/* UV Visual Bar */}
               <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col items-center hover:border-slate-600 transition-colors">
                  <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide"><Sun className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.uvIndex}</div>
