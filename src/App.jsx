@@ -81,7 +81,7 @@ const TRANSLATIONS = {
     modeBasic: "Bàsic",
     modeExpert: "Extens", // Canviat d'"Expert" a "Extens"
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    preciseRain: "Previsió Minut a Minut (1h)",
+    preciseRain: "Previsió Immediata (1h)",
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actualment tenim {desc} amb {temp}°C. ",
@@ -208,7 +208,7 @@ const TRANSLATIONS = {
     modeBasic: "Básico",
     modeExpert: "Extendido", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    preciseRain: "Previsión Minuto a Minuto (1h)",
+    preciseRain: "Previsión Inmediata (1h)",
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actualmente tenemos {desc} con {temp}°C. ",
@@ -1002,21 +1002,32 @@ const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
             <CloudRain className="w-3 h-3 text-blue-400" />
             <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
         </div>
-        <div className="flex items-end gap-1 h-12 w-full">
+        <div className="flex items-end gap-2 h-16 w-full pb-1">
            {chartData.map((val, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
-                 <div className="w-full bg-blue-900/30 rounded-sm relative h-full overflow-hidden">
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
+                 
+                 {/* VALUE DISPLAY (FIXED: SHOW DATA) */}
+                 {val > 0 && (
+                    <span className="text-[9px] font-bold text-blue-200 mb-0.5 animate-in slide-in-from-bottom-1">
+                        {val >= 10 ? Math.round(val) : val.toFixed(1)}
+                    </span>
+                 )}
+
+                 <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
                     <div 
-                      className="absolute bottom-0 left-0 right-0 bg-blue-400 rounded-sm transition-all group-hover:bg-blue-300"
-                      style={{ height: `${(val / max) * 100}%` }}
+                      className="w-full bg-blue-400 rounded-sm transition-all group-hover:bg-blue-300"
+                      style={{ height: `${(val / max) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
                     ></div>
                  </div>
-                 <span className="text-[9px] text-slate-400 font-medium">+{15 * (i+1)}m</span>
+                 <span className="text-[9px] text-slate-400 font-medium">
+                    {i === 0 ? 'Ara' : `+${i * 15}m`}
+                 </span>
               </div>
            ))}
         </div>
-        <div className="text-[9px] text-center text-blue-400/70 mt-1">
-           Intensitat prevista (mm)
+        <div className="flex justify-between items-center text-[9px] text-blue-400/70 mt-1 px-1">
+           <span>Intensitat (mm)</span>
+           <span>Previsió 1h</span>
         </div>
     </div>
   )
