@@ -121,5 +121,5 @@ Desenvolupat amb ❤️ per **Toni Tapias**.
 * **Web**: [tonitapias.github.io/meteoai](https://tonitapias.github.io/meteoai/)
 
 <p align="center">  
-Si t'agrada aquest projecte, considera donar-li una estrella ⭐ al repositori\!  
+Si t'agrada aquest projecte, considera donar-li una estrella ⭐ al repositori!  
 </p>
