@@ -16,17 +16,17 @@ const TRANSLATIONS = {
     favorites: "Llocs Preferits",
     now: "Ara",
     updatedNow: "Actualitzat ara",
-    feelsLike: "Sensació de",
-    aiAnalysis: "Anàlisi Detallat",
-    aiConfidence: "Precisió Alta",
-    aiConfidenceMod: "Precisió Mitjana",
-    aiConfidenceLow: "Precisió Baixa",
-    generatingTips: "Analitzant dades...",
+    feelsLike: "Sensació",
+    aiAnalysis: "Anàlisi Meteo IA",
+    aiConfidence: "Consens Models",
+    aiConfidenceMod: "Divergència Models",
+    aiConfidenceLow: "Incertesa Alta",
+    generatingTips: "Processant models meteorològics (ECMWF, GFS, ICON)...",
     trend24h: "Tendència 24h",
     temp: "Temperatura",
     rain: "Pluja",
     wind: "Vent",
-    cloud: "Cobertura de Núvols",
+    cloud: "Cobertura",
     humidity: "Humitat",
     forecast7days: "Previsió 7 Dies",
     today: "Avui",
@@ -42,7 +42,7 @@ const TRANSLATIONS = {
     sunset: "Posta Sol",
     moon: "Lluna",
     pressure: "Pressió",
-    aqi: "AQI",
+    aqi: "Qualitat Aire",
     index: "Index",
     moonPhase: "Fase Lunar",
     illumination: "Il·luminada",
@@ -67,7 +67,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "La previsió meteorològica reinventada amb Intel·ligència Artificial.",
+    subtitle: "Previsió multi-model interpretada per Intel·ligència Artificial.",
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
     pollenTypes: {
@@ -79,33 +79,46 @@ const TRANSLATIONS = {
       ragweed: "Ambròsia"
     },
     modeBasic: "Bàsic",
-    modeExpert: "Extens", // Canviat d'"Expert" a "Extens"
+    modeExpert: "Extens", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsió Immediata (1h)",
     
-    // AI Advanced Texts (Data-Driven)
-    aiStatus: "Actualment tenim {desc} amb {temp}°C. ",
-    aiFeelsLikeHigh: "La sensació és superior ({feels}°C) degut a la humitat. ",
-    aiFeelsLikeLow: "El vent de {speed} km/h fa baixar la sensació a {feels}°C. ",
-    aiRainNow: "Està plovent ({precip} mm/h). ",
-    aiRainSoon: "S'espera pluja en {min} minuts. ",
-    aiRainStop: "La pluja s'aturarà en {min} minuts. ",
-    aiDailySummary: "Màximes de {max}°C i mínimes de {min}°C per avui. ",
-    aiUVWarning: "Atenció a l'índex UV {uv} al migdia. ",
+    // AI Advanced Texts (Data-Driven - RENOVATS)
+    aiIntroMorning: "Bon dia. ",
+    aiIntroAfternoon: "Bona tarda. ",
+    aiIntroEvening: "Bon vespre. ",
+    aiIntroNight: "Bona nit. ",
+    
+    aiSummaryClear: "Els models indiquen un dia plàcid i assolellat. ",
+    aiSummaryCloudy: "Domini dels núvols, però sense precipitacions importants previstes. ",
+    aiSummaryRain: "Tenim un front actiu deixant precipitacions. ",
+    aiSummaryStorm: "Inestabilitat acusada amb risc de tempestes. ",
+    aiSummarySnow: "Ambient d'hivern rigorós amb nevades. ",
+    
+    aiTempStable: "Temperatures sense grans canvis. ",
+    aiTempRising: "Ambient clarament més càlid que ahir. ",
+    aiTempFalling: "Davallada tèrmica notable. ",
+    
+    aiWindLight: "Vent en calma. ",
+    aiWindMod: "Vent moderat que augmenta la sensació de fred. ",
+    aiWindStrong: "Precaució amb les ratxes de vent fortes. ",
+    
+    aiRainNone: "No s'espera pluja les pròximes hores. ",
+    aiRainExp: "S'aproximen pluges en breu. ",
     
     // WMO Codes Descriptions
     wmo: {
       0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
-      45: "boira", 48: "boira gebradora",
-      51: "plugim lleuger", 53: "plugim moderat", 55: "plugim dens",
-      56: "plugim gebrador lleuger", 57: "plugim gebrador dens",
-      61: "pluja lleugera", 63: "pluja moderada", 65: "pluja forta",
-      66: "pluja gebradora lleugera", 67: "pluja gebradora forta",
-      71: "nevada lleugera", 73: "nevada moderada", 75: "nevada forta",
+      45: "bancs de boira", 48: "boira gebradora",
+      51: "plugim feble", 53: "plugim moderat", 55: "plugim persistent",
+      56: "plugim gèlid", 57: "plugim gèlid intens",
+      61: "pluja feble", 63: "pluja moderada", 65: "pluja forta",
+      66: "pluja gelada", 67: "pluja gelada forta",
+      71: "nevada feble", 73: "nevada moderada", 75: "nevada forta",
       77: "ruixats de neu",
-      80: "ruixats de pluja lleugers", 81: "ruixats de pluja moderats", 82: "ruixats violents",
-      85: "ruixats de neu lleugers", 86: "ruixats de neu forts",
-      95: "tempesta", 96: "tempesta amb calamarsa lleugera", 99: "tempesta amb calamarsa forta"
+      80: "ruixats", 81: "xàfecs moderats", 82: "aiguats violents",
+      85: "ruixats de neu", 86: "ruixats de neu forts",
+      95: "tempesta elèctrica", 96: "tempesta amb calamarsa", 99: "tempesta severa amb calamarsa"
     },
 
     alertStorm: "Risc elèctric elevat i pluges intenses.",
@@ -123,9 +136,11 @@ const TRANSLATIONS = {
     tipThermal: "Roba tèrmica",
     tipWindbreaker: "Tallavents",
     tipMugginess: "Roba fresca",
-    tipUmbrella: "Paraigua",
+    tipUmbrella: "Agafa paraigua",
     tipSunscreen: "Crema solar",
     tipCalm: "Gaudeix",
+    tipCoat: "Abric gruixut",
+    tipLayers: "Vesteix per capes",
     
     moonPhases: {
       new: "Lluna Nova",
@@ -143,17 +158,17 @@ const TRANSLATIONS = {
     favorites: "Lugares Favoritos",
     now: "Ahora",
     updatedNow: "Actualizado ahora",
-    feelsLike: "Sensación de",
-    aiAnalysis: "Análisis Detallado",
-    aiConfidence: "Precisión Alta",
-    aiConfidenceMod: "Precisión Media",
-    aiConfidenceLow: "Precisión Baja",
-    generatingTips: "Procesando datos...",
+    feelsLike: "Sensación",
+    aiAnalysis: "Análisis Meteo IA",
+    aiConfidence: "Consenso Modelos",
+    aiConfidenceMod: "Divergencia Modelos",
+    aiConfidenceLow: "Incertidumbre Alta",
+    generatingTips: "Procesando modelos meteorológicos (ECMWF, GFS, ICON)...",
     trend24h: "Tendencia 24h",
     temp: "Temperatura",
     rain: "Lluvia",
     wind: "Viento",
-    cloud: "Cobertura de Nubes",
+    cloud: "Cobertura",
     humidity: "Humedad",
     forecast7days: "Previsión 7 Días",
     today: "Hoy",
@@ -169,7 +184,7 @@ const TRANSLATIONS = {
     sunset: "Puesta Sol",
     moon: "Luna",
     pressure: "Presión",
-    aqi: "AQI",
+    aqi: "Calidad Aire",
     index: "Índice",
     moonPhase: "Fase Lunar",
     illumination: "Iluminada",
@@ -194,7 +209,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
     alertWarning: "AVISO PRECAUCIÓN",
-    subtitle: "La previsión meteorológica reinventada con Inteligencia Artificial.",
+    subtitle: "Previsión multi-modelo interpretada por Inteligencia Artificial.",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
     pollenTypes: {
@@ -206,32 +221,44 @@ const TRANSLATIONS = {
       ragweed: "Ambrosía"
     },
     modeBasic: "Básico",
-    modeExpert: "Extendido", // Adaptat per coherència
+    modeExpert: "Extendido", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsión Inmediata (1h)",
     
-    // AI Advanced Texts (Data-Driven)
-    aiStatus: "Actualmente tenemos {desc} con {temp}°C. ",
-    aiFeelsLikeHigh: "La sensación es mayor ({feels}°C) debido a la humedad. ",
-    aiFeelsLikeLow: "El viento de {speed} km/h baja la sensación a {feels}°C. ",
-    aiRainNow: "Está lloviendo ({precip} mm/h). ",
-    aiRainSoon: "Se espera lluvia en {min} minutos. ",
-    aiRainStop: "La lluvia parará en {min} minutos. ",
-    aiDailySummary: "Máximas de {max}°C y mínimas de {min}°C para hoy. ",
-    aiUVWarning: "Atención al índice UV {uv} al mediodía. ",
+    aiIntroMorning: "Buenos días. ",
+    aiIntroAfternoon: "Buenas tardes. ",
+    aiIntroEvening: "Buenas noches. ",
+    aiIntroNight: "Buenas noches. ",
+    
+    aiSummaryClear: "Los modelos indican un día plácido y soleado. ",
+    aiSummaryCloudy: "Dominio de las nubes, pero sin precipitaciones importantes previstas. ",
+    aiSummaryRain: "Tenemos un frente activo dejando precipitaciones. ",
+    aiSummaryStorm: "Inestabilidad acusada con riesgo de tormentas. ",
+    aiSummarySnow: "Ambiente de invierno riguroso con nevadas. ",
+    
+    aiTempStable: "Temperaturas sin grandes cambios. ",
+    aiTempRising: "Ambiente claramente más cálido que ayer. ",
+    aiTempFalling: "Bajada térmica notable. ",
+    
+    aiWindLight: "Viento en calma. ",
+    aiWindMod: "Viento moderado que aumenta la sensación de frío. ",
+    aiWindStrong: "Precaución con las rachas de viento fuertes. ",
+    
+    aiRainNone: "No se espera lluvia en las próximas horas. ",
+    aiRainExp: "Se aproximan lluvias en breve. ",
 
     wmo: {
       0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
-      45: "niebla", 48: "niebla helada",
-      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna densa",
-      56: "llovizna helada ligera", 57: "llovizna helada densa",
+      45: "bancos de niebla", 48: "niebla helada",
+      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna persistente",
+      56: "llovizna helada", 57: "llovizna helada intensa",
       61: "lluvia ligera", 63: "lluvia moderada", 65: "lluvia fuerte",
-      66: "lluvia helada ligera", 67: "lluvia helada fuerte",
+      66: "lluvia helada", 67: "lluvia helada fuerte",
       71: "nevada ligera", 73: "nevada moderada", 75: "nevada fuerte",
       77: "chubascos de nieve",
-      80: "chubascos ligeros", 81: "chubascos moderados", 82: "chubascos violentos",
-      85: "chubascos de nieve ligeros", 86: "chubascos de nieve fuertes",
-      95: "tormenta", 96: "tormenta con granizo ligero", 99: "tormenta con granizo fuerte"
+      80: "chubascos", 81: "chubascos moderados", 82: "aguaceros violentos",
+      85: "chubascos de nieve", 86: "chubascos de nieve fuertes",
+      95: "tormenta eléctrica", 96: "tormenta con granizo", 99: "tormenta severa con granizo"
     },
     
     alertStorm: "Riesgo eléctrico elevado y lluvias intensas.",
@@ -248,9 +275,12 @@ const TRANSLATIONS = {
     tipThermal: "Ropa térmica",
     tipWindbreaker: "Cortavientos",
     tipMugginess: "Ropa fresca",
-    tipUmbrella: "Paraguas",
+    tipUmbrella: "Coge paraguas",
     tipSunscreen: "Protector solar",
     tipCalm: "Disfruta",
+    tipCoat: "Abrigo grueso",
+    tipLayers: "Viste por capas",
+
     moonPhases: {
       new: "Luna Nueva",
       waxingCrescent: "Creciente",
@@ -268,11 +298,11 @@ const TRANSLATIONS = {
     now: "Now",
     updatedNow: "Updated now",
     feelsLike: "Feels like",
-    aiAnalysis: "Detailed Analysis",
-    aiConfidence: "High Accuracy",
-    aiConfidenceMod: "Medium Accuracy",
-    aiConfidenceLow: "Low Accuracy",
-    generatingTips: "Analyzing data...",
+    aiAnalysis: "AI Meteo Analysis",
+    aiConfidence: "Model Consensus",
+    aiConfidenceMod: "Model Divergence",
+    aiConfidenceLow: "High Uncertainty",
+    generatingTips: "Processing meteorological models (ECMWF, GFS, ICON)...",
     trend24h: "24h Trend",
     temp: "Temperature",
     rain: "Rain",
@@ -293,7 +323,7 @@ const TRANSLATIONS = {
     sunset: "Sunset",
     moon: "Moon",
     pressure: "Pressure",
-    aqi: "AQI",
+    aqi: "Air Quality",
     index: "Index",
     moonPhase: "Moon Phase",
     illumination: "Illuminated",
@@ -318,7 +348,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extreme",
     alertDanger: "DANGER ALERT",
     alertWarning: "WARNING NOTICE",
-    subtitle: "Weather forecasting reinvented with Artificial Intelligence.",
+    subtitle: "Multi-model forecast interpreted by Artificial Intelligence.",
     aqiLevels: ["Excellent", "Good", "Fair", "Moderate", "Poor", "Very Poor"],
     pollen: "Pollen Levels",
     pollenTypes: {
@@ -330,19 +360,31 @@ const TRANSLATIONS = {
       ragweed: "Ragweed"
     },
     modeBasic: "Basic",
-    modeExpert: "Extended", // Adaptat per coherència
+    modeExpert: "Extended",
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     preciseRain: "Minute-by-Minute Forecast (1h)",
     
-    // AI Advanced Texts (Data-Driven)
-    aiStatus: "Currently {desc} with {temp}°C. ",
-    aiFeelsLikeHigh: "Feels warmer ({feels}°C) due to humidity. ",
-    aiFeelsLikeLow: "Wind of {speed} km/h lowers feels like to {feels}°C. ",
-    aiRainNow: "It is raining ({precip} mm/h). ",
-    aiRainSoon: "Rain expected in {min} minutes. ",
-    aiRainStop: "Rain stopping in {min} minutes. ",
-    aiDailySummary: "Highs of {max}°C and lows of {min}°C today. ",
-    aiUVWarning: "Watch out for UV index {uv} at noon. ",
+    aiIntroMorning: "Good morning. ",
+    aiIntroAfternoon: "Good afternoon. ",
+    aiIntroEvening: "Good evening. ",
+    aiIntroNight: "Good night. ",
+    
+    aiSummaryClear: "Models indicate a calm and sunny day. ",
+    aiSummaryCloudy: "Clouds dominating, but no significant rain expected. ",
+    aiSummaryRain: "An active front is passing through, bringing rain. ",
+    aiSummaryStorm: "High instability with risk of thunderstorms. ",
+    aiSummarySnow: "Rigorous winter conditions with snowfall. ",
+    
+    aiTempStable: "Temperatures stable. ",
+    aiTempRising: "Clearly warmer than yesterday. ",
+    aiTempFalling: "Significant temperature drop. ",
+    
+    aiWindLight: "Winds are calm. ",
+    aiWindMod: "Moderate wind increasing wind chill. ",
+    aiWindStrong: "Caution with strong wind gusts. ",
+    
+    aiRainNone: "No rain expected in the next few hours. ",
+    aiRainExp: "Rain approaching shortly. ",
 
     wmo: {
       0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
@@ -372,9 +414,12 @@ const TRANSLATIONS = {
     tipThermal: "Thermal wear",
     tipWindbreaker: "Windbreaker",
     tipMugginess: "Light clothes",
-    tipUmbrella: "Umbrella",
+    tipUmbrella: "Take umbrella",
     tipSunscreen: "Sunscreen",
     tipCalm: "Enjoy",
+    tipCoat: "Heavy coat",
+    tipLayers: "Wear layers",
+
     moonPhases: {
       new: "New Moon",
       waxingCrescent: "Waxing Crescent",
@@ -392,16 +437,16 @@ const TRANSLATIONS = {
     now: "Maintenant",
     updatedNow: "Mis à jour",
     feelsLike: "Ressenti",
-    aiAnalysis: "Analyse Détaillée",
-    aiConfidence: "Précision Élevée",
-    aiConfidenceMod: "Précision Moyenne",
-    aiConfidenceLow: "Précision Faible",
-    generatingTips: "Traitement des données...",
+    aiAnalysis: "Analyse Météo IA",
+    aiConfidence: "Consensus Modèles",
+    aiConfidenceMod: "Divergence Modèles",
+    aiConfidenceLow: "Incertitude Élevée",
+    generatingTips: "Traitement des modèles (ECMWF, GFS, ICON)...",
     trend24h: "Tendance 24h",
     temp: "Température",
     rain: "Pluie",
     wind: "Vent",
-    cloud: "Couverture nuageuse",
+    cloud: "Couverture",
     humidity: "Humidité",
     forecast7days: "Prévisions 7 Jours",
     today: "Aujourd'hui",
@@ -417,7 +462,7 @@ const TRANSLATIONS = {
     sunset: "Coucher soleil",
     moon: "Lune",
     pressure: "Pression",
-    aqi: "AQI",
+    aqi: "Qualité Air",
     index: "Indice",
     moonPhase: "Phase Lunaire",
     illumination: "Éclairée",
@@ -442,7 +487,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extrême",
     alertDanger: "ALERTE DANGER",
     alertWarning: "AVIS PRUDENCE",
-    subtitle: "La prévision météorologique réinventée avec l'Intelligence Artificielle.",
+    subtitle: "Prévision multi-modèle interprétée par Intelligence Artificielle.",
     aqiLevels: ["Excellent", "Bon", "Acceptable", "Modéré", "Mauvais", "Très Mauvais"],
     pollen: "Niveaux de Pollen",
     pollenTypes: {
@@ -454,19 +499,31 @@ const TRANSLATIONS = {
       ragweed: "Ambroisie"
     },
     modeBasic: "Basique",
-    modeExpert: "Étendu", // Adaptat per coherència
+    modeExpert: "Étendu", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Prévisions Minute par Minute (1h)",
     
-    // AI Advanced Texts (Data-Driven)
-    aiStatus: "Actuellement {desc} avec {temp}°C. ",
-    aiFeelsLikeHigh: "Ressenti plus chaud ({feels}°C) à cause de l'humidité. ",
-    aiFeelsLikeLow: "Le vent de {speed} km/h abaisse le ressenti à {feels}°C. ",
-    aiRainNow: "Il pleut ({precip} mm/h). ",
-    aiRainSoon: "Pluie attendue dans {min} minutes. ",
-    aiRainStop: "La pluie s'arrêtera dans {min} minutes. ",
-    aiDailySummary: "Maximales de {max}°C et minimales de {min}°C aujourd'hui. ",
-    aiUVWarning: "Attention à l'indice UV {uv} à midi. ",
+    aiIntroMorning: "Bonjour. ",
+    aiIntroAfternoon: "Bonne après-midi. ",
+    aiIntroEvening: "Bonsoir. ",
+    aiIntroNight: "Bonne nuit. ",
+    
+    aiSummaryClear: "Les modèles indiquent une journée calme et ensoleillée. ",
+    aiSummaryCloudy: "Domination nuageuse, mais pas de pluie significative prévue. ",
+    aiSummaryRain: "Un front actif traverse la zone, apportant de la pluie. ",
+    aiSummaryStorm: "Instabilité marquée avec risque d'orages. ",
+    aiSummarySnow: "Conditions hivernales rigoureuses avec chutes de neige. ",
+    
+    aiTempStable: "Températures sans grand changement. ",
+    aiTempRising: "Nettement plus chaud qu'hier. ",
+    aiTempFalling: "Chute brutale des températures. ",
+    
+    aiWindLight: "Vent calme. ",
+    aiWindMod: "Vent modéré augmentant le ressenti de froid. ",
+    aiWindStrong: "Prudence avec les fortes rafales de vent. ",
+    
+    aiRainNone: "Pas de pluie attendue dans les prochaines heures. ",
+    aiRainExp: "La pluie arrive sous peu. ",
 
     wmo: {
       0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "ciel couvert",
@@ -477,9 +534,9 @@ const TRANSLATIONS = {
       66: "pluie verglaçante légère", 67: "pluie verglaçante forte",
       71: "chute de neige faible", 73: "chute de neige modérée", 75: "chute de neige forte",
       77: "grains de neige",
-      80: "averses de pluie faibles", 81: "averses de pluie modérées", 82: "averses violentes",
-      85: "averses de neige faibles", 86: "averses de neige fortes",
-      95: "orage", 96: "orage avec grêle légère", 99: "orage avec grêle forte"
+      80: "averses", 81: "averses modérées", 82: "averses violentes",
+      85: "averses de neige", 86: "averses de neige fortes",
+      95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
     alertStorm: "Risque électrique élevé et fortes pluies.",
@@ -496,9 +553,12 @@ const TRANSLATIONS = {
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
     tipMugginess: "Lourd",
-    tipUmbrella: "Parapluie",
+    tipUmbrella: "Prenez parapluie",
     tipSunscreen: "Écran solaire",
     tipCalm: "Profitez",
+    tipCoat: "Manteau épais",
+    tipLayers: "Couches",
+
     moonPhases: {
       new: "Nouvelle Lune",
       waxingCrescent: "Premier Croissant",
@@ -571,7 +631,7 @@ const TypewriterText = ({ text }) => {
         setDisplayedText(text.slice(0, i + 1));
         i++;
       } else { clearInterval(timer); }
-    }, 20); 
+    }, 15); 
     return () => clearInterval(timer);
   }, [text]);
   return <p className="text-slate-200 font-medium leading-relaxed text-sm md:text-base min-h-[3em]">{displayedText}</p>;
@@ -1233,6 +1293,7 @@ export default function MeteoIA() {
     return getDynamicBackground(weather_code, is_day);
   };
 
+  // --- NOU ALGORTIME DE GENERACIÓ DE TEXT MÉS HUMÀ ---
   const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null) => {
     const tr = TRANSLATIONS[language];
     const feelsLike = current.apparent_temperature;
@@ -1242,111 +1303,76 @@ export default function MeteoIA() {
     const snowSum = daily.snowfall_sum && daily.snowfall_sum[0];
     const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
     const windSpeed = current.wind_speed_10m;
-    // Use forcedCode if provided (from smart minutely detection), else normal code
     const code = forcedCode !== null ? forcedCode : current.weather_code;
     const maxTemp = daily.temperature_2m_max[0];
     const minTemp = daily.temperature_2m_min[0];
     const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
     const uvMax = daily.uv_index_max[0];
+    const isDay = current.is_day;
     
     let summaryParts = [];
     let tips = [];
-    let confidenceLevel = 'high';
-    let confidenceText = tr.aiConfidence;
     let alerts = []; 
+    let confidenceText = tr.aiConfidence;
+    let confidenceLevel = 'high';
 
-    // CONFIDENCE LOGIC
+    // 1. INTRODUCCIÓ DINÀMICA
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) summaryParts.push(tr.aiIntroMorning);
+    else if (hour >= 12 && hour < 19) summaryParts.push(tr.aiIntroAfternoon);
+    else if (hour >= 19 && hour < 22) summaryParts.push(tr.aiIntroEvening);
+    else summaryParts.push(tr.aiIntroNight);
+
+    // 2. DESCRIPCIÓ GENERAL BASADA EN 3 MODELS (SIMULADA PER BEST_MATCH)
+    if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
+    else if (code >= 71) summaryParts.push(tr.aiSummarySnow);
+    else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
+    else if (code <= 2) summaryParts.push(tr.aiSummaryClear);
+    else summaryParts.push(tr.aiSummaryCloudy);
+
+    // 3. ANÀLISI DE SENSACIÓ (Wind Chill / Heat Index)
+    const diff = feelsLike - temp;
+    if (windSpeed > 15 && temp < 15) {
+       summaryParts.push(tr.aiWindMod); // Vent fa fred
+    } else if (temp > 25 && humidity > 60) {
+       // Xafogor
+       summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació de ${Math.round(feelsLike)}°C. ` : `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. `);
+    } else if (Math.abs(diff) < 2) {
+       summaryParts.push(tr.aiTempStable);
+    }
+
+    // 4. PREVISIÓ DE PLUJA IMMEDIATA (RADAR)
+    if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
+    else if (rainProb < 20 && code < 50) summaryParts.push(tr.aiRainNone);
+
+    // 5. ALERTS & CONSEJOS COMPLEXOS
+    if (windSpeed > 40) {
+      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
+      tips.push(tr.tipWindbreaker);
+    }
+    
+    if (temp < 5) {
+      if (windSpeed > 10) tips.push(tr.tipCoat, tr.tipThermal); // Fred i vent
+      else tips.push(tr.tipLayers);
+    } else if (temp > 30) {
+      tips.push(tr.tipHydration, tr.tipSunscreen);
+    }
+
+    if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
+    
+    if (uvMax > 7 && isDay) tips.push(tr.tipSunscreen);
+
+    // Confidence Logic
     if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
         confidenceLevel = 'medium';
         confidenceText = tr.aiConfidenceMod;
     }
-    if (code >= 95 || windSpeed > 60 || precip15 > 2) {
-        confidenceLevel = 'low';
-        confidenceText = tr.aiConfidenceLow;
-    }
 
-    // 1. MAIN STATUS (DATA DRIVEN)
-    // Check if wmo exists, otherwise fallback to empty string to avoid crash
-    const weatherDesc = (tr.wmo && tr.wmo[code]) || "temps variable";
-    summaryParts.push(tr.aiStatus.replace('{desc}', weatherDesc).replace('{temp}', Math.round(temp)));
-
-    // 2. PRECIPITATION NOWCAST
-    if (precip15 > 0.1 && code < 50) {
-       summaryParts.push(tr.aiRainSoon.replace('{min}', 15));
-    } else if (code >= 50 && precip15 === 0) {
-       summaryParts.push(tr.aiRainStop.replace('{min}', 15));
-    } else if (code >= 51) {
-       // If raining, showing intensity could be nice if we had precise rate, but precip15 is 15min sum
-       // Just keep status
-    }
-
-    // 3. THERMAL CONTEXT & WIND CHILL
-    const deltaTemp = temp - feelsLike;
-    if (deltaTemp > 3 && windSpeed > 10) {
-       summaryParts.push(tr.aiFeelsLikeLow.replace('{speed}', Math.round(windSpeed)).replace('{feels}', Math.round(feelsLike)));
-    } else if (feelsLike > temp + 2 && humidity > 60) {
-       summaryParts.push(tr.aiFeelsLikeHigh.replace('{feels}', Math.round(feelsLike)));
-    }
-
-    // 4. DAILY OUTLOOK
-    summaryParts.push(tr.aiDailySummary.replace('{max}', Math.round(maxTemp)).replace('{min}', Math.round(minTemp)));
-
-    // 5. UV WARNING IF HIGH
-    if (uvMax > 6) {
-       summaryParts.push(tr.aiUVWarning.replace('{uv}', Math.round(uvMax)));
-    }
-
-    // ALERTS & TIPS LOGIC (Refined)
-    if (code >= 95) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
-    if (isSnowCode(code) || snowSum > 2) {
-       alerts.push({ type: tr.snow, msg: `${tr.alertSnow} ${snowSum}cm.`, level: 'high', tips: "Cadenes" });
-       tips.push(tr.tipThermal);
-    }
-    
-    if (windSpeed > 80) {
-      alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
-      tips.push(tr.tipWindbreaker);
-    } else if (windSpeed > 40) {
-      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
-      tips.push(tr.tipWindbreaker);
-    }
-
-    if (temp > 35) {
-      alerts.push({ type: tr.sun, msg: tr.alertHeatExtreme, level: 'high' });
-      tips.push(tr.tipHydration);
-    } else if (temp > 30) {
-      alerts.push({ type: tr.sun, msg: tr.alertHeatHigh, level: 'warning' });
-      tips.push(tr.tipHydration);
-    }
-
-    if (temp < -5) {
-      alerts.push({ type: 'Fred', msg: tr.alertColdExtreme, level: 'high' });
-      tips.push(tr.tipThermal);
-    } else if (temp < 2) {
-      alerts.push({ type: 'Fred', msg: tr.alertColdHigh, level: 'warning' });
-      tips.push(tr.tipThermal);
-    }
-
-    if (rainProb > 70 || precipSum > 10) {
-       if (precipSum > 30) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
-       tips.push(tr.tipUmbrella);
-    } else if (rainProb > 30) {
-       tips.push(tr.tipUmbrella);
-    }
-
-    if (aqiValue > 100) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
-    
-    // Default tips if none
-    if (tips.length === 0) {
-       if (temp > 15 && temp < 25) tips.push(tr.tipCalm);
-       else if (temp >= 25) tips.push(tr.tipSunscreen);
-       else tips.push(tr.tipThermal);
-    }
-
-    // Deduplicate and slice tips
+    // Default tips
+    if (tips.length === 0) tips.push(tr.tipCalm);
     tips = [...new Set(tips)].slice(0, 4);
-    
-    return { text: summaryParts.join(" "), tips, confidence: confidenceText, confidenceLevel, alerts };
+
+    return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
   };
 
   useEffect(() => {
@@ -1413,8 +1439,10 @@ export default function MeteoIA() {
     setQuery(""); 
     
     try {
-      // MODIFICACIÓ CLAU: Afegim 'precipitation' a la llista de variables current per detectar pluja real
+      // MODIFICACIÓ CLAU: 'best_match' usa automàticament els models ECMWF, GFS i ICON segons la regió
+      // No cal especificar-los manualment per obtenir el "consenso" (és l'opció més robusta)
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation,weather_code`;
+      
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`)
@@ -1423,12 +1451,6 @@ export default function MeteoIA() {
       const weatherData = await weatherRes.json();
       const aqiData = await aqiRes.json();
       
-      // Pass minutely data to AI
-      const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
-      // Note: effectiveWeatherCode is calculated in render, so we pass null here initially or use base code.
-      // Ideally we would calc effective code here, but useMemo in render is safer for consistent updates with time.
-      // We will re-trigger AI generation in useEffect when effectiveWeatherCode updates.
-
       setWeatherData({ ...weatherData, location: { name, country, latitude: lat, longitude: lon } });
       setAqiData(aqiData);
     } catch (err) {
