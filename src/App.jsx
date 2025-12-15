@@ -1222,7 +1222,7 @@ export default function MeteoIA() {
     return getDynamicBackground(weather_code, is_day);
   };
 
-  const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca') => {
+  const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null) => {
     const tr = TRANSLATIONS[language];
     const feelsLike = current.apparent_temperature;
     const temp = current.temperature_2m;
@@ -1231,7 +1231,8 @@ export default function MeteoIA() {
     const snowSum = daily.snowfall_sum && daily.snowfall_sum[0];
     const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
     const windSpeed = current.wind_speed_10m;
-    const code = current.weather_code;
+    // Use forcedCode if provided (from smart minutely detection), else normal code
+    const code = forcedCode !== null ? forcedCode : current.weather_code;
     const maxTemp = daily.temperature_2m_max[0];
     const minTemp = daily.temperature_2m_min[0];
     const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
@@ -1413,9 +1414,10 @@ export default function MeteoIA() {
       
       // Pass minutely data to AI
       const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
+      // Note: effectiveWeatherCode is calculated in render, so we pass null here initially or use base code.
+      // Ideally we would calc effective code here, but useMemo in render is safer for consistent updates with time.
+      // We will re-trigger AI generation in useEffect when effectiveWeatherCode updates.
 
-      const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang);
-      setTimeout(() => setAiAnalysis(analysis), 800); 
       setWeatherData({ ...weatherData, location: { name, country, latitude: lat, longitude: lon } });
       setAqiData(aqiData);
     } catch (err) {
@@ -1424,13 +1426,6 @@ export default function MeteoIA() {
     } finally { setLoading(false); }
   };
   
-  useEffect(() => {
-     if(weatherData && aqiData) {
-         const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
-         const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang);
-         setAiAnalysis(analysis);
-     }
-  }, [lang, weatherData, aqiData]);
 
   // CALCULAR 'ARA' SHIFTED (Desplaçament temporal)
   // Ara depèn de 'now', que canvia cada minut
@@ -1448,15 +1443,59 @@ export default function MeteoIA() {
     // Convertim l'hora actual (shifted) a timestamp per buscar
     const currentMs = shiftedNow.getTime();
     
-    // Busquem l'índex del bloc de 15 minuts actual
-    const idx = weatherData.minutely_15.time.findIndex(t => new Date(t).getTime() >= currentMs);
+    // MODIFIED: Find index of the interval that COVERS the current time
+    // minutely_15 times are usually start times of intervals.
+    // e.g. 10:00, 10:15. If now is 10:10, we want the 10:00 interval (index 0 if array starts at 10:00).
+    // Array.findIndex finds the first element satisfying condition.
+    // We want the last element that is <= currentMs.
+    // Equivalent: First element > currentMs, minus 1.
     
-    // Si el trobem, agafem els pròxims 4 blocs (1 hora)
-    if (idx !== -1) {
-       return weatherData.minutely_15.precipitation.slice(idx, idx + 4);
-    }
-    return [];
+    const times = weatherData.minutely_15.time.map(t => new Date(t).getTime());
+    let idx = times.findIndex(t => t > currentMs);
+    
+    // If idx is 0, it means all times are in future (unlikely for current forecast response).
+    // If idx is -1, all times are past or current is after last slot.
+    // The current interval is at idx - 1.
+    let currentIdx = (idx === -1) ? times.length - 1 : Math.max(0, idx - 1);
+    
+    // Return slice starting from current interval
+    return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
   }, [weatherData, shiftedNow]);
+
+  // MODIFICACIÓ CLAU: CÀLCUL DEL CODI EFECTIU (SMART DETECTION)
+  // Si hi ha precipitació > 0 (encara que sigui mínima) en el radar minut a minut, forcem "Pluja".
+  const effectiveWeatherCode = useMemo(() => {
+    if (!weatherData) return 0;
+    
+    const currentCode = weatherData.current.weather_code;
+    const currentPrecip = weatherData.current.precipitation;
+    
+    // Check minutely forecast for the immediate NOW slot.
+    // minutelyPreciseData[0] corresponds to the 15m block covering "now" (after fix).
+    const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 ? minutelyPreciseData[0] : 0;
+    
+    // Force Rain if:
+    // 1. Current API precipitation > 0 (laggy but valid)
+    // 2. OR Minutely radar says it's raining NOW (> 0.0mm or > 0.1mm)
+    // AND the main code thinks it's just cloudy/clear (< 50)
+    // We use > 0 to be sensitive to light rain which user complained about.
+    if ((currentPrecip > 0 || immediateRain > 0) && currentCode < 50) {
+        return 61; // Force Rain Icon (Code 61: Slight rain)
+    }
+    
+    return currentCode;
+  }, [weatherData, minutelyPreciseData]);
+
+  // UPDATE AI WHEN EFFECTIVE CODE CHANGES
+  useEffect(() => {
+     if(weatherData && aqiData) {
+         const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
+         // Pass effectiveWeatherCode to generate description based on "Rain" not "Cloudy"
+         const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang, effectiveWeatherCode);
+         setAiAnalysis(analysis);
+     }
+  }, [lang, weatherData, aqiData, effectiveWeatherCode]);
+
 
   const chartData = useMemo(() => {
     if (!weatherData) return [];
@@ -1465,22 +1504,10 @@ export default function MeteoIA() {
     const nowLocalHour = shiftedNow.getHours();
     
     // Busquem l'índex que correspon a l'hora actual (o la següent) a la llista horària
-    // La llista horària d'Open-Meteo comença a les 00:00 del dia actual (o ahir depenent de la petició).
-    // Com que hem demanat `timezone=auto`, les strings d'hora (hourly.time) ja venen en hora local del lloc.
-    // Per tant, només hem de buscar quina string té l'hora igual a la nostra hora local calculada.
-    
-    // Simplificació robusta: comparació de strings ISO parcials?
-    // Opció "shifted":
-    
-    let startIndex = 0;
-    // Busquem l'índex on l'hora de l'array (parsejada com a local) sigui >= l'hora local "fake" que hem calculat.
-    // Com que `shiftedNow` és una data "mentidera" que té l'hora correcta si la imprimim en local...
     const nowTime = shiftedNow.getTime();
     
-    // Per comparar, hem de convertir les strings de l'API a dates "mentideres" també (timestamps locals).
-    // new Date("...T14:00").getTime() ja ens dona això.
-    
     const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
+    let startIndex = 0;
     if (idx !== -1) startIndex = Math.max(0, idx);
 
     return weatherData.hourly.temperature_2m.slice(startIndex, startIndex + 24).map((temp, i) => ({
@@ -1644,15 +1671,6 @@ export default function MeteoIA() {
   // --- SAFE DATA RESOLUTION FOR WIDGET ---
   const moonPhaseVal = getMoonPhase(new Date());
   
-  // MODIFICACIÓ CLAU: CÀLCUL DEL CODI EFECTIU
-  // Si hi ha precipitació > 0.1mm i el codi no indica pluja (<50), forcem el codi 61 (pluja lleugera).
-  // Això soluciona el problema de Sant Feliu Sasserra.
-  const effectiveWeatherCode = weatherData ? (
-    (weatherData.current.precipitation > 0.1 && weatherData.current.weather_code < 50) 
-      ? 61 // Force Rain Icon
-      : weatherData.current.weather_code
-  ) : 0;
-
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
       {/* WEATHER PARTICLES EFFECT - Use Effective Code */}
