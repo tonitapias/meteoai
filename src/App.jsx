@@ -1463,28 +1463,49 @@ export default function MeteoIA() {
   }, [weatherData, shiftedNow]);
 
   // MODIFICACIÓ CLAU: CÀLCUL DEL CODI EFECTIU (SMART DETECTION)
-  // Si hi ha precipitació > 0 (encara que sigui mínima) en el radar minut a minut, forcem "Pluja".
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
     const currentCode = weatherData.current.weather_code;
     const currentPrecip = weatherData.current.precipitation;
     
-    // Check minutely forecast for the immediate NOW slot.
-    // minutelyPreciseData[0] corresponds to the 15m block covering "now" (after fix).
+    // 1. Minutely Radar (Immediate)
     const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 ? minutelyPreciseData[0] : 0;
     
+    // 2. Hourly Probability Check (Look at current hour slot)
+    let hourlyRainProb = 0;
+    let hourlyPrecip = 0;
+    const nowMs = shiftedNow.getTime();
+    
+    // Find the hour slot we are currently in
+    const hourIdx = weatherData.hourly.time.findIndex(t => {
+        const tMs = new Date(t).getTime();
+        return tMs <= nowMs && (tMs + 3600000) > nowMs;
+    });
+
+    if (hourIdx !== -1) {
+        hourlyRainProb = weatherData.hourly.precipitation_probability[hourIdx] || 0;
+        hourlyPrecip = weatherData.hourly.precipitation[hourIdx] || 0;
+    }
+
+    // RAIN OVERRIDE LOGIC
     // Force Rain if:
-    // 1. Current API precipitation > 0 (laggy but valid)
-    // 2. OR Minutely radar says it's raining NOW (> 0.0mm or > 0.1mm)
-    // AND the main code thinks it's just cloudy/clear (< 50)
-    // We use > 0 to be sensitive to light rain which user complained about.
-    if ((currentPrecip > 0 || immediateRain > 0) && currentCode < 50) {
-        return 61; // Force Rain Icon (Code 61: Slight rain)
+    // - Current API says > 0mm
+    // - Minutely radar says > 0mm (now)
+    // - Hourly forecast says > 0.1mm for this hour
+    // - Hourly probability is High (>45%) AND we are currently "Cloudy" (models often hide rain in clouds)
+    
+    const hasRainData = currentPrecip > 0 || immediateRain > 0 || hourlyPrecip > 0.1;
+    const highRainRisk = hourlyRainProb >= 45; // Baixem umbral per ser més sensibles (usuari vol "afinar")
+
+    if ((hasRainData || highRainRisk) && currentCode < 50) {
+        // Return slight rain (61) or drizzle (51) depending on intensity/prob
+        if (hourlyPrecip > 2 || immediateRain > 1) return 63; // Moderate
+        return 61; // Slight rain fallback
     }
     
     return currentCode;
-  }, [weatherData, minutelyPreciseData]);
+  }, [weatherData, minutelyPreciseData, shiftedNow]);
 
   // UPDATE AI WHEN EFFECTIVE CODE CHANGES
   useEffect(() => {
