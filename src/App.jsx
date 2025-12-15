@@ -1678,18 +1678,18 @@ export default function MeteoIA() {
               </div>
               <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni AI</h2>
               <p className="text-slate-400 max-w-md mx-auto">{t.subtitle}</p>
-              <div className="flex gap-4 justify-center mt-4">
-                 <button onClick={() => setLang('ca')} className={`px-4 py-2 rounded-full border flex items-center gap-2 transition-all ${lang === 'ca' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                    <FlagIcon lang="ca" className="w-5 h-4 rounded shadow-sm" /> Català
+              <div className="flex flex-wrap gap-3 justify-center mt-8 px-2">
+                 <button onClick={() => setLang('ca')} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === 'ca' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                    <FlagIcon lang="ca" className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> Català
                  </button>
-                 <button onClick={() => setLang('es')} className={`px-4 py-2 rounded-full border flex items-center gap-2 transition-all ${lang === 'es' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                    <FlagIcon lang="es" className="w-5 h-4 rounded shadow-sm" /> Español
+                 <button onClick={() => setLang('es')} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === 'es' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                    <FlagIcon lang="es" className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> Español
                  </button>
-                 <button onClick={() => setLang('en')} className={`px-4 py-2 rounded-full border flex items-center gap-2 transition-all ${lang === 'en' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                    <FlagIcon lang="en" className="w-5 h-4 rounded shadow-sm" /> English
+                 <button onClick={() => setLang('en')} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === 'en' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                    <FlagIcon lang="en" className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> English
                  </button>
-                 <button onClick={() => setLang('fr')} className={`px-4 py-2 rounded-full border flex items-center gap-2 transition-all ${lang === 'fr' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                    <FlagIcon lang="fr" className="w-5 h-4 rounded shadow-sm" /> Français
+                 <button onClick={() => setLang('fr')} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === 'fr' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                    <FlagIcon lang="fr" className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> Français
                  </button>
               </div>
            </div>
