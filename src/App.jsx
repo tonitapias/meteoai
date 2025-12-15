@@ -80,6 +80,7 @@ const TRANSLATIONS = {
     },
     modeBasic: "Bàsic",
     modeExpert: "Expert",
+    directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actualment tenim {desc} amb {temp}°C. ",
@@ -117,7 +118,7 @@ const TRANSLATIONS = {
     alertRain: "Precipitacions abundants.",
     alertAir: "Qualitat de l'aire deficient.",
     
-    tipHydration: "Bebe aigua",
+    tipHydration: "Beu aigua",
     tipThermal: "Roba tèrmica",
     tipWindbreaker: "Tallavents",
     tipMugginess: "Roba fresca",
@@ -205,6 +206,7 @@ const TRANSLATIONS = {
     },
     modeBasic: "Básico",
     modeExpert: "Experto",
+    directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actualmente tenemos {desc} con {temp}°C. ",
@@ -235,7 +237,7 @@ const TRANSLATIONS = {
     alertWindExtreme: "Viento huracanado. Peligro exterior.",
     alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
     alertHeatExtreme: "Calor extremo. Evita el sol.",
-    alertHeatHigh: "Temperatures altas. Hidrátate.",
+    alertHeatHigh: "Temperaturas altas. Hidrátate.",
     alertColdExtreme: "Frío severo. Riesgo congelación.",
     alertColdHigh: "Heladas. Calzadas resbaladizas.",
     alertRain: "Precipitaciones abundantes.",
@@ -272,7 +274,7 @@ const TRANSLATIONS = {
     trend24h: "24h Trend",
     temp: "Temperature",
     rain: "Rain",
-    wind: "Wind (Gusts --)",
+    wind: "Wind",
     cloud: "Cloud Cover",
     humidity: "Humidity",
     forecast7days: "7-Day Forecast",
@@ -327,6 +329,7 @@ const TRANSLATIONS = {
     },
     modeBasic: "Basic",
     modeExpert: "Expert",
+    directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Currently {desc} with {temp}°C. ",
@@ -394,7 +397,7 @@ const TRANSLATIONS = {
     trend24h: "Tendance 24h",
     temp: "Température",
     rain: "Pluie",
-    wind: "Vent (Rafales --)",
+    wind: "Vent",
     cloud: "Couverture nuageuse",
     humidity: "Humidité",
     forecast7days: "Prévisions 7 Jours",
@@ -449,9 +452,10 @@ const TRANSLATIONS = {
     },
     modeBasic: "Basique",
     modeExpert: "Expert",
+    directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     
     // AI Advanced Texts (Data-Driven)
-    aiStatus: "Actualmente {desc} avec {temp}°C. ",
+    aiStatus: "Actuellement {desc} avec {temp}°C. ",
     aiFeelsLikeHigh: "Ressenti plus chaud ({feels}°C) à cause de l'humidité. ",
     aiFeelsLikeLow: "Le vent de {speed} km/h abaisse le ressenti à {feels}°C. ",
     aiRainNow: "Il pleut ({precip} mm/h). ",
@@ -461,7 +465,7 @@ const TRANSLATIONS = {
     aiUVWarning: "Attention à l'indice UV {uv} à midi. ",
 
     wmo: {
-      0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "cielo cubierto",
+      0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "ciel couvert",
       45: "brouillard", 48: "brouillard givrant",
       51: "bruine légère", 53: "bruine modérée", 55: "bruine dense",
       56: "bruine verglaçante légère", 57: "bruine verglaçante dense",
@@ -741,19 +745,25 @@ const PollenWidget = ({ data, lang = 'ca' }) => {
 };
 
 // --- COMPASS GAUGE ---
-const CompassGauge = ({ degrees, speed, label, subText }) => {
-  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }) => {
+  const directions = TRANSLATIONS[lang].directions || ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   const index = Math.round(((degrees %= 360) < 0 ? degrees + 360 : degrees) / 45) % 8;
   const dirText = directions[index];
+  
+  // Custom Compass directions for display in the circle
+  const N = directions[0];
+  const S = directions[4];
+  const E = directions[2];
+  const W = directions[6];
 
   return (
     <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
       <div className="relative w-24 h-24 flex items-center justify-center mb-1">
          <div className="absolute inset-0 rounded-full border-2 border-slate-800 flex items-center justify-center">
-            <span className="absolute top-1 text-[8px] text-slate-500 font-bold">N</span>
-            <span className="absolute bottom-1 text-[8px] text-slate-500 font-bold">S</span>
-            <span className="absolute left-1 text-[8px] text-slate-500 font-bold">W</span>
-            <span className="absolute right-1 text-[8px] text-slate-500 font-bold">E</span>
+            <span className="absolute top-1 text-[8px] text-slate-500 font-bold">{N}</span>
+            <span className="absolute bottom-1 text-[8px] text-slate-500 font-bold">{S}</span>
+            <span className="absolute left-1 text-[8px] text-slate-500 font-bold">{W}</span>
+            <span className="absolute right-1 text-[8px] text-slate-500 font-bold">{E}</span>
          </div>
          <div 
             className="w-full h-full flex items-center justify-center transition-transform duration-1000 ease-out"
@@ -1828,6 +1838,7 @@ export default function MeteoIA() {
                           degrees={weatherData.current.wind_direction_10m} 
                           speed={weatherData.current.wind_speed_10m} 
                           label={t.wind}
+                          lang={lang}
                        />
                      </div>
                      
