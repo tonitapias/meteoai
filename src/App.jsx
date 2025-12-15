@@ -1020,15 +1020,32 @@ export default function MeteoIA() {
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
   const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1) => {
-     if (code === 0) return isDay ? <Sun className={`${className} text-yellow-400 animate-[spin_12s_linear_infinite]`} /> : <Moon className={`${className} text-slate-300`} />;
-     if (code >= 1 && code <= 3) return isDay ? <CloudSun className={`${className} text-orange-300 animate-pulse`} /> : <CloudMoon className={`${className} text-slate-400`} />;
-     if (code >= 45 && code <= 48) return <CloudFog className={`${className} text-gray-400 animate-pulse`} />;
-     if (code >= 51 && code <= 67) return <CloudRain className={`${className} text-blue-400 animate-bounce`} />;
-     if (code >= 71 && code <= 77) return <Snowflake className={`${className} text-cyan-200 animate-[spin_3s_linear_infinite]`} />; 
-     if (code >= 85 && code <= 86) return <Snowflake className={`${className} text-cyan-200 animate-pulse`} />; 
-     if (code >= 95) return <CloudLightning className={`${className} text-purple-400 animate-pulse`} />;
-     return <Cloud className={`${className} text-gray-300 animate-[pulse_4s_ease-in-out_infinite]`} />;
-  };
+    // 0: Cel serè
+    if (code === 0) return isDay ? <Sun className={`${className} text-yellow-400 animate-[spin_12s_linear_infinite]`} /> : <Moon className={`${className} text-slate-300`} />;
+    
+    // 1-2: Parcialment ennuvolat (Sol/Lluna + Núvol)
+    if (code === 1 || code === 2) return isDay ? <CloudSun className={`${className} text-orange-300 animate-pulse`} /> : <CloudMoon className={`${className} text-slate-400`} />;
+    
+    // 3: Cobert / Ennuvolat (Només núvol, sense sol/lluna)
+    if (code === 3) return <Cloud className={`${className} text-slate-400 animate-[pulse_4s_ease-in-out_infinite]`} />;
+
+    // 45, 48: Boira
+    if (code >= 45 && code <= 48) return <CloudFog className={`${className} text-gray-400 animate-pulse`} />;
+    
+    // 51-67: Plugim i Pluja
+    // 80-82: Ruixats de pluja (Afegeixo aquests codis que abans faltaven)
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return <CloudRain className={`${className} text-blue-400 animate-bounce`} />;
+    
+    // 71-77: Neu
+    // 85-86: Ruixats de neu
+    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return <Snowflake className={`${className} text-cyan-200 animate-[spin_3s_linear_infinite]`} />; 
+    
+    // 95-99: Tempesta
+    if (code >= 95) return <CloudLightning className={`${className} text-purple-400 animate-pulse`} />;
+    
+    // Fallback: Núvol simple
+    return <Cloud className={`${className} text-gray-300 animate-[pulse_4s_ease-in-out_infinite]`} />;
+ };
   
   const getLangCodeForAPI = (l) => l; 
   
