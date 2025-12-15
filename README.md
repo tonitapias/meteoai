@@ -1,6 +1,6 @@
 # **🌍 MeteoToni AI**
 
-public/screenshot.png
+![MeteoToni AI App Screenshot](public/screenshot.png)
 
 La nova generació de predicció meteorològica.  
 Anàlisi intel·ligent, dades precises i una interfície moderna potenciada per Open-Meteo.
@@ -96,6 +96,6 @@ Distribuït sota la **Llicència MIT**. Consulta el fitxer LICENSE per a més in
 * Web: [https://tonitapias.github.io/meteoai/](https://tonitapias.github.io/meteoai/)  
 * GitHub: [@tonitapias](https://www.google.com/search?q=https://github.com/tonitapias)
 
-\<p align="center"\>  
+<p align="center"\>  
 Made with ❤️ by Toni  
-\</p\>
+</p\>
