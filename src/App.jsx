@@ -1774,6 +1774,28 @@ export default function MeteoIA() {
       isDay: weatherData.hourly.is_day[startHour + i],
       code: weatherData.hourly.weather_code[startHour + i]
     }));
+
+    // --- NEW: Calculate Comparison Data for Modal ---
+    const dayComparisonData = useMemo(() => {
+        if (!weatherData.hourlyComparison) return null;
+
+        const sliceModel = (modelData) => {
+            if (!modelData) return [];
+            return modelData.slice(startHour, endHour).map((d, i) => ({
+                temp: unit === 'F' ? Math.round((d.temperature_2m * 9/5) + 32) : d.temperature_2m,
+                rain: d.precipitation_probability,
+                wind: d.wind_speed_10m,
+                cloud: d.cloud_cover,
+                humidity: d.relative_humidity_2m,
+                time: weatherData.hourly.time[startHour + i]
+            }));
+        };
+
+        return {
+            gfs: sliceModel(weatherData.hourlyComparison.gfs),
+            icon: sliceModel(weatherData.hourlyComparison.icon)
+        };
+    }, [weatherData, startHour, endHour, unit]);
     
     const isTodaySnow = isSnowCode(weatherData.daily.weather_code[dayIdx]);
     const precipSum = weatherData.daily.precipitation_sum[dayIdx];
@@ -1811,8 +1833,8 @@ export default function MeteoIA() {
                      <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution}
                    </div>
                 </div>
-                {/* NOTA: Modal charts may be cluttered with comparison, but we can pass it if we want full consistency. For now, keep it simple in modal or use same component */}
-                <HourlyForecastChart data={dayHourlyData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
+                {/* UPDATED: Pass dayComparisonData */}
+                <HourlyForecastChart data={dayHourlyData} comparisonData={dayComparisonData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
               </div>
             )}
             
