@@ -1383,7 +1383,8 @@ export default function MeteoIA() {
     setQuery(""); 
     
     try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation,weather_code`;
+      // MODIFICACIÓ CLAU: Afegim 'precipitation' a la llista de variables current per detectar pluja real
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation,weather_code`;
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`)
@@ -1625,10 +1626,19 @@ export default function MeteoIA() {
   // --- SAFE DATA RESOLUTION FOR WIDGET ---
   const moonPhaseVal = getMoonPhase(new Date());
   
+  // MODIFICACIÓ CLAU: CÀLCUL DEL CODI EFECTIU
+  // Si hi ha precipitació > 0.1mm i el codi no indica pluja (<50), forcem el codi 61 (pluja lleugera).
+  // Això soluciona el problema de Sant Feliu Sasserra.
+  const effectiveWeatherCode = weatherData ? (
+    (weatherData.current.precipitation > 0.1 && weatherData.current.weather_code < 50) 
+      ? 61 // Force Rain Icon
+      : weatherData.current.weather_code
+  ) : 0;
+
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
-      {/* WEATHER PARTICLES EFFECT */}
-      {weatherData && <WeatherParticles code={weatherData.current.weather_code} />}
+      {/* WEATHER PARTICLES EFFECT - Use Effective Code */}
+      {weatherData && <WeatherParticles code={effectiveWeatherCode} />}
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10">
         <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 backdrop-blur-md flex flex-col md:flex-row gap-4 items-center justify-between sticky top-2 z-50 shadow-xl">
@@ -1847,10 +1857,11 @@ export default function MeteoIA() {
                    </div>
                    <div className="flex flex-col items-end self-end md:self-auto">
                       <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
-                        {getWeatherIcon(weatherData.current.weather_code, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day)}
+                         {/* USE EFFECTIVE WEATHER CODE HERE */}
+                        {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day)}
                       </div>
                       <span className="text-lg md:text-xl font-medium text-slate-200 mt-2">
-                         {weatherData.current.weather_code === 0 ? t.clear : isSnowCode(weatherData.current.weather_code) ? t.snow : weatherData.current.weather_code < 4 ? t.cloudy : t.rainy}
+                         {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
                       </span>
                    </div>
                  </div>
