@@ -1733,6 +1733,17 @@ export default function MeteoIA() {
       max: Math.max(...weatherData.daily.temperature_2m_max)
     };
   }, [weatherData]);
+  
+  // NOU CÀLCUL: Probabilitat de pluja actual (no màxima diària)
+  const currentRainProbability = useMemo(() => {
+     if (!weatherData || !weatherData.hourly) return 0;
+     const nowMs = shiftedNow.getTime();
+     const hourIdx = weatherData.hourly.time.findIndex(t => {
+        const tMs = new Date(t).getTime();
+        return tMs <= nowMs && (tMs + 3600000) > nowMs;
+     });
+     return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
+  }, [weatherData, shiftedNow]);
 
   useEffect(() => {
     function handleClickOutside(event) { if (searchRef.current && !searchRef.current.contains(event.target)) setShowSuggestions(false); }
@@ -2224,11 +2235,11 @@ export default function MeteoIA() {
                         color="text-pink-400"
                      />
                      
-                     {/* 4. Rain/Snow */}
+                     {/* 4. Rain/Snow (ARA MOSTRA L'ACTUAL) */}
                      <CircularGauge 
                         icon={isTodaySnow ? <Snowflake className="w-6 h-6" strokeWidth={2.5}/> : <Umbrella className="w-6 h-6" strokeWidth={2.5}/>} 
                         label={isTodaySnow ? t.snow : t.rain} 
-                        value={weatherData.daily.precipitation_probability_max[0]} 
+                        value={currentRainProbability} 
                         max={100}
                         subText="%"
                         color={isTodaySnow ? "text-cyan-300" : "text-indigo-400"}

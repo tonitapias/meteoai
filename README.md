@@ -1,5 +1,5 @@
-\<div align="center"\>  
-\<img src="public/vite.svg" alt="Logo" width="80" height="80" /\>
+<div align="center">  
+<img src="public/vite.svg" alt="Logo" width="80" height="80" >
 
 # **🌍 MeteoToni AI**
 
@@ -120,6 +120,6 @@ Desenvolupat amb ❤️ per **Toni Tapias**.
 * **GitHub**: [@tonitapias](https://www.google.com/search?q=https://github.com/tonitapias)  
 * **Web**: [tonitapias.github.io/meteoai](https://tonitapias.github.io/meteoai/)
 
-\<p align="center"\>  
-Si t'agrada aquest projecte, considera donar-li una estrella ⭐ al repositori\!  
-\</p\>
+<p align="center">  
+Si t'agrada aquest projecte, considera donar-li una estrella ⭐ al repositori!  
+</p>
