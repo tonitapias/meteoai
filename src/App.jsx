@@ -451,7 +451,7 @@ const TRANSLATIONS = {
     modeExpert: "Expert",
     
     // AI Advanced Texts (Data-Driven)
-    aiStatus: "Actuellement {desc} avec {temp}°C. ",
+    aiStatus: "Actualmente {desc} avec {temp}°C. ",
     aiFeelsLikeHigh: "Ressenti plus chaud ({feels}°C) à cause de l'humidité. ",
     aiFeelsLikeLow: "Le vent de {speed} km/h abaisse le ressenti à {feels}°C. ",
     aiRainNow: "Il pleut ({precip} mm/h). ",
@@ -461,7 +461,7 @@ const TRANSLATIONS = {
     aiUVWarning: "Attention à l'indice UV {uv} à midi. ",
 
     wmo: {
-      0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "couvert",
+      0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "cielo cubierto",
       45: "brouillard", 48: "brouillard givrant",
       51: "bruine légère", 53: "bruine modérée", 55: "bruine dense",
       56: "bruine verglaçante légère", 57: "bruine verglaçante dense",
@@ -605,14 +605,14 @@ const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) 
   const transform = lat < 0 ? "scale(-1, 1)" : "";
 
   return (
-    <svg viewBox="0 0 24 24" className={className} style={{transform}} stroke="none">
+    <svg viewBox="0 0 24 24" className={`${className} filter drop-shadow-md`} style={{transform}} stroke="none">
        <title>{getMoonPhaseText(phase, lang)}</title>
        <defs>
          <radialGradient id="moonGradient" cx="50%" cy="50%" r="80%" fx="30%" fy="30%"> <stop offset="0%" stopColor="#f1f5f9" /> <stop offset="90%" stopColor="#cbd5e1" /> </radialGradient>
          <filter id="moonGlow" x="-20%" y="-20%" width="140%" height="140%"> <feGaussianBlur stdDeviation="0.8" result="blur" /> <feComposite in="SourceGraphic" in2="blur" operator="over" /> </filter>
        </defs>
        <circle cx={cx} cy={cy} r={r} fill="#1e293b" stroke="#334155" strokeWidth="0.5" />
-       <path d={d} fill="url(#moonGradient)" className="drop-shadow-sm" />
+       <path d={d} fill="url(#moonGradient)" className="" />
     </svg>
   );
 };
@@ -657,8 +657,8 @@ const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
   return (
     <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
        <div className="w-full flex justify-between items-center text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
-          <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400"/> {t.sunrise}</span>
-          <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400"/></span>
+          <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400" strokeWidth={2.5}/> {t.sunrise}</span>
+          <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400" strokeWidth={2.5}/></span>
        </div>
        <div className="relative w-full h-24 overflow-hidden">
           <svg viewBox="0 0 100 60" className="w-full h-full">
@@ -689,7 +689,7 @@ const MoonWidget = ({ phase, lat, lang = 'ca' }) => {
   const illumination = Math.round((1 - Math.abs((phase - 0.5) * 2)) * 100);
   return (
     <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
-       <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider"><Moon className="w-3 h-3" /> {t.moonPhase}</div>
+       <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider"><Moon className="w-3 h-3" strokeWidth={2.5} /> {t.moonPhase}</div>
        <div className="flex flex-col items-center justify-center mt-2">
           <div className="relative">
              <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
@@ -726,7 +726,7 @@ const PollenWidget = ({ data, lang = 'ca' }) => {
   return (
     <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl backdrop-blur-sm relative h-full min-h-[140px] flex flex-col">
        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider mb-3">
-         <Flower2 className="w-3 h-3" /> {t.pollen}
+         <Flower2 className="w-3 h-3" strokeWidth={2.5} /> {t.pollen}
        </div>
        <div className="grid grid-cols-2 gap-2 flex-1">
           {pollenMap.map((item) => (
@@ -895,7 +895,8 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
                </g>
             )}
             
-            {(layer === 'wind' || layer === 'cloud' || layer === 'humidity') && (i % (points.length > 12 ? 3 : 1) === 0) && (
+            {/* Hour Labels for ALL charts */}
+            {(i % (points.length > 12 ? 3 : 1) === 0) && (
               <text x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">{new Date(p.time).getHours()}h</text>
             )}
           </g>
@@ -916,7 +917,7 @@ const SingleHourlyChart = ({ data, layer, unit, hoveredIndex, setHoveredIndex, h
       </svg>
     </div>
   );
-}
+};
 
 const HourlyForecastChart = ({ data, unit, lang = 'ca', shiftedNow }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -1019,32 +1020,61 @@ export default function MeteoIA() {
   const getUnitLabel = () => unit === 'F' ? '°F' : '°C';
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
-  const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1) => {
-    // 0: Cel serè
-    if (code === 0) return isDay ? <Sun className={`${className} text-yellow-400 animate-[spin_12s_linear_infinite]`} /> : <Moon className={`${className} text-slate-300`} />;
+  // --- ICONES MILLORADES (Amb Fill i Ombra) I LÒGICA WMO REFINADA ---
+  const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0) => {
+    // Definim propietats comuns per donar consistència
+    const commonProps = {
+      strokeWidth: 2, // Línia una mica més gruixuda per claredat
+      className: `${className} drop-shadow-md transition-all duration-300` // Afegim ombra per separar del fons
+    };
+
+    // OVERRIDE: Si la probabilitat de pluja és > 50% i el codi no és de precipitació, forcem icona de pluja
+    if (rainProb > 50 && code < 50) {
+       return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-400 fill-blue-400/20 animate-bounce`} />;
+    }
+
+    // 0: Cel serè (Afegim Fill semitransparent)
+    if (code === 0) return isDay 
+      ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[spin_12s_linear_infinite]`} /> 
+      : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
     
-    // 1-2: Parcialment ennuvolat (Sol/Lluna + Núvol)
-    if (code === 1 || code === 2) return isDay ? <CloudSun className={`${className} text-orange-300 animate-pulse`} /> : <CloudMoon className={`${className} text-slate-400`} />;
+    // 1-2: Parcialment ennuvolat (Afegim Fill als núvols i sol/lluna)
+    if (code === 1 || code === 2) return isDay 
+      ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300`} />
+      : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400`} />;
     
-    // 3: Cobert / Ennuvolat (Només núvol, sense sol/lluna)
-    if (code === 3) return <Cloud className={`${className} text-slate-400 animate-[pulse_4s_ease-in-out_infinite]`} />;
+    // 3: Cobert (Fill al núvol per donar pes)
+    if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
 
     // 45, 48: Boira
-    if (code >= 45 && code <= 48) return <CloudFog className={`${className} text-gray-400 animate-pulse`} />;
+    if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     
-    // 51-67: Plugim i Pluja
-    // 80-82: Ruixats de pluja (Afegeixo aquests codis que abans faltaven)
-    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return <CloudRain className={`${className} text-blue-400 animate-bounce`} />;
-    
+    // 51-55: Plugim (Drizzle) - Icona CloudDrizzle si existís, sinó CloudRain amb color més suau
+    if (code >= 51 && code <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-300 fill-blue-300/20`} />;
+
+    // 56-57: Plugim gebrador - Afegim toc cian
+    if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
+
+    // 61-65: Pluja (Rain) - Icona CloudRain estàndard
+    if (code >= 61 && code <= 65) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-bounce`} />;
+
+    // 66-67: Pluja gebradora
+    if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-bounce`} />;
+
     // 71-77: Neu
+    if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
+    
+    // 80-82: Ruixats de pluja (Showers) - Important: Usar CloudRain
+    if (code >= 80 && code <= 82) return <CloudRain {...commonProps} className={`${commonProps.className} text-indigo-400 fill-indigo-400/20 animate-bounce`} />;
+
     // 85-86: Ruixats de neu
-    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return <Snowflake className={`${className} text-cyan-200 animate-[spin_3s_linear_infinite]`} />; 
-    
+    if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
+
     // 95-99: Tempesta
-    if (code >= 95) return <CloudLightning className={`${className} text-purple-400 animate-pulse`} />;
+    if (code >= 95) return <CloudLightning {...commonProps} className={`${commonProps.className} text-purple-400 fill-purple-400/20 animate-pulse`} />;
     
-    // Fallback: Núvol simple
-    return <Cloud className={`${className} text-gray-300 animate-[pulse_4s_ease-in-out_infinite]`} />;
+    // Fallback
+    return <Cloud {...commonProps} className={`${commonProps.className} text-gray-300 fill-gray-300/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
  };
   
   const getLangCodeForAPI = (l) => l; 
@@ -1423,7 +1453,7 @@ export default function MeteoIA() {
               <p className="text-xs text-slate-400">{t.detailedForecast}</p>
             </div>
             <button onClick={() => setSelectedDayIndex(null)} className="p-2 hover:bg-slate-700 rounded-full text-white transition-colors">
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" strokeWidth={2.5} />
             </button>
           </div>
 
@@ -1433,7 +1463,7 @@ export default function MeteoIA() {
               <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
                 <div className="flex items-center justify-between mb-4">
                    <div className="flex items-center gap-2 text-sm font-bold text-slate-300">
-                     <Clock className="w-4 h-4 text-indigo-400"/> {t.hourlyEvolution}
+                     <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution}
                    </div>
                 </div>
                 <HourlyForecastChart data={dayHourlyData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
@@ -1445,7 +1475,7 @@ export default function MeteoIA() {
                   {dayHourlyData.filter((_, i) => i % 3 === 0).map((h, i) => (
                      <div key={i} className="flex flex-col items-center min-w-[3rem]">
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                        <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay)}</div>
+                        <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay, h.rain)}</div>
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                         {/* ADDED RAIN INFO */}
                         <div className="flex flex-col items-center mt-1 h-6 justify-start">
@@ -1459,18 +1489,18 @@ export default function MeteoIA() {
 
             <div className="grid grid-cols-2 gap-4">
               {snowSum > 0 ? (
-                 <DetailStat label={t.snowAccumulated} value={`${snowSum} cm`} icon={<CloudSnow className="w-4 h-4 text-cyan-200"/>} />
+                 <DetailStat label={t.snowAccumulated} value={`${snowSum} cm`} icon={<CloudSnow className="w-4 h-4 text-cyan-200 drop-shadow-sm fill-cyan-200/20" strokeWidth={2.5}/>} />
               ) : precipSum > 0 ? (
-                 <DetailStat label={t.totalPrecipitation} value={`${Math.round(precipSum)} mm`} icon={<Umbrella className="w-4 h-4 text-blue-400"/>} />
+                 <DetailStat label={t.totalPrecipitation} value={`${Math.round(precipSum)} mm`} icon={<Umbrella className="w-4 h-4 text-blue-400 drop-shadow-sm fill-blue-400/20" strokeWidth={2.5}/>} />
               ) : (
-                 <DetailStat label={t.rainProb} value={`${weatherData.daily.precipitation_probability_max[dayIdx]}%`} icon={<Umbrella className="w-4 h-4 text-blue-400"/>} />
+                 <DetailStat label={t.rainProb} value={`${weatherData.daily.precipitation_probability_max[dayIdx]}%`} icon={<Umbrella className="w-4 h-4 text-blue-400 drop-shadow-sm fill-blue-400/20" strokeWidth={2.5}/>} />
               )}
               
-              <DetailStat label={t.windMax} value={`${weatherData.daily.wind_speed_10m_max[dayIdx]} km/h`} icon={<Wind className="w-4 h-4 text-teal-400"/>} />
+              <DetailStat label={t.windMax} value={`${weatherData.daily.wind_speed_10m_max[dayIdx]} km/h`} icon={<Wind className="w-4 h-4 text-teal-400 drop-shadow-sm fill-teal-400/20" strokeWidth={2.5}/>} />
               
               {/* UV Visual Bar */}
               <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col items-center hover:border-slate-600 transition-colors">
-                 <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide"><Sun className="w-4 h-4 text-amber-400"/> {t.uvIndex}</div>
+                 <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide"><Sun className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.uvIndex}</div>
                  <div className="font-bold text-white text-lg">{uvIndex}</div>
                  <div className="w-full h-1.5 bg-slate-700 rounded-full mt-2 overflow-hidden flex">
                     <div className={`h-full ${uvIndex <= 2 ? 'bg-green-400' : uvIndex <= 5 ? 'bg-yellow-400' : uvIndex <= 7 ? 'bg-orange-400' : uvIndex <= 10 ? 'bg-red-500' : 'bg-purple-500'}`} style={{width: `${Math.min((uvIndex/11)*100, 100)}%`}}></div>
@@ -1480,9 +1510,9 @@ export default function MeteoIA() {
                  </div>
               </div>
 
-              <DetailStat label={t.tempMin} value={`${formatTemp(weatherData.daily.temperature_2m_min[dayIdx])}${getUnitLabel()}`} icon={<Activity className="w-4 h-4 text-indigo-400"/>} />
-              <DetailStat label={t.sunrise} value={formatTime(weatherData.daily.sunrise[dayIdx])} icon={<Sunrise className="w-4 h-4 text-orange-400"/>} />
-              <DetailStat label={t.sunset} value={formatTime(weatherData.daily.sunset[dayIdx])} icon={<Sunset className="w-4 h-4 text-purple-400"/>} />
+              <DetailStat label={t.tempMin} value={`${formatTemp(weatherData.daily.temperature_2m_min[dayIdx])}${getUnitLabel()}`} icon={<Activity className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/>} />
+              <DetailStat label={t.sunrise} value={formatTime(weatherData.daily.sunrise[dayIdx])} icon={<Sunrise className="w-4 h-4 text-orange-400 drop-shadow-sm fill-orange-400/20" strokeWidth={2.5}/>} />
+              <DetailStat label={t.sunset} value={formatTime(weatherData.daily.sunset[dayIdx])} icon={<Sunset className="w-4 h-4 text-purple-400 drop-shadow-sm fill-purple-400/20" strokeWidth={2.5}/>} />
             </div>
           </div>
         </div>
@@ -1507,7 +1537,7 @@ export default function MeteoIA() {
           <div className="flex items-center gap-3 select-none w-full md:w-auto justify-between md:justify-start">
              <div className="flex items-center gap-3">
                <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 animate-[pulse_4s_ease-in-out_infinite]">
-                 <BrainCircuit className="w-6 h-6 text-white"/>
+                 <BrainCircuit className="w-6 h-6 text-white" strokeWidth={2}/>
                </div>
                <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
              </div>
@@ -1634,7 +1664,7 @@ export default function MeteoIA() {
         {!weatherData && !loading && !error && (
            <div className="text-center py-20 md:py-32 animate-in fade-in slide-in-from-bottom-4 px-4">
               <div className="inline-flex p-6 rounded-full bg-indigo-500/10 mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
-                <CloudSun className="w-16 h-16 text-indigo-400 animate-pulse" />
+                <CloudSun className="w-16 h-16 text-indigo-400 animate-pulse" strokeWidth={1.5} />
               </div>
               <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni AI</h2>
               <p className="text-slate-400 max-w-md mx-auto">{t.subtitle}</p>
@@ -1669,13 +1699,13 @@ export default function MeteoIA() {
                     style={{animationDelay: `${i*100}ms`}}
                   >
                     <div className={`p-2 rounded-full ${alert.level === 'high' ? 'bg-red-500/20' : 'bg-amber-500/20'}`}>
-                      {alert.type === t.storm && <CloudLightning className="w-6 h-6"/>}
-                      {alert.type === t.snow && <Snowflake className="w-6 h-6"/>}
-                      {alert.type === t.wind && <Wind className="w-6 h-6"/>}
-                      {alert.type === t.sun && <ThermometerSun className="w-6 h-6"/>}
-                      {alert.type === 'Fred' && <ThermometerSnowflake className="w-6 h-6"/>}
-                      {alert.type === t.rain && <CloudRain className="w-6 h-6"/>}
-                      {alert.type === t.aqi && <AlertOctagon className="w-6 h-6"/>}
+                      {alert.type === t.storm && <CloudLightning className="w-6 h-6" strokeWidth={2.5}/>}
+                      {alert.type === t.snow && <Snowflake className="w-6 h-6" strokeWidth={2.5}/>}
+                      {alert.type === t.wind && <Wind className="w-6 h-6" strokeWidth={2.5}/>}
+                      {alert.type === t.sun && <ThermometerSun className="w-6 h-6" strokeWidth={2.5}/>}
+                      {alert.type === 'Fred' && <ThermometerSnowflake className="w-6 h-6" strokeWidth={2.5}/>}
+                      {alert.type === t.rain && <CloudRain className="w-6 h-6" strokeWidth={2.5}/>}
+                      {alert.type === t.aqi && <AlertOctagon className="w-6 h-6" strokeWidth={2.5}/>}
                       {!['Tempesta','Neu','Vent','Calor','Fred','Pluja','Qualitat Aire', t.storm, t.snow, t.wind, t.sun, t.rain, t.aqi].includes(alert.type) && <AlertTriangle className="w-6 h-6"/>}
                     </div>
                     
@@ -1748,7 +1778,7 @@ export default function MeteoIA() {
                    <div className="flex-1 w-full bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden">
                      <div className="flex items-center justify-between mb-3">
                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
-                         <BrainCircuit className="w-4 h-4 animate-pulse" /> {t.aiAnalysis}
+                         <BrainCircuit className="w-4 h-4 animate-pulse" strokeWidth={2}/> {t.aiAnalysis}
                        </div>
                        
                        {/* FIX: Check aiAnalysis before accessing confidenceLevel */}
@@ -1769,7 +1799,7 @@ export default function MeteoIA() {
                          <div className="flex flex-wrap gap-2">
                            {aiAnalysis.tips.map((tip, i) => (
                              <span key={i} className="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-100 rounded-lg border border-indigo-500/20 flex items-center gap-1.5 shadow-sm animate-in zoom-in duration-500" style={{animationDelay: `${i*150}ms`}}>
-                               {tip.includes(t.tipThermal) || tip.includes('Jaqueta') ? <Shirt className="w-3.5 h-3.5 opacity-70"/> : <AlertTriangle className="w-3.5 h-3.5 opacity-70"/>}
+                               {tip.includes(t.tipThermal) || tip.includes('Jaqueta') ? <Shirt className="w-3.5 h-3.5 opacity-70" strokeWidth={2.5}/> : <AlertTriangle className="w-3.5 h-3.5 opacity-70"/>}
                                {tip}
                              </span>
                            ))}
@@ -1803,7 +1833,7 @@ export default function MeteoIA() {
                      
                      {/* 2. Humidity Gauge (New) */}
                      <CircularGauge 
-                        icon={<Droplets className="w-6 h-6"/>} 
+                        icon={<Droplets className="w-6 h-6" strokeWidth={2.5}/>} 
                         label={t.humidity} 
                         value={weatherData.current.relative_humidity_2m} 
                         max={100}
@@ -1813,7 +1843,7 @@ export default function MeteoIA() {
                      
                      {/* 3. Pressure (Reduced or same) */}
                      <CircularGauge 
-                        icon={<Gauge className="w-6 h-6"/>} 
+                        icon={<Gauge className="w-6 h-6" strokeWidth={2.5}/>} 
                         label={t.pressure} 
                         value={Math.round(weatherData.current.pressure_msl)} 
                         max={1100} 
@@ -1823,7 +1853,7 @@ export default function MeteoIA() {
                      
                      {/* 4. Rain/Snow */}
                      <CircularGauge 
-                        icon={isTodaySnow ? <Snowflake className="w-6 h-6"/> : <Umbrella className="w-6 h-6"/>} 
+                        icon={isTodaySnow ? <Snowflake className="w-6 h-6" strokeWidth={2.5}/> : <Umbrella className="w-6 h-6" strokeWidth={2.5}/>} 
                         label={isTodaySnow ? t.snow : t.rain} 
                         value={weatherData.daily.precipitation_probability_max[0]} 
                         max={100}
@@ -1859,7 +1889,7 @@ export default function MeteoIA() {
                      <div className="col-span-2 md:col-span-2">
                        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
                           <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
-                             <Leaf className="w-3 h-3"/> {t.aqi}
+                             <Leaf className="w-3 h-3" strokeWidth={2.5}/> {t.aqi}
                           </div>
                           <div className="flex flex-col items-center justify-center mt-4">
                              <div className="text-4xl font-bold text-white mb-1">{aqiData?.current?.european_aqi || '--'}</div>
@@ -1880,7 +1910,7 @@ export default function MeteoIA() {
                   {/* HOURLY VISUAL CHART WITH TABS */}
                   <div className="lg:col-span-2 bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
-                       <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400"/> {t.trend24h}</h3>
+                       <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
                      </div>
                      
                      <HourlyForecastChart data={chartData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
@@ -1895,12 +1925,12 @@ export default function MeteoIA() {
             {/* BASIC MODE HOURLY (Simplified) */}
             {viewMode === 'basic' && (
                <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
-                 <h3 className="font-bold text-white flex items-center gap-2 mb-4"><Clock className="w-4 h-4 text-indigo-400"/> {t.hourlyEvolution} (24h)</h3>
+                 <h3 className="font-bold text-white flex items-center gap-2 mb-4"><Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)</h3>
                  <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
                     {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
                        <div key={i} className="flex flex-col items-center min-w-[3rem]">
                           <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                          <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay)}</div>
+                          <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain)}</div>
                           <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                           {/* ADDED RAIN INFO */}
                           <div className="flex flex-col items-center mt-1 h-6 justify-start">
@@ -1915,7 +1945,7 @@ export default function MeteoIA() {
 
             {/* 7 DAY FORECAST - LIST STYLE (ALWAYS VISIBLE) */}
             <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
-               <h3 className="font-bold text-white mb-5 flex items-center gap-2"><Calendar className="w-4 h-4 text-amber-400"/> {t.forecast7days}</h3>
+               <h3 className="font-bold text-white mb-5 flex items-center gap-2"><Calendar className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.forecast7days}</h3>
                <div className="space-y-2">
                  {weatherData.daily.time.map((day, i) => {
                    const isDaySnow = isSnowCode(weatherData.daily.weather_code[i]);
@@ -1935,18 +1965,19 @@ export default function MeteoIA() {
                         </div>
 
                         {/* Moon Phase (New) */}
-                        <div className="hidden md:flex justify-center w-10">
-                           <MoonPhaseIcon phase={listMoonPhase} lat={weatherData.location.latitude} lang={lang} />
+                        <div className="hidden md:flex justify-center w-10 opacity-70">
+                           <MoonPhaseIcon phase={listMoonPhase} lat={weatherData.location.latitude} lang={lang} className="w-6 h-6" />
                         </div>
 
                         {/* Icon & Precipitation & Volume */}
                         <div className="flex items-center gap-3 w-32 md:w-36">
-                           <div className="group-hover:scale-110 transition-transform">
-                               {getWeatherIcon(weatherData.daily.weather_code[i], "w-6 h-6")}
+                           <div className="group-hover:scale-110 transition-transform filter drop-shadow-md">
+                               {getWeatherIcon(weatherData.daily.weather_code[i], "w-8 h-8", 1, weatherData.daily.precipitation_probability_max[i])}
                            </div>
                            <div className="flex flex-col items-start">
                              {weatherData.daily.precipitation_probability_max[i] > 10 && (
                                 <span className={`text-xs flex items-center font-bold gap-0.5 ${isDaySnow ? 'text-cyan-200' : 'text-blue-300'}`}>
+                                  <Umbrella className="w-3 h-3" strokeWidth={2.5}/>
                                   {weatherData.daily.precipitation_probability_max[i]}%
                                 </span>
                              )}
