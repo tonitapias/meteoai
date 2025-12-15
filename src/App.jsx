@@ -81,6 +81,7 @@ const TRANSLATIONS = {
     modeBasic: "Bàsic",
     modeExpert: "Extens", // Canviat d'"Expert" a "Extens"
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
+    preciseRain: "Previsió Minut a Minut (1h)",
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actualment tenim {desc} amb {temp}°C. ",
@@ -207,6 +208,7 @@ const TRANSLATIONS = {
     modeBasic: "Básico",
     modeExpert: "Extendido", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
+    preciseRain: "Previsión Minuto a Minuto (1h)",
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actualmente tenemos {desc} con {temp}°C. ",
@@ -330,6 +332,7 @@ const TRANSLATIONS = {
     modeBasic: "Basic",
     modeExpert: "Extended", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+    preciseRain: "Minute-by-Minute Forecast (1h)",
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Currently {desc} with {temp}°C. ",
@@ -453,6 +456,7 @@ const TRANSLATIONS = {
     modeBasic: "Basique",
     modeExpert: "Étendu", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
+    preciseRain: "Prévisions Minute par Minute (1h)",
     
     // AI Advanced Texts (Data-Driven)
     aiStatus: "Actuellement {desc} avec {temp}°C. ",
@@ -575,9 +579,9 @@ const TypewriterText = ({ text }) => {
 
 // --- HELPERS DATES I HORES ---
 
-const getShiftedDate = (timezone) => {
-  const now = new Date();
-  const targetTimeStr = now.toLocaleString("en-US", { timeZone: timezone });
+// Modificat: Ara accepta una data base (now) per calcular el desplaçament real
+const getShiftedDate = (baseDate, timezone) => {
+  const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezone });
   return new Date(targetTimeStr);
 };
 
@@ -964,6 +968,43 @@ const HourlyForecastChart = ({ data, unit, lang = 'ca', shiftedNow }) => {
   );
 };
 
+// --- NOU COMPONENT: GRÀFICA DE PRECISIÓ (MINUT A MINUT) ---
+// Aquest component mostra la pluja prevista pels pròxims 60 minuts en intervals de 15 minuts.
+// És crucial per donar la sensació de "precisió" que demana l'usuari.
+const MinutelyPreciseChart = ({ data, label }) => {
+  if (!data || data.length === 0 || data.every(v => v === 0)) return null;
+  
+  // Limitem a 4 intervals (1 hora)
+  const chartData = data.slice(0, 4);
+  const max = Math.max(...chartData, 0.5); // Escala mínima
+
+  return (
+    <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in">
+        <div className="flex items-center gap-2 mb-2">
+            <CloudRain className="w-3 h-3 text-blue-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
+        </div>
+        <div className="flex items-end gap-1 h-12 w-full">
+           {chartData.map((val, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
+                 <div className="w-full bg-blue-900/30 rounded-sm relative h-full overflow-hidden">
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 bg-blue-400 rounded-sm transition-all group-hover:bg-blue-300"
+                      style={{ height: `${(val / max) * 100}%` }}
+                    ></div>
+                 </div>
+                 <span className="text-[9px] text-slate-400 font-medium">+{15 * (i+1)}m</span>
+              </div>
+           ))}
+        </div>
+        <div className="text-[9px] text-center text-blue-400/70 mt-1">
+           Intensitat prevista (mm)
+        </div>
+    </div>
+  )
+}
+
+
 // --- CIRCULAR GAUGE ---
 const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText }) => {
   const radius = 30;
@@ -1006,6 +1047,10 @@ export default function MeteoIA() {
   const [lang, setLang] = useState(() => localStorage.getItem('meteoia-lang') || 'ca');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('meteoia-view') || 'basic');
 
+  // --- RELLOTGE VIU ---
+  // Aquest state és la clau per la "precisió" temporal. S'actualitza cada minut.
+  const [now, setNow] = useState(new Date());
+
   const searchRef = useRef(null);
   const inputRef = useRef(null);
   const t = TRANSLATIONS[lang];
@@ -1014,6 +1059,12 @@ export default function MeteoIA() {
   useEffect(() => { localStorage.setItem('meteoia-unit', unit); }, [unit]);
   useEffect(() => { localStorage.setItem('meteoia-lang', lang); }, [lang]);
   useEffect(() => { localStorage.setItem('meteoia-view', viewMode); }, [viewMode]);
+
+  // --- INTERVAL RELLOTGE ---
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000); // Actualitza cada minut
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const savedFavs = localStorage.getItem('meteoia-favs');
@@ -1143,11 +1194,11 @@ export default function MeteoIA() {
     if (weatherData.daily && weatherData.daily.sunrise && weatherData.daily.sunset) {
         const sunrise = new Date(weatherData.daily.sunrise[0]).getTime();
         const sunset = new Date(weatherData.daily.sunset[0]).getTime();
-        const now = shiftedNow.getTime(); // Use shifted now to match location time
+        const nowMs = shiftedNow.getTime(); // Use shifted now to match location time
         
         const hourMs = 45 * 60 * 1000;
-        if (Math.abs(now - sunrise) < hourMs) return "from-indigo-900 via-purple-800 to-orange-400"; // Sunrise
-        if (Math.abs(now - sunset) < hourMs) return "from-blue-900 via-purple-900 to-orange-500"; // Sunset
+        if (Math.abs(nowMs - sunrise) < hourMs) return "from-indigo-900 via-purple-800 to-orange-400"; // Sunrise
+        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-900 via-purple-900 to-orange-500"; // Sunset
     }
     
     return getDynamicBackground(weather_code, is_day);
@@ -1332,7 +1383,7 @@ export default function MeteoIA() {
     setQuery(""); 
     
     try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation`;
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match&minutely_15=precipitation,weather_code`;
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`)
@@ -1363,12 +1414,30 @@ export default function MeteoIA() {
   }, [lang, weatherData, aqiData]);
 
   // CALCULAR 'ARA' SHIFTED (Desplaçament temporal)
+  // Ara depèn de 'now', que canvia cada minut
   const shiftedNow = useMemo(() => {
-    if (!weatherData) return new Date();
-    // Use the timezone provided by API to create a Date object that reflects local time wall-clock
+    if (!weatherData) return now;
     const timezone = weatherData.timezone || 'UTC';
-    return getShiftedDate(timezone);
-  }, [weatherData]);
+    return getShiftedDate(now, timezone);
+  }, [weatherData, now]);
+
+  // DADES DE PRECISIÓ (Next Hour)
+  // Busquem les dades minutely que corresponen a "Ara"
+  const minutelyPreciseData = useMemo(() => {
+    if (!weatherData || !weatherData.minutely_15) return [];
+    
+    // Convertim l'hora actual (shifted) a timestamp per buscar
+    const currentMs = shiftedNow.getTime();
+    
+    // Busquem l'índex del bloc de 15 minuts actual
+    const idx = weatherData.minutely_15.time.findIndex(t => new Date(t).getTime() >= currentMs);
+    
+    // Si el trobem, agafem els pròxims 4 blocs (1 hora)
+    if (idx !== -1) {
+       return weatherData.minutely_15.precipitation.slice(idx, idx + 4);
+    }
+    return [];
+  }, [weatherData, shiftedNow]);
 
   const chartData = useMemo(() => {
     if (!weatherData) return [];
@@ -1833,6 +1902,9 @@ export default function MeteoIA() {
                              </span>
                            ))}
                          </div>
+                         
+                         {/* GRÀFICA PRECISIÓ DE PLUJA */}
+                         <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} />
                        </div>
                      ) : (
                        <div className="flex items-center gap-2 text-slate-500 text-sm animate-pulse min-h-[3em]">
