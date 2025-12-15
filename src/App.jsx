@@ -9,7 +9,7 @@ import {
   LayoutTemplate, LayoutDashboard, GitGraph
 } from 'lucide-react';
 
-// --- SISTEMA DE TRADUCCIONS ---
+// --- SISTEMA DE TRADUCCIONS MILLORAT ---
 const TRANSLATIONS = {
   ca: {
     searchPlaceholder: "Cerca ciutat...",
@@ -21,7 +21,7 @@ const TRANSLATIONS = {
     aiConfidence: "Consens Models",
     aiConfidenceMod: "Divergència Models",
     aiConfidenceLow: "Incertesa Alta",
-    generatingTips: "Processant models meteorològics (ECMWF, GFS, ICON)...",
+    generatingTips: "Analitzant dades dels models (ECMWF, GFS, ICON)...",
     trend24h: "Tendència 24h",
     temp: "Temperatura",
     rain: "Pluja",
@@ -87,28 +87,31 @@ const TRANSLATIONS = {
     modelGfs: "GFS (EUA)",
     modelIcon: "ICON (Alemanya)",
     
-    // AI Advanced Texts (Data-Driven - RENOVATS)
-    aiIntroMorning: "Bon dia. ",
-    aiIntroAfternoon: "Bona tarda. ",
-    aiIntroEvening: "Bon vespre. ",
-    aiIntroNight: "Bona nit. ",
+    // AI Advanced Texts (Data-Driven - HUMANITZATS)
+    aiIntroMorning: "Bon dia! Comencem la jornada amb els mapes actualitzats. ",
+    aiIntroAfternoon: "Bona tarda. Mirem com evoluciona la situació. ",
+    aiIntroEvening: "Bon vespre. Així es presenta el final del dia. ",
+    aiIntroNight: "Bona nit. Previsió per a les pròximes hores nocturnes. ",
     
-    aiSummaryClear: "Els models indiquen un dia plàcid i assolellat. ",
-    aiSummaryCloudy: "Domini dels núvols, però sense precipitacions importants previstes. ",
-    aiSummaryRain: "Tenim un front actiu deixant precipitacions. ",
-    aiSummaryStorm: "Inestabilitat acusada amb risc de tempestes. ",
-    aiSummarySnow: "Ambient d'hivern rigorós amb nevades. ",
+    aiSummaryClear: "Cel serè. Els models confirmen un dia radiant i perfecte per estar a l'aire lliure. ",
+    aiSummaryCloudy: "El cel es mantindrà variable amb força núvols, tot i que no esperem complicacions. ",
+    aiSummaryRain: "Paraigua a mà. Tenim una situació de precipitacions actives a la zona. ",
+    aiSummaryStorm: "Precaució. La inestabilitat és acusada i hi ha risc de tempestes que poden ser intenses. ",
+    aiSummarySnow: "Ambient plenament hivernal. Les condicions són de fred rigorós i neu. ",
     
-    aiTempStable: "Temperatures sense grans canvis. ",
-    aiTempRising: "Ambient clarament més càlid que ahir. ",
-    aiTempFalling: "Davallada tèrmica notable. ",
+    // Noves claus de temperatura més naturals
+    aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
+    aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
+    aiTempMild: "Temperatures suaus i agradables, sense extrems. ",
+    aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
+    aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
     
-    aiWindLight: "Vent en calma. ",
-    aiWindMod: "Vent moderat que augmenta la sensació de fred. ",
-    aiWindStrong: "Precaució amb les ratxes de vent fortes. ",
+    aiWindLight: "El vent està en calma, dia plàcid. ",
+    aiWindMod: "El vent bufa amb ganes i accentua la sensació de fred. ",
+    aiWindStrong: "Compte amb les ratxes de vent, que poden ser fortes avui. ",
     
-    aiRainNone: "No s'espera pluja les pròximes hores. ",
-    aiRainExp: "S'aproximen pluges en breu. ",
+    aiRainNone: "Podeu estar tranquils, no es veu pluja a l'horitzó immediat. ",
+    aiRainExp: "Atenció al radar: s'acosta una taca de pluja imminentment. ",
     
     // WMO Codes Descriptions
     wmo: {
@@ -142,7 +145,7 @@ const TRANSLATIONS = {
     tipMugginess: "Roba fresca",
     tipUmbrella: "Agafa paraigua",
     tipSunscreen: "Crema solar",
-    tipCalm: "Gaudeix",
+    tipCalm: "Gaudeix del dia",
     tipCoat: "Abric gruixut",
     tipLayers: "Vesteix per capes",
     
@@ -167,7 +170,7 @@ const TRANSLATIONS = {
     aiConfidence: "Consenso Modelos",
     aiConfidenceMod: "Divergencia Modelos",
     aiConfidenceLow: "Incertidumbre Alta",
-    generatingTips: "Procesando modelos meteorológicos (ECMWF, GFS, ICON)...",
+    generatingTips: "Analizando modelos meteorológicos (ECMWF, GFS, ICON)...",
     trend24h: "Tendencia 24h",
     temp: "Temperatura",
     rain: "Lluvia",
@@ -233,27 +236,29 @@ const TRANSLATIONS = {
     modelGfs: "GFS (EEUU)",
     modelIcon: "ICON (Alemania)",
     
-    aiIntroMorning: "Buenos días. ",
-    aiIntroAfternoon: "Buenas tardes. ",
-    aiIntroEvening: "Buenas noches. ",
-    aiIntroNight: "Buenas noches. ",
+    aiIntroMorning: "Buenos días. Empezamos la jornada con los mapas actualizados. ",
+    aiIntroAfternoon: "Buenas tardes. Vemos cómo evoluciona la situación. ",
+    aiIntroEvening: "Buenas noches. Así se presenta el final del día. ",
+    aiIntroNight: "Buenas noches. Previsión para las próximas horas nocturnas. ",
     
-    aiSummaryClear: "Los modelos indican un día plácido y soleado. ",
-    aiSummaryCloudy: "Dominio de las nubes, pero sin precipitaciones importantes previstas. ",
-    aiSummaryRain: "Tenemos un frente activo dejando precipitaciones. ",
-    aiSummaryStorm: "Inestabilidad acusada con riesgo de tormentas. ",
-    aiSummarySnow: "Ambiente de invierno riguroso con nevadas. ",
+    aiSummaryClear: "Cielo despejado. Los modelos confirman un día radiante, perfecto para estar al aire libre. ",
+    aiSummaryCloudy: "Tendremos bastantes nubes, aunque por ahora no esperamos complicaciones. ",
+    aiSummaryRain: "Paraguas a mano. Tenemos precipitaciones activas cruzando la zona. ",
+    aiSummaryStorm: "Precaución. La inestabilidad es acusada y hay riesgo de tormentas fuertes. ",
+    aiSummarySnow: "Paisaje invernal. Las condiciones son de frío riguroso y nieve. ",
     
-    aiTempStable: "Temperaturas sin grandes cambios. ",
-    aiTempRising: "Ambiente claramente más cálido que ayer. ",
-    aiTempFalling: "Bajada térmica notable. ",
+    aiTempFreezing: "Ambiente gélido. Abrígate muy bien si sales. ",
+    aiTempCold: "Hace frío. Necesitarás ropa de abrigo para estar confortable. ",
+    aiTempMild: "Temperaturas suaves y agradables, sin extremos. ",
+    aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
+    aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
     
-    aiWindLight: "Viento en calma. ",
-    aiWindMod: "Viento moderado que aumenta la sensación de frío. ",
-    aiWindStrong: "Precaución con las rachas de viento fuertes. ",
+    aiWindLight: "El viento está en calma, día plácido. ",
+    aiWindMod: "El viento sopla con ganas y acentúa la sensación de frío. ",
+    aiWindStrong: "Cuidado con las rachas de viento, que pueden ser fuertes hoy. ",
     
-    aiRainNone: "No se espera lluvia en las próximas horas. ",
-    aiRainExp: "Se aproximan lluvias en breve. ",
+    aiRainNone: "Podéis estar tranquilos, no se ve lluvia en el horizonte inmediato. ",
+    aiRainExp: "Atención al radar: se acerca una mancha de lluvia inminentemente. ",
 
     wmo: {
       0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
@@ -310,7 +315,7 @@ const TRANSLATIONS = {
     aiConfidence: "Model Consensus",
     aiConfidenceMod: "Model Divergence",
     aiConfidenceLow: "High Uncertainty",
-    generatingTips: "Processing meteorological models (ECMWF, GFS, ICON)...",
+    generatingTips: "Analyzing meteorological models (ECMWF, GFS, ICON)...",
     trend24h: "24h Trend",
     temp: "Temperature",
     rain: "Rain",
@@ -376,27 +381,29 @@ const TRANSLATIONS = {
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Germany)",
     
-    aiIntroMorning: "Good morning. ",
-    aiIntroAfternoon: "Good afternoon. ",
-    aiIntroEvening: "Good evening. ",
-    aiIntroNight: "Good night. ",
+    aiIntroMorning: "Good morning. Starting the day with updated maps. ",
+    aiIntroAfternoon: "Good afternoon. Checking the latest developments. ",
+    aiIntroEvening: "Good evening. Here is the outlook for the end of the day. ",
+    aiIntroNight: "Good night. Forecast for the coming night hours. ",
     
-    aiSummaryClear: "Models indicate a calm and sunny day. ",
-    aiSummaryCloudy: "Clouds dominating, but no significant rain expected. ",
-    aiSummaryRain: "An active front is passing through, bringing rain. ",
-    aiSummaryStorm: "High instability with risk of thunderstorms. ",
-    aiSummarySnow: "Rigorous winter conditions with snowfall. ",
+    aiSummaryClear: "Clear skies. Models confirm a radiant day, perfect for being outdoors. ",
+    aiSummaryCloudy: "Skies will be variable with clouds, though no major issues are expected. ",
+    aiSummaryRain: "Keep an umbrella handy. Active precipitation is passing through the area. ",
+    aiSummaryStorm: "Caution. Instability is high and there is a risk of strong thunderstorms. ",
+    aiSummarySnow: "Winter landscape. Conditions are set for rigorous cold and snow. ",
     
-    aiTempStable: "Temperatures stable. ",
-    aiTempRising: "Clearly warmer than yesterday. ",
-    aiTempFalling: "Significant temperature drop. ",
+    aiTempFreezing: "Freezing conditions. Bundle up well if you go out. ",
+    aiTempCold: "It's cold. You'll need warm clothing to stay comfortable. ",
+    aiTempMild: "Mild and pleasant temperatures, no extremes. ",
+    aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
+    aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
     
-    aiWindLight: "Winds are calm. ",
-    aiWindMod: "Moderate wind increasing wind chill. ",
-    aiWindStrong: "Caution with strong wind gusts. ",
+    aiWindLight: "Winds are calm, a placid day. ",
+    aiWindMod: "The wind is blowing steadily, increasing the wind chill factor. ",
+    aiWindStrong: "Watch out for strong wind gusts today. ",
     
-    aiRainNone: "No rain expected in the next few hours. ",
-    aiRainExp: "Rain approaching shortly. ",
+    aiRainNone: "You can relax, no rain is seen on the immediate horizon. ",
+    aiRainExp: "Radar alert: rain is approaching imminently. ",
 
     wmo: {
       0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
@@ -453,7 +460,7 @@ const TRANSLATIONS = {
     aiConfidence: "Consensus Modèles",
     aiConfidenceMod: "Divergence Modèles",
     aiConfidenceLow: "Incertitude Élevée",
-    generatingTips: "Traitement des modèles (ECMWF, GFS, ICON)...",
+    generatingTips: "Analyse des modèles (ECMWF, GFS, ICON)...",
     trend24h: "Tendance 24h",
     temp: "Température",
     rain: "Pluie",
@@ -519,27 +526,29 @@ const TRANSLATIONS = {
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Allemagne)",
     
-    aiIntroMorning: "Bonjour. ",
-    aiIntroAfternoon: "Bonne après-midi. ",
-    aiIntroEvening: "Bonsoir. ",
-    aiIntroNight: "Bonne nuit. ",
+    aiIntroMorning: "Bonjour. Commençons la journée avec les cartes mises à jour. ",
+    aiIntroAfternoon: "Bonne après-midi. Voyons comment la situation évolue. ",
+    aiIntroEvening: "Bonsoir. Voici les perspectives pour la fin de la journée. ",
+    aiIntroNight: "Bonne nuit. Prévisions pour les heures nocturnes à venir. ",
     
-    aiSummaryClear: "Les modèles indiquent une journée calme et ensoleillée. ",
-    aiSummaryCloudy: "Domination nuageuse, mais pas de pluie significative prévue. ",
-    aiSummaryRain: "Un front actif traverse la zone, apportant de la pluie. ",
-    aiSummaryStorm: "Instabilité marquée avec risque d'orages. ",
-    aiSummarySnow: "Conditions hivernales rigoureuses avec chutes de neige. ",
+    aiSummaryClear: "Ciel dégagé. Les modèles confirment une journée radieuse, parfaite pour être dehors. ",
+    aiSummaryCloudy: "Le ciel restera variable avec des nuages, mais aucun problème majeur n'est attendu. ",
+    aiSummaryRain: "Gardez un parapluie à portée de main. Des précipitations actives traversent la zone. ",
+    aiSummaryStorm: "Prudence. L'instabilité est marquée et il y a un risque d'orages violents. ",
+    aiSummarySnow: "Paysage hivernal. Les conditions sont propices au froid rigoureux et à la neige. ",
     
-    aiTempStable: "Températures sans grand changement. ",
-    aiTempRising: "Nettement plus chaud qu'hier. ",
-    aiTempFalling: "Chute brutale des températures. ",
+    aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien si vous sortez. ",
+    aiTempCold: "Il fait froid. Vous aurez besoin de vêtements chauds pour être à l'aise. ",
+    aiTempMild: "Températures douces et agréables, sans extrêmes. ",
+    aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
+    aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",
     
-    aiWindLight: "Vent calme. ",
-    aiWindMod: "Vent modéré augmentant le ressenti de froid. ",
-    aiWindStrong: "Prudence avec les fortes rafales de vent. ",
+    aiWindLight: "Le vent est calme, une journée paisible. ",
+    aiWindMod: "Le vent souffle, accentuant la sensation de froid. ",
+    aiWindStrong: "Attention aux rafales de vent qui peuvent être fortes aujourd'hui. ",
     
-    aiRainNone: "Pas de pluie attendue dans les prochaines heures. ",
-    aiRainExp: "La pluie arrive sous peu. ",
+    aiRainNone: "Vous pouvez être tranquille, aucune pluie n'est visible à l'horizon immédiat. ",
+    aiRainExp: "Alerte radar : la pluie approche de façon imminente. ",
 
     wmo: {
       0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "ciel couvert",
@@ -1388,15 +1397,26 @@ export default function MeteoIA() {
     else if (code <= 2) summaryParts.push(tr.aiSummaryClear);
     else summaryParts.push(tr.aiSummaryCloudy);
 
-    // 3. ANÀLISI DE SENSACIÓ (Wind Chill / Heat Index)
+    // 3. ANÀLISI DE SENSACIÓ MILLORADA (ABSOLUTA + RELATIVA)
     const diff = feelsLike - temp;
-    if (windSpeed > 15 && temp < 15) {
-       summaryParts.push(tr.aiWindMod); // Vent fa fred
-    } else if (temp > 25 && humidity > 60) {
-       // Xafogor
-       summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació de ${Math.round(feelsLike)}°C. ` : `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. `);
-    } else if (Math.abs(diff) < 2) {
-       summaryParts.push(tr.aiTempStable);
+    
+    if (windSpeed > 20) {
+        summaryParts.push(tr.aiWindMod);
+    } 
+    
+    // Noves categories tèrmiques basades en temperatura absoluta i sensació
+    if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
+    else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
+    else if (feelsLike >= 10 && feelsLike < 18) {
+         // Ni fred ni calor, transició
+    }
+    else if (feelsLike >= 18 && feelsLike < 25) summaryParts.push(tr.aiTempMild);
+    else if (feelsLike >= 25 && feelsLike < 32) summaryParts.push(tr.aiTempWarm);
+    else if (feelsLike >= 32) summaryParts.push(tr.aiTempHot);
+
+    // Xafogor check
+    if (temp > 25 && humidity > 65) {
+       summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació real de ${Math.round(feelsLike)}°C. ` : language === 'es' ? `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. ` : "");
     }
 
     // 4. PREVISIÓ DE PLUJA IMMEDIATA (RADAR)
@@ -2314,7 +2334,7 @@ export default function MeteoIA() {
             {/* BASIC MODE HOURLY (Simplified) */}
             {viewMode === 'basic' && (
                <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
-                 <h3 className="font-bold text-white flex items-center gap-2 mb-4"><Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)</h3>
+                 <h3 className="font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)</h3>
                  <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
                     {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
                        <div key={i} className="flex flex-col items-center min-w-[3rem]">
