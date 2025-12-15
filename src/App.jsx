@@ -79,7 +79,7 @@ const TRANSLATIONS = {
       ragweed: "Ambròsia"
     },
     modeBasic: "Bàsic",
-    modeExpert: "Expert",
+    modeExpert: "Extens", // Canviat d'"Expert" a "Extens"
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     
     // AI Advanced Texts (Data-Driven)
@@ -205,7 +205,7 @@ const TRANSLATIONS = {
       ragweed: "Ambrosía"
     },
     modeBasic: "Básico",
-    modeExpert: "Experto",
+    modeExpert: "Extendido", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     
     // AI Advanced Texts (Data-Driven)
@@ -328,7 +328,7 @@ const TRANSLATIONS = {
       ragweed: "Ragweed"
     },
     modeBasic: "Basic",
-    modeExpert: "Expert",
+    modeExpert: "Extended", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     
     // AI Advanced Texts (Data-Driven)
@@ -451,7 +451,7 @@ const TRANSLATIONS = {
       ragweed: "Ambroisie"
     },
     modeBasic: "Basique",
-    modeExpert: "Expert",
+    modeExpert: "Étendu", // Adaptat per coherència
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     
     // AI Advanced Texts (Data-Driven)
