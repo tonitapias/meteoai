@@ -971,11 +971,29 @@ const HourlyForecastChart = ({ data, unit, lang = 'ca', shiftedNow }) => {
 // --- NOU COMPONENT: GRÀFICA DE PRECISIÓ (MINUT A MINUT) ---
 // Aquest component mostra la pluja prevista pels pròxims 60 minuts en intervals de 15 minuts.
 // És crucial per donar la sensació de "precisió" que demana l'usuari.
-const MinutelyPreciseChart = ({ data, label }) => {
-  if (!data || data.length === 0 || data.every(v => v === 0)) return null;
+const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
+  // MODIFICACIÓ: Si data és buida però currentPrecip > 0, creem un array fals per mostrar la pluja actual
+  // Això soluciona el problema de que "no apareix res" quan plou però el radar no ho veu
+  
+  let chartData = data ? [...data] : [];
+  
+  // Assegurar que tenim almenys 4 slots
+  while(chartData.length < 4) chartData.push(0);
   
   // Limitem a 4 intervals (1 hora)
-  const chartData = data.slice(0, 4);
+  chartData = chartData.slice(0, 4);
+
+  // HYBRID FIX: Si plou ara (currentPrecip > 0) i la previsió immediata és 0, 
+  // assumim que el radar falla i injectem la pluja actual al primer slot.
+  if (currentPrecip > 0 && chartData[0] === 0) {
+      chartData[0] = currentPrecip;
+      // Opcional: decaiment suau si volem simular que pararà, o mantenir-ho
+      // De moment només el primer slot per ser honestos amb "Ara"
+  }
+
+  // Ara comprovem si tot és 0
+  if (chartData.every(v => v === 0)) return null;
+  
   const max = Math.max(...chartData, 0.5); // Escala mínima
 
   return (
@@ -1915,7 +1933,7 @@ export default function MeteoIA() {
                          </div>
                          
                          {/* GRÀFICA PRECISIÓ DE PLUJA */}
-                         <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} />
+                         <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} currentPrecip={weatherData.current.precipitation} />
                        </div>
                      ) : (
                        <div className="flex items-center gap-2 text-slate-500 text-sm animate-pulse min-h-[3em]">
