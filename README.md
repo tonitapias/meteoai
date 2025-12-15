@@ -1,96 +1,99 @@
 # **🌍 MeteoToni AI**
 
-**The next generation of weather forecasting.** \> Intelligent analysis, precise data, and a modern interface powered by Open-Meteo.
+public/screenshot.png
 
-## **📖 About The Project**
+La nova generació de predicció meteorològica.  
+Anàlisi intel·ligent, dades precises i una interfície moderna potenciada per Open-Meteo.
 
-**MeteoToni AI** is not just another weather app. It combines high-precision meteorological data with an "AI Analysis" engine to provide human-readable summaries, health tips, and clothing recommendations.
+## **📖 Sobre el Projecte**
 
-Built with **React** and **Tailwind CSS**, it features a fully responsive design ("Mobile First"), dynamic backgrounds that change with the weather, and a comprehensive set of astronomical and atmospheric data.
+**MeteoToni AI** no és només una altra aplicació del temps. Combina dades meteorològiques d'alta precisió amb un motor d'"Anàlisi AI" per proporcionar resums llegibles, consells de salut i recomanacions de roba personalitzades.
 
-### **✨ Key Features**
+Construït amb **React** i **Tailwind CSS**, ofereix un disseny totalment adaptatiu ("Mobile First"), fons dinàmics que canvien segons el temps i l'hora del dia, i un conjunt complet de dades astronòmiques i atmosfèriques.
 
-* **🤖 Smart AI Analysis**: Automatically generates summaries and advice (clothing, hydration, UV warnings) based on complex data combinations.  
-* **🌍 Multi-Language Support**: Fully localized in **Catalan 🇦🇩, Spanish 🇪🇸, English 🇬🇧, and French 🇫🇷**.  
-* **🌡️ Precision Data**:  
-  * Real-time temperature & "Feels like".  
-  * Detailed **24h Hourly Forecast** (Temperature, Rain %, Wind, Humidity).  
-  * **7-Day Forecast** with visual temperature ranges.  
-* **🤧 Health & Air Quality**:  
-  * **Pollen Levels**: Specific tracking for Alder, Birch, Grass, Mugwort, Olive, and Ragweed.  
-  * **AQI (Air Quality Index)**: Real-time monitoring with color-coded alerts.  
-* **🌑 Advanced Astronomy**:  
-  * **Moon Phases**: Accurate phase calculation with visual rendering.  
-  * **Sun Cycle**: Interactive sun arc widget with sunrise/sunset countdowns.  
-* **🎨 Immersive UX**:  
-  * Dynamic background gradients based on weather conditions and time of day.  
-  * Particle effects for rain and snow.  
-  * Smart search with autocomplete and geolocation support.
+### **✨ Característiques Principals**
 
-## **🛠️ Tech Stack**
+* **🤖 Anàlisi Intel·ligent**: Generació automàtica de resums i consells (roba, hidratació, alertes UV) basats en combinacions complexes de dades.  
+* **🌍 Suport Multi-idioma**: Totalment localitzat en **Català 🇦🇩, Castellà 🇪🇸, Anglès 🇬🇧 i Francès 🇫🇷**.  
+* **🌡️ Dades de Precisió**:  
+  * Temperatura en temps real i "Sensació tèrmica".  
+  * **Previsió Horària 24h** detallada (Temperatura, % Pluja, Vent, Humitat).  
+  * **Previsió a 7 Dies** amb rangs de temperatura visuals.  
+* **🤧 Salut i Qualitat de l'Aire**:  
+  * **Nivells de Pol·len**: Seguiment específic per a Vern, Bedoll, Gramínies, Artemísia, Olivera i Ambròsia.  
+  * **AQI (Índex de Qualitat de l'Aire)**: Monitoratge en temps real amb alertes per colors.  
+* **🌑 Astronomia Avançada**:  
+  * **Fases Lunars**: Càlcul precís de la fase amb representació visual realista.  
+  * **Cicle Solar**: Widget interactiu de l'arc solar amb compte enrere per a la sortida i posta de sol.  
+* **🎨 UX Immersiva**:  
+  * Gradients de fons dinàmics basats en les condicions meteorològiques.  
+  * Efectes de partícules per a pluja i neu.  
+  * Cerca intel·ligent amb autocompletat i suport per a geolocalització.
 
-This project was built using the latest web technologies for speed and performance.
+## **🛠️ Tecnologies Utilitzades**
 
-* [**React 19**](https://react.dev/): Core frontend library.  
-* [**Vite**](https://vitejs.dev/): Next Generation Frontend Tooling.  
-* [**Tailwind CSS**](https://tailwindcss.com/): Utility-first CSS framework for rapid UI development.  
-* [**Lucide React**](https://lucide.dev/): Beautiful & consistent icon set.  
-* [**Open-Meteo API**](https://open-meteo.com/): Open-source weather API (No API key required).  
-* [**Nominatim / OpenStreetMap**](https://nominatim.org/): Geocoding and location search.
+Aquest projecte s'ha desenvolupat utilitzant les últimes tecnologies web per garantir velocitat i rendiment.
 
-## **🚀 Getting Started**
+* [**React 19**](https://react.dev/): Llibreria principal del frontend.  
+* [**Vite**](https://vitejs.dev/): Eina de construcció de nova generació.  
+* [**Tailwind CSS**](https://tailwindcss.com/): Framework CSS "utility-first" per a un disseny ràpid.  
+* [**Lucide React**](https://lucide.dev/): Conjunt d'icones elegant i consistent.  
+* [**Open-Meteo API**](https://open-meteo.com/): API meteorològica de codi obert (Sense necessitat de clau API).  
+* [**Nominatim / OpenStreetMap**](https://nominatim.org/): Geocodificació i cerca d'ubicacions.
 
-Follow these steps to get a local copy up and running.
+## **🚀 Començar**
 
-### **Prerequisites**
+Segueix aquests passos per obtenir una còpia local i posar-la en marxa.
 
-* Node.js (v18 or higher)  
+### **Prerequisits**
+
+* Node.js (v18 o superior)  
 * npm
 
-### **Installation**
+### **Instal·lació**
 
-1. **Clone the repository**  
+1. **Clona el repositori**  
    git clone \[https://github.com/tonitapias/meteoai.git\](https://github.com/tonitapias/meteoai.git)  
    cd meteoai
 
-2. **Install dependencies**  
+2. **Instal·la les dependències**  
    npm install
 
-3. **Start the development server**  
+3. **Inicia el servidor de desenvolupament**  
    npm run dev
 
-4. **Build for production**  
+4. **Compila per a producció**  
    npm run build
 
-## **📱 Usage**
+## **📱 Ús**
 
-1. **Search**: Use the search bar to find any city in the world.  
-2. **Geolocation**: Click the target icon to use your current GPS location.  
-3. **Preferences**:  
-   * Toggle between **Basic** and **Extended** view modes.  
-   * Switch units between **°C** and **°F**.  
-   * Change language via the flag icon.  
-4. **Details**: Click on any day in the 7-day forecast to open a detailed modal view.
+1. **Cerca**: Utilitza la barra de cerca per trobar qualsevol ciutat del món.  
+2. **Geolocalització**: Fes clic a la icona de l'objectiu per utilitzar la teva ubicació GPS actual.  
+3. **Preferències**:  
+   * Alterna entre els modes de vista **Bàsic** i **Extens**.  
+   * Canvia les unitats entre **°C** i **°F**.  
+   * Canvia l'idioma mitjançant la icona de la bandera.  
+4. **Detalls**: Fes clic a qualsevol dia de la previsió de 7 dies per obrir una vista detallada.
 
-## **🤝 Contributing**
+## **🤝 Contribució**
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Les contribucions són el que fan de la comunitat de codi obert un lloc increïble per aprendre, inspirar i crear. Qualsevol contribució que facis serà **molt apreciada**.
 
-1. Fork the Project  
-2. Create your Feature Branch (git checkout \-b feature/AmazingFeature)  
-3. Commit your Changes (git commit \-m 'Add some AmazingFeature')  
-4. Push to the Branch (git push origin feature/AmazingFeature)  
-5. Open a Pull Request
+1. Fes un Fork del Projecte  
+2. Crea la teva Branca de Funcionalitat (git checkout \-b feature/NovaFuncionalitat)  
+3. Fes Commit dels teus Canvis (git commit \-m 'Afegir NovaFuncionalitat')  
+4. Fes Push a la Branca (git push origin feature/NovaFuncionalitat)  
+5. Obre un Pull Request
 
-## **📄 License**
+## **📄 Llicència**
 
-Distributed under the **MIT License**. See LICENSE for more information.
+Distribuït sota la **Llicència MIT**. Consulta el fitxer LICENSE per a més informació.
 
-## **👨‍💻 Author**
+## **👨‍💻 Autor**
 
 **Toni Tapias**
 
-* Website: [https://tonitapias.github.io/meteoai/](https://tonitapias.github.io/meteoai/)  
+* Web: [https://tonitapias.github.io/meteoai/](https://tonitapias.github.io/meteoai/)  
 * GitHub: [@tonitapias](https://www.google.com/search?q=https://github.com/tonitapias)
 
 \<p align="center"\>  
