@@ -2040,6 +2040,14 @@ export default function MeteoIA() {
                  })}
                </div>
             </div>
+            
+            {/* FOOTER - COPYRIGHT */}
+            <div className="w-full py-8 mt-8 text-center border-t border-white/5">
+              <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity">
+                © {new Date().getFullYear()} Meteo Toni Ai <span className="mx-1.5 opacity-50">|</span> Desenvolupat per <span className="text-indigo-400 font-bold">Toni Tapias</span>
+              </p>
+            </div>
+
           </div>
         )}
         
