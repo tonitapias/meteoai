@@ -1740,7 +1740,7 @@ export default function MeteoIA() {
         setQuery(""); 
         inputRef.current?.blur();
         if (document.activeElement) document.activeElement.blur(); 
-    }, 0);
+    }, 200); // FIX: Increased delay from 100ms to 200ms for safer click/touch processing
   }
 
   // NEW: Shared Search Execution Logic for buttons/enter key
@@ -2280,7 +2280,7 @@ export default function MeteoIA() {
              <div className="relative flex-1">
                <button 
                   className={`absolute left-3 top-3.5 transition-colors ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
-                  onClick={executeSearch}
+                  onClick={executeSearch} // Fer clic a la lupa executa la cerca
                   disabled={isSearching}
                >
                  {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -2314,9 +2314,9 @@ export default function MeteoIA() {
                        key={i}
                        type="button" // Afegit type="button"
                        className={`group w-full px-4 py-4 md:py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors text-left ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
-                       onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
+                       onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // Click handler is here: Funciona per a qualsevol ciutat
                      >
-                       <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
+                       <div className="flex items-center gap-3 pointer-events-none"> {/* This makes sure inner elements don't interfere with the click */}
                          {query.length === 0 ? <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> : <MapPin className="w-5 h-5 text-slate-500"/>}
                          <div className="flex flex-col text-left">
                             <span className="text-base md:text-sm font-medium text-slate-200 group-hover:text-white transition-colors">{item.name}</span>
