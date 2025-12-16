@@ -654,7 +654,7 @@ const TRANSLATIONS = {
     },
 
     alertStorm: "Forte instabilité (CAPE élevé) et orages.",
-    alertSnow: "Attention : Neige accumulée prévue.",
+    alertSnow: "Attention : Neige accumulada prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
     alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
@@ -1712,19 +1712,35 @@ export default function MeteoIA() {
     return () => clearTimeout(timer);
   }, [query, showSuggestions, favorites, lang]);
 
+  // NEW: Shared Search Execution Logic
+  const executeSearch = () => {
+    const list = query.length === 0 ? favorites : suggestions;
+    if (list.length > 0) {
+        // Prefer active index, otherwise fallback to first item (essential for mobile 'Go')
+        const index = (activeSuggestionIndex >= 0 && activeSuggestionIndex < list.length) 
+            ? activeSuggestionIndex 
+            : 0;
+        
+        const item = list[index];
+        if (item) {
+            fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country);
+            setShowSuggestions(false);
+            inputRef.current?.blur();
+            if (document.activeElement) document.activeElement.blur(); // Mobile keyboard close
+        }
+    }
+  };
+
   const handleKeyDown = (e) => {
     if (!showSuggestions) return;
     const list = query.length === 0 ? favorites : suggestions;
     if (list.length === 0) return;
+    
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveSuggestionIndex(prev => (prev < list.length - 1 ? prev + 1 : 0)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveSuggestionIndex(prev => (prev > 0 ? prev - 1 : list.length - 1)); }
     else if (e.key === 'Enter') {
       e.preventDefault();
-      if (activeSuggestionIndex >= 0 && activeSuggestionIndex < list.length) {
-        const item = list[activeSuggestionIndex];
-        fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country);
-        inputRef.current?.blur();
-      }
+      executeSearch();
     } else if (e.key === 'Escape') { setShowSuggestions(false); }
   };
 
@@ -2255,7 +2271,14 @@ export default function MeteoIA() {
              </button>
 
              <div className="relative flex-1 md:w-80 hidden md:block">
-               <Search className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+               {/* PC Search Button (clickable) */}
+               <button 
+                  className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors"
+                  onClick={executeSearch}
+               >
+                 <Search className="w-4 h-4" />
+               </button>
+               
                <input 
                  ref={inputRef}
                  type="text" 
@@ -2310,13 +2333,21 @@ export default function MeteoIA() {
           {/* Mobile Search Bar Row */}
            <div className="w-full md:hidden flex gap-2">
              <div className="relative flex-1">
-               <Search className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+               {/* Mobile Search Button (clickable and higher z-index) */}
+               <button 
+                 className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors z-10 p-1 -m-1" // Added padding for touch target
+                 onClick={executeSearch}
+               >
+                 <Search className="w-4 h-4" />
+               </button>
+               
                <input 
                  type="text" 
                  placeholder={t.searchPlaceholder} 
                  value={query}
                  onFocus={() => setShowSuggestions(true)}
                  onChange={(e) => {setQuery(e.target.value); setShowSuggestions(true);}}
+                 onKeyDown={handleKeyDown} // ADDED KEYDOWN HANDLER FOR MOBILE 'GO' BUTTON
                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none touch-manipulation"
                />
                {showSuggestions && (
