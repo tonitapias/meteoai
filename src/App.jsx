@@ -653,8 +653,8 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilitat (CAPE elevat) i orages.",
-    alertSnow: "Attention : Neige accumulada prevista.",
+    alertStorm: "Forte instabilitat (CAPE elevat) et orages.",
+    alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
     alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
@@ -1698,6 +1698,7 @@ export default function MeteoIA() {
     return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
   };
 
+  // LÒGICA DE DEBOUNCE EXISTENT (MODIFICADA): Només fa la cerca a l'API si hi ha més de 2 caràcters
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.length > 2 && showSuggestions) {
@@ -1707,13 +1708,27 @@ export default function MeteoIA() {
           setSuggestions(data.results || []);
           setActiveSuggestionIndex(-1); 
         } catch (e) { console.error(e); }
-      } else if (query.length === 0) {
-         setSuggestions(favorites);
-         setActiveSuggestionIndex(-1);
-      }
+      } 
+      // ELIMINADA la lògica de favorites que es mou al nou useEffect
     }, 300);
     return () => clearTimeout(timer);
-  }, [query, showSuggestions, favorites, lang]);
+  }, [query, showSuggestions, lang]);
+  
+  // NOU: Lògica per carregar favorits immediatament o si el query es buida
+  // Això s'activa quan l'usuari fa focus i el camp és buit (query.length === 0)
+  useEffect(() => {
+    // Si l'usuari ha tancat la llista, no fem res
+    if (!showSuggestions) return;
+
+    // Si el camp de cerca està buit, mostrem els favorits
+    if (query.length === 0) {
+        setSuggestions(favorites);
+        setActiveSuggestionIndex(-1);
+    }
+    // Si hi ha query, la lògica de debounce (l'altre useEffect) s'encarregarà de la cerca a l'API.
+
+  }, [query, showSuggestions, favorites]);
+
 
   // NEW: Refactored function to handle cleanup after a successful search execution
   // ** IMPORTANT FIX **: Enveloping fetch/cleanup logic in setTimeout(..., 0) to ensure the native click event completes first.
