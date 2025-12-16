@@ -2241,8 +2241,12 @@ export default function MeteoIA() {
       {weatherData && <WeatherParticles code={effectiveWeatherCode} />}
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10">
+        
+        {/* RESTRUCTURED HEADER BAR: Single fluid row for MD+ */}
         <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 backdrop-blur-md flex flex-col md:flex-row gap-4 items-center justify-between sticky top-2 z-50 shadow-xl">
-          <div className="flex items-center gap-3 select-none w-full md:w-auto justify-between md:justify-start">
+          
+          {/* LOGO (Order 1) */}
+          <div className="flex items-center gap-3 select-none w-full md:w-auto justify-between md:justify-start md:order-1">
              <div className="flex items-center gap-3">
                <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 animate-[pulse_4s_ease-in-out_infinite]">
                  <BrainCircuit className="w-6 h-6 text-white" strokeWidth={2}/>
@@ -2250,14 +2254,16 @@ export default function MeteoIA() {
                <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
              </div>
              
+             {/* MOBILE UNIT/LANG TOGGLES (Keep for mobile layout) */}
              <div className="md:hidden flex gap-2">
-                 {/* MOBILE TOGGLE REMOVED HERE AS REQUESTED */}
+                 {/* ... MOBILE UNIT TOGGLE ... */}
                  <button 
                       onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
                       className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700 touch-manipulation"
                    >
                      {unit === 'C' ? '°C' : '°F'}
                  </button>
+                 {/* ... MOBILE LANG TOGGLE ... */}
                  <button 
                       onClick={cycleLang}
                       className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700 touch-manipulation"
@@ -2268,52 +2274,10 @@ export default function MeteoIA() {
              </div>
           </div>
 
-          <div className="flex gap-3 w-full md:w-auto items-center" ref={searchRef}>
-             {/* --- NOU SELECTOR DE VISTA (Substitueix els botons antics de toggleViewMode) --- */}
-             <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner w-full md:w-auto justify-center md:justify-start">
-               <button
-                 onClick={() => setViewMode('basic')}
-                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex-1 md:flex-none justify-center ${
-                   viewMode === 'basic' 
-                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
-                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                 }`}
-               >
-                 <LayoutTemplate className="w-4 h-4" />
-                 <span className="hidden md:inline">{t.modeBasic}</span>
-               </button>
-               
-               <button
-                 onClick={() => setViewMode('expert')}
-                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex-1 md:flex-none justify-center ${
-                   viewMode === 'expert' 
-                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
-                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                 }`}
-               >
-                 <LayoutDashboard className="w-4 h-4" />
-                 <span className="hidden md:inline">{t.modeExpert}</span>
-               </button>
-             </div>
-
-             <button 
-                onClick={cycleLang}
-                className="hidden md:flex bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all w-12 h-12 items-center justify-center shrink-0 shadow-lg uppercase"
-                title="Canviar idioma"
-             >
-               <FlagIcon lang={lang} className="w-6 h-4 rounded shadow-sm" />
-             </button>
-
-             <button 
-                onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
-                className="hidden md:flex bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all w-12 h-12 items-center justify-center shrink-0 shadow-lg"
-                title="Canviar unitats"
-             >
-               {unit === 'C' ? '°C' : '°F'}
-             </button>
-
-             <div className="relative flex-1 md:w-80 hidden md:block">
-               {/* PC Search Button (clickable) */}
+          {/* PC SEARCH INPUT + GEO BUTTON (Order 2) */}
+          <div className="relative flex-1 md:w-80 hidden md:flex items-center gap-3 md:order-2" ref={searchRef}> 
+             {/* PC Search Button (clickable) */}
+             <div className="relative flex-1">
                <button 
                   className={`absolute left-3 top-3.5 transition-colors ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
                   onClick={executeSearch}
@@ -2337,9 +2301,9 @@ export default function MeteoIA() {
                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none placeholder-slate-500 transition-all shadow-inner touch-manipulation"
                />
                
+               {/* Suggestions List */}
                {showSuggestions && (
                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-2">
-                   
                    {/* TITULAR FAVORITS/RESULTATS */}
                    {query.length === 0 && favorites.length > 0 && (
                      <div className="px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-wider bg-slate-950/80 sticky top-0 backdrop-blur-sm">{t.favorites}</div>
@@ -2379,17 +2343,65 @@ export default function MeteoIA() {
              </div>
              <button 
                 onClick={handleGetCurrentLocation} 
-                className="hidden md:block bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation disabled:bg-indigo-800 disabled:cursor-not-allowed" 
+                className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation disabled:bg-indigo-800 disabled:cursor-not-allowed shrink-0" 
                 title="Utilitza la meva ubicació"
                 disabled={isSearching}
              >
                 {isSearching ? <RefreshCw className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
              </button>
           </div>
+
+          {/* MODE SELECTOR + PC LANG/UNIT TOGGLES (Order 3) */}
+          <div className="flex gap-3 w-full md:w-auto items-center md:order-3 justify-center md:justify-end">
+             {/* --- NOU SELECTOR DE VISTA (Mode Basic/Advanced) --- */}
+             <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner w-full md:w-auto justify-center md:justify-start">
+               <button
+                 onClick={() => setViewMode('basic')}
+                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex-1 md:flex-none justify-center ${
+                   viewMode === 'basic' 
+                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                 }`}
+               >
+                 <LayoutTemplate className="w-4 h-4" />
+                 <span className="hidden md:inline">{t.modeBasic}</span>
+               </button>
+               
+               <button
+                 onClick={() => setViewMode('expert')}
+                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex-1 md:flex-none justify-center ${
+                   viewMode === 'expert' 
+                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                 }`}
+               >
+                 <LayoutDashboard className="w-4 h-4" />
+                 <span className="hidden md:inline">{t.modeExpert}</span>
+               </button>
+             </div>
+
+             {/* PC LANGUAGE TOGGLE (hidden md:flex) */}
+             <button 
+                onClick={cycleLang}
+                className="hidden md:flex bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all w-12 h-12 items-center justify-center shrink-0 shadow-lg uppercase"
+                title="Canviar idioma"
+             >
+               <FlagIcon lang={lang} className="w-6 h-4 rounded shadow-sm" />
+             </button>
+
+             {/* PC UNIT TOGGLE (hidden md:flex) */}
+             <button 
+                onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
+                className="hidden md:flex bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all w-12 h-12 items-center justify-center shrink-0 shadow-lg"
+                title="Canviar unitats"
+             >
+               {unit === 'C' ? '°C' : '°F'}
+             </button>
+          </div>
           
-          {/* Mobile Search Bar Row */}
-           <div className="w-full md:hidden flex gap-2">
-             <div className="relative flex-1">
+          {/* Mobile Search Bar Row (Always at the bottom on mobile, md:hidden) */}
+           <div className="w-full md:hidden flex gap-2 md:order-4">
+             <div className="relative flex-1" ref={searchRef}> 
                {/* Mobile Search Button (clickable and higher z-index) */}
                <button 
                  className={`absolute left-3 top-3.5 transition-colors z-10 p-1 -m-1 ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
@@ -2400,7 +2412,7 @@ export default function MeteoIA() {
                </button>
                
                <input 
-                 ref={inputRef} // REPARAT: L'inputRef només apunta a l'input
+                 ref={inputRef} 
                  type="text" 
                  placeholder={t.searchPlaceholder} 
                  value={query}
@@ -2453,7 +2465,7 @@ export default function MeteoIA() {
              </div>
              <button 
                 onClick={handleGetCurrentLocation} 
-                className="bg-indigo-600 text-white p-3 rounded-xl active:scale-95 touch-manipulation disabled:bg-indigo-800 disabled:cursor-not-allowed"
+                className="bg-indigo-600 text-white p-3 rounded-xl active:scale-95 touch-manipulation disabled:bg-indigo-800 disabled:cursor-not-allowed shrink-0"
                 disabled={isSearching}
              >
                 {isSearching ? <RefreshCw className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
@@ -2538,39 +2550,6 @@ export default function MeteoIA() {
                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
 
                <div className="relative z-10">
-                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                   <div>
-                     <div className="flex items-center gap-3">
-                       <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
-                       <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
-                         <Star className={`w-7 h-7 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
-                       </button>
-                     </div>
-                     <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200 font-medium">
-                        <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
-                        <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
-                        <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
-                        <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
-                        <button 
-                            onClick={() => !loading && fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} 
-                            className={`flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70 ${loading ? 'cursor-not-allowed opacity-70' : ''}`}
-                            disabled={loading}
-                        >
-                          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}/> 
-                          <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
-                        </button>
-                     </div>
-                   </div>
-                   <div className="flex flex-col items-end self-end md:self-auto">
-                      <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
-                        {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day, weatherData.current.precipitation_probability, weatherData.current.wind_speed_10m)}
-                      </div>
-                      <span className="text-lg md:text-xl font-medium text-slate-200 mt-2">
-                         {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
-                      </span>
-                   </div>
-                 </div>
-
                  <div className="flex flex-col lg:flex-row items-end gap-8 lg:gap-12">
                    <div className="flex items-start gap-2 w-full md:w-auto justify-between md:justify-start">
                       <span className="text-7xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
@@ -2625,6 +2604,33 @@ export default function MeteoIA() {
                        </div>
                      )}
                    </div>
+                 </div>
+                 
+                 {/* LOCATION AND TIME INFO BELOW MAIN DATA */}
+                 <div className="mt-6 pt-4 border-t border-white/10">
+                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                       <div>
+                         <div className="flex items-center gap-3">
+                           <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
+                           <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
+                             <Star className={`w-5 h-5 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
+                           </button>
+                         </div>
+                         <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200 font-medium">
+                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
+                            <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
+                            <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                         </div>
+                       </div>
+                       <div className="flex flex-col items-end self-end md:self-auto">
+                          <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
+                            {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-20 md:h-20", weatherData.current.is_day, currentRainProbability, weatherData.current.wind_speed_10m)}
+                          </div>
+                          <span className="text-base md:text-lg font-medium text-slate-200 mt-2">
+                             {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
+                          </span>
+                       </div>
+                     </div>
                  </div>
                </div>
             </div>
