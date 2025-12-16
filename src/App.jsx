@@ -108,7 +108,7 @@ const TRANSLATIONS = {
     
     // AI Advanced Texts
     aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
-    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ",
+    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolació atmosfèrica. ",
     aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
     aiIntroNight: "Bona nit. Previsió nocturna. ",
     
@@ -653,7 +653,7 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilitat (CAPE elevat) et orages.",
+    alertStorm: "Forte instabilité (CAPE elevat) et orages.",
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
@@ -2314,7 +2314,11 @@ export default function MeteoIA() {
                  type="text" 
                  placeholder={t.searchPlaceholder} 
                  value={query}
-                 onFocus={() => setShowSuggestions(true)}
+                 onFocus={() => {
+                   setShowSuggestions(true);
+                   // DISPARA LA LÒGICA DE FAVORITS IMMEDIATA SI EL CAMP ESTÀ BUIT
+                   if (query.length === 0) setSuggestions(favorites); 
+                 }}
                  onChange={(e) => {setQuery(e.target.value); setShowSuggestions(true);}}
                  onKeyDown={handleKeyDown}
                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none placeholder-slate-500 transition-all shadow-inner touch-manipulation"
@@ -2322,9 +2326,12 @@ export default function MeteoIA() {
                
                {showSuggestions && (
                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-2">
-                   {suggestions.length === 0 && query.length === 0 && favorites.length > 0 && (
+                   
+                   {/* TITULAR FAVORITS/RESULTATS */}
+                   {query.length === 0 && favorites.length > 0 && (
                      <div className="px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-wider bg-slate-950/80 sticky top-0 backdrop-blur-sm">{t.favorites}</div>
                    )}
+                   
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
                      <button // Canviat div a button
                        key={i}
@@ -2378,16 +2385,23 @@ export default function MeteoIA() {
                  type="text" 
                  placeholder={t.searchPlaceholder} 
                  value={query}
-                 onFocus={() => setShowSuggestions(true)}
+                 onFocus={() => {
+                   setShowSuggestions(true);
+                   // DISPARA LA LÒGICA DE FAVORITS IMMEDIATA SI EL CAMP ESTÀ BUIT
+                   if (query.length === 0) setSuggestions(favorites); 
+                 }}
                  onChange={(e) => {setQuery(e.target.value); setShowSuggestions(true);}}
                  onKeyDown={handleKeyDown} 
                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none touch-manipulation"
                />
                {showSuggestions && (
                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[40vh] overflow-y-auto">
-                   {suggestions.length === 0 && query.length === 0 && favorites.length > 0 && (
+                   
+                   {/* TITULAR FAVORITS/RESULTATS */}
+                   {query.length === 0 && favorites.length > 0 && (
                      <div className="px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-wider bg-slate-950/80 sticky top-0 backdrop-blur-sm">{t.favorites}</div>
                    )}
+                   
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
                       <button // Canviat div a button
                          key={i} 
