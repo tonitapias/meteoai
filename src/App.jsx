@@ -149,7 +149,7 @@ const TRANSLATIONS = {
     alertStorm: "Inestabilitat acusada (CAPE alt) i tempestes.",
     alertSnow: "Precaució: Neu acumulada prevista.",
     alertWindExtreme: "Vent huracanat. Perill extrem a l'exterior.",
-    alertWindHigh: "Ràfegues fortes. Compte objectes.",
+    alertWindHigh: "Ràfagues fortes. Compte objectes.",
     alertHeatExtreme: "Calor extrema. Evita el sol.",
     alertHeatHigh: "Temperatures altes. Hidrata't.",
     alertColdExtreme: "Fred sever. Risc congelació.",
@@ -964,7 +964,7 @@ const PollenWidget = ({ data, lang = 'ca' }) => {
 
 // --- COMPASS GAUGE ---
 const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }) => {
-  const directions = TRANSLATIONS[lang].directions || ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const directions = TRANSLATIONS[lang].directions || ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
   const index = Math.round(((degrees %= 360) < 0 ? degrees + 360 : degrees) / 45) % 8;
   const dirText = directions[index];
   
@@ -1712,7 +1712,16 @@ export default function MeteoIA() {
     return () => clearTimeout(timer);
   }, [query, showSuggestions, favorites, lang]);
 
-  // NEW: Shared Search Execution Logic
+  // NEW: Refactored function to handle cleanup after a successful search execution
+  const cleanupSearch = (lat, lon, name, country) => {
+    fetchWeatherByCoords(lat, lon, name, country);
+    setShowSuggestions(false);
+    setQuery(""); // Clear the input field after selection
+    inputRef.current?.blur();
+    if (document.activeElement) document.activeElement.blur(); // Mobile keyboard close
+  }
+
+  // NEW: Shared Search Execution Logic for buttons/enter key
   const executeSearch = () => {
     const list = query.length === 0 ? favorites : suggestions;
     if (list.length > 0) {
@@ -1723,10 +1732,7 @@ export default function MeteoIA() {
         
         const item = list[index];
         if (item) {
-            fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country);
-            setShowSuggestions(false);
-            inputRef.current?.blur();
-            if (document.activeElement) document.activeElement.blur(); // Mobile keyboard close
+            cleanupSearch(item.latitude, item.longitude, item.name, item.country);
         }
     }
   };
@@ -1755,10 +1761,12 @@ export default function MeteoIA() {
             const data = await response.json();
             const locationName = data.address.city || data.address.town || data.address.village || data.address.municipality || "Ubicació";
             const locationCountry = data.address.country || "";
-            fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
+            // Use cleanupSearch function after getting location
+            cleanupSearch(latitude, longitude, locationName, locationCountry); 
           } catch (err) {
             console.error("Error reverse geocoding:", err);
-            fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
+            // Use cleanupSearch function after error too, but with placeholder name
+            cleanupSearch(latitude, longitude, "Ubicació Detectada");
           }
         },
         (error) => { setError("No s'ha pogut obtenir la ubicació."); setLoading(false); }
@@ -1828,7 +1836,7 @@ export default function MeteoIA() {
     setAiAnalysis(null);
     setSuggestions([]);
     setShowSuggestions(false);
-    setQuery(""); 
+    // setQuery(""); // REMOVED: Handled by cleanupSearch
     
     try {
       // UPDATED URL WITH CAPE and PRESSURE_MSL IN HOURLY
@@ -2299,7 +2307,7 @@ export default function MeteoIA() {
                      <div
                        key={i}
                        className={`group w-full px-4 py-4 md:py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
-                       onClick={() => fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country)}
+                       onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // MODIFICACIÓ CLAU: Crida a cleanupSearch
                      >
                        <div className="flex items-center gap-3">
                          {query.length === 0 ? <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> : <MapPin className="w-5 h-5 text-slate-500"/>}
@@ -2335,6 +2343,7 @@ export default function MeteoIA() {
              <div className="relative flex-1">
                {/* Mobile Search Button (clickable and higher z-index) */}
                <button 
+                 ref={inputRef} // Fix: use inputRef on the input, not the button
                  className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors z-10 p-1 -m-1" // Added padding for touch target
                  onClick={executeSearch}
                >
@@ -2342,18 +2351,23 @@ export default function MeteoIA() {
                </button>
                
                <input 
+                 ref={inputRef}
                  type="text" 
                  placeholder={t.searchPlaceholder} 
                  value={query}
                  onFocus={() => setShowSuggestions(true)}
                  onChange={(e) => {setQuery(e.target.value); setShowSuggestions(true);}}
-                 onKeyDown={handleKeyDown} // ADDED KEYDOWN HANDLER FOR MOBILE 'GO' BUTTON
+                 onKeyDown={handleKeyDown} 
                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none touch-manipulation"
                />
                {showSuggestions && (
                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[40vh] overflow-y-auto">
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
-                      <div key={i} onClick={() => fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country)} className="p-4 border-b border-white/5 last:border-0 text-white active:bg-white/10">
+                      <div 
+                         key={i} 
+                         onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // MODIFICACIÓ CLAU: Crida a cleanupSearch
+                         className="p-4 border-b border-white/5 last:border-0 text-white active:bg-white/10"
+                      >
                         {item.name}
                       </div>
                    ))}
