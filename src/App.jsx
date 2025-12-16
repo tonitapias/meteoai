@@ -1152,7 +1152,7 @@ const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedN
   );
 };
 
-// --- NOU COMPONENT: GRÀFICA DE PRECISIÓ (MINUT A MINUT) ---
+// --- NOU COMPONENT: GRÀFICA DE PRECISIÓ AMB ESCALA DE COLORS (MODIFICAT) ---
 const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
   let chartData = data ? [...data] : [];
   while(chartData.length < 4) chartData.push(0);
@@ -1165,31 +1165,53 @@ const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
   if (chartData.every(v => v === 0)) return null;
   const max = Math.max(...chartData, 0.5); 
 
+  // Function to get color based on intensity (Official scales approx)
+  const getIntensityColor = (val) => {
+      if (val === 0) return 'bg-blue-900/50';
+      if (val < 2.5) return 'bg-blue-400'; // Light
+      if (val < 7.6) return 'bg-yellow-400'; // Moderate
+      if (val < 50) return 'bg-orange-500'; // Heavy
+      return 'bg-red-600'; // Violent
+  };
+
   return (
-    <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in">
-        <div className="flex items-center gap-2 mb-2">
-            <CloudRain className="w-3 h-3 text-blue-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
+    <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in relative">
+        <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+                <CloudRain className="w-3 h-3 text-blue-400" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
+            </div>
+            {max > 2.5 && <span className="text-[9px] text-slate-400 font-medium">Màx: {max.toFixed(1)}mm</span>}
         </div>
-        <div className="flex items-end gap-2 h-16 w-full pb-1">
-           {chartData.map((val, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
-                 {val > 0 && (
-                    <span className="text-[9px] font-bold text-blue-200 mb-0.5 animate-in slide-in-from-bottom-1">
-                        {val >= 10 ? Math.round(val) : val.toFixed(1)}
-                    </span>
-                 )}
-                 <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
-                    <div 
-                      className="w-full bg-blue-400 rounded-sm transition-all group-hover:bg-blue-300"
-                      style={{ height: `${(val / max) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
-                    ></div>
-                 </div>
-                 <span className="text-[9px] text-slate-400 font-medium">
-                    {i === 0 ? 'Ara' : `+${i * 15}m`}
-                 </span>
-              </div>
-           ))}
+        
+        {/* Background Grid Lines for Scale Context */}
+        <div className="relative h-16 w-full pb-1">
+             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
+                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
+                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
+             </div>
+
+             <div className="flex items-end gap-2 h-full w-full relative z-10">
+               {chartData.map((val, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
+                     {val > 0 && (
+                        <span className={`text-[9px] font-bold mb-0.5 animate-in slide-in-from-bottom-1 ${val > 7.6 ? 'text-white' : 'text-blue-200'}`}>
+                            {val >= 10 ? Math.round(val) : val.toFixed(1)}
+                        </span>
+                     )}
+                     <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
+                        <div 
+                          className={`w-full rounded-sm transition-all group-hover:opacity-80 ${getIntensityColor(val)}`}
+                          style={{ height: `${(val / max) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
+                        ></div>
+                     </div>
+                     <span className="text-[9px] text-slate-400 font-medium">
+                        {i === 0 ? 'Ara' : `+${i * 15}m`}
+                     </span>
+                  </div>
+               ))}
+             </div>
         </div>
         <div className="flex justify-between items-center text-[9px] text-blue-400/70 mt-1 px-1">
            <span>Intensitat (mm)</span>
@@ -2440,14 +2462,14 @@ export default function MeteoIA() {
                                   {weatherData.daily.precipitation_probability_max[i]}%
                                 </span>
                              )}
-                             {/* FILTER: Hide precip < 0.25mm as 'noise' */}
+                             {/* FILTER: Hide precip < 0.25mm as 'noise', BUT show 'IP' if 0.1 < val < 0.25 for Official feel */}
                              {snowSum > 0 ? (
                                 <span className="text-[10px] font-medium text-cyan-100 flex items-center gap-0.5">
                                   {snowSum}cm
                                 </span>
-                             ) : precipSum > 0.25 ? (
+                             ) : precipSum > 0.1 ? (
                                 <span className="text-[10px] font-medium text-blue-200 flex items-center gap-0.5">
-                                  {Math.round(precipSum)}mm
+                                  {precipSum < 0.25 ? "IP" : `${Math.round(precipSum)}mm`}
                                 </span>
                              ) : null}
                            </div>
