@@ -1331,7 +1331,8 @@ export default function MeteoIA() {
     // 1-2: Parcialment ennuvolat (Afegim Fill als núvols i sol/lluna)
     if (code === 1 || code === 2) {
        // --- MILLORA 4 (Vent): Si fa vent fort, animem el núvol ---
-       const windClass = windSpeed > 40 ? "animate-pulse" : "";
+       // MODIFICAT: Pulse més ràpid per simular vent fort
+       const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
        return isDay 
          ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300 ${windClass}`} />
          : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400 ${windClass}`} />;
@@ -1987,10 +1988,10 @@ export default function MeteoIA() {
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
                         <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay, h.rain, h.wind)}</div>
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
-                        {/* ADDED RAIN INFO */}
+                        {/* ADDED RAIN INFO + CONTRAST FIX */}
                         <div className="flex flex-col items-center mt-1 h-6 justify-start">
                            {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
-                           {h.precip > 0 && <span className="text-[9px] text-cyan-400">{h.precip}mm</span>}
+                           {h.precip > 0 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
                         </div>
                      </div>
                   ))}
@@ -2164,8 +2165,8 @@ export default function MeteoIA() {
           </div>
         </div>
 
-        {/* LOADING */}
-        {loading && (
+        {/* LOADING (ONLY INITIAL) */}
+        {loading && !weatherData && (
            <div className="animate-pulse space-y-6">
              <div className="h-64 bg-slate-800/50 rounded-[2.5rem] w-full"></div>
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><div className="grid grid-cols-2 gap-4 h-48"> {[1,2,3,4].map(i => <div key={i} className="bg-slate-800/50 rounded-2xl h-full"></div>)} </div><div className="lg:col-span-2 bg-slate-800/50 rounded-3xl h-48"></div></div>
@@ -2203,7 +2204,7 @@ export default function MeteoIA() {
         )}
 
         {/* MAIN DASHBOARD */}
-        {!loading && weatherData && (
+        {weatherData && (
           <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6">
             
             {/* ALERT BANNERS SYSTEM (ALWAYS VISIBLE) */}
@@ -2259,8 +2260,13 @@ export default function MeteoIA() {
                         {/* CORRECTED: Removed timezone prop from display to avoid double shift */}
                         <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
-                        <button onClick={() => fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} className="flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70">
-                          <RefreshCw className="w-3.5 h-3.5"/> <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
+                        <button 
+                            onClick={() => !loading && fetchWeatherByCoords(weatherData.location.latitude, weatherData.location.longitude, weatherData.location.name, weatherData.location.country)} 
+                            className={`flex items-center gap-1.5 hover:text-white transition-colors active:opacity-70 ${loading ? 'cursor-not-allowed opacity-70' : ''}`}
+                            disabled={loading}
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}/> 
+                          <span className="hidden md:inline">{t.updatedNow}</span><span className="md:hidden">{t.now}</span>
                         </button>
                      </div>
                    </div>
@@ -2459,10 +2465,10 @@ export default function MeteoIA() {
                           <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
                           <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind)}</div>
                           <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
-                          {/* ADDED RAIN INFO */}
+                          {/* ADDED RAIN INFO + CONTRAST FIX */}
                           <div className="flex flex-col items-center mt-1 h-6 justify-start">
                              {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
-                             {h.precip > 0 && <span className="text-[9px] text-cyan-400">{h.precip}mm</span>}
+                             {h.precip > 0 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
                           </div>
                        </div>
                     ))}
