@@ -802,7 +802,9 @@ const getMoonPhaseText = (phase, lang = 'ca') => {
 const calculateDewPoint = (T, RH) => {
   const a = 17.27;
   const b = 237.7;
-  const alpha = ((a * T) / (b + T)) + Math.log(RH / 100.0);
+  // Safety: Math.log of 0 is -Infinity. RH should be > 0.
+  const safeRH = Math.max(RH, 1);
+  const alpha = ((a * T) / (b + T)) + Math.log(safeRH / 100.0);
   return (b * alpha) / (a - alpha);
 };
 
@@ -1485,9 +1487,7 @@ export default function MeteoIA() {
   useEffect(() => {
       if (showSuggestions && activeSuggestionIndex !== -1 && suggestionsListRef.current) {
           const list = suggestionsListRef.current;
-          const element = list.children[query.length === 0 && favorites.length > 0 ? activeSuggestionIndex + 1 : activeSuggestionIndex]; // +1 for header if needed, actually header is separate
           // Finding the button element
-          // Simpler: grab all buttons
           const buttons = list.querySelectorAll('button.group'); // Target the rows
           if (buttons[activeSuggestionIndex]) {
               buttons[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
@@ -2567,25 +2567,56 @@ export default function MeteoIA() {
             <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
 
-               <div className="relative z-10">
-                 <div className="flex flex-col lg:flex-row items-end gap-8 lg:gap-12">
-                   <div className="flex items-start gap-2 w-full md:w-auto justify-between md:justify-start">
-                      <span className="text-7xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
-                        {formatTemp(weatherData.current.temperature_2m)}°
-                      </span>
-                      <div className="space-y-2 mt-2 md:mt-4">
-                         <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm backdrop-blur-md shadow-lg">
-                           <span className="text-rose-300 flex items-center gap-1">↑ {formatTemp(weatherData.daily.temperature_2m_max[0])}°</span>
-                           <span className="w-px h-3 bg-white/20"></span>
-                           <span className="text-cyan-300 flex items-center gap-1">↓ {formatTemp(weatherData.daily.temperature_2m_min[0])}°</span>
-                         </div>
-                         <div className="text-xs text-center text-slate-400 font-medium">
-                           {t.feelsLike} {formatTemp(weatherData.current.apparent_temperature)}°
-                         </div>
-                      </div>
+               <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
+                   
+                   {/* COLUMNA ESQUERRA: INFORMACIÓ PRINCIPAL AGRUPADA (NOU DISSENY) */}
+                   <div className="flex flex-col gap-4 w-full lg:w-auto">
+                       
+                       {/* HEADER: Ubicació i Hora */}
+                       <div className="flex flex-col">
+                           <div className="flex items-center gap-3">
+                                <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
+                                <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
+                                    <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
+                                </button>
+                           </div>
+                           <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
+                                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
+                                <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
+                                <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                           </div>
+                       </div>
+
+                       {/* COS PRINCIPAL: Temp + Icona (AL COSTAT) */}
+                       <div className="flex items-center gap-6 mt-2">
+                           <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
+                               {getWeatherIcon(effectiveWeatherCode, "w-24 h-24 md:w-32 md:h-32", weatherData.current.is_day, currentRainProbability, weatherData.current.wind_speed_10m)}
+                           </div>
+                           <div className="flex flex-col justify-center">
+                                <span className="text-8xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
+                                   {formatTemp(weatherData.current.temperature_2m)}°
+                                </span>
+                                <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
+                                   {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
+                                </span>
+                           </div>
+                       </div>
+
+                       {/* DADES EXTRES: Min/Max/Sensació */}
+                       <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">
+                                <span className="text-rose-300 flex items-center gap-1">↑ {formatTemp(weatherData.daily.temperature_2m_max[0])}°</span>
+                                <span className="w-px h-3 bg-white/20"></span>
+                                <span className="text-cyan-300 flex items-center gap-1">↓ {formatTemp(weatherData.daily.temperature_2m_min[0])}°</span>
+                            </div>
+                            <div className="text-sm text-slate-400 font-medium px-2">
+                                {t.feelsLike} <span className="text-slate-200 font-bold">{formatTemp(weatherData.current.apparent_temperature)}°</span>
+                            </div>
+                       </div>
                    </div>
 
-                   <div className="flex-1 w-full bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden">
+                   {/* COLUMNA DRETA: Caixa IA (ADAPTADA) */}
+                   <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center">
                      <div className="flex items-center justify-between mb-3">
                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
                          <BrainCircuit className="w-4 h-4 animate-pulse" strokeWidth={2}/> {t.aiAnalysis}
@@ -2622,34 +2653,6 @@ export default function MeteoIA() {
                        </div>
                      )}
                    </div>
-                 </div>
-                 
-                 {/* LOCATION AND TIME INFO BELOW MAIN DATA */}
-                 <div className="mt-6 pt-4 border-t border-white/10">
-                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                       <div>
-                         <div className="flex items-center gap-3">
-                           <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
-                           <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
-                             <Star className={`w-5 h-5 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
-                           </button>
-                         </div>
-                         <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200 font-medium">
-                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
-                            <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
-                            <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
-                         </div>
-                       </div>
-                       <div className="flex flex-col items-end self-end md:self-auto">
-                          <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
-                            {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-20 md:h-20", weatherData.current.is_day, currentRainProbability, weatherData.current.wind_speed_10m)}
-                          </div>
-                          <span className="text-base md:text-lg font-medium text-slate-200 mt-2">
-                             {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
-                          </span>
-                       </div>
-                     </div>
-                 </div>
                </div>
             </div>
 
