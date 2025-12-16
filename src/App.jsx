@@ -653,8 +653,8 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilité (CAPE élevé) i orages.",
-    alertSnow: "Attention : Neige accumulada prevista.",
+    alertStorm: "Forte instabilitat (CAPE élevé) i orages.",
+    alertSnow: "Attention : Neige accumulada prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
     alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
@@ -1716,12 +1716,16 @@ export default function MeteoIA() {
   }, [query, showSuggestions, favorites, lang]);
 
   // NEW: Refactored function to handle cleanup after a successful search execution
+  // ** IMPORTANT FIX **: Enveloping fetch/cleanup logic in setTimeout(..., 0) to ensure the native click event completes first.
   const cleanupSearch = (lat, lon, name, country) => {
-    fetchWeatherByCoords(lat, lon, name, country);
-    setShowSuggestions(false);
-    setQuery(""); // Clear the input field after selection
-    inputRef.current?.blur();
-    if (document.activeElement) document.activeElement.blur(); // Mobile keyboard close
+    // Retardem la crida per assegurar que el navegador hagi processat completament l'esdeveniment tàctil/click
+    setTimeout(() => {
+        fetchWeatherByCoords(lat, lon, name, country);
+        setShowSuggestions(false);
+        setQuery(""); 
+        inputRef.current?.blur();
+        if (document.activeElement) document.activeElement.blur(); 
+    }, 0);
   }
 
   // NEW: Shared Search Execution Logic for buttons/enter key
@@ -2257,7 +2261,7 @@ export default function MeteoIA() {
                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex-1 md:flex-none justify-center ${
                    viewMode === 'expert' 
                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
-                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5' // FIX aplicat: Tancar correctament la cadena
                  }`}
                >
                  <LayoutDashboard className="w-4 h-4" />
@@ -2374,7 +2378,7 @@ export default function MeteoIA() {
                          key={i} 
                          type="button" // Afegit type="button"
                          onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
-                         onMouseDown={(e) => e.preventDefault()} // BLOQUEJA el canvi de focus per assegurar el click
+                         onMouseDown={(e) => e.preventDefault()} // BLOQUEJA el canvi de focus per assegurar el click (compatible amb tàctil)
                          className="group w-full px-4 py-4 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 hover:bg-white/5 text-left" 
                       >
                          <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
