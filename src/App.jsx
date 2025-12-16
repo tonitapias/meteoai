@@ -653,7 +653,7 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilité (CAPE élevé) et orages.",
+    alertStorm: "Forte instabilité (CAPE élevé) i orages.",
     alertSnow: "Attention : Neige accumulada prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
