@@ -249,7 +249,6 @@ const TRANSLATIONS = {
     uvVeryHigh: "Muy Alto",
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
-    alertWarning: "AVISO PRECAUCIÓN",
     subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
@@ -653,7 +652,7 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilité (CAPE elevat) et orages.",
+    alertStorm: "Forte instabilitat (CAPE elevat) et orages.",
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
@@ -1455,6 +1454,7 @@ export default function MeteoIA() {
   const [unit, setUnit] = useState(() => localStorage.getItem('meteoia-unit') || 'C');
   const [lang, setLang] = useState(() => localStorage.getItem('meteoia-lang') || 'ca');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('meteoia-view') || 'basic');
+  const [isSearching, setIsSearching] = useState(false); // NOU: Estat per al loader de cerca
 
   const [now, setNow] = useState(new Date());
 
@@ -1745,15 +1745,17 @@ export default function MeteoIA() {
 
   // NEW: Shared Search Execution Logic for buttons/enter key
   const executeSearch = () => {
+    if (isSearching) return; // Si ja està buscant, ignora
+    
     const list = query.length === 0 ? favorites : suggestions;
     if (list.length > 0) {
-        // Prefer active index, otherwise fallback to first item (essential for mobile 'Go')
         const index = (activeSuggestionIndex >= 0 && activeSuggestionIndex < list.length) 
             ? activeSuggestionIndex 
             : 0;
         
         const item = list[index];
         if (item) {
+            setIsSearching(true); // Activa el loader
             cleanupSearch(item.latitude, item.longitude, item.name, item.country);
         }
     }
@@ -1773,8 +1775,11 @@ export default function MeteoIA() {
   };
 
   const handleGetCurrentLocation = () => {
+    if (isSearching) return; // Si ja està buscant, ignora
+    
     if (navigator.geolocation) {
       setLoading(true);
+      setIsSearching(true); // Activa el loader
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -1783,15 +1788,19 @@ export default function MeteoIA() {
             const data = await response.json();
             const locationName = data.address.city || data.address.town || data.address.village || data.address.municipality || "Ubicació";
             const locationCountry = data.address.country || "";
-            // Use cleanupSearch function after getting location
+            
+            // La crida a cleanupSearch contindrà la crida final a fetchWeatherByCoords
             cleanupSearch(latitude, longitude, locationName, locationCountry); 
           } catch (err) {
             console.error("Error reverse geocoding:", err);
-            // Use cleanupSearch function after error too, but with placeholder name
             cleanupSearch(latitude, longitude, "Ubicació Detectada");
           }
         },
-        (error) => { setError("No s'ha pogut obtenir la ubicació."); setLoading(false); }
+        (error) => { 
+          setError("No s'ha pogut obtenir la ubicació."); 
+          setLoading(false); 
+          setIsSearching(false); // Desactiva el loader en cas d'error de geolocalització
+        }
       );
     } else { setError("Geolocalització no suportada."); }
   };
@@ -1854,11 +1863,11 @@ export default function MeteoIA() {
 
   const fetchWeatherByCoords = async (lat, lon, name, country = "") => {
     setLoading(true);
+    setIsSearching(true); // Activa el loader
     setError(null);
     setAiAnalysis(null);
     setSuggestions([]);
     setShowSuggestions(false);
-    // setQuery(""); // REMOVED: Handled by cleanupSearch
     
     try {
       // UPDATED URL WITH CAPE and PRESSURE_MSL IN HOURLY
@@ -1880,7 +1889,10 @@ export default function MeteoIA() {
     } catch (err) {
       console.error(err);
       setError(err.message || "Error desconegut");
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+      setIsSearching(false); // Desactiva el loader al final
+    }
   };
   
   const shiftedNow = useMemo(() => {
@@ -2303,10 +2315,11 @@ export default function MeteoIA() {
              <div className="relative flex-1 md:w-80 hidden md:block">
                {/* PC Search Button (clickable) */}
                <button 
-                  className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors"
+                  className={`absolute left-3 top-3.5 transition-colors ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
                   onClick={executeSearch}
+                  disabled={isSearching}
                >
-                 <Search className="w-4 h-4" />
+                 {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                </button>
                
                <input 
@@ -2364,8 +2377,13 @@ export default function MeteoIA() {
                  </div>
                )}
              </div>
-             <button onClick={handleGetCurrentLocation} className="hidden md:block bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation" title="Utilitza la meva ubicació">
-                <LocateFixed className="w-5 h-5" />
+             <button 
+                onClick={handleGetCurrentLocation} 
+                className="hidden md:block bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation disabled:bg-indigo-800 disabled:cursor-not-allowed" 
+                title="Utilitza la meva ubicació"
+                disabled={isSearching}
+             >
+                {isSearching ? <RefreshCw className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
              </button>
           </div>
           
@@ -2374,10 +2392,11 @@ export default function MeteoIA() {
              <div className="relative flex-1">
                {/* Mobile Search Button (clickable and higher z-index) */}
                <button 
-                 className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors z-10 p-1 -m-1" 
+                 className={`absolute left-3 top-3.5 transition-colors z-10 p-1 -m-1 ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
                  onClick={executeSearch}
+                 disabled={isSearching}
                >
-                 <Search className="w-4 h-4" />
+                 {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                </button>
                
                <input 
@@ -2432,8 +2451,12 @@ export default function MeteoIA() {
                  </div>
                )}
              </div>
-             <button onClick={handleGetCurrentLocation} className="bg-indigo-600 text-white p-3 rounded-xl active:scale-95 touch-manipulation">
-                <LocateFixed className="w-5 h-5" />
+             <button 
+                onClick={handleGetCurrentLocation} 
+                className="bg-indigo-600 text-white p-3 rounded-xl active:scale-95 touch-manipulation disabled:bg-indigo-800 disabled:cursor-not-allowed"
+                disabled={isSearching}
+             >
+                {isSearching ? <RefreshCw className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
              </button>
            </div>
         </div>
@@ -2675,7 +2698,7 @@ export default function MeteoIA() {
                        <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
                        <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/20 rounded-full border border-indigo-500/30">
                           <GitGraph className="w-3 h-3 text-indigo-300" />
-                          <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">{t.modeExpert} - 3 Models</span>
+                          <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">{t.modelBest} - 3 Models</span>
                        </div>
                      </div>
                      
