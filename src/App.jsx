@@ -1122,7 +1122,7 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
          <span className={`w-2 h-2 rounded-full`} style={{backgroundColor: currentConfig.color}}></span>
          {currentConfig.title}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto drop-shadow-lg" preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto drop-shadow-lg touch-pan-x" preserveAspectRatio="none">
         <defs>
           <linearGradient id={`gradient-${layer}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={currentConfig.gradientStart} stopOpacity="0.4" />
@@ -1139,8 +1139,15 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
         <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         
         {points.map((p, i) => (
-          <g key={i} onMouseEnter={() => setHoveredIndex(i)}>
-            <rect x={p.x - (width / points.length / 2)} y={0} width={width / points.length} height={height} fill="transparent" className="cursor-crosshair"/>
+          <g 
+            key={i} 
+            onMouseEnter={() => setHoveredIndex(i)}
+            onClick={() => setHoveredIndex(i)}
+            onTouchStart={() => setHoveredIndex(i)}
+            className="cursor-pointer"
+          >
+            {/* Expanded touch target for mobile */}
+            <rect x={p.x - (width / points.length / 2)} y={0} width={width / points.length} height={height} fill="transparent" />
             {(i % (points.length > 12 ? 3 : 1) === 0) && (
               <text x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">{new Date(p.time).getHours()}h</text>
             )}
@@ -1169,7 +1176,7 @@ const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedN
   if (!data || data.length === 0) return null;
   
   return (
-    <div className="w-full overflow-x-auto custom-scrollbar relative" onMouseLeave={() => setHoveredIndex(null)}>
+    <div className="w-full overflow-x-auto custom-scrollbar relative touch-pan-x" onMouseLeave={() => setHoveredIndex(null)}>
       <div className="min-w-[220%] md:min-w-full space-y-3 pr-4">
         <SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={150} lang={lang} />
         <SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
@@ -2189,13 +2196,13 @@ export default function MeteoIA() {
                  {/* MOBILE TOGGLE REMOVED HERE AS REQUESTED */}
                  <button 
                       onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
-                      className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center"
+                      className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700 touch-manipulation"
                    >
                      {unit === 'C' ? '°C' : '°F'}
                  </button>
                  <button 
                       onClick={cycleLang}
-                      className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs"
+                      className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700 touch-manipulation"
                       title="Canviar idioma"
                    >
                      <FlagIcon lang={lang} className="w-5 h-4 rounded shadow-sm" />
@@ -2295,13 +2302,12 @@ export default function MeteoIA() {
                  </div>
                )}
              </div>
-             {/* Mobile Search Button/Input handling could be here but kept hidden for clean layout as per request, just removed desktop toggle */}
              <button onClick={handleGetCurrentLocation} className="hidden md:block bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation" title="Utilitza la meva ubicació">
                 <LocateFixed className="w-5 h-5" />
              </button>
           </div>
           
-          {/* Mobile Search Bar Row (Optional/Standard pattern for mobile layouts not explicitly requested to change but keeping consistent) */}
+          {/* Mobile Search Bar Row */}
            <div className="w-full md:hidden flex gap-2">
              <div className="relative flex-1">
                <Search className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
@@ -2311,20 +2317,19 @@ export default function MeteoIA() {
                  value={query}
                  onFocus={() => setShowSuggestions(true)}
                  onChange={(e) => {setQuery(e.target.value); setShowSuggestions(true);}}
-                 className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                 className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none touch-manipulation"
                />
-               {/* Mobile suggestions dropdown duplicated logic or shared component would go here */}
                {showSuggestions && (
-                 <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[50vh] overflow-y-auto">
+                 <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[40vh] overflow-y-auto">
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
-                      <div key={i} onClick={() => fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country)} className="p-4 border-b border-white/5 last:border-0 text-white">
+                      <div key={i} onClick={() => fetchWeatherByCoords(item.latitude, item.longitude, item.name, item.country)} className="p-4 border-b border-white/5 last:border-0 text-white active:bg-white/10">
                         {item.name}
                       </div>
                    ))}
                  </div>
                )}
              </div>
-             <button onClick={handleGetCurrentLocation} className="bg-indigo-600 text-white p-3 rounded-xl">
+             <button onClick={handleGetCurrentLocation} className="bg-indigo-600 text-white p-3 rounded-xl active:scale-95 touch-manipulation">
                 <LocateFixed className="w-5 h-5" />
              </button>
            </div>
