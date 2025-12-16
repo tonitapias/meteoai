@@ -653,8 +653,8 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilitat (CAPE élevé) i orages.",
-    alertSnow: "Attention : Neige accumulada prévue.",
+    alertStorm: "Forte instabilitat (CAPE elevat) i orages.",
+    alertSnow: "Attention : Neige accumulada prevista.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
     alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
@@ -2261,7 +2261,7 @@ export default function MeteoIA() {
                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex-1 md:flex-none justify-center ${
                    viewMode === 'expert' 
                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
-                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5' // FIX aplicat: Tancar correctament la cadena
+                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                  }`}
                >
                  <LayoutDashboard className="w-4 h-4" />
