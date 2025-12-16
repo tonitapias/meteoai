@@ -139,7 +139,12 @@ const TRANSLATIONS = {
     alertColdHigh: "Glaçades. Calçades relliscoses.",
     alertRain: "Precipitacions abundants.",
     alertAir: "Qualitat de l'aire deficient.",
+    alertUV: "Radiació UV Extrema",
     
+    // Noves traduccions per alertes
+    cold: "Fred",
+    heat: "Calor",
+
     tipHydration: "Beu aigua",
     tipThermal: "Roba tèrmica",
     tipWindbreaker: "Tallavents",
@@ -286,6 +291,11 @@ const TRANSLATIONS = {
     alertColdHigh: "Heladas. Calzadas resbaladizas.",
     alertRain: "Precipitaciones abundantes.",
     alertAir: "Calidad del aire deficiente.",
+    alertUV: "Radiación UV Extrema",
+
+    cold: "Frío",
+    heat: "Calor",
+
     tipHydration: "Bebe agua",
     tipThermal: "Ropa térmica",
     tipWindbreaker: "Cortavientos",
@@ -432,6 +442,11 @@ const TRANSLATIONS = {
     alertColdHigh: "Frost. Slippery roads.",
     alertRain: "Heavy rainfall.",
     alertAir: "Poor air quality.",
+    alertUV: "Extreme UV Radiation",
+
+    cold: "Cold",
+    heat: "Heat",
+
     tipHydration: "Drink water",
     tipThermal: "Thermal wear",
     tipWindbreaker: "Windbreaker",
@@ -578,6 +593,11 @@ const TRANSLATIONS = {
     alertColdHigh: "Gelées. Prudence sur la route.",
     alertRain: "Précipitations abondantes.",
     alertAir: "Qualité de l'air médiocre.",
+    alertUV: "Rayonnement UV Extrême",
+
+    cold: "Froid",
+    heat: "Chaleur",
+
     tipHydration: "Hydratation",
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
@@ -1431,22 +1451,59 @@ export default function MeteoIA() {
     if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
     else if (rainProb < 20 && code < 50) summaryParts.push(tr.aiRainNone);
 
-    // 5. ALERTS & CONSEJOS COMPLEXOS
-    if (windSpeed > 40) {
-      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
-      tips.push(tr.tipWindbreaker);
-    }
+    // 5. ALERTS & CONSEJOS COMPLEXOS (MILLORAT)
     
-    if (temp < 5) {
-      if (windSpeed > 10) tips.push(tr.tipCoat, tr.tipThermal); // Fred i vent
-      else tips.push(tr.tipLayers);
-    } else if (temp > 30) {
-      tips.push(tr.tipHydration, tr.tipSunscreen);
+    // --- ALERTES BASADES EN CODIG WMO (FALTAVEN) ---
+    // Tempesta (Codis 95, 96, 99)
+    if (code >= 95) {
+       alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
+    }
+    // Neu (Codis 71-77, 85-86)
+    else if (code >= 71 && code <= 77 || code === 85 || code === 86) {
+       alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
+    }
+    // Pluja Forta (Codis 65, 82) o molta precipitació prevista
+    else if (code === 65 || code === 82 || precipSum > 30) {
+       alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
     }
 
-    if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
+    // --- ALERTES PER PARÀMETRES ---
+    // Vent (Baixem umbral a 30 per ser més sensibles, o 50 per alerta forta)
+    if (windSpeed > 50) {
+      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
+      tips.push(tr.tipWindbreaker);
+    } else if (windSpeed > 80) { // Vent extrem
+      alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
+    }
     
-    if (uvMax > 7 && isDay) tips.push(tr.tipSunscreen);
+    // Temperatures Extremes
+    if (temp < 0) {
+      alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' });
+      tips.push(tr.tipCoat, tr.tipThermal);
+    } else if (temp < 5) {
+      // Només avís si fa vent també, sinó només consell
+      if(windSpeed > 15) tips.push(tr.tipCoat); 
+      tips.push(tr.tipLayers);
+    } 
+    
+    if (temp > 35) {
+       alerts.push({ type: tr.heat, msg: tr.alertHeatExtreme, level: 'high' });
+       tips.push(tr.tipHydration, tr.tipSunscreen);
+    } else if (temp > 30) {
+       alerts.push({ type: tr.heat, msg: tr.alertHeatHigh, level: 'warning' });
+       tips.push(tr.tipHydration);
+    }
+
+    // Consells generals (sense alerta visual, només tips)
+    if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
+    if (uvMax > 7 && isDay) {
+       // Alerta UV si és extrem
+       if(uvMax >= 10) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' });
+       tips.push(tr.tipSunscreen);
+    }
+    if (aqiValue > 100) { // Alerta qualitat aire
+       alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
+    }
 
     // Confidence Logic
     if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
