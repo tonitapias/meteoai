@@ -1308,8 +1308,8 @@ const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500
   );
 };
 
-// --- DEW POINT WIDGET (NEW) ---
-const DewPointWidget = ({ value, lang, unit }) => {
+// --- DEW POINT WIDGET (UPDATED: HYBRID) ---
+const DewPointWidget = ({ value, humidity, lang, unit }) => { 
     const t = TRANSLATIONS[lang];
     // Dew Point Scale (approx):
     // < 10: Dry
@@ -1363,8 +1363,15 @@ const DewPointWidget = ({ value, lang, unit }) => {
             </div>
             
             <div className="flex flex-col items-center mt-3 w-full">
-                 <div className="relative mb-2">
+                 <div className="relative mb-2 flex items-baseline gap-2">
+                    {/* El Punt de Rosada és el protagonista */}
                     <div className={`text-3xl font-bold ${color}`}>{displayValue}°</div>
+                    
+                    {/* La Humitat Relativa és l'actor secundari (NOU) */}
+                    <div className="flex items-center gap-0.5 text-slate-400 text-xs font-medium bg-slate-800/50 px-1.5 py-0.5 rounded-md border border-white/5" title={t.humidity}>
+                        <Droplets className="w-3 h-3" />
+                        <span>{humidity}%</span>
+                    </div>
                  </div>
                  
                  <div className="w-full max-w-[80%] h-2 bg-slate-800 rounded-full overflow-hidden relative">
@@ -2520,10 +2527,10 @@ export default function MeteoIA() {
                         }
                      />
                      
-                     {/* REPLACED: Humidity with Dew Point Widget (or added alongside) */}
-                     {/* Since user said meteorologists prefer Dew Point, let's feature it */}
+                     {/* REPLACED: Dew Point Widget Updated to Hybrid */}
                      <DewPointWidget 
                         value={currentDewPoint} 
+                        humidity={weatherData.current.relative_humidity_2m} // PASSING HUMIDITY HERE
                         lang={lang} 
                         unit={unit} 
                      />
