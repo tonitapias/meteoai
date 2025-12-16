@@ -95,7 +95,7 @@ const TRANSLATIONS = {
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsió Immediata (1h)",
     modelsLegend: "Comparativa Models",
-    modelBest: "Consens",
+    modelBest: "Consensus",
     modelGfs: "GFS (EUA)",
     modelIcon: "ICON (Alemanya)",
     
@@ -832,7 +832,10 @@ const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) 
     <svg viewBox="0 0 24 24" className={`${className} filter drop-shadow-md`} style={{transform}} stroke="none">
        <title>{getMoonPhaseText(phase, lang)}</title>
        <defs>
-         <radialGradient id="moonGradient" cx="50%" cy="50%" r="80%" fx="30%" fy="30%"> <stop offset="0%" stopColor="#f1f5f9" /> <stop offset="90%" stopColor="#cbd5e1" /> </radialGradient>
+         <radialGradient id="moonGradient" cx="50%" cy="50%" r="80%" fx="30%" fy="30%"> 
+            <stop offset="0%" stopColor="#f1f5f9" /> 
+            <stop offset="90%" stopColor="#cbd5e1" /> 
+         </radialGradient> {/* CORREGIT: Tancament de radialGradient */}
          <filter id="moonGlow" x="-20%" y="-20%" width="140%" height="140%"> <feGaussianBlur stdDeviation="0.8" result="blur" /> <feComposite in="SourceGraphic" in2="blur" operator="over" /> </filter>
        </defs>
        <circle cx={cx} cy={cy} r={r} fill="#1e293b" stroke="#334155" strokeWidth="0.5" />
@@ -2343,15 +2346,14 @@ export default function MeteoIA() {
              <div className="relative flex-1">
                {/* Mobile Search Button (clickable and higher z-index) */}
                <button 
-                 ref={inputRef} // Fix: use inputRef on the input, not the button
-                 className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors z-10 p-1 -m-1" // Added padding for touch target
+                 className="absolute left-3 top-3.5 text-slate-400 hover:text-white transition-colors z-10 p-1 -m-1" 
                  onClick={executeSearch}
                >
                  <Search className="w-4 h-4" />
                </button>
                
                <input 
-                 ref={inputRef}
+                 ref={inputRef} // REPARAT: L'inputRef només apunta a l'input
                  type="text" 
                  placeholder={t.searchPlaceholder} 
                  value={query}
@@ -2362,13 +2364,31 @@ export default function MeteoIA() {
                />
                {showSuggestions && (
                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[40vh] overflow-y-auto">
+                   {suggestions.length === 0 && query.length === 0 && favorites.length > 0 && (
+                     <div className="px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-wider bg-slate-950/80 sticky top-0 backdrop-blur-sm">{t.favorites}</div>
+                   )}
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
                       <div 
                          key={i} 
-                         onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // MODIFICACIÓ CLAU: Crida a cleanupSearch
-                         className="p-4 border-b border-white/5 last:border-0 text-white active:bg-white/10"
+                         onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // La cerca ara ha de funcionar correctament
+                         className="group w-full px-4 py-4 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 hover:bg-white/5" // Estil adaptat de PC
                       >
-                        {item.name}
+                         <div className="flex items-center gap-3">
+                           {query.length === 0 ? <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> : <MapPin className="w-5 h-5 text-slate-500"/>}
+                           <div className="flex flex-col text-left">
+                              <span className="text-base font-medium text-slate-200 group-hover:text-white transition-colors">{item.name}</span>
+                              <span className="text-xs text-slate-500">{item.country || item.admin1}</span> {/* REPARAT: Mostra el país/regió */}
+                           </div>
+                         </div>
+                         {query.length === 0 && ( // REPARAT: Mostra el botó d'esborrar si és favorit
+                           <button 
+                              onClick={(e) => removeFavorite(e, item.name)}
+                              className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:opacity-100 touch-manipulation"
+                              aria-label="Eliminar favorit"
+                           >
+                             <Trash2 className="w-5 h-5"/>
+                           </button>
+                         )}
                       </div>
                    ))}
                  </div>
