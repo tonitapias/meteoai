@@ -1464,7 +1464,9 @@ export default function MeteoIA() {
 
   const [now, setNow] = useState(new Date());
 
-  const searchRef = useRef(null);
+  // FIX: Separate refs to prevent click conflicts
+  const searchRefPC = useRef(null);
+  const searchRefMobile = useRef(null);
   const inputRef = useRef(null);
   const suggestionsListRef = useRef(null); // Ref per llista de suggeriments (per scroll)
   const t = TRANSLATIONS[lang];
@@ -1748,17 +1750,19 @@ export default function MeteoIA() {
   }, [query, showSuggestions, favorites]);
 
 
-  // NEW: Refactored function to handle cleanup after a successful search execution
-  // ** IMPORTANT FIX **: Enveloping fetch/cleanup logic in setTimeout(..., 0) to ensure the native click event completes first.
+  // FIX: Robust cleanup logic for click/touch events
   const cleanupSearch = (lat, lon, name, country) => {
     // Retardem la crida per assegurar que el navegador hagi processat completament l'esdeveniment tàctil/click
     setTimeout(() => {
         fetchWeatherByCoords(lat, lon, name, country);
         setShowSuggestions(false);
         setQuery(""); 
-        inputRef.current?.blur();
-        if (document.activeElement) document.activeElement.blur(); 
-    }, 200); 
+        
+        // FIX: Remove focus from any active element safely
+        if (document.activeElement && document.activeElement.blur) {
+           document.activeElement.blur();
+        }
+    }, 50); // Reduced delay for better PC responsiveness
   }
 
   // NEW: Shared Search Execution Logic for buttons/enter key
@@ -1863,11 +1867,13 @@ export default function MeteoIA() {
         }
         else if (key.includes('_gfs_seamless')) {
            const cleanKey = key.replace('_gfs_seamless', '');
-           val.forEach((v, i) => gfsHourly[i][cleanKey] = v);
+           // FIX: Safety check for array bounds
+           val.forEach((v, i) => { if (gfsHourly[i]) gfsHourly[i][cleanKey] = v });
         }
         else if (key.includes('_icon_seamless')) {
             const cleanKey = key.replace('_icon_seamless', '');
-            val.forEach((v, i) => iconHourly[i][cleanKey] = v);
+            // FIX: Safety check for array bounds
+            val.forEach((v, i) => { if (iconHourly[i]) iconHourly[i][cleanKey] = v });
         }
      });
 
@@ -2090,8 +2096,16 @@ export default function MeteoIA() {
      return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
   }, [weatherData, shiftedNow]);
 
+  // FIX: Updated click outside logic to handle separated refs
   useEffect(() => {
-    function handleClickOutside(event) { if (searchRef.current && !searchRef.current.contains(event.target)) setShowSuggestions(false); }
+    function handleClickOutside(event) { 
+        const isInsidePC = searchRefPC.current && searchRefPC.current.contains(event.target);
+        const isInsideMobile = searchRefMobile.current && searchRefMobile.current.contains(event.target);
+        
+        if (!isInsidePC && !isInsideMobile) {
+            setShowSuggestions(false);
+        }
+    }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -2159,6 +2173,13 @@ export default function MeteoIA() {
     const freezingLevels = dayHourlyData.map(d => d.snowLevel).filter(val => val !== undefined && val !== null);
     const minSnowLevel = freezingLevels.length ? Math.min(...freezingLevels) : 0;
     const maxSnowLevel = freezingLevels.length ? Math.max(...freezingLevels) : 0;
+
+    const DetailStat = ({ label, value, icon }) => (
+      <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col items-center hover:border-slate-600 transition-colors">
+         <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide">{icon} {label}</div>
+         <div className="font-bold text-white text-lg">{value}</div>
+      </div>
+    );
 
     return (
       <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setSelectedDayIndex(null)}>
@@ -2358,7 +2379,7 @@ export default function MeteoIA() {
           </div>
 
           {/* PC SEARCH INPUT + GEO BUTTON (Order 2) */}
-          <div className="relative flex-1 md:w-80 hidden md:flex items-center gap-3 md:order-2" ref={searchRef}> 
+          <div className="relative flex-1 md:w-80 hidden md:flex items-center gap-3 md:order-2" ref={searchRefPC}> 
              <div className="relative flex-1">
                <button 
                   className={`absolute left-3 top-3.5 transition-colors ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
@@ -2393,7 +2414,7 @@ export default function MeteoIA() {
                      <button 
                        key={i}
                        type="button" 
-                       onMouseDown={(e) => e.preventDefault()} // --- FIX: AFEGIT PER AL RATOLÍ EN PC ---
+                       onMouseDown={(e) => e.preventDefault()} 
                        className={`group w-full px-4 py-4 md:py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors text-left ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
                        onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
                      >
@@ -2482,7 +2503,7 @@ export default function MeteoIA() {
           
           {/* Mobile Search Bar Row (Always at the bottom on mobile, md:hidden) */}
            <div className="w-full md:hidden flex gap-2 md:order-4">
-             <div className="relative flex-1" ref={searchRef}> 
+             <div className="relative flex-1" ref={searchRefMobile}> 
                <button 
                  className={`absolute left-3 top-3.5 transition-colors z-10 p-1 -m-1 ${isSearching ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
                  onClick={executeSearch}
@@ -2830,10 +2851,9 @@ export default function MeteoIA() {
 
             <div className="w-full py-8 mt-8 text-center border-t border-white/5">
               <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity">
-                © {new Date().getFullYear()} Meteo Toni Ai <span className="mx-1.5 opacity-50">|</span> Desenvolupat per <span className="text-indigo-400 font-bold">Toni Tapias</span>
+                © {new Date().getFullYear()} Meteo Toni Ai
               </p>
             </div>
-
           </div>
         )}
         
@@ -2841,13 +2861,4 @@ export default function MeteoIA() {
       </div>
     </div>
   );
-}
-
-function DetailStat({ label, value, icon }) {
-  return (
-    <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col items-center hover:border-slate-600 transition-colors">
-       <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide">{icon} {label}</div>
-       <div className="font-bold text-white text-lg">{value}</div>
-    </div>
-  )
 }
