@@ -2374,6 +2374,7 @@ export default function MeteoIA() {
                          key={i} 
                          type="button" // Afegit type="button"
                          onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
+                         onMouseDown={(e) => e.preventDefault()} // BLOQUEJA el canvi de focus per assegurar el click
                          className="group w-full px-4 py-4 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 hover:bg-white/5 text-left" 
                       >
                          <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
