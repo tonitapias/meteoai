@@ -653,10 +653,10 @@ const WeatherParticles = ({ code }) => {
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
-      {/* Sun/Moon Layer - Offset to Top Right */}
-      <div className="absolute top-[-10%] right-[-10%] w-[55%] h-[55%] z-0">
+      {/* Sun/Moon Layer - Offset to Top Right FURTHER AWAY to avoid overlap */}
+      <div className="absolute top-[-20%] right-[-20%] w-[50%] h-[50%] z-0">
          {isDay ? (
-           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[spin_12s_linear_infinite]" strokeWidth={2} />
+           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]" strokeWidth={2} />
          ) : (
            <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
          )}
@@ -673,18 +673,18 @@ const VariableWeatherIcon = ({ isDay, className, ...props }) => {
 const VariableRainIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
-      {/* Sun/Moon Layer - Offset to Top Right */}
-      <div className="absolute top-[-15%] right-[-15%] w-[60%] h-[60%] z-0">
+      {/* Sun/Moon Layer - Offset to Top Right FURTHER AWAY to avoid overlap */}
+      <div className="absolute top-[-20%] right-[-20%] w-[50%] h-[50%] z-0">
          {isDay ? (
-           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[spin_12s_linear_infinite]" strokeWidth={2} />
+           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]" strokeWidth={2} />
          ) : (
            <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
          )}
       </div>
       
       {/* Main Cloud Layer with Rain */}
-      {/* Utilitzem CloudRain estàndard però superposat al Sol animat */}
-      <CloudRain className="w-full h-full text-indigo-400 fill-indigo-400/20 animate-bounce relative z-10" strokeWidth={2} />
+      {/* Using standard CloudRain but overlaid. Animate pulse instead of bounce for organic feel */}
+      <CloudRain className="w-full h-full text-indigo-400 fill-indigo-400/20 animate-pulse relative z-10" strokeWidth={2} />
     </div>
   );
 };
@@ -1306,27 +1306,36 @@ export default function MeteoIA() {
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
   // --- ICONES MILLORADES (Amb Fill i Ombra) I LÒGICA WMO REFINADA ---
-  const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0) => {
+  // MODIFICAT: Implementa la lògica de dia/nit consistent i animacions orgàniques
+  const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0) => {
     // Definim propietats comuns per donar consistència
     const commonProps = {
       strokeWidth: 2, // Línia una mica més gruixuda per claredat
       className: `${className} drop-shadow-md transition-all duration-300` // Afegim ombra per separar del fons
     };
 
-    // OVERRIDE: Si la probabilitat de pluja és > 50% i el codi no és de precipitació, forcem icona de pluja
+    // --- MILLORA 1: No forçar icona de pluja si no plou, mostrar risc alt visualment diferent ---
+    // Si la probabilitat de pluja és > 50% i el codi no és de precipitació, 
+    // mostrem VariableRainIcon per indicar "Sol/Núvol + Gota" (Risc) en lloc de núvol de pluja.
     if (rainProb > 50 && code < 50) {
-       return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-400 fill-blue-400/20 animate-bounce`} />;
+       return <VariableRainIcon isDay={isDay} {...commonProps} />;
     }
 
-    // 0: Cel serè (Afegim Fill semitransparent)
+    // 0: Cel serè
     if (code === 0) return isDay 
-      ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[spin_12s_linear_infinite]`} /> 
+      // --- MILLORA 2: Animació Pulse en lloc de Spin ---
+      // Si fa molt vent (>40), afegim una animació més ràpida o diferent si calgués, però el pulse és elegant.
+      ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
     
     // 1-2: Parcialment ennuvolat (Afegim Fill als núvols i sol/lluna)
-    if (code === 1 || code === 2) return isDay 
-      ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300`} />
-      : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400`} />;
+    if (code === 1 || code === 2) {
+       // --- MILLORA 4 (Vent): Si fa vent fort, animem el núvol ---
+       const windClass = windSpeed > 40 ? "animate-pulse" : "";
+       return isDay 
+         ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300 ${windClass}`} />
+         : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400 ${windClass}`} />;
+    }
     
     // 3: Cobert (Fill al núvol per donar pes)
     if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
@@ -1341,10 +1350,16 @@ export default function MeteoIA() {
     if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
 
     // 61-65: Pluja (Rain) - Icona CloudRain estàndard
-    if (code >= 61 && code <= 65) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-bounce`} />;
+    // --- MILLORA 3: Gestió nocturna de la pluja ---
+    if (code >= 61 && code <= 65) {
+        // Si és de nit, utilitzem la icona composta per donar context (Lluna + Núvol + Pluja)
+        if (!isDay) return <VariableRainIcon isDay={false} {...commonProps} />;
+        // De dia, CloudRain estàndard però amb animació suau (pulse) o estàtica, no bounce
+        return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-pulse`} />;
+    }
 
     // 66-67: Pluja gebradora
-    if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-bounce`} />;
+    if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse`} />;
 
     // 71-77: Neu
     if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
@@ -1970,7 +1985,7 @@ export default function MeteoIA() {
                   {dayHourlyData.filter((_, i) => i % 3 === 0).map((h, i) => (
                      <div key={i} className="flex flex-col items-center min-w-[3rem]">
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                        <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay, h.rain)}</div>
+                        <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay, h.rain, h.wind)}</div>
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                         {/* ADDED RAIN INFO */}
                         <div className="flex flex-col items-center mt-1 h-6 justify-start">
@@ -2252,7 +2267,7 @@ export default function MeteoIA() {
                    <div className="flex flex-col items-end self-end md:self-auto">
                       <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
                          {/* USE EFFECTIVE WEATHER CODE HERE */}
-                        {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day)}
+                        {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day, weatherData.current.precipitation_probability, weatherData.current.wind_speed_10m)}
                       </div>
                       <span className="text-lg md:text-xl font-medium text-slate-200 mt-2">
                          {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
@@ -2442,7 +2457,7 @@ export default function MeteoIA() {
                     {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
                        <div key={i} className="flex flex-col items-center min-w-[3rem]">
                           <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                          <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain)}</div>
+                          <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind)}</div>
                           <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                           {/* ADDED RAIN INFO */}
                           <div className="flex flex-col items-center mt-1 h-6 justify-start">
