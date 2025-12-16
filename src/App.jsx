@@ -649,7 +649,7 @@ const WeatherParticles = ({ code }) => {
   );
 };
 
-// --- ICONA VARIABLE: SOL/LLUNA + NÚVOL + LLAMP ---
+// --- ICONA VARIABLE: SOL/LLUNA + NÚVOL + LLAMP (TEMPESTA) ---
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
@@ -664,6 +664,27 @@ const VariableWeatherIcon = ({ isDay, className, ...props }) => {
       
       {/* Main Cloud Layer with Lightning */}
       <CloudLightning className="w-full h-full text-purple-400 fill-purple-400/20 animate-pulse relative z-10" strokeWidth={2} />
+    </div>
+  );
+};
+
+// --- ICONA VARIABLE: SOL/LLUNA + NÚVOL + PLUJA (RUIXATS) ---
+// NOU COMPONENT: Combina Sol/Lluna amb CloudRain per simular CloudSunRain amb animació
+const VariableRainIcon = ({ isDay, className, ...props }) => {
+  return (
+    <div className={`${className} relative flex items-center justify-center`} {...props}>
+      {/* Sun/Moon Layer - Offset to Top Right */}
+      <div className="absolute top-[-15%] right-[-15%] w-[60%] h-[60%] z-0">
+         {isDay ? (
+           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[spin_12s_linear_infinite]" strokeWidth={2} />
+         ) : (
+           <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
+         )}
+      </div>
+      
+      {/* Main Cloud Layer with Rain */}
+      {/* Utilitzem CloudRain estàndard però superposat al Sol animat */}
+      <CloudRain className="w-full h-full text-indigo-400 fill-indigo-400/20 animate-bounce relative z-10" strokeWidth={2} />
     </div>
   );
 };
@@ -1328,8 +1349,8 @@ export default function MeteoIA() {
     // 71-77: Neu
     if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
     
-    // 80-82: Ruixats de pluja (Showers) - Important: Usar CloudRain
-    if (code >= 80 && code <= 82) return <CloudRain {...commonProps} className={`${commonProps.className} text-indigo-400 fill-indigo-400/20 animate-bounce`} />;
+    // 80-82: Ruixats de pluja (Showers) - Variable (Sun/Moon + Rain)
+    if (code >= 80 && code <= 82) return <VariableRainIcon isDay={isDay} {...commonProps} />;
 
     // 85-86: Ruixats de neu
     if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
