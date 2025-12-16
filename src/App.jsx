@@ -1718,7 +1718,8 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startIndex + i],
       humidity: weatherData.hourly.relative_humidity_2m[startIndex + i], 
       uv: weatherData.hourly.uv_index[startIndex + i],
-      snowLevel: weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[startIndex + i] : 0,
+      // CORRECCIÓ SNOW LEVEL: Restem 300m per aproximar la cota de neu real (on qualla)
+      snowLevel: weatherData.hourly.freezing_level_height ? Math.max(0, weatherData.hourly.freezing_level_height[startIndex + i] - 300) : 0,
       isDay: weatherData.hourly.is_day[startIndex + i],
       time: weatherData.hourly.time[startIndex + i],
       code: weatherData.hourly.weather_code[startIndex + i]
@@ -1811,7 +1812,8 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startHour + i],
       humidity: weatherData.hourly.relative_humidity_2m[startHour + i],
       uv: weatherData.hourly.uv_index[startHour + i],
-      snowLevel: weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[startHour + i] : 0,
+      // CORRECCIÓ SNOW LEVEL AQUÍ TAMBÉ
+      snowLevel: weatherData.hourly.freezing_level_height ? Math.max(0, weatherData.hourly.freezing_level_height[startHour + i] - 300) : 0,
       time: weatherData.hourly.time[startHour + i],
       isDay: weatherData.hourly.is_day[startHour + i],
       code: weatherData.hourly.weather_code[startHour + i]
@@ -1913,9 +1915,9 @@ export default function MeteoIA() {
               
               <DetailStat label={t.windMax} value={`${weatherData.daily.wind_speed_10m_max[dayIdx]} km/h`} icon={<Wind className="w-4 h-4 text-teal-400 drop-shadow-sm fill-teal-400/20" strokeWidth={2.5}/>} />
               
-              {/* Snow Level Stat */}
+              {/* Snow Level Stat - ETIQUETA NETEJA (sense 0°) */}
               <DetailStat 
-                 label={t.snowLevel + " (0°)"} 
+                 label={t.snowLevel} 
                  value={`${Math.round(minSnowLevel)} - ${Math.round(maxSnowLevel)}m`} 
                  icon={<Mountain className="w-4 h-4 text-stone-400 drop-shadow-sm fill-stone-400/20" strokeWidth={2.5}/>} 
               />
