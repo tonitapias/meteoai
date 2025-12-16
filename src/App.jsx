@@ -4,9 +4,9 @@ import {
   CloudLightning, Snowflake, CloudFog, CloudSun, CloudMoon, BrainCircuit, 
   Activity, AlertTriangle, X, Sunrise, Sunset, Umbrella, Eye,
   LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
-  ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, Calendar, Clock,
+  ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, TrendingDown, Minus, Calendar, Clock,
   Layers, ThermometerSnowflake, AlertCircle, CloudSnow, Moon, Compass, Globe, Flower2,
-  LayoutTemplate, LayoutDashboard, GitGraph, Mountain
+  LayoutTemplate, LayoutDashboard, GitGraph, Mountain, Zap
 } from 'lucide-react';
 
 // --- SISTEMA DE TRADUCCIONS MILLORAT ---
@@ -21,7 +21,7 @@ const TRANSLATIONS = {
     aiConfidence: "Consens Models",
     aiConfidenceMod: "Divergència Models",
     aiConfidenceLow: "Incertesa Alta",
-    generatingTips: "Analitzant dades dels models (ECMWF, GFS, ICON)...",
+    generatingTips: "Analitzant CAPE, Pressió i Models (ECMWF, GFS, ICON)...",
     trend24h: "Tendència 24h",
     temp: "Temperatura",
     rain: "Pluja",
@@ -43,6 +43,15 @@ const TRANSLATIONS = {
     sunset: "Posta Sol",
     moon: "Lluna",
     pressure: "Pressió",
+    pressureTrend: "Tendència",
+    pressureRising: "Pujant",
+    pressureFalling: "Baixant",
+    pressureSteady: "Estable",
+    stormPotential: "Potencial Tempesta",
+    capeStable: "Estable",
+    capeModerate: "Inest. Moderada",
+    capeHigh: "Inest. Alta",
+    capeExtreme: "RISC SEVER",
     aqi: "Qualitat Aire",
     index: "Index",
     moonPhase: "Fase Lunar",
@@ -68,7 +77,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "Previsió multi-model interpretada per Intel·ligència Artificial.",
+    subtitle: "Previsió professional multi-model amb anàlisi d'inestabilitat (CAPE).",
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
     pollenTypes: {
@@ -80,7 +89,7 @@ const TRANSLATIONS = {
       ragweed: "Ambròsia"
     },
     modeBasic: "Bàsic",
-    modeExpert: "Extens", 
+    modeExpert: "Agència", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsió Immediata (1h)",
     modelsLegend: "Comparativa Models",
@@ -88,17 +97,17 @@ const TRANSLATIONS = {
     modelGfs: "GFS (EUA)",
     modelIcon: "ICON (Alemanya)",
     
-    // AI Advanced Texts (Data-Driven - HUMANITZATS)
-    aiIntroMorning: "Bon dia! Comencem la jornada amb els mapes actualitzats. ",
-    aiIntroAfternoon: "Bona tarda. Mirem com evoluciona la situació. ",
-    aiIntroEvening: "Bon vespre. Així es presenta el final del dia. ",
-    aiIntroNight: "Bona nit. Previsió per a les pròximes hores nocturnes. ",
+    // AI Advanced Texts
+    aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
+    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ",
+    aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
+    aiIntroNight: "Bona nit. Previsió nocturna. ",
     
-    aiSummaryClear: "Cel serè. Els models confirmen un dia radiant i perfecte per estar a l'aire lliure. ",
-    aiSummaryCloudy: "El cel es mantindrà variable amb força núvols, tot i que no esperem complicacions. ",
-    aiSummaryRain: "Paraigua a mà. Tenim una situació de precipitacions actives a la zona. ",
-    aiSummaryStorm: "Precaució. La inestabilitat és acusada i hi ha risc de tempestes que poden ser intenses. ",
-    aiSummarySnow: "Ambient plenament hivernal. Les condicions són de fred rigorós i neu. ",
+    aiSummaryClear: "Estabilitat dominant. Cel serè i sense complicacions meteorològiques. ",
+    aiSummaryCloudy: "Pas de nuvolositat variable sense conseqüències destacables. ",
+    aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
+    aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
+    aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
     // Noves claus de temperatura més naturals
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
@@ -107,14 +116,13 @@ const TRANSLATIONS = {
     aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
     aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
     
-    aiWindLight: "El vent està en calma, dia plàcid. ",
-    aiWindMod: "El vent bufa amb ganes i accentua la sensació de fred. ",
-    aiWindStrong: "Compte amb les ratxes de vent, que poden ser fortes avui. ",
+    aiWindLight: "Flux feble, situació tranquil·la. ",
+    aiWindMod: "Vent moderat que accentua la sensació tèrmica. ",
+    aiWindStrong: "Atenció a les ratxes de vent, situació potencialment perillosa. ",
     
-    aiRainNone: "Podeu estar tranquils, no es veu pluja a l'horitzó immediat. ",
-    aiRainExp: "Atenció al radar: s'acosta una taca de pluja imminentment. ",
-    
-    // WMO Codes Descriptions
+    aiRainNone: "Sense precipitacions a la vista en els models a curt termini. ",
+    aiRainExp: "Radar actiu: precipitació imminent detectada. ",
+
     wmo: {
       0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
       45: "bancs de boira", 48: "boira gebradora",
@@ -129,7 +137,7 @@ const TRANSLATIONS = {
       95: "tempesta elèctrica", 96: "tempesta amb calamarsa", 99: "tempesta severa amb calamarsa"
     },
 
-    alertStorm: "Risc elèctric elevat i pluges intenses.",
+    alertStorm: "Inestabilitat acusada (CAPE alt) i tempestes.",
     alertSnow: "Precaució: Neu acumulada prevista.",
     alertWindExtreme: "Vent huracanat. Perill extrem a l'exterior.",
     alertWindHigh: "Ràfegues fortes. Compte objectes.",
@@ -141,7 +149,6 @@ const TRANSLATIONS = {
     alertAir: "Qualitat de l'aire deficient.",
     alertUV: "Radiació UV Extrema",
     
-    // Noves traduccions per alertes
     cold: "Fred",
     heat: "Calor",
 
@@ -176,7 +183,7 @@ const TRANSLATIONS = {
     aiConfidence: "Consenso Modelos",
     aiConfidenceMod: "Divergencia Modelos",
     aiConfidenceLow: "Incertidumbre Alta",
-    generatingTips: "Analizando modelos meteorológicos (ECMWF, GFS, ICON)...",
+    generatingTips: "Analizando CAPE, Presión y Modelos (ECMWF, GFS, ICON)...",
     trend24h: "Tendencia 24h",
     temp: "Temperatura",
     rain: "Lluvia",
@@ -198,6 +205,15 @@ const TRANSLATIONS = {
     sunset: "Puesta Sol",
     moon: "Luna",
     pressure: "Presión",
+    pressureTrend: "Tendencia",
+    pressureRising: "Subiendo",
+    pressureFalling: "Bajando",
+    pressureSteady: "Estable",
+    stormPotential: "Potencial Tormenta",
+    capeStable: "Estable",
+    capeModerate: "Inest. Moderada",
+    capeHigh: "Inest. Alta",
+    capeExtreme: "RIESGO SEVERO",
     aqi: "Calidad Aire",
     index: "Índice",
     moonPhase: "Fase Lunar",
@@ -223,7 +239,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
     alertWarning: "AVISO PRECAUCIÓN",
-    subtitle: "Previsión multi-modelo interpretada por Inteligencia Artificial.",
+    subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE).",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
     pollenTypes: {
@@ -235,7 +251,7 @@ const TRANSLATIONS = {
       ragweed: "Ambrosía"
     },
     modeBasic: "Básico",
-    modeExpert: "Extendido", 
+    modeExpert: "Agencia", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsión Inmediata (1h)",
     modelsLegend: "Comparativa Modelos",
@@ -243,16 +259,16 @@ const TRANSLATIONS = {
     modelGfs: "GFS (EEUU)",
     modelIcon: "ICON (Alemania)",
     
-    aiIntroMorning: "Buenos días. Empezamos la jornada con los mapas actualizados. ",
-    aiIntroAfternoon: "Buenas tardes. Vemos cómo evoluciona la situación. ",
-    aiIntroEvening: "Buenas noches. Así se presenta el final del día. ",
-    aiIntroNight: "Buenas noches. Previsión para las próximas horas nocturnas. ",
+    aiIntroMorning: "Buenos días. Analizamos la situación sinóptica actualizada. ",
+    aiIntroAfternoon: "Buenas tardes. Seguimiento de la evolución atmosférica. ",
+    aiIntroEvening: "Buenas noches. Situación para las próximas horas. ",
+    aiIntroNight: "Buenas noches. Previsión nocturna. ",
     
-    aiSummaryClear: "Cielo despejado. Los modelos confirman un día radiante, perfecto para estar al aire libre. ",
-    aiSummaryCloudy: "Tendremos bastantes nubes, aunque por ahora no esperamos complicaciones. ",
-    aiSummaryRain: "Paraguas a mano. Tenemos precipitaciones activas cruzando la zona. ",
-    aiSummaryStorm: "Precaución. La inestabilidad es acusada y hay riesgo de tormentas fuertes. ",
-    aiSummarySnow: "Paisaje invernal. Las condiciones son de frío riguroso y nieve. ",
+    aiSummaryClear: "Estabilidad dominante. Cielo despejado y sin complicaciones. ",
+    aiSummaryCloudy: "Paso de nubosidad variable sin consecuencias destacables. ",
+    aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
+    aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
+    aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
     
     aiTempFreezing: "Ambiente gélido. Abrígate muy bien si sales. ",
     aiTempCold: "Hace frío. Necesitarás ropa de abrigo para estar confortable. ",
@@ -260,12 +276,12 @@ const TRANSLATIONS = {
     aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
     aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
     
-    aiWindLight: "El viento está en calma, día plácido. ",
-    aiWindMod: "El viento sopla con ganas y acentúa la sensación de frío. ",
-    aiWindStrong: "Cuidado con las rachas de viento, que pueden ser fuertes hoy. ",
+    aiWindLight: "Flujo débil, situación tranquila. ",
+    aiWindMod: "Viento moderado que acentúa la sensación térmica. ",
+    aiWindStrong: "Atención a las rachas de viento, situación potencialmente peligrosa. ",
     
-    aiRainNone: "Podéis estar tranquilos, no se ve lluvia en el horizonte inmediato. ",
-    aiRainExp: "Atención al radar: se acerca una mancha de lluvia inminentemente. ",
+    aiRainNone: "Sin precipitaciones a la vista en los modelos a corto plazo. ",
+    aiRainExp: "Radar activo: precipitación inminente detectada. ",
 
     wmo: {
       0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
@@ -281,7 +297,7 @@ const TRANSLATIONS = {
       95: "tormenta eléctrica", 96: "tormenta con granizo", 99: "tormenta severa con granizo"
     },
     
-    alertStorm: "Riesgo eléctrico elevado y lluvias intensas.",
+    alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
     alertSnow: "Precaución: Nieve acumulada prevista.",
     alertWindExtreme: "Viento huracanado. Peligro exterior.",
     alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
@@ -327,7 +343,7 @@ const TRANSLATIONS = {
     aiConfidence: "Model Consensus",
     aiConfidenceMod: "Model Divergence",
     aiConfidenceLow: "High Uncertainty",
-    generatingTips: "Analyzing meteorological models (ECMWF, GFS, ICON)...",
+    generatingTips: "Analyzing CAPE, Pressure & Models (ECMWF, GFS, ICON)...",
     trend24h: "24h Trend",
     temp: "Temperature",
     rain: "Rain",
@@ -349,6 +365,15 @@ const TRANSLATIONS = {
     sunset: "Sunset",
     moon: "Moon",
     pressure: "Pressure",
+    pressureTrend: "Trend",
+    pressureRising: "Rising",
+    pressureFalling: "Falling",
+    pressureSteady: "Steady",
+    stormPotential: "Storm Potential",
+    capeStable: "Stable",
+    capeModerate: "Mod. Instability",
+    capeHigh: "High Instability",
+    capeExtreme: "SEVERE RISK",
     aqi: "Air Quality",
     index: "Index",
     moonPhase: "Moon Phase",
@@ -374,7 +399,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extreme",
     alertDanger: "DANGER ALERT",
     alertWarning: "WARNING NOTICE",
-    subtitle: "Multi-model forecast interpreted by Artificial Intelligence.",
+    subtitle: "Professional multi-model forecast with instability analysis (CAPE).",
     aqiLevels: ["Excellent", "Good", "Fair", "Moderate", "Poor", "Very Poor"],
     pollen: "Pollen Levels",
     pollenTypes: {
@@ -386,7 +411,7 @@ const TRANSLATIONS = {
       ragweed: "Ragweed"
     },
     modeBasic: "Basic",
-    modeExpert: "Extended",
+    modeExpert: "Agency",
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     preciseRain: "Minute-by-Minute Forecast (1h)",
     modelsLegend: "Model Comparison",
@@ -394,16 +419,16 @@ const TRANSLATIONS = {
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Germany)",
     
-    aiIntroMorning: "Good morning. Starting the day with updated maps. ",
-    aiIntroAfternoon: "Good afternoon. Checking the latest developments. ",
-    aiIntroEvening: "Good evening. Here is the outlook for the end of the day. ",
-    aiIntroNight: "Good night. Forecast for the coming night hours. ",
+    aiIntroMorning: "Good morning. Analyzing the updated synoptic situation. ",
+    aiIntroAfternoon: "Good afternoon. Tracking atmospheric evolution. ",
+    aiIntroEvening: "Good evening. Outlook for the coming hours. ",
+    aiIntroNight: "Good night. Nocturnal forecast. ",
     
-    aiSummaryClear: "Clear skies. Models confirm a radiant day, perfect for being outdoors. ",
-    aiSummaryCloudy: "Skies will be variable with clouds, though no major issues are expected. ",
-    aiSummaryRain: "Keep an umbrella handy. Active precipitation is passing through the area. ",
-    aiSummaryStorm: "Caution. Instability is high and there is a risk of strong thunderstorms. ",
-    aiSummarySnow: "Winter landscape. Conditions are set for rigorous cold and snow. ",
+    aiSummaryClear: "Dominant stability. Clear skies and no meteorological complications. ",
+    aiSummaryCloudy: "Variable cloudiness with no notable consequences. ",
+    aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
+    aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
+    aiSummarySnow: "Fully winter configuration with expected snowfall. ",
     
     aiTempFreezing: "Freezing conditions. Bundle up well if you go out. ",
     aiTempCold: "It's cold. You'll need warm clothing to stay comfortable. ",
@@ -411,12 +436,12 @@ const TRANSLATIONS = {
     aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
     aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
     
-    aiWindLight: "Winds are calm, a placid day. ",
-    aiWindMod: "The wind is blowing steadily, increasing the wind chill factor. ",
-    aiWindStrong: "Watch out for strong wind gusts today. ",
+    aiWindLight: "Weak flow, calm situation. ",
+    aiWindMod: "Moderate wind increasing wind chill factor. ",
+    aiWindStrong: "Attention to wind gusts, potentially dangerous situation. ",
     
-    aiRainNone: "You can relax, no rain is seen on the immediate horizon. ",
-    aiRainExp: "Radar alert: rain is approaching imminently. ",
+    aiRainNone: "No precipitation in sight in short-term models. ",
+    aiRainExp: "Active radar: imminent precipitation detected. ",
 
     wmo: {
       0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
@@ -432,7 +457,7 @@ const TRANSLATIONS = {
       95: "thunderstorm", 96: "thunderstorm with slight hail", 99: "thunderstorm with heavy hail"
     },
 
-    alertStorm: "High electrical risk and heavy rain.",
+    alertStorm: "High instability (High CAPE) and storms.",
     alertSnow: "Caution: Accumulated snow forecast.",
     alertWindExtreme: "Hurricane-force winds. Danger.",
     alertWindHigh: "Strong gusts. Watch objects.",
@@ -478,7 +503,7 @@ const TRANSLATIONS = {
     aiConfidence: "Consensus Modèles",
     aiConfidenceMod: "Divergence Modèles",
     aiConfidenceLow: "Incertitude Élevée",
-    generatingTips: "Analyse des modèles (ECMWF, GFS, ICON)...",
+    generatingTips: "Analyse CAPE, Pression et Modèles (ECMWF, GFS, ICON)...",
     trend24h: "Tendance 24h",
     temp: "Température",
     rain: "Pluie",
@@ -500,6 +525,15 @@ const TRANSLATIONS = {
     sunset: "Coucher soleil",
     moon: "Lune",
     pressure: "Pression",
+    pressureTrend: "Tendance",
+    pressureRising: "En hausse",
+    pressureFalling: "En baisse",
+    pressureSteady: "Stable",
+    stormPotential: "Potentiel Orage",
+    capeStable: "Stable",
+    capeModerate: "Inst. Modérée",
+    capeHigh: "Inst. Élevée",
+    capeExtreme: "RISQUE SÉVÈRE",
     aqi: "Qualité Air",
     index: "Indice",
     moonPhase: "Phase Lunaire",
@@ -525,7 +559,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extrême",
     alertDanger: "ALERTE DANGER",
     alertWarning: "AVIS PRUDENCE",
-    subtitle: "Prévision multi-modèle interprétée par Intelligence Artificielle.",
+    subtitle: "Prévision professionnelle multi-modèle avec analyse d'instabilité (CAPE).",
     aqiLevels: ["Excellent", "Bon", "Acceptable", "Modéré", "Mauvais", "Très Mauvais"],
     pollen: "Niveaux de Pollen",
     pollenTypes: {
@@ -537,7 +571,7 @@ const TRANSLATIONS = {
       ragweed: "Ambroisie"
     },
     modeBasic: "Basique",
-    modeExpert: "Étendu", 
+    modeExpert: "Agence", 
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Prévisions Minute par Minute (1h)",
     modelsLegend: "Comparaison Modèles",
@@ -545,16 +579,16 @@ const TRANSLATIONS = {
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Allemagne)",
     
-    aiIntroMorning: "Bonjour. Commençons la journée avec les cartes mises à jour. ",
-    aiIntroAfternoon: "Bonne après-midi. Voyons comment la situation évolue. ",
-    aiIntroEvening: "Bonsoir. Voici les perspectives pour la fin de la journée. ",
-    aiIntroNight: "Bonne nuit. Prévisions pour les heures nocturnes à venir. ",
+    aiIntroMorning: "Bonjour. Analyse de la situation synoptique actualisée. ",
+    aiIntroAfternoon: "Bonne après-midi. Suivi de l'évolution atmosphérique. ",
+    aiIntroEvening: "Bonsoir. Perspectives pour les heures à venir. ",
+    aiIntroNight: "Bonne nuit. Prévisions nocturnes. ",
     
-    aiSummaryClear: "Ciel dégagé. Les modèles confirment une journée radieuse, parfaite pour être dehors. ",
-    aiSummaryCloudy: "Le ciel restera variable avec des nuages, mais aucun problème majeur n'est attendu. ",
-    aiSummaryRain: "Gardez un parapluie à portée de main. Des précipitations actives traversent la zone. ",
-    aiSummaryStorm: "Prudence. L'instabilité est marquée et il y a un risque d'orages violents. ",
-    aiSummarySnow: "Paysage hivernal. Les conditions sont propices au froid rigoureux et à la neige. ",
+    aiSummaryClear: "Stabilité dominante. Ciel dégagé sans complications. ",
+    aiSummaryCloudy: "Passage nuageux variable sans conséquences notables. ",
+    aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
+    aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
+    aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
     
     aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien si vous sortez. ",
     aiTempCold: "Il fait froid. Vous aurez besoin de vêtements chauds pour être à l'aise. ",
@@ -562,12 +596,12 @@ const TRANSLATIONS = {
     aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
     aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",
     
-    aiWindLight: "Le vent est calme, une journée paisible. ",
-    aiWindMod: "Le vent souffle, accentuant la sensation de froid. ",
-    aiWindStrong: "Attention aux rafales de vent qui peuvent être fortes aujourd'hui. ",
+    aiWindLight: "Flux faible, situation calme. ",
+    aiWindMod: "Vent modéré accentuant le ressenti thermique. ",
+    aiWindStrong: "Attention aux rafales, situation potentiellement dangereuse. ",
     
-    aiRainNone: "Vous pouvez être tranquille, aucune pluie n'est visible à l'horizon immédiat. ",
-    aiRainExp: "Alerte radar : la pluie approche de façon imminente. ",
+    aiRainNone: "Aucune précipitation en vue sur les modèles à court terme. ",
+    aiRainExp: "Radar actif : précipitation imminente détectée. ",
 
     wmo: {
       0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "ciel couvert",
@@ -583,7 +617,7 @@ const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Risque électrique élevé et fortes pluies.",
+    alertStorm: "Forte instabilité (CAPE élevé) et orages.",
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
@@ -649,11 +683,10 @@ const WeatherParticles = ({ code }) => {
   );
 };
 
-// --- ICONA VARIABLE: SOL/LLUNA + NÚVOL + LLAMP (TEMPESTA) ---
+// --- ICONA VARIABLE ---
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
-      {/* Sun/Moon Layer - Offset to Top Right FURTHER AWAY to avoid overlap */}
       <div className="absolute top-[-20%] right-[-20%] w-[50%] h-[50%] z-0">
          {isDay ? (
            <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]" strokeWidth={2} />
@@ -661,19 +694,14 @@ const VariableWeatherIcon = ({ isDay, className, ...props }) => {
            <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
          )}
       </div>
-      
-      {/* Main Cloud Layer with Lightning */}
       <CloudLightning className="w-full h-full text-purple-400 fill-purple-400/20 animate-pulse relative z-10" strokeWidth={2} />
     </div>
   );
 };
 
-// --- ICONA VARIABLE: SOL/LLUNA + NÚVOL + PLUJA (RUIXATS) ---
-// NOU COMPONENT: Combina Sol/Lluna amb CloudRain per simular CloudSunRain amb animació
 const VariableRainIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
-      {/* Sun/Moon Layer - Offset to Top Right FURTHER AWAY to avoid overlap */}
       <div className="absolute top-[-20%] right-[-20%] w-[50%] h-[50%] z-0">
          {isDay ? (
            <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]" strokeWidth={2} />
@@ -681,15 +709,12 @@ const VariableRainIcon = ({ isDay, className, ...props }) => {
            <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
          )}
       </div>
-      
-      {/* Main Cloud Layer with Rain */}
-      {/* Using standard CloudRain but overlaid. Animate pulse instead of bounce for organic feel */}
       <CloudRain className="w-full h-full text-indigo-400 fill-indigo-400/20 animate-pulse relative z-10" strokeWidth={2} />
     </div>
   );
 };
 
-// --- Subcomponent Efecte Escriptura Corregit ---
+// --- Subcomponent Efecte Escriptura ---
 const TypewriterText = ({ text }) => {
   const [displayedText, setDisplayedText] = useState('');
   useEffect(() => {
@@ -707,9 +732,7 @@ const TypewriterText = ({ text }) => {
   return <p className="text-slate-200 font-medium leading-relaxed text-sm md:text-base min-h-[3em]">{displayedText}</p>;
 };
 
-// --- HELPERS DATES I HORES ---
-
-// Modificat: Ara accepta una data base (now) per calcular el desplaçament real
+// --- HELPERS ---
 const getShiftedDate = (baseDate, timezone) => {
   const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezone });
   return new Date(targetTimeStr);
@@ -777,12 +800,10 @@ const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) 
 // --- SUN WIDGET ---
 const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
   const t = TRANSLATIONS[lang];
-  // Parse strings directly - we assume they represent local time as intended by API
   const sunriseTime = new Date(sunrise).getTime();
   const sunsetTime = new Date(sunset).getTime();
   const now = shiftedNow.getTime();
 
-  // Compare day parts using date strings to be safe against shift logic quirks
   const isToday = shiftedNow.toDateString() === new Date(sunrise).toDateString();
   
   let progress = 0;
@@ -903,7 +924,6 @@ const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }) => {
   const index = Math.round(((degrees %= 360) < 0 ? degrees + 360 : degrees) / 45) % 8;
   const dirText = directions[index];
   
-  // Custom Compass directions for display in the circle
   const N = directions[0];
   const S = directions[4];
   const E = directions[2];
@@ -976,7 +996,6 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   const paddingX = 20;
   const paddingY = 30;
 
-  // Gather values from ALL models to set Scale
   const values = data.map(d => d[dataKey] || 0);
   let allValues = [...values];
   
@@ -993,7 +1012,6 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   let maxVal = Math.max(...allValues);
 
   if (layer === 'temp') {
-     // Ensure buffer for temp
      minVal -= 2;
      maxVal += 2;
   } else if (layer === 'rain' || layer === 'cloud' || layer === 'humidity') {
@@ -1008,8 +1026,6 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   }
   
   const range = maxVal - minVal || 1;
-
-  // Helper to calculate Y for any value
   const calcY = (val) => height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
 
   const points = data.map((d, i) => ({
@@ -1031,15 +1047,13 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
     return d;
   };
 
-  // Main Line
   const linePath = buildSmoothPath(points, 'y');
   const areaPath = `${linePath} L ${width - paddingX},${height} L ${paddingX},${height} Z`;
 
-  // Secondary Lines (Comparison)
   let gfsPath = "";
   let iconPath = "";
 
-  if (comparisonData && layer !== 'snowLevel') { // Skip compare for snowLevel mostly to avoid clutter
+  if (comparisonData && layer !== 'snowLevel') {
       if (comparisonData.gfs && comparisonData.gfs.length > 0) {
           const gfsPoints = comparisonData.gfs.map((d, i) => ({
               x: paddingX + (i / (comparisonData.gfs.length - 1)) * (width - 2 * paddingX),
@@ -1073,21 +1087,16 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
         </defs>
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
         
-        {/* Fill Area (Main Model only) */}
         <path d={areaPath} fill={`url(#gradient-${layer})`} />
 
-        {/* Comparison Lines (Rendered before Main so Main is on top) */}
         {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />}
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />}
 
-        {/* Main Line */}
         <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         
-        {/* Interactivity Overlay */}
         {points.map((p, i) => (
           <g key={i} onMouseEnter={() => setHoveredIndex(i)}>
             <rect x={p.x - (width / points.length / 2)} y={0} width={width / points.length} height={height} fill="transparent" className="cursor-crosshair"/>
-            {/* Hour Labels */}
             {(i % (points.length > 12 ? 3 : 1) === 0) && (
               <text x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">{new Date(p.time).getHours()}h</text>
             )}
@@ -1124,7 +1133,6 @@ const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedN
         <SingleHourlyChart data={data} comparisonData={comparisonData} layer="snowLevel" unit="m" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
       </div>
 
-      {/* LEGEND FOR MULTI-MODEL */}
       <div className="flex justify-center items-center gap-4 mt-4 pt-2 border-t border-white/5">
            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{t.modelsLegend}:</span>
            <div className="flex items-center gap-1.5">
@@ -1145,32 +1153,17 @@ const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedN
 };
 
 // --- NOU COMPONENT: GRÀFICA DE PRECISIÓ (MINUT A MINUT) ---
-// Aquest component mostra la pluja prevista pels pròxims 60 minuts en intervals de 15 minuts.
-// És crucial per donar la sensació de "precisió" que demana l'usuari.
 const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
-  // MODIFICACIÓ: Si data és buida però currentPrecip > 0, creem un array fals per mostrar la pluja actual
-  // Això soluciona el problema de que "no apareix res" quan plou però el radar no ho veu
-  
   let chartData = data ? [...data] : [];
-  
-  // Assegurar que tenim almenys 4 slots
   while(chartData.length < 4) chartData.push(0);
-  
-  // Limitem a 4 intervals (1 hora)
   chartData = chartData.slice(0, 4);
 
-  // HYBRID FIX: Si plou ara (currentPrecip > 0) i la previsió immediata és 0, 
-  // assumim que el radar falla i injectem la pluja actual al primer slot.
   if (currentPrecip > 0 && chartData[0] === 0) {
       chartData[0] = currentPrecip;
-      // Opcional: decaiment suau si volem simular que pararà, o mantenir-ho
-      // De moment només el primer slot per ser honestos amb "Ara"
   }
 
-  // Ara comprovem si tot és 0
   if (chartData.every(v => v === 0)) return null;
-  
-  const max = Math.max(...chartData, 0.5); // Escala mínima
+  const max = Math.max(...chartData, 0.5); 
 
   return (
     <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in">
@@ -1181,14 +1174,11 @@ const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
         <div className="flex items-end gap-2 h-16 w-full pb-1">
            {chartData.map((val, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
-                 
-                 {/* VALUE DISPLAY (FIXED: SHOW DATA) */}
                  {val > 0 && (
                     <span className="text-[9px] font-bold text-blue-200 mb-0.5 animate-in slide-in-from-bottom-1">
                         {val >= 10 ? Math.round(val) : val.toFixed(1)}
                     </span>
                  )}
-
                  <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
                     <div 
                       className="w-full bg-blue-400 rounded-sm transition-all group-hover:bg-blue-300"
@@ -1209,12 +1199,16 @@ const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
   )
 }
 
-
-// --- CIRCULAR GAUGE ---
-const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText }) => {
+// --- CIRCULAR GAUGE (ENHANCED FOR PRESSURE TREND) ---
+const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText, trend = null, trendLabel = null }) => {
   const radius = 30;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (Math.min(value, max) / max) * circumference;
+  // Dynamic scale adjustment for pressure to make it look active (950-1050 range usually)
+  const normalizedValue = label.includes("Pressió") || label.includes("Pressure") || label.includes("Presión") 
+      ? Math.max(0, Math.min((value - 950) / 100, 1)) 
+      : Math.min(value, max) / max;
+  
+  const strokeDashoffset = circumference - normalizedValue * circumference;
 
   return (
     <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
@@ -1230,9 +1224,62 @@ const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500
       </div>
       <div className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-2">{label}</div>
       {subText && <div className="text-[10px] text-slate-500 mt-1">{subText}</div>}
+      
+      {/* TREND INDICATOR */}
+      {trend && (
+         <div className={`absolute top-2 right-2 flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-slate-950/50 ${
+             trend === 'rising' ? 'text-teal-400 border-teal-500/30' : 
+             trend === 'falling' ? 'text-rose-400 border-rose-500/30' : 
+             'text-slate-400 border-slate-500/30'
+         }`}>
+             {trend === 'rising' && <TrendingUp className="w-3 h-3" />}
+             {trend === 'falling' && <TrendingDown className="w-3 h-3" />}
+             {trend === 'steady' && <Minus className="w-3 h-3" />}
+             {trendLabel}
+         </div>
+      )}
     </div>
   );
 };
+
+// --- CAPE WIDGET (NEW) ---
+const CapeWidget = ({ cape, lang }) => {
+    const t = TRANSLATIONS[lang];
+    // CAPE Thresholds: <1000 Stable, 1000-2500 Moderate, >2500 High/Extreme
+    let status = t.capeStable;
+    let color = "text-green-400";
+    let bgColor = "bg-green-500";
+    let percentage = Math.min((cape / 3000) * 100, 100);
+
+    if (cape > 1000 && cape <= 2500) {
+        status = t.capeModerate;
+        color = "text-orange-400";
+        bgColor = "bg-orange-500";
+    } else if (cape > 2500) {
+        status = t.capeExtreme;
+        color = "text-red-500 animate-pulse";
+        bgColor = "bg-red-500";
+    }
+
+    return (
+        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
+            <div className="absolute top-2 left-3 flex items-center gap-1.5">
+                <Zap className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.stormPotential}</span>
+            </div>
+            
+            <div className="flex flex-col items-center mt-4">
+                <span className={`text-2xl font-bold ${color}`}>{Math.round(cape)}</span>
+                <span className="text-[9px] text-slate-500 mb-2">J/kg (CAPE)</span>
+                
+                <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
+                </div>
+                <span className={`text-xs font-bold mt-2 px-2 py-0.5 rounded border border-white/5 bg-white/5 ${color}`}>{status}</span>
+            </div>
+        </div>
+    )
+}
 
 export default function MeteoIA() {
   const [query, setQuery] = useState('');
@@ -1247,27 +1294,22 @@ export default function MeteoIA() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
   const [favorites, setFavorites] = useState([]);
   
-  // ESTAT INICIAL AMB PERSISTÈNCIA
   const [unit, setUnit] = useState(() => localStorage.getItem('meteoia-unit') || 'C');
   const [lang, setLang] = useState(() => localStorage.getItem('meteoia-lang') || 'ca');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('meteoia-view') || 'basic');
 
-  // --- RELLOTGE VIU ---
-  // Aquest state és la clau per la "precisió" temporal. S'actualitza cada minut.
   const [now, setNow] = useState(new Date());
 
   const searchRef = useRef(null);
   const inputRef = useRef(null);
   const t = TRANSLATIONS[lang];
 
-  // GUARDAR PREFERÈNCIES
   useEffect(() => { localStorage.setItem('meteoia-unit', unit); }, [unit]);
   useEffect(() => { localStorage.setItem('meteoia-lang', lang); }, [lang]);
   useEffect(() => { localStorage.setItem('meteoia-view', viewMode); }, [viewMode]);
 
-  // --- INTERVAL RELLOTGE ---
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000); // Actualitza cada minut
+    const timer = setInterval(() => setNow(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
 
@@ -1305,85 +1347,57 @@ export default function MeteoIA() {
   const getUnitLabel = () => unit === 'F' ? '°F' : '°C';
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
-  // --- ICONES MILLORADES (Amb Fill i Ombra) I LÒGICA WMO REFINADA ---
-  // MODIFICAT: Implementa la lògica de dia/nit consistent i animacions orgàniques
   const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0) => {
-    // Definim propietats comuns per donar consistència
     const commonProps = {
-      strokeWidth: 2, // Línia una mica més gruixuda per claredat
-      className: `${className} drop-shadow-md transition-all duration-300` // Afegim ombra per separar del fons
+      strokeWidth: 2, 
+      className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // --- MILLORA 1: No forçar icona de pluja si no plou, mostrar risc alt visualment diferent ---
-    // Si la probabilitat de pluja és > 50% i el codi no és de precipitació, 
-    // mostrem VariableRainIcon per indicar "Sol/Núvol + Gota" (Risc) en lloc de núvol de pluja.
     if (rainProb > 50 && code < 50) {
        return <VariableRainIcon isDay={isDay} {...commonProps} />;
     }
 
-    // 0: Cel serè
     if (code === 0) return isDay 
-      // --- MILLORA 2: Animació Pulse en lloc de Spin ---
-      // Si fa molt vent (>40), afegim una animació més ràpida o diferent si calgués, però el pulse és elegant.
       ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
     
-    // 1-2: Parcialment ennuvolat (Afegim Fill als núvols i sol/lluna)
     if (code === 1 || code === 2) {
-       // --- MILLORA 4 (Vent): Si fa vent fort, animem el núvol ---
-       // MODIFICAT: Pulse més ràpid per simular vent fort
        const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
        return isDay 
          ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300 ${windClass}`} />
          : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400 ${windClass}`} />;
     }
     
-    // 3: Cobert (Fill al núvol per donar pes)
     if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
 
-    // 45, 48: Boira
     if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     
-    // 51-55: Plugim (Drizzle) - Icona CloudDrizzle si existís, sinó CloudRain amb color més suau
     if (code >= 51 && code <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-300 fill-blue-300/20`} />;
 
-    // 56-57: Plugim gebrador - Afegim toc cian
     if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
 
-    // 61-65: Pluja (Rain) - Icona CloudRain estàndard
-    // --- MILLORA 3: Gestió nocturna de la pluja ---
     if (code >= 61 && code <= 65) {
-        // Si és de nit, utilitzem la icona composta per donar context (Lluna + Núvol + Pluja)
         if (!isDay) return <VariableRainIcon isDay={false} {...commonProps} />;
-        // De dia, CloudRain estàndard però amb animació suau (pulse) o estàtica, no bounce
         return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-pulse`} />;
     }
 
-    // 66-67: Pluja gebradora
     if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse`} />;
 
-    // 71-77: Neu
     if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
     
-    // 80-82: Ruixats de pluja (Showers) - Variable (Sun/Moon + Rain)
     if (code >= 80 && code <= 82) return <VariableRainIcon isDay={isDay} {...commonProps} />;
 
-    // 85-86: Ruixats de neu
     if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
 
-    // 95-99: Tempesta (Custom Icon with Sun/Moon + Cloud + Lightning)
     if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
     
-    // Fallback
     return <Cloud {...commonProps} className={`${commonProps.className} text-gray-300 fill-gray-300/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
  };
   
   const getLangCodeForAPI = (l) => l; 
   
-  // Date Formatter helper
   const formatDate = (dateString, options) => {
       const locales = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
-      // Force local time interpretation for YYYY-MM-DD
       const date = dateString.includes('T') ? new Date(dateString) : new Date(`${dateString}T00:00:00`);
       return new Intl.DateTimeFormat(locales[lang], options).format(date);
   };
@@ -1405,42 +1419,38 @@ export default function MeteoIA() {
     return "from-slate-900 to-indigo-950";
   };
   
-  // BACKGROUND UPDATER: Add Sunset/Sunrise gradients
   const getRefinedBackground = () => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
     const { is_day, weather_code } = weatherData.current;
     
-    // Check if it's sunrise or sunset time (within 45 mins)
-    // We need to parse API strings which are local to the location
     if (weatherData.daily && weatherData.daily.sunrise && weatherData.daily.sunset) {
         const sunrise = new Date(weatherData.daily.sunrise[0]).getTime();
         const sunset = new Date(weatherData.daily.sunset[0]).getTime();
-        const nowMs = shiftedNow.getTime(); // Use shifted now to match location time
+        const nowMs = shiftedNow.getTime(); 
         
         const hourMs = 45 * 60 * 1000;
-        if (Math.abs(nowMs - sunrise) < hourMs) return "from-indigo-900 via-purple-800 to-orange-400"; // Sunrise
-        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-900 via-purple-900 to-orange-500"; // Sunset
+        if (Math.abs(nowMs - sunrise) < hourMs) return "from-indigo-900 via-purple-800 to-orange-400"; 
+        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-900 via-purple-900 to-orange-500"; 
     }
     
     return getDynamicBackground(weather_code, is_day);
   };
 
-  // --- NOU ALGORTIME DE GENERACIÓ DE TEXT MÉS HUMÀ ---
   const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null) => {
     const tr = TRANSLATIONS[language];
     const feelsLike = current.apparent_temperature;
     const temp = current.temperature_2m;
     const humidity = current.relative_humidity_2m;
     const rainProb = daily.precipitation_probability_max[0];
-    const snowSum = daily.snowfall_sum && daily.snowfall_sum[0];
-    const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
     const windSpeed = current.wind_speed_10m;
     const code = forcedCode !== null ? forcedCode : current.weather_code;
-    const maxTemp = daily.temperature_2m_max[0];
-    const minTemp = daily.temperature_2m_min[0];
+    const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
     const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
     const uvMax = daily.uv_index_max[0];
     const isDay = current.is_day;
+    
+    // NEW: CAPE Logic for Agency Level Alerts
+    const currentCape = hourly.cape ? hourly.cape[new Date().getHours()] || 0 : 0;
     
     let summaryParts = [];
     let tips = [];
@@ -1448,77 +1458,56 @@ export default function MeteoIA() {
     let confidenceText = tr.aiConfidence;
     let confidenceLevel = 'high';
 
-    // 1. INTRODUCCIÓ DINÀMICA
     const hour = new Date().getHours();
     if (hour >= 6 && hour < 12) summaryParts.push(tr.aiIntroMorning);
     else if (hour >= 12 && hour < 19) summaryParts.push(tr.aiIntroAfternoon);
     else if (hour >= 19 && hour < 22) summaryParts.push(tr.aiIntroEvening);
     else summaryParts.push(tr.aiIntroNight);
 
-    // 2. DESCRIPCIÓ GENERAL BASADA EN 3 MODELS (SIMULADA PER BEST_MATCH)
     if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (code >= 71) summaryParts.push(tr.aiSummarySnow);
     else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
     else if (code <= 2) summaryParts.push(tr.aiSummaryClear);
     else summaryParts.push(tr.aiSummaryCloudy);
 
-    // 3. ANÀLISI DE SENSACIÓ MILLORADA (ABSOLUTA + RELATIVA)
     const diff = feelsLike - temp;
+    if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
     
-    if (windSpeed > 20) {
-        summaryParts.push(tr.aiWindMod);
-    } 
-    
-    // Noves categories tèrmiques basades en temperatura absoluta i sensació
     if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
     else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
-    else if (feelsLike >= 10 && feelsLike < 18) {
-         // Ni fred ni calor, transició
-    }
     else if (feelsLike >= 18 && feelsLike < 25) summaryParts.push(tr.aiTempMild);
     else if (feelsLike >= 25 && feelsLike < 32) summaryParts.push(tr.aiTempWarm);
     else if (feelsLike >= 32) summaryParts.push(tr.aiTempHot);
 
-    // Xafogor check
     if (temp > 25 && humidity > 65) {
        summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació real de ${Math.round(feelsLike)}°C. ` : language === 'es' ? `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. ` : "");
     }
 
-    // 4. PREVISIÓ DE PLUJA IMMEDIATA (RADAR)
     if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
     else if (rainProb < 20 && code < 50) summaryParts.push(tr.aiRainNone);
 
-    // 5. ALERTS & CONSEJOS COMPLEXOS (MILLORAT)
-    
-    // --- ALERTES BASADES EN CODIG WMO (FALTAVEN) ---
-    // Tempesta (Codis 95, 96, 99)
-    if (code >= 95) {
+    // --- ALERTS ---
+    if (code >= 95 || currentCape > 2000) {
        alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     }
-    // Neu (Codis 71-77, 85-86)
     else if (code >= 71 && code <= 77 || code === 85 || code === 86) {
        alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     }
-    // Pluja Forta (Codis 65, 82) o molta precipitació prevista
     else if (code === 65 || code === 82 || precipSum > 30) {
        alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
     }
 
-    // --- ALERTES PER PARÀMETRES ---
-    // Vent (Baixem umbral a 30 per ser més sensibles, o 50 per alerta forta)
     if (windSpeed > 50) {
       alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
       tips.push(tr.tipWindbreaker);
-    } else if (windSpeed > 80) { // Vent extrem
+    } else if (windSpeed > 80) { 
       alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
     }
     
-    // Temperatures Extremes
     if (temp < 0) {
       alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' });
       tips.push(tr.tipCoat, tr.tipThermal);
     } else if (temp < 5) {
-      // Només avís si fa vent també, sinó només consell
       if(windSpeed > 15) tips.push(tr.tipCoat); 
       tips.push(tr.tipLayers);
     } 
@@ -1531,24 +1520,20 @@ export default function MeteoIA() {
        tips.push(tr.tipHydration);
     }
 
-    // Consells generals (sense alerta visual, només tips)
     if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
     if (uvMax > 7 && isDay) {
-       // Alerta UV si és extrem
        if(uvMax >= 10) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' });
        tips.push(tr.tipSunscreen);
     }
-    if (aqiValue > 100) { // Alerta qualitat aire
+    if (aqiValue > 100) { 
        alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
     }
 
-    // Confidence Logic
     if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
         confidenceLevel = 'medium';
         confidenceText = tr.aiConfidenceMod;
     }
 
-    // Default tips
     if (tips.length === 0) tips.push(tr.tipCalm);
     tips = [...new Set(tips)].slice(0, 4);
 
@@ -1610,15 +1595,9 @@ export default function MeteoIA() {
     } else { setError("Geolocalització no suportada."); }
   };
 
-  // NORMALIZE MULTI-MODEL DATA helper
   const normalizeModelData = (data) => {
-     // If we request multiple models, Open-Meteo suffixes variables with model name
-     // e.g. temperature_2m_best_match, temperature_2m_ecmwf_ifs4
-     // We want to extract 'best_match' (or standard) as main, and others as comparison
-     
      const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] } };
      
-     // 1. Process Current (Usually straightforward or just Best Match)
      Object.keys(data.current).forEach(key => {
         if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
            result.current[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.current[key];
@@ -1627,7 +1606,6 @@ export default function MeteoIA() {
         }
      });
 
-     // 2. Process Daily (Same logic)
      Object.keys(data.daily).forEach(key => {
         if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
            result.daily[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.daily[key];
@@ -1636,8 +1614,6 @@ export default function MeteoIA() {
         }
      });
 
-     // 3. Process Hourly & Build Comparison
-     // Initialize arrays
      const gfsHourly = [];
      const iconHourly = [];
      const len = data.hourly.time.length;
@@ -1650,20 +1626,17 @@ export default function MeteoIA() {
      Object.keys(data.hourly).forEach(key => {
         const val = data.hourly[key];
         
-        // MAIN DATA (Best Match / ECMWF)
         if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
            result.hourly[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = val;
         } 
-        // METADATA or Standard Vars without suffixes
-        else if (key === 'time' || key === 'is_day' || key === 'freezing_level_height') {
+        // INCLUDE CAPE AND PRESSURE IN HOURLY NORMALIZE
+        else if (['time', 'is_day', 'freezing_level_height', 'pressure_msl', 'cape'].includes(key)) {
            result.hourly[key] = val;
         }
-        // GFS
         else if (key.includes('_gfs_seamless')) {
            const cleanKey = key.replace('_gfs_seamless', '');
            val.forEach((v, i) => gfsHourly[i][cleanKey] = v);
         }
-        // ICON
         else if (key.includes('_icon_seamless')) {
             const cleanKey = key.replace('_icon_seamless', '');
             val.forEach((v, i) => iconHourly[i][cleanKey] = v);
@@ -1673,7 +1646,6 @@ export default function MeteoIA() {
      result.hourlyComparison.gfs = gfsHourly;
      result.hourlyComparison.icon = iconHourly;
      
-     // Fallback if strict suffixing wasn't present (e.g. standard request)
      if (Object.keys(result.current).length === 0) return data;
      
      return { ...data, ...result };
@@ -1688,9 +1660,8 @@ export default function MeteoIA() {
     setQuery(""); 
     
     try {
-      // REQUEST ALL 3 MAJOR MODELS: ECMWF (Best Match default), GFS, ICON
-      // ADDED freezing_level_height TO hourly REQUEST
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
+      // UPDATED URL WITH CAPE and PRESSURE_MSL IN HOURLY
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
       
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
@@ -1701,7 +1672,6 @@ export default function MeteoIA() {
       const rawWeatherData = await weatherRes.json();
       const aqiData = await aqiRes.json();
       
-      // NORMALIZE DATA FOR APP CONSUMPTION
       const processedWeatherData = normalizeModelData(rawWeatherData);
 
       setWeatherData({ ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } });
@@ -1712,48 +1682,36 @@ export default function MeteoIA() {
     } finally { setLoading(false); }
   };
   
-
-  // CALCULAR 'ARA' SHIFTED (Desplaçament temporal)
-  // Ara depèn de 'now', que canvia cada minut
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     const timezone = weatherData.timezone || 'UTC';
     return getShiftedDate(now, timezone);
   }, [weatherData, now]);
 
-  // DADES DE PRECISIÓ (Next Hour)
-  // Busquem les dades minutely que corresponen a "Ara"
   const minutelyPreciseData = useMemo(() => {
-    // GUARD ADDED: Prevent slice error if minutely_15 or precipitation is missing
     if (!weatherData || !weatherData.minutely_15 || !weatherData.minutely_15.precipitation) return [];
     
-    // Convertim l'hora actual (shifted) a timestamp per buscar
     const currentMs = shiftedNow.getTime();
     
     const times = weatherData.minutely_15.time.map(t => new Date(t).getTime());
     let idx = times.findIndex(t => t > currentMs);
     let currentIdx = (idx === -1) ? times.length - 1 : Math.max(0, idx - 1);
     
-    // Return slice starting from current interval
     return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
   }, [weatherData, shiftedNow]);
 
-  // MODIFICACIÓ CLAU: CÀLCUL DEL CODI EFECTIU (SMART DETECTION)
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
     const currentCode = weatherData.current.weather_code;
     const currentPrecip = weatherData.current.precipitation;
     
-    // 1. Minutely Radar (Immediate)
     const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 ? minutelyPreciseData[0] : 0;
     
-    // 2. Hourly Probability Check (Look at current hour slot)
     let hourlyRainProb = 0;
     let hourlyPrecip = 0;
     const nowMs = shiftedNow.getTime();
     
-    // Find the hour slot we are currently in
     const hourIdx = weatherData.hourly.time.findIndex(t => {
         const tMs = new Date(t).getTime();
         return tMs <= nowMs && (tMs + 3600000) > nowMs;
@@ -1765,21 +1723,55 @@ export default function MeteoIA() {
     }
 
     const hasRainData = currentPrecip > 0 || immediateRain > 0 || hourlyPrecip > 0.1;
-    const highRainRisk = hourlyRainProb >= 45; // Baixem umbral per ser més sensibles (usuari vol "afinar")
+    const highRainRisk = hourlyRainProb >= 45; 
 
     if ((hasRainData || highRainRisk) && currentCode < 50) {
-        if (hourlyPrecip > 2 || immediateRain > 1) return 63; // Moderate
-        return 61; // Slight rain fallback
+        if (hourlyPrecip > 2 || immediateRain > 1) return 63; 
+        return 61; 
     }
     
     return currentCode;
   }, [weatherData, minutelyPreciseData, shiftedNow]);
 
-  // UPDATE AI WHEN EFFECTIVE CODE CHANGES
+  // NEW: Calculate Barometric Trend (3h change)
+  const barometricTrend = useMemo(() => {
+      if(!weatherData || !weatherData.hourly || !weatherData.hourly.pressure_msl) return { trend: 'steady', val: 0 };
+      
+      const nowMs = shiftedNow.getTime();
+      const currentIdx = weatherData.hourly.time.findIndex(t => {
+          const tMs = new Date(t).getTime();
+          return tMs <= nowMs && (tMs + 3600000) > nowMs;
+      });
+
+      if (currentIdx < 3) return { trend: 'steady', val: 0 }; // Not enough history
+
+      const currentP = weatherData.hourly.pressure_msl[currentIdx];
+      const pastP = weatherData.hourly.pressure_msl[currentIdx - 3]; // 3h ago
+      const diff = currentP - pastP;
+      
+      // Threshold: 1 hPa/3h is noticeable
+      if (diff >= 1) return { trend: 'rising', val: diff };
+      if (diff <= -1) return { trend: 'falling', val: diff };
+      return { trend: 'steady', val: diff };
+
+  }, [weatherData, shiftedNow]);
+
+  // NEW: Get current CAPE
+  const currentCape = useMemo(() => {
+      if(!weatherData || !weatherData.hourly || !weatherData.hourly.cape) return 0;
+      const nowMs = shiftedNow.getTime();
+      const currentIdx = weatherData.hourly.time.findIndex(t => {
+          const tMs = new Date(t).getTime();
+          return tMs <= nowMs && (tMs + 3600000) > nowMs;
+      });
+      if (currentIdx === -1) return 0;
+      return weatherData.hourly.cape[currentIdx] || 0;
+  }, [weatherData, shiftedNow]);
+
+
   useEffect(() => {
      if(weatherData && aqiData) {
          const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
-         // Pass effectiveWeatherCode to generate description based on "Rain" not "Cloudy"
          const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang, effectiveWeatherCode);
          setAiAnalysis(analysis);
      }
@@ -1787,13 +1779,8 @@ export default function MeteoIA() {
 
 
   const chartData = useMemo(() => {
-    // GUARD ADDED: Prevent slice error if hourly data is incomplete
     if (!weatherData || !weatherData.hourly || !weatherData.hourly.temperature_2m || !weatherData.hourly.time) return [];
     
-    // Utilitzem l'hora desplaçada (local del lloc) per saber on comença la gràfica
-    const nowLocalHour = shiftedNow.getHours();
-    
-    // Busquem l'índex que correspon a l'hora actual (o la següent) a la llista horària
     const nowTime = shiftedNow.getTime();
     
     const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
@@ -1812,7 +1799,6 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startIndex + i],
       humidity: weatherData.hourly.relative_humidity_2m[startIndex + i], 
       uv: weatherData.hourly.uv_index[startIndex + i],
-      // CORRECCIÓ SNOW LEVEL: Restem 300m per aproximar la cota de neu real (on qualla)
       snowLevel: weatherData.hourly.freezing_level_height ? Math.max(0, weatherData.hourly.freezing_level_height[startIndex + i] - 300) : 0,
       isDay: weatherData.hourly.is_day[startIndex + i],
       time: weatherData.hourly.time[startIndex + i],
@@ -1822,7 +1808,6 @@ export default function MeteoIA() {
     return mainData;
   }, [weatherData, unit, shiftedNow]);
 
-  // PREPARE COMPARISON DATA SLICES
   const comparisonData = useMemo(() => {
       if (!weatherData || !weatherData.hourlyComparison) return null;
       
@@ -1859,7 +1844,6 @@ export default function MeteoIA() {
     };
   }, [weatherData]);
   
-  // NOU CÀLCUL: Probabilitat de pluja actual (no màxima diària)
   const currentRainProbability = useMemo(() => {
      if (!weatherData || !weatherData.hourly) return 0;
      const nowMs = shiftedNow.getTime();
@@ -1887,7 +1871,6 @@ export default function MeteoIA() {
   };
 
   const DayDetailModal = () => {
-    // GUARD ADDED: Prevent crash if hourly data is missing
     if (selectedDayIndex === null || !weatherData || !weatherData.hourly || !weatherData.hourly.temperature_2m) return null;
     
     const dayIdx = selectedDayIndex;
@@ -1906,14 +1889,12 @@ export default function MeteoIA() {
       cloud: weatherData.hourly.cloud_cover[startHour + i],
       humidity: weatherData.hourly.relative_humidity_2m[startHour + i],
       uv: weatherData.hourly.uv_index[startHour + i],
-      // CORRECCIÓ SNOW LEVEL AQUÍ TAMBÉ
       snowLevel: weatherData.hourly.freezing_level_height ? Math.max(0, weatherData.hourly.freezing_level_height[startHour + i] - 300) : 0,
       time: weatherData.hourly.time[startHour + i],
       isDay: weatherData.hourly.is_day[startHour + i],
       code: weatherData.hourly.weather_code[startHour + i]
     }));
 
-    // --- NEW: Calculate Comparison Data for Modal ---
     const dayComparisonData = useMemo(() => {
         if (!weatherData.hourlyComparison) return null;
 
@@ -1935,12 +1916,10 @@ export default function MeteoIA() {
         };
     }, [weatherData, startHour, endHour, unit]);
     
-    const isTodaySnow = isSnowCode(weatherData.daily.weather_code[dayIdx]);
     const precipSum = weatherData.daily.precipitation_sum[dayIdx];
     const snowSum = weatherData.daily.snowfall_sum[dayIdx];
     const uvIndex = weatherData.daily.uv_index_max[dayIdx];
 
-    // Calculate Min/Max Snow Level for the day
     const freezingLevels = dayHourlyData.map(d => d.snowLevel).filter(val => val !== undefined && val !== null);
     const minSnowLevel = freezingLevels.length ? Math.min(...freezingLevels) : 0;
     const maxSnowLevel = freezingLevels.length ? Math.max(...freezingLevels) : 0;
@@ -1968,7 +1947,6 @@ export default function MeteoIA() {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Conditional Hourly Chart in Modal - PASS COMPARISON DATA IF EXPERT */}
             {viewMode === 'expert' && (
               <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
                 <div className="flex items-center justify-between mb-4">
@@ -1976,7 +1954,6 @@ export default function MeteoIA() {
                      <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution}
                    </div>
                 </div>
-                {/* UPDATED: Pass dayComparisonData */}
                 <HourlyForecastChart data={dayHourlyData} comparisonData={dayComparisonData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
               </div>
             )}
@@ -1988,10 +1965,9 @@ export default function MeteoIA() {
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
                         <div className="my-1 scale-75">{getWeatherIcon(h.code, "w-6 h-6", h.isDay, h.rain, h.wind)}</div>
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
-                        {/* ADDED RAIN INFO + CONTRAST FIX */}
                         <div className="flex flex-col items-center mt-1 h-6 justify-start">
                            {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
-                           {h.precip > 0 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
+                           {h.precip > 0.25 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
                         </div>
                      </div>
                   ))}
@@ -2001,7 +1977,7 @@ export default function MeteoIA() {
             <div className="grid grid-cols-2 gap-4">
               {snowSum > 0 ? (
                  <DetailStat label={t.snowAccumulated} value={`${snowSum} cm`} icon={<CloudSnow className="w-4 h-4 text-cyan-200 drop-shadow-sm fill-cyan-200/20" strokeWidth={2.5}/>} />
-              ) : precipSum > 0 ? (
+              ) : precipSum > 0.25 ? (
                  <DetailStat label={t.totalPrecipitation} value={`${Math.round(precipSum)} mm`} icon={<Umbrella className="w-4 h-4 text-blue-400 drop-shadow-sm fill-blue-400/20" strokeWidth={2.5}/>} />
               ) : (
                  <DetailStat label={t.rainProb} value={`${weatherData.daily.precipitation_probability_max[dayIdx]}%`} icon={<Umbrella className="w-4 h-4 text-blue-400 drop-shadow-sm fill-blue-400/20" strokeWidth={2.5}/>} />
@@ -2009,14 +1985,12 @@ export default function MeteoIA() {
               
               <DetailStat label={t.windMax} value={`${weatherData.daily.wind_speed_10m_max[dayIdx]} km/h`} icon={<Wind className="w-4 h-4 text-teal-400 drop-shadow-sm fill-teal-400/20" strokeWidth={2.5}/>} />
               
-              {/* Snow Level Stat - ETIQUETA NETEJA (sense 0°) */}
               <DetailStat 
                  label={t.snowLevel} 
                  value={`${Math.round(minSnowLevel)} - ${Math.round(maxSnowLevel)}m`} 
                  icon={<Mountain className="w-4 h-4 text-stone-400 drop-shadow-sm fill-stone-400/20" strokeWidth={2.5}/>} 
               />
 
-              {/* UV Visual Bar */}
               <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col items-center hover:border-slate-600 transition-colors">
                  <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide"><Sun className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.uvIndex}</div>
                  <div className="font-bold text-white text-lg">{uvIndex}</div>
@@ -2042,12 +2016,10 @@ export default function MeteoIA() {
 
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
 
-  // --- SAFE DATA RESOLUTION FOR WIDGET ---
   const moonPhaseVal = getMoonPhase(new Date());
   
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
-      {/* WEATHER PARTICLES EFFECT - Use Effective Code */}
       {weatherData && <WeatherParticles code={effectiveWeatherCode} />}
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10">
@@ -2060,7 +2032,6 @@ export default function MeteoIA() {
                <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
              </div>
              
-             {/* Mobile Controls */}
              <div className="md:hidden flex gap-2">
                  <button 
                       onClick={toggleViewMode}
@@ -2085,7 +2056,6 @@ export default function MeteoIA() {
           </div>
 
           <div className="flex gap-3 w-full md:w-auto items-center" ref={searchRef}>
-             {/* Desktop Controls */}
              <button 
                 onClick={toggleViewMode}
                 className={`hidden md:flex border border-slate-700/50 text-indigo-300 font-bold px-4 py-3 rounded-xl hover:text-white transition-all items-center gap-2 shadow-lg ${viewMode === 'expert' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950/50 hover:bg-slate-800'}`}
@@ -2165,7 +2135,6 @@ export default function MeteoIA() {
           </div>
         </div>
 
-        {/* LOADING (ONLY INITIAL) */}
         {loading && !weatherData && (
            <div className="animate-pulse space-y-6">
              <div className="h-64 bg-slate-800/50 rounded-[2.5rem] w-full"></div>
@@ -2203,11 +2172,9 @@ export default function MeteoIA() {
            </div>
         )}
 
-        {/* MAIN DASHBOARD */}
         {weatherData && (
           <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6">
             
-            {/* ALERT BANNERS SYSTEM (ALWAYS VISIBLE) */}
             {aiAnalysis?.alerts?.length > 0 && (
               <div className="space-y-3">
                 {aiAnalysis.alerts.map((alert, i) => (
@@ -2241,7 +2208,6 @@ export default function MeteoIA() {
               </div>
             )}
 
-            {/* TOP CARD (ALWAYS VISIBLE) */}
             <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
 
@@ -2257,7 +2223,6 @@ export default function MeteoIA() {
                      <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200 font-medium">
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
-                        {/* CORRECTED: Removed timezone prop from display to avoid double shift */}
                         <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full hidden md:block"></span>
                         <button 
@@ -2272,7 +2237,6 @@ export default function MeteoIA() {
                    </div>
                    <div className="flex flex-col items-end self-end md:self-auto">
                       <div className="filter drop-shadow-2xl md:hover:scale-110 transition-transform duration-500">
-                         {/* USE EFFECTIVE WEATHER CODE HERE */}
                         {getWeatherIcon(effectiveWeatherCode, "w-16 h-16 md:w-24 md:h-24", weatherData.current.is_day, weatherData.current.precipitation_probability, weatherData.current.wind_speed_10m)}
                       </div>
                       <span className="text-lg md:text-xl font-medium text-slate-200 mt-2">
@@ -2298,14 +2262,12 @@ export default function MeteoIA() {
                       </div>
                    </div>
 
-                   {/* AI INSIGHTS CARD */}
                    <div className="flex-1 w-full bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden">
                      <div className="flex items-center justify-between mb-3">
                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
                          <BrainCircuit className="w-4 h-4 animate-pulse" strokeWidth={2}/> {t.aiAnalysis}
                        </div>
                        
-                       {/* FIX: Check aiAnalysis before accessing confidenceLevel */}
                        {aiAnalysis && (
                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
                               aiAnalysis.confidenceLevel === 'high' ? 'text-green-400 border-green-500/30 bg-green-500/10' :
@@ -2329,7 +2291,6 @@ export default function MeteoIA() {
                            ))}
                          </div>
                          
-                         {/* GRÀFICA PRECISIÓ DE PLUJA */}
                          <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} currentPrecip={weatherData.current.precipitation} />
                        </div>
                      ) : (
@@ -2342,14 +2303,11 @@ export default function MeteoIA() {
                </div>
             </div>
 
-            {/* CONDITIONAL RENDER: EXPERT vs BASIC */}
             {viewMode === 'expert' && (
               <div className="animate-in slide-in-from-bottom-4 duration-500">
-                {/* METRICS & HOURLY GRAPH ROW (EXPERT ONLY) */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 md:gap-4 auto-rows-fr">
-                     {/* 1. Compass Gauge (Wind Direction) */}
                      <div className="col-span-1">
                        <CompassGauge 
                           degrees={weatherData.current.wind_direction_10m} 
@@ -2359,7 +2317,21 @@ export default function MeteoIA() {
                        />
                      </div>
                      
-                     {/* 2. Humidity Gauge (New) */}
+                     {/* UPDATED: Pressure Gauge now with Trend */}
+                     <CircularGauge 
+                        icon={<Gauge className="w-6 h-6" strokeWidth={2.5}/>} 
+                        label={t.pressure} 
+                        value={Math.round(weatherData.current.pressure_msl)} 
+                        max={1050} 
+                        subText="hPa"
+                        color="text-pink-400"
+                        trend={barometricTrend.trend}
+                        trendLabel={
+                            barometricTrend.trend === 'rising' ? t.pressureRising :
+                            barometricTrend.trend === 'falling' ? t.pressureFalling : t.pressureSteady
+                        }
+                     />
+                     
                      <CircularGauge 
                         icon={<Droplets className="w-6 h-6" strokeWidth={2.5}/>} 
                         label={t.humidity} 
@@ -2369,27 +2341,11 @@ export default function MeteoIA() {
                         color="text-blue-400"
                      />
                      
-                     {/* 3. Pressure (Reduced or same) */}
-                     <CircularGauge 
-                        icon={<Gauge className="w-6 h-6" strokeWidth={2.5}/>} 
-                        label={t.pressure} 
-                        value={Math.round(weatherData.current.pressure_msl)} 
-                        max={1100} 
-                        subText="hPa"
-                        color="text-pink-400"
-                     />
-                     
-                     {/* 4. Rain/Snow (ARA MOSTRA L'ACTUAL) */}
-                     <CircularGauge 
-                        icon={isTodaySnow ? <Snowflake className="w-6 h-6" strokeWidth={2.5}/> : <Umbrella className="w-6 h-6" strokeWidth={2.5}/>} 
-                        label={isTodaySnow ? t.snow : t.rain} 
-                        value={currentRainProbability} 
-                        max={100}
-                        subText="%"
-                        color={isTodaySnow ? "text-cyan-300" : "text-indigo-400"}
-                     />
+                     {/* NEW: CAPE Widget */}
+                     <div className="col-span-1">
+                        <CapeWidget cape={currentCape} lang={lang} />
+                     </div>
 
-                     {/* 5. Sun Arc Widget */}
                      <div className="col-span-2 md:col-span-2">
                         <SunArcWidget 
                           sunrise={weatherData.daily.sunrise[0]} 
@@ -2399,7 +2355,6 @@ export default function MeteoIA() {
                         />
                      </div>
 
-                     {/* 6. NEW Moon Widget with SIMPLIFIED REAL PHASE */}
                      <div className="col-span-2 md:col-span-2">
                         <MoonWidget 
                           phase={moonPhaseVal} 
@@ -2408,38 +2363,14 @@ export default function MeteoIA() {
                         />
                      </div>
                      
-                     {/* 7. Pollen Widget */}
                      <div className="col-span-2 md:col-span-2">
                         <PollenWidget data={aqiData?.current} lang={lang} />
                      </div>
-
-                     {/* AQI GAUGE WITH TEXT */}
-                     <div className="col-span-2 md:col-span-2">
-                       <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
-                          <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
-                             <Leaf className="w-3 h-3" strokeWidth={2.5}/> {t.aqi}
-                          </div>
-                          <div className="flex flex-col items-center justify-center mt-4">
-                             <div className="text-4xl font-bold text-white mb-1">{aqiData?.current?.european_aqi || '--'}</div>
-                             <div className={`text-xs font-bold px-3 py-1 rounded-full border uppercase tracking-wide ${
-                                (aqiData?.current?.european_aqi || 0) <= 20 ? 'text-green-400 border-green-500/30 bg-green-500/10' :
-                                (aqiData?.current?.european_aqi || 0) <= 40 ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' :
-                                (aqiData?.current?.european_aqi || 0) <= 60 ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' :
-                                (aqiData?.current?.european_aqi || 0) <= 80 ? 'text-orange-400 border-orange-500/30 bg-orange-500/10' :
-                                'text-red-400 border-red-500/30 bg-red-500/10'
-                             }`}>
-                                {t.aqiLevels[Math.min(Math.floor((aqiData?.current?.european_aqi || 0) / 20), 5)]}
-                             </div>
-                          </div>
-                       </div>
-                     </div>
                   </div>
 
-                  {/* HOURLY VISUAL CHART WITH TABS */}
                   <div className="lg:col-span-2 bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
                        <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
-                       {/* Badge Indicating Multi-Model */}
                        <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/20 rounded-full border border-indigo-500/30">
                           <GitGraph className="w-3 h-3 text-indigo-300" />
                           <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">{t.modeExpert} - 3 Models</span>
@@ -2455,7 +2386,6 @@ export default function MeteoIA() {
               </div>
             )}
             
-            {/* BASIC MODE HOURLY (Simplified) */}
             {viewMode === 'basic' && (
                <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
                  <h3 className="font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)</h3>
@@ -2465,10 +2395,10 @@ export default function MeteoIA() {
                           <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
                           <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind)}</div>
                           <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
-                          {/* ADDED RAIN INFO + CONTRAST FIX */}
                           <div className="flex flex-col items-center mt-1 h-6 justify-start">
                              {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
-                             {h.precip > 0 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
+                             {/* FILTER APPLIED HERE TOO */}
+                             {h.precip > 0.25 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
                           </div>
                        </div>
                     ))}
@@ -2476,7 +2406,6 @@ export default function MeteoIA() {
                </div>
             )}
 
-            {/* 7 DAY FORECAST - LIST STYLE (ALWAYS VISIBLE) */}
             <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
                <h3 className="font-bold text-white mb-5 flex items-center gap-2"><Calendar className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.forecast7days}</h3>
                <div className="space-y-2">
@@ -2492,17 +2421,14 @@ export default function MeteoIA() {
                        onClick={() => setSelectedDayIndex(i)}
                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group touch-manipulation active:bg-white/10"
                      >
-                        {/* Day Name */}
                         <div className="w-16 text-left font-bold text-slate-200 capitalize">
                            {i === 0 ? t.today : formatDate(day, { weekday: 'short' })}
                         </div>
 
-                        {/* Moon Phase (New) */}
                         <div className="hidden md:flex justify-center w-10 opacity-70">
                            <MoonPhaseIcon phase={listMoonPhase} lat={weatherData.location.latitude} lang={lang} className="w-6 h-6" />
                         </div>
 
-                        {/* Icon & Precipitation & Volume */}
                         <div className="flex items-center gap-3 w-32 md:w-36">
                            <div className="group-hover:scale-110 transition-transform filter drop-shadow-md">
                                {getWeatherIcon(weatherData.daily.weather_code[i], "w-8 h-8", 1, weatherData.daily.precipitation_probability_max[i])}
@@ -2514,12 +2440,12 @@ export default function MeteoIA() {
                                   {weatherData.daily.precipitation_probability_max[i]}%
                                 </span>
                              )}
-                             {/* DISPLAY VOLUME (L or CM) */}
+                             {/* FILTER: Hide precip < 0.25mm as 'noise' */}
                              {snowSum > 0 ? (
                                 <span className="text-[10px] font-medium text-cyan-100 flex items-center gap-0.5">
                                   {snowSum}cm
                                 </span>
-                             ) : precipSum > 0 ? (
+                             ) : precipSum > 0.25 ? (
                                 <span className="text-[10px] font-medium text-blue-200 flex items-center gap-0.5">
                                   {Math.round(precipSum)}mm
                                 </span>
@@ -2527,7 +2453,6 @@ export default function MeteoIA() {
                            </div>
                         </div>
 
-                        {/* Temp Range Bar */}
                         <div className="flex-1 flex justify-end md:justify-center">
                            <TempRangeBar 
                               min={Math.round(weatherData.daily.temperature_2m_min[i])}
@@ -2544,7 +2469,6 @@ export default function MeteoIA() {
                </div>
             </div>
             
-            {/* FOOTER - COPYRIGHT */}
             <div className="w-full py-8 mt-8 text-center border-t border-white/5">
               <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity">
                 © {new Date().getFullYear()} Meteo Toni Ai <span className="mx-1.5 opacity-50">|</span> Desenvolupat per <span className="text-indigo-400 font-bold">Toni Tapias</span>
