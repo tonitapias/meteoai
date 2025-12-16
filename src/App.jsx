@@ -654,7 +654,7 @@ const TRANSLATIONS = {
     },
 
     alertStorm: "Forte instabilité (CAPE élevé) i orages.",
-    alertSnow: "Attention : Neige accumulada prévue.",
+    alertSnow: "Attention : Neige accumulada prevista.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
     alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
@@ -2307,12 +2307,13 @@ export default function MeteoIA() {
                      <div className="px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-wider bg-slate-950/80 sticky top-0 backdrop-blur-sm">{t.favorites}</div>
                    )}
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
-                     <div
+                     <button // Canviat div a button
                        key={i}
-                       className={`group w-full px-4 py-4 md:py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
-                       onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // MODIFICACIÓ CLAU: Crida a cleanupSearch
+                       className={`group w-full px-4 py-4 md:py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors text-left ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
+                       onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
+                       onTouchStart={() => setActiveSuggestionIndex(i)} // Afegit onTouchStart per millorar l'experiència tàctil
                      >
-                       <div className="flex items-center gap-3">
+                       <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
                          {query.length === 0 ? <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> : <MapPin className="w-5 h-5 text-slate-500"/>}
                          <div className="flex flex-col text-left">
                             <span className="text-base md:text-sm font-medium text-slate-200 group-hover:text-white transition-colors">{item.name}</span>
@@ -2323,7 +2324,7 @@ export default function MeteoIA() {
                        {query.length === 0 ? (
                          <button 
                             onClick={(e) => removeFavorite(e, item.name)}
-                            className="p-3 md:p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all md:opacity-0 group-hover:opacity-100 focus:opacity-100 touch-manipulation"
+                            className="p-3 md:p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all md:opacity-0 group-hover:opacity-100 focus:opacity-100 touch-manipulation z-20"
                             aria-label="Eliminar favorit"
                          >
                            <Trash2 className="w-5 h-5"/>
@@ -2331,7 +2332,7 @@ export default function MeteoIA() {
                        ) : (
                          i === activeSuggestionIndex && <ArrowRight className="w-4 h-4 text-indigo-400 animate-pulse"/>
                        )}
-                     </div>
+                     </button>
                    ))}
                  </div>
                )}
@@ -2368,12 +2369,13 @@ export default function MeteoIA() {
                      <div className="px-4 py-2 text-xs font-bold text-indigo-400 uppercase tracking-wider bg-slate-950/80 sticky top-0 backdrop-blur-sm">{t.favorites}</div>
                    )}
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
-                      <div 
+                      <button // Canviat div a button
                          key={i} 
-                         onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} // La cerca ara ha de funcionar correctament
-                         className="group w-full px-4 py-4 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 hover:bg-white/5" // Estil adaptat de PC
+                         onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
+                         onTouchStart={() => setActiveSuggestionIndex(i)} // Afegit onTouchStart per millorar l'experiència tàctil
+                         className="group w-full px-4 py-4 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 hover:bg-white/5 text-left" 
                       >
-                         <div className="flex items-center gap-3">
+                         <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
                            {query.length === 0 ? <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> : <MapPin className="w-5 h-5 text-slate-500"/>}
                            <div className="flex flex-col text-left">
                               <span className="text-base font-medium text-slate-200 group-hover:text-white transition-colors">{item.name}</span>
@@ -2383,13 +2385,13 @@ export default function MeteoIA() {
                          {query.length === 0 && ( // REPARAT: Mostra el botó d'esborrar si és favorit
                            <button 
                               onClick={(e) => removeFavorite(e, item.name)}
-                              className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:opacity-100 touch-manipulation"
+                              className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:opacity-100 touch-manipulation z-20"
                               aria-label="Eliminar favorit"
                            >
                              <Trash2 className="w-5 h-5"/>
                            </button>
                          )}
-                      </div>
+                      </button>
                    ))}
                  </div>
                )}
