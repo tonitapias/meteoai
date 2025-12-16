@@ -6,7 +6,7 @@ import {
   LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
   ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, TrendingDown, Minus, Calendar, Clock,
   Layers, ThermometerSnowflake, AlertCircle, CloudSnow, Moon, Compass, Globe, Flower2,
-  LayoutTemplate, LayoutDashboard, GitGraph, Mountain, Zap
+  LayoutTemplate, LayoutDashboard, GitGraph, Mountain, Zap, Thermometer
 } from 'lucide-react';
 
 // --- SISTEMA DE TRADUCCIONS MILLORAT ---
@@ -28,6 +28,8 @@ const TRANSLATIONS = {
     wind: "Vent",
     cloud: "Cobertura",
     humidity: "Humitat",
+    dewPoint: "Punt de Rosada", // NEW
+    dewPointDesc: "Llindar de xafogor", // NEW
     snowLevel: "Cota de neu",
     forecast7days: "Previsió 7 Dies",
     today: "Avui",
@@ -77,7 +79,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "Previsió professional multi-model amb anàlisi d'inestabilitat (CAPE).",
+    subtitle: "Previsió profesional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
     pollenTypes: {
@@ -96,6 +98,13 @@ const TRANSLATIONS = {
     modelBest: "Consens",
     modelGfs: "GFS (EUA)",
     modelIcon: "ICON (Alemanya)",
+    
+    // Dew Point Levels
+    dpDry: "Sec / Agradable",
+    dpComfortable: "Confortable",
+    dpHumid: "Xafogós",
+    dpOppressive: "Opressiu",
+    dpExtreme: "Insuportable",
     
     // AI Advanced Texts
     aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
@@ -190,6 +199,8 @@ const TRANSLATIONS = {
     wind: "Viento",
     cloud: "Cobertura",
     humidity: "Humedad",
+    dewPoint: "Punto de Rocío",
+    dewPointDesc: "Umbral de bochorno",
     snowLevel: "Cota de nieve",
     forecast7days: "Previsión 7 Días",
     today: "Hoy",
@@ -239,7 +250,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
     alertWarning: "AVISO PRECAUCIÓN",
-    subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE).",
+    subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
     pollenTypes: {
@@ -258,6 +269,13 @@ const TRANSLATIONS = {
     modelBest: "Consenso",
     modelGfs: "GFS (EEUU)",
     modelIcon: "ICON (Alemania)",
+    
+    // Dew Point Levels
+    dpDry: "Seco / Agradable",
+    dpComfortable: "Confortable",
+    dpHumid: "Bochornoso",
+    dpOppressive: "Opresivo",
+    dpExtreme: "Insuperable",
     
     aiIntroMorning: "Buenos días. Analizamos la situación sinóptica actualizada. ",
     aiIntroAfternoon: "Buenas tardes. Seguimiento de la evolución atmosférica. ",
@@ -350,6 +368,8 @@ const TRANSLATIONS = {
     wind: "Wind",
     cloud: "Cloud Cover",
     humidity: "Humidity",
+    dewPoint: "Dew Point",
+    dewPointDesc: "Mugginess threshold",
     snowLevel: "Snow Level",
     forecast7days: "7-Day Forecast",
     today: "Today",
@@ -399,7 +419,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extreme",
     alertDanger: "DANGER ALERT",
     alertWarning: "WARNING NOTICE",
-    subtitle: "Professional multi-model forecast with instability analysis (CAPE).",
+    subtitle: "Professional multi-model forecast with instability analysis (CAPE) and Dew Point.",
     aqiLevels: ["Excellent", "Good", "Fair", "Moderate", "Poor", "Very Poor"],
     pollen: "Pollen Levels",
     pollenTypes: {
@@ -418,6 +438,13 @@ const TRANSLATIONS = {
     modelBest: "Consensus",
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Germany)",
+    
+    // Dew Point Levels
+    dpDry: "Dry / Comfortable",
+    dpComfortable: "Comfortable",
+    dpHumid: "Muggy",
+    dpOppressive: "Oppressive",
+    dpExtreme: "Miserable",
     
     aiIntroMorning: "Good morning. Analyzing the updated synoptic situation. ",
     aiIntroAfternoon: "Good afternoon. Tracking atmospheric evolution. ",
@@ -510,6 +537,8 @@ const TRANSLATIONS = {
     wind: "Vent",
     cloud: "Couverture",
     humidity: "Humidité",
+    dewPoint: "Point de Rosée",
+    dewPointDesc: "Seuil de touffeur",
     snowLevel: "Limite neige",
     forecast7days: "Prévisions 7 Jours",
     today: "Aujourd'hui",
@@ -559,7 +588,7 @@ const TRANSLATIONS = {
     uvExtreme: "Extrême",
     alertDanger: "ALERTE DANGER",
     alertWarning: "AVIS PRUDENCE",
-    subtitle: "Prévision professionnelle multi-modèle avec analyse d'instabilité (CAPE).",
+    subtitle: "Prévision professionnelle multi-modèle avec analyse d'instabilité (CAPE) et Point de Rosée.",
     aqiLevels: ["Excellent", "Bon", "Acceptable", "Modéré", "Mauvais", "Très Mauvais"],
     pollen: "Niveaux de Pollen",
     pollenTypes: {
@@ -578,6 +607,13 @@ const TRANSLATIONS = {
     modelBest: "Consensus",
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Allemagne)",
+    
+    // Dew Point Levels
+    dpDry: "Sec / Agréable",
+    dpComfortable: "Confortable",
+    dpHumid: "Lourd",
+    dpOppressive: "Oppressant",
+    dpExtreme: "Insupportable",
     
     aiIntroMorning: "Bonjour. Analyse de la situation synoptique actualisée. ",
     aiIntroAfternoon: "Bonne après-midi. Suivi de l'évolution atmosphérique. ",
@@ -761,6 +797,14 @@ const getMoonPhaseText = (phase, lang = 'ca') => {
   if (phase < 0.72) return t.waningGibbous;
   if (phase < 0.78) return t.lastQuarter;
   return t.waningCrescent;
+};
+
+// --- CALC DEW POINT (FORMULA MAGNUS) ---
+const calculateDewPoint = (T, RH) => {
+  const a = 17.27;
+  const b = 237.7;
+  const alpha = ((a * T) / (b + T)) + Math.log(RH / 100.0);
+  return (b * alpha) / (a - alpha);
 };
 
 // --- BANDERES ---
@@ -1263,6 +1307,81 @@ const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500
     </div>
   );
 };
+
+// --- DEW POINT WIDGET (NEW) ---
+const DewPointWidget = ({ value, lang, unit }) => {
+    const t = TRANSLATIONS[lang];
+    // Dew Point Scale (approx):
+    // < 10: Dry
+    // 10-15: Comfortable
+    // 16-20: Humid
+    // 21-24: Oppressive
+    // > 24: Extreme
+    
+    let status = t.dpComfortable;
+    let color = "text-teal-400";
+    let bgColor = "bg-teal-500";
+    let bgOpacity = "bg-teal-500/10";
+    
+    // Normalize for color bar (0 to 30 scale typically)
+    const percentage = Math.min(Math.max((value / 28) * 100, 0), 100);
+
+    if (value < 10) {
+        status = t.dpDry;
+        color = "text-blue-400";
+        bgColor = "bg-blue-500";
+        bgOpacity = "bg-blue-500/10";
+    } else if (value >= 10 && value <= 15) {
+        status = t.dpComfortable;
+        color = "text-green-400";
+        bgColor = "bg-green-500";
+        bgOpacity = "bg-green-500/10";
+    } else if (value > 15 && value <= 20) {
+        status = t.dpHumid;
+        color = "text-yellow-400";
+        bgColor = "bg-yellow-500";
+        bgOpacity = "bg-yellow-500/10";
+    } else if (value > 20 && value <= 24) {
+        status = t.dpOppressive;
+        color = "text-orange-500";
+        bgColor = "bg-orange-500";
+        bgOpacity = "bg-orange-500/10";
+    } else if (value > 24) {
+        status = t.dpExtreme;
+        color = "text-red-500 animate-pulse";
+        bgColor = "bg-red-500";
+        bgOpacity = "bg-red-500/10";
+    }
+
+    const displayValue = unit === 'F' ? Math.round((value * 9/5) + 32) : Math.round(value);
+
+    return (
+        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
+            <div className="absolute top-2 left-3 flex items-center gap-1.5">
+                <Thermometer className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.dewPoint}</span>
+            </div>
+            
+            <div className="flex flex-col items-center mt-3 w-full">
+                 <div className="relative mb-2">
+                    <div className={`text-3xl font-bold ${color}`}>{displayValue}°</div>
+                 </div>
+                 
+                 <div className="w-full max-w-[80%] h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
+                 </div>
+                 
+                 <div className={`mt-2 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${color} ${bgOpacity} border border-current border-opacity-20`}>
+                    {status}
+                 </div>
+                 <div className="text-[9px] text-slate-500 mt-1.5 text-center px-2 leading-tight">
+                    {t.dewPointDesc}
+                 </div>
+            </div>
+        </div>
+    )
+}
+
 
 // --- CAPE WIDGET (NEW) ---
 const CapeWidget = ({ cape, lang }) => {
@@ -1790,6 +1909,11 @@ export default function MeteoIA() {
       return weatherData.hourly.cape[currentIdx] || 0;
   }, [weatherData, shiftedNow]);
 
+  // NEW: Calculate current Dew Point
+  const currentDewPoint = useMemo(() => {
+    if(!weatherData || !weatherData.current) return 0;
+    return calculateDewPoint(weatherData.current.temperature_2m, weatherData.current.relative_humidity_2m);
+  }, [weatherData]);
 
   useEffect(() => {
      if(weatherData && aqiData) {
@@ -2354,13 +2478,12 @@ export default function MeteoIA() {
                         }
                      />
                      
-                     <CircularGauge 
-                        icon={<Droplets className="w-6 h-6" strokeWidth={2.5}/>} 
-                        label={t.humidity} 
-                        value={weatherData.current.relative_humidity_2m} 
-                        max={100}
-                        subText="%"
-                        color="text-blue-400"
+                     {/* REPLACED: Humidity with Dew Point Widget (or added alongside) */}
+                     {/* Since user said meteorologists prefer Dew Point, let's feature it */}
+                     <DewPointWidget 
+                        value={currentDewPoint} 
+                        lang={lang} 
+                        unit={unit} 
                      />
                      
                      {/* NEW: CAPE Widget */}
