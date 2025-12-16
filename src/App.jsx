@@ -162,7 +162,7 @@ const TRANSLATIONS = {
     heat: "Calor",
 
     tipHydration: "Beu aigua",
-    tipThermal: "Roba tèrmica",
+    tipThermal: "Roba tèrmmica",
     tipWindbreaker: "Tallavents",
     tipMugginess: "Roba fresca",
     tipUmbrella: "Agafa paraigua",
@@ -672,7 +672,7 @@ const TRANSLATIONS = {
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
     tipMugginess: "Lourd",
-    tipUmbrella: "Prenez parapluie",
+    tipUmbrella: "Preneu parapluie",
     tipSunscreen: "Écran solaire",
     tipCalm: "Profitez",
     tipCoat: "Manteau épais",
@@ -2309,9 +2309,9 @@ export default function MeteoIA() {
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
                      <button // Canviat div a button
                        key={i}
+                       type="button" // Afegit type="button"
                        className={`group w-full px-4 py-4 md:py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors text-left ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
                        onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
-                       onTouchStart={() => setActiveSuggestionIndex(i)} // Afegit onTouchStart per millorar l'experiència tàctil
                      >
                        <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
                          {query.length === 0 ? <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> : <MapPin className="w-5 h-5 text-slate-500"/>}
@@ -2323,6 +2323,7 @@ export default function MeteoIA() {
                        
                        {query.length === 0 ? (
                          <button 
+                            type="button" // Afegit type="button"
                             onClick={(e) => removeFavorite(e, item.name)}
                             className="p-3 md:p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all md:opacity-0 group-hover:opacity-100 focus:opacity-100 touch-manipulation z-20"
                             aria-label="Eliminar favorit"
@@ -2371,8 +2372,8 @@ export default function MeteoIA() {
                    {(query.length === 0 ? favorites : suggestions).map((item, i) => (
                       <button // Canviat div a button
                          key={i} 
+                         type="button" // Afegit type="button"
                          onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country)} 
-                         onTouchStart={() => setActiveSuggestionIndex(i)} // Afegit onTouchStart per millorar l'experiència tàctil
                          className="group w-full px-4 py-4 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors active:bg-white/10 hover:bg-white/5 text-left" 
                       >
                          <div className="flex items-center gap-3 pointer-events-none"> {/* Afegit pointer-events-none */}
@@ -2384,6 +2385,7 @@ export default function MeteoIA() {
                          </div>
                          {query.length === 0 && ( // REPARAT: Mostra el botó d'esborrar si és favorit
                            <button 
+                              type="button" // Afegit type="button"
                               onClick={(e) => removeFavorite(e, item.name)}
                               className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:opacity-100 touch-manipulation z-20"
                               aria-label="Eliminar favorit"
