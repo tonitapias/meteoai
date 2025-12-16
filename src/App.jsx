@@ -6,7 +6,8 @@ import {
   LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
   ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, TrendingDown, Minus, Calendar, Clock,
   Layers, ThermometerSnowflake, AlertCircle, CloudSnow, Moon, Compass, Globe, Flower2,
-  LayoutTemplate, LayoutDashboard, GitGraph, Mountain, Zap, Thermometer
+  LayoutTemplate, LayoutDashboard, GitGraph, Mountain, Zap, Thermometer,
+  ArrowDownUp, CheckCircle2, Split
 } from 'lucide-react';
 
 // --- SISTEMA DE TRADUCCIONS MILLORAT ---
@@ -22,7 +23,7 @@ const TRANSLATIONS = {
     aiConfidenceMod: "Divergència Models",
     aiConfidenceLow: "Incertesa Alta",
     generatingTips: "Analitzant CAPE, Pressió i Models (ECMWF, GFS, ICON)...",
-    trend24h: "Tendència 24h",
+    trend24h: "Comparativa Models 24h",
     temp: "Temperatura",
     rain: "Pluja",
     wind: "Vent",
@@ -95,9 +96,11 @@ const TRANSLATIONS = {
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsió Immediata (1h)",
     modelsLegend: "Comparativa Models",
-    modelBest: "Consensus",
+    modelBest: "Consensus (ECMWF)",
     modelGfs: "GFS (EUA)",
     modelIcon: "ICON (Alemanya)",
+    modelCompareTitle: "Comparativa Models (Diari)",
+    divergence: "Divergència",
     
     // Dew Point Levels
     dpDry: "Sec / Agradable",
@@ -193,7 +196,7 @@ const TRANSLATIONS = {
     aiConfidenceMod: "Divergencia Modelos",
     aiConfidenceLow: "Incertidumbre Alta",
     generatingTips: "Analizando CAPE, Presión y Modelos (ECMWF, GFS, ICON)...",
-    trend24h: "Tendencia 24h",
+    trend24h: "Comparativa Modelos 24h",
     temp: "Temperatura",
     rain: "Lluvia",
     wind: "Viento",
@@ -265,9 +268,11 @@ const TRANSLATIONS = {
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Previsión Inmediata (1h)",
     modelsLegend: "Comparativa Modelos",
-    modelBest: "Consenso",
+    modelBest: "Consenso (ECMWF)",
     modelGfs: "GFS (EEUU)",
     modelIcon: "ICON (Alemania)",
+    modelCompareTitle: "Comparativa Modelos (Diario)",
+    divergence: "Divergencia",
     
     // Dew Point Levels
     dpDry: "Seco / Agradable",
@@ -361,7 +366,7 @@ const TRANSLATIONS = {
     aiConfidenceMod: "Model Divergence",
     aiConfidenceLow: "High Uncertainty",
     generatingTips: "Analyzing CAPE, Pressure & Models (ECMWF, GFS, ICON)...",
-    trend24h: "24h Trend",
+    trend24h: "24h Model Comparison",
     temp: "Temperature",
     rain: "Rain",
     wind: "Wind",
@@ -434,9 +439,11 @@ const TRANSLATIONS = {
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     preciseRain: "Minute-by-Minute Forecast (1h)",
     modelsLegend: "Model Comparison",
-    modelBest: "Consensus",
+    modelBest: "Consensus (ECMWF)",
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Germany)",
+    modelCompareTitle: "Daily Model Comparison",
+    divergence: "Divergence",
     
     // Dew Point Levels
     dpDry: "Dry / Comfortable",
@@ -530,7 +537,7 @@ const TRANSLATIONS = {
     aiConfidenceMod: "Divergence Modèles",
     aiConfidenceLow: "Incertitude Élevée",
     generatingTips: "Analyse CAPE, Pression et Modèles (ECMWF, GFS, ICON)...",
-    trend24h: "Tendance 24h",
+    trend24h: "Comparaison Modèles 24h",
     temp: "Température",
     rain: "Pluie",
     wind: "Vent",
@@ -603,9 +610,11 @@ const TRANSLATIONS = {
     directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
     preciseRain: "Prévisions Minute par Minute (1h)",
     modelsLegend: "Comparaison Modèles",
-    modelBest: "Consensus",
+    modelBest: "Consensus (ECMWF)",
     modelGfs: "GFS (USA)",
     modelIcon: "ICON (Allemagne)",
+    modelCompareTitle: "Comparaison Modèles (Quotidien)",
+    divergence: "Divergence",
     
     // Dew Point Levels
     dpDry: "Sec / Agréable",
@@ -1025,7 +1034,7 @@ const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }
   )
 };
 
-// --- SINGLE CHART (MULTI-MODEL SUPPORT) ---
+// --- SINGLE CHART (MULTI-MODEL SUPPORT & DEEP ANALYSIS TOOLTIP) ---
 const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 140, lang = 'ca', shiftedNow }) => {
   if (!data || data.length === 0) return null;
   const t = TRANSLATIONS[lang];
@@ -1101,6 +1110,12 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
 
   let gfsPath = "";
   let iconPath = "";
+  
+  // Values for Tooltip Logic
+  const getComparsionValue = (dataset, index) => {
+      if(dataset && dataset[index]) return dataset[index][dataKey];
+      return null;
+  }
 
   if (comparisonData && layer !== 'snowLevel') {
       if (comparisonData.gfs && comparisonData.gfs.length > 0) {
@@ -1120,6 +1135,8 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
   }
 
   const hoverData = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : null;
+  const gfsValue = hoveredIndex !== null ? getComparsionValue(comparisonData?.gfs, hoveredIndex) : null;
+  const iconValue = hoveredIndex !== null ? getComparsionValue(comparisonData?.icon, hoveredIndex) : null;
 
   return (
     <div className="relative w-full">
@@ -1138,8 +1155,9 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
         
         <path d={areaPath} fill={`url(#gradient-${layer})`} />
 
-        {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />}
-        {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" />}
+        {/* GFS & ICON Lines */}
+        {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 4"/>}
+        {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 2"/>}
 
         <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         
@@ -1163,9 +1181,42 @@ const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, se
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
             <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
-            <g transform={`translate(${Math.min(width - 60, Math.max(60, hoverData.x))}, ${Math.min(height - 40, Math.max(20, hoverData.y - 35))})`}>
-               <rect x="-40" y="-22" width="80" height={34} rx="6" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" />
-               <text x="0" y="0" dy="5" textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">{Math.round(hoverData.value)}{unit}</text>
+            
+            {/* ENHANCED TOOLTIP WITH MULTI-MODEL DATA */}
+            <g transform={`translate(${Math.min(width - 100, Math.max(100, hoverData.x))}, ${Math.min(height - 80, Math.max(50, hoverData.y - 60))})`}>
+               {/* Background for tooltip */}
+               <rect x="-65" y="-45" width="130" height="90" rx="6" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" filter="drop-shadow(0 4px 6px rgb(0 0 0 / 0.5))" />
+               
+               {/* Title Hour */}
+               <text x="0" y="-30" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" opacity="0.8">
+                 {new Date(hoverData.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+               </text>
+               
+               {/* Separator */}
+               <line x1="-55" y1="-22" x2="55" y2="-22" stroke="white" strokeOpacity="0.1" />
+               
+               {/* ECMWF (Best) */}
+               <circle cx="-45" cy="-10" r="3" fill={currentConfig.color} />
+               <text x="-35" y="-7" textAnchor="start" fill="white" fontSize="10" fontWeight="bold">ECMWF:</text>
+               <text x="50" y="-7" textAnchor="end" fill="white" fontSize="10" fontWeight="bold">{Math.round(hoverData.value)}{unit}</text>
+               
+               {/* GFS */}
+               {gfsValue !== null && (
+                 <>
+                   <circle cx="-45" cy="8" r="3" fill="#4ade80" />
+                   <text x="-35" y="11" textAnchor="start" fill="#cbd5e1" fontSize="10">GFS:</text>
+                   <text x="50" y="11" textAnchor="end" fill="#4ade80" fontSize="10" fontWeight="bold">{Math.round(gfsValue)}{unit}</text>
+                 </>
+               )}
+               
+               {/* ICON */}
+               {iconValue !== null && (
+                 <>
+                   <circle cx="-45" cy="26" r="3" fill="#fbbf24" />
+                   <text x="-35" y="29" textAnchor="start" fill="#cbd5e1" fontSize="10">ICON:</text>
+                   <text x="50" y="29" textAnchor="end" fill="#fbbf24" fontSize="10" fontWeight="bold">{Math.round(iconValue)}{unit}</text>
+                 </>
+               )}
             </g>
           </g>
         )}
@@ -1196,11 +1247,11 @@ const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedN
               <span className="text-xs text-slate-300">{t.modelBest}</span>
            </div>
            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-green-400"></div>
+              <div className="w-3 h-0.5 bg-green-400 border-t border-b border-green-400 border-dashed w-4"></div>
               <span className="text-xs text-slate-300">{t.modelGfs}</span>
            </div>
            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-amber-400"></div>
+              <div className="w-3 h-0.5 bg-amber-400 border-t border-b border-amber-400 border-dashed w-4"></div>
               <span className="text-xs text-slate-300">{t.modelIcon}</span>
            </div>
       </div>
@@ -1326,12 +1377,6 @@ const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500
 // --- DEW POINT WIDGET (UPDATED: HYBRID) ---
 const DewPointWidget = ({ value, humidity, lang, unit }) => { 
     const t = TRANSLATIONS[lang];
-    // Dew Point Scale (approx):
-    // < 10: Dry
-    // 10-15: Comfortable
-    // 16-20: Humid
-    // 21-24: Oppressive
-    // > 24: Extreme
     
     let status = t.dpComfortable;
     let color = "text-teal-400";
@@ -1460,15 +1505,14 @@ export default function MeteoIA() {
   const [unit, setUnit] = useState(() => localStorage.getItem('meteoia-unit') || 'C');
   const [lang, setLang] = useState(() => localStorage.getItem('meteoia-lang') || 'ca');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('meteoia-view') || 'basic');
-  const [isSearching, setIsSearching] = useState(false); // NOU: Estat per al loader de cerca
+  const [isSearching, setIsSearching] = useState(false);
 
   const [now, setNow] = useState(new Date());
 
-  // FIX: Separate refs to prevent click conflicts
   const searchRefPC = useRef(null);
   const searchRefMobile = useRef(null);
   const inputRef = useRef(null);
-  const suggestionsListRef = useRef(null); // Ref per llista de suggeriments (per scroll)
+  const suggestionsListRef = useRef(null);
   const t = TRANSLATIONS[lang];
 
   useEffect(() => { localStorage.setItem('meteoia-unit', unit); }, [unit]);
@@ -1485,12 +1529,10 @@ export default function MeteoIA() {
     if (savedFavs) setFavorites(JSON.parse(savedFavs));
   }, []);
 
-  // Scroll to active suggestion
   useEffect(() => {
       if (showSuggestions && activeSuggestionIndex !== -1 && suggestionsListRef.current) {
           const list = suggestionsListRef.current;
-          // Finding the button element
-          const buttons = list.querySelectorAll('button.group'); // Target the rows
+          const buttons = list.querySelectorAll('button.group'); 
           if (buttons[activeSuggestionIndex]) {
               buttons[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
           }
@@ -1628,7 +1670,6 @@ export default function MeteoIA() {
     const uvMax = daily.uv_index_max[0];
     const isDay = current.is_day;
     
-    // NEW: CAPE Logic for Agency Level Alerts
     const currentCape = hourly.cape ? hourly.cape[new Date().getHours()] || 0 : 0;
     
     let summaryParts = [];
@@ -1719,7 +1760,6 @@ export default function MeteoIA() {
     return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
   };
 
-  // LÒGICA DE DEBOUNCE EXISTENT (MODIFICADA): Només fa la cerca a l'API si hi ha més de 2 caràcters
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.length > 2 && showSuggestions) {
@@ -1734,40 +1774,29 @@ export default function MeteoIA() {
     return () => clearTimeout(timer);
   }, [query, showSuggestions, lang]);
   
-  // NOU: Lògica per carregar favorits immediatament o si el query es buida
-  // Això s'activa quan l'usuari fa focus i el camp és buit (query.length === 0)
   useEffect(() => {
-    // Si l'usuari ha tancat la llista, no fem res
     if (!showSuggestions) return;
-
-    // Si el camp de cerca està buit, mostrem els favorits
     if (query.length === 0) {
         setSuggestions(favorites);
         setActiveSuggestionIndex(-1);
     }
-    // Si hi ha query, la lògica de debounce (l'altre useEffect) s'encarregarà de la cerca a l'API.
-
   }, [query, showSuggestions, favorites]);
 
 
-  // FIX: Robust cleanup logic for click/touch events
   const cleanupSearch = (lat, lon, name, country) => {
-    // Retardem la crida per assegurar que el navegador hagi processat completament l'esdeveniment tàctil/click
     setTimeout(() => {
         fetchWeatherByCoords(lat, lon, name, country);
         setShowSuggestions(false);
         setQuery(""); 
         
-        // FIX: Remove focus from any active element safely
         if (document.activeElement && document.activeElement.blur) {
            document.activeElement.blur();
         }
-    }, 50); // Reduced delay for better PC responsiveness
+    }, 50);
   }
 
-  // NEW: Shared Search Execution Logic for buttons/enter key
   const executeSearch = () => {
-    if (isSearching) return; // Si ja està buscant, ignora
+    if (isSearching) return;
     
     const list = query.length === 0 ? favorites : suggestions;
     if (list.length > 0) {
@@ -1777,7 +1806,7 @@ export default function MeteoIA() {
         
         const item = list[index];
         if (item) {
-            setIsSearching(true); // Activa el loader
+            setIsSearching(true);
             cleanupSearch(item.latitude, item.longitude, item.name, item.country);
         }
     }
@@ -1797,11 +1826,11 @@ export default function MeteoIA() {
   };
 
   const handleGetCurrentLocation = () => {
-    if (isSearching) return; // Si ja està buscant, ignora
+    if (isSearching) return;
     
     if (navigator.geolocation) {
       setLoading(true);
-      setIsSearching(true); // Activa el loader
+      setIsSearching(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -1811,7 +1840,6 @@ export default function MeteoIA() {
             const locationName = data.address.city || data.address.town || data.address.village || data.address.municipality || "Ubicació";
             const locationCountry = data.address.country || "";
             
-            // La crida a cleanupSearch contindrà la crida final a fetchWeatherByCoords
             cleanupSearch(latitude, longitude, locationName, locationCountry); 
           } catch (err) {
             console.error("Error reverse geocoding:", err);
@@ -1821,14 +1849,14 @@ export default function MeteoIA() {
         (error) => { 
           setError("No s'ha pogut obtenir la ubicació."); 
           setLoading(false); 
-          setIsSearching(false); // Desactiva el loader en cas d'error de geolocalització
+          setIsSearching(false);
         }
       );
     } else { setError("Geolocalització no suportada."); }
   };
 
   const normalizeModelData = (data) => {
-     const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] } };
+     const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
      
      Object.keys(data.current).forEach(key => {
         if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
@@ -1838,13 +1866,29 @@ export default function MeteoIA() {
         }
      });
 
+     // Normalize DAILY Comparison Data
+     const dailyGfs = {};
+     const dailyIcon = {};
+
      Object.keys(data.daily).forEach(key => {
         if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
            result.daily[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.daily[key];
-        } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
+        } 
+        else if (key.includes('_gfs_seamless')) {
+           const cleanKey = key.replace('_gfs_seamless', '');
+           dailyGfs[cleanKey] = data.daily[key];
+        }
+        else if (key.includes('_icon_seamless')) {
+           const cleanKey = key.replace('_icon_seamless', '');
+           dailyIcon[cleanKey] = data.daily[key];
+        }
+        else {
            result.daily[key] = data.daily[key];
         }
      });
+
+     result.dailyComparison.gfs = dailyGfs;
+     result.dailyComparison.icon = dailyIcon;
 
      const gfsHourly = [];
      const iconHourly = [];
@@ -1867,12 +1911,10 @@ export default function MeteoIA() {
         }
         else if (key.includes('_gfs_seamless')) {
            const cleanKey = key.replace('_gfs_seamless', '');
-           // FIX: Safety check for array bounds
            val.forEach((v, i) => { if (gfsHourly[i]) gfsHourly[i][cleanKey] = v });
         }
         else if (key.includes('_icon_seamless')) {
             const cleanKey = key.replace('_icon_seamless', '');
-            // FIX: Safety check for array bounds
             val.forEach((v, i) => { if (iconHourly[i]) iconHourly[i][cleanKey] = v });
         }
      });
@@ -1887,14 +1929,13 @@ export default function MeteoIA() {
 
   const fetchWeatherByCoords = async (lat, lon, name, country = "") => {
     setLoading(true);
-    setIsSearching(true); // Activa el loader
+    setIsSearching(true);
     setError(null);
     setAiAnalysis(null);
     setSuggestions([]);
     setShowSuggestions(false);
     
     try {
-      // UPDATED URL WITH CAPE and PRESSURE_MSL IN HOURLY
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
       
       const [weatherRes, aqiRes] = await Promise.all([
@@ -1915,7 +1956,7 @@ export default function MeteoIA() {
       setError(err.message || "Error desconegut");
     } finally { 
       setLoading(false); 
-      setIsSearching(false); // Desactiva el loader al final
+      setIsSearching(false);
     }
   };
   
@@ -1970,7 +2011,6 @@ export default function MeteoIA() {
     return currentCode;
   }, [weatherData, minutelyPreciseData, shiftedNow]);
 
-  // NEW: Calculate Barometric Trend (3h change)
   const barometricTrend = useMemo(() => {
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.pressure_msl) return { trend: 'steady', val: 0 };
       
@@ -1980,20 +2020,18 @@ export default function MeteoIA() {
           return tMs <= nowMs && (tMs + 3600000) > nowMs;
       });
 
-      if (currentIdx < 3) return { trend: 'steady', val: 0 }; // Not enough history
+      if (currentIdx < 3) return { trend: 'steady', val: 0 }; 
 
       const currentP = weatherData.hourly.pressure_msl[currentIdx];
-      const pastP = weatherData.hourly.pressure_msl[currentIdx - 3]; // 3h ago
+      const pastP = weatherData.hourly.pressure_msl[currentIdx - 3];
       const diff = currentP - pastP;
       
-      // Threshold: 1 hPa/3h is noticeable
       if (diff >= 1) return { trend: 'rising', val: diff };
       if (diff <= -1) return { trend: 'falling', val: diff };
       return { trend: 'steady', val: diff };
 
   }, [weatherData, shiftedNow]);
 
-  // NEW: Get current CAPE
   const currentCape = useMemo(() => {
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.cape) return 0;
       const nowMs = shiftedNow.getTime();
@@ -2005,7 +2043,6 @@ export default function MeteoIA() {
       return weatherData.hourly.cape[currentIdx] || 0;
   }, [weatherData, shiftedNow]);
 
-  // NEW: Calculate current Dew Point
   const currentDewPoint = useMemo(() => {
     if(!weatherData || !weatherData.current) return 0;
     return calculateDewPoint(weatherData.current.temperature_2m, weatherData.current.relative_humidity_2m);
@@ -2096,7 +2133,6 @@ export default function MeteoIA() {
      return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
   }, [weatherData, shiftedNow]);
 
-  // FIX: Updated click outside logic to handle separated refs
   useEffect(() => {
     function handleClickOutside(event) { 
         const isInsidePC = searchRefPC.current && searchRefPC.current.contains(event.target);
@@ -2174,6 +2210,27 @@ export default function MeteoIA() {
     const minSnowLevel = freezingLevels.length ? Math.min(...freezingLevels) : 0;
     const maxSnowLevel = freezingLevels.length ? Math.max(...freezingLevels) : 0;
 
+    // --- DEEP ANALYSIS DAILY COMPARISON TABLE ---
+    const dailyModelComparison = useMemo(() => {
+        if(!weatherData.dailyComparison) return null;
+        
+        const getData = (source) => {
+             if(!source) return { max: '-', min: '-', rain: '-' };
+             return {
+                 max: source.temperature_2m_max ? formatTemp(source.temperature_2m_max[dayIdx]) + '°' : '-',
+                 min: source.temperature_2m_min ? formatTemp(source.temperature_2m_min[dayIdx]) + '°' : '-',
+                 rain: source.precipitation_probability_max ? source.precipitation_probability_max[dayIdx] + '%' : '-'
+             };
+        };
+
+        return {
+            best: getData(weatherData.daily),
+            gfs: getData(weatherData.dailyComparison.gfs),
+            icon: getData(weatherData.dailyComparison.icon)
+        };
+
+    }, [weatherData, dayIdx, unit]);
+
     const DetailStat = ({ label, value, icon }) => (
       <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col items-center hover:border-slate-600 transition-colors">
          <div className="text-slate-400 text-xs mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide">{icon} {label}</div>
@@ -2204,6 +2261,46 @@ export default function MeteoIA() {
           </div>
 
           <div className="p-6 space-y-6">
+            
+            {/* DAILY MODEL COMPARISON TABLE */}
+            {dailyModelComparison && (
+               <div className="bg-slate-950/50 rounded-2xl p-4 border border-indigo-500/20 shadow-inner">
+                  <div className="flex items-center gap-2 mb-3 text-sm font-bold text-indigo-300 uppercase tracking-wider">
+                      <Split className="w-4 h-4" /> {t.modelCompareTitle}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-xs md:text-sm">
+                      <div className="text-slate-500 font-bold">Model</div>
+                      <div className="text-slate-400 text-center font-medium">Max Temp</div>
+                      <div className="text-slate-400 text-center font-medium">Min Temp</div>
+                      <div className="text-slate-400 text-center font-medium">Prob. Pluja</div>
+
+                      {/* ECMWF */}
+                      <div className="flex items-center gap-1.5 font-bold text-indigo-300">
+                          <div className="w-2 h-2 rounded-full bg-indigo-500"></div> ECMWF
+                      </div>
+                      <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.best.max}</div>
+                      <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.best.min}</div>
+                      <div className="text-center text-blue-300 font-bold bg-blue-500/10 rounded py-1">{dailyModelComparison.best.rain}</div>
+
+                      {/* GFS */}
+                      <div className="flex items-center gap-1.5 font-bold text-green-300">
+                           <div className="w-2 h-2 rounded-full bg-green-500"></div> GFS
+                      </div>
+                      <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.gfs.max}</div>
+                      <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.gfs.min}</div>
+                      <div className="text-center text-blue-300 font-bold bg-blue-500/10 rounded py-1">{dailyModelComparison.gfs.rain}</div>
+
+                      {/* ICON */}
+                      <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                           <div className="w-2 h-2 rounded-full bg-amber-500"></div> ICON
+                      </div>
+                      <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.icon.max}</div>
+                      <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.icon.min}</div>
+                      <div className="text-center text-blue-300 font-bold bg-blue-500/10 rounded py-1">{dailyModelComparison.icon.rain}</div>
+                  </div>
+               </div>
+            )}
+
             {viewMode === 'expert' && (
               <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
                 <div className="flex items-center justify-between mb-4">
@@ -2275,7 +2372,7 @@ export default function MeteoIA() {
 
   const moonPhaseVal = getMoonPhase(new Date());
 
-  // --- REFACTOR: 7-DAY FORECAST SECTION (MOVED TO VARIABLE) ---
+  // --- REFACTOR: 7-DAY FORECAST SECTION (WITH MODEL DIVERGENCE INDICATOR) ---
   const sevenDayForecastSection = weatherData && (
     <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
       <h3 className="font-bold text-white mb-5 flex items-center gap-2">
@@ -2287,6 +2384,18 @@ export default function MeteoIA() {
           const precipSum = weatherData.daily.precipitation_sum[i];
           const snowSum = weatherData.daily.snowfall_sum[i];
           const listMoonPhase = getMoonPhase(new Date(day));
+          
+          // Check divergence for icon
+          let divergence = false;
+          if (weatherData.dailyComparison.gfs.temperature_2m_max && weatherData.dailyComparison.icon.temperature_2m_max) {
+              const maxes = [
+                  weatherData.daily.temperature_2m_max[i], 
+                  weatherData.dailyComparison.gfs.temperature_2m_max[i], 
+                  weatherData.dailyComparison.icon.temperature_2m_max[i]
+              ];
+              const maxDiff = Math.max(...maxes) - Math.min(...maxes);
+              if (maxDiff > 3) divergence = true;
+          }
 
           return (
             <button 
@@ -2294,8 +2403,13 @@ export default function MeteoIA() {
               onClick={() => setSelectedDayIndex(i)}
               className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group touch-manipulation active:bg-white/10"
             >
-              <div className="w-16 text-left font-bold text-slate-200 capitalize">
-                  {i === 0 ? t.today : formatDate(day, { weekday: 'short' })}
+              <div className="w-16 text-left flex flex-col items-start">
+                  <span className="font-bold text-slate-200 capitalize">{i === 0 ? t.today : formatDate(day, { weekday: 'short' })}</span>
+                  {divergence && (
+                      <span className="text-[9px] text-amber-400 flex items-center gap-0.5 mt-0.5 bg-amber-500/10 px-1 rounded" title={t.aiConfidenceMod}>
+                          <GitGraph className="w-2.5 h-2.5" /> Diff
+                      </span>
+                  )}
               </div>
 
               <div className="hidden md:flex justify-center w-10 opacity-70">
@@ -2809,10 +2923,6 @@ export default function MeteoIA() {
                       <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
                           <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
-                          <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/20 rounded-full border border-indigo-500/30">
-                              <GitGraph className="w-3 h-3 text-indigo-300" />
-                              <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">{t.modelBest} - 3 Models</span>
-                          </div>
                         </div>
                         
                         <HourlyForecastChart data={chartData} comparisonData={comparisonData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
