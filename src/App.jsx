@@ -967,10 +967,14 @@ export default function MeteoIA() {
                               
                               <div className="flex flex-col">
                                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                                  FIABILITAT
+                                  {t.rel_title}
                                 </span>
                                 <span className="text-xs font-medium leading-tight">
-                                  {reliability.message}
+                                  {/* Aquí és on fem la màgia de la traducció: */}
+                                  {reliability.type === 'ok' && t.rel_high}
+                                  {reliability.type === 'general' && t.rel_medium}
+                                  {reliability.type === 'rain' && t.rel_low_rain.replace('{diff}', reliability.value)}
+                                  {reliability.type === 'temp' && t.rel_low_temp.replace('{diff}', reliability.value)}
                                 </span>
                               </div>
                             </div>

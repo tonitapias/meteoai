@@ -183,15 +183,15 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     }
 
     if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
-        confidenceLevel = 'medium';
-        confidenceText = tr.aiConfidenceMod;
+       confidenceLevel = 'medium';
+       confidenceText = tr.aiConfidenceMod;
     }
 
     if (tips.length === 0) tips.push(tr.tipCalm);
     tips = [...new Set(tips)].slice(0, 4);
 
     return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
-  };
+ };
 
 // Fase Lunar
 export const getMoonPhase = (date) => {
@@ -206,9 +206,11 @@ export const getMoonPhase = (date) => {
   phase -= Math.floor(phase); 
   return phase; 
 };
+
 /**
  * Calcula la fiabilitat de la predicció comparant 3 models (Best, GFS, ICON).
- * Retorna un objecte amb el nivell de fiabilitat i un missatge explicatiu.
+ * Retorna dades per ser traduïdes a la UI (sense text hardcoded).
+ * Retorna: { level: 'high'|'medium'|'low', type: 'ok'|'general'|'rain'|'temp', value: number }
  */
 export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 0) => {
   // Si falten dades, no podem jutjar
@@ -225,28 +227,34 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   const r2 = getRain(dailyGFS);
   const r3 = getRain(dailyICON);
 
-  // 3. Calculem la divergència (Diferència entre el valor més alt i el més baix)
+  // 3. Calculem la divergència
   const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null);
   const rains = [r1, r2, r3];
 
   const diffTemp = Math.max(...temps) - Math.min(...temps);
   const diffRain = Math.max(...rains) - Math.min(...rains);
 
-  // 4. Lògica del Semàfor
-  let level = 'high'; // high (verd), medium (groc), low (vermell)
-  let message = 'Models coincidents. Predicció fiable.';
+  // 4. Lògica del Semàfor (Retornem TIPUS, no Missatge)
+  let level = 'high';
+  let type = 'ok';
+  let value = 0;
 
-  // CAS: Fiabilitat BAIXA (Molta discrepància)
+  // CAS: Fiabilitat BAIXA
   if (diffTemp >= 4 || diffRain >= 40) {
     level = 'low';
-    if (diffRain >= 40) message = `⚠️ Incertesa alta: Un model preveu pluja (${Math.max(...rains)}%) i un altre no (${Math.min(...rains)}%).`;
-    else message = `⚠️ Incertesa tèrmica: Els models varien en ${diffTemp.toFixed(1)}ºC.`;
+    if (diffRain >= 40) {
+      type = 'rain';
+      value = Math.round(diffRain);
+    } else {
+      type = 'temp';
+      value = diffTemp.toFixed(1);
+    }
   } 
   // CAS: Fiabilitat MITJANA
   else if (diffTemp >= 2.5 || diffRain >= 25) {
     level = 'medium';
-    message = 'Hi ha certa discrepància entre els models meteorològics.';
+    type = 'general';
   }
 
-  return { level, message, diffTemp, diffRain };
+  return { level, type, value };
 };

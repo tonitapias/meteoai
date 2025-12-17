@@ -171,8 +171,16 @@ export const TRANSLATIONS = {
       waningGibbous: "Gibbosa Minvant",
       lastQuarter: "Quart Minvant",
       waningCrescent: "Minvant"
-    }
+    },
+
+    // --- NOVES CLAUS DE FIABILITAT ---
+    rel_title: "FIABILITAT DE LA PREVISIÓ",
+    rel_high: "Models coincidents. Predicció molt fiable.",
+    rel_medium: "Hi ha certa discrepància entre els models.",
+    rel_low_rain: "⚠️ Incertesa: Divergència de pluja del {diff}%.",
+    rel_low_temp: "⚠️ Incertesa tèrmica: Els models varien en {diff}ºC."
   },
+
   es: {
     searchPlaceholder: "Buscar ciudad...",
     favorites: "Lugares Favoritos",
@@ -341,8 +349,16 @@ export const TRANSLATIONS = {
       waningGibbous: "Gibosa Menguante",
       lastQuarter: "Cuarto Menguante",
       waningCrescent: "Menguante"
-    }
+    },
+
+    // --- NOVES CLAUS DE FIABILITAT ---
+    rel_title: "FIABILIDAD DE LA PREVISIÓN",
+    rel_high: "Modelos coincidentes. Predicción muy fiable.",
+    rel_medium: "Existe cierta discrepancia entre los modelos.",
+    rel_low_rain: "⚠️ Incertidumbre: Divergencia de lluvia del {diff}%.",
+    rel_low_temp: "⚠️ Incertidumbre térmica: Los modelos varían en {diff}ºC."
   },
+
   en: {
     searchPlaceholder: "Search city...",
     favorites: "Favorite Places",
@@ -512,8 +528,16 @@ export const TRANSLATIONS = {
       waningGibbous: "Waning Gibbous",
       lastQuarter: "Last Quarter",
       waningCrescent: "Waning Crescent"
-    }
+    },
+
+    // --- NOVES CLAUS DE FIABILITAT ---
+    rel_title: "FORECAST RELIABILITY",
+    rel_high: "Models align. Highly reliable forecast.",
+    rel_medium: "There is some discrepancy between models.",
+    rel_low_rain: "⚠️ Uncertainty: Rain divergence of {diff}%.",
+    rel_low_temp: "⚠️ Thermal uncertainty: Models vary by {diff}ºC."
   },
+
   fr: {
     searchPlaceholder: "Rechercher une ville...",
     favorites: "Lieux favoris",
@@ -683,6 +707,13 @@ export const TRANSLATIONS = {
       waningGibbous: "Gibbeuse Décroissante",
       lastQuarter: "Dernier Quartier",
       waningCrescent: "Dernier Croissant"
-    }
+    },
+
+    // --- NOVES CLAUS DE FIABILITAT ---
+    rel_title: "FIABILITÉ DES PRÉVISIONS",
+    rel_high: "Modèles concordants. Prévision très fiable.",
+    rel_medium: "Il y a une certaine divergence entre les modèles.",
+    rel_low_rain: "⚠️ Incertitude : Divergence de pluie de {diff}%.",
+    rel_low_temp: "⚠️ Incertitude thermique : Les modèles varient de {diff}ºC."
   }
 };
