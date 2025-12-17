@@ -1,125 +1,60 @@
-<div align="center">  
-<img src="public/vite.svg" alt="Logo" width="80" height="80" >
+# 🌦️ Meteo Toni AI
 
-# **🌍 MeteoToni AI**
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
+![Open-Meteo](https://img.shields.io/badge/Open--Meteo-API-orange?style=for-the-badge)
 
-**La nova generació de predicció meteorològica intel·ligent.**
+**Meteo Toni AI** és una aplicació meteorològica avançada desenvolupada amb React que combina dades de múltiples models numèrics (ECMWF, GFS, ICON) amb un motor d'anàlisi intel·ligent per oferir previsions precises i fàcils d'entendre.
 
-[Veure Demo](https://tonitapias.github.io/meteoai/) · [Informar d'un Error](https://www.google.com/search?q=https://github.com/tonitapias/meteoai/issues) · [Sol·licitar Funció](https://www.google.com/search?q=https://github.com/tonitapias/meteoai/issues)
+A diferència de les apps convencionals, aquesta eina està dissenyada tant per a usuaris bàsics com per a **aficionats a la meteorologia**, incloent-hi mètriques avançades com el CAPE, el Punt de Rosada i mapes de models comparatius.
 
-\</div\>
+## ✨ Funcionalitats Principals
 
-## **📖 Sobre el Projecte**
+### 🧠 Intel·ligència Meteorològica (AI)
+* **Motor d'Anàlisi Heurístic:** Genera resums textuals automàtics basats en variables complexes (inestabilitat, vent, pressió).
+* **Alertes Intel·ligents:** Avisos personalitzats per tempestes severes (basat en CAPE), risc de nevades o xafogor extrema.
+* **Consells Dinàmics:** Recomanacions de roba i activitats segons la previsió.
 
-**MeteoToni AI** és una aplicació meteorològica avançada que transcendeix la simple visualització de dades. Utilitza algorismes d'interpretació de dades ("IA") per convertir mètriques meteorològiques complexes en resums textuals naturals, consells de salut i recomanacions de vestimenta.
+### 📊 Dades "Pro" i Multi-Model
+* **Comparativa de Models:** Visualització simultània de les previsions del model Europeu (**ECMWF**), Americà (**GFS**) i Alemany (**ICON**) per detectar la incertesa (divergència).
+* **Índexs Avançats:**
+    * ⚡ **CAPE (J/kg):** Potencial d'energia convectiva per predir tempestes.
+    * 💧 **Punt de Rosada:** Càlcul precís de la sensació de xafogor (Fórmula de Magnus).
+    * 📉 **Tendència Baromètrica:** Detecció de canvis de pressió (puja/baixa/estable).
+* **Nowcasting:** Previsió de pluja minut a minut per a la pròxima hora.
 
-A diferència de les apps convencionals, MeteoToni AI integra **comparatives multi-model** (ECMWF, GFS, ICON) per oferir un consens de predicció més fiable, tot presentat en una interfície immersiva que reacciona visualment a les condicions actuals.
+### 🎨 Experiència d'Usuari (UX/UI)
+* **Disseny Glassmorphism:** Interfície moderna amb efectes de transparència i fons dinàmics que canvien segons l'hora i el temps (dia/nit, pluja, neu).
+* **Visualització de Dades:** Gràfics SVG personalitzats (sense llibreries externes pesades) per a un rendiment òptim.
+* **Modes de Visualització:**
+    * 👓 **Mode Essencial:** Informació clara i directa per al dia a dia.
+    * 🔬 **Mode Avançat:** Panell de control complet amb totes les variables tècniques.
+* **Multilingüe:** Disponible en Català, Castellà, Anglès i Francès.
 
-## **✨ Característiques Principals**
+## 🛠️ Stack Tecnològic
 
-### **🧠 Intel·ligència Meteorològica**
+El projecte ha estat construït seguint una **arquitectura modular** per garantir l'escalabilitat i el manteniment.
 
-* **Anàlisi Textual Dinàmica**: Generació automàtica de resums diaris (Ex: "Dia plàcid", "Risc de tempestes") basats en l'anàlisi creuada de múltiples variables.  
-* **Smart Tips**: Consells personalitzats sobre roba, hidratació, protecció solar i ús de paraigües segons les condicions exactes del moment.  
-* **Alertes Intel·ligents**: Sistema de notificacions visuals per fenòmens extrems (Vent fort, UV extrem, Qualitat de l'aire perillosa).
+* **Core:** [React](https://react.dev/) (Hooks: `useState`, `useEffect`, `useMemo`, `useRef`).
+* **Build Tool:** [Vite](https://vitejs.dev/) (Rendiment ultraràpid).
+* **Estils:** [Tailwind CSS](https://tailwindcss.com/) (Disseny responsiu i glassmorphism).
+* **Icones:** [Lucide React](https://lucide.dev/).
+* **Dades:**
+    * [Open-Meteo API](https://open-meteo.com/): Dades meteorològiques (gratuït i open-source).
+    * [Nominatim (OSM)](https://nominatim.org/): Geolocalització i cerca de llocs.
 
-### **📊 Precisió i Dades Multi-Model**
+## 📂 Estructura del Projecte
 
-* **Consens de Models**: Visualitza i compara dades de tres dels models més prestigiosos del món:  
-  * 🇪🇺 **ECMWF** (Model Europeu \- Best Match)  
-  * 🇺🇸 **GFS** (Model Americà)  
-  * 🇩🇪 **ICON** (Model Alemany)  
-* **Previsió Minut a Minut**: Gràfica de precipitació d'alta precisió per a la pròxima hora (Nowcasting).  
-* **Modes de Vista**:  
-  * **Bàsic**: Per a una consulta ràpida i visual.  
-  * **Expert**: Gràfiques comparatives detallades, gauges de pressió/humitat i dades tècniques.
+El codi s'ha refactoritzat per separar la lògica de negoci de la interfície d'usuari:
 
-### **🌿 Salut i Astronomia**
-
-* **Qualitat de l'Aire (AQI)**: Monitoratge en temps real de contaminants.  
-* **Rastrejador de Pol·len**: Nivells específics per a al·lèrgics (Gramínies, olivera, bedoll, etc.).  
-* **Astro-Widgets**:  
-  * Cicle solar interactiu amb hores daurades/blaves.  
-  * Fases lunars renderitzades amb precisió astronòmica.
-
-### **🎨 Experiència d'Usuari (UX)**
-
-* **Fons Dinàmics**: Gradients que canvien segons l'hora (alba, dia, capvespre, nit) i el temps (pluja, neu, sol).  
-* **Partícules Reactives**: Efectes visuals de pluja i neu que responen a la intensitat de la precipitació real.  
-* **Multi-idioma**: 🇦🇩 Català, 🇪🇸 Castellà, 🇬🇧 Anglès, 🇫🇷 Francès.
-
-## **🛠️ Stack Tecnològic**
-
-Aquest projecte està construït amb un stack modern enfocat al rendiment i l'experiència de desenvolupament:
-
-| Tecnologia | Ús |
-| :---- | :---- |
-| **[React 19](https://react.dev/)** | Llibreria UI principal (Hooks, Custom Hooks). |
-| [**Vite**](https://vitejs.dev/) | Bundler i entorn de desenvolupament ultraràpid. |
-| [**Tailwind CSS**](https://tailwindcss.com/) | Estils utility-first i disseny responsive. |
-| [**Open-Meteo API**](https://open-meteo.com/) | Font de dades meteorològiques (Open Source). |
-| [**Nominatim API**](https://nominatim.org/) | Geocodificació inversa i cerca de llocs. |
-| [**Lucide React**](https://lucide.dev/) | Iconografia vectoritzada i lleugera. |
-
-## **🚀 Instal·lació i Ús Local**
-
-Segueix aquests passos per clonar i executar el projecte a la teva màquina local:
-
-### **Prerequisits**
-
-* **Node.js** (v18 o superior)  
-* **npm** o **yarn**
-
-### **Passos**
-
-1. **Clona el repositori:**  
-   git clone \[https://github.com/tonitapias/meteoai.git\](https://github.com/tonitapias/meteoai.git)  
-   cd meteoai
-
-2. **Instal·la les dependències:**  
-   npm install
-
-3. **Inicia el servidor de desenvolupament:**  
-   npm run dev
-
-   L'aplicació estarà disponible a http://localhost:5173.  
-4. **Compila per a producció:**  
-   npm run build
-
-## **📂 Estructura del Projecte**
-
-meteoai/  
-├── public/              \# Assets estàtics (imatges, robots.txt)  
-├── src/  
-│   ├── assets/          \# Logos i vectors  
-│   ├── App.jsx          \# Component Principal (Lògica de negoci i UI)  
-│   ├── main.jsx         \# Punt d'entrada React  
-│   └── index.css        \# Directives Tailwind i estils globals  
-├── eslint.config.js     \# Configuració de Linter  
-├── tailwind.config.js   \# Configuració de Tailwind  
-└── vite.config.js       \# Configuració de Vite
-
-## **🤝 Contribució**
-
-Les contribucions són benvingudes\! Si tens idees per millorar l'algorisme de predicció o la interfície:
-
-1. Fes un **Fork** del projecte.  
-2. Crea una branca per a la teva funcionalitat (git checkout \-b feature/NovaFuncionalitat).  
-3. Fes **Commit** dels canvis (git commit \-m 'Afegida nova gràfica de vent').  
-4. Fes **Push** a la branca (git push origin feature/NovaFuncionalitat).  
-5. Obre un **Pull Request**.
-
-## **📄 Llicència**
-
-Distribuït sota la llicència **MIT**. Consulta el fitxer LICENSE per a més informació.
-
-## **👨‍💻 Autor**
-
-Desenvolupat amb ❤️ per **Toni Tapias**.
-
-* **GitHub**: [@tonitapias](https://www.google.com/search?q=https://github.com/tonitapias)  
-* **Web**: [tonitapias.github.io/meteoai](https://tonitapias.github.io/meteoai/)
-
-<p align="center">  
-Si t'agrada aquest projecte, considera donar-li una estrella ⭐ al repositori!  
-</p>
+```bash
+src/
+├── components/         # Components visuals reutilitzables
+│   ├── WeatherCharts.jsx   # Gràfics SVG (Previsió horària, pluja minut a minut)
+│   └── WeatherWidgets.jsx  # Widgets petits (Sol, Lluna, Vent, CAPE...)
+├── utils/              # Lògica pura i càlculs
+│   └── weatherLogic.js     # Normalització de models, fórmules (Magnus), motor IA
+├── constants/          # Dades estàtiques
+│   └── translations.js     # Diccionaris d'idiomes (i18n)
+└── App.jsx             # Controlador principal i gestió d'estat

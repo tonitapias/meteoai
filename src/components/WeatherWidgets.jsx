@@ -1,0 +1,371 @@
+// src/components/WeatherWidgets.jsx
+import React from 'react';
+import { 
+  Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
+  Thermometer, Droplets, Zap, Gauge 
+} from 'lucide-react';
+import { TRANSLATIONS } from '../constants/translations';
+
+// --- HELPERS (Necessaris per als widgets) ---
+const getMoonPhaseText = (phase, lang = 'ca') => {
+  const t = TRANSLATIONS[lang].moonPhases;
+  if (phase < 0.03 || phase > 0.97) return t.new;
+  if (phase < 0.22) return t.waxingCrescent;
+  if (phase < 0.28) return t.firstQuarter;
+  if (phase < 0.47) return t.waxingGibbous;
+  if (phase < 0.53) return t.full;
+  if (phase < 0.72) return t.waningGibbous;
+  if (phase < 0.78) return t.lastQuarter;
+  return t.waningCrescent;
+};
+
+// --- WIDGETS ---
+
+export const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }) => {
+  const totalRange = globalMax - globalMin || 1;
+  const safeMin = Math.max(min, globalMin);
+  const safeMax = Math.min(max, globalMax);
+  const leftPct = ((safeMin - globalMin) / totalRange) * 100;
+  const widthPct = ((safeMax - safeMin) / totalRange) * 100;
+
+  return (
+    <div className="flex items-center gap-3 w-full max-w-[12rem] md:max-w-[16rem]">
+      <span className="text-xs text-slate-400 w-8 text-right font-medium tabular-nums">{displayMin}°</span>
+      <div className="flex-1 h-1.5 bg-slate-700/50 rounded-full relative overflow-hidden">
+        <div className="absolute h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-400 to-amber-400 opacity-90" style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '6px' }} />
+      </div>
+      <span className="text-xs text-white w-8 text-left font-bold tabular-nums">{displayMax}°</span>
+    </div>
+  )
+};
+
+export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
+  const t = TRANSLATIONS[lang];
+  const sunriseTime = new Date(sunrise).getTime();
+  const sunsetTime = new Date(sunset).getTime();
+  const now = shiftedNow.getTime();
+
+  const isToday = shiftedNow.toDateString() === new Date(sunrise).toDateString();
+  
+  let progress = 0;
+  let nextEventText = "";
+  
+  if (isToday) {
+     const totalDayLength = sunsetTime - sunriseTime;
+     const elapsed = now - sunriseTime;
+     progress = Math.max(0, Math.min(1, elapsed / totalDayLength));
+     
+     if (now < sunriseTime) {
+        const diff = sunriseTime - now;
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        nextEventText = `${t.sunRiseIn} ${h}h ${m}m`;
+     } else if (now < sunsetTime) {
+        const diff = sunsetTime - now;
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        nextEventText = `${t.sunSetIn} ${h}h ${m}m`;
+     } else { nextEventText = t.sunSetDone; }
+  } else if (now > sunsetTime) { progress = 1; nextEventText = t.sunSetDone; }
+  
+  const r = 35; const cx = 50; const cy = 50;
+  const angle = Math.PI - (progress * Math.PI);
+  const sunX = cx + r * Math.cos(angle);
+  const sunY = cy - r * Math.sin(angle); 
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
+       <div className="w-full flex justify-between items-center text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
+          <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400" strokeWidth={2.5}/> {t.sunrise}</span>
+          <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400" strokeWidth={2.5}/></span>
+       </div>
+       <div className="relative w-full h-24 overflow-hidden">
+          <svg viewBox="0 0 100 60" className="w-full h-full">
+             <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+             <g transform={`translate(${sunX - 6}, ${sunY - 6})`}>
+                <circle cx="6" cy="6" r="4" fill="#fbbf24" className="animate-pulse shadow-lg shadow-amber-500/50" />
+                <circle cx="6" cy="6" r="8" stroke="#fbbf24" strokeWidth="1" opacity="0.5" />
+             </g>
+             <line x1="0" y1="55" x2="100" y2="55" stroke="#1e293b" strokeWidth="1" />
+          </svg>
+          <div className="absolute bottom-2 left-0 right-0 text-center">
+             <span className="text-[10px] font-bold text-amber-300 bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-500/20 backdrop-blur-sm">{nextEventText}</span>
+          </div>
+       </div>
+       <div className="w-full flex justify-between items-end -mt-4 z-10">
+          <span className="text-sm font-bold text-white">{new Date(sunrise).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          <span className="text-xs text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">{isToday ? (progress > 0 && progress < 1 ? t.day : t.night) : t.sun}</span>
+          <span className="text-sm font-bold text-white">{new Date(sunset).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+       </div>
+    </div>
+  );
+};
+
+export const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) => {
+  const uniqueId = React.useId ? React.useId().replace(/:/g, '') : Math.random().toString(36).substr(2, 9);
+  const p = phase % 1;
+  const r = 9; const cx = 12; const cy = 12; const theta = p * 2 * Math.PI;
+  const rx = Math.abs(r * Math.cos(theta));
+  const isWaxing = p <= 0.5; const isCrescent = (p < 0.25) || (p > 0.75); 
+  const outerD = isWaxing ? `M ${cx},${cy-r} A ${r},${r} 0 0 1 ${cx},${cy+r}` : `M ${cx},${cy-r} A ${r},${r} 0 0 0 ${cx},${cy+r}`;
+  let sweep = 0; if (isWaxing) { sweep = isCrescent ? 0 : 1; } else { sweep = !isCrescent ? 0 : 1; }
+  const innerD = `A ${rx},${r} 0 0 ${sweep} ${cx},${cy-r}`;
+  const d = `${outerD} ${innerD} Z`;
+  const transform = lat < 0 ? "scale(-1, 1)" : "";
+
+  return (
+    <svg viewBox="0 0 24 24" className={`${className} filter drop-shadow-md`} style={{transform}} stroke="none">
+       <title>{getMoonPhaseText(phase, lang)}</title>
+       <defs>
+         <radialGradient id={`moonGradient-${uniqueId}`} cx="50%" cy="50%" r="80%" fx="30%" fy="30%"> 
+            <stop offset="0%" stopColor="#f1f5f9" /> 
+            <stop offset="90%" stopColor="#cbd5e1" /> 
+         </radialGradient>
+         <filter id={`moonGlow-${uniqueId}`} x="-20%" y="-20%" width="140%" height="140%"> <feGaussianBlur stdDeviation="0.8" result="blur" /> <feComposite in="SourceGraphic" in2="blur" operator="over" /> </filter>
+       </defs>
+       <circle cx={cx} cy={cy} r={r} fill="#1e293b" stroke="#334155" strokeWidth="0.5" />
+       <path d={d} fill={`url(#moonGradient-${uniqueId})`} className="" />
+    </svg>
+  );
+};
+
+export const MoonWidget = ({ phase, lat, lang = 'ca' }) => {
+  const t = TRANSLATIONS[lang];
+  const phaseName = getMoonPhaseText(phase, lang);
+  const illumination = Math.round((1 - Math.abs((phase - 0.5) * 2)) * 100);
+  return (
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
+       <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider"><Moon className="w-3 h-3" strokeWidth={2.5} /> {t.moonPhase}</div>
+       <div className="flex flex-col items-center justify-center mt-2">
+          <div className="relative">
+             <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
+             <MoonPhaseIcon phase={phase} lat={lat} className="w-16 h-16 text-slate-200 relative z-10" lang={lang} />
+          </div>
+          <span className="text-lg font-bold text-white mt-4">{phaseName}</span>
+          <span className="text-xs text-slate-400 mt-1 font-medium bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700">{illumination}% {t.illumination}</span>
+       </div>
+    </div>
+  );
+};
+
+export const PollenWidget = ({ data, lang = 'ca' }) => {
+  if (!data) return null;
+  const t = TRANSLATIONS[lang];
+  
+  const pollenMap = [
+    { key: 'alder', val: data.alder_pollen },
+    { key: 'birch', val: data.birch_pollen },
+    { key: 'grass', val: data.grass_pollen },
+    { key: 'mugwort', val: data.mugwort_pollen },
+    { key: 'olive', val: data.olive_pollen },
+    { key: 'ragweed', val: data.ragweed_pollen }
+  ];
+
+  const getLevelColor = (val) => {
+    if (!val || val < 10) return 'bg-green-500'; 
+    if (val < 50) return 'bg-yellow-500'; 
+    if (val < 200) return 'bg-orange-500'; 
+    return 'bg-red-500'; 
+  };
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl backdrop-blur-sm relative h-full min-h-[140px] flex flex-col">
+       <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider mb-3">
+         <Flower2 className="w-3 h-3" strokeWidth={2.5} /> {t.pollen}
+       </div>
+       <div className="grid grid-cols-2 gap-2 flex-1">
+          {pollenMap.map((item) => (
+             <div key={item.key} className="flex items-center justify-between bg-slate-950/30 p-2 rounded-lg border border-white/5">
+                <span className="text-xs text-slate-300 font-medium">{t.pollenTypes[item.key]}</span>
+                <div className={`w-2.5 h-2.5 rounded-full ${getLevelColor(item.val)} shadow-sm`}></div>
+             </div>
+          ))}
+       </div>
+    </div>
+  );
+};
+
+export const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }) => {
+  const directions = TRANSLATIONS[lang].directions || ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+  const index = Math.round(((degrees %= 360) < 0 ? degrees + 360 : degrees) / 45) % 8;
+  const dirText = directions[index];
+  
+  const N = directions[0];
+  const S = directions[4];
+  const E = directions[2];
+  const W = directions[6];
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
+      <div className="relative w-24 h-24 flex items-center justify-center mb-1">
+         <div className="absolute inset-0 rounded-full border-2 border-slate-800 flex items-center justify-center">
+            <span className="absolute top-1 text-[8px] text-slate-500 font-bold">{N}</span>
+            <span className="absolute bottom-1 text-[8px] text-slate-500 font-bold">{S}</span>
+            <span className="absolute left-1 text-[8px] text-slate-500 font-bold">{W}</span>
+            <span className="absolute right-1 text-[8px] text-slate-500 font-bold">{E}</span>
+         </div>
+         <div 
+            className="w-full h-full flex items-center justify-center transition-transform duration-1000 ease-out"
+            style={{ transform: `rotate(${degrees}deg)` }}
+         >
+             <div className="w-1 h-12 bg-gradient-to-b from-red-500 to-transparent rounded-full relative -top-2">
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -mt-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-red-500"></div>
+             </div>
+         </div>
+         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 m-6 rounded-full border border-slate-700 backdrop-blur-sm">
+            <span className="text-sm font-bold text-white">{Math.round(speed)}</span>
+            <span className="text-[9px] text-slate-400">km/h</span>
+         </div>
+      </div>
+      <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">{label}</div>
+      <div className="text-xs font-bold text-teal-400 mt-0.5">{dirText} ({degrees}°)</div>
+    </div>
+  );
+};
+
+export const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText, trend = null, trendLabel = null }) => {
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  const normalizedValue = label.includes("Pressió") || label.includes("Pressure") || label.includes("Presión") 
+      ? Math.max(0, Math.min((value - 950) / 100, 1)) 
+      : Math.min(value, max) / max;
+  
+  const strokeDashoffset = circumference - normalizedValue * circumference;
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
+      <div className="relative w-24 h-24 flex items-center justify-center">
+         <svg className="w-full h-full transform -rotate-90">
+            <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-800" />
+            <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className={`${color} transition-all duration-1000 ease-out`} />
+         </svg>
+         <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className={`mb-1 ${color}`}>{icon}</div>
+            <span className="text-sm font-bold text-white">{value}</span>
+         </div>
+      </div>
+      <div className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-2">{label}</div>
+      {subText && <div className="text-[10px] text-slate-500 mt-1">{subText}</div>}
+      
+      {trend && (
+         <div className={`absolute top-2 right-2 flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-slate-950/50 ${
+             trend === 'rising' ? 'text-teal-400 border-teal-500/30' : 
+             trend === 'falling' ? 'text-rose-400 border-rose-500/30' : 
+             'text-slate-400 border-slate-500/30'
+         }`}>
+             {trend === 'rising' && <TrendingUp className="w-3 h-3" />}
+             {trend === 'falling' && <TrendingDown className="w-3 h-3" />}
+             {trend === 'steady' && <Minus className="w-3 h-3" />}
+             {trendLabel}
+         </div>
+      )}
+    </div>
+  );
+};
+
+export const DewPointWidget = ({ value, humidity, lang, unit }) => { 
+    const t = TRANSLATIONS[lang];
+    
+    let status = t.dpComfortable;
+    let color = "text-teal-400";
+    let bgColor = "bg-teal-500";
+    let bgOpacity = "bg-teal-500/10";
+    
+    const percentage = Math.min(Math.max((value / 28) * 100, 0), 100);
+
+    if (value < 10) {
+        status = t.dpDry;
+        color = "text-blue-400";
+        bgColor = "bg-blue-500";
+        bgOpacity = "bg-blue-500/10";
+    } else if (value >= 10 && value <= 15) {
+        status = t.dpComfortable;
+        color = "text-green-400";
+        bgColor = "bg-green-500";
+        bgOpacity = "bg-green-500/10";
+    } else if (value > 15 && value <= 20) {
+        status = t.dpHumid;
+        color = "text-yellow-400";
+        bgColor = "bg-yellow-500";
+        bgOpacity = "bg-yellow-500/10";
+    } else if (value > 20 && value <= 24) {
+        status = t.dpOppressive;
+        color = "text-orange-500";
+        bgColor = "bg-orange-500";
+        bgOpacity = "bg-orange-500/10";
+    } else if (value > 24) {
+        status = t.dpExtreme;
+        color = "text-red-500 animate-pulse";
+        bgColor = "bg-red-500";
+        bgOpacity = "bg-red-500/10";
+    }
+
+    const displayValue = unit === 'F' ? Math.round((value * 9/5) + 32) : Math.round(value);
+
+    return (
+        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
+            <div className="absolute top-2 left-3 flex items-center gap-1.5">
+                <Thermometer className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.dewPoint}</span>
+            </div>
+            
+            <div className="flex flex-col items-center mt-3 w-full">
+                 <div className="relative mb-2 flex items-baseline gap-2">
+                    <div className={`text-3xl font-bold ${color}`}>{displayValue}°</div>
+                    <div className="flex items-center gap-0.5 text-slate-400 text-xs font-medium bg-slate-800/50 px-1.5 py-0.5 rounded-md border border-white/5" title={t.humidity}>
+                        <Droplets className="w-3 h-3" />
+                        <span>{humidity}%</span>
+                    </div>
+                 </div>
+                 
+                 <div className="w-full max-w-[80%] h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
+                 </div>
+                 
+                 <div className={`mt-2 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${color} ${bgOpacity} border border-current border-opacity-20`}>
+                    {status}
+                 </div>
+                 <div className="text-[9px] text-slate-500 mt-1.5 text-center px-2 leading-tight">
+                    {t.dewPointDesc}
+                 </div>
+            </div>
+        </div>
+    )
+};
+
+export const CapeWidget = ({ cape, lang }) => {
+    const t = TRANSLATIONS[lang];
+    let status = t.capeStable;
+    let color = "text-green-400";
+    let bgColor = "bg-green-500";
+    let percentage = Math.min((cape / 3000) * 100, 100);
+
+    if (cape > 1000 && cape <= 2500) {
+        status = t.capeModerate;
+        color = "text-orange-400";
+        bgColor = "bg-orange-500";
+    } else if (cape > 2500) {
+        status = t.capeExtreme;
+        color = "text-red-500 animate-pulse";
+        bgColor = "bg-red-500";
+    }
+
+    return (
+        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
+            <div className="absolute top-2 left-3 flex items-center gap-1.5">
+                <Zap className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.stormPotential}</span>
+            </div>
+            
+            <div className="flex flex-col items-center mt-4">
+                <span className={`text-2xl font-bold ${color}`}>{Math.round(cape)}</span>
+                <span className="text-[9px] text-slate-500 mb-2">J/kg (CAPE)</span>
+                
+                <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
+                </div>
+                <span className={`text-xs font-bold mt-2 px-2 py-0.5 rounded border border-white/5 bg-white/5 ${color}`}>{status}</span>
+            </div>
+        </div>
+    )
+};

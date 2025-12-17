@@ -10,696 +10,23 @@ import {
   ArrowDownUp, CheckCircle2, Split
 } from 'lucide-react';
 
-// --- SISTEMA DE TRADUCCIONS MILLORAT ---
-const TRANSLATIONS = {
-  ca: {
-    searchPlaceholder: "Cerca ciutat...",
-    favorites: "Llocs Preferits",
-    now: "Ara",
-    updatedNow: "Actualitzat ara",
-    feelsLike: "Sensació",
-    aiAnalysis: "Anàlisi Meteo IA",
-    aiConfidence: "Consens Models",
-    aiConfidenceMod: "Divergència Models",
-    aiConfidenceLow: "Incertesa Alta",
-    generatingTips: "Analitzant CAPE, Pressió i Models (ECMWF, GFS, ICON)...",
-    trend24h: "Comparativa Models 24h",
-    temp: "Temperatura",
-    rain: "Pluja",
-    wind: "Vent",
-    cloud: "Cobertura",
-    humidity: "Humitat",
-    dewPoint: "Punt de Rosada", 
-    dewPointDesc: "Llindar de xafogor", 
-    snowLevel: "Cota de neu",
-    forecast7days: "Previsió 7 Dies",
-    today: "Avui",
-    detailedForecast: "Previsió detallada",
-    hourlyEvolution: "Evolució Horària",
-    snowAccumulated: "Neu Acumulada",
-    totalPrecipitation: "Precipitació Total",
-    rainProb: "Prob. Pluja",
-    windMax: "Vent Màx",
-    uvIndex: "Índex UV",
-    tempMin: "Temp Mín",
-    sunrise: "Sortida Sol",
-    sunset: "Posta Sol",
-    moon: "Lluna",
-    pressure: "Pressió",
-    pressureTrend: "Tendència",
-    pressureRising: "Pujant",
-    pressureFalling: "Baixant",
-    pressureSteady: "Estable",
-    stormPotential: "Potencial Tempesta",
-    capeStable: "Estable",
-    capeModerate: "Inest. Moderada",
-    capeHigh: "Inest. Alta",
-    capeExtreme: "RISC SEVER",
-    aqi: "Qualitat Aire",
-    index: "Index",
-    moonPhase: "Fase Lunar",
-    illumination: "Il·luminada",
-    calc: "Calc",
-    est: "Est.",
-    sunRiseIn: "Surt en",
-    sunSetIn: "Posta en",
-    sunSetDone: "Ja s'ha post",
-    localTime: "Hora local",
-    day: "Dia",
-    night: "Nit",
-    sun: "Sol",
-    clear: "Serè",
-    cloudy: "Ennuvolat",
-    snow: "Nevada",
-    rainy: "Pluja",
-    storm: "Tempesta",
-    uvLow: "Baix",
-    uvMod: "Moderat",
-    uvHigh: "Alt",
-    uvVeryHigh: "Molt Alt",
-    uvExtreme: "Extrem",
-    alertDanger: "ALERTA PERILL",
-    alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "Previsió profesional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
-    aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
-    pollen: "Nivells de Pol·len",
-    pollenTypes: {
-      alder: "Vern",
-      birch: "Bedoll",
-      grass: "Gramínies",
-      mugwort: "Artemísia",
-      olive: "Olivera",
-      ragweed: "Ambròsia"
-    },
-    modeBasic: "Essencial",
-    modeExpert: "Avançat", 
-    directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    preciseRain: "Previsió Immediata (1h)",
-    modelsLegend: "Comparativa Models",
-    modelBest: "Consensus (ECMWF)",
-    modelGfs: "GFS (EUA)",
-    modelIcon: "ICON (Alemanya)",
-    modelCompareTitle: "Comparativa Models (Diari)",
-    divergence: "Divergència",
-    
-    // Dew Point Levels
-    dpDry: "Sec / Agradable",
-    dpComfortable: "Confortable",
-    dpHumid: "Xafogós",
-    dpOppressive: "Opressiu",
-    dpExtreme: "Insuportable",
-    
-    // AI Advanced Texts
-    aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
-    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolació atmosfèrica. ",
-    aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
-    aiIntroNight: "Bona nit. Previsió nocturna. ",
-    
-    aiSummaryClear: "Estabilitat dominant. Cel serè i sense complicacions meteorològiques. ",
-    aiSummaryCloudy: "Pas de nuvolositat variable sense conseqüències destacables. ",
-    aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
-    aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
-    aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
-    
-    // Noves claus de temperatura més naturals
-    aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
-    aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
-    aiTempMild: "Temperatures suaus i agradables, sense extrems. ",
-    aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
-    aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
-    
-    aiWindLight: "Flux feble, situació tranquil·la. ",
-    aiWindMod: "Vent moderat que accentua la sensació tèrmica. ",
-    aiWindStrong: "Atenció a les ratxes de vent, situació potencialment perillosa. ",
-    
-    aiRainNone: "Sense precipitacions a la vista en els models a curt termini. ",
-    aiRainExp: "Radar actiu: precipitació imminent detectada. ",
+// --- IMPORTS DELS NOUS MÒDULS ---
+import { TRANSLATIONS } from './constants/translations';
+import { HourlyForecastChart, MinutelyPreciseChart } from './components/WeatherCharts';
+import { 
+  SunArcWidget, MoonWidget, PollenWidget, CompassGauge, 
+  CircularGauge, DewPointWidget, CapeWidget, TempRangeBar, MoonPhaseIcon 
+} from './components/WeatherWidgets';
+import { 
+  getShiftedDate, calculateDewPoint, normalizeModelData, 
+  generateAIPrediction, getMoonPhase 
+} from './utils/weatherLogic';
 
-    wmo: {
-      0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
-      45: "bancs de boira", 48: "boira gebradora",
-      51: "plugim feble", 53: "plugim moderat", 55: "plugim persistent",
-      56: "plugim gèlid", 57: "plugim gèlid intens",
-      61: "pluja feble", 63: "pluja moderada", 65: "pluja forta",
-      66: "pluja gelada", 67: "pluja gelada forta",
-      71: "nevada feble", 73: "nevada moderada", 75: "nevada forta",
-      77: "ruixats de neu",
-      80: "ruixats", 81: "xàfecs moderats", 82: "aiguats violents",
-      85: "ruixats de neu", 86: "ruixats de neu forts",
-      95: "tempesta elèctrica", 96: "tempesta amb calamarsa", 99: "tempesta severa amb calamarsa"
-    },
 
-    alertStorm: "Inestabilitat acusada (CAPE alt) i tempestes.",
-    alertSnow: "Precaució: Neu acumulada prevista.",
-    alertWindExtreme: "Vent huracanat. Perill extrem a l'exterior.",
-    alertWindHigh: "Ràfagues fortes. Compte objectes.",
-    alertHeatExtreme: "Calor extrema. Evita el sol.",
-    alertHeatHigh: "Temperatures altes. Hidrata't.",
-    alertColdExtreme: "Fred sever. Risc congelació.",
-    alertColdHigh: "Glaçades. Calçades relliscoses.",
-    alertRain: "Precipitacions abundants.",
-    alertAir: "Qualitat de l'aire deficient.",
-    alertUV: "Radiació UV Extrema",
-    
-    cold: "Fred",
-    heat: "Calor",
+// --- COMPONENTS PETITS D'INTERFÍCIE (UI) ---
+// (Aquests els deixem aquí de moment perquè l'App funcioni, 
+//  però en el futur podries moure'ls a 'components/WeatherUI.jsx')
 
-    tipHydration: "Beu aigua",
-    tipThermal: "Roba tèrmmica",
-    tipWindbreaker: "Tallavents",
-    tipMugginess: "Roba fresca",
-    tipUmbrella: "Agafa paraigua",
-    tipSunscreen: "Crema solar",
-    tipCalm: "Gaudeix del dia",
-    tipCoat: "Abric gruixut",
-    tipLayers: "Vesteix per capes",
-    
-    moonPhases: {
-      new: "Lluna Nova",
-      waxingCrescent: "Creixent",
-      firstQuarter: "Quart Creixent",
-      waxingGibbous: "Gibbosa Creixent",
-      full: "Lluna Plena",
-      waningGibbous: "Gibbosa Minvant",
-      lastQuarter: "Quart Minvant",
-      waningCrescent: "Minvant"
-    }
-  },
-  es: {
-    searchPlaceholder: "Buscar ciudad...",
-    favorites: "Lugares Favoritos",
-    now: "Ahora",
-    updatedNow: "Actualizado ahora",
-    feelsLike: "Sensación",
-    aiAnalysis: "Análisis Meteo IA",
-    aiConfidence: "Consenso Modelos",
-    aiConfidenceMod: "Divergencia Modelos",
-    aiConfidenceLow: "Incertidumbre Alta",
-    generatingTips: "Analizando CAPE, Presión y Modelos (ECMWF, GFS, ICON)...",
-    trend24h: "Comparativa Modelos 24h",
-    temp: "Temperatura",
-    rain: "Lluvia",
-    wind: "Viento",
-    cloud: "Cobertura",
-    humidity: "Humedad",
-    dewPoint: "Punto de Rocío",
-    dewPointDesc: "Umbral de bochorno",
-    snowLevel: "Cota de nieve",
-    forecast7days: "Previsión 7 Días",
-    today: "Hoy",
-    detailedForecast: "Previsión detallada",
-    hourlyEvolution: "Evolución Horaria",
-    snowAccumulated: "Nieve Acumulada",
-    totalPrecipitation: "Precipitación Total",
-    rainProb: "Prob. Lluvia",
-    windMax: "Viento Máx",
-    uvIndex: "Índice UV",
-    tempMin: "Temp Mín",
-    sunrise: "Salida Sol",
-    sunset: "Puesta Sol",
-    moon: "Luna",
-    pressure: "Presión",
-    pressureTrend: "Tendencia",
-    pressureRising: "Subiendo",
-    pressureFalling: "Bajando",
-    pressureSteady: "Estable",
-    stormPotential: "Potencial Tormenta",
-    capeStable: "Estable",
-    capeModerate: "Inest. Moderada",
-    capeHigh: "Inest. Alta",
-    capeExtreme: "RIESGO SEVERO",
-    aqi: "Calidad Aire",
-    index: "Índice",
-    moonPhase: "Fase Lunar",
-    illumination: "Iluminada",
-    calc: "Calc",
-    est: "Est.",
-    sunRiseIn: "Sale en",
-    sunSetIn: "Puesta en",
-    sunSetDone: "Ya se puso",
-    localTime: "Hora local",
-    day: "Día",
-    night: "Noche",
-    sun: "Sol",
-    clear: "Despejado",
-    cloudy: "Nublado",
-    snow: "Nevada",
-    rainy: "Lluvia",
-    storm: "Tormenta",
-    uvLow: "Bajo",
-    uvMod: "Moderado",
-    uvHigh: "Alto",
-    uvVeryHigh: "Muy Alto",
-    uvExtreme: "Extremo",
-    alertDanger: "ALERTA PELIGRO",
-    subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
-    aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
-    pollen: "Niveles de Polen",
-    pollenTypes: {
-      alder: "Aliso",
-      birch: "Abedul",
-      grass: "Gramíneas",
-      mugwort: "Artemisa",
-      olive: "Olivo",
-      ragweed: "Ambrosía"
-    },
-    modeBasic: "Esencial",
-    modeExpert: "Avanzado", 
-    directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    preciseRain: "Previsión Inmediata (1h)",
-    modelsLegend: "Comparativa Modelos",
-    modelBest: "Consenso (ECMWF)",
-    modelGfs: "GFS (EEUU)",
-    modelIcon: "ICON (Alemania)",
-    modelCompareTitle: "Comparativa Modelos (Diario)",
-    divergence: "Divergencia",
-    
-    // Dew Point Levels
-    dpDry: "Seco / Agradable",
-    dpComfortable: "Confortable",
-    dpHumid: "Bochornoso",
-    dpOppressive: "Opresivo",
-    dpExtreme: "Insuperable",
-    
-    aiIntroMorning: "Buenos días. Analizamos la situación sinóptica actualizada. ",
-    aiIntroAfternoon: "Buenas tardes. Seguimiento de la evolución atmosférica. ",
-    aiIntroEvening: "Buenas noches. Situación para las próximas horas. ",
-    aiIntroNight: "Buenas noches. Previsión nocturna. ",
-    
-    aiSummaryClear: "Estabilidad dominante. Cielo despejado y sin complicaciones. ",
-    aiSummaryCloudy: "Paso de nubosidad variable sin consecuencias destacables. ",
-    aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
-    aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
-    aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
-    
-    aiTempFreezing: "Ambiente gélido. Abrígate muy bien si sales. ",
-    aiTempCold: "Hace frío. Necesitarás ropa de abrigo para estar confortable. ",
-    aiTempMild: "Temperaturas suaves y agradables, sin extremos. ",
-    aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
-    aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
-    
-    aiWindLight: "Flujo débil, situación tranquila. ",
-    aiWindMod: "Viento moderado que acentúa la sensación térmica. ",
-    aiWindStrong: "Atención a las rachas de viento, situación potencialmente peligrosa. ",
-    
-    aiRainNone: "Sin precipitaciones a la vista en los modelos a corto plazo. ",
-    aiRainExp: "Radar activo: precipitación inminente detectada. ",
-
-    wmo: {
-      0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
-      45: "bancos de niebla", 48: "niebla helada",
-      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna persistente",
-      56: "llovizna helada", 57: "llovizna helada intensa",
-      61: "lluvia ligera", 63: "lluvia moderada", 65: "lluvia fuerte",
-      66: "lluvia helada", 67: "lluvia helada fuerte",
-      71: "nevada ligera", 73: "nevada moderada", 75: "nevada fuerte",
-      77: "chubascos de nieve",
-      80: "chubascos", 81: "chubascos moderados", 82: "aguaceros violentos",
-      85: "chubascos de nieve", 86: "chubascos de nieve fuertes",
-      95: "tormenta eléctrica", 96: "tormenta con granizo", 99: "tormenta severa con granizo"
-    },
-    
-    alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
-    alertSnow: "Precaución: Nieve acumulada prevista.",
-    alertWindExtreme: "Viento huracanado. Peligro exterior.",
-    alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
-    alertHeatExtreme: "Calor extremo. Evita el sol.",
-    alertHeatHigh: "Temperaturas altas. Hidrátate.",
-    alertColdExtreme: "Frío severo. Riesgo congelación.",
-    alertColdHigh: "Heladas. Calzadas resbaladizas.",
-    alertRain: "Precipitaciones abundantes.",
-    alertAir: "Calidad del aire deficiente.",
-    alertUV: "Radiación UV Extrema",
-
-    cold: "Frío",
-    heat: "Calor",
-
-    tipHydration: "Bebe agua",
-    tipThermal: "Ropa térmica",
-    tipWindbreaker: "Cortavientos",
-    tipMugginess: "Ropa fresca",
-    tipUmbrella: "Coge paraguas",
-    tipSunscreen: "Protector solar",
-    tipCalm: "Disfruta",
-    tipCoat: "Abrigo grueso",
-    tipLayers: "Viste por capas",
-
-    moonPhases: {
-      new: "Luna Nueva",
-      waxingCrescent: "Creciente",
-      firstQuarter: "Cuarto Creciente",
-      waxingGibbous: "Gibosa Creciente",
-      full: "Luna Llena",
-      waningGibbous: "Gibosa Menguante",
-      lastQuarter: "Cuarto Menguante",
-      waningCrescent: "Menguante"
-    }
-  },
-  en: {
-    searchPlaceholder: "Search city...",
-    favorites: "Favorite Places",
-    now: "Now",
-    updatedNow: "Updated now",
-    feelsLike: "Feels like",
-    aiAnalysis: "AI Meteo Analysis",
-    aiConfidence: "Model Consensus",
-    aiConfidenceMod: "Model Divergence",
-    aiConfidenceLow: "High Uncertainty",
-    generatingTips: "Analyzing CAPE, Pressure & Models (ECMWF, GFS, ICON)...",
-    trend24h: "24h Model Comparison",
-    temp: "Temperature",
-    rain: "Rain",
-    wind: "Wind",
-    cloud: "Cloud Cover",
-    humidity: "Humidity",
-    dewPoint: "Dew Point",
-    dewPointDesc: "Mugginess threshold",
-    snowLevel: "Snow Level",
-    forecast7days: "7-Day Forecast",
-    today: "Today",
-    detailedForecast: "Detailed Forecast",
-    hourlyEvolution: "Hourly Evolution",
-    snowAccumulated: "Accumulated Snow",
-    totalPrecipitation: "Total Precipitation",
-    rainProb: "Rain Prob.",
-    windMax: "Max Wind",
-    uvIndex: "UV Index",
-    tempMin: "Min Temp",
-    sunrise: "Sunrise",
-    sunset: "Sunset",
-    moon: "Moon",
-    pressure: "Pressure",
-    pressureTrend: "Trend",
-    pressureRising: "Rising",
-    pressureFalling: "Falling",
-    pressureSteady: "Steady",
-    stormPotential: "Storm Potential",
-    capeStable: "Stable",
-    capeModerate: "Mod. Instability",
-    capeHigh: "High Instability",
-    capeExtreme: "SEVERE RISK",
-    aqi: "Air Quality",
-    index: "Index",
-    moonPhase: "Moon Phase",
-    illumination: "Illuminated",
-    calc: "Calc",
-    est: "Est.",
-    sunRiseIn: "Rise in",
-    sunSetIn: "Set in",
-    sunSetDone: "Set already",
-    localTime: "Local time",
-    day: "Day",
-    night: "Night",
-    sun: "Sun",
-    clear: "Clear",
-    cloudy: "Cloudy",
-    snow: "Snow",
-    rainy: "Rain",
-    storm: "Storm",
-    uvLow: "Low",
-    uvMod: "Moderate",
-    uvHigh: "High",
-    uvVeryHigh: "Very High",
-    uvExtreme: "Extreme",
-    alertDanger: "DANGER ALERT",
-    alertWarning: "WARNING NOTICE",
-    subtitle: "Professional multi-model forecast with instability analysis (CAPE) and Dew Point.",
-    aqiLevels: ["Excellent", "Good", "Fair", "Moderate", "Poor", "Very Poor"],
-    pollen: "Pollen Levels",
-    pollenTypes: {
-      alder: "Alder",
-      birch: "Birch",
-      grass: "Grass",
-      mugwort: "Mugwort",
-      olive: "Olive",
-      ragweed: "Ragweed"
-    },
-    modeBasic: "Essential",
-    modeExpert: "Advanced",
-    directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
-    preciseRain: "Minute-by-Minute Forecast (1h)",
-    modelsLegend: "Model Comparison",
-    modelBest: "Consensus (ECMWF)",
-    modelGfs: "GFS (USA)",
-    modelIcon: "ICON (Germany)",
-    modelCompareTitle: "Daily Model Comparison",
-    divergence: "Divergence",
-    
-    // Dew Point Levels
-    dpDry: "Dry / Comfortable",
-    dpComfortable: "Comfortable",
-    dpHumid: "Muggy",
-    dpOppressive: "Oppressive",
-    dpExtreme: "Miserable",
-    
-    aiIntroMorning: "Good morning. Analyzing the updated synoptic situation. ",
-    aiIntroAfternoon: "Good afternoon. Tracking atmospheric evolution. ",
-    aiIntroEvening: "Good evening. Outlook for the coming hours. ",
-    aiIntroNight: "Good night. Nocturnal forecast. ",
-    
-    aiSummaryClear: "Dominant stability. Clear skies and no meteorological complications. ",
-    aiSummaryCloudy: "Variable cloudiness with no notable consequences. ",
-    aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
-    aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
-    aiSummarySnow: "Fully winter configuration with expected snowfall. ",
-    
-    aiTempFreezing: "Freezing conditions. Bundle up well if you go out. ",
-    aiTempCold: "It's cold. You'll need warm clothing to stay comfortable. ",
-    aiTempMild: "Mild and pleasant temperatures, no extremes. ",
-    aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
-    aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
-    
-    aiWindLight: "Weak flow, calm situation. ",
-    aiWindMod: "Moderate wind increasing wind chill factor. ",
-    aiWindStrong: "Attention to wind gusts, potentially dangerous situation. ",
-    
-    aiRainNone: "No precipitation in sight in short-term models. ",
-    aiRainExp: "Active radar: imminent precipitation detected. ",
-
-    wmo: {
-      0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
-      45: "fog", 48: "depositing rime fog",
-      51: "light drizzle", 53: "moderate drizzle", 55: "dense drizzle",
-      56: "light freezing drizzle", 57: "dense freezing drizzle",
-      61: "slight rain", 63: "moderate rain", 65: "heavy rain",
-      66: "light freezing rain", 67: "heavy freezing rain",
-      71: "slight snow fall", 73: "moderate snow fall", 75: "heavy snow fall",
-      77: "snow grains",
-      80: "slight rain showers", 81: "moderate rain showers", 82: "violent rain showers",
-      85: "slight snow showers", 86: "heavy snow showers",
-      95: "thunderstorm", 96: "thunderstorm with slight hail", 99: "thunderstorm with heavy hail"
-    },
-
-    alertStorm: "High instability (High CAPE) and storms.",
-    alertSnow: "Caution: Accumulated snow forecast.",
-    alertWindExtreme: "Hurricane-force winds. Danger.",
-    alertWindHigh: "Strong gusts. Watch objects.",
-    alertHeatExtreme: "Extreme heat. Avoid sun.",
-    alertHeatHigh: "High temperatures. Stay hydrated.",
-    alertColdExtreme: "Severe cold. Frostbite risk.",
-    alertColdHigh: "Frost. Slippery roads.",
-    alertRain: "Heavy rainfall.",
-    alertAir: "Poor air quality.",
-    alertUV: "Extreme UV Radiation",
-
-    cold: "Cold",
-    heat: "Heat",
-
-    tipHydration: "Drink water",
-    tipThermal: "Thermal wear",
-    tipWindbreaker: "Windbreaker",
-    tipMugginess: "Light clothes",
-    tipUmbrella: "Take umbrella",
-    tipSunscreen: "Sunscreen",
-    tipCalm: "Enjoy",
-    tipCoat: "Heavy coat",
-    tipLayers: "Wear layers",
-
-    moonPhases: {
-      new: "New Moon",
-      waxingCrescent: "Waxing Crescent",
-      firstQuarter: "First Quarter",
-      waxingGibbous: "Waxing Gibbous",
-      full: "Full Moon",
-      waningGibbous: "Waning Gibbous",
-      lastQuarter: "Last Quarter",
-      waningCrescent: "Waning Crescent"
-    }
-  },
-  fr: {
-    searchPlaceholder: "Rechercher une ville...",
-    favorites: "Lieux favoris",
-    now: "Maintenant",
-    updatedNow: "Mis à jour",
-    feelsLike: "Ressenti",
-    aiAnalysis: "Analyse Météo IA",
-    aiConfidence: "Consensus Modèles",
-    aiConfidenceMod: "Divergence Modèles",
-    aiConfidenceLow: "Incertitude Élevée",
-    generatingTips: "Analyse CAPE, Pression et Modèles (ECMWF, GFS, ICON)...",
-    trend24h: "Comparaison Modèles 24h",
-    temp: "Température",
-    rain: "Pluie",
-    wind: "Vent",
-    cloud: "Couverture",
-    humidity: "Humidité",
-    dewPoint: "Point de Rosée",
-    dewPointDesc: "Seuil de touffeur",
-    snowLevel: "Limite neige",
-    forecast7days: "Prévisions 7 Jours",
-    today: "Aujourd'hui",
-    detailedForecast: "Prévisions détaillées",
-    hourlyEvolution: "Évolution horaire",
-    snowAccumulated: "Neige accumulée",
-    totalPrecipitation: "Précipitations totales",
-    rainProb: "Prob. Pluie",
-    windMax: "Vent Max",
-    uvIndex: "Indice UV",
-    tempMin: "Temp Min",
-    sunrise: "Lever soleil",
-    sunset: "Coucher soleil",
-    moon: "Lune",
-    pressure: "Pression",
-    pressureTrend: "Tendance",
-    pressureRising: "En hausse",
-    pressureFalling: "En baisse",
-    pressureSteady: "Stable",
-    stormPotential: "Potentiel Orage",
-    capeStable: "Stable",
-    capeModerate: "Inst. Modérée",
-    capeHigh: "Inst. Élevée",
-    capeExtreme: "RISQUE SÉVÈRE",
-    aqi: "Qualité Air",
-    index: "Indice",
-    moonPhase: "Phase Lunaire",
-    illumination: "Éclairée",
-    calc: "Calc",
-    est: "Est.",
-    sunRiseIn: "Lever dans",
-    sunSetIn: "Coucher dans",
-    sunSetDone: "Déjà couché",
-    localTime: "Heure locale",
-    day: "Jour",
-    night: "Nuit",
-    sun: "Soleil",
-    clear: "Clair",
-    cloudy: "Nuageux",
-    snow: "Neige",
-    rainy: "Pluvieux",
-    storm: "Orage",
-    uvLow: "Faible",
-    uvMod: "Modéré",
-    uvHigh: "Élevé",
-    uvVeryHigh: "Très élevé",
-    uvExtreme: "Extrême",
-    alertDanger: "ALERTE DANGER",
-    alertWarning: "AVIS PRUDENCE",
-    subtitle: "Prévision professionnelle multi-modèle avec analyse d'instabilité (CAPE) et Point de Rosée.",
-    aqiLevels: ["Excellent", "Bon", "Acceptable", "Modéré", "Mauvais", "Très Mauvais"],
-    pollen: "Niveaux de Pollen",
-    pollenTypes: {
-      alder: "Aulne",
-      birch: "Bouleau",
-      grass: "Graminées",
-      mugwort: "Armoise",
-      olive: "Olivier",
-      ragweed: "Ambroisie"
-    },
-    modeBasic: "Essentiel",
-    modeExpert: "Avancé", 
-    directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    preciseRain: "Prévisions Minute par Minute (1h)",
-    modelsLegend: "Comparaison Modèles",
-    modelBest: "Consensus (ECMWF)",
-    modelGfs: "GFS (USA)",
-    modelIcon: "ICON (Allemagne)",
-    modelCompareTitle: "Comparaison Modèles (Quotidien)",
-    divergence: "Divergence",
-    
-    // Dew Point Levels
-    dpDry: "Sec / Agréable",
-    dpComfortable: "Confortable",
-    dpHumid: "Lourd",
-    dpOppressive: "Oppressant",
-    dpExtreme: "Insupportable",
-    
-    aiIntroMorning: "Bonjour. Analyse de la situation synoptique actualisée. ",
-    aiIntroAfternoon: "Bonne après-midi. Suivi de l'évolution atmosphérique. ",
-    aiIntroEvening: "Bonsoir. Perspectives pour les heures à venir. ",
-    aiIntroNight: "Bonne nuit. Prévisions nocturnes. ",
-    
-    aiSummaryClear: "Stabilité dominante. Ciel dégagé sans complications. ",
-    aiSummaryCloudy: "Passage nuageux variable sans conséquences notables. ",
-    aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
-    aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
-    aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
-    
-    aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien si vous sortez. ",
-    aiTempCold: "Il fait froid. Vous aurez besoin de vêtements chauds pour être à l'aise. ",
-    aiTempMild: "Températures douces et agréables, sans extrêmes. ",
-    aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
-    aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",
-    
-    aiWindLight: "Flux faible, situation calme. ",
-    aiWindMod: "Vent modéré accentuant le ressenti thermique. ",
-    aiWindStrong: "Attention aux rafales, situation potentiellement dangereuse. ",
-    
-    aiRainNone: "Aucune précipitation en vue sur les modèles à court terme. ",
-    aiRainExp: "Radar actif : précipitation imminente détectée. ",
-
-    wmo: {
-      0: "ciel dégagé", 1: "ciel peu nuageux", 2: "partiellement nuageux", 3: "ciel couvert",
-      45: "brouillard", 48: "brouillard givrant",
-      51: "bruine légère", 53: "bruine modérée", 55: "bruine dense",
-      56: "bruine verglaçante légère", 57: "bruine verglaçante dense",
-      61: "pluie faible", 63: "pluie modérée", 65: "pluie forte",
-      66: "pluie verglaçante légère", 67: "pluie verglaçante forte",
-      71: "chute de neige faible", 73: "chute de neige modérée", 75: "chute de neige forte",
-      77: "grains de neige",
-      80: "averses", 81: "averses modérées", 82: "averses violentes",
-      85: "averses de neige", 86: "averses de neige fortes",
-      95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
-    },
-
-    alertStorm: "Forte instabilitat (CAPE elevat) et orages.",
-    alertSnow: "Attention : Neige accumulée prévue.",
-    alertWindExtreme: "Vent d'ouragan. Danger extrême.",
-    alertWindHigh: "Rafales fortes. Attention aux objets.",
-    alertHeatExtreme: "Chaleur extrême. Danger de coup de chaleur.",
-    alertHeatHigh: "Températures élevées. Hydratez-vous.",
-    alertColdExtreme: "Froid extrême. Risque d'hypothermie.",
-    alertColdHigh: "Gelées. Prudence sur la route.",
-    alertRain: "Précipitations abondantes.",
-    alertAir: "Qualité de l'air médiocre.",
-    alertUV: "Rayonnement UV Extrême",
-
-    cold: "Froid",
-    heat: "Chaleur",
-
-    tipHydration: "Hydratation",
-    tipThermal: "Vêtements thermiques",
-    tipWindbreaker: "Coupe-vent",
-    tipMugginess: "Lourd",
-    tipUmbrella: "Preneu parapluie",
-    tipSunscreen: "Écran solaire",
-    tipCalm: "Profitez",
-    tipCoat: "Manteau épais",
-    tipLayers: "Couches",
-
-    moonPhases: {
-      new: "Nouvelle Lune",
-      waxingCrescent: "Premier Croissant",
-      firstQuarter: "Premier Quartier",
-      waxingGibbous: "Gibbeuse Croissante",
-      full: "Pleine Lune",
-      waningGibbous: "Gibbeuse Décroissante",
-      lastQuarter: "Dernier Quartier",
-      waningCrescent: "Dernier Croissant"
-    }
-  }
-};
-
-// --- COMPONENT: ANIMACIÓ DE PARTÍCULES ---
 const WeatherParticles = ({ code }) => {
   const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
@@ -727,7 +54,6 @@ const WeatherParticles = ({ code }) => {
   );
 };
 
-// --- ICONA VARIABLE ---
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
@@ -758,7 +84,6 @@ const VariableRainIcon = ({ isDay, className, ...props }) => {
   );
 };
 
-// --- Subcomponent Efecte Escriptura ---
 const TypewriterText = ({ text }) => {
   const [displayedText, setDisplayedText] = useState('');
   useEffect(() => {
@@ -776,48 +101,6 @@ const TypewriterText = ({ text }) => {
   return <p className="text-slate-200 font-medium leading-relaxed text-sm md:text-base min-h-[3em]">{displayedText}</p>;
 };
 
-// --- HELPERS ---
-const getShiftedDate = (baseDate, timezone) => {
-  const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezone });
-  return new Date(targetTimeStr);
-};
-
-const getMoonPhase = (date) => {
-  let year = date.getFullYear();
-  let month = date.getMonth() + 1;
-  let day = date.getDate();
-  if (month < 3) { year--; month += 12; }
-  const c = 365.25 * year;
-  const e = 30.6 * month;
-  const jd = c + e + day - 694039.09; 
-  let phase = jd / 29.5305882; 
-  phase -= Math.floor(phase); 
-  return phase; 
-};
-
-const getMoonPhaseText = (phase, lang = 'ca') => {
-  const t = TRANSLATIONS[lang].moonPhases;
-  if (phase < 0.03 || phase > 0.97) return t.new;
-  if (phase < 0.22) return t.waxingCrescent;
-  if (phase < 0.28) return t.firstQuarter;
-  if (phase < 0.47) return t.waxingGibbous;
-  if (phase < 0.53) return t.full;
-  if (phase < 0.72) return t.waningGibbous;
-  if (phase < 0.78) return t.lastQuarter;
-  return t.waningCrescent;
-};
-
-// --- CALC DEW POINT (FORMULA MAGNUS) ---
-const calculateDewPoint = (T, RH) => {
-  const a = 17.27;
-  const b = 237.7;
-  // Safety: Math.log of 0 is -Infinity. RH should be > 0.
-  const safeRH = Math.max(RH, 1);
-  const alpha = ((a * T) / (b + T)) + Math.log(safeRH / 100.0);
-  return (b * alpha) / (a - alpha);
-};
-
-// --- BANDERES ---
 const FlagIcon = ({ lang, className = "w-5 h-5 rounded-sm object-cover" }) => {
   if (lang === 'ca') { return <svg viewBox="0 0 640 480" className={className}><path fill="#FFED00" d="M0 0h640v480H0z"/><path fill="#D50032" d="M0 48h640v48H0zM0 144h640v48H0zM0 240h640v48H0zM0 336h640v48H0z"/></svg>; }
   if (lang === 'es') { return <svg viewBox="0 0 640 480" className={className}><path fill="#AA151B" d="M0 0h640v480H0z"/><path fill="#F1BF00" d="M0 120h640v240H0z"/></svg>; }
@@ -826,669 +109,8 @@ const FlagIcon = ({ lang, className = "w-5 h-5 rounded-sm object-cover" }) => {
   return null;
 };
 
-// --- ICONA MOON (REPARAT: ID únic per gradient) ---
-const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) => {
-  const uniqueId = React.useId ? React.useId().replace(/:/g, '') : Math.random().toString(36).substr(2, 9);
-  const p = phase % 1;
-  const r = 9; const cx = 12; const cy = 12; const theta = p * 2 * Math.PI;
-  const rx = Math.abs(r * Math.cos(theta));
-  const isWaxing = p <= 0.5; const isCrescent = (p < 0.25) || (p > 0.75); 
-  const outerD = isWaxing ? `M ${cx},${cy-r} A ${r},${r} 0 0 1 ${cx},${cy+r}` : `M ${cx},${cy-r} A ${r},${r} 0 0 0 ${cx},${cy+r}`;
-  let sweep = 0; if (isWaxing) { sweep = isCrescent ? 0 : 1; } else { sweep = !isCrescent ? 0 : 1; }
-  const innerD = `A ${rx},${r} 0 0 ${sweep} ${cx},${cy-r}`;
-  const d = `${outerD} ${innerD} Z`;
-  const transform = lat < 0 ? "scale(-1, 1)" : "";
 
-  return (
-    <svg viewBox="0 0 24 24" className={`${className} filter drop-shadow-md`} style={{transform}} stroke="none">
-       <title>{getMoonPhaseText(phase, lang)}</title>
-       <defs>
-         <radialGradient id={`moonGradient-${uniqueId}`} cx="50%" cy="50%" r="80%" fx="30%" fy="30%"> 
-            <stop offset="0%" stopColor="#f1f5f9" /> 
-            <stop offset="90%" stopColor="#cbd5e1" /> 
-         </radialGradient>
-         <filter id={`moonGlow-${uniqueId}`} x="-20%" y="-20%" width="140%" height="140%"> <feGaussianBlur stdDeviation="0.8" result="blur" /> <feComposite in="SourceGraphic" in2="blur" operator="over" /> </filter>
-       </defs>
-       <circle cx={cx} cy={cy} r={r} fill="#1e293b" stroke="#334155" strokeWidth="0.5" />
-       <path d={d} fill={`url(#moonGradient-${uniqueId})`} className="" />
-    </svg>
-  );
-};
-
-// --- SUN WIDGET ---
-const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
-  const t = TRANSLATIONS[lang];
-  const sunriseTime = new Date(sunrise).getTime();
-  const sunsetTime = new Date(sunset).getTime();
-  const now = shiftedNow.getTime();
-
-  const isToday = shiftedNow.toDateString() === new Date(sunrise).toDateString();
-  
-  let progress = 0;
-  let nextEventText = "";
-  
-  if (isToday) {
-     const totalDayLength = sunsetTime - sunriseTime;
-     const elapsed = now - sunriseTime;
-     progress = Math.max(0, Math.min(1, elapsed / totalDayLength));
-     
-     if (now < sunriseTime) {
-        const diff = sunriseTime - now;
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        nextEventText = `${t.sunRiseIn} ${h}h ${m}m`;
-     } else if (now < sunsetTime) {
-        const diff = sunsetTime - now;
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        nextEventText = `${t.sunSetIn} ${h}h ${m}m`;
-     } else { nextEventText = t.sunSetDone; }
-  } else if (now > sunsetTime) { progress = 1; nextEventText = t.sunSetDone; }
-  
-  const r = 35; const cx = 50; const cy = 50;
-  const angle = Math.PI - (progress * Math.PI);
-  const sunX = cx + r * Math.cos(angle);
-  const sunY = cy - r * Math.sin(angle); 
-
-  return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
-       <div className="w-full flex justify-between items-center text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
-          <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400" strokeWidth={2.5}/> {t.sunrise}</span>
-          <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400" strokeWidth={2.5}/></span>
-       </div>
-       <div className="relative w-full h-24 overflow-hidden">
-          <svg viewBox="0 0 100 60" className="w-full h-full">
-             <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
-             <g transform={`translate(${sunX - 6}, ${sunY - 6})`}>
-                <circle cx="6" cy="6" r="4" fill="#fbbf24" className="animate-pulse shadow-lg shadow-amber-500/50" />
-                <circle cx="6" cy="6" r="8" stroke="#fbbf24" strokeWidth="1" opacity="0.5" />
-             </g>
-             <line x1="0" y1="55" x2="100" y2="55" stroke="#1e293b" strokeWidth="1" />
-          </svg>
-          <div className="absolute bottom-2 left-0 right-0 text-center">
-             <span className="text-[10px] font-bold text-amber-300 bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-500/20 backdrop-blur-sm">{nextEventText}</span>
-          </div>
-       </div>
-       <div className="w-full flex justify-between items-end -mt-4 z-10">
-          <span className="text-sm font-bold text-white">{new Date(sunrise).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-          <span className="text-xs text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">{isToday ? (progress > 0 && progress < 1 ? t.day : t.night) : t.sun}</span>
-          <span className="text-sm font-bold text-white">{new Date(sunset).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-       </div>
-    </div>
-  );
-};
-
-// --- MOON WIDGET ---
-const MoonWidget = ({ phase, lat, lang = 'ca' }) => {
-  const t = TRANSLATIONS[lang];
-  const phaseName = getMoonPhaseText(phase, lang);
-  const illumination = Math.round((1 - Math.abs((phase - 0.5) * 2)) * 100);
-  return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
-       <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider"><Moon className="w-3 h-3" strokeWidth={2.5} /> {t.moonPhase}</div>
-       <div className="flex flex-col items-center justify-center mt-2">
-          <div className="relative">
-             <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
-             <MoonPhaseIcon phase={phase} lat={lat} className="w-16 h-16 text-slate-200 relative z-10" lang={lang} />
-          </div>
-          <span className="text-lg font-bold text-white mt-4">{phaseName}</span>
-          <span className="text-xs text-slate-400 mt-1 font-medium bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700">{illumination}% {t.illumination}</span>
-       </div>
-    </div>
-  );
-};
-
-// --- POLLEN WIDGET ---
-const PollenWidget = ({ data, lang = 'ca' }) => {
-  if (!data) return null;
-  const t = TRANSLATIONS[lang];
-  
-  const pollenMap = [
-    { key: 'alder', val: data.alder_pollen },
-    { key: 'birch', val: data.birch_pollen },
-    { key: 'grass', val: data.grass_pollen },
-    { key: 'mugwort', val: data.mugwort_pollen },
-    { key: 'olive', val: data.olive_pollen },
-    { key: 'ragweed', val: data.ragweed_pollen }
-  ];
-
-  const getLevelColor = (val) => {
-    if (!val || val < 10) return 'bg-green-500'; 
-    if (val < 50) return 'bg-yellow-500'; 
-    if (val < 200) return 'bg-orange-500'; 
-    return 'bg-red-500'; 
-  };
-
-  return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl backdrop-blur-sm relative h-full min-h-[140px] flex flex-col">
-       <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider mb-3">
-         <Flower2 className="w-3 h-3" strokeWidth={2.5} /> {t.pollen}
-       </div>
-       <div className="grid grid-cols-2 gap-2 flex-1">
-          {pollenMap.map((item) => (
-             <div key={item.key} className="flex items-center justify-between bg-slate-950/30 p-2 rounded-lg border border-white/5">
-                <span className="text-xs text-slate-300 font-medium">{t.pollenTypes[item.key]}</span>
-                <div className={`w-2.5 h-2.5 rounded-full ${getLevelColor(item.val)} shadow-sm`}></div>
-             </div>
-          ))}
-       </div>
-    </div>
-  );
-};
-
-// --- COMPASS GAUGE ---
-const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }) => {
-  const directions = TRANSLATIONS[lang].directions || ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
-  const index = Math.round(((degrees %= 360) < 0 ? degrees + 360 : degrees) / 45) % 8;
-  const dirText = directions[index];
-  
-  const N = directions[0];
-  const S = directions[4];
-  const E = directions[2];
-  const W = directions[6];
-
-  return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
-      <div className="relative w-24 h-24 flex items-center justify-center mb-1">
-         <div className="absolute inset-0 rounded-full border-2 border-slate-800 flex items-center justify-center">
-            <span className="absolute top-1 text-[8px] text-slate-500 font-bold">{N}</span>
-            <span className="absolute bottom-1 text-[8px] text-slate-500 font-bold">{S}</span>
-            <span className="absolute left-1 text-[8px] text-slate-500 font-bold">{W}</span>
-            <span className="absolute right-1 text-[8px] text-slate-500 font-bold">{E}</span>
-         </div>
-         <div 
-            className="w-full h-full flex items-center justify-center transition-transform duration-1000 ease-out"
-            style={{ transform: `rotate(${degrees}deg)` }}
-         >
-             <div className="w-1 h-12 bg-gradient-to-b from-red-500 to-transparent rounded-full relative -top-2">
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -mt-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-red-500"></div>
-             </div>
-         </div>
-         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 m-6 rounded-full border border-slate-700 backdrop-blur-sm">
-            <span className="text-sm font-bold text-white">{Math.round(speed)}</span>
-            <span className="text-[9px] text-slate-400">km/h</span>
-         </div>
-      </div>
-      <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">{label}</div>
-      <div className="text-xs font-bold text-teal-400 mt-0.5">{dirText} ({degrees}°)</div>
-    </div>
-  );
-};
-
-// --- TEMP RANGE BAR ---
-const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }) => {
-  const totalRange = globalMax - globalMin || 1;
-  const safeMin = Math.max(min, globalMin);
-  const safeMax = Math.min(max, globalMax);
-  const leftPct = ((safeMin - globalMin) / totalRange) * 100;
-  const widthPct = ((safeMax - safeMin) / totalRange) * 100;
-
-  return (
-    <div className="flex items-center gap-3 w-full max-w-[12rem] md:max-w-[16rem]">
-      <span className="text-xs text-slate-400 w-8 text-right font-medium tabular-nums">{displayMin}°</span>
-      <div className="flex-1 h-1.5 bg-slate-700/50 rounded-full relative overflow-hidden">
-        <div className="absolute h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-400 to-amber-400 opacity-90" style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '6px' }} />
-      </div>
-      <span className="text-xs text-white w-8 text-left font-bold tabular-nums">{displayMax}°</span>
-    </div>
-  )
-};
-
-// --- SINGLE CHART (MULTI-MODEL SUPPORT & DEEP ANALYSIS TOOLTIP) ---
-const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 140, lang = 'ca', shiftedNow }) => {
-  if (!data || data.length === 0) return null;
-  const t = TRANSLATIONS[lang];
-
-  const layersConfig = {
-    temp: { key: 'temp', color: '#818cf8', gradientStart: '#818cf8', title: t.temp },
-    rain: { key: 'rain', color: '#3b82f6', gradientStart: '#3b82f6', title: t.rainProb },
-    wind: { key: 'wind', color: '#2dd4bf', gradientStart: '#2dd4bf', title: t.wind },
-    cloud: { key: 'cloud', color: '#94a3b8', gradientStart: '#94a3b8', title: t.cloud },
-    humidity: { key: 'humidity', color: '#22d3ee', gradientStart: '#22d3ee', title: t.humidity },
-    snowLevel: { key: 'snowLevel', color: '#e2e8f0', gradientStart: '#cbd5e1', title: t.snowLevel }
-  };
-
-  const currentConfig = layersConfig[layer];
-  const dataKey = currentConfig.key;
-  const width = 800;
-  const paddingX = 20;
-  const paddingY = 30;
-
-  const values = data.map(d => d[dataKey] || 0);
-  let allValues = [...values];
-  
-  if (comparisonData && comparisonData.gfs) {
-     const gfsVals = comparisonData.gfs.map(d => d[dataKey] || 0);
-     allValues = [...allValues, ...gfsVals];
-  }
-  if (comparisonData && comparisonData.icon) {
-     const iconVals = comparisonData.icon.map(d => d[dataKey] || 0);
-     allValues = [...allValues, ...iconVals];
-  }
-
-  let minVal = Math.min(...allValues);
-  let maxVal = Math.max(...allValues);
-
-  if (layer === 'temp') {
-     minVal -= 2;
-     maxVal += 2;
-  } else if (layer === 'rain' || layer === 'cloud' || layer === 'humidity') {
-    minVal = 0;
-    maxVal = 100;
-  } else if (layer === 'wind') {
-    minVal = 0; 
-    maxVal = Math.max(maxVal, 20);
-  } else if (layer === 'snowLevel') {
-    minVal = Math.max(0, minVal - 500);
-    maxVal = maxVal + 500;
-  }
-  
-  const range = maxVal - minVal || 1;
-  const calcY = (val) => height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
-
-  const points = data.map((d, i) => ({
-    x: paddingX + (i / (data.length - 1)) * (width - 2 * paddingX),
-    y: calcY(d[dataKey] || 0),
-    value: d[dataKey] || 0,
-    ...d
-  }));
-
-  const buildSmoothPath = (pts, keyY = 'y') => {
-    if (pts.length === 0) return "";
-    let d = `M ${pts[0].x},${pts[0][keyY]}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i];
-      const p1 = pts[i + 1];
-      const cx = (p0.x + p1.x) / 2;
-      d += ` C ${cx},${p0[keyY]} ${cx},${p1[keyY]} ${p1.x},${p1[keyY]}`;
-    }
-    return d;
-  };
-
-  const linePath = buildSmoothPath(points, 'y');
-  const areaPath = `${linePath} L ${width - paddingX},${height} L ${paddingX},${height} Z`;
-
-  let gfsPath = "";
-  let iconPath = "";
-  
-  // Values for Tooltip Logic
-  const getComparsionValue = (dataset, index) => {
-      if(dataset && dataset[index]) return dataset[index][dataKey];
-      return null;
-  }
-
-  if (comparisonData && layer !== 'snowLevel') {
-      if (comparisonData.gfs && comparisonData.gfs.length > 0) {
-          const gfsPoints = comparisonData.gfs.map((d, i) => ({
-              x: paddingX + (i / (comparisonData.gfs.length - 1)) * (width - 2 * paddingX),
-              y: calcY(d[dataKey] || 0)
-          }));
-          gfsPath = buildSmoothPath(gfsPoints, 'y');
-      }
-      if (comparisonData.icon && comparisonData.icon.length > 0) {
-          const iconPoints = comparisonData.icon.map((d, i) => ({
-              x: paddingX + (i / (comparisonData.icon.length - 1)) * (width - 2 * paddingX),
-              y: calcY(d[dataKey] || 0)
-          }));
-          iconPath = buildSmoothPath(iconPoints, 'y');
-      }
-  }
-
-  const hoverData = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : null;
-  const gfsValue = hoveredIndex !== null ? getComparsionValue(comparisonData?.gfs, hoveredIndex) : null;
-  const iconValue = hoveredIndex !== null ? getComparsionValue(comparisonData?.icon, hoveredIndex) : null;
-
-  return (
-    <div className="relative w-full">
-      <div className="absolute top-2 left-4 text-xs font-bold text-slate-400 uppercase tracking-wider z-10 flex items-center gap-2">
-         <span className={`w-2 h-2 rounded-full`} style={{backgroundColor: currentConfig.color}}></span>
-         {currentConfig.title}
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto drop-shadow-lg touch-pan-x" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id={`gradient-${layer}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={currentConfig.gradientStart} stopOpacity="0.4" />
-            <stop offset="100%" stopColor={currentConfig.gradientStart} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-        
-        <path d={areaPath} fill={`url(#gradient-${layer})`} />
-
-        {/* GFS & ICON Lines */}
-        {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 4"/>}
-        {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 2"/>}
-
-        <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        
-        {points.map((p, i) => (
-          <g 
-            key={i} 
-            onMouseEnter={() => setHoveredIndex(i)}
-            onClick={() => setHoveredIndex(i)}
-            onTouchStart={() => setHoveredIndex(i)}
-            className="cursor-pointer"
-          >
-            {/* Expanded touch target for mobile */}
-            <rect x={p.x - (width / points.length / 2)} y={0} width={width / points.length} height={height} fill="transparent" />
-            {(i % (points.length > 12 ? 3 : 1) === 0) && (
-              <text x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">{new Date(p.time).getHours()}h</text>
-            )}
-          </g>
-        ))}
-
-        {hoverData && (
-          <g>
-            <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
-            <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
-            
-            {/* ENHANCED TOOLTIP WITH MULTI-MODEL DATA */}
-            <g transform={`translate(${Math.min(width - 100, Math.max(100, hoverData.x))}, ${Math.min(height - 80, Math.max(50, hoverData.y - 60))})`}>
-               {/* Background for tooltip */}
-               <rect x="-65" y="-45" width="130" height="90" rx="6" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" filter="drop-shadow(0 4px 6px rgb(0 0 0 / 0.5))" />
-               
-               {/* Title Hour */}
-               <text x="0" y="-30" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" opacity="0.8">
-                 {new Date(hoverData.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-               </text>
-               
-               {/* Separator */}
-               <line x1="-55" y1="-22" x2="55" y2="-22" stroke="white" strokeOpacity="0.1" />
-               
-               {/* ECMWF (Best) */}
-               <circle cx="-45" cy="-10" r="3" fill={currentConfig.color} />
-               <text x="-35" y="-7" textAnchor="start" fill="white" fontSize="10" fontWeight="bold">ECMWF:</text>
-               <text x="50" y="-7" textAnchor="end" fill="white" fontSize="10" fontWeight="bold">{Math.round(hoverData.value)}{unit}</text>
-               
-               {/* GFS */}
-               {gfsValue !== null && (
-                 <>
-                   <circle cx="-45" cy="8" r="3" fill="#4ade80" />
-                   <text x="-35" y="11" textAnchor="start" fill="#cbd5e1" fontSize="10">GFS:</text>
-                   <text x="50" y="11" textAnchor="end" fill="#4ade80" fontSize="10" fontWeight="bold">{Math.round(gfsValue)}{unit}</text>
-                 </>
-               )}
-               
-               {/* ICON */}
-               {iconValue !== null && (
-                 <>
-                   <circle cx="-45" cy="26" r="3" fill="#fbbf24" />
-                   <text x="-35" y="29" textAnchor="start" fill="#cbd5e1" fontSize="10">ICON:</text>
-                   <text x="50" y="29" textAnchor="end" fill="#fbbf24" fontSize="10" fontWeight="bold">{Math.round(iconValue)}{unit}</text>
-                 </>
-               )}
-            </g>
-          </g>
-        )}
-      </svg>
-    </div>
-  );
-};
-
-const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedNow }) => {
-  const [hoveredIndex, setHoveredIndex] = useState(null);
-  const t = TRANSLATIONS[lang];
-
-  if (!data || data.length === 0) return null;
-  
-  return (
-    <div className="w-full overflow-x-auto custom-scrollbar relative touch-pan-x" onMouseLeave={() => setHoveredIndex(null)}>
-      <div className="min-w-[220%] md:min-w-full space-y-3 pr-4">
-        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={150} lang={lang} />
-        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="wind" unit="km/h" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-        <SingleHourlyChart data={data} comparisonData={comparisonData} layer="snowLevel" unit="m" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={130} lang={lang} />
-      </div>
-
-      <div className="flex justify-center items-center gap-4 mt-4 pt-2 border-t border-white/5">
-           <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{t.modelsLegend}:</span>
-           <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-indigo-500 border border-indigo-400"></div>
-              <span className="text-xs text-slate-300">{t.modelBest}</span>
-           </div>
-           <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-green-400 border-t border-b border-green-400 border-dashed w-4"></div>
-              <span className="text-xs text-slate-300">{t.modelGfs}</span>
-           </div>
-           <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-amber-400 border-t border-b border-amber-400 border-dashed w-4"></div>
-              <span className="text-xs text-slate-300">{t.modelIcon}</span>
-           </div>
-      </div>
-    </div>
-  );
-};
-
-// --- NOU COMPONENT: GRÀFICA DE PRECISIÓ AMB ESCALA DE COLORS (MODIFICAT) ---
-const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
-  let chartData = data ? [...data] : [];
-  // Safety: Ensure we have data
-  if(chartData.length === 0) return null; 
-  
-  while(chartData.length < 4) chartData.push(0);
-  chartData = chartData.slice(0, 4);
-
-  if (currentPrecip > 0 && chartData[0] === 0) {
-      chartData[0] = currentPrecip;
-  }
-
-  if (chartData.every(v => v === 0)) return null;
-  const max = Math.max(...chartData, 0.5); 
-
-  // Function to get color based on intensity (Official scales approx)
-  const getIntensityColor = (val) => {
-      if (val === 0) return 'bg-blue-900/50';
-      if (val < 2.5) return 'bg-blue-400'; // Light
-      if (val < 7.6) return 'bg-yellow-400'; // Moderate
-      if (val < 50) return 'bg-orange-500'; // Heavy
-      return 'bg-red-600'; // Violent
-  };
-
-  return (
-    <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in relative">
-        <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-                <CloudRain className="w-3 h-3 text-blue-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
-            </div>
-            {max > 2.5 && <span className="text-[9px] text-slate-400 font-medium">Màx: {max.toFixed(1)}mm</span>}
-        </div>
-        
-        {/* Background Grid Lines for Scale Context */}
-        <div className="relative h-16 w-full pb-1">
-             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
-                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
-                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
-             </div>
-
-             <div className="flex items-end gap-2 h-full w-full relative z-10">
-               {chartData.map((val, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
-                     {val > 0 && (
-                        <span className={`text-[9px] font-bold mb-0.5 animate-in slide-in-from-bottom-1 ${val > 7.6 ? 'text-white' : 'text-blue-200'}`}>
-                            {val >= 10 ? Math.round(val) : val.toFixed(1)}
-                        </span>
-                     )}
-                     <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
-                        <div 
-                          className={`w-full rounded-sm transition-all group-hover:opacity-80 ${getIntensityColor(val)}`}
-                          style={{ height: `${(val / max) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
-                        ></div>
-                     </div>
-                     <span className="text-[9px] text-slate-400 font-medium">
-                        {i === 0 ? 'Ara' : `+${i * 15}m`}
-                     </span>
-                  </div>
-               ))}
-             </div>
-        </div>
-        <div className="flex justify-between items-center text-[9px] text-blue-400/70 mt-1 px-1">
-           <span>Intensitat (mm)</span>
-           <span>Previsió 1h</span>
-        </div>
-    </div>
-  )
-}
-
-// --- CIRCULAR GAUGE (ENHANCED FOR PRESSURE TREND) ---
-const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText, trend = null, trendLabel = null }) => {
-  const radius = 30;
-  const circumference = 2 * Math.PI * radius;
-  // Dynamic scale adjustment for pressure to make it look active (950-1050 range usually)
-  const normalizedValue = label.includes("Pressió") || label.includes("Pressure") || label.includes("Presión") 
-      ? Math.max(0, Math.min((value - 950) / 100, 1)) 
-      : Math.min(value, max) / max;
-  
-  const strokeDashoffset = circumference - normalizedValue * circumference;
-
-  return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
-      <div className="relative w-24 h-24 flex items-center justify-center">
-         <svg className="w-full h-full transform -rotate-90">
-            <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-800" />
-            <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className={`${color} transition-all duration-1000 ease-out`} />
-         </svg>
-         <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className={`mb-1 ${color}`}>{icon}</div>
-            <span className="text-sm font-bold text-white">{value}</span>
-         </div>
-      </div>
-      <div className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-2">{label}</div>
-      {subText && <div className="text-[10px] text-slate-500 mt-1">{subText}</div>}
-      
-      {/* TREND INDICATOR */}
-      {trend && (
-         <div className={`absolute top-2 right-2 flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-slate-950/50 ${
-             trend === 'rising' ? 'text-teal-400 border-teal-500/30' : 
-             trend === 'falling' ? 'text-rose-400 border-rose-500/30' : 
-             'text-slate-400 border-slate-500/30'
-         }`}>
-             {trend === 'rising' && <TrendingUp className="w-3 h-3" />}
-             {trend === 'falling' && <TrendingDown className="w-3 h-3" />}
-             {trend === 'steady' && <Minus className="w-3 h-3" />}
-             {trendLabel}
-         </div>
-      )}
-    </div>
-  );
-};
-
-// --- DEW POINT WIDGET (UPDATED: HYBRID) ---
-const DewPointWidget = ({ value, humidity, lang, unit }) => { 
-    const t = TRANSLATIONS[lang];
-    
-    let status = t.dpComfortable;
-    let color = "text-teal-400";
-    let bgColor = "bg-teal-500";
-    let bgOpacity = "bg-teal-500/10";
-    
-    // Normalize for color bar (0 to 30 scale typically)
-    const percentage = Math.min(Math.max((value / 28) * 100, 0), 100);
-
-    if (value < 10) {
-        status = t.dpDry;
-        color = "text-blue-400";
-        bgColor = "bg-blue-500";
-        bgOpacity = "bg-blue-500/10";
-    } else if (value >= 10 && value <= 15) {
-        status = t.dpComfortable;
-        color = "text-green-400";
-        bgColor = "bg-green-500";
-        bgOpacity = "bg-green-500/10";
-    } else if (value > 15 && value <= 20) {
-        status = t.dpHumid;
-        color = "text-yellow-400";
-        bgColor = "bg-yellow-500";
-        bgOpacity = "bg-yellow-500/10";
-    } else if (value > 20 && value <= 24) {
-        status = t.dpOppressive;
-        color = "text-orange-500";
-        bgColor = "bg-orange-500";
-        bgOpacity = "bg-orange-500/10";
-    } else if (value > 24) {
-        status = t.dpExtreme;
-        color = "text-red-500 animate-pulse";
-        bgColor = "bg-red-500";
-        bgOpacity = "bg-red-500/10";
-    }
-
-    const displayValue = unit === 'F' ? Math.round((value * 9/5) + 32) : Math.round(value);
-
-    return (
-        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
-            <div className="absolute top-2 left-3 flex items-center gap-1.5">
-                <Thermometer className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.dewPoint}</span>
-            </div>
-            
-            <div className="flex flex-col items-center mt-3 w-full">
-                 <div className="relative mb-2 flex items-baseline gap-2">
-                    {/* El Punt de Rosada és el protagonista */}
-                    <div className={`text-3xl font-bold ${color}`}>{displayValue}°</div>
-                    
-                    {/* La Humitat Relativa és l'actor secundari (NOU) */}
-                    <div className="flex items-center gap-0.5 text-slate-400 text-xs font-medium bg-slate-800/50 px-1.5 py-0.5 rounded-md border border-white/5" title={t.humidity}>
-                        <Droplets className="w-3 h-3" />
-                        <span>{humidity}%</span>
-                    </div>
-                 </div>
-                 
-                 <div className="w-full max-w-[80%] h-2 bg-slate-800 rounded-full overflow-hidden relative">
-                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
-                 </div>
-                 
-                 <div className={`mt-2 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${color} ${bgOpacity} border border-current border-opacity-20`}>
-                    {status}
-                 </div>
-                 <div className="text-[9px] text-slate-500 mt-1.5 text-center px-2 leading-tight">
-                    {t.dewPointDesc}
-                 </div>
-            </div>
-        </div>
-    )
-}
-
-
-// --- CAPE WIDGET (NEW) ---
-const CapeWidget = ({ cape, lang }) => {
-    const t = TRANSLATIONS[lang];
-    // CAPE Thresholds: <1000 Stable, 1000-2500 Moderate, >2500 High/Extreme
-    let status = t.capeStable;
-    let color = "text-green-400";
-    let bgColor = "bg-green-500";
-    let percentage = Math.min((cape / 3000) * 100, 100);
-
-    if (cape > 1000 && cape <= 2500) {
-        status = t.capeModerate;
-        color = "text-orange-400";
-        bgColor = "bg-orange-500";
-    } else if (cape > 2500) {
-        status = t.capeExtreme;
-        color = "text-red-500 animate-pulse";
-        bgColor = "bg-red-500";
-    }
-
-    return (
-        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
-            <div className="absolute top-2 left-3 flex items-center gap-1.5">
-                <Zap className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.stormPotential}</span>
-            </div>
-            
-            <div className="flex flex-col items-center mt-4">
-                <span className={`text-2xl font-bold ${color}`}>{Math.round(cape)}</span>
-                <span className="text-[9px] text-slate-500 mb-2">J/kg (CAPE)</span>
-                
-                <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
-                </div>
-                <span className={`text-xs font-bold mt-2 px-2 py-0.5 rounded border border-white/5 bg-white/5 ${color}`}>{status}</span>
-            </div>
-        </div>
-    )
-}
-
+// --- APP PRINCIPAL ---
 export default function MeteoIA() {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -1657,109 +279,6 @@ export default function MeteoIA() {
     return getDynamicBackground(weather_code, is_day);
   };
 
-  const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null) => {
-    const tr = TRANSLATIONS[language];
-    const feelsLike = current.apparent_temperature;
-    const temp = current.temperature_2m;
-    const humidity = current.relative_humidity_2m;
-    const rainProb = daily.precipitation_probability_max[0];
-    const windSpeed = current.wind_speed_10m;
-    const code = forcedCode !== null ? forcedCode : current.weather_code;
-    const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
-    const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
-    const uvMax = daily.uv_index_max[0];
-    const isDay = current.is_day;
-    
-    const currentCape = hourly.cape ? hourly.cape[new Date().getHours()] || 0 : 0;
-    
-    let summaryParts = [];
-    let tips = [];
-    let alerts = []; 
-    let confidenceText = tr.aiConfidence;
-    let confidenceLevel = 'high';
-
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 12) summaryParts.push(tr.aiIntroMorning);
-    else if (hour >= 12 && hour < 19) summaryParts.push(tr.aiIntroAfternoon);
-    else if (hour >= 19 && hour < 22) summaryParts.push(tr.aiIntroEvening);
-    else summaryParts.push(tr.aiIntroNight);
-
-    if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
-    else if (code >= 71) summaryParts.push(tr.aiSummarySnow);
-    else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
-    else if (code <= 2) summaryParts.push(tr.aiSummaryClear);
-    else summaryParts.push(tr.aiSummaryCloudy);
-
-    const diff = feelsLike - temp;
-    if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
-    
-    if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
-    else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
-    else if (feelsLike >= 18 && feelsLike < 25) summaryParts.push(tr.aiTempMild);
-    else if (feelsLike >= 25 && feelsLike < 32) summaryParts.push(tr.aiTempWarm);
-    else if (feelsLike >= 32) summaryParts.push(tr.aiTempHot);
-
-    if (temp > 25 && humidity > 65) {
-       summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació real de ${Math.round(feelsLike)}°C. ` : language === 'es' ? `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. ` : "");
-    }
-
-    if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
-    else if (rainProb < 20 && code < 50) summaryParts.push(tr.aiRainNone);
-
-    // --- ALERTS ---
-    if (code >= 95 || currentCape > 2000) {
-       alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
-    }
-    else if (code >= 71 && code <= 77 || code === 85 || code === 86) {
-       alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
-    }
-    else if (code === 65 || code === 82 || precipSum > 30) {
-       alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
-    }
-
-    if (windSpeed > 50) {
-      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
-      tips.push(tr.tipWindbreaker);
-    } else if (windSpeed > 80) { 
-      alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
-    }
-    
-    if (temp < 0) {
-      alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' });
-      tips.push(tr.tipCoat, tr.tipThermal);
-    } else if (temp < 5) {
-      if(windSpeed > 15) tips.push(tr.tipCoat); 
-      tips.push(tr.tipLayers);
-    } 
-    
-    if (temp > 35) {
-       alerts.push({ type: tr.heat, msg: tr.alertHeatExtreme, level: 'high' });
-       tips.push(tr.tipHydration, tr.tipSunscreen);
-    } else if (temp > 30) {
-       alerts.push({ type: tr.heat, msg: tr.alertHeatHigh, level: 'warning' });
-       tips.push(tr.tipHydration);
-    }
-
-    if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
-    if (uvMax > 7 && isDay) {
-       if(uvMax >= 10) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' });
-       tips.push(tr.tipSunscreen);
-    }
-    if (aqiValue > 100) { 
-       alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
-    }
-
-    if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
-        confidenceLevel = 'medium';
-        confidenceText = tr.aiConfidenceMod;
-    }
-
-    if (tips.length === 0) tips.push(tr.tipCalm);
-    tips = [...new Set(tips)].slice(0, 4);
-
-    return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
-  };
-
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.length > 2 && showSuggestions) {
@@ -1855,78 +374,6 @@ export default function MeteoIA() {
     } else { setError("Geolocalització no suportada."); }
   };
 
-  const normalizeModelData = (data) => {
-     const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
-     
-     Object.keys(data.current).forEach(key => {
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
-           result.current[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.current[key];
-        } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
-           result.current[key] = data.current[key];
-        }
-     });
-
-     // Normalize DAILY Comparison Data
-     const dailyGfs = {};
-     const dailyIcon = {};
-
-     Object.keys(data.daily).forEach(key => {
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
-           result.daily[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.daily[key];
-        } 
-        else if (key.includes('_gfs_seamless')) {
-           const cleanKey = key.replace('_gfs_seamless', '');
-           dailyGfs[cleanKey] = data.daily[key];
-        }
-        else if (key.includes('_icon_seamless')) {
-           const cleanKey = key.replace('_icon_seamless', '');
-           dailyIcon[cleanKey] = data.daily[key];
-        }
-        else {
-           result.daily[key] = data.daily[key];
-        }
-     });
-
-     result.dailyComparison.gfs = dailyGfs;
-     result.dailyComparison.icon = dailyIcon;
-
-     const gfsHourly = [];
-     const iconHourly = [];
-     const len = data.hourly.time.length;
-     
-     for (let i = 0; i < len; i++) {
-        gfsHourly.push({});
-        iconHourly.push({});
-     }
-
-     Object.keys(data.hourly).forEach(key => {
-        const val = data.hourly[key];
-        
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
-           result.hourly[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = val;
-        } 
-        // INCLUDE CAPE AND PRESSURE IN HOURLY NORMALIZE
-        else if (['time', 'is_day', 'freezing_level_height', 'pressure_msl', 'cape'].includes(key)) {
-           result.hourly[key] = val;
-        }
-        else if (key.includes('_gfs_seamless')) {
-           const cleanKey = key.replace('_gfs_seamless', '');
-           val.forEach((v, i) => { if (gfsHourly[i]) gfsHourly[i][cleanKey] = v });
-        }
-        else if (key.includes('_icon_seamless')) {
-            const cleanKey = key.replace('_icon_seamless', '');
-            val.forEach((v, i) => { if (iconHourly[i]) iconHourly[i][cleanKey] = v });
-        }
-     });
-
-     result.hourlyComparison.gfs = gfsHourly;
-     result.hourlyComparison.icon = iconHourly;
-     
-     if (Object.keys(result.current).length === 0) return data;
-     
-     return { ...data, ...result };
-  };
-
   const fetchWeatherByCoords = async (lat, lon, name, country = "") => {
     setLoading(true);
     setIsSearching(true);
@@ -1947,6 +394,7 @@ export default function MeteoIA() {
       const rawWeatherData = await weatherRes.json();
       const aqiData = await aqiRes.json();
       
+      // Utilitzem la funció normalitzadora externa
       const processedWeatherData = normalizeModelData(rawWeatherData);
 
       setWeatherData({ ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } });
@@ -2045,12 +493,14 @@ export default function MeteoIA() {
 
   const currentDewPoint = useMemo(() => {
     if(!weatherData || !weatherData.current) return 0;
+    // Utilitzem la funció importada
     return calculateDewPoint(weatherData.current.temperature_2m, weatherData.current.relative_humidity_2m);
   }, [weatherData]);
 
   useEffect(() => {
      if(weatherData && aqiData) {
          const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
+         // Utilitzem la funció de predicció externa
          const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang, effectiveWeatherCode);
          setAiAnalysis(analysis);
      }
@@ -2210,7 +660,6 @@ export default function MeteoIA() {
     const minSnowLevel = freezingLevels.length ? Math.min(...freezingLevels) : 0;
     const maxSnowLevel = freezingLevels.length ? Math.max(...freezingLevels) : 0;
 
-    // --- DEEP ANALYSIS DAILY COMPARISON TABLE ---
     const dailyModelComparison = useMemo(() => {
         if(!weatherData.dailyComparison) return null;
         
@@ -2262,7 +711,6 @@ export default function MeteoIA() {
 
           <div className="p-6 space-y-6">
             
-            {/* DAILY MODEL COMPARISON TABLE */}
             {dailyModelComparison && (
                <div className="bg-slate-950/50 rounded-2xl p-4 border border-indigo-500/20 shadow-inner">
                   <div className="flex items-center gap-2 mb-3 text-sm font-bold text-indigo-300 uppercase tracking-wider">
@@ -2274,7 +722,6 @@ export default function MeteoIA() {
                       <div className="text-slate-400 text-center font-medium">Min Temp</div>
                       <div className="text-slate-400 text-center font-medium">Prob. Pluja</div>
 
-                      {/* ECMWF */}
                       <div className="flex items-center gap-1.5 font-bold text-indigo-300">
                           <div className="w-2 h-2 rounded-full bg-indigo-500"></div> ECMWF
                       </div>
@@ -2282,7 +729,6 @@ export default function MeteoIA() {
                       <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.best.min}</div>
                       <div className="text-center text-blue-300 font-bold bg-blue-500/10 rounded py-1">{dailyModelComparison.best.rain}</div>
 
-                      {/* GFS */}
                       <div className="flex items-center gap-1.5 font-bold text-green-300">
                            <div className="w-2 h-2 rounded-full bg-green-500"></div> GFS
                       </div>
@@ -2290,7 +736,6 @@ export default function MeteoIA() {
                       <div className="text-center text-white font-bold bg-white/5 rounded py-1">{dailyModelComparison.gfs.min}</div>
                       <div className="text-center text-blue-300 font-bold bg-blue-500/10 rounded py-1">{dailyModelComparison.gfs.rain}</div>
 
-                      {/* ICON */}
                       <div className="flex items-center gap-1.5 font-bold text-amber-300">
                            <div className="w-2 h-2 rounded-full bg-amber-500"></div> ICON
                       </div>
@@ -2367,12 +812,11 @@ export default function MeteoIA() {
   };
 
   const currentBg = getRefinedBackground();
-
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
-
+  
+  // Utilitzem la funció externa per a la fase lunar
   const moonPhaseVal = getMoonPhase(new Date());
 
-  // --- REFACTOR: 7-DAY FORECAST SECTION (WITH MODEL DIVERGENCE INDICATOR) ---
   const sevenDayForecastSection = weatherData && (
     <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
       <h3 className="font-bold text-white mb-5 flex items-center gap-2">
@@ -2385,7 +829,6 @@ export default function MeteoIA() {
           const snowSum = weatherData.daily.snowfall_sum[i];
           const listMoonPhase = getMoonPhase(new Date(day));
           
-          // Check divergence for icon
           let divergence = false;
           if (weatherData.dailyComparison.gfs.temperature_2m_max && weatherData.dailyComparison.icon.temperature_2m_max) {
               const maxes = [
@@ -2462,10 +905,8 @@ export default function MeteoIA() {
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10">
         
-        {/* RESTRUCTURED HEADER BAR: Single fluid row for MD+ */}
         <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 backdrop-blur-md flex flex-col md:flex-row gap-4 items-center justify-between sticky top-2 z-50 shadow-xl">
           
-          {/* LOGO (Order 1) */}
           <div className="flex items-center gap-3 select-none w-full md:w-auto justify-between md:justify-start md:order-1">
              <div className="flex items-center gap-3">
                <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 animate-[pulse_4s_ease-in-out_infinite]">
@@ -2474,7 +915,6 @@ export default function MeteoIA() {
                <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
              </div>
              
-             {/* MOBILE UNIT/LANG TOGGLES (Keep for mobile layout) */}
              <div className="md:hidden flex gap-2">
                  <button 
                       onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
@@ -2492,7 +932,6 @@ export default function MeteoIA() {
              </div>
           </div>
 
-          {/* PC SEARCH INPUT + GEO BUTTON (Order 2) */}
           <div className="relative flex-1 md:w-80 hidden md:flex items-center gap-3 md:order-2" ref={searchRefPC}> 
              <div className="relative flex-1">
                <button 
@@ -2517,7 +956,6 @@ export default function MeteoIA() {
                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none placeholder-slate-500 transition-all shadow-inner touch-manipulation"
                />
                
-               {/* Suggestions List */}
                {showSuggestions && (
                  <div ref={suggestionsListRef} className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-2">
                    {query.length === 0 && favorites.length > 0 && (
@@ -2567,9 +1005,7 @@ export default function MeteoIA() {
              </button>
           </div>
 
-          {/* MODE SELECTOR + PC LANG/UNIT TOGGLES (Order 3) */}
           <div className="flex gap-3 w-full md:w-auto items-center md:order-3 justify-center md:justify-end">
-             {/* --- NOU SELECTOR DE VISTA (Mode Basic/Advanced) --- */}
              <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner w-full md:w-auto justify-center md:justify-start">
                <button
                  onClick={() => setViewMode('basic')}
@@ -2596,7 +1032,6 @@ export default function MeteoIA() {
                </button>
              </div>
 
-             {/* PC LANGUAGE TOGGLE (hidden md:flex) */}
              <button 
                 onClick={cycleLang}
                 className="hidden md:flex bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all w-12 h-12 items-center justify-center shrink-0 shadow-lg uppercase"
@@ -2605,7 +1040,6 @@ export default function MeteoIA() {
                <FlagIcon lang={lang} className="w-6 h-4 rounded shadow-sm" />
              </button>
 
-             {/* PC UNIT TOGGLE (hidden md:flex) */}
              <button 
                 onClick={() => setUnit(unit === 'C' ? 'F' : 'C')}
                 className="hidden md:flex bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all w-12 h-12 items-center justify-center shrink-0 shadow-lg"
@@ -2615,7 +1049,6 @@ export default function MeteoIA() {
              </button>
           </div>
           
-          {/* Mobile Search Bar Row (Always at the bottom on mobile, md:hidden) */}
            <div className="w-full md:hidden flex gap-2 md:order-4">
              <div className="relative flex-1" ref={searchRefMobile}> 
                <button 
@@ -2764,10 +1197,8 @@ export default function MeteoIA() {
 
                <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
                    
-                   {/* COLUMNA ESQUERRA: INFORMACIÓ PRINCIPAL AGRUPADA (NOU DISSENY) */}
                    <div className="flex flex-col gap-4 w-full lg:w-auto">
                        
-                       {/* HEADER: Ubicació i Hora */}
                        <div className="flex flex-col">
                            <div className="flex items-center gap-3">
                                 <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
@@ -2782,7 +1213,6 @@ export default function MeteoIA() {
                            </div>
                        </div>
 
-                       {/* COS PRINCIPAL: Temp + Icona (AL COSTAT) */}
                        <div className="flex items-center gap-6 mt-2">
                            <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
                                {getWeatherIcon(effectiveWeatherCode, "w-24 h-24 md:w-32 md:h-32", weatherData.current.is_day, currentRainProbability, weatherData.current.wind_speed_10m)}
@@ -2797,7 +1227,6 @@ export default function MeteoIA() {
                            </div>
                        </div>
 
-                       {/* DADES EXTRES: Min/Max/Sensació */}
                        <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">
                                 <span className="text-rose-300 flex items-center gap-1">↑ {formatTemp(weatherData.daily.temperature_2m_max[0])}°</span>
@@ -2810,7 +1239,6 @@ export default function MeteoIA() {
                        </div>
                    </div>
 
-                   {/* COLUMNA DRETA: Caixa IA (ADAPTADA) */}
                    <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center">
                      <div className="flex items-center justify-between mb-3">
                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
@@ -2855,7 +1283,6 @@ export default function MeteoIA() {
               <div className="animate-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   
-                  {/* COLUMNA ESQUERRA: WIDGETS */}
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 md:gap-4 auto-rows-fr">
                      <div className="col-span-1">
                        <CompassGauge 
@@ -2913,13 +1340,10 @@ export default function MeteoIA() {
                      </div>
                   </div>
 
-                  {/* COLUMNA DRETA: PREVISIÓ 7 DIES + GRÀFIQUES */}
                   <div className="lg:col-span-2 flex flex-col gap-6">
                       
-                      {/* 1. PREVISIÓ 7 DIES (ARA A SOBRE) */}
                       {sevenDayForecastSection}
 
-                      {/* 2. GRÀFIQUES */}
                       <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
                           <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
@@ -2954,7 +1378,6 @@ export default function MeteoIA() {
                  </div>
                </div>
 
-               {/* EN MODE BÀSIC LA LLISTA SURT AL FINAL */}
                {sevenDayForecastSection}
               </>
             )}

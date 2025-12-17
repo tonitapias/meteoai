@@ -1,0 +1,208 @@
+// src/utils/weatherLogic.js
+import { TRANSLATIONS } from '../constants/translations';
+
+// Calcula la data real segons la zona horària de la ciutat
+export const getShiftedDate = (baseDate, timezone) => {
+  const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezone });
+  return new Date(targetTimeStr);
+};
+
+// Fórmula de Magnus per al punt de rosada
+export const calculateDewPoint = (T, RH) => {
+  const a = 17.27;
+  const b = 237.7;
+  const safeRH = Math.max(RH, 1);
+  const alpha = ((a * T) / (b + T)) + Math.log(safeRH / 100.0);
+  return (b * alpha) / (a - alpha);
+};
+
+// Normalitza les dades de diferents models (ECMWF, GFS, ICON) per poder comparar-les
+export const normalizeModelData = (data) => {
+     const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
+     
+     // Current
+     Object.keys(data.current).forEach(key => {
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
+           result.current[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.current[key];
+        } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
+           result.current[key] = data.current[key];
+        }
+     });
+
+     // Daily
+     const dailyGfs = {};
+     const dailyIcon = {};
+
+     Object.keys(data.daily).forEach(key => {
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
+           result.daily[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.daily[key];
+        } 
+        else if (key.includes('_gfs_seamless')) {
+           const cleanKey = key.replace('_gfs_seamless', '');
+           dailyGfs[cleanKey] = data.daily[key];
+        }
+        else if (key.includes('_icon_seamless')) {
+           const cleanKey = key.replace('_icon_seamless', '');
+           dailyIcon[cleanKey] = data.daily[key];
+        }
+        else {
+           result.daily[key] = data.daily[key];
+        }
+     });
+
+     result.dailyComparison.gfs = dailyGfs;
+     result.dailyComparison.icon = dailyIcon;
+
+     // Hourly
+     const gfsHourly = [];
+     const iconHourly = [];
+     const len = data.hourly.time.length;
+     
+     for (let i = 0; i < len; i++) {
+        gfsHourly.push({});
+        iconHourly.push({});
+     }
+
+     Object.keys(data.hourly).forEach(key => {
+        const val = data.hourly[key];
+        
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
+           result.hourly[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = val;
+        } 
+        else if (['time', 'is_day', 'freezing_level_height', 'pressure_msl', 'cape'].includes(key)) {
+           result.hourly[key] = val;
+        }
+        else if (key.includes('_gfs_seamless')) {
+           const cleanKey = key.replace('_gfs_seamless', '');
+           val.forEach((v, i) => { if (gfsHourly[i]) gfsHourly[i][cleanKey] = v });
+        }
+        else if (key.includes('_icon_seamless')) {
+            const cleanKey = key.replace('_icon_seamless', '');
+            val.forEach((v, i) => { if (iconHourly[i]) iconHourly[i][cleanKey] = v });
+        }
+     });
+
+     result.hourlyComparison.gfs = gfsHourly;
+     result.hourlyComparison.icon = iconHourly;
+     
+     if (Object.keys(result.current).length === 0) return data;
+     
+     return { ...data, ...result };
+};
+
+// Genera el text predictiu basat en regles expertes
+export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null) => {
+    const tr = TRANSLATIONS[language];
+    const feelsLike = current.apparent_temperature;
+    const temp = current.temperature_2m;
+    const humidity = current.relative_humidity_2m;
+    const rainProb = daily.precipitation_probability_max[0];
+    const windSpeed = current.wind_speed_10m;
+    const code = forcedCode !== null ? forcedCode : current.weather_code;
+    const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
+    const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
+    const uvMax = daily.uv_index_max[0];
+    const isDay = current.is_day;
+    
+    const currentCape = hourly.cape ? hourly.cape[new Date().getHours()] || 0 : 0;
+    
+    let summaryParts = [];
+    let tips = [];
+    let alerts = []; 
+    let confidenceText = tr.aiConfidence;
+    let confidenceLevel = 'high';
+
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) summaryParts.push(tr.aiIntroMorning);
+    else if (hour >= 12 && hour < 19) summaryParts.push(tr.aiIntroAfternoon);
+    else if (hour >= 19 && hour < 22) summaryParts.push(tr.aiIntroEvening);
+    else summaryParts.push(tr.aiIntroNight);
+
+    if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
+    else if (code >= 71) summaryParts.push(tr.aiSummarySnow);
+    else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
+    else if (code <= 2) summaryParts.push(tr.aiSummaryClear);
+    else summaryParts.push(tr.aiSummaryCloudy);
+
+    const diff = feelsLike - temp;
+    if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
+    
+    if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
+    else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
+    else if (feelsLike >= 18 && feelsLike < 25) summaryParts.push(tr.aiTempMild);
+    else if (feelsLike >= 25 && feelsLike < 32) summaryParts.push(tr.aiTempWarm);
+    else if (feelsLike >= 32) summaryParts.push(tr.aiTempHot);
+
+    if (temp > 25 && humidity > 65) {
+       summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació real de ${Math.round(feelsLike)}°C. ` : language === 'es' ? `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. ` : "");
+    }
+
+    if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
+    else if (rainProb < 20 && code < 50) summaryParts.push(tr.aiRainNone);
+
+    if (code >= 95 || currentCape > 2000) {
+       alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
+    }
+    else if (code >= 71 && code <= 77 || code === 85 || code === 86) {
+       alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
+    }
+    else if (code === 65 || code === 82 || precipSum > 30) {
+       alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
+    }
+
+    if (windSpeed > 50) {
+      alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
+      tips.push(tr.tipWindbreaker);
+    } else if (windSpeed > 80) { 
+      alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
+    }
+    
+    if (temp < 0) {
+      alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' });
+      tips.push(tr.tipCoat, tr.tipThermal);
+    } else if (temp < 5) {
+      if(windSpeed > 15) tips.push(tr.tipCoat); 
+      tips.push(tr.tipLayers);
+    } 
+    
+    if (temp > 35) {
+       alerts.push({ type: tr.heat, msg: tr.alertHeatExtreme, level: 'high' });
+       tips.push(tr.tipHydration, tr.tipSunscreen);
+    } else if (temp > 30) {
+       alerts.push({ type: tr.heat, msg: tr.alertHeatHigh, level: 'warning' });
+       tips.push(tr.tipHydration);
+    }
+
+    if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
+    if (uvMax > 7 && isDay) {
+       if(uvMax >= 10) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' });
+       tips.push(tr.tipSunscreen);
+    }
+    if (aqiValue > 100) { 
+       alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
+    }
+
+    if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
+        confidenceLevel = 'medium';
+        confidenceText = tr.aiConfidenceMod;
+    }
+
+    if (tips.length === 0) tips.push(tr.tipCalm);
+    tips = [...new Set(tips)].slice(0, 4);
+
+    return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
+  };
+
+// Fase Lunar
+export const getMoonPhase = (date) => {
+  let year = date.getFullYear();
+  let month = date.getMonth() + 1;
+  let day = date.getDate();
+  if (month < 3) { year--; month += 12; }
+  const c = 365.25 * year;
+  const e = 30.6 * month;
+  const jd = c + e + day - 694039.09; 
+  let phase = jd / 29.5305882; 
+  phase -= Math.floor(phase); 
+  return phase; 
+};
