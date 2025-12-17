@@ -68,7 +68,7 @@ export const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "Previsió profesional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
+    subtitle: "Previsió professional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.", // CORREGIT: professional (ss)
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
     pollenTypes: {
@@ -99,7 +99,7 @@ export const TRANSLATIONS = {
     
     // AI Advanced Texts
     aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
-    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolació atmosfèrica. ",
+    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ", // CORREGIT: evolució
     aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
     aiIntroNight: "Bona nit. Previsió nocturna. ",
     
@@ -153,7 +153,7 @@ export const TRANSLATIONS = {
     heat: "Calor",
 
     tipHydration: "Beu aigua",
-    tipThermal: "Roba tèrmmica",
+    tipThermal: "Roba tèrmica", // CORREGIT: tèrmica (una m)
     tipWindbreaker: "Tallavents",
     tipMugginess: "Roba fresca",
     tipUmbrella: "Agafa paraigua",
@@ -166,9 +166,9 @@ export const TRANSLATIONS = {
       new: "Lluna Nova",
       waxingCrescent: "Creixent",
       firstQuarter: "Quart Creixent",
-      waxingGibbous: "Gibbosa Creixent",
+      waxingGibbous: "Gibosa Creixent", // CORREGIT: Gibosa (una b)
       full: "Lluna Plena",
-      waningGibbous: "Gibbosa Minvant",
+      waningGibbous: "Gibosa Minvant", // CORREGIT: Gibosa (una b)
       lastQuarter: "Quart Minvant",
       waningCrescent: "Minvant"
     },
@@ -673,7 +673,7 @@ export const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilitat (CAPE elevat) et orages.",
+    alertStorm: "Forte instabilité (CAPE élevé) et orages.", // CORREGIT: instabilité
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
@@ -692,7 +692,7 @@ export const TRANSLATIONS = {
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
     tipMugginess: "Lourd",
-    tipUmbrella: "Preneu parapluie",
+    tipUmbrella: "Prenez un parapluie", // CORREGIT: Prenez (no Preneu)
     tipSunscreen: "Écran solaire",
     tipCalm: "Profitez",
     tipCoat: "Manteau épais",
