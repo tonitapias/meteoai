@@ -104,7 +104,7 @@ export const TRANSLATIONS = {
     aiIntroNight: "Bona nit. Previsió nocturna. ",
     
     aiSummaryClear: "Estabilitat dominant. Cel serè i sense complicacions meteorològiques. ",
-    aiSummaryCloudy: "Pas de nuvolositat variable sense conseqüències destacables. ",
+    aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però possiblement humit. ",
     aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
     aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
@@ -120,7 +120,7 @@ export const TRANSLATIONS = {
     aiWindMod: "Vent moderat que accentua la sensació tèrmica. ",
     aiWindStrong: "Atenció a les ratxes de vent, situació potencialment perillosa. ",
     
-    aiRainNone: "Sense precipitacions a la vista en els models a curt termini. ",
+    aiRainNone: "No s'esperen pluges generals, tot i que la humitat podria deixar algun plugim dispers. ",
     aiRainExp: "Radar actiu: precipitació imminent detectada. ",
 
     wmo: {
@@ -283,7 +283,7 @@ export const TRANSLATIONS = {
     aiIntroNight: "Buenas noches. Previsión nocturna. ",
     
     aiSummaryClear: "Estabilidad dominante. Cielo despejado y sin complicaciones. ",
-    aiSummaryCloudy: "Paso de nubosidad variable sin consecuencias destacables. ",
+    aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero posiblemente húmedo. ",
     aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
     aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
     aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
@@ -298,7 +298,7 @@ export const TRANSLATIONS = {
     aiWindMod: "Viento moderado que acentúa la sensación térmica. ",
     aiWindStrong: "Atención a las rachas de viento, situación potencialmente peligrosa. ",
     
-    aiRainNone: "Sin precipitaciones a la vista en los modelos a corto plazo. ",
+    aiRainNone: "No se esperan lluvias generales, aunque la humedad podría dejar alguna llovizna dispersa. ",
     aiRainExp: "Radar activo: precipitación inminente detectada. ",
 
     wmo: {
@@ -462,7 +462,7 @@ export const TRANSLATIONS = {
     aiIntroNight: "Good night. Nocturnal forecast. ",
     
     aiSummaryClear: "Dominant stability. Clear skies and no meteorological complications. ",
-    aiSummaryCloudy: "Variable cloudiness with no notable consequences. ",
+    aiSummaryCloudy: "Variable cloudiness. Stable but potentially humid atmosphere. ",
     aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
     aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
     aiSummarySnow: "Fully winter configuration with expected snowfall. ",
@@ -477,7 +477,7 @@ export const TRANSLATIONS = {
     aiWindMod: "Moderate wind increasing wind chill factor. ",
     aiWindStrong: "Attention to wind gusts, potentially dangerous situation. ",
     
-    aiRainNone: "No precipitation in sight in short-term models. ",
+    aiRainNone: "No significant rain expected, though high humidity might cause scattered drizzle. ",
     aiRainExp: "Active radar: imminent precipitation detected. ",
 
     wmo: {
@@ -641,7 +641,7 @@ export const TRANSLATIONS = {
     aiIntroNight: "Bonne nuit. Prévisions nocturnes. ",
     
     aiSummaryClear: "Stabilité dominante. Ciel dégagé sans complications. ",
-    aiSummaryCloudy: "Passage nuageux variable sans conséquences notables. ",
+    aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais potentiellement humide. ",
     aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
     aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
     aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
@@ -656,7 +656,7 @@ export const TRANSLATIONS = {
     aiWindMod: "Vent modéré accentuant le ressenti thermique. ",
     aiWindStrong: "Attention aux rafales, situation potentiellement dangereuse. ",
     
-    aiRainNone: "Aucune précipitation en vue sur les modèles à court terme. ",
+    aiRainNone: "Pas de pluies importantes, mais l'humidité pourrait provoquer quelques bruines éparses. ",
     aiRainExp: "Radar actif : précipitation imminente détectée. ",
 
     wmo: {

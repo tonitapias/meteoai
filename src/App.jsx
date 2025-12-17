@@ -29,6 +29,33 @@ import {
   calculateReliability 
 } from './utils/weatherLogic';
 
+// --- COMPONENT PER ANIMAR ICONES (LIVING ICONS) ---
+const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
+  // Definim estils d'animació locals per no dependre de tailwind.config
+  const style = {
+    animation: windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
+               windSpeed > 15 ? 'wiggle 3s ease-in-out infinite' : 'none',
+    transformOrigin: 'bottom center',
+    filter: precip > 2 ? 'drop-shadow(0 0 10px rgba(255,255,255,0.5))' : ''
+  };
+
+  const precipStyle = precip > 2 ? { animation: 'pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {};
+
+  return (
+    <>
+      <style>{`
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(-3deg); }
+          50% { transform: rotate(3deg); }
+        }
+      `}</style>
+      <div style={{...style, ...precipStyle}} className="transition-all duration-1000">
+        {children}
+      </div>
+    </>
+  );
+};
+
 // --- APP PRINCIPAL ---
 export default function MeteoIA() {
   const [query, setQuery] = useState('');
@@ -134,18 +161,30 @@ export default function MeteoIA() {
     return "from-slate-900 to-indigo-950";
   };
   
+  // --- MILLORA 3: FONS ATMOSFÈRICS MÉS REALS ---
   const getRefinedBackground = () => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
-    const { is_day, weather_code } = weatherData.current;
+    const { is_day, weather_code, cloud_cover } = weatherData.current;
     
+    // Dies molt grisos o boira
+    if (weather_code === 45 || weather_code === 48) return "from-slate-600 via-slate-500 to-stone-400";
+    if (cloud_cover > 95 && is_day && weather_code < 50) return "from-slate-500 via-slate-400 to-slate-300"; 
+
     if (weatherData.daily && weatherData.daily.sunrise && weatherData.daily.sunset) {
         const sunrise = new Date(weatherData.daily.sunrise[0]).getTime();
         const sunset = new Date(weatherData.daily.sunset[0]).getTime();
         const nowMs = shiftedNow.getTime(); 
         
-        const hourMs = 45 * 60 * 1000;
-        if (Math.abs(nowMs - sunrise) < hourMs) return "from-indigo-900 via-purple-800 to-orange-400"; 
-        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-900 via-purple-900 to-orange-500"; 
+        const hourMs = 60 * 60 * 1000;
+        const twilightMs = 30 * 60 * 1000;
+
+        // SORTIDA SOL
+        if (Math.abs(nowMs - sunrise) < twilightMs) return "from-indigo-900 via-rose-800 to-amber-400"; 
+        if (Math.abs(nowMs - sunrise) < hourMs) return "from-blue-600 via-indigo-400 to-sky-200"; 
+
+        // POSTA SOL
+        if (Math.abs(nowMs - sunset) < twilightMs) return "from-indigo-950 via-purple-900 to-orange-500"; 
+        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-800 via-orange-700 to-yellow-500"; 
     }
     
     return getDynamicBackground(weather_code, is_day);
@@ -266,7 +305,6 @@ export default function MeteoIA() {
       const rawWeatherData = await weatherRes.json();
       const aqiData = await aqiRes.json();
       
-      // Utilitzem la funció normalitzadora externa
       const processedWeatherData = normalizeModelData(rawWeatherData);
 
       setWeatherData({ ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } });
@@ -298,35 +336,28 @@ export default function MeteoIA() {
     return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
   }, [weatherData, shiftedNow]);
 
+  // --- MILLORA 2: CÀLCUL DEL CODI METEO MÉS AGRESSIU (Real-Time) ---
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
     const currentCode = weatherData.current.weather_code;
+    const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 ? Math.max(...minutelyPreciseData.slice(0, 2)) : 0;
     const currentPrecip = weatherData.current.precipitation;
+    const cloudCover = weatherData.current.cloud_cover;
+    const windSpeed = weatherData.current.wind_speed_10m;
     
-    const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 ? minutelyPreciseData[0] : 0;
-    
-    let hourlyRainProb = 0;
-    let hourlyPrecip = 0;
-    const nowMs = shiftedNow.getTime();
-    
-    const hourIdx = weatherData.hourly.time.findIndex(t => {
-        const tMs = new Date(t).getTime();
-        return tMs <= nowMs && (tMs + 3600000) > nowMs;
-    });
-
-    if (hourIdx !== -1) {
-        hourlyRainProb = weatherData.hourly.precipitation_probability[hourIdx] || 0;
-        hourlyPrecip = weatherData.hourly.precipitation[hourIdx] || 0;
+    // Prioritat Pluja Real
+    if (currentPrecip > 0.1 || immediateRain > 0.2) {
+        if (currentPrecip > 2 || immediateRain > 2) return 65; // Pluja forta
+        if (weatherData.current.temperature_2m < 1) return 71; // Neu probable
+        return 61; // Pluja
     }
 
-    const hasRainData = currentPrecip > 0 || immediateRain > 0 || hourlyPrecip > 0.1;
-    const highRainRisk = hourlyRainProb >= 45; 
+    // Vent molt fort amb núvols -> Amenaçador (Code 3)
+    if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
 
-    if ((hasRainData || highRainRisk) && currentCode < 50) {
-        if (hourlyPrecip > 2 || immediateRain > 1) return 63; 
-        return 61; 
-    }
+    // Boira espessa (Humitat alta + sense sol)
+    if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
     
     return currentCode;
   }, [weatherData, minutelyPreciseData, shiftedNow]);
@@ -365,14 +396,12 @@ export default function MeteoIA() {
 
   const currentDewPoint = useMemo(() => {
     if(!weatherData || !weatherData.current) return 0;
-    // Utilitzem la funció importada
     return calculateDewPoint(weatherData.current.temperature_2m, weatherData.current.relative_humidity_2m);
   }, [weatherData]);
 
   useEffect(() => {
      if(weatherData && aqiData) {
          const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
-         // Utilitzem la funció de predicció externa
          const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang, effectiveWeatherCode);
          setAiAnalysis(analysis);
      }
@@ -481,7 +510,6 @@ export default function MeteoIA() {
    const currentBg = getRefinedBackground();
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
   
-  // Utilitzem la funció externa per a la fase lunar
   const moonPhaseVal = getMoonPhase(new Date());
 
   const sevenDayForecastSection = weatherData && (
@@ -566,7 +594,6 @@ export default function MeteoIA() {
     </div>
   );
 
-// --- Càlcul de Fiabilitat ---
   const reliability = useMemo(() => {
     if (!weatherData || !weatherData.daily || !weatherData.dailyComparison) return null;
     return calculateReliability(
@@ -891,19 +918,44 @@ export default function MeteoIA() {
                            </div>
                        </div>
 
+                       {/* --- BLOC SENCER DE LA CAPÇALERA (Icona + Temperatura) --- */}
                        <div className="flex items-center gap-6 mt-2">
+                           {/* Icona Animada */}
                            <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
-                               {getWeatherIcon(effectiveWeatherCode, "w-24 h-24 md:w-32 md:h-32", weatherData.current.is_day, currentRainProbability, weatherData.current.wind_speed_10m)}
+                               <LivingIcon 
+                                  code={effectiveWeatherCode} 
+                                  isDay={weatherData.current.is_day}
+                                  rainProb={currentRainProbability}
+                                  windSpeed={weatherData.current.wind_speed_10m}
+                                  precip={weatherData.current.precipitation}
+                               >
+                                  {getWeatherIcon(
+                                     effectiveWeatherCode, 
+                                     "w-24 h-24 md:w-32 md:h-32", 
+                                     weatherData.current.is_day, 
+                                     currentRainProbability, 
+                                     weatherData.current.wind_speed_10m, 
+                                     weatherData.current.relative_humidity_2m
+                                  )}
+                               </LivingIcon>
                            </div>
+
+                           {/* Temperatura i Text */}
                            <div className="flex flex-col justify-center">
                                 <span className="text-8xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                                   {effectiveWeatherCode === 0 ? t.clear : isSnowCode(effectiveWeatherCode) ? t.snow : (effectiveWeatherCode < 4) ? t.cloudy : t.rainy}
+                                   {
+                                      effectiveWeatherCode === 0 ? t.clear : 
+                                      isSnowCode(effectiveWeatherCode) ? t.snow : 
+                                      (effectiveWeatherCode < 4) ? t.cloudy : 
+                                      (weatherData.current.relative_humidity_2m >= 97) ? "Boira / Plugim" : t.rainy
+                                   }
                                 </span>
                            </div>
                        </div>
+                       {/* --- FI DEL BLOC --- */}
 
                        <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">
@@ -939,7 +991,6 @@ export default function MeteoIA() {
 
                   <TypewriterText text={aiAnalysis.text} />
                           
-                          {/* Llista de consells (Tips) */}
                           <div className="flex flex-wrap gap-2 mt-3 mb-4">
                             {aiAnalysis.tips.map((tip, i) => (
                               <span key={i} className="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-100 rounded-lg border border-indigo-500/20 flex items-center gap-1.5 shadow-sm animate-in zoom-in duration-500" style={{animationDelay: `${i*150}ms`}}>
@@ -949,7 +1000,6 @@ export default function MeteoIA() {
                             ))}
                           </div>
 
-                          {/* --- SEMÀFOR DE FIABILITAT --- */}
                           {reliability && (
                             <div className={`p-3 rounded-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700 ${
                               reliability.level === 'high' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' :
@@ -970,7 +1020,6 @@ export default function MeteoIA() {
                                   {t.rel_title}
                                 </span>
                                 <span className="text-xs font-medium leading-tight">
-                                  {/* Aquí és on fem la màgia de la traducció: */}
                                   {reliability.type === 'ok' && t.rel_high}
                                   {reliability.type === 'general' && t.rel_medium}
                                   {reliability.type === 'rain' && t.rel_low_rain.replace('{diff}', reliability.value)}
@@ -1081,7 +1130,7 @@ export default function MeteoIA() {
                     {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
                        <div key={i} className="flex flex-col items-center min-w-[3rem]">
                           <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                          <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind)}</div>
+                          <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity)}</div>
                           <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                           <div className="flex flex-col items-center mt-1 h-6 justify-start">
                              {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
