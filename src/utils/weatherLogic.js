@@ -206,3 +206,47 @@ export const getMoonPhase = (date) => {
   phase -= Math.floor(phase); 
   return phase; 
 };
+/**
+ * Calcula la fiabilitat de la predicció comparant 3 models (Best, GFS, ICON).
+ * Retorna un objecte amb el nivell de fiabilitat i un missatge explicatiu.
+ */
+export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 0) => {
+  // Si falten dades, no podem jutjar
+  if (!dailyGFS || !dailyICON || !dailyBest) return null;
+
+  // 1. Extraiem les temperatures màximes d'aquell dia
+  const t1 = dailyBest.temperature_2m_max[dayIndex];
+  const t2 = dailyGFS.temperature_2m_max[dayIndex];
+  const t3 = dailyICON.temperature_2m_max[dayIndex];
+
+  // 2. Extraiem la probabilitat de pluja (si existeix, sinó assumim 0 per no trencar-ho)
+  const getRain = (source) => source?.precipitation_probability_max?.[dayIndex] ?? 0;
+  const r1 = getRain(dailyBest);
+  const r2 = getRain(dailyGFS);
+  const r3 = getRain(dailyICON);
+
+  // 3. Calculem la divergència (Diferència entre el valor més alt i el més baix)
+  const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null);
+  const rains = [r1, r2, r3];
+
+  const diffTemp = Math.max(...temps) - Math.min(...temps);
+  const diffRain = Math.max(...rains) - Math.min(...rains);
+
+  // 4. Lògica del Semàfor
+  let level = 'high'; // high (verd), medium (groc), low (vermell)
+  let message = 'Models coincidents. Predicció fiable.';
+
+  // CAS: Fiabilitat BAIXA (Molta discrepància)
+  if (diffTemp >= 4 || diffRain >= 40) {
+    level = 'low';
+    if (diffRain >= 40) message = `⚠️ Incertesa alta: Un model preveu pluja (${Math.max(...rains)}%) i un altre no (${Math.min(...rains)}%).`;
+    else message = `⚠️ Incertesa tèrmica: Els models varien en ${diffTemp.toFixed(1)}ºC.`;
+  } 
+  // CAS: Fiabilitat MITJANA
+  else if (diffTemp >= 2.5 || diffRain >= 25) {
+    level = 'medium';
+    message = 'Hi ha certa discrepància entre els models meteorològics.';
+  }
+
+  return { level, message, diffTemp, diffRain };
+};
