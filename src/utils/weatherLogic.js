@@ -138,7 +138,11 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     }
 
     if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
-    else if (rainProb < 20 && code < 50) summaryParts.push(tr.aiRainNone);
+    else if (rainProb < 20 && code < 50) {
+       // --- NOVA LÒGICA (Vic vs La Molina) ---
+       if (humidity >= 90) summaryParts.push(tr.aiRainHumid);
+       else summaryParts.push(tr.aiRainNone);
+    }
 
     if (code >= 95 || currentCape > 2000) {
        alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
@@ -207,39 +211,28 @@ export const getMoonPhase = (date) => {
   return phase; 
 };
 
-/**
- * Calcula la fiabilitat de la predicció comparant 3 models (Best, GFS, ICON).
- * Retorna dades per ser traduïdes a la UI (sense text hardcoded).
- * Retorna: { level: 'high'|'medium'|'low', type: 'ok'|'general'|'rain'|'temp', value: number }
- */
 export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 0) => {
-  // Si falten dades, no podem jutjar
   if (!dailyGFS || !dailyICON || !dailyBest) return null;
 
-  // 1. Extraiem les temperatures màximes d'aquell dia
   const t1 = dailyBest.temperature_2m_max[dayIndex];
   const t2 = dailyGFS.temperature_2m_max[dayIndex];
   const t3 = dailyICON.temperature_2m_max[dayIndex];
 
-  // 2. Extraiem la probabilitat de pluja (si existeix, sinó assumim 0 per no trencar-ho)
   const getRain = (source) => source?.precipitation_probability_max?.[dayIndex] ?? 0;
   const r1 = getRain(dailyBest);
   const r2 = getRain(dailyGFS);
   const r3 = getRain(dailyICON);
 
-  // 3. Calculem la divergència
   const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null);
   const rains = [r1, r2, r3];
 
   const diffTemp = Math.max(...temps) - Math.min(...temps);
   const diffRain = Math.max(...rains) - Math.min(...rains);
 
-  // 4. Lògica del Semàfor (Retornem TIPUS, no Missatge)
   let level = 'high';
   let type = 'ok';
   let value = 0;
 
-  // CAS: Fiabilitat BAIXA
   if (diffTemp >= 4 || diffRain >= 40) {
     level = 'low';
     if (diffRain >= 40) {
@@ -250,7 +243,6 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
       value = diffTemp.toFixed(1);
     }
   } 
-  // CAS: Fiabilitat MITJANA
   else if (diffTemp >= 2.5 || diffRain >= 25) {
     level = 'medium';
     type = 'general';

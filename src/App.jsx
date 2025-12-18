@@ -946,13 +946,15 @@ export default function MeteoIA() {
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                                   {
-                                      effectiveWeatherCode === 0 ? t.clear : 
-                                      isSnowCode(effectiveWeatherCode) ? t.snow : 
-                                      (effectiveWeatherCode < 4) ? t.cloudy : 
-                                      (weatherData.current.relative_humidity_2m >= 97) ? "Boira / Plugim" : t.rainy
-                                   }
-                                </span>
+   {
+      effectiveWeatherCode === 0 ? t.clear : 
+      isSnowCode(effectiveWeatherCode) ? t.snow : 
+      (effectiveWeatherCode < 4) ? t.cloudy : 
+      (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? "Boira" : 
+      (weatherData.current.relative_humidity_2m >= 95) ? "Boira / Plugim" : 
+      t.rainy
+   }
+</span>
                            </div>
                        </div>
                        {/* --- FI DEL BLOC --- */}

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 
 // --- COMPONENTS INTERNS (Helpers) ---
+
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
@@ -64,22 +65,20 @@ export const WeatherParticles = ({ code }) => {
   );
 };
 
-// 1. AFEGIT PARÀMETRE 'humidity' AL FINAL (valor per defecte 0 per no trencar res)
+// --- CORRECCIÓ APLICADA AQUÍ BAIX ---
+// 1. Afegim 'humidity' als paràmetres (amb valor per defecte 0)
 export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0) => {
     const commonProps = {
       strokeWidth: 2, 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // --- NOVA REGLA: EXCEPCIÓ VIC / BOIRA HUMIDA ---
-    // Codis de plugim (51,53,55), plugim gelat (56,57), pluja feble (61) o ruixats febles (80)
-    // SI la humitat és >= 97%, mostrem BOIRA en comptes de pluja.
+    // 2. NOVA REGLA: Si plou poc però la humitat és extrema (>=95%), mostrem BOIRA
     const drizzleCodes = [51, 53, 55, 56, 57, 61, 80];
-    
-    if (drizzleCodes.includes(code) && humidity >= 97) {
+    if (drizzleCodes.includes(code) && humidity >= 95) {
        return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     }
-    // -----------------------------------------------
+    // -----------------------------------------------------------------------
 
     if (rainProb > 50 && code < 50) {
        return <VariableRainIcon isDay={isDay} {...commonProps} />;

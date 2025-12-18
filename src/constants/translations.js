@@ -68,7 +68,7 @@ export const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "Previsió professional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.", // CORREGIT: professional (ss)
+    subtitle: "Previsió professional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
     pollenTypes: {
@@ -99,7 +99,7 @@ export const TRANSLATIONS = {
     
     // AI Advanced Texts
     aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
-    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ", // CORREGIT: evolució
+    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ",
     aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
     aiIntroNight: "Bona nit. Previsió nocturna. ",
     
@@ -109,7 +109,6 @@ export const TRANSLATIONS = {
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
     aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
-    // Noves claus de temperatura més naturals
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
     aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
     aiTempMild: "Temperatures suaus i agradables, sense extrems. ",
@@ -120,7 +119,9 @@ export const TRANSLATIONS = {
     aiWindMod: "Vent moderat que accentua la sensació tèrmica. ",
     aiWindStrong: "Atenció a les ratxes de vent, situació potencialment perillosa. ",
     
-    aiRainNone: "No s'esperen pluges generals, tot i que la humitat podria deixar algun plugim dispers. ",
+    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
+    aiRainNone: "No s'esperen precipitacions. Gaudiu de l'estabilitat atmosfèrica. ",
+    aiRainHumid: "No s'esperen pluges generals, tot i que la humitat podria deixar algun plugim dispers. ",
     aiRainExp: "Radar actiu: precipitació imminent detectada. ",
 
     wmo: {
@@ -153,7 +154,7 @@ export const TRANSLATIONS = {
     heat: "Calor",
 
     tipHydration: "Beu aigua",
-    tipThermal: "Roba tèrmica", // CORREGIT: tèrmica (una m)
+    tipThermal: "Roba tèrmica",
     tipWindbreaker: "Tallavents",
     tipMugginess: "Roba fresca",
     tipUmbrella: "Agafa paraigua",
@@ -166,14 +167,13 @@ export const TRANSLATIONS = {
       new: "Lluna Nova",
       waxingCrescent: "Creixent",
       firstQuarter: "Quart Creixent",
-      waxingGibbous: "Gibosa Creixent", // CORREGIT: Gibosa (una b)
+      waxingGibbous: "Gibosa Creixent",
       full: "Lluna Plena",
-      waningGibbous: "Gibosa Minvant", // CORREGIT: Gibosa (una b)
+      waningGibbous: "Gibosa Minvant",
       lastQuarter: "Quart Minvant",
       waningCrescent: "Minvant"
     },
 
-    // --- NOVES CLAUS DE FIABILITAT ---
     rel_title: "FIABILITAT DE LA PREVISIÓ",
     rel_high: "Models coincidents. Predicció molt fiable.",
     rel_medium: "Hi ha certa discrepància entre els models.",
@@ -270,7 +270,6 @@ export const TRANSLATIONS = {
     modelCompareTitle: "Comparativa Modelos (Diario)",
     divergence: "Divergencia",
     
-    // Dew Point Levels
     dpDry: "Seco / Agradable",
     dpComfortable: "Confortable",
     dpHumid: "Bochornoso",
@@ -298,7 +297,9 @@ export const TRANSLATIONS = {
     aiWindMod: "Viento moderado que acentúa la sensación térmica. ",
     aiWindStrong: "Atención a las rachas de viento, situación potencialmente peligrosa. ",
     
-    aiRainNone: "No se esperan lluvias generales, aunque la humedad podría dejar alguna llovizna dispersa. ",
+    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
+    aiRainNone: "No se esperan precipitaciones. Disfrutad de la estabilidad atmosférica. ",
+    aiRainHumid: "No se esperan lluvias generales, aunque la humedad podría dejar alguna llovizna dispersa. ",
     aiRainExp: "Radar activo: precipitación inminente detectada. ",
 
     wmo: {
@@ -316,7 +317,7 @@ export const TRANSLATIONS = {
     },
     
     alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
-    alertSnow: "Precaución: Nieve acumulada prevista.",
+    alertSnow: "Precaució: Neu acumulada prevista.", // CORREGIT: Nieve
     alertWindExtreme: "Viento huracanado. Peligro exterior.",
     alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
     alertHeatExtreme: "Calor extremo. Evita el sol.",
@@ -351,7 +352,6 @@ export const TRANSLATIONS = {
       waningCrescent: "Menguante"
     },
 
-    // --- NOVES CLAUS DE FIABILITAT ---
     rel_title: "FIABILIDAD DE LA PREVISIÓN",
     rel_high: "Modelos coincidentes. Predicción muy fiable.",
     rel_medium: "Existe cierta discrepancia entre los modelos.",
@@ -449,7 +449,6 @@ export const TRANSLATIONS = {
     modelCompareTitle: "Daily Model Comparison",
     divergence: "Divergence",
     
-    // Dew Point Levels
     dpDry: "Dry / Comfortable",
     dpComfortable: "Comfortable",
     dpHumid: "Muggy",
@@ -477,7 +476,9 @@ export const TRANSLATIONS = {
     aiWindMod: "Moderate wind increasing wind chill factor. ",
     aiWindStrong: "Attention to wind gusts, potentially dangerous situation. ",
     
-    aiRainNone: "No significant rain expected, though high humidity might cause scattered drizzle. ",
+    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
+    aiRainNone: "No rain expected. Enjoy the stable weather. ",
+    aiRainHumid: "No significant rain expected, though high humidity might cause scattered drizzle. ",
     aiRainExp: "Active radar: imminent precipitation detected. ",
 
     wmo: {
@@ -530,7 +531,6 @@ export const TRANSLATIONS = {
       waningCrescent: "Waning Crescent"
     },
 
-    // --- NOVES CLAUS DE FIABILITAT ---
     rel_title: "FORECAST RELIABILITY",
     rel_high: "Models align. Highly reliable forecast.",
     rel_medium: "There is some discrepancy between models.",
@@ -628,7 +628,6 @@ export const TRANSLATIONS = {
     modelCompareTitle: "Comparaison Modèles (Quotidien)",
     divergence: "Divergence",
     
-    // Dew Point Levels
     dpDry: "Sec / Agréable",
     dpComfortable: "Confortable",
     dpHumid: "Lourd",
@@ -656,7 +655,9 @@ export const TRANSLATIONS = {
     aiWindMod: "Vent modéré accentuant le ressenti thermique. ",
     aiWindStrong: "Attention aux rafales, situation potentiellement dangereuse. ",
     
-    aiRainNone: "Pas de pluies importantes, mais l'humidité pourrait provoquer quelques bruines éparses. ",
+    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
+    aiRainNone: "Pas de précipitations prévues. Profitez de la stabilité atmosphérique. ",
+    aiRainHumid: "Pas de pluies importantes, mais l'humidité pourrait provoquer quelques bruines éparses. ",
     aiRainExp: "Radar actif : précipitation imminente détectée. ",
 
     wmo: {
@@ -673,7 +674,7 @@ export const TRANSLATIONS = {
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
 
-    alertStorm: "Forte instabilité (CAPE élevé) et orages.", // CORREGIT: instabilité
+    alertStorm: "Forte instabilité (CAPE élevé) et orages.",
     alertSnow: "Attention : Neige accumulée prévue.",
     alertWindExtreme: "Vent d'ouragan. Danger extrême.",
     alertWindHigh: "Rafales fortes. Attention aux objets.",
@@ -692,7 +693,7 @@ export const TRANSLATIONS = {
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
     tipMugginess: "Lourd",
-    tipUmbrella: "Prenez un parapluie", // CORREGIT: Prenez (no Preneu)
+    tipUmbrella: "Prenez un parapluie",
     tipSunscreen: "Écran solaire",
     tipCalm: "Profitez",
     tipCoat: "Manteau épais",
@@ -709,7 +710,6 @@ export const TRANSLATIONS = {
       waningCrescent: "Dernier Croissant"
     },
 
-    // --- NOVES CLAUS DE FIABILITAT ---
     rel_title: "FIABILITÉ DES PRÉVISIONS",
     rel_high: "Modèles concordants. Prévision très fiable.",
     rel_medium: "Il y a une certaine divergence entre les modèles.",
