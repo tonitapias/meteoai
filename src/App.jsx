@@ -31,7 +31,6 @@ import {
 
 // --- COMPONENT PER ANIMAR ICONES (LIVING ICONS) ---
 const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
-  // Definim estils d'animació locals per no dependre de tailwind.config
   const style = {
     animation: windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
                windSpeed > 15 ? 'wiggle 3s ease-in-out infinite' : 'none',
@@ -161,12 +160,10 @@ export default function MeteoIA() {
     return "from-slate-900 to-indigo-950";
   };
   
-  // --- MILLORA 3: FONS ATMOSFÈRICS MÉS REALS ---
   const getRefinedBackground = () => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
     const { is_day, weather_code, cloud_cover } = weatherData.current;
     
-    // Dies molt grisos o boira
     if (weather_code === 45 || weather_code === 48) return "from-slate-600 via-slate-500 to-stone-400";
     if (cloud_cover > 95 && is_day && weather_code < 50) return "from-slate-500 via-slate-400 to-slate-300"; 
 
@@ -178,11 +175,9 @@ export default function MeteoIA() {
         const hourMs = 60 * 60 * 1000;
         const twilightMs = 30 * 60 * 1000;
 
-        // SORTIDA SOL
         if (Math.abs(nowMs - sunrise) < twilightMs) return "from-indigo-900 via-rose-800 to-amber-400"; 
         if (Math.abs(nowMs - sunrise) < hourMs) return "from-blue-600 via-indigo-400 to-sky-200"; 
 
-        // POSTA SOL
         if (Math.abs(nowMs - sunset) < twilightMs) return "from-indigo-950 via-purple-900 to-orange-500"; 
         if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-800 via-orange-700 to-yellow-500"; 
     }
@@ -294,7 +289,8 @@ export default function MeteoIA() {
     setShowSuggestions(false);
     
     try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code`;
+      // --- MODIFICACIÓ: Afegit &forecast_days=8 per tenir un dia extra ---
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
@@ -336,7 +332,6 @@ export default function MeteoIA() {
     return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
   }, [weatherData, shiftedNow]);
 
-  // --- MILLORA 2: CÀLCUL DEL CODI METEO MÉS AGRESSIU (Real-Time) ---
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
@@ -346,17 +341,13 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
-    // Prioritat Pluja Real
     if (currentPrecip > 0.1 || immediateRain > 0.2) {
-        if (currentPrecip > 2 || immediateRain > 2) return 65; // Pluja forta
-        if (weatherData.current.temperature_2m < 1) return 71; // Neu probable
-        return 61; // Pluja
+        if (currentPrecip > 2 || immediateRain > 2) return 65; 
+        if (weatherData.current.temperature_2m < 1) return 71; 
+        return 61; 
     }
 
-    // Vent molt fort amb núvols -> Amenaçador (Code 3)
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
-
-    // Boira espessa (Humitat alta + sense sol)
     if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
     
     return currentCode;
@@ -518,21 +509,31 @@ export default function MeteoIA() {
         <Calendar className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.forecast7days}
       </h3>
       <div className="space-y-2">
-        {weatherData.daily.time.map((day, i) => {
-          const isDaySnow = isSnowCode(weatherData.daily.weather_code[i]);
+        {/* --- MODIFICACIÓ: slice(1) per saltar avui --- */}
+        {weatherData.daily.time.slice(1).map((day, idx) => {
+          const i = idx + 1; // Ajustem l'índex per agafar la dada correcta
+
+          // Ja no cal lògica especial per "Avui"
+          const displayCode = weatherData.daily.weather_code[i];
           const precipSum = weatherData.daily.precipitation_sum[i];
+          const rainProb = weatherData.daily.precipitation_probability_max[i];
+          const displayIsDay = 1; 
+
           const snowSum = weatherData.daily.snowfall_sum[i];
+          const isDaySnow = isSnowCode(displayCode);
           const listMoonPhase = getMoonPhase(new Date(day));
           
           let divergence = false;
           if (weatherData.dailyComparison.gfs.temperature_2m_max && weatherData.dailyComparison.icon.temperature_2m_max) {
-              const maxes = [
-                  weatherData.daily.temperature_2m_max[i], 
-                  weatherData.dailyComparison.gfs.temperature_2m_max[i], 
-                  weatherData.dailyComparison.icon.temperature_2m_max[i]
-              ];
-              const maxDiff = Math.max(...maxes) - Math.min(...maxes);
-              if (maxDiff > 3) divergence = true;
+              if(weatherData.dailyComparison.gfs.temperature_2m_max[i] !== undefined) {
+                  const maxes = [
+                      weatherData.daily.temperature_2m_max[i], 
+                      weatherData.dailyComparison.gfs.temperature_2m_max[i], 
+                      weatherData.dailyComparison.icon.temperature_2m_max[i]
+                  ];
+                  const maxDiff = Math.max(...maxes) - Math.min(...maxes);
+                  if (maxDiff > 3) divergence = true;
+              }
           }
 
           return (
@@ -542,7 +543,7 @@ export default function MeteoIA() {
               className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group touch-manipulation active:bg-white/10"
             >
               <div className="w-16 text-left flex flex-col items-start">
-                  <span className="font-bold text-slate-200 capitalize">{i === 0 ? t.today : formatDate(day, { weekday: 'short' })}</span>
+                  <span className="font-bold text-slate-200 capitalize">{formatDate(day, { weekday: 'short' })}</span>
                   {divergence && (
                       <span className="text-[9px] text-amber-400 flex items-center gap-0.5 mt-0.5 bg-amber-500/10 px-1 rounded" title={t.aiConfidenceMod}>
                           <GitGraph className="w-2.5 h-2.5" /> Diff
@@ -556,13 +557,13 @@ export default function MeteoIA() {
 
               <div className="flex items-center gap-3 w-32 md:w-36">
                   <div className="group-hover:scale-110 transition-transform filter drop-shadow-md">
-                      {getWeatherIcon(weatherData.daily.weather_code[i], "w-8 h-8", 1, weatherData.daily.precipitation_probability_max[i])}
+                      {getWeatherIcon(displayCode, "w-8 h-8", displayIsDay, rainProb)}
                   </div>
                   <div className="flex flex-col items-start">
-                    {weatherData.daily.precipitation_probability_max[i] > 10 && (
+                    {rainProb > 10 && (
                       <span className={`text-xs flex items-center font-bold gap-0.5 ${isDaySnow ? 'text-cyan-200' : 'text-blue-300'}`}>
                         <Umbrella className="w-3 h-3" strokeWidth={2.5}/>
-                        {weatherData.daily.precipitation_probability_max[i]}%
+                        {rainProb}%
                       </span>
                     )}
                     {snowSum > 0 ? (
@@ -950,7 +951,7 @@ export default function MeteoIA() {
       effectiveWeatherCode === 0 ? t.clear : 
       (effectiveWeatherCode === 1 || effectiveWeatherCode === 2) ? (weatherData.current.is_day ? t.partlyCloudy : t.partlyCloudyNight) : 
       isSnowCode(effectiveWeatherCode) ? t.snow : 
-      (effectiveWeatherCode === 3) ? t.cloudy : // Només el 3 és "Ennuvolat/Cobert"
+      (effectiveWeatherCode === 3) ? t.aiSummaryOvercast?.split('.')[0] || t.cloudy : // Intentem agafar "Cel Cobert" si existeix
       (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? "Boira" : 
       (weatherData.current.relative_humidity_2m >= 95) ? "Boira / Plugim" : 
       t.rainy
