@@ -69,7 +69,8 @@ export const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    subtitle: "Previsió professional multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
+    // MODIFICAT: Eliminada la paraula "professional"
+    subtitle: "Previsió multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
     pollenTypes: {
@@ -111,7 +112,8 @@ export const TRANSLATIONS = {
     aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini absolut dels núvols. ",
     aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
-    aiSummarySnow: "Configuració plenamente hivernal amb nevades previstes. ",
+    // CORREGIT: "plenamente" -> "plenament"
+    aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
     aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
@@ -120,7 +122,6 @@ export const TRANSLATIONS = {
     aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
     aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
     
-    // NOVA CLAU PER A XAFOGOR
     aiHeatIndex: "Xafogor acusada, sensació real de {temp}°C. ",
     
     aiWindLight: "Flux feble, situació tranquil·la. ",
@@ -260,7 +261,8 @@ export const TRANSLATIONS = {
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
     alertWarning: "AVISO PRECAUCIÓN",
-    subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
+    // MODIFICAT: Eliminada "profesional"
+    subtitle: "Previsión multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
     pollenTypes: {
@@ -309,7 +311,6 @@ export const TRANSLATIONS = {
     aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
     aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
     
-    // NOVA CLAU PER A XAFOGOR
     aiHeatIndex: "Bochorno notable, sensación de {temp}°C. ",
     
     aiWindLight: "Flujo débil, situación tranquila. ",
@@ -449,7 +450,8 @@ export const TRANSLATIONS = {
     uvExtreme: "Extreme",
     alertDanger: "DANGER ALERT",
     alertWarning: "WARNING NOTICE",
-    subtitle: "Professional multi-model forecast with instability analysis (CAPE) and Dew Point.",
+    // MODIFICAT: Eliminada "Professional"
+    subtitle: "Multi-model forecast with instability analysis (CAPE) and Dew Point.",
     aqiLevels: ["Excellent", "Good", "Fair", "Moderate", "Poor", "Very Poor"],
     pollen: "Pollen Levels",
     pollenTypes: {
@@ -498,7 +500,6 @@ export const TRANSLATIONS = {
     aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
     aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
     
-    // NOVA CLAU PER A XAFOGOR
     aiHeatIndex: "Significant humidity, feels like {temp}°C. ",
     
     aiWindLight: "Weak flow, calm situation. ",
@@ -638,7 +639,8 @@ export const TRANSLATIONS = {
     uvExtreme: "Extrême",
     alertDanger: "ALERTE DANGER",
     alertWarning: "AVIS PRUDENCE",
-    subtitle: "Prévision professionnelle multi-modèle avec analyse d'instabilité (CAPE) et Point de Rosée.",
+    // MODIFICAT: Eliminada "professionnelle"
+    subtitle: "Prévision multi-modèle avec analyse d'instabilité (CAPE) et Point de Rosée.",
     aqiLevels: ["Excellent", "Bon", "Acceptable", "Modéré", "Mauvais", "Très Mauvais"],
     pollen: "Niveaux de Pollen",
     pollenTypes: {
@@ -687,7 +689,6 @@ export const TRANSLATIONS = {
     aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
     aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",
     
-    // NOVA CLAU PER A XAFOGOR
     aiHeatIndex: "Temps lourd, ressenti de {temp}°C. ",
     
     aiWindLight: "Flux faible, situation calme. ",
