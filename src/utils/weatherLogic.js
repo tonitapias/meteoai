@@ -124,7 +124,7 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     
     // --- LÒGICA NOVA DE NÚVOLS ---
     else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear); // 0 i 1 = Serè
-    else if (code === 2) summaryParts.push(tr.aiSummaryVariable); // 2 = Variable (Marbella)
+    else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight); // <--- CANVI: Si no és de dia, frase de nit
     else summaryParts.push(tr.aiSummaryCloudy); // 3 o més = Ennuvolat
 
     const diff = feelsLike - temp;

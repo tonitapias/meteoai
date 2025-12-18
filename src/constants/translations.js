@@ -57,7 +57,8 @@ export const TRANSLATIONS = {
     night: "Nit",
     sun: "Sol",
     clear: "Serè",
-    partlyCloudy: "Sol i Núvols", // <--- NOU
+    partlyCloudy: "Sol i Núvols",
+    partlyCloudyNight: "Intervals de Núvols", // <--- NOU
     cloudy: "Ennuvolat",
     snow: "Nevada",
     rainy: "Pluja",
@@ -105,7 +106,8 @@ export const TRANSLATIONS = {
     aiIntroNight: "Bona nit. Previsió nocturna. ",
     
     aiSummaryClear: "Estabilitat dominant. Cel serè i sense complicacions meteorològiques. ",
-    aiSummaryVariable: "Cel variable. Sol i núvols compartint protagonisme sense risc de pluja. ", // <--- NOU
+    aiSummaryVariable: "Cel variable. Sol i núvols compartint protagonisme sense risc de pluja. ",
+    aiSummaryVariableNight: "Nit variable. Pas d'intervals de núvols sense risc de precipitació. ", // <--- NOU
     aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però possiblement humit. ",
     aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
@@ -240,7 +242,8 @@ export const TRANSLATIONS = {
     night: "Noche",
     sun: "Sol",
     clear: "Despejado",
-    partlyCloudy: "Sol y Nubes", // <--- NOU
+    partlyCloudy: "Sol y Nubes", 
+    partlyCloudyNight: "Intervalos Nubosos", // <--- NOU
     cloudy: "Nublado",
     snow: "Nevada",
     rainy: "Lluvia",
@@ -285,7 +288,8 @@ export const TRANSLATIONS = {
     aiIntroNight: "Buenas noches. Previsión nocturna. ",
     
     aiSummaryClear: "Estabilidad dominante. Cielo despejado y sin complicaciones. ",
-    aiSummaryVariable: "Cielo variable. Sol y nubes compartiendo protagonismo sin riesgo de lluvia. ", // <--- NOU
+    aiSummaryVariable: "Cielo variable. Sol y nubes compartiendo protagonismo sin riesgo de lluvia. ",
+    aiSummaryVariableNight: "Noche variable. Paso de intervalos nubosos sin riesgo de precipitación. ", // <--- NOU
     aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero posiblemente húmedo. ",
     aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
     aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
@@ -307,7 +311,7 @@ export const TRANSLATIONS = {
     aiRainExp: "Radar activo: precipitación inminente detectada. ",
 
     wmo: {
-      0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
+      0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialment nublado", 3: "cielo cubierto",
       45: "bancos de niebla", 48: "niebla helada",
       51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna persistente",
       56: "llovizna helada", 57: "llovizna helada intensa",
@@ -321,7 +325,7 @@ export const TRANSLATIONS = {
     },
     
     alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
-    alertSnow: "Precaució: Neu acumulada prevista.", // CORREGIT: Nieve
+    alertSnow: "Precaució: Neu acumulada prevista.", 
     alertWindExtreme: "Viento huracanado. Peligro exterior.",
     alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
     alertHeatExtreme: "Calor extremo. Evita el sol.",
@@ -420,7 +424,8 @@ export const TRANSLATIONS = {
     night: "Night",
     sun: "Sun",
     clear: "Clear",
-    partlyCloudy: "Partly Cloudy", // <--- NOU
+    partlyCloudy: "Partly Cloudy",
+    partlyCloudyNight: "Partly Cloudy", // <--- NOU
     cloudy: "Cloudy",
     snow: "Snow",
     rainy: "Rain",
@@ -466,7 +471,8 @@ export const TRANSLATIONS = {
     aiIntroNight: "Good night. Nocturnal forecast. ",
     
     aiSummaryClear: "Dominant stability. Clear skies and no meteorological complications. ",
-    aiSummaryVariable: "Variable skies. Sun and clouds mixing with no rain expected. ", // <--- NOU
+    aiSummaryVariable: "Variable skies. Sun and clouds mixing with no rain expected. ",
+    aiSummaryVariableNight: "Variable skies. Passing clouds with no rain expected. ", // <--- NOU
     aiSummaryCloudy: "Variable cloudiness. Stable but potentially humid atmosphere. ",
     aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
     aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
@@ -601,7 +607,8 @@ export const TRANSLATIONS = {
     night: "Nuit",
     sun: "Soleil",
     clear: "Clair",
-    partlyCloudy: "Éclaircies", // <--- NOU
+    partlyCloudy: "Éclaircies",
+    partlyCloudyNight: "Éclaircies", // <--- NOU
     cloudy: "Nuageux",
     snow: "Neige",
     rainy: "Pluvieux",
@@ -647,7 +654,8 @@ export const TRANSLATIONS = {
     aiIntroNight: "Bonne nuit. Prévisions nocturnes. ",
     
     aiSummaryClear: "Stabilité dominante. Ciel dégagé sans complications. ",
-    aiSummaryVariable: "Ciel variable. Soleil et nuages se partagent le ciel sans risque de pluie. ", // <--- NOU
+    aiSummaryVariable: "Ciel variable. Soleil et nuages se partagent le ciel sans risque de pluie. ",
+    aiSummaryVariableNight: "Ciel variable. Passage de nuages sans risque de pluie. ", // <--- NOU
     aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais potentiellement humide. ",
     aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
     aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
