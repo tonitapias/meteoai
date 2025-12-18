@@ -118,14 +118,26 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     else if (hour >= 19 && hour < 22) summaryParts.push(tr.aiIntroEvening);
     else summaryParts.push(tr.aiIntroNight);
 
-    if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
-    else if (code >= 71) summaryParts.push(tr.aiSummarySnow);
-    else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
+    // --- CORRECCIÓ: Definició precisa de neu vs pluja ---
+    // Codis de Neu: 71-77, 85, 86
+    const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
+    
+    if (code >= 95) {
+        summaryParts.push(tr.aiSummaryStorm);
+    }
+    else if (isSnow) {
+        summaryParts.push(tr.aiSummarySnow);
+    }
+    else if (code >= 51 || precip15 > 0) {
+        // Això ara inclou codis 51-67 i 80-82 (Ruixats de pluja)
+        summaryParts.push(tr.aiSummaryRain);
+    }
+    // --- FI CORRECCIÓ ---
     
     // --- LÒGICA NOVA DE NÚVOLS ---
-    else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear); // 0 i 1 = Serè
-    else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight); // <--- CANVI: Si no és de dia, frase de nit
-    else summaryParts.push(tr.aiSummaryCloudy); // 3 o més = Ennuvolat
+    else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear); // Serè
+    else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight); // Variable
+    else summaryParts.push(tr.aiSummaryCloudy); // Ennuvolat (Codi 3, 45, 48)
 
     const diff = feelsLike - temp;
     if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
@@ -140,17 +152,26 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        summaryParts.push(language === 'ca' ? `Xafogor acusada, sensació real de ${Math.round(feelsLike)}°C. ` : language === 'es' ? `Boichorno notable, sensación de ${Math.round(feelsLike)}°C. ` : "");
     }
 
-    if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
+    // --- BLOC DE PLUJA INTEL·LIGENT (Amb avís futur) ---
+    if (precip15 > 0.1) {
+        // Està plovent ARA mateix
+        summaryParts.push(tr.aiRainExp);
+    } 
     else if (rainProb < 20 && code < 50) {
-       // --- NOVA LÒGICA (Vic vs La Molina) ---
-       if (humidity >= 90) summaryParts.push(tr.aiRainHumid);
-       else summaryParts.push(tr.aiRainNone);
+        // NO s'espera pluja i fa "bon temps" (o boira)
+        if (humidity >= 90) summaryParts.push(tr.aiRainHumid); // Vic/Manresa
+        else summaryParts.push(tr.aiRainNone); // La Molina
+    }
+    else if (code < 50) {
+        // Fa "bon temps" ARA (Sol/Núvols), però la probabilitat de pluja és ALTA (>20%)
+        if (rainProb > 60) summaryParts.push(tr.aiRainChanceHigh);
+        else summaryParts.push(tr.aiRainChance);
     }
 
     if (code >= 95 || currentCape > 2000) {
        alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     }
-    else if (code >= 71 && code <= 77 || code === 85 || code === 86) {
+    else if (isSnow) {
        alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     }
     else if (code === 65 || code === 82 || precipSum > 30) {
@@ -180,7 +201,8 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        tips.push(tr.tipHydration);
     }
 
-    if (rainProb > 40 || precip15 > 0) tips.push(tr.tipUmbrella);
+    if (rainProb > 40 || precip15 > 0.1) tips.push(tr.tipUmbrella);
+    
     if (uvMax > 7 && isDay) {
        if(uvMax >= 10) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' });
        tips.push(tr.tipSunscreen);
