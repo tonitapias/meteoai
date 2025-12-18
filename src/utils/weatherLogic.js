@@ -121,8 +121,11 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (code >= 71) summaryParts.push(tr.aiSummarySnow);
     else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
-    else if (code <= 2) summaryParts.push(tr.aiSummaryClear);
-    else summaryParts.push(tr.aiSummaryCloudy);
+    
+    // --- LÒGICA NOVA DE NÚVOLS ---
+    else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear); // 0 i 1 = Serè
+    else if (code === 2) summaryParts.push(tr.aiSummaryVariable); // 2 = Variable (Marbella)
+    else summaryParts.push(tr.aiSummaryCloudy); // 3 o més = Ennuvolat
 
     const diff = feelsLike - temp;
     if (windSpeed > 20) summaryParts.push(tr.aiWindMod);

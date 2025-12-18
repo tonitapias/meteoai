@@ -948,8 +948,9 @@ export default function MeteoIA() {
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
    {
       effectiveWeatherCode === 0 ? t.clear : 
+      (effectiveWeatherCode === 1 || effectiveWeatherCode === 2) ? t.partlyCloudy : 
       isSnowCode(effectiveWeatherCode) ? t.snow : 
-      (effectiveWeatherCode < 4) ? t.cloudy : 
+      (effectiveWeatherCode === 3) ? t.cloudy : // Només el 3 és "Ennuvolat/Cobert"
       (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? "Boira" : 
       (weatherData.current.relative_humidity_2m >= 95) ? "Boira / Plugim" : 
       t.rainy
