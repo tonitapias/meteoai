@@ -109,13 +109,14 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Cel variable. Sol i núvols compartint protagonisme. ", 
     aiSummaryVariableNight: "Nit variable. Pas d'intervals de núvols. ", 
     aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però possiblement humit. ",
+    aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini absolut dels núvols. ", // <--- NOU
     aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
     aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
     aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
-    aiTempCool: "Ambient fresc. Una jaqueta lleugera serà suficient. ", // <--- NOU
+    aiTempCool: "Ambient fresc. Una jaqueta lleugera serà suficient. ", 
     aiTempMild: "Temperatures suaus i agradables, sense extrems. ",
     aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
     aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
@@ -294,13 +295,14 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Cielo variable. Sol y nubes compartiendo protagonismo. ",
     aiSummaryVariableNight: "Noche variable. Paso de intervalos nubosos. ",
     aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero posiblemente húmedo. ",
+    aiSummaryOvercast: "Cielo cubierto. Jornada gris con predominio absoluto de las nubes. ", // <--- NOU
     aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
     aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
     aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
     
     aiTempFreezing: "Ambiente gélido. Abrígate muy bien si sales. ",
     aiTempCold: "Hace frío. Necesitarás ropa de abrigo para estar confortable. ",
-    aiTempCool: "Ambiente fresco. Una chaqueta ligera será suficiente. ", // <--- NOU
+    aiTempCool: "Ambiente fresco. Una chaqueta ligera será suficiente. ", 
     aiTempMild: "Temperaturas suaves y agradables, sin extremos. ",
     aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
     aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
@@ -480,13 +482,14 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Variable skies. Sun and clouds mixing. ",
     aiSummaryVariableNight: "Variable skies. Passing clouds. ",
     aiSummaryCloudy: "Variable cloudiness. Stable but potentially humid atmosphere. ",
+    aiSummaryOvercast: "Overcast skies. A gray day with dominant cloud cover. ", // <--- NOU
     aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
     aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
     aiSummarySnow: "Fully winter configuration with expected snowfall. ",
     
     aiTempFreezing: "Freezing conditions. Bundle up well if you go out. ",
     aiTempCold: "It's cold. You'll need warm clothing to stay comfortable. ",
-    aiTempCool: "Cool atmosphere. A light jacket will be enough. ", // <--- NOU
+    aiTempCool: "Cool atmosphere. A light jacket will be enough. ", 
     aiTempMild: "Mild and pleasant temperatures, no extremes. ",
     aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
     aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
@@ -666,13 +669,14 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Ciel variable. Soleil et nuages se partagent le ciel. ",
     aiSummaryVariableNight: "Ciel variable. Passage de nuages. ", 
     aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais potentiellement humide. ",
+    aiSummaryOvercast: "Ciel couvert. Journée grise dominée par les nuages. ", // <--- NOU
     aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
     aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
     aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
     
     aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien si vous sortez. ",
     aiTempCold: "Il fait froid. Vous aurez besoin de vêtements chauds pour être à l'aise. ",
-    aiTempCool: "Ambiance fraîche. Une veste légère suffira. ", // <--- NOU
+    aiTempCool: "Ambiance fraîche. Une veste légère suffira. ", 
     aiTempMild: "Températures douces et agréables, sans extrêmes. ",
     aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
     aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",

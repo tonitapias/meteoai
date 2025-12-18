@@ -104,19 +104,16 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     const isDay = current.is_day;
     const currentHour = new Date().getHours();
     
-    // 1. MILLORA: Calculem la probabilitat REAL futura (hores restants), no la del dia sencer
-    // Així evitem avisar de pluja a la nit si ja ha plogut al matí.
+    // 1. MILLORA: Calculem la probabilitat REAL futura (hores restants)
     let futureRainProb = 0;
     if (hourly && hourly.precipitation_probability) {
-        // Mirem les pròximes 12 hores o fins a mitjanit
         const nextHours = hourly.precipitation_probability.slice(currentHour, currentHour + 12);
         futureRainProb = Math.max(...nextHours, 0);
     } else {
-        // Fallback si no hi ha dades horàries
         futureRainProb = daily.precipitation_probability_max[0];
     }
 
-    const rainProb = futureRainProb; // Fem servir la futura per als textos
+    const rainProb = futureRainProb; 
     
     const currentCape = hourly.cape ? hourly.cape[currentHour] || 0 : 0;
     
@@ -137,16 +134,18 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     else if (isSnow) summaryParts.push(tr.aiSummarySnow);
     else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
     
+    // --- LÒGICA DE NÚVOLS AFINADA ---
     else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear);
     else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
-    else summaryParts.push(tr.aiSummaryCloudy);
+    else if (code === 3) summaryParts.push(tr.aiSummaryOvercast); // <--- CODI 3 SEPARAT
+    else summaryParts.push(tr.aiSummaryCloudy); // Resta (Boira 45, 48)
 
     if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
     
-    // 2. MILLORA: Rangs de temperatura continus (sense forats)
+    // 2. Rangs de temperatura
     if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
     else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
-    else if (feelsLike >= 10 && feelsLike < 18) summaryParts.push(tr.aiTempCool); // <--- NOU RANG 10-18
+    else if (feelsLike >= 10 && feelsLike < 18) summaryParts.push(tr.aiTempCool); 
     else if (feelsLike >= 18 && feelsLike < 25) summaryParts.push(tr.aiTempMild);
     else if (feelsLike >= 25 && feelsLike < 32) summaryParts.push(tr.aiTempWarm);
     else if (feelsLike >= 32) summaryParts.push(tr.aiTempHot);
@@ -163,7 +162,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         else summaryParts.push(tr.aiRainNone);
     }
     else if (code < 50) {
-        // Ara 'rainProb' és intel·ligent i només avisa si la pluja és FUTURA
         if (rainProb > 60) summaryParts.push(tr.aiRainChanceHigh);
         else summaryParts.push(tr.aiRainChance);
     }
@@ -191,7 +189,7 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     } else if (temp < 5) {
       if(windSpeed > 15) tips.push(tr.tipCoat); 
       tips.push(tr.tipLayers);
-    } else if (temp >= 5 && temp < 15) { // Afegit tip per a fresca
+    } else if (temp >= 5 && temp < 15) {
       tips.push(tr.tipLayers);
     }
     
@@ -203,7 +201,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        tips.push(tr.tipHydration);
     }
 
-    // El paraigua també ha de dependre de la pluja futura, no la passada
     if (rainProb > 40 || precip15 > 0.1) tips.push(tr.tipUmbrella);
     
     if (uvMax > 7 && isDay) {
