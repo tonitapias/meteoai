@@ -289,7 +289,6 @@ export default function MeteoIA() {
     setShowSuggestions(false);
     
     try {
-      // --- MODIFICACIÓ: Afegit &forecast_days=8 per tenir un dia extra ---
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       
       const [weatherRes, aqiRes] = await Promise.all([
@@ -509,11 +508,9 @@ export default function MeteoIA() {
         <Calendar className="w-4 h-4 text-amber-400 drop-shadow-sm fill-amber-400/20" strokeWidth={2.5}/> {t.forecast7days}
       </h3>
       <div className="space-y-2">
-        {/* --- MODIFICACIÓ: slice(1) per saltar avui --- */}
         {weatherData.daily.time.slice(1).map((day, idx) => {
-          const i = idx + 1; // Ajustem l'índex per agafar la dada correcta
+          const i = idx + 1;
 
-          // Ja no cal lògica especial per "Avui"
           const displayCode = weatherData.daily.weather_code[i];
           const precipSum = weatherData.daily.precipitation_sum[i];
           const rainProb = weatherData.daily.precipitation_probability_max[i];
@@ -592,6 +589,27 @@ export default function MeteoIA() {
           );
         })}
       </div>
+    </div>
+  );
+
+  const hourlyForecastSection = (
+    <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
+       <h3 className="font-bold text-white flex items-center gap-2">
+         <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)
+       </h3>
+       <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+          {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
+             <div key={i} className="flex flex-col items-center min-w-[3rem]">
+                <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
+                <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity)}</div>
+                <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
+                <div className="flex flex-col items-center mt-1 h-6 justify-start">
+                   {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
+                   {h.precip > 0.25 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
+                </div>
+             </div>
+          ))}
+       </div>
     </div>
   );
 
@@ -1109,6 +1127,8 @@ export default function MeteoIA() {
 
                   <div className="lg:col-span-2 flex flex-col gap-6">
                       
+                      {hourlyForecastSection}
+
                       {sevenDayForecastSection}
 
                       <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
@@ -1128,23 +1148,7 @@ export default function MeteoIA() {
             
             {viewMode === 'basic' && (
               <>
-               <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
-                 <h3 className="font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)</h3>
-                 <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
-                    {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
-                       <div key={i} className="flex flex-col items-center min-w-[3rem]">
-                          <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                          <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity)}</div>
-                          <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
-                          <div className="flex flex-col items-center mt-1 h-6 justify-start">
-                             {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
-                             {h.precip > 0.25 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-               </div>
-
+               {hourlyForecastSection}
                {sevenDayForecastSection}
               </>
             )}
