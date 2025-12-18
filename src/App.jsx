@@ -474,19 +474,7 @@ export default function MeteoIA() {
      return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
   }, [weatherData, shiftedNow]);
 
-  useEffect(() => {
-    function handleClickOutside(event) { 
-        const isInsidePC = searchRefPC.current && searchRefPC.current.contains(event.target);
-        const isInsideMobile = searchRefMobile.current && searchRefMobile.current.contains(event.target);
-        
-        if (!isInsidePC && !isInsideMobile) {
-            setShowSuggestions(false);
-        }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-  
+  // --- AQUI ESTAN LES FUNCIONS QUE FALTAVEN ---
   const cycleLang = () => {
       const langs = ['ca', 'es', 'en', 'fr'];
       const currentIdx = langs.indexOf(lang);
@@ -497,10 +485,40 @@ export default function MeteoIA() {
     setViewMode(prev => prev === 'basic' ? 'expert' : 'basic');
   };
 
-   const currentBg = getRefinedBackground();
+  const reliability = useMemo(() => {
+    if (!weatherData || !weatherData.daily || !weatherData.dailyComparison) return null;
+    return calculateReliability(
+      weatherData.daily,
+      weatherData.dailyComparison.gfs,
+      weatherData.dailyComparison.icon,
+      0 
+    );
+  }, [weatherData]);
+
+  const currentBg = getRefinedBackground();
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
-  
   const moonPhaseVal = getMoonPhase(new Date());
+
+  const hourlyForecastSection = (
+    <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
+       <h3 className="font-bold text-white flex items-center gap-2">
+         <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)
+       </h3>
+       <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+          {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
+             <div key={i} className="flex flex-col items-center min-w-[3rem]">
+                <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
+                <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity)}</div>
+                <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
+                <div className="flex flex-col items-center mt-1 h-6 justify-start">
+                   {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
+                   {h.precip > 0.25 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
+                </div>
+             </div>
+          ))}
+       </div>
+    </div>
+  );
 
   const sevenDayForecastSection = weatherData && (
     <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
@@ -509,7 +527,7 @@ export default function MeteoIA() {
       </h3>
       <div className="space-y-2">
         {weatherData.daily.time.slice(1).map((day, idx) => {
-          const i = idx + 1;
+          const i = idx + 1; // Ajust per saltar avui correctament
 
           const displayCode = weatherData.daily.weather_code[i];
           const precipSum = weatherData.daily.precipitation_sum[i];
@@ -591,37 +609,6 @@ export default function MeteoIA() {
       </div>
     </div>
   );
-
-  const hourlyForecastSection = (
-    <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
-       <h3 className="font-bold text-white flex items-center gap-2">
-         <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)
-       </h3>
-       <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
-          {chartData.filter((_, i) => i % 3 === 0).map((h, i) => (
-             <div key={i} className="flex flex-col items-center min-w-[3rem]">
-                <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity)}</div>
-                <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
-                <div className="flex flex-col items-center mt-1 h-6 justify-start">
-                   {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
-                   {h.precip > 0.25 && <span className="text-[9px] text-cyan-400 font-bold">{h.precip}mm</span>}
-                </div>
-             </div>
-          ))}
-       </div>
-    </div>
-  );
-
-  const reliability = useMemo(() => {
-    if (!weatherData || !weatherData.daily || !weatherData.dailyComparison) return null;
-    return calculateReliability(
-      weatherData.daily,
-      weatherData.dailyComparison.gfs,
-      weatherData.dailyComparison.icon,
-      0 
-    );
-  }, [weatherData]);  
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>

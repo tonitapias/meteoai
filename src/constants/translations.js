@@ -1,4 +1,3 @@
-// --- SISTEMA DE TRADUCCIONS MILLORAT ---
 export const TRANSLATIONS = {
   ca: {
     searchPlaceholder: "Cerca ciutat...",
@@ -109,10 +108,10 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Cel variable. Sol i núvols compartint protagonisme. ", 
     aiSummaryVariableNight: "Nit variable. Pas d'intervals de núvols. ", 
     aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però possiblement humit. ",
-    aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini absolut dels núvols. ", // <--- NOU
+    aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini absolut dels núvols. ",
     aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
-    aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
+    aiSummarySnow: "Configuració plenamente hivernal amb nevades previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
     aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
@@ -121,11 +120,13 @@ export const TRANSLATIONS = {
     aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
     aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
     
+    // NOVA CLAU PER A XAFOGOR
+    aiHeatIndex: "Xafogor acusada, sensació real de {temp}°C. ",
+    
     aiWindLight: "Flux feble, situació tranquil·la. ",
     aiWindMod: "Vent moderat que accentua la sensació tèrmica. ",
     aiWindStrong: "Atenció a les ratxes de vent, situació potencialment perillosa. ",
     
-    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
     aiRainNone: "No s'esperen precipitacions. Gaudiu de l'estabilitat atmosfèrica. ",
     aiRainHumid: "No s'esperen pluges generals, tot i que la humitat podria deixar algun plugim dispers. ",
     aiRainExp: "Radar actiu: precipitació imminent detectada. ",
@@ -258,6 +259,7 @@ export const TRANSLATIONS = {
     uvVeryHigh: "Muy Alto",
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
+    alertWarning: "AVISO PRECAUCIÓN",
     subtitle: "Previsión profesional multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
@@ -295,7 +297,7 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Cielo variable. Sol y nubes compartiendo protagonismo. ",
     aiSummaryVariableNight: "Noche variable. Paso de intervalos nubosos. ",
     aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero posiblemente húmedo. ",
-    aiSummaryOvercast: "Cielo cubierto. Jornada gris con predominio absoluto de las nubes. ", // <--- NOU
+    aiSummaryOvercast: "Cielo cubierto. Jornada gris con predominio absoluto de las nubes. ",
     aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
     aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
     aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
@@ -307,11 +309,13 @@ export const TRANSLATIONS = {
     aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
     aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
     
+    // NOVA CLAU PER A XAFOGOR
+    aiHeatIndex: "Bochorno notable, sensación de {temp}°C. ",
+    
     aiWindLight: "Flujo débil, situación tranquila. ",
     aiWindMod: "Viento moderado que acentúa la sensación térmica. ",
     aiWindStrong: "Atención a las rachas de viento, situación potencialmente peligrosa. ",
     
-    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
     aiRainNone: "No se esperan precipitaciones. Disfrutad de la estabilidad atmosférica. ",
     aiRainHumid: "No se esperan lluvias generales, aunque la humedad podría dejar alguna llovizna dispersa. ",
     aiRainExp: "Radar activo: precipitación inminente detectada. ",
@@ -372,7 +376,7 @@ export const TRANSLATIONS = {
     rel_high: "Modelos coincidentes. Predicción muy fiable.",
     rel_medium: "Existe cierta discrepancia entre los modelos.",
     rel_low_rain: "⚠️ Incertidumbre: Divergencia de lluvia del {diff}%.",
-    rel_low_temp: "⚠️ Incertidumbre térmica: Los modelos varían en {diff}ºC."
+    rel_low_temp: "⚠️ Incertidumbre térmica: Modelos varían en {diff}ºC."
   },
 
   en: {
@@ -482,7 +486,7 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Variable skies. Sun and clouds mixing. ",
     aiSummaryVariableNight: "Variable skies. Passing clouds. ",
     aiSummaryCloudy: "Variable cloudiness. Stable but potentially humid atmosphere. ",
-    aiSummaryOvercast: "Overcast skies. A gray day with dominant cloud cover. ", // <--- NOU
+    aiSummaryOvercast: "Overcast skies. A gray day with dominant cloud cover. ",
     aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
     aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
     aiSummarySnow: "Fully winter configuration with expected snowfall. ",
@@ -494,11 +498,13 @@ export const TRANSLATIONS = {
     aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
     aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
     
+    // NOVA CLAU PER A XAFOGOR
+    aiHeatIndex: "Significant humidity, feels like {temp}°C. ",
+    
     aiWindLight: "Weak flow, calm situation. ",
     aiWindMod: "Moderate wind increasing wind chill factor. ",
     aiWindStrong: "Attention to wind gusts, potentially dangerous situation. ",
     
-    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
     aiRainNone: "No rain expected. Enjoy the stable weather. ",
     aiRainHumid: "No significant rain expected, though high humidity might cause scattered drizzle. ",
     aiRainExp: "Active radar: imminent precipitation detected. ",
@@ -669,7 +675,7 @@ export const TRANSLATIONS = {
     aiSummaryVariable: "Ciel variable. Soleil et nuages se partagent le ciel. ",
     aiSummaryVariableNight: "Ciel variable. Passage de nuages. ", 
     aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais potentiellement humide. ",
-    aiSummaryOvercast: "Ciel couvert. Journée grise dominée par les nuages. ", // <--- NOU
+    aiSummaryOvercast: "Ciel couvert. Journée grise dominée par les nuages. ",
     aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
     aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
     aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
@@ -681,11 +687,13 @@ export const TRANSLATIONS = {
     aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
     aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",
     
+    // NOVA CLAU PER A XAFOGOR
+    aiHeatIndex: "Temps lourd, ressenti de {temp}°C. ",
+    
     aiWindLight: "Flux faible, situation calme. ",
     aiWindMod: "Vent modéré accentuant le ressenti thermique. ",
     aiWindStrong: "Attention aux rafales, situation potentiellement dangereuse. ",
     
-    // --- LÒGICA NOVA PER PLUJA VS HUMITAT ---
     aiRainNone: "Pas de précipitations prévues. Profitez de la stabilité atmosphérique. ",
     aiRainHumid: "Pas de pluies importantes, mais l'humidité pourrait provoquer quelques bruines éparses. ",
     aiRainExp: "Radar actif : précipitation imminente détectée. ",
