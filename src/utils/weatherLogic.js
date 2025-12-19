@@ -21,10 +21,13 @@ export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
      
+     // REGEX ACTUALITZADA: Ara inclou _ecmwf_ifs025
+     const suffixRegex = /_best_match|_ecmwf_ifs4|_ecmwf_ifs025/g;
+
      // Current
      Object.keys(data.current).forEach(key => {
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
-           result.current[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.current[key];
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4') || key.endsWith('_ecmwf_ifs025')) {
+           result.current[key.replace(suffixRegex, '')] = data.current[key];
         } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
            result.current[key] = data.current[key];
         }
@@ -35,8 +38,8 @@ export const normalizeModelData = (data) => {
      const dailyIcon = {};
 
      Object.keys(data.daily).forEach(key => {
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
-           result.daily[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = data.daily[key];
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4') || key.endsWith('_ecmwf_ifs025')) {
+           result.daily[key.replace(suffixRegex, '')] = data.daily[key];
         } 
         else if (key.includes('_gfs_seamless')) {
            const cleanKey = key.replace('_gfs_seamless', '');
@@ -67,8 +70,8 @@ export const normalizeModelData = (data) => {
      Object.keys(data.hourly).forEach(key => {
         const val = data.hourly[key];
         
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4')) {
-           result.hourly[key.replace(/_best_match|_ecmwf_ifs4/g, '')] = val;
+        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4') || key.endsWith('_ecmwf_ifs025')) {
+           result.hourly[key.replace(suffixRegex, '')] = val;
         } 
         else if (['time', 'is_day', 'freezing_level_height', 'pressure_msl', 'cape'].includes(key)) {
            result.hourly[key] = val;
@@ -159,15 +162,22 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
 
     // --- CORRECCIÓ XAFOGOR ---
     if (temp > 25 && humidity > 65) {
-       // Utilitzem la nova clau de traducció per evitar textos "hardcoded"
        const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(feelsLike)) : "";
        summaryParts.push(heatText);
     }
 
     if (precip15 > 0.1) summaryParts.push(tr.aiRainExp);
     else if (rainProb < 20 && code < 50) {
-        if (humidity >= 90) summaryParts.push(tr.aiRainHumid);
-        else summaryParts.push(tr.aiRainNone);
+        if (humidity >= 90) {
+             summaryParts.push(tr.aiRainHumid);
+        } else {
+             // Si no plou, però està molt ennuvolat (>70%), no diem "Gaudiu", diem "Dia gris"
+             if (current.cloud_cover > 70) {
+                 summaryParts.push(" No s'espera pluja, tot i l'aspecte gris del cel.");
+             } else {
+                 summaryParts.push(tr.aiRainNone); // Aquí sí: "Gaudiu de l'estabilitat" (perquè fa sol)
+             }
+        }
     }
     else if (code < 50) {
         if (rainProb > 60) summaryParts.push(tr.aiRainChanceHigh);

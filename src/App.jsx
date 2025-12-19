@@ -289,7 +289,8 @@ export default function MeteoIA() {
     setShowSuggestions(false);
     
     try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=best_match,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
+      // CORRECCIÓ: 'ecmwf_ifs025' és el nom correcte del model (havíem posat ifs4 per error)
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(weatherUrl),
@@ -399,7 +400,7 @@ export default function MeteoIA() {
 
 
   const chartData = useMemo(() => {
-    if (!weatherData || !weatherData.hourly || !weatherData.hourly.temperature_2m || !weatherData.hourly.time) return [];
+    if (!weatherData || !weatherData.hourly || !weatherData.hourly.time) return [];
     
     const nowTime = shiftedNow.getTime();
     
@@ -408,26 +409,76 @@ export default function MeteoIA() {
     if (idx !== -1) startIndex = Math.max(0, idx);
     const endIndex = startIndex + 24;
 
-    const mainData = weatherData.hourly.temperature_2m.slice(startIndex, endIndex).map((temp, i) => ({
-      temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
-      apparent: unit === 'F' ? Math.round((weatherData.hourly.apparent_temperature[startIndex + i] * 9/5) + 32) : weatherData.hourly.apparent_temperature[startIndex + i],
-      rain: weatherData.hourly.precipitation_probability[startIndex + i],
-      precip: weatherData.hourly.precipitation[startIndex + i], 
-      wind: weatherData.hourly.wind_speed_10m[startIndex + i],
-      gusts: weatherData.hourly.wind_gusts_10m[startIndex + i],
-      windDir: weatherData.hourly.wind_direction_10m[startIndex + i], 
-      cloud: weatherData.hourly.cloud_cover[startIndex + i],
-      humidity: weatherData.hourly.relative_humidity_2m[startIndex + i], 
-      uv: weatherData.hourly.uv_index[startIndex + i],
-      snowLevel: weatherData.hourly.freezing_level_height ? Math.max(0, weatherData.hourly.freezing_level_height[startIndex + i] - 300) : 0,
-      isDay: weatherData.hourly.is_day[startIndex + i],
-      time: weatherData.hourly.time[startIndex + i],
-      code: weatherData.hourly.weather_code[startIndex + i]
-    }));
+    // --- BUSCADOR INTEL·LIGENT DE VARIABLES ---
+    const availableKeys = Object.keys(weatherData.hourly);
+    
+    // Prioritzem: la neta -> ecmwf -> gfs -> icon -> qualsevol altra
+    const snowKey = availableKeys.find(k => k === 'freezing_level_height') || 
+                    availableKeys.find(k => k.includes('freezing_level_height') && k.includes('ecmwf')) ||
+                    availableKeys.find(k => k.includes('freezing_level_height'));
+
+    const mainData = weatherData.hourly.time.slice(startIndex, endIndex).map((tRaw, i) => {
+      const realIndex = startIndex + i;
+
+      // 1. Recuperem dades bàsiques per fer el "Sanity Check"
+      const temp = weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[realIndex] : 0;
+      
+      // 2. Recuperem la cota de neu del model principal (Europeu)
+      let fl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][realIndex] : null;
+
+      // 3. --- FILTRE DE SENTIT COMÚ (SANITY CHECK) ---
+      // Si la cota és molt baixa (< 100m) però fa calor (> 4ºC), assumim que la dada és errònia (0 o null)
+      const isSuspicious = (fl === null || fl === undefined || (fl < 100 && temp > 4));
+
+      if (isSuspicious) {
+         // Intentem recuperar la dada del GFS (Americà)
+         const gfsFl = weatherData.hourlyComparison?.gfs?.[realIndex]?.freezing_level_height;
+         if (gfsFl !== undefined && gfsFl !== null) {
+             fl = gfsFl; // Fem servir el GFS com a reserva
+         } else {
+             // Si el GFS també falla, provem l'ICON
+             const iconFl = weatherData.hourlyComparison?.icon?.[realIndex]?.freezing_level_height;
+             if (iconFl !== undefined && iconFl !== null) fl = iconFl;
+         }
+      }
+
+      // 4. Càlcul final (-300m)
+      const snowLevelVal = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
+
+      // Accés a la resta de variables
+      const apparent = weatherData.hourly.apparent_temperature ? weatherData.hourly.apparent_temperature[realIndex] : temp;
+      const rain = weatherData.hourly.precipitation_probability ? weatherData.hourly.precipitation_probability[realIndex] : 0;
+      const precip = weatherData.hourly.precipitation ? weatherData.hourly.precipitation[realIndex] : 0;
+      const wind = weatherData.hourly.wind_speed_10m ? weatherData.hourly.wind_speed_10m[realIndex] : 0;
+      const gusts = weatherData.hourly.wind_gusts_10m ? weatherData.hourly.wind_gusts_10m[realIndex] : 0;
+      const windDir = weatherData.hourly.wind_direction_10m ? weatherData.hourly.wind_direction_10m[realIndex] : 0;
+      const cloud = weatherData.hourly.cloud_cover ? weatherData.hourly.cloud_cover[realIndex] : 0;
+      const humidity = weatherData.hourly.relative_humidity_2m ? weatherData.hourly.relative_humidity_2m[realIndex] : 0;
+      const uv = weatherData.hourly.uv_index ? weatherData.hourly.uv_index[realIndex] : 0;
+      const isDayVal = weatherData.hourly.is_day ? weatherData.hourly.is_day[realIndex] : 1;
+      const code = weatherData.hourly.weather_code ? weatherData.hourly.weather_code[realIndex] : 0;
+
+      return {
+        temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
+        apparent: unit === 'F' ? Math.round((apparent * 9/5) + 32) : apparent,
+        rain,
+        precip, 
+        wind,
+        gusts,
+        windDir, 
+        cloud,
+        humidity, 
+        uv,
+        snowLevel: snowLevelVal,
+        isDay: isDayVal,
+        time: tRaw,
+        code
+      };
+    });
 
     return mainData;
   }, [weatherData, unit, shiftedNow]);
-
+  
   const comparisonData = useMemo(() => {
       if (!weatherData || !weatherData.hourlyComparison) return null;
       
@@ -439,14 +490,31 @@ export default function MeteoIA() {
 
       const sliceModel = (modelData) => {
          if(!modelData) return [];
-         return modelData.slice(startIndex, endIndex).map((d, i) => ({
-             temp: unit === 'F' ? Math.round((d.temperature_2m * 9/5) + 32) : d.temperature_2m,
-             rain: d.precipitation_probability,
-             wind: d.wind_speed_10m,
-             cloud: d.cloud_cover,
-             humidity: d.relative_humidity_2m,
-             time: weatherData.hourly.time[startIndex + i]
-         }));
+         return modelData.slice(startIndex, endIndex).map((d, i) => {
+             // --- CORRECCIÓ: CÀLCUL COTA DE NEU COMPARATIVA ---
+             // Busquem la variable 'freezing_level_height' (que weatherLogic ja hauria d'haver netejat)
+             // Si no la troba neta, mirem si hi ha alguna clau que contingui 'freezing' per si de cas
+             let fl = d.freezing_level_height;
+             
+             if (fl === undefined) {
+                 const keys = Object.keys(d);
+                 const dirtyKey = keys.find(k => k.includes('freezing_level_height'));
+                 if (dirtyKey) fl = d[dirtyKey];
+             }
+
+             // Càlcul final (-300m) o null
+             const snowLevel = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
+
+             return {
+                 temp: unit === 'F' ? Math.round((d.temperature_2m * 9/5) + 32) : d.temperature_2m,
+                 rain: d.precipitation_probability,
+                 wind: d.wind_speed_10m,
+                 cloud: d.cloud_cover,
+                 humidity: d.relative_humidity_2m,
+                 snowLevel: snowLevel, // ARA SÍ QUE L'ENVIEM
+                 time: weatherData.hourly.time[startIndex + i]
+             };
+         });
       };
 
       return {
