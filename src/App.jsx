@@ -10,7 +10,6 @@ import {
   ArrowDownUp, CheckCircle2, Split
 } from 'lucide-react';
 
-// --- IMPORTS DELS NOUS MÒDULS ---
 import { TRANSLATIONS } from './constants/translations';
 import { HourlyForecastChart, MinutelyPreciseChart } from './components/WeatherCharts';
 import { 
@@ -29,7 +28,6 @@ import {
   calculateReliability 
 } from './utils/weatherLogic';
 
-// --- COMPONENT PER ANIMAR ICONES (LIVING ICONS) ---
 const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
   const style = {
     animation: windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
@@ -55,7 +53,6 @@ const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
   );
 };
 
-// --- APP PRINCIPAL ---
 export default function MeteoIA() {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -143,11 +140,6 @@ export default function MeteoIA() {
       return new Intl.DateTimeFormat(locales[lang], options).format(date);
   };
   
-  const formatTime = (dateString) => {
-      const locales = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
-      return new Date(dateString).toLocaleTimeString(locales[lang], {hour:'2-digit', minute:'2-digit'});
-  };
-
   const getDynamicBackground = (code, isDay = 1) => {
     if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
     if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
@@ -289,7 +281,6 @@ export default function MeteoIA() {
     setShowSuggestions(false);
     
     try {
-      // CORRECCIÓ: 'ecmwf_ifs025' és el nom correcte del model (havíem posat ifs4 per error)
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       
       const [weatherRes, aqiRes] = await Promise.all([
@@ -390,13 +381,32 @@ export default function MeteoIA() {
     return calculateDewPoint(weatherData.current.temperature_2m, weatherData.current.relative_humidity_2m);
   }, [weatherData]);
 
+  const reliability = useMemo(() => {
+    if (!weatherData || !weatherData.daily || !weatherData.dailyComparison) return null;
+    return calculateReliability(
+      weatherData.daily,
+      weatherData.dailyComparison.gfs,
+      weatherData.dailyComparison.icon,
+      0 
+    );
+  }, [weatherData]);
+
   useEffect(() => {
      if(weatherData && aqiData) {
          const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
-         const analysis = generateAIPrediction(currentWithMinutely, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang, effectiveWeatherCode);
+         // PASSEM LA RELIABILITY A LA FUNCIO GENERADORA
+         const analysis = generateAIPrediction(
+             currentWithMinutely, 
+             weatherData.daily, 
+             weatherData.hourly, 
+             aqiData?.current?.european_aqi || 0, 
+             lang, 
+             effectiveWeatherCode,
+             reliability
+         );
          setAiAnalysis(analysis);
      }
-  }, [lang, weatherData, aqiData, effectiveWeatherCode]);
+  }, [lang, weatherData, aqiData, effectiveWeatherCode, reliability]);
 
 
   const chartData = useMemo(() => {
@@ -409,10 +419,8 @@ export default function MeteoIA() {
     if (idx !== -1) startIndex = Math.max(0, idx);
     const endIndex = startIndex + 24;
 
-    // --- BUSCADOR INTEL·LIGENT DE VARIABLES ---
+    // Buscador Intel·ligent de Cota de Neu
     const availableKeys = Object.keys(weatherData.hourly);
-    
-    // Prioritzem: la neta -> ecmwf -> gfs -> icon -> qualsevol altra
     const snowKey = availableKeys.find(k => k === 'freezing_level_height') || 
                     availableKeys.find(k => k.includes('freezing_level_height') && k.includes('ecmwf')) ||
                     availableKeys.find(k => k.includes('freezing_level_height'));
@@ -420,23 +428,20 @@ export default function MeteoIA() {
     const mainData = weatherData.hourly.time.slice(startIndex, endIndex).map((tRaw, i) => {
       const realIndex = startIndex + i;
 
-      // 1. Recuperem dades bàsiques per fer el "Sanity Check"
+      // 1. Recuperem dades bàsiques
       const temp = weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[realIndex] : 0;
       
-      // 2. Recuperem la cota de neu del model principal (Europeu)
+      // 2. Recuperem la cota de neu (ECMWF)
       let fl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][realIndex] : null;
 
-      // 3. --- FILTRE DE SENTIT COMÚ (SANITY CHECK) ---
-      // Si la cota és molt baixa (< 100m) però fa calor (> 4ºC), assumim que la dada és errònia (0 o null)
+      // 3. Filtre Sentit Comú (Si < 100m i > 4ºC, agafem GFS)
       const isSuspicious = (fl === null || fl === undefined || (fl < 100 && temp > 4));
 
       if (isSuspicious) {
-         // Intentem recuperar la dada del GFS (Americà)
          const gfsFl = weatherData.hourlyComparison?.gfs?.[realIndex]?.freezing_level_height;
          if (gfsFl !== undefined && gfsFl !== null) {
-             fl = gfsFl; // Fem servir el GFS com a reserva
+             fl = gfsFl; 
          } else {
-             // Si el GFS també falla, provem l'ICON
              const iconFl = weatherData.hourlyComparison?.icon?.[realIndex]?.freezing_level_height;
              if (iconFl !== undefined && iconFl !== null) fl = iconFl;
          }
@@ -445,7 +450,6 @@ export default function MeteoIA() {
       // 4. Càlcul final (-300m)
       const snowLevelVal = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
 
-      // Accés a la resta de variables
       const apparent = weatherData.hourly.apparent_temperature ? weatherData.hourly.apparent_temperature[realIndex] : temp;
       const rain = weatherData.hourly.precipitation_probability ? weatherData.hourly.precipitation_probability[realIndex] : 0;
       const precip = weatherData.hourly.precipitation ? weatherData.hourly.precipitation[realIndex] : 0;
@@ -478,7 +482,7 @@ export default function MeteoIA() {
 
     return mainData;
   }, [weatherData, unit, shiftedNow]);
-  
+
   const comparisonData = useMemo(() => {
       if (!weatherData || !weatherData.hourlyComparison) return null;
       
@@ -491,18 +495,13 @@ export default function MeteoIA() {
       const sliceModel = (modelData) => {
          if(!modelData) return [];
          return modelData.slice(startIndex, endIndex).map((d, i) => {
-             // --- CORRECCIÓ: CÀLCUL COTA DE NEU COMPARATIVA ---
-             // Busquem la variable 'freezing_level_height' (que weatherLogic ja hauria d'haver netejat)
-             // Si no la troba neta, mirem si hi ha alguna clau que contingui 'freezing' per si de cas
+             // Càlcul cota de neu comparativa
              let fl = d.freezing_level_height;
-             
              if (fl === undefined) {
                  const keys = Object.keys(d);
                  const dirtyKey = keys.find(k => k.includes('freezing_level_height'));
                  if (dirtyKey) fl = d[dirtyKey];
              }
-
-             // Càlcul final (-300m) o null
              const snowLevel = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
 
              return {
@@ -511,7 +510,7 @@ export default function MeteoIA() {
                  wind: d.wind_speed_10m,
                  cloud: d.cloud_cover,
                  humidity: d.relative_humidity_2m,
-                 snowLevel: snowLevel, // ARA SÍ QUE L'ENVIEM
+                 snowLevel: snowLevel,
                  time: weatherData.hourly.time[startIndex + i]
              };
          });
@@ -542,7 +541,6 @@ export default function MeteoIA() {
      return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
   }, [weatherData, shiftedNow]);
 
-  // --- AQUI ESTAN LES FUNCIONS QUE FALTAVEN ---
   const cycleLang = () => {
       const langs = ['ca', 'es', 'en', 'fr'];
       const currentIdx = langs.indexOf(lang);
@@ -552,16 +550,6 @@ export default function MeteoIA() {
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'basic' ? 'expert' : 'basic');
   };
-
-  const reliability = useMemo(() => {
-    if (!weatherData || !weatherData.daily || !weatherData.dailyComparison) return null;
-    return calculateReliability(
-      weatherData.daily,
-      weatherData.dailyComparison.gfs,
-      weatherData.dailyComparison.icon,
-      0 
-    );
-  }, [weatherData]);
 
   const currentBg = getRefinedBackground();
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
@@ -595,7 +583,7 @@ export default function MeteoIA() {
       </h3>
       <div className="space-y-2">
         {weatherData.daily.time.slice(1).map((day, idx) => {
-          const i = idx + 1; // Ajust per saltar avui correctament
+          const i = idx + 1;
 
           const displayCode = weatherData.daily.weather_code[i];
           const precipSum = weatherData.daily.precipitation_sum[i];
@@ -992,9 +980,7 @@ export default function MeteoIA() {
                            </div>
                        </div>
 
-                       {/* --- BLOC SENCER DE LA CAPÇALERA (Icona + Temperatura) --- */}
                        <div className="flex items-center gap-6 mt-2">
-                           {/* Icona Animada */}
                            <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
                                <LivingIcon 
                                   code={effectiveWeatherCode} 
@@ -1014,7 +1000,6 @@ export default function MeteoIA() {
                                </LivingIcon>
                            </div>
 
-                           {/* Temperatura i Text */}
                            <div className="flex flex-col justify-center">
                                 <span className="text-8xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
                                    {formatTemp(weatherData.current.temperature_2m)}°
@@ -1024,7 +1009,7 @@ export default function MeteoIA() {
       effectiveWeatherCode === 0 ? t.clear : 
       (effectiveWeatherCode === 1 || effectiveWeatherCode === 2) ? (weatherData.current.is_day ? t.partlyCloudy : t.partlyCloudyNight) : 
       isSnowCode(effectiveWeatherCode) ? t.snow : 
-      (effectiveWeatherCode === 3) ? t.aiSummaryOvercast?.split('.')[0] || t.cloudy : // Intentem agafar "Cel Cobert" si existeix
+      (effectiveWeatherCode === 3) ? t.aiSummaryOvercast?.split('.')[0] || t.cloudy :
       (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? "Boira" : 
       (weatherData.current.relative_humidity_2m >= 95) ? "Boira / Plugim" : 
       t.rainy
@@ -1032,7 +1017,6 @@ export default function MeteoIA() {
 </span>
                            </div>
                        </div>
-                       {/* --- FI DEL BLOC --- */}
 
                        <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">

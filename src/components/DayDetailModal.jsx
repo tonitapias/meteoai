@@ -14,7 +14,6 @@ export default function DayDetailModal({
 }) {
   if (selectedDayIndex === null || !weatherData) return null;
 
-  // 1. Dades generals del dia (Resum)
   const dayData = useMemo(() => {
     const i = selectedDayIndex;
     return {
@@ -31,7 +30,6 @@ export default function DayDetailModal({
     };
   }, [weatherData, selectedDayIndex]);
 
-  // 2. Calculem els índexs horaris que corresponen a aquest dia concret
   const dayIndices = useMemo(() => {
     const targetDate = new Date(dayData.date).toDateString();
     return weatherData.hourly.time
@@ -40,11 +38,9 @@ export default function DayDetailModal({
       .map(item => item.idx);
   }, [weatherData, dayData]);
 
-  // 3. Dades Principals (Model Europeu/Best Match) amb correcció de Cota de Neu
   const hourlyDataForDay = useMemo(() => {
     if (dayIndices.length === 0) return [];
 
-    // Buscador intel·ligent de variables (Cota de neu)
     const keys = Object.keys(weatherData.hourly);
     const findKey = (baseName) => {
         return keys.find(k => k === baseName) || 
@@ -54,15 +50,11 @@ export default function DayDetailModal({
     };
 
     const snowKey = findKey('freezing_level_height');
-    const tempKey = findKey('temperature_2m'); // Per seguretat
+    const tempKey = findKey('temperature_2m');
     
     return dayIndices.map(idx => {
-        // Recuperem cota de neu crua
         const rawFl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][idx] : null;
-        // Fallback als comparatius si cal
         const fallbackFl = rawFl ?? weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
-        
-        // Càlcul final cota de neu (-300m)
         const snowLevel = (fallbackFl !== null && fallbackFl !== undefined) ? Math.max(0, fallbackFl - 300) : null;
 
         return {
@@ -79,7 +71,6 @@ export default function DayDetailModal({
     });
   }, [weatherData, dayIndices]);
 
-    
   const comparisonDataForDay = useMemo(() => {
       if (!weatherData.hourlyComparison || dayIndices.length === 0) return null;
 
@@ -89,19 +80,13 @@ export default function DayDetailModal({
               const d = modelArray[idx];
               if (!d) return null;
 
-              // --- CORRECCIÓ: Recuperem la cota de neu per a la comparativa ---
               let fl = d.freezing_level_height;
-              
-              // Cerca de seguretat per si la clau té un nom brut
               if (fl === undefined) {
                   const keys = Object.keys(d);
                   const dirtyKey = keys.find(k => k.includes('freezing_level_height'));
                   if (dirtyKey) fl = d[dirtyKey];
               }
-
-              // Càlcul final (-300m)
               const snowLevel = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
-              // ----------------------------------------------------------------
 
               return {
                   time: weatherData.hourly.time[idx],
@@ -110,7 +95,7 @@ export default function DayDetailModal({
                   wind: d.wind_speed_10m,
                   cloud: d.cloud_cover,
                   humidity: d.relative_humidity_2m,
-                  snowLevel: snowLevel // ARA SÍ: Afegim la dada al gràfic
+                  snowLevel: snowLevel 
               };
           }).filter(Boolean);
       };
@@ -121,7 +106,6 @@ export default function DayDetailModal({
       };
   }, [weatherData, dayIndices]);
 
-  // 5. Càlcul del rang de cota de neu per mostrar al resum
   const snowLevelRange = useMemo(() => {
      if (hourlyDataForDay.length === 0) return "---";
      const levels = hourlyDataForDay.map(d => d.snowLevel).filter(l => l !== null);
@@ -156,7 +140,6 @@ export default function DayDetailModal({
         </button>
 
         <div className="p-6 md:p-8">
-          {/* Capçalera del Modal */}
           <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between mb-8 border-b border-white/5 pb-6">
             <div>
                <h2 className="text-3xl font-bold text-white capitalize mb-2">{formatDate(dayData.date)}</h2>
@@ -179,7 +162,6 @@ export default function DayDetailModal({
             </div>
           </div>
 
-          {/* Widgets de Resum */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
                 <Droplets className="w-6 h-6 text-blue-400 mb-1"/>
@@ -211,7 +193,6 @@ export default function DayDetailModal({
              </div>
           </div>
           
-          {/* Sol i Lluna */}
           <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between">
                  <div className="flex items-center gap-3">
@@ -234,7 +215,6 @@ export default function DayDetailModal({
               </div>
           </div>
 
-          {/* GRÀFIC HORARI AMB COMPARATIVA */}
           <div className="bg-slate-950/50 border border-white/5 rounded-3xl p-4 md:p-6">
              <h3 className="font-bold text-white mb-6 flex items-center gap-2">
                 <Thermometer className="w-5 h-5 text-indigo-400"/> Evolució Horària
@@ -242,7 +222,7 @@ export default function DayDetailModal({
              
              <HourlyForecastChart 
                 data={hourlyDataForDay} 
-                comparisonData={comparisonDataForDay} // AQUI ESTÀ LA CLAU
+                comparisonData={comparisonDataForDay} 
                 unit={unit} 
                 lang={lang} 
                 shiftedNow={shiftedNow}

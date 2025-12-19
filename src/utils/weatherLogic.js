@@ -21,7 +21,6 @@ export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
      
-     // REGEX ACTUALITZADA: Ara inclou _ecmwf_ifs025
      const suffixRegex = /_best_match|_ecmwf_ifs4|_ecmwf_ifs025/g;
 
      // Current
@@ -57,7 +56,7 @@ export const normalizeModelData = (data) => {
      result.dailyComparison.gfs = dailyGfs;
      result.dailyComparison.icon = dailyIcon;
 
-     // Hourly - ESTRUCTURA D'ARRAY (Important per evitar errors a App.jsx)
+     // Hourly
      const gfsHourly = [];
      const iconHourly = [];
      const len = data.hourly.time.length;
@@ -95,7 +94,7 @@ export const normalizeModelData = (data) => {
 };
 
 // Genera el text predictiu basat en regles expertes
-export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null) => {
+export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null, reliability = null) => {
     const tr = TRANSLATIONS[language];
     const feelsLike = current.apparent_temperature;
     const temp = current.temperature_2m;
@@ -108,7 +107,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     const isDay = current.is_day;
     const currentHour = new Date().getHours();
     
-    // --- MODIFICACIÓ CLAU: Mínima del dia per preveure fred nocturn ---
     const minTempToday = daily.temperature_2m_min ? daily.temperature_2m_min[0] : 10;
 
     let futureRainProb = 0;
@@ -125,8 +123,22 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     let summaryParts = [];
     let tips = [];
     let alerts = []; 
-    let confidenceText = tr.aiConfidence;
+    
+    // --- LÒGICA DE FIABILITAT SINCRONITZADA ---
+    let confidenceText = tr.aiConfidence; 
     let confidenceLevel = 'high';
+
+    if (reliability) {
+        if (reliability.level === 'low') {
+            confidenceLevel = 'low';
+            confidenceText = tr.aiConfidenceLow || "Divergència Alta";
+        } else if (reliability.level === 'medium') {
+            confidenceLevel = 'medium';
+            confidenceText = tr.aiConfidenceMod || "Divergència Moderada";
+        } else {
+            confidenceText = "Consens de Models"; 
+        }
+    }
 
     if (currentHour >= 6 && currentHour < 12) summaryParts.push(tr.aiIntroMorning);
     else if (currentHour >= 12 && currentHour < 19) summaryParts.push(tr.aiIntroAfternoon);
@@ -145,11 +157,9 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
 
     if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
     
-    // --- LÒGICA DE TEMPERATURA MILLORADA ---
     if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
     else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
     else if (feelsLike >= 10 && feelsLike < 18) {
-        // Si és tarda i la mínima baixarà de 10°C, avisem que farà fred
         if (currentHour >= 15 && minTempToday < 10) {
             summaryParts.push(tr.aiTempCold); 
         } else {
@@ -160,7 +170,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     else if (feelsLike >= 25 && feelsLike < 32) summaryParts.push(tr.aiTempWarm);
     else if (feelsLike >= 32) summaryParts.push(tr.aiTempHot);
 
-    // --- CORRECCIÓ XAFOGOR ---
     if (temp > 25 && humidity > 65) {
        const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(feelsLike)) : "";
        summaryParts.push(heatText);
@@ -171,11 +180,11 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         if (humidity >= 90) {
              summaryParts.push(tr.aiRainHumid);
         } else {
-             // Si no plou, però està molt ennuvolat (>70%), no diem "Gaudiu", diem "Dia gris"
+             // DETECCIÓ DE DIES GRISOS
              if (current.cloud_cover > 70) {
                  summaryParts.push(" No s'espera pluja, tot i l'aspecte gris del cel.");
              } else {
-                 summaryParts.push(tr.aiRainNone); // Aquí sí: "Gaudiu de l'estabilitat" (perquè fa sol)
+                 summaryParts.push(tr.aiRainNone); 
              }
         }
     }
@@ -184,7 +193,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         else summaryParts.push(tr.aiRainChance);
     }
 
-    // Alertes i Cape
     if (code >= 95 || currentCape > 2000) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     else if (code === 65 || code === 82 || precipSum > 30) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
@@ -194,7 +202,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
       tips.push(tr.tipWindbreaker);
     } else if (windSpeed > 80) alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
     
-    // --- CONSELLS DE ROBA ACTUALITZATS ---
     if (temp < 0) {
       alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' });
       tips.push(tr.tipCoat, tr.tipThermal);
@@ -202,7 +209,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
       tips.push(tr.tipCoat); 
       if (temp < 5) tips.push(tr.tipLayers);
     } else if (temp >= 10 && temp < 16) {
-      // Si a la tarda la mínima prevista és < 8°C, recomanem abric i capes
       if (currentHour >= 15 && minTempToday < 8) {
          tips.push(tr.tipCoat, tr.tipLayers);
       } else {
@@ -225,18 +231,12 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     }
     if (aqiValue > 100) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
 
-    if (code >= 80 || (rainProb > 40 && rainProb < 70)) {
-       confidenceLevel = 'medium';
-       confidenceText = tr.aiConfidenceMod;
-    }
-
     if (tips.length === 0) tips.push(tr.tipCalm);
     tips = [...new Set(tips)].slice(0, 4);
 
     return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
  };
 
-// Fase Lunar
 export const getMoonPhase = (date) => {
   let year = date.getFullYear();
   let month = date.getMonth() + 1;
