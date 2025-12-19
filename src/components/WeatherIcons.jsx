@@ -4,8 +4,6 @@ import {
   Cloud, CloudFog, Snowflake, CloudSnow 
 } from 'lucide-react';
 
-// --- COMPONENTS INTERNS (Helpers) ---
-
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
@@ -35,8 +33,6 @@ const VariableRainIcon = ({ isDay, className, ...props }) => {
     </div>
   );
 };
-
-// --- EXPORTS PÚBLICS ---
 
 export const WeatherParticles = ({ code }) => {
   const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
@@ -71,8 +67,6 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // CORRECCIÓ: He tret 61 i 80. Només posem boira si és plugim molt fi.
-    // Si és pluja (61) o ruixat (80), volem icona de pluja encara que hi hagi boira.
     const drizzleCodes = [51, 53, 55, 56, 57];
     
     if (drizzleCodes.includes(code) && humidity >= 95 && rainProb < 80) {

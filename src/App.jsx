@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Search, Wind, Droplets, MapPin, Sun, Cloud, CloudRain, 
-  CloudLightning, Snowflake, CloudFog, CloudSun, CloudMoon, BrainCircuit, 
-  Activity, AlertTriangle, X, Sunrise, Sunset, Umbrella, Eye,
-  LocateFixed, Shirt, Leaf, Star, RefreshCw, Trash2, Navigation,
-  ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, TrendingDown, Minus, Calendar, Clock,
-  Layers, ThermometerSnowflake, AlertCircle, CloudSnow, Moon, Compass, Globe, Flower2,
-  LayoutTemplate, LayoutDashboard, GitGraph, Mountain, Zap, Thermometer,
-  ArrowDownUp, CheckCircle2, Split
+  Search, Wind, Droplets, MapPin, CloudSun, CloudRain, 
+  CloudLightning, Snowflake, BrainCircuit, 
+  AlertTriangle, Sunrise, Sunset, Umbrella, 
+  LocateFixed, Shirt, Star, RefreshCw, Trash2,
+  ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, Clock,
+  Calendar, ThermometerSnowflake, Cloud, 
+  LayoutTemplate, LayoutDashboard, GitGraph // <--- AFEGITS QUE FALTAVEN
 } from 'lucide-react';
 
 import { TRANSLATIONS } from './constants/translations';
@@ -1003,9 +1002,9 @@ export default function MeteoIA() {
       (effectiveWeatherCode === 1 || effectiveWeatherCode === 2) ? (weatherData.current.is_day ? t.partlyCloudy : t.partlyCloudyNight) : 
       isSnowCode(effectiveWeatherCode) ? t.snow : 
       (effectiveWeatherCode === 3) ? t.aiSummaryOvercast?.split('.')[0] || t.cloudy :
-      (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? "Boira" : 
+      (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? t.wmo[45] : 
       (weatherData.current.relative_humidity_2m >= 95 && weatherData.current.precipitation > 0.2) ? (t.rainFog || "Pluja i Boira") :
-      (weatherData.current.relative_humidity_2m >= 95) ? "Boira / Plugim" : 
+      (weatherData.current.relative_humidity_2m >= 95) ? t.wmo[45] : 
       t.rainy
    }
 </span>
