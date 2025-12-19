@@ -7,7 +7,6 @@ export const getShiftedDate = (baseDate, timezone) => {
   return new Date(targetTimeStr);
 };
 
-// Fórmula de Magnus per al punt de rosada
 export const calculateDewPoint = (T, RH) => {
   const a = 17.27;
   const b = 237.7;
@@ -16,7 +15,6 @@ export const calculateDewPoint = (T, RH) => {
   return (b * alpha) / (a - alpha);
 };
 
-// Normalitza les dades de diferents models (ECMWF, GFS, ICON) per poder comparar-les
 export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
@@ -124,7 +122,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     let tips = [];
     let alerts = []; 
     
-    // --- LÒGICA DE FIABILITAT SINCRONITZADA ---
     let confidenceText = tr.aiConfidence; 
     let confidenceLevel = 'high';
 
@@ -147,8 +144,16 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
 
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     
+    // --- NOVA LÒGICA PER DETECTAR "PLUJA AMB BOIRA" ---
+    // Si humitat >= 95% i hi ha precipitació o plugim, forcem missatge específic
+    const isFoggyRain = humidity >= 95 && (code >= 51 || precip15 > 0) && !isSnow;
+
     if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (isSnow) summaryParts.push(tr.aiSummarySnow);
+    else if (isFoggyRain) {
+        // Usem la nova traducció
+        summaryParts.push(tr.aiSummaryRainFog || "Ambient molt humit i tancat. Pluja persistent amb visibilitat reduïda. ");
+    }
     else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
     else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear);
     else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
@@ -180,7 +185,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         if (humidity >= 90) {
              summaryParts.push(tr.aiRainHumid);
         } else {
-             // DETECCIÓ DE DIES GRISOS
              if (current.cloud_cover > 70) {
                  summaryParts.push(" No s'espera pluja, tot i l'aspecte gris del cel.");
              } else {
@@ -283,4 +287,23 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   }
 
   return { level, type, value };
+};
+
+// --- NOVA FUNCIÓ PER FORÇAR ETIQUETA ---
+// Afegeix això al final per generar el text correcte
+export const getWeatherLabel = (current, language) => {
+  const tr = TRANSLATIONS[language];
+  if (!tr || !current) return "";
+
+  const code = current.weather_code;
+  const humidity = current.relative_humidity_2m || 0;
+  const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
+  
+  // Si hi ha boira (>=95%) I precipitació real (>0.2mm), forcem el text
+  if (humidity >= 95 && precip15 > 0.2) {
+      return tr.rainFog; 
+  }
+
+  // Si no, text estàndard
+  return tr.wmo[code] || "---";
 };

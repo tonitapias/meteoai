@@ -65,20 +65,19 @@ export const WeatherParticles = ({ code }) => {
   );
 };
 
-// --- CORRECCIÓ APLICADA AQUÍ BAIX ---
-// 1. Afegim 'humidity' als paràmetres (amb valor per defecte 0)
 export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0) => {
     const commonProps = {
       strokeWidth: 2, 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // 2. NOVA REGLA: Si plou poc però la humitat és extrema (>=95%), mostrem BOIRA
-    const drizzleCodes = [51, 53, 55, 56, 57, 61, 80];
-    if (drizzleCodes.includes(code) && humidity >= 95) {
+    // CORRECCIÓ: He tret 61 i 80. Només posem boira si és plugim molt fi.
+    // Si és pluja (61) o ruixat (80), volem icona de pluja encara que hi hagi boira.
+    const drizzleCodes = [51, 53, 55, 56, 57];
+    
+    if (drizzleCodes.includes(code) && humidity >= 95 && rainProb < 80) {
        return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     }
-    // -----------------------------------------------------------------------
 
     if (rainProb > 50 && code < 50) {
        return <VariableRainIcon isDay={isDay} {...commonProps} />;
@@ -119,4 +118,4 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
     if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
     
     return <Cloud {...commonProps} className={`${commonProps.className} text-gray-300 fill-gray-300/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
- };
+};

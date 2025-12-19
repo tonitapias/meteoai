@@ -394,7 +394,6 @@ export default function MeteoIA() {
   useEffect(() => {
      if(weatherData && aqiData) {
          const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
-         // PASSEM LA RELIABILITY A LA FUNCIO GENERADORA
          const analysis = generateAIPrediction(
              currentWithMinutely, 
              weatherData.daily, 
@@ -419,7 +418,6 @@ export default function MeteoIA() {
     if (idx !== -1) startIndex = Math.max(0, idx);
     const endIndex = startIndex + 24;
 
-    // Buscador Intel·ligent de Cota de Neu
     const availableKeys = Object.keys(weatherData.hourly);
     const snowKey = availableKeys.find(k => k === 'freezing_level_height') || 
                     availableKeys.find(k => k.includes('freezing_level_height') && k.includes('ecmwf')) ||
@@ -428,13 +426,10 @@ export default function MeteoIA() {
     const mainData = weatherData.hourly.time.slice(startIndex, endIndex).map((tRaw, i) => {
       const realIndex = startIndex + i;
 
-      // 1. Recuperem dades bàsiques
       const temp = weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[realIndex] : 0;
       
-      // 2. Recuperem la cota de neu (ECMWF)
       let fl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][realIndex] : null;
 
-      // 3. Filtre Sentit Comú (Si < 100m i > 4ºC, agafem GFS)
       const isSuspicious = (fl === null || fl === undefined || (fl < 100 && temp > 4));
 
       if (isSuspicious) {
@@ -447,7 +442,6 @@ export default function MeteoIA() {
          }
       }
 
-      // 4. Càlcul final (-300m)
       const snowLevelVal = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
 
       const apparent = weatherData.hourly.apparent_temperature ? weatherData.hourly.apparent_temperature[realIndex] : temp;
@@ -495,7 +489,6 @@ export default function MeteoIA() {
       const sliceModel = (modelData) => {
          if(!modelData) return [];
          return modelData.slice(startIndex, endIndex).map((d, i) => {
-             // Càlcul cota de neu comparativa
              let fl = d.freezing_level_height;
              if (fl === undefined) {
                  const keys = Object.keys(d);
@@ -1011,6 +1004,7 @@ export default function MeteoIA() {
       isSnowCode(effectiveWeatherCode) ? t.snow : 
       (effectiveWeatherCode === 3) ? t.aiSummaryOvercast?.split('.')[0] || t.cloudy :
       (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? "Boira" : 
+      (weatherData.current.relative_humidity_2m >= 95 && weatherData.current.precipitation > 0.2) ? (t.rainFog || "Pluja i Boira") :
       (weatherData.current.relative_humidity_2m >= 95) ? "Boira / Plugim" : 
       t.rainy
    }

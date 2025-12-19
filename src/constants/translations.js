@@ -61,6 +61,7 @@ export const TRANSLATIONS = {
     cloudy: "Ennuvolat",
     snow: "Nevada",
     rainy: "Pluja",
+    rainFog: "Pluja i Boira",
     storm: "Tempesta",
     uvLow: "Baix",
     uvMod: "Moderat",
@@ -111,7 +112,9 @@ export const TRANSLATIONS = {
     aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però possiblement humit. ",
     aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini absolut dels núvols. ",
     aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
+    aiSummaryRainFog: "Ambient molt humit i tancat. Pluja persistent amb visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
+    
     // CORREGIT: "plenamente" -> "plenament"
     aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
@@ -253,6 +256,7 @@ export const TRANSLATIONS = {
     cloudy: "Nublado",
     snow: "Nevada",
     rainy: "Lluvia",
+    rainFog: "Lluvia y Niebla",
     storm: "Tormenta",
     uvLow: "Bajo",
     uvMod: "Moderado",
@@ -301,6 +305,7 @@ export const TRANSLATIONS = {
     aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero posiblemente húmedo. ",
     aiSummaryOvercast: "Cielo cubierto. Jornada gris con predominio absoluto de las nubes. ",
     aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
+    aiSummaryRainFog: "Ambiente muy húmedo y cerrado. Lluvia persistente con visibilidad reducida por niebla. ",
     aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
     aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
     
@@ -442,6 +447,7 @@ export const TRANSLATIONS = {
     cloudy: "Cloudy",
     snow: "Snow",
     rainy: "Rain",
+    rainFog: "Rain and Fog",
     storm: "Storm",
     uvLow: "Low",
     uvMod: "Moderate",
@@ -490,6 +496,7 @@ export const TRANSLATIONS = {
     aiSummaryCloudy: "Variable cloudiness. Stable but potentially humid atmosphere. ",
     aiSummaryOvercast: "Overcast skies. A gray day with dominant cloud cover. ",
     aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
+    aiSummaryRainFog: "Very humid and foggy conditions. Persistent rain with reduced visibility. ",
     aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
     aiSummarySnow: "Fully winter configuration with expected snowfall. ",
     
@@ -631,6 +638,7 @@ export const TRANSLATIONS = {
     cloudy: "Nuageux",
     snow: "Neige",
     rainy: "Pluvieux",
+    rainFog: "Pluie et Brouillard",
     storm: "Orage",
     uvLow: "Faible",
     uvMod: "Modéré",
@@ -679,6 +687,7 @@ export const TRANSLATIONS = {
     aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais potentiellement humide. ",
     aiSummaryOvercast: "Ciel couvert. Journée grise dominée par les nuages. ",
     aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
+    aiSummaryRainFog: "Ambiance très humide et bouchée. Pluie persistante avec visibilité réduite par le brouillard. ",    
     aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
     aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
     
