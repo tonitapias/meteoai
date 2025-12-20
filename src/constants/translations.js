@@ -1,5 +1,7 @@
 export const TRANSLATIONS = {
   ca: {
+    aiConsensus: "Consens de Models",
+    aiCloudyNoRain: "No s'espera pluja, tot i l'aspecte gris del cel.",
     searchPlaceholder: "Cerca ciutat...",
     favorites: "Llocs Preferits",
     now: "Ara",
@@ -117,7 +119,7 @@ export const TRANSLATIONS = {
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
     aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
     aiTempCool: "Ambient fresc. Una jaqueta lleugera serà suficient. ", 
-    aiTempMild: "Temperatures suaus i agradables, sense extrems. ",
+    aiTempMild: "Temperaturas suaus i agradables, sense extrems. ",
     aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
     aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
     

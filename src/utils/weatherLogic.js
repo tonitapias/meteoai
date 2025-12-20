@@ -15,79 +15,82 @@ export const calculateDewPoint = (T, RH) => {
   return (b * alpha) / (a - alpha);
 };
 
+// FUNCIÓ ACTUALITZADA I MÉS ROBUSTA
 export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
-     const result = { current: {}, hourly: {}, daily: {}, hourlyComparison: { gfs: [], icon: [] }, dailyComparison: { gfs: {}, icon: {} } };
+     
+     // Inicialitzem l'estructura base
+     const result = { 
+         current: {}, 
+         hourly: {}, 
+         daily: {}, 
+         hourlyComparison: { gfs: [], icon: [] }, 
+         dailyComparison: { gfs: {}, icon: {} } 
+     };
      
      const suffixRegex = /_best_match|_ecmwf_ifs4|_ecmwf_ifs025/g;
 
-     // Current
-     Object.keys(data.current).forEach(key => {
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4') || key.endsWith('_ecmwf_ifs025')) {
-           result.current[key.replace(suffixRegex, '')] = data.current[key];
-        } else if (!key.includes('_gfs_seamless') && !key.includes('_icon_seamless')) {
-           result.current[key] = data.current[key];
-        }
+     // 1. Processar Current, Daily i Hourly (Dades Principals)
+     // Copiem directament les dades principals netejant els sufixos ECMWF
+     ['current', 'daily', 'hourly'].forEach(section => {
+         if (!data[section]) return;
+         
+         Object.keys(data[section]).forEach(key => {
+            // Si és una dada de comparativa (GFS/ICON), la saltem aquí, la processarem després
+            if (key.includes('_gfs_seamless') || key.includes('_icon_seamless')) return;
+
+            // Si té sufixos d'ECMWF o Best Match, els traiem
+            if (key.match(suffixRegex)) {
+                result[section][key.replace(suffixRegex, '')] = data[section][key];
+            } else {
+                // Si és una clau estàndard (ex: 'time', 'is_day'), la copiem tal qual
+                result[section][key] = data[section][key];
+            }
+         });
      });
 
-     // Daily
-     const dailyGfs = {};
-     const dailyIcon = {};
-
-     Object.keys(data.daily).forEach(key => {
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4') || key.endsWith('_ecmwf_ifs025')) {
-           result.daily[key.replace(suffixRegex, '')] = data.daily[key];
-        } 
-        else if (key.includes('_gfs_seamless')) {
-           const cleanKey = key.replace('_gfs_seamless', '');
-           dailyGfs[cleanKey] = data.daily[key];
-        }
-        else if (key.includes('_icon_seamless')) {
-           const cleanKey = key.replace('_icon_seamless', '');
-           dailyIcon[cleanKey] = data.daily[key];
-        }
-        else {
-           result.daily[key] = data.daily[key];
-        }
-     });
-
-     result.dailyComparison.gfs = dailyGfs;
-     result.dailyComparison.icon = dailyIcon;
-
-     // Hourly
-     const gfsHourly = [];
-     const iconHourly = [];
-     const len = data.hourly.time.length;
+     // 2. Processar Comparatives (GFS i ICON)
+     // Això evita errors si l'API canvia l'ordre de les claus
      
-     for (let i = 0; i < len; i++) {
-        gfsHourly.push({});
-        iconHourly.push({});
-     }
+     // --- DAILY COMPARISON ---
+     Object.keys(data.daily || {}).forEach(key => {
+        if (key.includes('_gfs_seamless')) {
+           result.dailyComparison.gfs[key.replace('_gfs_seamless', '')] = data.daily[key];
+        } else if (key.includes('_icon_seamless')) {
+           result.dailyComparison.icon[key.replace('_icon_seamless', '')] = data.daily[key];
+        }
+     });
 
-     Object.keys(data.hourly).forEach(key => {
-        const val = data.hourly[key];
-        
-        if (key.endsWith('_best_match') || key.endsWith('_ecmwf_ifs4') || key.endsWith('_ecmwf_ifs025')) {
-           result.hourly[key.replace(suffixRegex, '')] = val;
-        } 
-        else if (['time', 'is_day', 'freezing_level_height', 'pressure_msl', 'cape'].includes(key)) {
-           result.hourly[key] = val;
-        }
-        else if (key.includes('_gfs_seamless')) {
+     // --- HOURLY COMPARISON ---
+     const timeLength = data.hourly?.time?.length || 0;
+     
+     // Inicialitzem arrays amb objectes buits per evitar "undefined"
+     result.hourlyComparison.gfs = Array(timeLength).fill(null).map(() => ({}));
+     result.hourlyComparison.icon = Array(timeLength).fill(null).map(() => ({}));
+
+     Object.keys(data.hourly || {}).forEach(key => {
+        if (key.includes('_gfs_seamless')) {
            const cleanKey = key.replace('_gfs_seamless', '');
-           val.forEach((v, i) => { if (gfsHourly[i]) gfsHourly[i][cleanKey] = v });
-        }
+           data.hourly[key].forEach((val, index) => {
+               if (result.hourlyComparison.gfs[index]) {
+                   result.hourlyComparison.gfs[index][cleanKey] = val;
+               }
+           });
+        } 
         else if (key.includes('_icon_seamless')) {
             const cleanKey = key.replace('_icon_seamless', '');
-            val.forEach((v, i) => { if (iconHourly[i]) iconHourly[i][cleanKey] = v });
+            data.hourly[key].forEach((val, index) => {
+               if (result.hourlyComparison.icon[index]) {
+                   result.hourlyComparison.icon[index][cleanKey] = val;
+               }
+           });
         }
      });
 
-     result.hourlyComparison.gfs = gfsHourly;
-     result.hourlyComparison.icon = iconHourly;
-     
+     // Si per algun motiu no hem pogut processar res, tornem l'original per no trencar l'app
      if (Object.keys(result.current).length === 0) return data;
      
+     // Fusionem amb l'original per seguretat (però prioritzant el nostre processat)
      return { ...data, ...result };
 };
 
@@ -136,7 +139,8 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
             confidenceLevel = 'medium';
             confidenceText = tr.aiConfidenceMod || "Divergència Moderada";
         } else {
-            confidenceText = "Consens de Models"; 
+            // UPDATED: Usant nova clau de traducció
+            confidenceText = tr.aiConsensus || "Consens de Models"; 
         }
     }
 
@@ -184,7 +188,8 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
              summaryParts.push(tr.aiRainHumid);
         } else {
              if (current.cloud_cover > 70) {
-                 summaryParts.push(" No s'espera pluja, tot i l'aspecte gris del cel.");
+                 // UPDATED: Usant nova clau de traducció
+                 summaryParts.push(tr.aiCloudyNoRain || " No s'espera pluja.");
              } else {
                  summaryParts.push(tr.aiRainNone); 
              }

@@ -28,28 +28,23 @@ import {
   getWeatherLabel
 } from './utils/weatherLogic';
 
+// COMPONENT OPTIMITZAT: Ja no injecta <style> en cada renderitzat
 const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
+  const animationStyle = windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
+                         windSpeed > 15 ? 'wiggle 3s ease-in-out infinite' : 'none';
+
   const style = {
-    animation: windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
-               windSpeed > 15 ? 'wiggle 3s ease-in-out infinite' : 'none',
+    animation: animationStyle,
     transformOrigin: 'bottom center',
     filter: precip > 2 ? 'drop-shadow(0 0 10px rgba(255,255,255,0.5))' : ''
   };
 
-  const precipStyle = precip > 2 ? { animation: 'pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {};
+  const className = `transition-all duration-1000 ${precip > 2 ? 'animate-pulse' : ''}`;
 
   return (
-    <>
-      <style>{`
-        @keyframes wiggle {
-          0%, 100% { transform: rotate(-3deg); }
-          50% { transform: rotate(3deg); }
-        }
-      `}</style>
-      <div style={{...style, ...precipStyle}} className="transition-all duration-1000">
-        {children}
-      </div>
-    </>
+    <div style={style} className={className}>
+      {children}
+    </div>
   );
 };
 
@@ -1074,7 +1069,7 @@ export default function MeteoIA() {
                               <div className="flex flex-col">
                                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                                   {t.rel_title}
-                                </span>
+                                  </span>
                                 <span className="text-xs font-medium leading-tight">
                                   {reliability.type === 'ok' && t.rel_high}
                                   {reliability.type === 'general' && t.rel_medium}
