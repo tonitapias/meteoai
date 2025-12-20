@@ -15,82 +15,91 @@ export const calculateDewPoint = (T, RH) => {
   return (b * alpha) / (a - alpha);
 };
 
-// FUNCIÓ ACTUALITZADA I MÉS ROBUSTA
+
 export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      
-     // Inicialitzem l'estructura base
+     // 1. Estructura base segura clonant les dades originals
      const result = { 
-         current: {}, 
-         hourly: {}, 
-         daily: {}, 
+         current: { ...data.current }, 
+         hourly: { ...data.hourly }, 
+         daily: { ...data.daily }, 
          hourlyComparison: { gfs: [], icon: [] }, 
          dailyComparison: { gfs: {}, icon: {} } 
      };
      
-     const suffixRegex = /_best_match|_ecmwf_ifs4|_ecmwf_ifs025/g;
+     // Regex per netejar els sufixos del model principal (Best Match / ECMWF)
+     // Afegim 'aifs' per si es fa servir el model d'IA en el futur
+     const mainSuffixRegex = /(_best_match|_ecmwf_ifs4|_ecmwf_ifs025|_ecmwf_aifs04)/g;
 
-     // 1. Processar Current, Daily i Hourly (Dades Principals)
-     // Copiem directament les dades principals netejant els sufixos ECMWF
+     // 2. Processar Dades Principals (Neteja de noms)
      ['current', 'daily', 'hourly'].forEach(section => {
          if (!data[section]) return;
          
          Object.keys(data[section]).forEach(key => {
-            // Si és una dada de comparativa (GFS/ICON), la saltem aquí, la processarem després
-            if (key.includes('_gfs_seamless') || key.includes('_icon_seamless')) return;
+            // Saltem les claus que pertanyen a models comparatius (GFS/ICON)
+            // Ho detectem genèricament buscant "_gfs_" o "_icon_" al mig o final
+            if (key.includes('_gfs_') || key.includes('_icon_')) return;
 
-            // Si té sufixos d'ECMWF o Best Match, els traiem
-            if (key.match(suffixRegex)) {
-                result[section][key.replace(suffixRegex, '')] = data[section][key];
-            } else {
-                // Si és una clau estàndard (ex: 'time', 'is_day'), la copiem tal qual
-                result[section][key] = data[section][key];
+            // Si la clau té sufixos d'ECMWF o Best Match, creem una versió neta
+            // Ex: "temperature_2m_best_match" -> "temperature_2m"
+            if (key.match(mainSuffixRegex)) {
+                const cleanKey = key.replace(mainSuffixRegex, '');
+                result[section][cleanKey] = data[section][key];
             }
          });
      });
 
-     // 2. Processar Comparatives (GFS i ICON)
-     // Això evita errors si l'API canvia l'ordre de les claus
+     // 3. Processar Comparatives (GFS i ICON) de forma robusta
      
      // --- DAILY COMPARISON ---
      Object.keys(data.daily || {}).forEach(key => {
-        if (key.includes('_gfs_seamless')) {
-           result.dailyComparison.gfs[key.replace('_gfs_seamless', '')] = data.daily[key];
-        } else if (key.includes('_icon_seamless')) {
-           result.dailyComparison.icon[key.replace('_icon_seamless', '')] = data.daily[key];
+        // Detectem el model basant-nos en fragments clau, no en el nom sencer
+        if (key.includes('_gfs_')) {
+           // Separem pel fragment "_gfs_" i agafem la primera part com a nom net
+           const cleanKey = key.split('_gfs_')[0]; 
+           result.dailyComparison.gfs[cleanKey] = data.daily[key];
+        } else if (key.includes('_icon_')) {
+           const cleanKey = key.split('_icon_')[0];
+           result.dailyComparison.icon[cleanKey] = data.daily[key];
         }
      });
 
      // --- HOURLY COMPARISON ---
      const timeLength = data.hourly?.time?.length || 0;
      
-     // Inicialitzem arrays amb objectes buits per evitar "undefined"
-     result.hourlyComparison.gfs = Array(timeLength).fill(null).map(() => ({}));
-     result.hourlyComparison.icon = Array(timeLength).fill(null).map(() => ({}));
+     // Inicialitzem arrays de forma segura
+     result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
+     result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
 
      Object.keys(data.hourly || {}).forEach(key => {
-        if (key.includes('_gfs_seamless')) {
-           const cleanKey = key.replace('_gfs_seamless', '');
-           data.hourly[key].forEach((val, index) => {
-               if (result.hourlyComparison.gfs[index]) {
-                   result.hourlyComparison.gfs[index][cleanKey] = val;
-               }
-           });
-        } 
-        else if (key.includes('_icon_seamless')) {
-            const cleanKey = key.replace('_icon_seamless', '');
-            data.hourly[key].forEach((val, index) => {
-               if (result.hourlyComparison.icon[index]) {
-                   result.hourlyComparison.icon[index][cleanKey] = val;
-               }
-           });
+        let model = null;
+        let cleanKey = null;
+
+        // Identificació genèrica del model
+        if (key.includes('_gfs_')) {
+            model = 'gfs';
+            cleanKey = key.split('_gfs_')[0];
+        } else if (key.includes('_icon_')) {
+            model = 'icon';
+            cleanKey = key.split('_icon_')[0];
+        }
+
+        // Si hem identificat un model comparatiu, mapem les dades
+        if (model && cleanKey) {
+            const values = data.hourly[key];
+            // Protecció: Iterem només fins al límit disponible per evitar errors d'índex
+            const safeLength = Math.min(values.length, timeLength);
+            
+            for (let i = 0; i < safeLength; i++) {
+                if (result.hourlyComparison[model][i]) {
+                    result.hourlyComparison[model][i][cleanKey] = values[i];
+                }
+            }
         }
      });
 
-     // Si per algun motiu no hem pogut processar res, tornem l'original per no trencar l'app
-     if (Object.keys(result.current).length === 0) return data;
-     
-     // Fusionem amb l'original per seguretat (però prioritzant el nostre processat)
+     // Retornem fusionant l'original amb el processat per màxima seguretat
      return { ...data, ...result };
 };
 

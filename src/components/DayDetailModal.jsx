@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Umbrella, Mountain } from 'lucide-react';
+import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain } from 'lucide-react';
 import { HourlyForecastChart } from './WeatherCharts';
 
 export default function DayDetailModal({ 
@@ -8,7 +8,6 @@ export default function DayDetailModal({
   onClose, 
   unit, 
   lang,
-  viewMode,
   shiftedNow,
   getWeatherIcon 
 }) {
@@ -30,43 +29,46 @@ export default function DayDetailModal({
     };
   }, [weatherData, selectedDayIndex]);
 
+  // CORRECCIÓ DE DATES (Del Pas 1) MANTINGUDA
   const dayIndices = useMemo(() => {
-    const targetDate = new Date(dayData.date).toDateString();
+    if (!dayData.date) return [];
+    const targetDayStr = dayData.date.includes('T') ? dayData.date.split('T')[0] : dayData.date;
+
     return weatherData.hourly.time
-      .map((t, idx) => ({ t: new Date(t).toDateString(), idx }))
-      .filter(item => item.t === targetDate)
+      .map((t, idx) => ({ 
+        datePart: t.includes('T') ? t.split('T')[0] : t, 
+        idx 
+      }))
+      .filter(item => item.datePart === targetDayStr)
       .map(item => item.idx);
   }, [weatherData, dayData]);
 
+  // LÒGICA SIMPLIFICADA (Gràcies a la normalització del Pas 2)
   const hourlyDataForDay = useMemo(() => {
     if (dayIndices.length === 0) return [];
 
-    const keys = Object.keys(weatherData.hourly);
-    const findKey = (baseName) => {
-        return keys.find(k => k === baseName) || 
-               keys.find(k => k.includes(baseName) && k.includes('ecmwf')) ||
-               keys.find(k => k.includes(baseName) && k.includes('gfs')) ||
-               keys.find(k => k.includes(baseName));
-    };
-
-    const snowKey = findKey('freezing_level_height');
-    const tempKey = findKey('temperature_2m');
-    
     return dayIndices.map(idx => {
-        const rawFl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][idx] : null;
-        const fallbackFl = rawFl ?? weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
-        const snowLevel = (fallbackFl !== null && fallbackFl !== undefined) ? Math.max(0, fallbackFl - 300) : null;
+        // Accés directe sense cerques "fuzzy"
+        const fl = weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[idx] : null;
+        
+        // Fallback robust per cota de neu
+        let finalFl = fl;
+        if (finalFl === null || finalFl === undefined) {
+             finalFl = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? 
+                       weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
+        }
+        const snowLevel = (finalFl !== null && finalFl !== undefined) ? Math.max(0, finalFl - 300) : null;
 
         return {
             time: weatherData.hourly.time[idx],
-            temp: weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[idx] : 0,
-            rain: weatherData.hourly.precipitation_probability ? weatherData.hourly.precipitation_probability[idx] : 0,
+            temp: weatherData.hourly.temperature_2m[idx],
+            rain: weatherData.hourly.precipitation_probability[idx],
             snowLevel: snowLevel, 
-            isDay: weatherData.hourly.is_day ? weatherData.hourly.is_day[idx] : 1,
-            code: weatherData.hourly.weather_code ? weatherData.hourly.weather_code[idx] : 0,
-            precip: weatherData.hourly.precipitation ? weatherData.hourly.precipitation[idx] : 0,
-            wind: weatherData.hourly.wind_speed_10m ? weatherData.hourly.wind_speed_10m[idx] : 0,
-            humidity: weatherData.hourly.relative_humidity_2m ? weatherData.hourly.relative_humidity_2m[idx] : 0,
+            isDay: weatherData.hourly.is_day[idx],
+            code: weatherData.hourly.weather_code[idx],
+            precip: weatherData.hourly.precipitation[idx],
+            wind: weatherData.hourly.wind_speed_10m[idx],
+            humidity: weatherData.hourly.relative_humidity_2m[idx],
         };
     });
   }, [weatherData, dayIndices]);
@@ -75,17 +77,12 @@ export default function DayDetailModal({
       if (!weatherData.hourlyComparison || dayIndices.length === 0) return null;
 
       const extractModelData = (modelArray) => {
-          if (!modelArray) return [];
+          if (!modelArray || !modelArray.length) return [];
           return dayIndices.map(idx => {
               const d = modelArray[idx];
               if (!d) return null;
-
-              let fl = d.freezing_level_height;
-              if (fl === undefined) {
-                  const keys = Object.keys(d);
-                  const dirtyKey = keys.find(k => k.includes('freezing_level_height'));
-                  if (dirtyKey) fl = d[dirtyKey];
-              }
+              
+              const fl = d.freezing_level_height;
               const snowLevel = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
 
               return {
@@ -134,6 +131,7 @@ export default function DayDetailModal({
       >
         <button 
           onClick={onClose}
+          aria-label="Tancar"
           className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors z-10"
         >
           <X className="w-6 h-6 text-slate-400 hover:text-white" />
@@ -226,7 +224,6 @@ export default function DayDetailModal({
                 unit={unit} 
                 lang={lang} 
                 shiftedNow={shiftedNow}
-                isDetailView={true} 
              />
           </div>
 
