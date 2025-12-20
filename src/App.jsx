@@ -986,7 +986,7 @@ export default function MeteoIA() {
                                   windSpeed={weatherData.current.wind_speed_10m}
                                   precip={weatherData.current.precipitation}
                                >
-                                  {/* ICONA AMB precip15 */}
+                                  {/* ICONA CRIDA AMB precip15 */}
                                   {getWeatherIcon(
                                      effectiveWeatherCode, 
                                      "w-24 h-24 md:w-32 md:h-32", 
@@ -1004,7 +1004,7 @@ export default function MeteoIA() {
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                                  {/* CRIDA CORRECTA: ETIQUETA AMB DADES COMBINADES */}
+                                  {/* ETIQUETA CORREGIDA: Passant dades de pluja */}
                                   {getWeatherLabel({ 
                                       ...weatherData.current, 
                                       minutely15: weatherData.minutely_15?.precipitation 

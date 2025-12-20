@@ -61,16 +61,16 @@ export const WeatherParticles = ({ code }) => {
   );
 };
 
-// ICONA CORREGIDA
+// ICONA CORREGIDA I NETEJA D'INCONGRUÈNCIES
 export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0, precip15 = 0) => {
     const commonProps = {
       strokeWidth: 2, 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // ELIMINAT: El bloc que convertia plugim (51,53...) en boira. 
-    // Ara qualsevol pluja mostrarà icona de pluja.
-
+    // ELIMINAT: El bloc que convertia plugim+humitat en boira.
+    
+    // Si hi ha probabilitat alta de pluja però el codi és baix, posem pluja variable
     if (rainProb > 50 && code < 50) {
        return <VariableRainIcon isDay={isDay} {...commonProps} />;
     }
@@ -88,7 +88,7 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
     
     if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
 
-    // CORRECCIÓ ICONA: Si és boira però hi ha precipitació (>0), icona de pluja.
+    // CORRECCIÓ ICONA: Si és boira però hi ha precipitació (>0), forcem icona de pluja.
     if ((code >= 45 && code <= 48) && (precip15 > 0)) {
          return <VariableRainIcon isDay={isDay} {...commonProps} />;
     }
