@@ -100,8 +100,10 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     const windSpeed = current.wind_speed_10m;
     const code = forcedCode !== null ? forcedCode : current.weather_code;
     const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
-    // Assegurem càlcul segur de la precipitació recent
+    
+    // Càlcul segur de precipitació minutal
     const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
+    
     const uvMax = daily.uv_index_max[0];
     const isDay = current.is_day;
     const currentHour = new Date().getHours();
@@ -145,7 +147,7 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
 
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     
-    // Si plou, ignorem si hi ha boira o no al text de l'IA, diem que plou.
+    // MODIFICAT: Prioritat total a la pluja al text de l'IA
     if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (isSnow) summaryParts.push(tr.aiSummarySnow);
     else if (code >= 51 || precip15 > 0) { 
@@ -285,10 +287,7 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   return { level, type, value };
 };
 
-// --- ETIQUETA PRINCIPAL REFORÇADA ---
-// ... (resta de l'arxiu igual, ves al final de tot)
-
-// --- ETIQUETA PRINCIPAL SIMPLIFICADA ---
+// --- ETIQUETA PRINCIPAL DEFINITIVA I SIMPLIFICADA ---
 export const getWeatherLabel = (current, language) => {
   const tr = TRANSLATIONS[language];
   if (!tr || !current) return "";
@@ -296,18 +295,18 @@ export const getWeatherLabel = (current, language) => {
   const code = Number(current.weather_code);
   const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
   
-  // 1. CORRECCIÓ BOIRA: Si plou amb boira, diem "Pluja".
+  // 1. PRIORITAT PLUJA SOBRE BOIRA:
+  // Si cau aigua (>0), ignorem la boira i mostrem text de pluja.
   if ((code === 45 || code === 48) && precip15 > 0) {
       return tr.rainy; 
   }
 
-  // 2. SIMPLIFICACIÓ TOTAL:
-  // Agrupem Plugim feble (51), moderat (53) i dens (55) tot com a "Pluja".
-  // També "Pluja feble" (61) es pot mostrar com "Pluja" si vols ser molt minimalista.
+  // 2. SIMPLIFICACIÓ:
+  // Agrupem "Plugim feble/moderat/dens" (51, 53, 55) i "Pluja feble" (61) sota l'etiqueta única "Pluja".
+  // Això fa l'app molt més clara per a l'usuari.
   if (code === 51 || code === 53 || code === 55 || code === 61) {
-      return tr.rainy; // Retorna "Pluja" (o "Lluvia" / "Rain" segons idioma)
+      return tr.rainy; 
   }
 
-  // La resta de codis (Tempesta, Neu, Pluja forta, etc.) es mostren específics
   return tr.wmo[code] || "---";
 };
