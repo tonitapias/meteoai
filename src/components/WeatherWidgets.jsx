@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
-  Thermometer, Droplets, Zap, Gauge 
+  Thermometer, Droplets, Zap, Gauge, Mountain // <--- AFEGIT 'Mountain'
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants/translations';
 
@@ -368,4 +368,53 @@ export const CapeWidget = ({ cape, lang }) => {
             </div>
         </div>
     )
+};
+
+export const SnowLevelWidget = ({ freezingLevel, unit }) => {
+  // Si no hi ha dades, no renderitzem res
+  if (freezingLevel === null || freezingLevel === undefined) return null;
+
+  // Càlcul estàndard: la neu qualla uns 300m per sota de la isoterma 0ºC
+  const snowLevel = Math.max(0, freezingLevel - 300);
+  
+  const formatH = (val) => `${Math.round(val)}m`;
+  
+  return (
+    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col justify-between h-full relative overflow-hidden group backdrop-blur-sm">
+      {/* Títol */}
+      <div className="flex items-center gap-2 text-indigo-300 mb-2 z-10">
+        <Mountain className="w-4 h-4" />
+        <span className="text-xs font-bold uppercase tracking-wider">Cota de Neu</span>
+      </div>
+
+      {/* Dades Principals */}
+      <div className="flex flex-col gap-1 z-10 mt-1">
+        <div className="flex justify-between items-end">
+             <span className="text-3xl font-bold text-white leading-none">
+                {formatH(snowLevel)}
+             </span>
+        </div>
+        <span className="text-xs text-slate-400 font-medium">
+           Isoterma 0ºC a <span className="text-slate-300">{formatH(freezingLevel)}</span>
+        </span>
+      </div>
+
+      {/* Visualització Gràfica (Muntanya Abstracta) */}
+      <div className="absolute bottom-0 right-0 w-24 h-24 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none">
+         <svg viewBox="0 0 100 100" className="fill-current text-white">
+            <path d="M50 10 L90 90 L10 90 Z" />
+            <path d="M50 10 L65 40 L35 40 Z" fill="white" className="opacity-80" /> {/* Cim nevat */}
+         </svg>
+      </div>
+      
+      {/* Barra visual d'alçada */}
+      <div className="mt-3 h-1.5 w-full bg-slate-700 rounded-full overflow-hidden flex z-10">
+          {/* Si la cota és molt baixa (<1000m), la barra s'omple més per indicar "perill/proximitat" */}
+          <div 
+            className={`h-full transition-all duration-1000 ${snowLevel < 1000 ? 'bg-cyan-300' : 'bg-indigo-400'}`} 
+            style={{ width: `${Math.max(10, Math.min(100, (3000 - snowLevel) / 30))}%` }} 
+          ></div>
+      </div>
+    </div>
+  );
 };

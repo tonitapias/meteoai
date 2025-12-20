@@ -3,18 +3,20 @@ import {
   Wind, CloudSun, CloudRain, CloudLightning, Snowflake, 
   AlertTriangle, Umbrella, Shirt, ThermometerSun, AlertOctagon, 
   TrendingUp, Clock, Calendar, ThermometerSnowflake, GitGraph,
-  Star, BrainCircuit, MapPin, Map // <--- Afegit 'Map'
+  Star, BrainCircuit, MapPin, Map // <--- Assegura't que 'Map' hi és
 } from 'lucide-react';
 
 import Header from './components/Header'; 
 import { TRANSLATIONS } from './constants/translations';
 import { HourlyForecastChart, MinutelyPreciseChart } from './components/WeatherCharts';
+// --- IMPORT UNIFICAT DE WIDGETS (SENSE DUPLICATS) ---
 import { 
   SunArcWidget, MoonWidget, PollenWidget, CompassGauge, 
-  CircularGauge, DewPointWidget, CapeWidget, TempRangeBar, MoonPhaseIcon 
+  CircularGauge, DewPointWidget, CapeWidget, TempRangeBar, MoonPhaseIcon,
+  SnowLevelWidget 
 } from './components/WeatherWidgets';
 import DayDetailModal from './components/DayDetailModal';
-import RadarModal from './components/RadarModal'; // <--- Afegit import del Radar
+import RadarModal from './components/RadarModal'; 
 import { WeatherParticles, getWeatherIcon } from './components/WeatherIcons';
 import { TypewriterText, FlagIcon } from './components/WeatherUI';
 import { 
@@ -56,8 +58,8 @@ export default function MeteoIA() {
   const [error, setError] = useState(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
   const [favorites, setFavorites] = useState([]);
-  const [showRadar, setShowRadar] = useState(false); // <--- Nou estat pel Radar
-  
+  const [showRadar, setShowRadar] = useState(false); 
+
   // --- CONFIGURACIÓ (LocalStorage) ---
   const [unit, setUnit] = useState(() => localStorage.getItem('meteoia-unit') || 'C');
   const [lang, setLang] = useState(() => localStorage.getItem('meteoia-lang') || 'ca');
@@ -209,7 +211,49 @@ export default function MeteoIA() {
      return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
   }, [weatherData, shiftedNow]);
 
-  // --- LÒGICA CORREGIDA PER PLUJA ACTUAL ---
+  // --- CÀLCUL DE LA ISOTERMA 0ºC (Nou) ---
+  // A src/App.jsx
+
+  // --- CÀLCUL ROBUST DE LA ISOTERMA 0ºC ---
+  const currentFreezingLevel = useMemo(() => {
+      if(!weatherData || !weatherData.hourly) return null;
+      
+      // 1. Busquem la clau principal (ECMWF normalment)
+      const key = Object.keys(weatherData.hourly).find(k => k.includes('freezing_level_height'));
+      if (!key) return null;
+      
+      const nowMs = shiftedNow.getTime();
+      const currentIdx = weatherData.hourly.time.findIndex(t => {
+          const tMs = new Date(t).getTime();
+          return tMs <= nowMs && (tMs + 3600000) > nowMs;
+      });
+      
+      if (currentIdx === -1) return null;
+      
+      // 2. Obtenim el valor inicial
+      let val = weatherData.hourly[key][currentIdx];
+      const currentTemp = weatherData.current.temperature_2m;
+
+      // 3. VERIFICACIÓ D'ERRORS:
+      // Si el valor no existeix (null/undefined) 
+      // O SI és 0 metres però fa més de 4ºC (això és impossible, és un error de l'API)
+      const isSuspicious = val === null || val === undefined || (val < 100 && currentTemp > 4);
+
+      if (isSuspicious) {
+          // Intentem rescatar la dada dels models secundaris (GFS o ICON)
+          const gfsVal = weatherData.hourlyComparison?.gfs?.[currentIdx]?.freezing_level_height;
+          const iconVal = weatherData.hourlyComparison?.icon?.[currentIdx]?.freezing_level_height;
+          
+          if (gfsVal !== null && gfsVal !== undefined) val = gfsVal;
+          else if (iconVal !== null && iconVal !== undefined) val = iconVal;
+      }
+      
+      // 4. Si després de tot segueix sent invàlid, retornem NULL (així el widget s'amaga)
+      // Important: NO retornem 0 per defecte.
+      return (val !== null && val !== undefined) ? val : null;
+
+  }, [weatherData, shiftedNow]);
+
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
@@ -219,24 +263,19 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
-    // 1. SI JA ESTÀ PLOVENT (Dades reals de precipitació) - MÉS ESTRICTE
-    // Només posem icona de pluja si hi ha precipitació mesurable (>0mm)
+    // 1. SI JA ESTÀ PLOVENT (Dades reals de precipitació)
     if (currentPrecip > 0 || immediateRain > 0.1) {
         if (currentPrecip > 2 || immediateRain > 2) return 65; 
         if (weatherData.current.temperature_2m < 1) return 71; 
         return 61; 
     }
 
-    // 2. MODIFICAT: ELIMINEM la regla que deia "si probabilitat > 50% llavors pluja".
-    // Això provocava el problema de "l'app diu que plou però no plou".
-    // Ara ens refiem del codi original de l'API o de la precipitació real detectada a dalt.
-
-    // 3. ALTRES CONDICIONS (Vent, Humitat)
+    // 2. ALTRES CONDICIONS
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
     if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
     
     return currentCode;
-  }, [weatherData, minutelyPreciseData, shiftedNow]); // Nota: Ja no depèn de currentRainProbability
+  }, [weatherData, minutelyPreciseData, shiftedNow]);
 
   // FONS DINÀMIC
   const getDynamicBackground = (code, isDay = 1) => {
@@ -630,9 +669,7 @@ export default function MeteoIA() {
                                     <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
                                 </button>
                                 
-                                {/* A src/App.jsx */}
-
-                                {/* --- BOTÓ RADAR (MODIFICAT) --- */}
+                                {/* --- BOTÓ RADAR --- */}
                                 <button 
                                     onClick={() => setShowRadar(true)}
                                     className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
@@ -643,8 +680,7 @@ export default function MeteoIA() {
                                         Radar
                                     </span>
                                 </button>
-                                {/* ------------------------------ */}
-
+                                {/* ---------------- */}
                            </div>
                            <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
                                 <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
@@ -681,7 +717,7 @@ export default function MeteoIA() {
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
                                   {getWeatherLabel({ 
                                       ...weatherData.current, 
-                                      weather_code: effectiveWeatherCode, // Utilitzem el codi corregit
+                                      weather_code: effectiveWeatherCode, 
                                       minutely15: weatherData.minutely_15?.precipitation 
                                   }, lang)}
                                 </span>
@@ -778,6 +814,14 @@ export default function MeteoIA() {
                           lang={lang}
                        />
                      </div>
+                     
+                     {/* --- WIDGET COTA NEU (Només si < 4000m) --- */}
+                     {currentFreezingLevel !== null && currentFreezingLevel < 4000 && (
+                        <div className="col-span-1">
+                            <SnowLevelWidget freezingLevel={currentFreezingLevel} unit={unit} />
+                        </div>
+                     )}
+
                      <CircularGauge 
                         icon={<AlertOctagon className="w-6 h-6" strokeWidth={2.5}/>} 
                         label={t.pressure} 
@@ -818,7 +862,7 @@ export default function MeteoIA() {
 
             <div className="w-full py-8 mt-8 text-center border-t border-white/5">
               <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70">
-                © {new Date().getFullYear()} Meteo Toni Ai
+                © {new Date().getFullYear()} Meteo Toni AI
               </p>
             </div>
           </div>

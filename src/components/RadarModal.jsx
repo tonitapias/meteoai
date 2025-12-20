@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, Map, ExternalLink } from 'lucide-react'; // <--- AFEGIR ExternalLink
+import { X, Map, ExternalLink } from 'lucide-react';
 
 const RadarModal = ({ lat, lon, onClose }) => {
-  // Configuració de RainViewer
+  // CONFIGURACIÓ AMB ANIMACIÓ (Restaurada)
+  // Hem tornat a posar oAP=1 (AutoPlay) i la resta de paràmetres visuals
   const radarUrl = `https://www.rainviewer.com/map.html?loc=${lat},${lon},8&oFa=0&oC=1&oU=0&oCS=1&oF=0&oAP=1&c=3&o=90&lm=1&layer=radar&sm=1&sn=1`;
 
   return (
@@ -18,7 +19,6 @@ const RadarModal = ({ lat, lon, onClose }) => {
           </h3>
           
           <div className="flex items-center gap-2">
-              {/* --- NOU BOTÓ: OBRIR EN FINESTRA NOVA (Pla B per Samsung/iOS) --- */}
               <a 
                 href={radarUrl} 
                 target="_blank" 
@@ -47,11 +47,11 @@ const RadarModal = ({ lat, lon, onClose }) => {
                 height="100%" 
                 frameBorder="0" 
                 allowFullScreen
-                // --- SOLUCIÓ TÈCNICA: Permisos explícits ---
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                referrerPolicy="no-referrer-when-downgrade"
+                // --- PUNT CLAU: Mantenim el 'sandbox' ELIMINAT ---
+                // Això és el que arregla el Samsung, no la URL.
+                // Així podem tenir animació i compatibilitat alhora.
+                referrerPolicy="no-referrer"
                 loading="eager"
-                // -------------------------------------------
                 className="absolute inset-0 w-full h-full"
                 title="Radar RainViewer"
             />
@@ -59,8 +59,7 @@ const RadarModal = ({ lat, lon, onClose }) => {
         
         <div className="p-2 bg-slate-900 text-center text-xs text-slate-500 flex justify-between px-4">
             <span>Dades: RainViewer</span>
-            {/* Missatge d'ajuda si no carrega */}
-            <span className="opacity-50">Si no carrega, prem el botó de dalt a la dreta ↗</span>
+            <span className="opacity-50">Si falla, prem "Obrir fora" ↗</span>
         </div>
       </div>
     </div>
