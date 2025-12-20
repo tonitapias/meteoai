@@ -1,13 +1,8 @@
 import React from 'react';
-import { X, Map } from 'lucide-react';
+import { X, Map, ExternalLink } from 'lucide-react'; // <--- AFEGIR ExternalLink
 
 const RadarModal = ({ lat, lon, onClose }) => {
-  // Configuració de RainViewer:
-  // loc: lat,lon,zoom
-  // layer: radar
-  // smooth: 1 (suavitzat)
-  // snow: 1 (mostrar neu)
-  // colors: 1 (original)
+  // Configuració de RainViewer
   const radarUrl = `https://www.rainviewer.com/map.html?loc=${lat},${lon},8&oFa=0&oC=1&oU=0&oCS=1&oF=0&oAP=1&c=3&o=90&lm=1&layer=radar&sm=1&sn=1`;
 
   return (
@@ -17,14 +12,31 @@ const RadarModal = ({ lat, lon, onClose }) => {
         {/* Capçalera del Modal */}
         <div className="flex items-center justify-between p-4 bg-slate-800/50 border-b border-white/10">
           <h3 className="text-white font-bold flex items-center gap-2">
-             <Map className="w-5 h-5 text-indigo-400"/> Radar de Precipitació (En Viu)
+             <Map className="w-5 h-5 text-indigo-400"/> 
+             <span className="hidden md:inline">Radar de Precipitació</span>
+             <span className="md:hidden">Radar</span>
           </h3>
-          <button 
-            onClick={onClose} 
-            className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
-          >
-            <X className="w-6 h-6"/>
-          </button>
+          
+          <div className="flex items-center gap-2">
+              {/* --- NOU BOTÓ: OBRIR EN FINESTRA NOVA (Pla B per Samsung/iOS) --- */}
+              <a 
+                href={radarUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 rounded-full transition-colors flex items-center gap-2 px-3"
+                title="Obrir en navegador extern"
+              >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="text-xs font-bold hidden md:inline">Obrir fora</span>
+              </a>
+
+              <button 
+                onClick={onClose} 
+                className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
+              >
+                <X className="w-6 h-6"/>
+              </button>
+          </div>
         </div>
 
         {/* Iframe del Mapa */}
@@ -35,13 +47,20 @@ const RadarModal = ({ lat, lon, onClose }) => {
                 height="100%" 
                 frameBorder="0" 
                 allowFullScreen
+                // --- SOLUCIÓ TÈCNICA: Permisos explícits ---
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                referrerPolicy="no-referrer-when-downgrade"
+                loading="eager"
+                // -------------------------------------------
                 className="absolute inset-0 w-full h-full"
                 title="Radar RainViewer"
             />
         </div>
         
-        <div className="p-2 bg-slate-900 text-center text-xs text-slate-500">
-            Dades proporcionades per RainViewer
+        <div className="p-2 bg-slate-900 text-center text-xs text-slate-500 flex justify-between px-4">
+            <span>Dades: RainViewer</span>
+            {/* Missatge d'ajuda si no carrega */}
+            <span className="opacity-50">Si no carrega, prem el botó de dalt a la dreta ↗</span>
         </div>
       </div>
     </div>
