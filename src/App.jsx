@@ -630,16 +630,20 @@ export default function MeteoIA() {
                                     <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
                                 </button>
                                 
-                                {/* --- BOTÓ RADAR --- */}
+                                {/* A src/App.jsx */}
+
+                                {/* --- BOTÓ RADAR (MODIFICAT) --- */}
                                 <button 
                                     onClick={() => setShowRadar(true)}
-                                    className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-2 px-3 group"
+                                    className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
                                     title="Veure Radar en viu"
                                 >
-                                    <Map className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                    <span className="text-xs font-bold uppercase hidden md:inline">Radar</span>
+                                    <Map className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                                        Radar
+                                    </span>
                                 </button>
-                                {/* ---------------- */}
+                                {/* ------------------------------ */}
 
                            </div>
                            <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">

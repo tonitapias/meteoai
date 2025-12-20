@@ -58,9 +58,10 @@ export default function Header({
   useEffect(() => {
     if (showSuggestions && activeSuggestionIndex !== -1 && suggestionsListRef.current) {
         const list = suggestionsListRef.current;
-        const buttons = list.querySelectorAll('button.group'); 
-        if (buttons[activeSuggestionIndex]) {
-            buttons[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
+        // Busquem tant 'button' com 'div' amb la classe 'group' per si de cas
+        const items = list.querySelectorAll('.group'); 
+        if (items[activeSuggestionIndex]) {
+            items[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
         }
     }
   }, [activeSuggestionIndex, showSuggestions]);
@@ -113,14 +114,20 @@ export default function Header({
            <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
          </div>
          
-         {/* Mòbil: Controls bàsics (ARA INCLOU CANVI DE VISTA) */}
-         <div className="md:hidden flex gap-2">
-             {/* Botó toggle vista per a mòbil */}
+         {/* Mòbil: Controls bàsics */}
+         <div className="md:hidden flex gap-2 items-center">
              <button 
                 onClick={() => setViewMode(viewMode === 'basic' ? 'expert' : 'basic')} 
-                className={`p-2 rounded-lg w-10 h-10 flex items-center justify-center transition-all ${viewMode === 'expert' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'}`}
+                className={`px-3 h-10 rounded-lg flex items-center gap-2 transition-all ${
+                    viewMode === 'expert' 
+                    ? 'bg-indigo-600 text-white shadow-md' 
+                    : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'
+                }`}
              >
-                 {viewMode === 'basic' ? <LayoutTemplate size={18} /> : <LayoutDashboard size={18} />}
+                 {viewMode === 'basic' ? <LayoutTemplate size={16} /> : <LayoutDashboard size={16} />}
+                 <span className="text-xs font-bold uppercase tracking-wide">
+                     {viewMode === 'basic' ? t.modeBasic : t.modeExpert}
+                 </span>
              </button>
 
              <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
@@ -161,9 +168,9 @@ export default function Header({
                )}
                
                {(query.length === 0 ? favorites : suggestions).map((item, i) => (
-                 <button 
+                 // --- CANVI AQUÍ: <button> per <div> ---
+                 <div 
                    key={i}
-                   type="button" 
                    onMouseDown={(e) => e.preventDefault()} 
                    className={`group w-full px-4 py-3 flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer transition-colors text-left ${i === activeSuggestionIndex ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500' : 'hover:bg-white/5'}`}
                    onClick={() => cleanupSearch(item.latitude, item.longitude, item.name, item.country || item.admin1)} 
@@ -188,7 +195,7 @@ export default function Header({
                    ) : (
                      i === activeSuggestionIndex && <ArrowRight className="w-4 h-4 text-indigo-400 animate-pulse"/>
                    )}
-                 </button>
+                 </div>
                ))}
              </div>
            )}
@@ -198,7 +205,7 @@ export default function Header({
          </button>
       </div>
 
-      {/* 3. CONTROLS ESCRIPTORI (Hidden on mobile) */}
+      {/* 3. CONTROLS ESCRIPTORI */}
       <div className="hidden md:flex gap-3 w-full md:w-auto items-center md:order-3 justify-end">
          <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner">
            <button onClick={() => setViewMode('basic')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'basic' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>
