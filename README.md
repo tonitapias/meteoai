@@ -1,53 +1,49 @@
-# 🌤️ Meteo Toni AI
+# 🌦️ Meteo Toni AI
 
-**Meteo Toni AI** és una aplicació meteorològica de nova generació construïda amb **React** i **Vite**. Va més enllà de la simple previsió, oferint una anàlisi textual "tipus IA", comparativa entre múltiples models meteorològics (GFS, ICON, ECMWF) i una experiència visual immersiva amb fons dinàmics i efectes de partícules.
+Benvinguts a la **Meteo Toni AI**! 👋
 
-## ✨ Funcionalitats Clau
+Aquesta no és la típica aplicació del temps avorrida. És un projecte personal fet amb **React** on he volgut portar la previsió meteorològica un pas més enllà, barrejant dades reals amb una mica de "màgia" (lògica intel·ligent) perquè t'expliqui el temps com ho faria un amic.
 
-- **🧠 Anàlisi Intel·ligent**: Algoritme que genera resums de les condicions, riscos i consells de roba en llenguatge natural.
-- **📊 Comparativa Multi-Model**: Compara les previsions dels models **ECMWF**, **GFS** i **ICON** per detectar divergències i assegurar la fiabilitat.
-- **🎨 Interfície Immersiva**: 
-  - Fons degradats dinàmics basats en el codi de temps, l'hora del dia (Hora Daurada/Blava) i la sortida/posta de sol.
-  - Sistema de partícules per a pluja 🌧️ i neu ❄️.
-  - Icones animades amb Lucide React.
-- **🌍 Global i Local**: 
-  - Cerca precisa d'ubicacions amb autocompletat.
-  - Suport per a Geolocalització.
-  - Ajust automàtic a la zona horària local del lloc cercat.
-- **📉 Mètriques Avançades**:
-  - Gràfiques de precipitació minut a minut (pròxima hora).
-  - Índex CAPE, Punt de Rosada, tendències de pressió.
-  - Visualització de l'Arc Solar i Fase Lunar.
-  - Qualitat de l'aire (AQI) i nivells de pol·len.
-- **⚙️ Personalitzable**:
-  - **Modes**: Bàsic (Visió general) vs. Expert (Dades tècniques).
-  - **Idiomes**: Català, Castellà, Anglès, Francès.
-  - **Unitats**: Celsius/Fahrenheit.
+## 🔗 Vols provar-la ara mateix?
 
-## 🛠️ Tecnologies Utilitzades
+No cal instal·lar res! Pots veure l'aplicació funcionant en directe aquí:
 
-- **Framework**: [React](https://reactjs.org/) (Hooks, Context, Memoization)
-- **Eina de Build**: [Vite](https://vitejs.dev/)
-- **Estils**: [Tailwind CSS](https://tailwindcss.com/)
-- **Icones**: [Lucide React](https://lucide.dev/)
-- **Dades**: [Open-Meteo API](https://open-meteo.com/) (Gratuït, ús no comercial)
-- **Geocoding**: OpenStreetMap (Nominatim)
+👉 **[Fes clic aquí per obrir la Meteo Toni AI](https://tonitapias.github.io/meteoai/)**
 
-## 📂 Estructura del Projecte
+*Funciona perfectament al mòbil, a la tablet i a l'ordinador.*
 
-El projecte segueix una arquitectura modular i neta:
+---
 
-```bash
-src/
-├── components/       # Components d'Interfície
-│   ├── DayDetailModal.jsx  # Detall diari i comparativa
-│   ├── WeatherCharts.jsx   # Integració de gràfiques (Recharts)
-│   ├── WeatherIcons.jsx    # Lògica visual, icones i partícules
-│   ├── WeatherWidgets.jsx  # Gauges, widgets de sol/lluna
-│   └── WeatherUI.jsx       # Elements UI petits (Text tipus màquina, Banderes)
-├── utils/            # Funcions auxiliars
-│   ├── formatters.js       # Format de dates, hores i unitats
-│   └── weatherLogic.js     # Càlculs físics (Punt de rosada, etc.)
-├── constants/        # Dades estàtiques
-│   └── translations.js     # Diccionaris d'idiomes (i18n)
-└── App.jsx           # Lògica principal de l'aplicació
+## 😎 Què la fa especial?
+
+Més enllà de dir-te la temperatura, aquesta app té algunes coses molt xules sota el capó:
+
+- **🤖 El "Cervell" (AI Analysis):** L'app analitza les dades i et genera un text personalitzat (Tipus: *"Agafa jaqueta que refresca"* o *"Consens de models, pluja segura"*).
+- **☔️ Especialista en pluja:** Si hi ha un risc alt de precipitació, l'app et mostra pluja directament, encara que els sensors diguin només "núvol".
+- **🏎️ Velocitat total:** Tot està pensat perquè la cerca de ciutats sigui instantània i l'app es mogui amb total fluïdesa.
+- **📱 Mode Mòbil i Expert:** Pots triar entre una vista bàsica o una vista experta amb gràfics i dades avançades.
+
+## 🌳 Estructura del Projecte
+
+Així és com estan organitzades les peces per dins:
+
+```text
+meteoai/
+├── public/                 # Arxius públics i icones
+├── src/
+│   ├── assets/             # Imatges i recursos visuals
+│   ├── components/         # Les peces de la web
+│   │   ├── Header.jsx          # Cercador, favorits i controls
+│   │   ├── WeatherCharts.jsx   # Gràfics d'evolució horària
+│   │   ├── WeatherWidgets.jsx  # Panells de vent, pressió, sol, etc.
+│   │   ├── WeatherIcons.jsx    # Lògica visual d'icones dinàmiques
+│   │   ├── DayDetailModal.jsx  # Detalls a fons de cada dia
+│   │   └── WeatherUI.jsx       # Elements visuals auxiliars
+│   ├── constants/          # Traduccions (CA, ES, EN, FR)
+│   ├── utils/              # La "intel·ligència" de l'app
+│   │   ├── weatherLogic.js     # Algorismes de predicció i neteja
+│   │   └── formatters.js       # Formateig de dates i dades
+│   ├── App.jsx             # El cor que mou tota la informació
+│   └── main.jsx            # Punt d'entrada del codi
+├── index.html              # Pàgina principal
+└── package.json            # Configuració i llibreries
