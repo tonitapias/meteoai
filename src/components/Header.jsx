@@ -29,12 +29,10 @@ export default function Header({
   const suggestionsListRef = useRef(null);
   const t = TRANSLATIONS[lang];
 
-  // Sincronitza l'estat de càrrega extern amb l'intern
   useEffect(() => {
      setIsSearching(loading);
   }, [loading]);
 
-  // Lògica de suggeriments (Debounce)
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.length > 2 && showSuggestions) {
@@ -49,7 +47,6 @@ export default function Header({
     return () => clearTimeout(timer);
   }, [query, showSuggestions, lang]);
 
-  // Mostrar favorits si la query està buida
   useEffect(() => {
     if (!showSuggestions) return;
     if (query.length === 0) {
@@ -58,7 +55,6 @@ export default function Header({
     }
   }, [query, showSuggestions, favorites]);
 
-  // Scroll automàtic als suggeriments
   useEffect(() => {
     if (showSuggestions && activeSuggestionIndex !== -1 && suggestionsListRef.current) {
         const list = suggestionsListRef.current;
@@ -70,12 +66,9 @@ export default function Header({
   }, [activeSuggestionIndex, showSuggestions]);
 
   const cleanupSearch = (lat, lon, name, country) => {
-    // Tanquem suggeriments i netegem
     setShowSuggestions(false);
     setQuery(""); 
     if (inputRef.current) inputRef.current.blur();
-    
-    // Enviem les dades al pare (App.jsx)
     onSearch(lat, lon, name, country);
   };
 
@@ -111,7 +104,7 @@ export default function Header({
   return (
     <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 backdrop-blur-md flex flex-col md:flex-row gap-4 items-center justify-between sticky top-2 z-50 shadow-xl mb-6">
       
-      {/* LOGO I TITOL */}
+      {/* 1. SECCIÓ LOGO I CONTROLS MÒBIL */}
       <div className="flex items-center gap-3 select-none w-full md:w-auto justify-between md:justify-start md:order-1">
          <div className="flex items-center gap-3">
            <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 animate-[pulse_4s_ease-in-out_infinite]">
@@ -120,8 +113,16 @@ export default function Header({
            <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
          </div>
          
-         {/* Mòbil: Controls bàsics */}
+         {/* Mòbil: Controls bàsics (ARA INCLOU CANVI DE VISTA) */}
          <div className="md:hidden flex gap-2">
+             {/* Botó toggle vista per a mòbil */}
+             <button 
+                onClick={() => setViewMode(viewMode === 'basic' ? 'expert' : 'basic')} 
+                className={`p-2 rounded-lg w-10 h-10 flex items-center justify-center transition-all ${viewMode === 'expert' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'}`}
+             >
+                 {viewMode === 'basic' ? <LayoutTemplate size={18} /> : <LayoutDashboard size={18} />}
+             </button>
+
              <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
                  {unit === 'C' ? '°C' : '°F'}
              </button>
@@ -131,7 +132,7 @@ export default function Header({
          </div>
       </div>
 
-      {/* BARRA DE CERCA (Desktop i Mòbil unificada lògicament) */}
+      {/* 2. BARRA DE CERCA */}
       <div className="relative flex-1 w-full md:w-80 md:order-2 flex gap-2"> 
          <div className="relative flex-1">
            <button 
@@ -197,7 +198,7 @@ export default function Header({
          </button>
       </div>
 
-      {/* CONTROLS ESCRIPTORI */}
+      {/* 3. CONTROLS ESCRIPTORI (Hidden on mobile) */}
       <div className="hidden md:flex gap-3 w-full md:w-auto items-center md:order-3 justify-end">
          <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner">
            <button onClick={() => setViewMode('basic')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'basic' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>
