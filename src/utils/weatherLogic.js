@@ -28,8 +28,7 @@ export const normalizeModelData = (data) => {
          dailyComparison: { gfs: {}, icon: {} } 
      };
      
-     // Regex per netejar els sufixos del model principal (Best Match / ECMWF)
-     // Afegim 'aifs' per si es fa servir el model d'IA en el futur
+     // Regex per netejar els sufixos del model principal
      const mainSuffixRegex = /(_best_match|_ecmwf_ifs4|_ecmwf_ifs025|_ecmwf_aifs04)/g;
 
      // 2. Processar Dades Principals (Neteja de noms)
@@ -37,12 +36,8 @@ export const normalizeModelData = (data) => {
          if (!data[section]) return;
          
          Object.keys(data[section]).forEach(key => {
-            // Saltem les claus que pertanyen a models comparatius (GFS/ICON)
-            // Ho detectem genèricament buscant "_gfs_" o "_icon_" al mig o final
             if (key.includes('_gfs_') || key.includes('_icon_')) return;
 
-            // Si la clau té sufixos d'ECMWF o Best Match, creem una versió neta
-            // Ex: "temperature_2m_best_match" -> "temperature_2m"
             if (key.match(mainSuffixRegex)) {
                 const cleanKey = key.replace(mainSuffixRegex, '');
                 result[section][cleanKey] = data[section][key];
@@ -50,13 +45,11 @@ export const normalizeModelData = (data) => {
          });
      });
 
-     // 3. Processar Comparatives (GFS i ICON) de forma robusta
+     // 3. Processar Comparatives (GFS i ICON)
      
      // --- DAILY COMPARISON ---
      Object.keys(data.daily || {}).forEach(key => {
-        // Detectem el model basant-nos en fragments clau, no en el nom sencer
         if (key.includes('_gfs_')) {
-           // Separem pel fragment "_gfs_" i agafem la primera part com a nom net
            const cleanKey = key.split('_gfs_')[0]; 
            result.dailyComparison.gfs[cleanKey] = data.daily[key];
         } else if (key.includes('_icon_')) {
@@ -67,8 +60,6 @@ export const normalizeModelData = (data) => {
 
      // --- HOURLY COMPARISON ---
      const timeLength = data.hourly?.time?.length || 0;
-     
-     // Inicialitzem arrays de forma segura
      result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
      result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
 
@@ -76,7 +67,6 @@ export const normalizeModelData = (data) => {
         let model = null;
         let cleanKey = null;
 
-        // Identificació genèrica del model
         if (key.includes('_gfs_')) {
             model = 'gfs';
             cleanKey = key.split('_gfs_')[0];
@@ -85,12 +75,9 @@ export const normalizeModelData = (data) => {
             cleanKey = key.split('_icon_')[0];
         }
 
-        // Si hem identificat un model comparatiu, mapem les dades
         if (model && cleanKey) {
             const values = data.hourly[key];
-            // Protecció: Iterem només fins al límit disponible per evitar errors d'índex
             const safeLength = Math.min(values.length, timeLength);
-            
             for (let i = 0; i < safeLength; i++) {
                 if (result.hourlyComparison[model][i]) {
                     result.hourlyComparison[model][i][cleanKey] = values[i];
@@ -99,7 +86,6 @@ export const normalizeModelData = (data) => {
         }
      });
 
-     // Retornem fusionant l'original amb el processat per màxima seguretat
      return { ...data, ...result };
 };
 
@@ -113,7 +99,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     const code = forcedCode !== null ? forcedCode : current.weather_code;
     const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
     
-    // Càlcul segur de precipitació minutal
     const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
     
     const uvMax = daily.uv_index_max[0];
@@ -159,7 +144,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
 
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     
-    // MODIFICAT: Prioritat total a la pluja al text de l'IA
     if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (isSnow) summaryParts.push(tr.aiSummarySnow);
     else if (code >= 51 || precip15 > 0) { 
@@ -299,18 +283,23 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   return { level, type, value };
 };
 
-// --- ETIQUETA PRINCIPAL DEFINITIVA I SIMPLIFICADA ---
+// --- ETIQUETA PRINCIPAL DEFINITIVA I SIMPLIFICADA (CORREGIDA) ---
 export const getWeatherLabel = (current, language) => {
   const tr = TRANSLATIONS[language];
   if (!tr || !current) return "";
 
   const code = Number(current.weather_code);
-  const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
   
-  // 1. PRIORITAT PLUJA SOBRE "NO PLUJA":
-  // Si cau aigua (>0), ignorem si posa núvol (0-3) o boira (45-48) i mostrem text de pluja.
-  if ((code <= 3 || (code >= 45 && code <= 48)) && precip15 > 0) {
-      return tr.rainy; 
+  // CORRECCIÓ: Mirem només la precipitació actual per a l'etiqueta en viu
+  const precipActual = current.precipitation || 0;
+  
+  // 1. PRIORITAT PLUJA REAL:
+  // Només canviem l'etiqueta a "Pluja" si realment està caient aigua (>0)
+  // Encara que el codi sigui "ennuvolat", si cau aigua, direm "Pluja".
+  // PERÒ: Si el codi és núvol i NO cau aigua, NO direm "Pluja".
+  if ((code <= 3 || (code >= 45 && code <= 48))) {
+      if (precipActual > 0) return tr.rainy; 
+      // Si és 0, deixem que passi i retorni el text del codi (ex: "Ennuvolat")
   }
 
   // 2. SIMPLIFICACIÓ:

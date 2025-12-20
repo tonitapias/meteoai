@@ -3,7 +3,7 @@ import {
   Wind, CloudSun, CloudRain, CloudLightning, Snowflake, 
   AlertTriangle, Umbrella, Shirt, ThermometerSun, AlertOctagon, 
   TrendingUp, Clock, Calendar, ThermometerSnowflake, GitGraph,
-  Star, BrainCircuit, MapPin
+  Star, BrainCircuit, MapPin, Map // <--- Afegit 'Map'
 } from 'lucide-react';
 
 import Header from './components/Header'; 
@@ -14,6 +14,7 @@ import {
   CircularGauge, DewPointWidget, CapeWidget, TempRangeBar, MoonPhaseIcon 
 } from './components/WeatherWidgets';
 import DayDetailModal from './components/DayDetailModal';
+import RadarModal from './components/RadarModal'; // <--- Afegit import del Radar
 import { WeatherParticles, getWeatherIcon } from './components/WeatherIcons';
 import { TypewriterText, FlagIcon } from './components/WeatherUI';
 import { 
@@ -55,6 +56,7 @@ export default function MeteoIA() {
   const [error, setError] = useState(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [showRadar, setShowRadar] = useState(false); // <--- Nou estat pel Radar
   
   // --- CONFIGURACIÓ (LocalStorage) ---
   const [unit, setUnit] = useState(() => localStorage.getItem('meteoia-unit') || 'C');
@@ -178,7 +180,7 @@ export default function MeteoIA() {
     }
   };
   
-  // --- MEMOS DE CÀLCUL (ORDRE CORREGIT) ---
+  // --- MEMOS DE CÀLCUL ---
 
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
@@ -197,7 +199,6 @@ export default function MeteoIA() {
     return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
   }, [weatherData, shiftedNow]);
 
-  // MOVEN AMUNT: Aquesta variable s'ha de definir ABANS que s'utilitzi a effectiveWeatherCode
   const currentRainProbability = useMemo(() => {
      if (!weatherData || !weatherData.hourly) return 0;
      const nowMs = shiftedNow.getTime();
@@ -208,6 +209,7 @@ export default function MeteoIA() {
      return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
   }, [weatherData, shiftedNow]);
 
+  // --- LÒGICA CORREGIDA PER PLUJA ACTUAL ---
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
@@ -217,26 +219,26 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
-    // 1. SI JA ESTÀ PLOVENT (Dades reals de precipitació)
-    if (currentPrecip > 0 || immediateRain > 0) {
+    // 1. SI JA ESTÀ PLOVENT (Dades reals de precipitació) - MÉS ESTRICTE
+    // Només posem icona de pluja si hi ha precipitació mesurable (>0mm)
+    if (currentPrecip > 0 || immediateRain > 0.1) {
         if (currentPrecip > 2 || immediateRain > 2) return 65; 
         if (weatherData.current.temperature_2m < 1) return 71; 
         return 61; 
     }
 
-    // 2. NOVA LÒGICA: SI LA PROBABILITAT ÉS ALTA (Ara ja tenim accés a currentRainProbability)
-    if ((currentCode === 2 || currentCode === 3 || currentCode === 45) && currentRainProbability > 50) {
-        return 61; 
-    }
+    // 2. MODIFICAT: ELIMINEM la regla que deia "si probabilitat > 50% llavors pluja".
+    // Això provocava el problema de "l'app diu que plou però no plou".
+    // Ara ens refiem del codi original de l'API o de la precipitació real detectada a dalt.
 
-    // 3. ALTRES CONDICIONS
+    // 3. ALTRES CONDICIONS (Vent, Humitat)
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
     if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
     
     return currentCode;
-  }, [weatherData, minutelyPreciseData, shiftedNow, currentRainProbability]);
+  }, [weatherData, minutelyPreciseData, shiftedNow]); // Nota: Ja no depèn de currentRainProbability
 
-  // FONS DINÀMIC (utilitza effectiveWeatherCode)
+  // FONS DINÀMIC
   const getDynamicBackground = (code, isDay = 1) => {
     if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
     if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
@@ -627,6 +629,18 @@ export default function MeteoIA() {
                                 <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
                                     <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
                                 </button>
+                                
+                                {/* --- BOTÓ RADAR --- */}
+                                <button 
+                                    onClick={() => setShowRadar(true)}
+                                    className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-2 px-3 group"
+                                    title="Veure Radar en viu"
+                                >
+                                    <Map className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-bold uppercase hidden md:inline">Radar</span>
+                                </button>
+                                {/* ---------------- */}
+
                            </div>
                            <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
                                 <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
@@ -661,12 +675,12 @@ export default function MeteoIA() {
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-  {getWeatherLabel({ 
-      ...weatherData.current, 
-      weather_code: effectiveWeatherCode, // <--- AQUESTA ÉS LA CLAU: Passem el codi corregit
-      minutely15: weatherData.minutely_15?.precipitation 
-  }, lang)}
-</span>
+                                  {getWeatherLabel({ 
+                                      ...weatherData.current, 
+                                      weather_code: effectiveWeatherCode, // Utilitzem el codi corregit
+                                      minutely15: weatherData.minutely_15?.precipitation 
+                                  }, lang)}
+                                </span>
                            </div>
                        </div>
 
@@ -816,6 +830,15 @@ export default function MeteoIA() {
           shiftedNow={shiftedNow}
           getWeatherIcon={getWeatherIcon}
         />
+
+        {/* --- MODAL DEL RADAR --- */}
+        {showRadar && weatherData && (
+            <RadarModal 
+                lat={weatherData.location.latitude} 
+                lon={weatherData.location.longitude} 
+                onClose={() => setShowRadar(false)} 
+            />
+        )}
 
       </div>
     </div>
