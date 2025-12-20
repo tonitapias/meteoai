@@ -27,7 +27,7 @@ export default function Header({
   
   const inputRef = useRef(null);
   const suggestionsListRef = useRef(null);
-  const t = TRANSLATIONS[lang];
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   useEffect(() => {
      setIsSearching(loading);
@@ -58,7 +58,6 @@ export default function Header({
   useEffect(() => {
     if (showSuggestions && activeSuggestionIndex !== -1 && suggestionsListRef.current) {
         const list = suggestionsListRef.current;
-        // Busquem tant 'button' com 'div' amb la classe 'group' per si de cas
         const items = list.querySelectorAll('.group'); 
         if (items[activeSuggestionIndex]) {
             items[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
@@ -168,7 +167,6 @@ export default function Header({
                )}
                
                {(query.length === 0 ? favorites : suggestions).map((item, i) => (
-                 // --- CANVI AQUÍ: <button> per <div> ---
                  <div 
                    key={i}
                    onMouseDown={(e) => e.preventDefault()} 
@@ -188,7 +186,8 @@ export default function Header({
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onRemoveFavorite(e, item.name); }} 
                         className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all touch-manipulation z-20 pointer-events-auto"
-                        aria-label="Eliminar favorit"
+                        aria-label={t.removeFavorite}
+                        title={t.removeFavorite}
                      >
                        <Trash2 className="w-5 h-5"/>
                      </button>
@@ -200,7 +199,12 @@ export default function Header({
              </div>
            )}
          </div>
-         <button onClick={onLocate} disabled={isSearching} className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation disabled:bg-indigo-800 shrink-0" title="La meva ubicació">
+         <button 
+            onClick={onLocate} 
+            disabled={isSearching} 
+            className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20 active:scale-95 touch-manipulation disabled:bg-indigo-800 shrink-0" 
+            title={t.myLocation}
+         >
             {isSearching ? <RefreshCw className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
          </button>
       </div>

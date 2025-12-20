@@ -189,7 +189,21 @@ export const TRANSLATIONS = {
     rel_high: "Models coincidents. Predicció molt fiable.",
     rel_medium: "Hi ha certa discrepància entre els models.",
     rel_low_rain: "⚠️ Incertesa: Divergència de pluja del {diff}%.",
-    rel_low_temp: "⚠️ Incertesa tèrmica: Els models varien en {diff}ºC."
+    rel_low_temp: "⚠️ Incertesa tèrmica: Els models varien en {diff}ºC.",
+
+    // --- NOVES CLAUS AFEGIDES ---
+    dayDetailTitle: "Previsió detallada del dia",
+    max: "Màx",
+    min: "Mín",
+    freezingLevelAt: "Isoterma 0ºC a",
+    removeFavorite: "Eliminar favorit",
+    myLocation: "La meva ubicació",
+    radarTitle: "Radar de Precipitació",
+    radarShort: "Radar",
+    openExternal: "Obrir fora",
+    openBrowser: "Obrir en navegador extern",
+    radarData: "Dades: RainViewer",
+    radarFail: "Si falla, prem \"Obrir fora\" ↗"
   },
 
   es: {
@@ -379,7 +393,21 @@ export const TRANSLATIONS = {
     rel_high: "Modelos coincidentes. Predicción muy fiable.",
     rel_medium: "Existe cierta discrepancia entre los modelos.",
     rel_low_rain: "⚠️ Incertidumbre: Divergencia de lluvia del {diff}%.",
-    rel_low_temp: "⚠️ Incertidumbre térmica: Modelos varían en {diff}ºC."
+    rel_low_temp: "⚠️ Incertidumbre térmica: Modelos varían en {diff}ºC.",
+
+    // --- NOVES CLAUS AFEGIDES ---
+    dayDetailTitle: "Previsión detallada del día",
+    max: "Máx",
+    min: "Mín",
+    freezingLevelAt: "Isoterma 0ºC a",
+    removeFavorite: "Eliminar favorito",
+    myLocation: "Mi ubicación",
+    radarTitle: "Radar de Precipitación",
+    radarShort: "Radar",
+    openExternal: "Abrir fuera",
+    openBrowser: "Abrir en navegador externo",
+    radarData: "Datos: RainViewer",
+    radarFail: "Si falla, pulsa \"Abrir fuera\" ↗"
   },
 
   en: {
@@ -569,7 +597,21 @@ export const TRANSLATIONS = {
     rel_high: "Models align. Highly reliable forecast.",
     rel_medium: "There is some discrepancy between models.",
     rel_low_rain: "⚠️ Uncertainty: Rain divergence of {diff}%.",
-    rel_low_temp: "⚠️ Thermal uncertainty: Models vary by {diff}ºC."
+    rel_low_temp: "⚠️ Thermal uncertainty: Models vary by {diff}ºC.",
+
+    // --- NOVES CLAUS AFEGIDES ---
+    dayDetailTitle: "Detailed daily forecast",
+    max: "Max",
+    min: "Min",
+    freezingLevelAt: "Freezing level at",
+    removeFavorite: "Remove favorite",
+    myLocation: "My location",
+    radarTitle: "Precipitation Radar",
+    radarShort: "Radar",
+    openExternal: "Open external",
+    openBrowser: "Open in external browser",
+    radarData: "Data: RainViewer",
+    radarFail: "If it fails, press \"Open external\" ↗"
   },
 
   fr: {
@@ -759,6 +801,20 @@ export const TRANSLATIONS = {
     rel_high: "Modèles concordants. Prévision très fiable.",
     rel_medium: "Il y a une certaine divergence entre les modèles.",
     rel_low_rain: "⚠️ Incertitude : Divergence de pluie de {diff}%.",
-    rel_low_temp: "⚠️ Incertitude thermique : Les modèles varient de {diff}ºC."
+    rel_low_temp: "⚠️ Incertitude thermique : Les modèles varient de {diff}ºC.",
+
+    // --- NOVES CLAUS AFEGIDES ---
+    dayDetailTitle: "Prévisions détaillées",
+    max: "Max",
+    min: "Min",
+    freezingLevelAt: "Isotherme 0ºC à",
+    removeFavorite: "Supprimer le favori",
+    myLocation: "Ma position",
+    radarTitle: "Radar de Précipitations",
+    radarShort: "Radar",
+    openExternal: "Ouvrir",
+    openBrowser: "Ouvrir dans le navigateur",
+    radarData: "Données: RainViewer",
+    radarFail: "Si ça échoue, appuyez sur \"Ouvrir\" ↗"
   }
 };

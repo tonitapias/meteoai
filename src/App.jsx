@@ -3,13 +3,12 @@ import {
   Wind, CloudSun, CloudRain, CloudLightning, Snowflake, 
   AlertTriangle, Umbrella, Shirt, ThermometerSun, AlertOctagon, 
   TrendingUp, Clock, Calendar, ThermometerSnowflake, GitGraph,
-  Star, BrainCircuit, MapPin, Map // <--- Assegura't que 'Map' hi és
+  Star, BrainCircuit, MapPin, Map 
 } from 'lucide-react';
 
 import Header from './components/Header'; 
 import { TRANSLATIONS } from './constants/translations';
 import { HourlyForecastChart, MinutelyPreciseChart } from './components/WeatherCharts';
-// --- IMPORT UNIFICAT DE WIDGETS (SENSE DUPLICATS) ---
 import { 
   SunArcWidget, MoonWidget, PollenWidget, CompassGauge, 
   CircularGauge, DewPointWidget, CapeWidget, TempRangeBar, MoonPhaseIcon,
@@ -29,7 +28,6 @@ import {
   getWeatherLabel
 } from './utils/weatherLogic';
 
-// COMPONENT VISUAL (Es manté igual)
 const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
   const animationStyle = windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
                          windSpeed > 15 ? 'wiggle 3s ease-in-out infinite' : 'none';
@@ -50,7 +48,6 @@ const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
 };
 
 export default function MeteoIA() {
-  // --- ESTATS PRINCIPALS ---
   const [weatherData, setWeatherData] = useState(null);
   const [aqiData, setAqiData] = useState(null);
   const [aiAnalysis, setAiAnalysis] = useState(null);
@@ -60,15 +57,13 @@ export default function MeteoIA() {
   const [favorites, setFavorites] = useState([]);
   const [showRadar, setShowRadar] = useState(false); 
 
-  // --- CONFIGURACIÓ (LocalStorage) ---
   const [unit, setUnit] = useState(() => localStorage.getItem('meteoia-unit') || 'C');
   const [lang, setLang] = useState(() => localStorage.getItem('meteoia-lang') || 'ca');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('meteoia-view') || 'basic');
 
   const [now, setNow] = useState(new Date());
-  const t = TRANSLATIONS[lang];
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // --- EFECTES GLOBALS ---
   useEffect(() => { localStorage.setItem('meteoia-unit', unit); }, [unit]);
   useEffect(() => { localStorage.setItem('meteoia-lang', lang); }, [lang]);
   useEffect(() => { localStorage.setItem('meteoia-view', viewMode); }, [viewMode]);
@@ -83,7 +78,6 @@ export default function MeteoIA() {
     if (savedFavs) setFavorites(JSON.parse(savedFavs));
   }, []);
 
-  // --- GESTIÓ DE FAVORITS ---
   const saveFavorites = (newFavs) => {
     setFavorites(newFavs);
     localStorage.setItem('meteoia-favs', JSON.stringify(newFavs));
@@ -105,7 +99,6 @@ export default function MeteoIA() {
 
   const isCurrentFavorite = weatherData && favorites.some(f => f.name === weatherData.location.name);
 
-  // --- HELPERS ---
   const formatTemp = (tempC) => {
     if (unit === 'F') return Math.round((tempC * 9/5) + 32);
     return Math.round(tempC);
@@ -117,10 +110,9 @@ export default function MeteoIA() {
   const formatDate = (dateString, options) => {
       const locales = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
       const date = dateString.includes('T') ? new Date(dateString) : new Date(`${dateString}T00:00:00`);
-      return new Intl.DateTimeFormat(locales[lang], options).format(date);
+      return new Intl.DateTimeFormat(locales[lang] || locales['ca'], options).format(date);
   };
   
-  // --- LÒGICA DE CERCA I API ---
   const handleSearch = (lat, lon, name, country) => {
       fetchWeatherByCoords(lat, lon, name, country);
   };
@@ -182,8 +174,6 @@ export default function MeteoIA() {
     }
   };
   
-  // --- MEMOS DE CÀLCUL ---
-
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     const timezone = weatherData.timezone || 'UTC';
@@ -208,17 +198,15 @@ export default function MeteoIA() {
         const tMs = new Date(t).getTime();
         return tMs <= nowMs && (tMs + 3600000) > nowMs;
      });
-     return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
+     // PROTECCIÓ: Comprovem si l'array existeix abans d'accedir-hi
+     return (hourIdx !== -1 && weatherData.hourly.precipitation_probability) 
+         ? weatherData.hourly.precipitation_probability[hourIdx] 
+         : 0;
   }, [weatherData, shiftedNow]);
 
-  // --- CÀLCUL DE LA ISOTERMA 0ºC (Nou) ---
-  // A src/App.jsx
-
-  // --- CÀLCUL ROBUST DE LA ISOTERMA 0ºC ---
   const currentFreezingLevel = useMemo(() => {
       if(!weatherData || !weatherData.hourly) return null;
       
-      // 1. Busquem la clau principal (ECMWF normalment)
       const key = Object.keys(weatherData.hourly).find(k => k.includes('freezing_level_height'));
       if (!key) return null;
       
@@ -230,17 +218,13 @@ export default function MeteoIA() {
       
       if (currentIdx === -1) return null;
       
-      // 2. Obtenim el valor inicial
-      let val = weatherData.hourly[key][currentIdx];
+      // PROTECCIÓ:
+      let val = weatherData.hourly[key] ? weatherData.hourly[key][currentIdx] : null;
       const currentTemp = weatherData.current.temperature_2m;
 
-      // 3. VERIFICACIÓ D'ERRORS:
-      // Si el valor no existeix (null/undefined) 
-      // O SI és 0 metres però fa més de 4ºC (això és impossible, és un error de l'API)
       const isSuspicious = val === null || val === undefined || (val < 100 && currentTemp > 4);
 
       if (isSuspicious) {
-          // Intentem rescatar la dada dels models secundaris (GFS o ICON)
           const gfsVal = weatherData.hourlyComparison?.gfs?.[currentIdx]?.freezing_level_height;
           const iconVal = weatherData.hourlyComparison?.icon?.[currentIdx]?.freezing_level_height;
           
@@ -248,8 +232,6 @@ export default function MeteoIA() {
           else if (iconVal !== null && iconVal !== undefined) val = iconVal;
       }
       
-      // 4. Si després de tot segueix sent invàlid, retornem NULL (així el widget s'amaga)
-      // Important: NO retornem 0 per defecte.
       return (val !== null && val !== undefined) ? val : null;
 
   }, [weatherData, shiftedNow]);
@@ -263,21 +245,18 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
-    // 1. SI JA ESTÀ PLOVENT (Dades reals de precipitació)
     if (currentPrecip > 0 || immediateRain > 0.1) {
         if (currentPrecip > 2 || immediateRain > 2) return 65; 
         if (weatherData.current.temperature_2m < 1) return 71; 
         return 61; 
     }
 
-    // 2. ALTRES CONDICIONS
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
     if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
     
     return currentCode;
   }, [weatherData, minutelyPreciseData, shiftedNow]);
 
-  // FONS DINÀMIC
   const getDynamicBackground = (code, isDay = 1) => {
     if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
     if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
@@ -318,6 +297,7 @@ export default function MeteoIA() {
   };
 
   const barometricTrend = useMemo(() => {
+      // PROTECCIÓ:
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.pressure_msl) return { trend: 'steady', val: 0 };
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
@@ -334,6 +314,7 @@ export default function MeteoIA() {
   }, [weatherData, shiftedNow]);
 
   const currentCape = useMemo(() => {
+      // PROTECCIÓ:
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.cape) return 0;
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
@@ -359,7 +340,6 @@ export default function MeteoIA() {
     );
   }, [weatherData]);
 
-  // Generació d'IA Analysis
   useEffect(() => {
      if(weatherData) {
          const currentWithMinutely = { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation };
@@ -389,11 +369,18 @@ export default function MeteoIA() {
     const availableKeys = Object.keys(weatherData.hourly);
     const snowKey = availableKeys.find(k => k === 'freezing_level_height') || 
                     availableKeys.find(k => k.includes('freezing_level_height'));
+    
+    // FUNCIÓ SEGURA PER LLEGIR VALORS I EVITAR EL "READING '23'"
+    const getSafeVal = (key, i, def = 0) => {
+        return (weatherData.hourly[key] && weatherData.hourly[key][i] !== undefined) 
+               ? weatherData.hourly[key][i] 
+               : def;
+    };
 
     return weatherData.hourly.time.slice(startIndex, endIndex).map((tRaw, i) => {
       const realIndex = startIndex + i;
-      const temp = weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[realIndex] : 0;
-      let fl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][realIndex] : null;
+      const temp = getSafeVal('temperature_2m', realIndex, 0);
+      let fl = snowKey ? getSafeVal(snowKey, realIndex, null) : null;
 
       const isSuspicious = (fl === null || fl === undefined || (fl < 100 && temp > 4));
       if (isSuspicious) {
@@ -404,19 +391,22 @@ export default function MeteoIA() {
 
       return {
         temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
-        apparent: unit === 'F' ? Math.round((weatherData.hourly.apparent_temperature[realIndex] * 9/5) + 32) : weatherData.hourly.apparent_temperature[realIndex],
-        rain: weatherData.hourly.precipitation_probability[realIndex],
-        precip: weatherData.hourly.precipitation[realIndex],
-        wind: weatherData.hourly.wind_speed_10m[realIndex],
-        gusts: weatherData.hourly.wind_gusts_10m[realIndex],
-        windDir: weatherData.hourly.wind_direction_10m[realIndex],
-        cloud: weatherData.hourly.cloud_cover[realIndex],
-        humidity: weatherData.hourly.relative_humidity_2m[realIndex],
-        uv: weatherData.hourly.uv_index[realIndex],
+        // ARA UTILITZEM getSafeVal A TOT ARREU
+        apparent: unit === 'F' 
+            ? Math.round((getSafeVal('apparent_temperature', realIndex) * 9/5) + 32) 
+            : getSafeVal('apparent_temperature', realIndex),
+        rain: getSafeVal('precipitation_probability', realIndex),
+        precip: getSafeVal('precipitation', realIndex),
+        wind: getSafeVal('wind_speed_10m', realIndex),
+        gusts: getSafeVal('wind_gusts_10m', realIndex),
+        windDir: getSafeVal('wind_direction_10m', realIndex),
+        cloud: getSafeVal('cloud_cover', realIndex),
+        humidity: getSafeVal('relative_humidity_2m', realIndex),
+        uv: getSafeVal('uv_index', realIndex),
         snowLevel: snowLevelVal,
-        isDay: weatherData.hourly.is_day[realIndex],
+        isDay: getSafeVal('is_day', realIndex, 1),
         time: tRaw,
-        code: weatherData.hourly.weather_code[realIndex]
+        code: getSafeVal('weather_code', realIndex, 0)
       };
     });
   }, [weatherData, unit, shiftedNow]);
@@ -460,7 +450,6 @@ export default function MeteoIA() {
     };
   }, [weatherData]);
 
-  // --- RENDER ---
   const currentBg = getRefinedBackground();
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
   const moonPhaseVal = getMoonPhase(new Date());
@@ -580,7 +569,6 @@ export default function MeteoIA() {
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10">
         
-        {/* NOVA CAPÇALERA OPTIMITZADA */}
         <Header 
            onSearch={handleSearch}
            onLocate={handleGetCurrentLocation}
@@ -628,7 +616,6 @@ export default function MeteoIA() {
         {weatherData && (
           <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6">
             
-            {/* ALERTES INTEL·LIGENTS */}
             {aiAnalysis?.alerts?.length > 0 && (
               <div className="space-y-3">
                 {aiAnalysis.alerts.map((alert, i) => (
@@ -655,12 +642,10 @@ export default function MeteoIA() {
               </div>
             )}
 
-            {/* DASHBOARD PRINCIPAL */}
             <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
 
                <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
-                   {/* Columna Esquerra: Dades actuals */}
                    <div className="flex flex-col gap-4 w-full lg:w-auto">
                        <div className="flex flex-col">
                            <div className="flex items-center gap-3">
@@ -669,18 +654,16 @@ export default function MeteoIA() {
                                     <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
                                 </button>
                                 
-                                {/* --- BOTÓ RADAR --- */}
                                 <button 
                                     onClick={() => setShowRadar(true)}
                                     className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
-                                    title="Veure Radar en viu"
+                                    title={t.radarTitle}
                                 >
                                     <Map className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
                                     <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
-                                        Radar
+                                        {t.radarShort}
                                     </span>
                                 </button>
-                                {/* ---------------- */}
                            </div>
                            <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
                                 <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
@@ -736,7 +719,6 @@ export default function MeteoIA() {
                        </div>
                    </div>
 
-                   {/* Columna Dreta: IA Analysis */}
                    <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center">
                      <div className="flex items-center justify-between mb-3">
                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
@@ -766,7 +748,6 @@ export default function MeteoIA() {
                             ))}
                           </div>
                           
-                          {/* Fiabilitat / Divergència */}
                           {reliability && (
                             <div className={`p-3 rounded-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700 ${
                               reliability.level === 'high' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' :
@@ -800,7 +781,6 @@ export default function MeteoIA() {
                </div>
             </div>
 
-            {/* VISTA EXPERTA */}
             {viewMode === 'expert' && (
               <div className="animate-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -815,10 +795,10 @@ export default function MeteoIA() {
                        />
                      </div>
                      
-                     {/* --- WIDGET COTA NEU (Només si < 4000m) --- */}
+                     {/* --- MODIFICAT: WIDGET COTA NEU (Amb seguretat i lang) --- */}
                      {currentFreezingLevel !== null && currentFreezingLevel < 4000 && (
                         <div className="col-span-1">
-                            <SnowLevelWidget freezingLevel={currentFreezingLevel} unit={unit} />
+                            <SnowLevelWidget freezingLevel={currentFreezingLevel} unit={unit} lang={lang} />
                         </div>
                      )}
 
@@ -852,7 +832,6 @@ export default function MeteoIA() {
               </div>
             )}
             
-            {/* VISTA BÀSICA */}
             {viewMode === 'basic' && (
               <>
                {hourlyForecastSection}
@@ -879,12 +858,12 @@ export default function MeteoIA() {
           getWeatherIcon={getWeatherIcon}
         />
 
-        {/* --- MODAL DEL RADAR --- */}
         {showRadar && weatherData && (
             <RadarModal 
                 lat={weatherData.location.latitude} 
                 lon={weatherData.location.longitude} 
                 onClose={() => setShowRadar(false)} 
+                lang={lang} 
             />
         )}
 

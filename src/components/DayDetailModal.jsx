@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain } from 'lucide-react';
 import { HourlyForecastChart } from './WeatherCharts';
+import { TRANSLATIONS } from '../constants/translations';
 
 export default function DayDetailModal({ 
   weatherData, 
@@ -11,6 +12,8 @@ export default function DayDetailModal({
   shiftedNow,
   getWeatherIcon 
 }) {
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+
   if (selectedDayIndex === null || !weatherData) return null;
 
   const dayData = useMemo(() => {
@@ -29,7 +32,6 @@ export default function DayDetailModal({
     };
   }, [weatherData, selectedDayIndex]);
 
-  // CORRECCIÓ DE DATES (Del Pas 1) MANTINGUDA
   const dayIndices = useMemo(() => {
     if (!dayData.date) return [];
     const targetDayStr = dayData.date.includes('T') ? dayData.date.split('T')[0] : dayData.date;
@@ -43,15 +45,12 @@ export default function DayDetailModal({
       .map(item => item.idx);
   }, [weatherData, dayData]);
 
-  // LÒGICA SIMPLIFICADA (Gràcies a la normalització del Pas 2)
   const hourlyDataForDay = useMemo(() => {
     if (dayIndices.length === 0) return [];
 
     return dayIndices.map(idx => {
-        // Accés directe sense cerques "fuzzy"
         const fl = weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[idx] : null;
         
-        // Fallback robust per cota de neu
         let finalFl = fl;
         if (finalFl === null || finalFl === undefined) {
              finalFl = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? 
@@ -123,6 +122,14 @@ export default function DayDetailModal({
     return new Date(isoString).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   };
 
+  const getUVLevelText = (val) => {
+      if (val > 10) return `(${t.uvExtreme})`;
+      if (val > 7) return `(${t.uvVeryHigh})`;
+      if (val > 5) return `(${t.uvHigh})`;
+      if (val > 2) return `(${t.uvMod})`;
+      return `(${t.uvLow})`;
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
@@ -131,7 +138,7 @@ export default function DayDetailModal({
       >
         <button 
           onClick={onClose}
-          aria-label="Tancar"
+          aria-label={t.removeFavorite || "Tancar"}
           className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors z-10"
         >
           <X className="w-6 h-6 text-slate-400 hover:text-white" />
@@ -143,18 +150,18 @@ export default function DayDetailModal({
                <h2 className="text-3xl font-bold text-white capitalize mb-2">{formatDate(dayData.date)}</h2>
                <div className="flex items-center gap-2 text-slate-400">
                   <Calendar className="w-4 h-4"/>
-                  <span className="text-sm font-medium">Previsió detallada del dia</span>
+                  <span className="text-sm font-medium">{t.dayDetailTitle}</span>
                </div>
             </div>
             
             <div className="flex items-center gap-4 bg-white/5 px-5 py-3 rounded-2xl">
                <div className="flex flex-col items-center">
-                  <span className="text-xs text-rose-300 font-bold uppercase tracking-wider">Màx</span>
+                  <span className="text-xs text-rose-300 font-bold uppercase tracking-wider">{t.max}</span>
                   <span className="text-2xl font-bold text-white">{Math.round(dayData.maxTemp)}°</span>
                </div>
                <div className="w-px h-8 bg-white/10"></div>
                <div className="flex flex-col items-center">
-                  <span className="text-xs text-cyan-300 font-bold uppercase tracking-wider">Mín</span>
+                  <span className="text-xs text-cyan-300 font-bold uppercase tracking-wider">{t.min}</span>
                   <span className="text-2xl font-bold text-white">{Math.round(dayData.minTemp)}°</span>
                </div>
             </div>
@@ -163,29 +170,29 @@ export default function DayDetailModal({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
                 <Droplets className="w-6 h-6 text-blue-400 mb-1"/>
-                <span className="text-xs text-slate-400 uppercase font-bold">Precipitació Total</span>
+                <span className="text-xs text-slate-400 uppercase font-bold">{t.totalPrecipitation}</span>
                 <span className="text-lg font-bold text-slate-200">{dayData.precipSum} mm</span>
              </div>
              
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
                 <Wind className="w-6 h-6 text-teal-400 mb-1"/>
-                <span className="text-xs text-slate-400 uppercase font-bold">Vent Màx</span>
+                <span className="text-xs text-slate-400 uppercase font-bold">{t.windMax}</span>
                 <span className="text-lg font-bold text-slate-200">{dayData.windMax} km/h</span>
              </div>
 
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
                 <Mountain className="w-6 h-6 text-indigo-300 mb-1"/>
-                <span className="text-xs text-slate-400 uppercase font-bold">Cota de neu</span>
+                <span className="text-xs text-slate-400 uppercase font-bold">{t.snowLevel}</span>
                 <span className="text-lg font-bold text-slate-200">{snowLevelRange}</span>
              </div>
 
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
                 <Sun className="w-6 h-6 text-amber-400 mb-1"/>
-                <span className="text-xs text-slate-400 uppercase font-bold">Índex UV</span>
+                <span className="text-xs text-slate-400 uppercase font-bold">{t.uvIndex}</span>
                 <span className="text-lg font-bold text-slate-200">
                     {dayData.uvMax} 
                     <span className="text-xs ml-1 font-normal opacity-70">
-                        {dayData.uvMax > 10 ? '(Extrem)' : dayData.uvMax > 7 ? '(Molt Alt)' : dayData.uvMax > 5 ? '(Alt)' : dayData.uvMax > 2 ? '(Moderat)' : '(Baix)'}
+                        {getUVLevelText(dayData.uvMax)}
                     </span>
                 </span>
              </div>
@@ -196,7 +203,7 @@ export default function DayDetailModal({
                  <div className="flex items-center gap-3">
                     <div className="p-2 bg-amber-500/20 rounded-full text-amber-400"><Sun className="w-5 h-5"/></div>
                     <div className="flex flex-col">
-                        <span className="text-xs text-amber-200/70 font-bold uppercase">Sortida Sol</span>
+                        <span className="text-xs text-amber-200/70 font-bold uppercase">{t.sunrise}</span>
                         <span className="text-xl font-bold text-amber-100">{formatTime(dayData.sunrise)}</span>
                     </div>
                  </div>
@@ -206,7 +213,7 @@ export default function DayDetailModal({
                  <div className="flex items-center gap-3">
                     <div className="p-2 bg-indigo-500/20 rounded-full text-indigo-400"><Moon className="w-5 h-5"/></div>
                     <div className="flex flex-col">
-                        <span className="text-xs text-indigo-200/70 font-bold uppercase">Posta Sol</span>
+                        <span className="text-xs text-indigo-200/70 font-bold uppercase">{t.sunset}</span>
                         <span className="text-xl font-bold text-indigo-100">{formatTime(dayData.sunset)}</span>
                     </div>
                  </div>
@@ -215,7 +222,7 @@ export default function DayDetailModal({
 
           <div className="bg-slate-950/50 border border-white/5 rounded-3xl p-4 md:p-6">
              <h3 className="font-bold text-white mb-6 flex items-center gap-2">
-                <Thermometer className="w-5 h-5 text-indigo-400"/> Evolució Horària
+                <Thermometer className="w-5 h-5 text-indigo-400"/> {t.hourlyEvolution}
              </h3>
              
              <HourlyForecastChart 
