@@ -68,8 +68,8 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // ELIMINAT: Bloc que convertia plugim+humitat en boira.
-    // Ara si és plugim, mostrem pluja, punt.
+    // ELIMINAT: El bloc que convertia plugim (51,53...) en boira. 
+    // Ara qualsevol pluja mostrarà icona de pluja.
 
     if (rainProb > 50 && code < 50) {
        return <VariableRainIcon isDay={isDay} {...commonProps} />;

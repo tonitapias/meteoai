@@ -332,11 +332,10 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
-    // Si hi ha precipitació > 0, forcem pluja
     if (currentPrecip > 0 || immediateRain > 0) {
         if (currentPrecip > 2 || immediateRain > 2) return 65; 
         if (weatherData.current.temperature_2m < 1) return 71; 
-        return 61; 
+        return 61; // Pluja feble/normal
     }
 
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
@@ -660,7 +659,6 @@ export default function MeteoIA() {
     </div>
   );
 
-  // CÀLCUL DE PRECIPITACIÓ MINUTAL PER PASSAR A LA ICONA I ETIQUETA
   const currentPrecip15 = weatherData?.current?.minutely15 
       ? weatherData.current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) 
       : 0;
@@ -988,7 +986,7 @@ export default function MeteoIA() {
                                   windSpeed={weatherData.current.wind_speed_10m}
                                   precip={weatherData.current.precipitation}
                                >
-                                  {/* ICONA CRIDA AMB precip15 */}
+                                  {/* ICONA AMB precip15 */}
                                   {getWeatherIcon(
                                      effectiveWeatherCode, 
                                      "w-24 h-24 md:w-32 md:h-32", 
@@ -1006,8 +1004,11 @@ export default function MeteoIA() {
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                                  {/* ETIQUETA CRIDA AMB DADES FUSIONADES */}
-                                  {getWeatherLabel({ ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation }, lang)}
+                                  {/* CRIDA CORRECTA: ETIQUETA AMB DADES COMBINADES */}
+                                  {getWeatherLabel({ 
+                                      ...weatherData.current, 
+                                      minutely15: weatherData.minutely_15?.precipitation 
+                                  }, lang)}
                                 </span>
                            </div>
                        </div>
