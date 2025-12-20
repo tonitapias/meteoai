@@ -6,7 +6,7 @@ import {
   Star, BrainCircuit, MapPin
 } from 'lucide-react';
 
-import Header from './components/Header'; // <--- EL NOU COMPONENT
+import Header from './components/Header'; 
 import { TRANSLATIONS } from './constants/translations';
 import { HourlyForecastChart, MinutelyPreciseChart } from './components/WeatherCharts';
 import { 
@@ -94,7 +94,6 @@ export default function MeteoIA() {
   };
 
   const removeFavorite = (e, name) => {
-    // Esborrar favorit des del Header
     if(e) e.stopPropagation();
     const newFavs = favorites.filter(f => f.name !== name);
     saveFavorites(newFavs);
@@ -110,7 +109,6 @@ export default function MeteoIA() {
 
   const getUnitLabel = () => unit === 'F' ? '°F' : '°C';
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
-  const getLangCodeForAPI = (l) => l; 
   
   const formatDate = (dateString, options) => {
       const locales = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
@@ -118,50 +116,7 @@ export default function MeteoIA() {
       return new Intl.DateTimeFormat(locales[lang], options).format(date);
   };
   
-  // --- FONS DINÀMIC ---
-  const getDynamicBackground = (code, isDay = 1) => {
-    if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
-    if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
-    if (isSnowCode(code)) return "from-slate-800 via-slate-700 to-cyan-950"; 
-    if (code >= 51) return "from-slate-800 via-slate-900 to-blue-950"; 
-    
-    if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
-    if (code === 0 && !isDay) return "from-slate-950 via-indigo-950 to-purple-950"; 
-    if (code <= 3 && isDay) return "from-slate-700 via-slate-600 to-blue-800"; 
-    return "from-slate-900 to-indigo-950";
-  };
-  
-  const getRefinedBackground = () => {
-    if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
-    const { is_day, weather_code, cloud_cover } = weatherData.current;
-    
-    // Prioritzem el codi efectiu si hi ha pluja imminent
-    const code = effectiveWeatherCode || weather_code;
-
-    if (code === 45 || code === 48) return "from-slate-600 via-slate-500 to-stone-400";
-    if (cloud_cover > 95 && is_day && code < 50) return "from-slate-500 via-slate-400 to-slate-300"; 
-
-    if (weatherData.daily && weatherData.daily.sunrise && weatherData.daily.sunset) {
-        const sunrise = new Date(weatherData.daily.sunrise[0]).getTime();
-        const sunset = new Date(weatherData.daily.sunset[0]).getTime();
-        const nowMs = shiftedNow.getTime(); 
-        
-        const hourMs = 60 * 60 * 1000;
-        const twilightMs = 30 * 60 * 1000;
-
-        if (Math.abs(nowMs - sunrise) < twilightMs) return "from-indigo-900 via-rose-800 to-amber-400"; 
-        if (Math.abs(nowMs - sunrise) < hourMs) return "from-blue-600 via-indigo-400 to-sky-200"; 
-
-        if (Math.abs(nowMs - sunset) < twilightMs) return "from-indigo-950 via-purple-900 to-orange-500"; 
-        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-800 via-orange-700 to-yellow-500"; 
-    }
-    
-    return getDynamicBackground(code, is_day);
-  };
-
-  // --- lògica DE CERCA I API ---
-
-  // Aquesta funció es passa al Header per iniciar la cerca
+  // --- LÒGICA DE CERCA I API ---
   const handleSearch = (lat, lon, name, country) => {
       fetchWeatherByCoords(lat, lon, name, country);
   };
@@ -201,12 +156,10 @@ export default function MeteoIA() {
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`;
 
-      // Crida principal protegida
       const weatherRes = await fetch(weatherUrl);
       if (!weatherRes.ok) throw new Error(`Error satèl·lit: ${weatherRes.status}`);
       const rawWeatherData = await weatherRes.json();
       
-      // Intentem carregar AQI, sense bloquejar si falla
       let aqiData = null;
       try {
           const aqiRes = await fetch(aqiUrl);
@@ -225,7 +178,7 @@ export default function MeteoIA() {
     }
   };
   
-  // --- MEMOS DE CÀLCUL (Optimització) ---
+  // --- MEMOS DE CÀLCUL (ORDRE CORREGIT) ---
 
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
@@ -244,6 +197,17 @@ export default function MeteoIA() {
     return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
   }, [weatherData, shiftedNow]);
 
+  // MOVEN AMUNT: Aquesta variable s'ha de definir ABANS que s'utilitzi a effectiveWeatherCode
+  const currentRainProbability = useMemo(() => {
+     if (!weatherData || !weatherData.hourly) return 0;
+     const nowMs = shiftedNow.getTime();
+     const hourIdx = weatherData.hourly.time.findIndex(t => {
+        const tMs = new Date(t).getTime();
+        return tMs <= nowMs && (tMs + 3600000) > nowMs;
+     });
+     return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
+  }, [weatherData, shiftedNow]);
+
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData) return 0;
     
@@ -253,17 +217,64 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
+    // 1. SI JA ESTÀ PLOVENT (Dades reals de precipitació)
     if (currentPrecip > 0 || immediateRain > 0) {
         if (currentPrecip > 2 || immediateRain > 2) return 65; 
         if (weatherData.current.temperature_2m < 1) return 71; 
         return 61; 
     }
 
+    // 2. NOVA LÒGICA: SI LA PROBABILITAT ÉS ALTA (Ara ja tenim accés a currentRainProbability)
+    if ((currentCode === 2 || currentCode === 3 || currentCode === 45) && currentRainProbability > 50) {
+        return 61; 
+    }
+
+    // 3. ALTRES CONDICIONS
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
     if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
     
     return currentCode;
-  }, [weatherData, minutelyPreciseData, shiftedNow]);
+  }, [weatherData, minutelyPreciseData, shiftedNow, currentRainProbability]);
+
+  // FONS DINÀMIC (utilitza effectiveWeatherCode)
+  const getDynamicBackground = (code, isDay = 1) => {
+    if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
+    if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
+    if (isSnowCode(code)) return "from-slate-800 via-slate-700 to-cyan-950"; 
+    if (code >= 51) return "from-slate-800 via-slate-900 to-blue-950"; 
+    
+    if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
+    if (code === 0 && !isDay) return "from-slate-950 via-indigo-950 to-purple-950"; 
+    if (code <= 3 && isDay) return "from-slate-700 via-slate-600 to-blue-800"; 
+    return "from-slate-900 to-indigo-950";
+  };
+  
+  const getRefinedBackground = () => {
+    if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
+    const { is_day, weather_code, cloud_cover } = weatherData.current;
+    
+    const code = effectiveWeatherCode || weather_code;
+
+    if (code === 45 || code === 48) return "from-slate-600 via-slate-500 to-stone-400";
+    if (cloud_cover > 95 && is_day && code < 50) return "from-slate-500 via-slate-400 to-slate-300"; 
+
+    if (weatherData.daily && weatherData.daily.sunrise && weatherData.daily.sunset) {
+        const sunrise = new Date(weatherData.daily.sunrise[0]).getTime();
+        const sunset = new Date(weatherData.daily.sunset[0]).getTime();
+        const nowMs = shiftedNow.getTime(); 
+        
+        const hourMs = 60 * 60 * 1000;
+        const twilightMs = 30 * 60 * 1000;
+
+        if (Math.abs(nowMs - sunrise) < twilightMs) return "from-indigo-900 via-rose-800 to-amber-400"; 
+        if (Math.abs(nowMs - sunrise) < hourMs) return "from-blue-600 via-indigo-400 to-sky-200"; 
+
+        if (Math.abs(nowMs - sunset) < twilightMs) return "from-indigo-950 via-purple-900 to-orange-500"; 
+        if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-800 via-orange-700 to-yellow-500"; 
+    }
+    
+    return getDynamicBackground(code, is_day);
+  };
 
   const barometricTrend = useMemo(() => {
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.pressure_msl) return { trend: 'steady', val: 0 };
@@ -343,7 +354,6 @@ export default function MeteoIA() {
       const temp = weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[realIndex] : 0;
       let fl = snowKey && weatherData.hourly[snowKey] ? weatherData.hourly[snowKey][realIndex] : null;
 
-      // Fallback per cota de neu
       const isSuspicious = (fl === null || fl === undefined || (fl < 100 && temp > 4));
       if (isSuspicious) {
          fl = weatherData.hourlyComparison?.gfs?.[realIndex]?.freezing_level_height ?? 
@@ -381,7 +391,6 @@ export default function MeteoIA() {
 
       const sliceModel = (modelData) => {
          if(!modelData || !modelData.length) return [];
-         // Protecció addicional per longitud
          return modelData.slice(startIndex, endIndex).map((d, i) => {
              if (!d) return null;
              return {
@@ -409,16 +418,6 @@ export default function MeteoIA() {
       max: Math.max(...weatherData.daily.temperature_2m_max)
     };
   }, [weatherData]);
-  
-  const currentRainProbability = useMemo(() => {
-     if (!weatherData || !weatherData.hourly) return 0;
-     const nowMs = shiftedNow.getTime();
-     const hourIdx = weatherData.hourly.time.findIndex(t => {
-        const tMs = new Date(t).getTime();
-        return tMs <= nowMs && (tMs + 3600000) > nowMs;
-     });
-     return hourIdx !== -1 ? weatherData.hourly.precipitation_probability[hourIdx] : 0;
-  }, [weatherData, shiftedNow]);
 
   // --- RENDER ---
   const currentBg = getRefinedBackground();
@@ -462,7 +461,6 @@ export default function MeteoIA() {
           const listMoonPhase = getMoonPhase(new Date(day));
           
           let divergence = false;
-          // Comprovació ràpida de divergència per mostrar avís
           if (weatherData.dailyComparison.gfs.temperature_2m_max?.[i] !== undefined) {
              const maxes = [
                   weatherData.daily.temperature_2m_max[i], 
@@ -577,7 +575,6 @@ export default function MeteoIA() {
               <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni AI</h2>
               <p className="text-slate-400 max-w-md mx-auto">{t.subtitle}</p>
               <div className="flex flex-wrap gap-3 justify-center mt-8 px-2">
-                 {/* Boto ràpid per canviar idioma a l'inici */}
                  {['ca', 'es', 'en', 'fr'].map(l => (
                      <button key={l} onClick={() => setLang(l)} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === l ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
                         <FlagIcon lang={l} className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> {l === 'ca' ? 'Català' : l === 'es' ? 'Español' : l === 'fr' ? 'Français' : 'English'}
@@ -601,7 +598,6 @@ export default function MeteoIA() {
                   >
                     <div className={`p-2 rounded-full ${alert.level === 'high' ? 'bg-red-500/20' : 'bg-amber-500/20'}`}>
                       {alert.type === t.storm && <CloudLightning className="w-6 h-6" strokeWidth={2.5}/>}
-                      {/* ... més icones d'alerta ... */}
                       {!['Tempesta', t.storm].includes(alert.type) && <AlertTriangle className="w-6 h-6"/>}
                     </div>
                     <div className="flex flex-col">
@@ -665,11 +661,12 @@ export default function MeteoIA() {
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                                  {getWeatherLabel({ 
-                                      ...weatherData.current, 
-                                      minutely15: weatherData.minutely_15?.precipitation 
-                                  }, lang)}
-                                </span>
+  {getWeatherLabel({ 
+      ...weatherData.current, 
+      weather_code: effectiveWeatherCode, // <--- AQUESTA ÉS LA CLAU: Passem el codi corregit
+      minutely15: weatherData.minutely_15?.precipitation 
+  }, lang)}
+</span>
                            </div>
                        </div>
 

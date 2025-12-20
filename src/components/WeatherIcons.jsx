@@ -4,6 +4,8 @@ import {
   Cloud, CloudFog, Snowflake, CloudSnow 
 } from 'lucide-react';
 
+// --- COMPONENTS VISUALS COMPOSTOS ---
+
 const VariableWeatherIcon = ({ isDay, className, ...props }) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
@@ -37,7 +39,9 @@ const VariableRainIcon = ({ isDay, className, ...props }) => {
 export const WeatherParticles = ({ code }) => {
   const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
+  
   if (!isSnow && !isRain) return null;
+  
   const type = isSnow ? 'snow' : 'rain';
   const count = 30; 
 
@@ -61,20 +65,28 @@ export const WeatherParticles = ({ code }) => {
   );
 };
 
-// ICONA CORREGIDA I NETEJA D'INCONGRUÈNCIES
-export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0, precip15 = 0) => {
+// --- FUNCIÓ PRINCIPAL DE SELECCIÓ D'ICONA ---
+
+export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0, precip = 0) => {
     const commonProps = {
       strokeWidth: 2, 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // ELIMINAT: El bloc que convertia plugim+humitat en boira.
-    
-    // Si hi ha probabilitat alta de pluja però el codi és baix, posem pluja variable
-    if (rainProb > 50 && code < 50) {
+    // 1. PRIORITAT ABSOLUTA: PRECIPITACIÓ REAL
+    // Si l'API diu que està caient aigua (precip > 0), ignorem si posa "Núvol".
+    if (precip > 0) {
        return <VariableRainIcon isDay={isDay} {...commonProps} />;
     }
 
+    // 2. PRIORITAT ALTA: PROBABILITAT DE PLUJA
+    // Si el codi és baix (Sol, Núvol, Boira) però la probabilitat és alta (>50%),
+    // mostrem la icona de pluja variable (Sol/Lluna + Núvol amb pluja).
+    if (rainProb > 50 && (code < 50)) {
+       return <VariableRainIcon isDay={isDay} {...commonProps} />;
+    }
+
+    // 3. SELECCIÓ ESTÀNDARD PER CODI WMO
     if (code === 0) return isDay 
       ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
@@ -87,11 +99,6 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
     }
     
     if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
-
-    // CORRECCIÓ ICONA: Si és boira però hi ha precipitació (>0), forcem icona de pluja.
-    if ((code >= 45 && code <= 48) && (precip15 > 0)) {
-         return <VariableRainIcon isDay={isDay} {...commonProps} />;
-    }
 
     if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     
@@ -114,5 +121,6 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
 
     if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
     
+    // Fallback
     return <Cloud {...commonProps} className={`${commonProps.className} text-gray-300 fill-gray-300/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
 };

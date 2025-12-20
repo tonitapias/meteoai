@@ -148,7 +148,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
             confidenceLevel = 'medium';
             confidenceText = tr.aiConfidenceMod || "Divergència Moderada";
         } else {
-            // UPDATED: Usant nova clau de traducció
             confidenceText = tr.aiConsensus || "Consens de Models"; 
         }
     }
@@ -197,7 +196,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
              summaryParts.push(tr.aiRainHumid);
         } else {
              if (current.cloud_cover > 70) {
-                 // UPDATED: Usant nova clau de traducció
                  summaryParts.push(tr.aiCloudyNoRain || " No s'espera pluja.");
              } else {
                  summaryParts.push(tr.aiRainNone); 
@@ -309,15 +307,14 @@ export const getWeatherLabel = (current, language) => {
   const code = Number(current.weather_code);
   const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
   
-  // 1. PRIORITAT PLUJA SOBRE BOIRA:
-  // Si cau aigua (>0), ignorem la boira i mostrem text de pluja.
-  if ((code === 45 || code === 48) && precip15 > 0) {
+  // 1. PRIORITAT PLUJA SOBRE "NO PLUJA":
+  // Si cau aigua (>0), ignorem si posa núvol (0-3) o boira (45-48) i mostrem text de pluja.
+  if ((code <= 3 || (code >= 45 && code <= 48)) && precip15 > 0) {
       return tr.rainy; 
   }
 
   // 2. SIMPLIFICACIÓ:
   // Agrupem "Plugim feble/moderat/dens" (51, 53, 55) i "Pluja feble" (61) sota l'etiqueta única "Pluja".
-  // Això fa l'app molt més clara per a l'usuari.
   if (code === 51 || code === 53 || code === 55 || code === 61) {
       return tr.rainy; 
   }
