@@ -6,7 +6,7 @@ import {
   LocateFixed, Shirt, Star, RefreshCw, Trash2,
   ThermometerSun, Gauge, ArrowRight, AlertOctagon, TrendingUp, Clock,
   Calendar, ThermometerSnowflake, Cloud, 
-  LayoutTemplate, LayoutDashboard, GitGraph // <--- AFEGITS QUE FALTAVEN
+  LayoutTemplate, LayoutDashboard, GitGraph
 } from 'lucide-react';
 
 import { TRANSLATIONS } from './constants/translations';
@@ -24,7 +24,8 @@ import {
   normalizeModelData, 
   generateAIPrediction, 
   getMoonPhase, 
-  calculateReliability 
+  calculateReliability,
+  getWeatherLabel
 } from './utils/weatherLogic';
 
 const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
@@ -331,10 +332,10 @@ export default function MeteoIA() {
     const cloudCover = weatherData.current.cloud_cover;
     const windSpeed = weatherData.current.wind_speed_10m;
     
-    if (currentPrecip > 0.1 || immediateRain > 0.2) {
+    if (currentPrecip > 0 || immediateRain > 0) {
         if (currentPrecip > 2 || immediateRain > 2) return 65; 
         if (weatherData.current.temperature_2m < 1) return 71; 
-        return 61; 
+        return 61; // Pluja feble/normal
     }
 
     if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
@@ -657,6 +658,10 @@ export default function MeteoIA() {
       </div>
     </div>
   );
+
+  const currentPrecip15 = weatherData?.current?.minutely15 
+      ? weatherData.current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) 
+      : 0;
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
@@ -987,7 +992,8 @@ export default function MeteoIA() {
                                      weatherData.current.is_day, 
                                      currentRainProbability, 
                                      weatherData.current.wind_speed_10m, 
-                                     weatherData.current.relative_humidity_2m
+                                     weatherData.current.relative_humidity_2m,
+                                     currentPrecip15 // <--- NOU ARGUMENT IMPRESCINDIBLE
                                   )}
                                </LivingIcon>
                            </div>
@@ -997,17 +1003,8 @@ export default function MeteoIA() {
                                    {formatTemp(weatherData.current.temperature_2m)}°
                                 </span>
                                 <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-   {
-      effectiveWeatherCode === 0 ? t.clear : 
-      (effectiveWeatherCode === 1 || effectiveWeatherCode === 2) ? (weatherData.current.is_day ? t.partlyCloudy : t.partlyCloudyNight) : 
-      isSnowCode(effectiveWeatherCode) ? t.snow : 
-      (effectiveWeatherCode === 3) ? t.aiSummaryOvercast?.split('.')[0] || t.cloudy :
-      (effectiveWeatherCode === 45 || effectiveWeatherCode === 48) ? t.wmo[45] : 
-      (weatherData.current.relative_humidity_2m >= 95 && weatherData.current.precipitation > 0.2) ? (t.rainFog || "Pluja i Boira") :
-      (weatherData.current.relative_humidity_2m >= 95) ? t.wmo[45] : 
-      t.rainy
-   }
-</span>
+                                  {getWeatherLabel(weatherData.current, lang)}
+                                </span>
                            </div>
                        </div>
 
@@ -1082,8 +1079,6 @@ export default function MeteoIA() {
                               </div>
                             </div>
                           )}
-
-                                         
                          
                          <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} currentPrecip={weatherData.current.precipitation} />
                        </div>
@@ -1185,7 +1180,7 @@ export default function MeteoIA() {
               </>
             )}
 
-<div className="w-full py-8 mt-8 text-center border-t border-white/5">
+            <div className="w-full py-8 mt-8 text-center border-t border-white/5">
               <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity">
                 © {new Date().getFullYear()} Meteo Toni Ai
               </p>

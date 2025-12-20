@@ -100,7 +100,8 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     const windSpeed = current.wind_speed_10m;
     const code = forcedCode !== null ? forcedCode : current.weather_code;
     const precipSum = daily.precipitation_sum && daily.precipitation_sum[0];
-    const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
+    // Assegurem càlcul segur de la precipitació recent
+    const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
     const uvMax = daily.uv_index_max[0];
     const isDay = current.is_day;
     const currentHour = new Date().getHours();
@@ -144,17 +145,12 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
 
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     
-    // --- NOVA LÒGICA PER DETECTAR "PLUJA AMB BOIRA" ---
-    // Si humitat >= 95% i hi ha precipitació o plugim, forcem missatge específic
-    const isFoggyRain = humidity >= 95 && (code >= 51 || precip15 > 0) && !isSnow;
-
+    // Si plou, ignorem si hi ha boira o no al text de l'IA, diem que plou.
     if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (isSnow) summaryParts.push(tr.aiSummarySnow);
-    else if (isFoggyRain) {
-        // Usem la nova traducció
-        summaryParts.push(tr.aiSummaryRainFog || "Ambient molt humit i tancat. Pluja persistent amb visibilitat reduïda. ");
+    else if (code >= 51 || precip15 > 0) { 
+        summaryParts.push(tr.aiSummaryRain); 
     }
-    else if (code >= 51 || precip15 > 0) summaryParts.push(tr.aiSummaryRain);
     else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear);
     else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
     else if (code === 3) summaryParts.push(tr.aiSummaryOvercast); 
@@ -289,21 +285,29 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   return { level, type, value };
 };
 
-// --- NOVA FUNCIÓ PER FORÇAR ETIQUETA ---
-// Afegeix això al final per generar el text correcte
+// --- ETIQUETA PRINCIPAL REFORÇADA ---
+// ... (resta de l'arxiu igual, ves al final de tot)
+
+// --- ETIQUETA PRINCIPAL SIMPLIFICADA ---
 export const getWeatherLabel = (current, language) => {
   const tr = TRANSLATIONS[language];
   if (!tr || !current) return "";
 
-  const code = current.weather_code;
-  const humidity = current.relative_humidity_2m || 0;
-  const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + b, 0) : 0;
+  const code = Number(current.weather_code);
+  const precip15 = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
   
-  // Si hi ha boira (>=95%) I precipitació real (>0.2mm), forcem el text
-  if (humidity >= 95 && precip15 > 0.2) {
-      return tr.rainFog; 
+  // 1. CORRECCIÓ BOIRA: Si plou amb boira, diem "Pluja".
+  if ((code === 45 || code === 48) && precip15 > 0) {
+      return tr.rainy; 
   }
 
-  // Si no, text estàndard
+  // 2. SIMPLIFICACIÓ TOTAL:
+  // Agrupem Plugim feble (51), moderat (53) i dens (55) tot com a "Pluja".
+  // També "Pluja feble" (61) es pot mostrar com "Pluja" si vols ser molt minimalista.
+  if (code === 51 || code === 53 || code === 55 || code === 61) {
+      return tr.rainy; // Retorna "Pluja" (o "Lluvia" / "Rain" segons idioma)
+  }
+
+  // La resta de codis (Tempesta, Neu, Pluja forta, etc.) es mostren específics
   return tr.wmo[code] || "---";
 };

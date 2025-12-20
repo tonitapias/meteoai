@@ -61,7 +61,8 @@ export const WeatherParticles = ({ code }) => {
   );
 };
 
-export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0) => {
+// ICONA AMB SUPORT PER A 'precip15'
+export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0, precip15 = 0) => {
     const commonProps = {
       strokeWidth: 2, 
       className: `${className} drop-shadow-md transition-all duration-300` 
@@ -69,7 +70,8 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
 
     const drizzleCodes = [51, 53, 55, 56, 57];
     
-    if (drizzleCodes.includes(code) && humidity >= 95 && rainProb < 80) {
+    // Si hi ha plugim molt feble i humitat extrema, posem boira (només si la precipitació és gairebé nul·la)
+    if (drizzleCodes.includes(code) && humidity >= 95 && rainProb < 80 && precip15 < 0.1) {
        return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     }
 
@@ -89,6 +91,12 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
     }
     
     if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
+
+    // --- CORRECCIÓ ICONA ---
+    // Si és boira (45, 48) PERÒ hi ha qualsevol indici de pluja (>0), mostrem icona de pluja
+    if ((code >= 45 && code <= 48) && (precip15 > 0)) {
+         return <VariableRainIcon isDay={isDay} {...commonProps} />;
+    }
 
     if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     

@@ -70,7 +70,6 @@ export const TRANSLATIONS = {
     uvExtreme: "Extrem",
     alertDanger: "ALERTA PERILL",
     alertWarning: "AVÍS PRECAUCIÓ",
-    // MODIFICAT: Eliminada la paraula "professional"
     subtitle: "Previsió multi-model amb anàlisi d'inestabilitat (CAPE) i Punt de Rosada.",
     aqiLevels: ["Excel·lent", "Bona", "Acceptable", "Moderada", "Dolenta", "Molt Dolenta"],
     pollen: "Nivells de Pol·len",
@@ -93,14 +92,12 @@ export const TRANSLATIONS = {
     modelCompareTitle: "Comparativa Models (Diari)",
     divergence: "Divergència",
     
-    // Dew Point Levels
     dpDry: "Sec / Agradable",
     dpComfortable: "Confortable",
     dpHumid: "Xafogós",
     dpOppressive: "Opressiu",
     dpExtreme: "Insuportable",
     
-    // AI Advanced Texts
     aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
     aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ",
     aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
@@ -115,7 +112,6 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambient molt humit i tancat. Pluja persistent amb visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
     
-    // CORREGIT: "plenamente" -> "plenament"
     aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
@@ -265,7 +261,6 @@ export const TRANSLATIONS = {
     uvExtreme: "Extremo",
     alertDanger: "ALERTA PELIGRO",
     alertWarning: "AVISO PRECAUCIÓN",
-    // MODIFICAT: Eliminada "profesional"
     subtitle: "Previsión multi-modelo con análisis de inestabilidad (CAPE) y Punto de Rocío.",
     aqiLevels: ["Excelente", "Buena", "Aceptable", "Moderada", "Mala", "Muy Mala"],
     pollen: "Niveles de Polen",
@@ -456,7 +451,6 @@ export const TRANSLATIONS = {
     uvExtreme: "Extreme",
     alertDanger: "DANGER ALERT",
     alertWarning: "WARNING NOTICE",
-    // MODIFICAT: Eliminada "Professional"
     subtitle: "Multi-model forecast with instability analysis (CAPE) and Dew Point.",
     aqiLevels: ["Excellent", "Good", "Fair", "Moderate", "Poor", "Very Poor"],
     pollen: "Pollen Levels",
@@ -647,7 +641,6 @@ export const TRANSLATIONS = {
     uvExtreme: "Extrême",
     alertDanger: "ALERTE DANGER",
     alertWarning: "AVIS PRUDENCE",
-    // MODIFICAT: Eliminada "professionnelle"
     subtitle: "Prévision multi-modèle avec analyse d'instabilité (CAPE) et Point de Rosée.",
     aqiLevels: ["Excellent", "Bon", "Acceptable", "Modéré", "Mauvais", "Très Mauvais"],
     pollen: "Niveaux de Pollen",
