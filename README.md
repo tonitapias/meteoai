@@ -18,10 +18,10 @@ No cal instal·lar res! Pots veure l'aplicació funcionant en directe aquí:
 
 Més enllà de dir-te la temperatura, aquesta app té algunes coses molt xules sota el capó:
 
-- **🤖 El "Cervell" (AI Analysis):** L'app analitza les dades i et genera un text personalitzat (Tipus: *"Agafa jaqueta que refresca"* o *"Consens de models, pluja segura"*).
-- **☔️ Especialista en pluja:** Si hi ha un risc alt de precipitació, l'app et mostra pluja directament, encara que els sensors diguin només "núvol".
-- **🏎️ Velocitat total:** Tot està pensat perquè la cerca de ciutats sigui instantània i l'app es mogui amb total fluïdesa.
-- **📱 Mode Mòbil i Expert:** Pots triar entre una vista bàsica o una vista experta amb gràfics i dades avançades.
+- **🤖 El "Cervell" (AI Analysis)**: L'app analitza les dades i et genera un text personalitzat (Tipus: *"Agafa jaqueta que refresca"* o *"Consens de models, pluja segura"*).
+- **☔️ Especialista en pluja**: Si hi ha un risc alt de precipitació, l'app et mostra pluja directament, encara que els sensors diguin només "núvol".
+- **🏎️ Velocitat total**: Tot està pensat perquè la cerca de ciutats sigui instantània i l'app es mogui amb total fluïdesa.
+- **📱 Mode Mòbil i Expert**: Pots triar entre una vista bàsica o una vista experta amb gràfics i dades avançades.
 
 ## 🌳 Estructura del Projecte
 
@@ -47,3 +47,13 @@ meteoai/
 │   └── main.jsx            # Punt d'entrada del codi
 ├── index.html              # Pàgina principal
 └── package.json            # Configuració i llibreries
+
+🛠️ Tecnologies
+
+React + Vite (Velocitat i modernitat)
+
+Tailwind CSS (Disseny i animacions)
+
+Open-Meteo API (Dades de models ECMWF, GFS i ICON)
+
+Fet amb 💙 i molt de codi per Toni Tapias.
