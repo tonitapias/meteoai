@@ -89,7 +89,7 @@ export const normalizeModelData = (data) => {
      return { ...data, ...result };
 };
 
-// Genera el text predictiu basat en regles expertes
+// Genera el text predictiu basat en regles expertes i TENDÈNCIA DE RADAR
 export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', forcedCode = null, reliability = null) => {
     const tr = TRANSLATIONS[language];
     
@@ -109,9 +109,12 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     
     // Dades de "Finestra" (Radar immediat)
     const precipInstantanea = current.minutely15 ? current.minutely15[0] : 0;
-    const precip15Sum = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
+    const precipNext15 = current.minutely15 ? current.minutely15[1] : 0;
+    
+    // Suma dels pròxims 60 minuts (4 quarts d'hora)
+    const precip1hSum = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
 
-    // Càlcul de probabilitat futura
+    // Càlcul de probabilitat futura (Models)
     let futureRainProb = 0;
     if (hourly && hourly.precipitation_probability) {
         const nextHours = hourly.precipitation_probability.slice(currentHour, currentHour + 12);
@@ -141,7 +144,7 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         }
     }
 
-    // --- 2. SALUTACIÓ REALISTA (SOLAR vs RELLOTGE) ---
+    // --- 2. SALUTACIÓ ---
     if (isDay) {
         if (currentHour < 12) summaryParts.push(tr.aiIntroMorning);
         else summaryParts.push(tr.aiIntroAfternoon);
@@ -152,15 +155,17 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     }
 
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
+    const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+
+    // --- 3. ESTAT DEL CEL I PRECIPITACIÓ (Amb Lògica Predictiva) ---
     
-    // --- 3. ESTAT DEL CEL I PRECIPITACIÓ (LOGICA DE FINESTRA) ---
-    
-    // CAS A: PLUJA REAL DETECTADA PEL RADAR
+    // CAS A: PLUJA REAL DETECTADA PEL RADAR ARA MATEIX
     if (precipInstantanea > 0) {
+        // Intensitat actual
         if (precipInstantanea < 0.2) {
-            summaryParts.push(tr.aiRainLight);
+            summaryParts.push(tr.aiRainLight); 
         } else if (precipInstantanea > 2.0) {
-            summaryParts.push(tr.aiRainHeavy);
+            summaryParts.push(tr.aiRainHeavy); 
         } else {
             if (code === 45 || code === 48) {
                 summaryParts.push(tr.aiSummaryRainFog || tr.aiSummaryRain);
@@ -169,28 +174,52 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
             }
         }
 
+        // TENDÈNCIA (NOWCASTING): Què passarà en 15 minuts?
+        if (precipNext15 === 0) {
+            summaryParts.push(tr.aiRainStopping); // "La pluja hauria d'aturar-se aviat."
+        } else if (precipNext15 > precipInstantanea * 1.5) {
+            summaryParts.push(tr.aiRainMore); // "S'intensificarà."
+        } else if (precipNext15 < precipInstantanea * 0.5) {
+            summaryParts.push(tr.aiRainLess); // "Anirà minvant."
+        }
+
         if (code <= 2 && isDay) {
             summaryParts.push(tr.aiSunRain);
         }
     }
-    // CAS B: NEU O TEMPESTA
+    // CAS B: NO PLOU ARA, PERÒ EL MODEL DEIA PLUJA (Correcció Coherent)
+    else if (isRainCode) {
+        if (precip1hSum > 0.1) {
+            // El radar veu pluja en breu, encara que ara sigui 0
+            summaryParts.push(tr.aiRainExp); // "Precipitació imminent"
+        } else {
+            // El model diu pluja, el radar diu no.
+            summaryParts.push(tr.aiThreatening); // "Cel amenaçador..."
+        }
+    }
+    // CAS C: NEU O TEMPESTA
     else if (code >= 95) summaryParts.push(tr.aiSummaryStorm);
     else if (isSnow) summaryParts.push(tr.aiSummarySnow);
     
-    // CAS C: NO PLOU ARA MATEIX
+    // CAS D: TEMPS ESTABLE
     else {
-        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-            summaryParts.push(tr.aiThreatening);
-        }
-        else if (code === 45 || code === 48) summaryParts.push(tr.aiSummaryCloudy); 
+        if (code === 45 || code === 48) summaryParts.push(tr.aiSummaryCloudy); 
         else if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear);
         else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
         else if (code === 3) summaryParts.push(tr.aiSummaryOvercast); 
         else summaryParts.push(tr.aiSummaryCloudy); 
+        
+        // Matís final si s'espera pluja més tard
+        if (rainProb > 40 && precip1hSum === 0) {
+             summaryParts.push(tr.aiRainChance);
+        } else if (current.cloud_cover < 30 && code <= 2) {
+             summaryParts.push(tr.aiRainNone);
+        }
     }
 
     // --- 4. VENT I TEMPERATURA ---
     if (windSpeed > 20) summaryParts.push(tr.aiWindMod);
+    if (windSpeed > 50) summaryParts.push(tr.aiWindStrong); 
     
     if (feelsLike <= 0) summaryParts.push(tr.aiTempFreezing);
     else if (feelsLike > 0 && feelsLike < 10) summaryParts.push(tr.aiTempCold);
@@ -207,26 +236,10 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        summaryParts.push(heatText);
     }
 
-    // --- 5. DETALLS FINALS DE PROBABILITAT ---
-    if (precipInstantanea === 0) {
-        if (precip15Sum > 0.1) summaryParts.push(tr.aiRainExp); 
-        else if (rainProb < 20 && code < 50) {
-            if (humidity >= 95) summaryParts.push(tr.aiRainHumid); 
-            else {
-                if (current.cloud_cover > 70) summaryParts.push(tr.aiCloudyNoRain || " No s'espera pluja.");
-                else summaryParts.push(tr.aiRainNone); 
-            }
-        }
-        else if (code < 50) {
-            if (rainProb > 60) summaryParts.push(tr.aiRainChanceHigh);
-            else summaryParts.push(tr.aiRainChance);
-        }
-    }
-
-    // --- 6. ALERTES I TIPS ---
+    // --- 5. ALERTES I TIPS ---
     if (code >= 95 || currentCape > 2000) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
-    else if (code === 65 || code === 82 || precipSum > 30) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
+    else if ((code === 65 || code === 82 || precipSum > 30) && precipInstantanea > 0) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
 
     if (windSpeed > 50) {
       alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
@@ -252,7 +265,7 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        tips.push(tr.tipHydration);
     }
 
-    if (rainProb > 40 || precip15Sum > 0.1) tips.push(tr.tipUmbrella);
+    if (rainProb > 40 || precip1hSum > 0.1) tips.push(tr.tipUmbrella);
     if (uvMax > 7 && isDay) {
        if(uvMax >= 10) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' });
        tips.push(tr.tipSunscreen);
@@ -262,7 +275,9 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     if (tips.length === 0) tips.push(tr.tipCalm);
     tips = [...new Set(tips)].slice(0, 4);
 
-    return { text: summaryParts.join(""), tips, confidence: confidenceText, confidenceLevel, alerts };
+    const finalString = summaryParts.join("").replace(/\s+/g, ' ');
+
+    return { text: finalString, tips, confidence: confidenceText, confidenceLevel, alerts };
  };
 
 export const getMoonPhase = (date) => {
@@ -313,7 +328,6 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   return { level, type, value };
 };
 
-// --- ETIQUETA PRINCIPAL DEFINITIVA I SIMPLIFICADA (CORREGIDA) ---
 export const getWeatherLabel = (current, language) => {
   const tr = TRANSLATIONS[language];
   if (!tr || !current) return "";
@@ -323,16 +337,9 @@ export const getWeatherLabel = (current, language) => {
       ? current.minutely15[0] 
       : 0;
   
-  // 1. Lògica de "Radar":
   if (precipInstantanea > 0.1) {
-      // Si el codi base és Boira, retornem "Pluja i Boira" específicament
       if (code === 45 || code === 48) return tr.rainFog || "Pluja i Boira";
       return tr.rainy; 
-  }
-
-  // 2. Si el codi és de pluja, PERÒ el radar diu 0.0mm:
-  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-      if (precipInstantanea === 0) return tr.cloudy; 
   }
 
   return tr.wmo[code] || "---";

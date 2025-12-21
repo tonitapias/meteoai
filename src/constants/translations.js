@@ -1,5 +1,6 @@
 export const TRANSLATIONS = {
   ca: {
+    // ... (Blocs anteriors sense canvis fins a 'wmo') ...
     aiConsensus: "Consens de Models",
     aiCloudyNoRain: "No s'espera pluja, tot i l'aspecte gris del cel.",
     searchPlaceholder: "Cerca ciutat...",
@@ -100,62 +101,97 @@ export const TRANSLATIONS = {
     dpOppressive: "Opressiu",
     dpExtreme: "Insuportable",
     
-    aiIntroMorning: "Bon dia. Analitzem la situació sinòptica actualitzada. ",
-    aiIntroAfternoon: "Bona tarda. Seguiment de l'evolució atmosfèrica. ",
-    aiIntroEvening: "Bon vespre. Situació per a les pròximes hores. ",
-    aiIntroNight: "Bona nit. Previsió nocturna. ",
+    // TEXTOS IA
+    aiIntroMorning: "Bon dia. Situació actual: ",
+    aiIntroAfternoon: "Bona tarda. Evolució atmosfèrica: ",
+    aiIntroEvening: "Bon vespre. Previsió immediata: ",
+    aiIntroNight: "Bona nit. Situació nocturna: ",
     
-    aiSummaryClear: "Cel serè. Ambient tranquil. ", 
-    aiSummaryVariable: "Cel variable. Sol i núvols compartint protagonisme. ", 
-    aiSummaryVariableNight: "Nit variable. Pas d'intervals de núvols. ", 
-    aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però possiblement humit. ",
-    aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini absolut dels núvols. ",
-    aiSummaryRain: "Pertorbació activa. S'esperen precipitacions a la zona. ",
-    aiSummaryRainFog: "Ambient molt humit i tancat. Pluja persistent amb visibilitat reduïda per boira. ",
-    aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
+    aiSummaryClear: "Cel serè i ambient tranquil. ", 
+    aiSummaryVariable: "Cel variable amb sol i núvols alternant-se. ", 
+    aiSummaryVariableNight: "Nit variable amb pas d'intervals de núvols. ", 
+    aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però humit. ",
+    aiSummaryOvercast: "Cel cobert. Jornada grisa amb predomini dels núvols. ",
+    aiSummaryRain: "Pertorbació activa amb precipitacions a la zona. ",
+    aiSummaryRainFog: "Ambient tancat. Pluja persistent i visibilitat reduïda per boira. ",
+    aiSummaryStorm: "Situació inestable. Risc de tempestes actives. ",
     
-    // --- NOVES CLAUS AFEGIDES (REALISME) ---
-    aiRainLight: "Cau un plugim molt feble o quatre gotes ara mateix. ",
+    aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",
     aiRainHeavy: "Plou amb força intensitat en aquest moment. ",
     aiSunRain: "Atenció: Sol i pluja simultàniament. ",
-    aiThreatening: "El cel està amenaçador, tot i que ara mateix no plou. ",
-    // ---------------------------------------
-
-    aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
+    aiThreatening: "Cel amenaçador, tot i que ara mateix no plou. ",
     
-    aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
-    aiTempCold: "Fa fred. Caldrà roba d'abric per estar confortable. ",
-    aiTempCool: "Ambient fresc. Una jaqueta lleugera serà suficient. ", 
-    aiTempMild: "Temperaturas suaus i agradables, sense extrems. ",
-    aiTempWarm: "Ambient càlid, es nota la pujada de temperatura. ",
-    aiTempHot: "Calor intensa. Eviteu els esforços a les hores centrals. ",
+    aiSummarySnow: "Configuració hivernal amb nevades previstes. ",
     
-    aiHeatIndex: "Xafogor acusada, sensació real de {temp}°C. ",
+    aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé. ",
+    aiTempCold: "Fa fred. Caldrà roba d'abric. ",
+    aiTempCool: "Ambient fresc. Jaqueta lleugera recomanada. ", 
+    aiTempMild: "Temperaturas suaus i agradables. ",
+    aiTempWarm: "Ambient càlid, pugen les temperatures. ",
+    aiTempHot: "Calor intensa. Eviteu esforços al sol. ",
     
-    aiWindLight: "Flux feble, situació tranquil·la. ",
-    aiWindMod: "Vent moderat que accentua la sensació tèrmica. ",
-    aiWindStrong: "Atenció a les ratxes de vent, situació potencialment perillosa. ",
+    aiHeatIndex: "Xafogor acusada, sensació de {temp}°C. ",
     
-    aiRainNone: "No s'esperen precipitacions. Gaudiu de l'estabilitat atmosfèrica. ",
-    aiRainHumid: "No s'esperen pluges generals, tot i que la humitat podria deixar algun plugim dispers. ",
+    aiWindLight: "Vent feble. ",
+    aiWindMod: "Vent moderat. ",
+    aiWindStrong: "Ratxes de vent fortes, precaució. ",
+    
+    aiRainNone: "No s'esperen precipitacions properament. ",
+    aiRainHumid: "No s'esperen pluges generals, potser algun plugim dispers. ",
     aiRainExp: "Radar actiu: precipitació imminent detectada. ",
+    
+    aiRainStopping: "La pluja hauria d'aturar-se aviat. ",
+    aiRainMore: "La precipitació s'intensificarà en breu. ",
+    aiRainLess: "La intensitat de la pluja anirà minvant. ",
+    
     aiRainChance: "Possibilitat de precipitació durant la jornada. ", 
     aiRainChanceHigh: "Alta probabilitat de pluja en les pròximes hores. ", 
 
+    // --- CORRECCIÓ DE DEFINICIONS WMO ---
     wmo: {
       0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
       45: "bancs de boira", 48: "boira gebradora",
-      51: "plugim feble", 53: "plugim moderat", 55: "plugim persistent",
-      56: "plugim gèlid", 57: "plugim gèlid intens",
-      61: "pluja feble", 63: "pluja moderada", 65: "pluja forta",
-      66: "pluja gelada", 67: "pluja gelada forta",
-      71: "nevada feble", 73: "nevada moderada", 75: "nevada forta",
-      77: "ruixats de neu",
-      80: "ruixats", 81: "xàfecs moderats", 82: "aiguats violents",
-      85: "ruixats de neu", 86: "ruixats de neu forts",
-      95: "tempesta elèctrica", 96: "tempesta amb calamarsa", 99: "tempesta severa amb calamarsa"
-    },
+      
+      // PLUGIM (DRIZZLE)
+      51: "plugim feble", 
+      53: "plugim moderat", 
+      55: "plugim dens", // Abans: persistent (confús)
 
+      // PLUGIM ENGELANT (FREEZING DRIZZLE)
+      56: "plugim engelant feble", // Abans: gèlid
+      57: "plugim engelant dens",
+      
+      // PLUJA (RAIN)
+      61: "pluja feble", 
+      63: "pluja moderada", 
+      65: "pluja forta",
+      
+      // PLUJA ENGELANT (FREEZING RAIN)
+      66: "pluja engelant feble", 
+      67: "pluja engelant forta",
+      
+      // NEU (SNOW)
+      71: "nevada feble", 
+      73: "nevada moderada", 
+      75: "nevada forta",
+      77: "neu granulada", // Abans: ruixats de neu (Error)
+      
+      // RUIXATS (SHOWERS) - Unificació de terminologia
+      80: "ruixats febles", // Abans: ruixats
+      81: "ruixats moderats", // Abans: xàfecs moderats
+      82: "ruixats torrencials", // Abans: aiguats violents
+      
+      // RUIXATS DE NEU
+      85: "ruixats de neu febles", 
+      86: "ruixats de neu forts",
+      
+      // TEMPESTA
+      95: "tempesta", 
+      96: "tempesta amb calamarsa", 
+      99: "tempesta severa amb calamarsa"
+    },
+    
+    // ... (Resta de claus igual) ...
     alertStorm: "Inestabilitat acusada (CAPE alt) i tempestes.",
     alertSnow: "Precaució: Neu acumulada prevista.",
     alertWindExtreme: "Vent huracanat. Perill extrem a l'exterior.",
@@ -213,6 +249,7 @@ export const TRANSLATIONS = {
   },
 
   es: {
+    // ... (Blocs anteriors igual) ...
     searchPlaceholder: "Buscar ciudad...",
     favorites: "Lugares Favoritos",
     now: "Ahora",
@@ -311,62 +348,66 @@ export const TRANSLATIONS = {
     dpOppressive: "Opresivo",
     dpExtreme: "Insuperable",
     
-    aiIntroMorning: "Buenos días. Analizamos la situación sinóptica actualizada. ",
-    aiIntroAfternoon: "Buenas tardes. Seguimiento de la evolución atmosférica. ",
-    aiIntroEvening: "Buenas noches. Situación para las próximas horas. ",
-    aiIntroNight: "Buenas noches. Previsión nocturna. ",
+    aiIntroMorning: "Buenos días. Situación actualizada: ",
+    aiIntroAfternoon: "Buenas tardes. Evolución atmosférica: ",
+    aiIntroEvening: "Buenas noches. Previsión inmediata: ",
+    aiIntroNight: "Buenas noches. Situación nocturna: ",
     
-    aiSummaryClear: "Cielo despejado. Ambiente tranquilo. ", 
-    aiSummaryVariable: "Cielo variable. Sol y nubes compartiendo protagonismo. ",
-    aiSummaryVariableNight: "Noche variable. Paso de intervalos nubosos. ",
-    aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero posiblemente húmedo. ",
-    aiSummaryOvercast: "Cielo cubierto. Jornada gris con predominio absoluto de las nubes. ",
-    aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
-    aiSummaryRainFog: "Ambiente muy húmedo y cerrado. Lluvia persistente con visibilidad reducida por niebla. ",
-    aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
+    aiSummaryClear: "Cielo despejado y ambiente tranquilo. ", 
+    aiSummaryVariable: "Cielo variable con sol y nubes alternándose. ",
+    aiSummaryVariableNight: "Noche variable con paso de intervalos nubosos. ",
+    aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero húmedo. ",
+    aiSummaryOvercast: "Cielo cubierto. Jornada gris con predominio de las nubes. ",
+    aiSummaryRain: "Perturbación activa con precipitaciones en la zona. ",
+    aiSummaryRainFog: "Ambiente muy húmedo. Lluvia persistente y niebla. ",
+    aiSummaryStorm: "Situación inestable. Riesgo de tormentas activas. ",
     
-    // --- NUEVAS CLAVES AÑADIDAS (REALISMO) ---
-    aiRainLight: "Cae una llovizna muy débil o cuatro gotas ahora mismo. ",
+    aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",
     aiRainHeavy: "Llueve con bastante intensidad en este momento. ",
     aiSunRain: "Atención: Sol y lluvia simultáneamente. ",
-    aiThreatening: "El cielo está amenazador, aunque ahora mismo no llueve. ",
-    // -----------------------------------------
-
-    aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
+    aiThreatening: "Cielo amenazador, aunque ahora mismo no llueve. ",
     
-    aiTempFreezing: "Ambiente gélido. Abrígate muy bien si sales. ",
-    aiTempCold: "Hace frío. Necesitarás ropa de abrigo para estar confortable. ",
+    aiSummarySnow: "Configuración invernal con nevadas previstas. ",
+    
+    aiTempFreezing: "Ambiente gélido. Abrígate muy bien. ",
+    aiTempCold: "Hace frío. Necesitarás ropa de abrigo. ",
     aiTempCool: "Ambiente fresco. Una chaqueta ligera será suficiente. ", 
-    aiTempMild: "Temperaturas suaves y agradables, sin extremos. ",
-    aiTempWarm: "Ambiente cálido, se nota la subida de temperatura. ",
-    aiTempHot: "Calor intenso. Evita los esfuerzos en las horas centrales. ",
+    aiTempMild: "Temperaturas suaves y agradables. ",
+    aiTempWarm: "Ambiente cálido, suben las temperaturas. ",
+    aiTempHot: "Calor intenso. Evita esfuerzos al sol. ",
     
     aiHeatIndex: "Bochorno notable, sensación de {temp}°C. ",
     
-    aiWindLight: "Flujo débil, situación tranquila. ",
-    aiWindMod: "Viento moderado que acentúa la sensación térmica. ",
-    aiWindStrong: "Atención a las rachas de viento, situación potencialmente peligrosa. ",
+    aiWindLight: "Viento débil. ",
+    aiWindMod: "Viento moderado. ",
+    aiWindStrong: "Rachas de viento fuertes, precaución. ",
     
-    aiRainNone: "No se esperan precipitaciones. Disfrutad de la estabilidad atmosférica. ",
-    aiRainHumid: "No se esperan lluvias generales, aunque la humedad podría dejar alguna llovizna dispersa. ",
+    aiRainNone: "No se esperan precipitaciones próximamente. ",
+    aiRainHumid: "No se esperan lluvias generales, quizás alguna llovizna. ",
     aiRainExp: "Radar activo: precipitación inminente detectada. ",
+    
+    aiRainStopping: "La lluvia debería parar pronto. ",
+    aiRainMore: "La precipitación se intensificará en breve. ",
+    aiRainLess: "La intensidad de la lluvia irá disminuyendo. ",
+
     aiRainChance: "Posibilidad de precipitación durante la jornada. ", 
     aiRainChanceHigh: "Alta probabilidad de lluvia en las próximas horas. ", 
 
     wmo: {
       0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
       45: "bancos de niebla", 48: "niebla helada",
-      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna persistente",
-      56: "llovizna helada", 57: "llovizna helada intensa",
+      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna densa", // Fix
+      56: "llovizna helada ligera", 57: "llovizna helada densa",
       61: "lluvia ligera", 63: "lluvia moderada", 65: "lluvia fuerte",
-      66: "lluvia helada", 67: "lluvia helada fuerte",
+      66: "lluvia helada ligera", 67: "lluvia helada fuerte",
       71: "nevada ligera", 73: "nevada moderada", 75: "nevada fuerte",
-      77: "chubascos de nieve",
-      80: "chubascos", 81: "chubascos moderados", 82: "aguaceros violentos",
+      77: "cinarra", // Fix: Snow grains
+      80: "chubascos ligeros", 81: "chubascos moderados", 82: "chubascos torrenciales", // Fix
       85: "chubascos de nieve", 86: "chubascos de nieve fuertes",
       95: "tormenta eléctrica", 96: "tormenta con granizo", 99: "tormenta severa con granizo"
     },
     
+    // ... (Alertes i tips iguals) ...
     alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
     alertSnow: "Precaución: Nieve acumulada prevista.",
     alertWindExtreme: "Viento huracanado. Peligro exterior.",
@@ -424,6 +465,7 @@ export const TRANSLATIONS = {
   },
 
   en: {
+    // ... (Blocs anteriors igual) ...
     searchPlaceholder: "Search city...",
     favorites: "Favorite Places",
     now: "Now",
@@ -522,45 +564,48 @@ export const TRANSLATIONS = {
     dpOppressive: "Oppressive",
     dpExtreme: "Miserable",
     
-    aiIntroMorning: "Good morning. Analyzing the updated synoptic situation. ",
-    aiIntroAfternoon: "Good afternoon. Tracking atmospheric evolution. ",
-    aiIntroEvening: "Good evening. Outlook for the coming hours. ",
-    aiIntroNight: "Good night. Nocturnal forecast. ",
+    aiIntroMorning: "Good morning. Current situation: ",
+    aiIntroAfternoon: "Good afternoon. Atmospheric outlook: ",
+    aiIntroEvening: "Good evening. Immediate forecast: ",
+    aiIntroNight: "Good night. Nocturnal situation: ",
     
-    aiSummaryClear: "Clear skies. Calm atmosphere. ", 
-    aiSummaryVariable: "Variable skies. Sun and clouds mixing. ",
-    aiSummaryVariableNight: "Variable skies. Passing clouds. ",
-    aiSummaryCloudy: "Variable cloudiness. Stable but potentially humid atmosphere. ",
-    aiSummaryOvercast: "Overcast skies. A gray day with dominant cloud cover. ",
-    aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
-    aiSummaryRainFog: "Very humid and foggy conditions. Persistent rain with reduced visibility. ",
-    aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
+    aiSummaryClear: "Clear skies and calm atmosphere. ", 
+    aiSummaryVariable: "Variable skies with sun and clouds mixing. ",
+    aiSummaryVariableNight: "Variable skies with passing clouds. ",
+    aiSummaryCloudy: "Variable cloudiness. Stable but humid atmosphere. ",
+    aiSummaryOvercast: "Overcast. A gray day with dominant cloud cover. ",
+    aiSummaryRain: "Active disturbance. Precipitation falling in the area. ",
+    aiSummaryRainFog: "Humid and foggy. Persistent rain with reduced visibility. ",
+    aiSummaryStorm: "Unstable situation. Risk of active storms. ",
     
-    // --- NEW KEYS ADDED (REALISM) ---
     aiRainLight: "Light drizzle or a few drops falling right now. ",
     aiRainHeavy: "Heavy rain falling at this moment. ",
     aiSunRain: "Attention: Sun and rain mixing simultaneously. ",
-    aiThreatening: "Threatening skies, although it is not raining right now. ",
-    // --------------------------------
-
-    aiSummarySnow: "Fully winter configuration with expected snowfall. ",
+    aiThreatening: "Threatening skies, though not raining right now. ",
     
-    aiTempFreezing: "Freezing conditions. Bundle up well if you go out. ",
-    aiTempCold: "It's cold. You'll need warm clothing to stay comfortable. ",
-    aiTempCool: "Cool atmosphere. A light jacket will be enough. ", 
-    aiTempMild: "Mild and pleasant temperatures, no extremes. ",
-    aiTempWarm: "Warm atmosphere, temperatures are noticeably rising. ",
-    aiTempHot: "Intense heat. Avoid strenuous activity during midday hours. ",
+    aiSummarySnow: "Winter configuration with expected snowfall. ",
     
-    aiHeatIndex: "Significant humidity, feels like {temp}°C. ",
+    aiTempFreezing: "Freezing. Bundle up well. ",
+    aiTempCold: "It's cold. You'll need warm clothing. ",
+    aiTempCool: "Cool. A light jacket will be enough. ", 
+    aiTempMild: "Mild and pleasant temperatures. ",
+    aiTempWarm: "Warm atmosphere, temperatures are rising. ",
+    aiTempHot: "Intense heat. Avoid strenuous activity. ",
     
-    aiWindLight: "Weak flow, calm situation. ",
-    aiWindMod: "Moderate wind increasing wind chill factor. ",
-    aiWindStrong: "Attention to wind gusts, potentially dangerous situation. ",
+    aiHeatIndex: "High humidity, feels like {temp}°C. ",
     
-    aiRainNone: "No rain expected. Enjoy the stable weather. ",
-    aiRainHumid: "No significant rain expected, though high humidity might cause scattered drizzle. ",
+    aiWindLight: "Light wind. ",
+    aiWindMod: "Moderate wind. ",
+    aiWindStrong: "Strong wind gusts, caution. ",
+    
+    aiRainNone: "No rain expected soon. ",
+    aiRainHumid: "No significant rain, maybe scattered drizzle. ",
     aiRainExp: "Active radar: imminent precipitation detected. ",
+    
+    aiRainStopping: "Rain is expected to stop soon. ",
+    aiRainMore: "Rain intensity will increase shortly. ",
+    aiRainLess: "Rain intensity will decrease. ",
+
     aiRainChance: "Chance of precipitation later today. ", 
     aiRainChanceHigh: "High probability of rain in the coming hours. ", 
 
@@ -635,6 +680,7 @@ export const TRANSLATIONS = {
   },
 
   fr: {
+    // ... (Blocs anteriors igual) ...
     searchPlaceholder: "Rechercher une ville...",
     favorites: "Lieux favoris",
     now: "Maintenant",
@@ -733,45 +779,48 @@ export const TRANSLATIONS = {
     dpOppressive: "Oppressant",
     dpExtreme: "Insupportable",
     
-    aiIntroMorning: "Bonjour. Analyse de la situation synoptique actualisée. ",
-    aiIntroAfternoon: "Bonne après-midi. Suivi de l'évolution atmosphérique. ",
-    aiIntroEvening: "Bonsoir. Perspectives pour les heures à venir. ",
-    aiIntroNight: "Bonne nuit. Prévisions nocturnes. ",
+    aiIntroMorning: "Bonjour. Situation actuelle : ",
+    aiIntroAfternoon: "Bonne après-midi. Perspectives : ",
+    aiIntroEvening: "Bonsoir. Prévisions immédiates : ",
+    aiIntroNight: "Bonne nuit. Situation nocturne : ",
     
-    aiSummaryClear: "Ciel dégagé. Ambiance calme. ", 
-    aiSummaryVariable: "Ciel variable. Soleil et nuages se partagent le ciel. ",
-    aiSummaryVariableNight: "Ciel variable. Passage de nuages. ", 
-    aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais potentiellement humide. ",
+    aiSummaryClear: "Ciel dégagé et ambiance calme. ", 
+    aiSummaryVariable: "Ciel variable avec soleil et nuages alternés. ",
+    aiSummaryVariableNight: "Ciel variable avec passage de nuages. ", 
+    aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais humide. ",
     aiSummaryOvercast: "Ciel couvert. Journée grise dominée par les nuages. ",
-    aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
-    aiSummaryRainFog: "Ambiance très humide et bouchée. Pluie persistante avec visibilité réduite par le brouillard. ",    
-    aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
+    aiSummaryRain: "Perturbation active. Précipitations sur la zone. ",
+    aiSummaryRainFog: "Ambiance bouchée. Pluie persistante et brouillard. ",    
+    aiSummaryStorm: "Situation instable. Risque d'orages actifs. ",
     
-    // --- NOUVELLES CLÉS AJOUTÉES (RÉALISME) ---
     aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
     aiRainHeavy: "Il pleut avec force en ce moment. ",
     aiSunRain: "Attention : Soleil et pluie simultanément. ",
-    aiThreatening: "Le ciel est menaçant, bien qu'il ne pleuve pas pour l'instant. ",
-    // ------------------------------------------
-
-    aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
+    aiThreatening: "Ciel menaçant, bien qu'il ne pleuve pas pour l'instant. ",
     
-    aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien si vous sortez. ",
-    aiTempCold: "Il fait froid. Vous aurez besoin de vêtements chauds pour être à l'aise. ",
+    aiSummarySnow: "Configuration hivernale avec chutes de neige prévues. ",
+    
+    aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien. ",
+    aiTempCold: "Il fait froid. Vêtements chauds nécessaires. ",
     aiTempCool: "Ambiance fraîche. Une veste légère suffira. ", 
-    aiTempMild: "Températures douces et agréables, sans extrêmes. ",
-    aiTempWarm: "Atmosphère chaude, la hausse des températures est perceptible. ",
-    aiTempHot: "Chaleur intense. Évitez les efforts aux heures les plus chaudes. ",
+    aiTempMild: "Températures douces et agréables. ",
+    aiTempWarm: "Atmosphère chaude, les températures montent. ",
+    aiTempHot: "Chaleur intense. Évitez les efforts. ",
     
     aiHeatIndex: "Temps lourd, ressenti de {temp}°C. ",
     
-    aiWindLight: "Flux faible, situation calme. ",
-    aiWindMod: "Vent modéré accentuant le ressenti thermique. ",
-    aiWindStrong: "Attention aux rafales, situation potentiellement dangereuse. ",
+    aiWindLight: "Vent faible. ",
+    aiWindMod: "Vent modéré. ",
+    aiWindStrong: "Rafales de vent fortes, prudence. ",
     
-    aiRainNone: "Pas de précipitations prévues. Profitez de la stabilité atmosphérique. ",
-    aiRainHumid: "Pas de pluies importantes, mais l'humidité pourrait provoquer quelques bruines éparses. ",
+    aiRainNone: "Pas de précipitations prévues prochainement. ",
+    aiRainHumid: "Pas de pluies importantes, peut-être quelques bruines. ",
     aiRainExp: "Radar actif : précipitation imminente détectée. ",
+    
+    aiRainStopping: "La pluie devrait bientôt s'arrêter. ",
+    aiRainMore: "L'intensité de la pluie va augmenter. ",
+    aiRainLess: "L'intensité de la pluie va diminuer. ",
+
     aiRainChance: "Possibilité de précipitations dans la journée. ", 
     aiRainChanceHigh: "Forte probabilité de pluie dans les prochaines heures. ", 
 
@@ -783,8 +832,8 @@ export const TRANSLATIONS = {
       61: "pluie faible", 63: "pluie modérée", 65: "pluie forte",
       66: "pluie verglaçante légère", 67: "pluie verglaçante forte",
       71: "chute de neige faible", 73: "chute de neige modérée", 75: "chute de neige forte",
-      77: "grains de neige",
-      80: "averses", 81: "averses modérées", 82: "averses violentes",
+      77: "neige en grains",
+      80: "averses faibles", 81: "averses modérées", 82: "averses torrentielles",
       85: "averses de neige", 86: "averses de neige fortes",
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"
     },
