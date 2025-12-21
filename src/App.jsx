@@ -152,45 +152,56 @@ export default function MeteoIA() {
   }, [fetchWeatherByCoords]);
 
   const handleGetCurrentLocation = useCallback(() => {
-    if (navigator.geolocation) {
-      setLoading(true);
-      
-      // Opcions optimitzades per velocitat
-      const options = {
-        enableHighAccuracy: false, // FALSE = Més ràpid (usa WiFi/Antenes), TRUE = Lent (usa GPS satèl·lit)
-        timeout: 5000,             // Màxim 5 segons d'espera
-        maximumAge: 600000         // Accepta posicions de fa fins a 10 minuts (memòria cau)
-      };
+    if (!navigator.geolocation) {
+      setError("Geolocalització no suportada.");
+      return;
+    }
+    
+    setLoading(true);
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            // Reverse Geocoding
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`);
-            const data = await response.json();
-            
-            // Lògica per trobar el nom més adient
-            const address = data.address || {};
-            const locationName = address.city || address.town || address.village || address.municipality || address.county || "Ubicació";
-            const locationCountry = address.country || "";
-            
-            fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
-          } catch (err) {
-            console.error("Error reverse geocoding:", err);
-            // Si falla el nom, busquem el temps igualment amb coordenades
-            fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
-          }
-        },
-        (error) => { 
-          console.warn("Error geolocalització:", error);
-          // Si falla per timeout, podem intentar-ho de nou amb highAccuracy o mostrar error
-          setError("No s'ha pogut obtenir la ubicació ràpidament."); 
-          setLoading(false); 
-        },
-        options
-      );
-    } else { setError("Geolocalització no suportada."); }
+    // Funció que processa la posició un cop la tenim (sigui del mètode ràpid o lent)
+    const onPositionFound = async (position) => {
+      const { latitude, longitude } = position.coords;
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`);
+        const data = await response.json();
+        
+        const address = data.address || {};
+        const locationName = address.city || address.town || address.village || address.municipality || address.county || "Ubicació";
+        const locationCountry = address.country || "";
+        
+        fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
+      } catch (err) {
+        console.error("Error reverse geocoding:", err);
+        fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
+      }
+    };
+
+    // Funció d'error final
+    const onPositionError = (err) => {
+      console.warn("Error geolocalització final:", err);
+      setError("No s'ha pogut obtenir la ubicació. Verifica els permisos.");
+      setLoading(false);
+    };
+
+    // --- ESTRATÈGIA DOBLE ---
+    
+    // 1. Intentem el mètode RÀPID (WiFi/Antenes) amb poc temps (3s)
+    navigator.geolocation.getCurrentPosition(
+      onPositionFound, 
+      (error) => {
+        console.log("Mètode ràpid fallit, activant GPS d'alta precisió...", error);
+        
+        // 2. Si falla, activem automàticament el GPS (Alta Precisió) amb més temps (20s)
+        navigator.geolocation.getCurrentPosition(
+          onPositionFound,
+          onPositionError,
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
+      },
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: 600000 }
+    );
+
   }, [fetchWeatherByCoords, lang]);
   
   const shiftedNow = useMemo(() => {
