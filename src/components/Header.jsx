@@ -132,9 +132,12 @@ export default function Header({
              <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
                  {unit === 'C' ? '°C' : '°F'}
              </button>
-             <button onClick={cycleLang} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700">
-                 <FlagIcon lang={lang} className="w-5 h-4 rounded shadow-sm" />
-             </button>
+             <button 
+       onClick={cycleLang} 
+       className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700"
+>
+      <FlagIcon lang={lang} className="w-6 h-4 rounded shadow-sm" />
+           </button>
          </div>
       </div>
 
