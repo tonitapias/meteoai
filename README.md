@@ -66,62 +66,68 @@ meteoai/
 ├── package.json
 └── vite.config.js
 
-🛠️ Tecnologies Utilitzades
-Frontend: React 19 + Vite
+## 🛠️ Tecnologies Utilitzades
 
-Estils: Tailwind CSS (Disseny responsiu i animacions)
+- **Frontend:** React 19 + Vite
+- **Estils:** Tailwind CSS (Disseny responsiu i animacions)
+- **Icones:** Lucide React (Coherència visual)
+- **Dades Meteorològiques:** [Open-Meteo API](https://open-meteo.com/)
+- **Radar i Satèl·lit:** [RainViewer API](https://www.rainviewer.com/api.html)
+- **Geocoding:** Nominatim (OpenStreetMap)
 
-Icones: Lucide React (Coherència visual)
+## 🚀 Instal·lació i Desplegament
 
-Dades Meteorològiques: Open-Meteo API
-
-Radar i Satèl·lit: RainViewer API
-
-Geocoding: Nominatim (OpenStreetMap)
-
-🚀 Instal·lació i Desplegament
 Si vols executar el projecte localment:
 
-Clonar el repositori:
+1.  **Clonar el repositori:**
+    ```bash
+    git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
+    cd meteoai
+    ```
 
-Bash
+2.  **Instal·lar dependències:**
+    ```bash
+    npm install
+    ```
 
-git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
-cd meteoai
-Instal·lar dependències:
+3.  **Executar en mode desenvolupament:**
+    ```bash
+    npm run dev
+    ```
 
-Bash
+4.  **Construir per a producció:**
+    ```bash
+    npm run build
+    ```
 
-npm install
-Executar en mode desenvolupament:
+### Desplegament a GitHub Pages
 
-Bash
-
-npm run dev
-Construir per a producció:
-
-Bash
-
-npm run build
-Desplegament a GitHub Pages
 El projecte està configurat per desplegar-se fàcilment:
 
-Bash
-
+```bash
 npm run deploy
 
-🌍 Idiomes Suportats
+```
+
+## 🌍 Idiomes Suportats
+
 L'aplicació està totalment localitzada en:
 
-CA Català
+* 🇦🇩 Català
+* 🇪🇸 Castellà
+* 🇬🇧 Anglès
+* 🇫🇷 Francès
 
-🇪🇸 Castellà
+## 🤝 Contribucions
 
-🇬🇧 Anglès
+Les suggerències i millores són benvingudes! Si tens alguna idea per fer l'app encara més "llista", no dubtis a obrir una *issue* o un *pull request*.
 
-🇫🇷 Francès
+---
 
-🤝 Contribucions
-Les suggerències i millores són benvingudes! Si tens alguna idea per fer l'app encara més "llista", no dubtis a obrir una issue o un pull request.
+<p align="center">
+Fet amb ❤️ i molt de ☕ per <b>Toni Tapias</b>
+</p>
 
-<p align="center"> Fet amb ❤️ i molt de ☕ per <b>Toni Tapias</b> </p>
+```
+
+```
