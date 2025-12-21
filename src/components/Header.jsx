@@ -114,31 +114,33 @@ export default function Header({
          </div>
          
          {/* Mòbil: Controls bàsics */}
-         <div className="md:hidden flex gap-2 items-center">
-             <button 
-                onClick={() => setViewMode(viewMode === 'basic' ? 'expert' : 'basic')} 
-                className={`px-3 h-10 rounded-lg flex items-center gap-2 transition-all ${
-                    viewMode === 'expert' 
-                    ? 'bg-indigo-600 text-white shadow-md' 
-                    : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'
-                }`}
-             >
-                 {viewMode === 'basic' ? <LayoutTemplate size={16} /> : <LayoutDashboard size={16} />}
-                 <span className="text-xs font-bold uppercase tracking-wide">
-                     {viewMode === 'basic' ? t.modeBasic : t.modeExpert}
-                 </span>
-             </button>
+<div className="md:hidden flex gap-2 items-center">
+    {/* 1. Botó Mode (Ara només icona per estalviar espai) */}
+    <button 
+       onClick={() => setViewMode(viewMode === 'basic' ? 'expert' : 'basic')} 
+       className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+           viewMode === 'expert' 
+           ? 'bg-indigo-600 text-white shadow-md' 
+           : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'
+       }`}
+       title={viewMode === 'basic' ? t.modeBasic : t.modeExpert}
+    >
+        {viewMode === 'basic' ? <LayoutTemplate size={18} /> : <LayoutDashboard size={18} />}
+    </button>
 
-             <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
-                 {unit === 'C' ? '°C' : '°F'}
-             </button>
-             <button 
+    {/* 2. Botó Unitats */}
+    <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
+        {unit === 'C' ? '°C' : '°F'}
+    </button>
+    
+    {/* 3. Botó Idioma (Arreglat perquè no surti i es vegi bé la bandera) */}
+    <button 
        onClick={cycleLang} 
        className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700 overflow-hidden"
-            >
-       <FlagIcon lang={lang} className="w-full h-auto rounded-sm shadow-sm" />
-             </button>
-         </div>
+    >
+      <FlagIcon lang={lang} className="w-full h-auto rounded-sm shadow-sm" />
+    </button>
+     </div>
       </div>
 
       {/* 2. BARRA DE CERCA */}
