@@ -154,25 +154,41 @@ export default function MeteoIA() {
   const handleGetCurrentLocation = useCallback(() => {
     if (navigator.geolocation) {
       setLoading(true);
+      
+      // Opcions optimitzades per velocitat
+      const options = {
+        enableHighAccuracy: false, // FALSE = Més ràpid (usa WiFi/Antenes), TRUE = Lent (usa GPS satèl·lit)
+        timeout: 5000,             // Màxim 5 segons d'espera
+        maximumAge: 600000         // Accepta posicions de fa fins a 10 minuts (memòria cau)
+      };
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
+            // Reverse Geocoding
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`);
             const data = await response.json();
-            const locationName = data.address.city || data.address.town || data.address.village || data.address.municipality || "Ubicació";
-            const locationCountry = data.address.country || "";
+            
+            // Lògica per trobar el nom més adient
+            const address = data.address || {};
+            const locationName = address.city || address.town || address.village || address.municipality || address.county || "Ubicació";
+            const locationCountry = address.country || "";
             
             fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
           } catch (err) {
             console.error("Error reverse geocoding:", err);
+            // Si falla el nom, busquem el temps igualment amb coordenades
             fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
           }
         },
         (error) => { 
-          setError("No s'ha pogut obtenir la ubicació."); 
+          console.warn("Error geolocalització:", error);
+          // Si falla per timeout, podem intentar-ho de nou amb highAccuracy o mostrar error
+          setError("No s'ha pogut obtenir la ubicació ràpidament."); 
           setLoading(false); 
-        }
+        },
+        options
       );
     } else { setError("Geolocalització no suportada."); }
   }, [fetchWeatherByCoords, lang]);
