@@ -73,22 +73,18 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // 1. PRIORITAT ABSOLUTA: PRECIPITACIÓ REAL (Radar)
-    // Coherència amb weatherLogic: fem servir el mateix llindar (> 0.1)
+    // 1. PRIORITAT ABSOLUTA: PRECIPITACIÓ REAL
+    // Si l'API diu que està caient aigua (> 0.1 mm), ignorem si posa "Núvol".
     if (precip > 0.1) {
-       // Si el codi base és "Clar" (0-2), posem "Sol i Pluja" (fenomen real).
+       // Si el codi base és "Clar" (0-2), posem "Sol i Pluja".
        if (code <= 2) {
            return <VariableRainIcon isDay={isDay} {...commonProps} />;
        }
-       // Ennuvolat + Pluja (cas estàndard quan el radar detecta aigua)
+       // Ennuvolat + Pluja
        return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-400 fill-blue-400/20 animate-pulse`} />;
     }
 
     // 2. SELECCIÓ ESTÀNDARD PER CODI WMO
-    // (Aquestes icones es mostraran quan el radar estigui "tranquil" <= 0.1, 
-    // encara que el codi WMO indiqui risc de pluja. Així l'usuari veu la previsió
-    // però l'animació de "pluja activa" del bloc anterior només surt si cau aigua de veritat)
-
     if (code === 0) return isDay 
       ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
@@ -104,31 +100,23 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
 
     if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     
-    // Plugims i pluges lleugeres
     if (code >= 51 && code <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-300 fill-blue-300/20`} />;
 
-    // Pluja gèlida
     if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
 
-    // Pluja moderada/forta
     if (code >= 61 && code <= 65) {
         if (!isDay) return <VariableRainIcon isDay={false} {...commonProps} />;
         return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-pulse`} />;
     }
 
-    // Pluja gelada forta
     if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse`} />;
 
-    // Neu
     if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
     
-    // Ruixats
     if (code >= 80 && code <= 82) return <VariableRainIcon isDay={isDay} {...commonProps} />;
 
-    // Ruixats de neu
     if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
 
-    // Tempesta
     if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
     
     // Fallback

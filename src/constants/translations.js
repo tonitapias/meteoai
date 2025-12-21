@@ -1,6 +1,5 @@
 export const TRANSLATIONS = {
   ca: {
-    // ... (Blocs anteriors sense canvis fins a 'wmo') ...
     aiConsensus: "Consens de Models",
     aiCloudyNoRain: "No s'espera pluja, tot i l'aspecte gris del cel.",
     searchPlaceholder: "Cerca ciutat...",
@@ -101,7 +100,6 @@ export const TRANSLATIONS = {
     dpOppressive: "Opressiu",
     dpExtreme: "Insuportable",
     
-    // TEXTOS IA
     aiIntroMorning: "Bon dia. Situació actual: ",
     aiIntroAfternoon: "Bona tarda. Evolució atmosfèrica: ",
     aiIntroEvening: "Bon vespre. Previsió immediata: ",
@@ -119,7 +117,9 @@ export const TRANSLATIONS = {
     aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",
     aiRainHeavy: "Plou amb força intensitat en aquest moment. ",
     aiSunRain: "Atenció: Sol i pluja simultàniament. ",
-    aiThreatening: "Cel amenaçador, tot i que ara mateix no plou. ",
+    
+    // --- MODIFICAT: Més prudent ---
+    aiThreatening: "Cel amenaçador. Risc de precipitació en qualsevol moment. ",
     
     aiSummarySnow: "Configuració hivernal amb nevades previstes. ",
     
@@ -147,51 +147,20 @@ export const TRANSLATIONS = {
     aiRainChance: "Possibilitat de precipitació durant la jornada. ", 
     aiRainChanceHigh: "Alta probabilitat de pluja en les pròximes hores. ", 
 
-    // --- CORRECCIÓ DE DEFINICIONS WMO ---
     wmo: {
       0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
       45: "bancs de boira", 48: "boira gebradora",
-      
-      // PLUGIM (DRIZZLE)
-      51: "plugim feble", 
-      53: "plugim moderat", 
-      55: "plugim dens", // Abans: persistent (confús)
-
-      // PLUGIM ENGELANT (FREEZING DRIZZLE)
-      56: "plugim engelant feble", // Abans: gèlid
-      57: "plugim engelant dens",
-      
-      // PLUJA (RAIN)
-      61: "pluja feble", 
-      63: "pluja moderada", 
-      65: "pluja forta",
-      
-      // PLUJA ENGELANT (FREEZING RAIN)
-      66: "pluja engelant feble", 
-      67: "pluja engelant forta",
-      
-      // NEU (SNOW)
-      71: "nevada feble", 
-      73: "nevada moderada", 
-      75: "nevada forta",
-      77: "neu granulada", // Abans: ruixats de neu (Error)
-      
-      // RUIXATS (SHOWERS) - Unificació de terminologia
-      80: "ruixats febles", // Abans: ruixats
-      81: "ruixats moderats", // Abans: xàfecs moderats
-      82: "ruixats torrencials", // Abans: aiguats violents
-      
-      // RUIXATS DE NEU
-      85: "ruixats de neu febles", 
-      86: "ruixats de neu forts",
-      
-      // TEMPESTA
-      95: "tempesta", 
-      96: "tempesta amb calamarsa", 
-      99: "tempesta severa amb calamarsa"
+      51: "plugim feble", 53: "plugim moderat", 55: "plugim dens",
+      56: "plugim engelant feble", 57: "plugim engelant dens",
+      61: "pluja feble", 63: "pluja moderada", 65: "pluja forta",
+      66: "pluja engelant feble", 67: "pluja engelant forta",
+      71: "nevada feble", 73: "nevada moderada", 75: "nevada forta",
+      77: "neu granulada",
+      80: "ruixats febles", 81: "ruixats moderats", 82: "ruixats torrencials",
+      85: "ruixats de neu febles", 86: "ruixats de neu forts",
+      95: "tempesta", 96: "tempesta amb calamarsa", 99: "tempesta severa amb calamarsa"
     },
     
-    // ... (Resta de claus igual) ...
     alertStorm: "Inestabilitat acusada (CAPE alt) i tempestes.",
     alertSnow: "Precaució: Neu acumulada prevista.",
     alertWindExtreme: "Vent huracanat. Perill extrem a l'exterior.",
@@ -249,7 +218,6 @@ export const TRANSLATIONS = {
   },
 
   es: {
-    // ... (Blocs anteriors igual) ...
     searchPlaceholder: "Buscar ciudad...",
     favorites: "Lugares Favoritos",
     now: "Ahora",
@@ -365,7 +333,9 @@ export const TRANSLATIONS = {
     aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",
     aiRainHeavy: "Llueve con bastante intensidad en este momento. ",
     aiSunRain: "Atención: Sol y lluvia simultáneamente. ",
-    aiThreatening: "Cielo amenazador, aunque ahora mismo no llueve. ",
+    
+    // --- MODIFICADO: Más prudente ---
+    aiThreatening: "Cielo amenazador. Riesgo de precipitación en cualquier momento. ",
     
     aiSummarySnow: "Configuración invernal con nevadas previstas. ",
     
@@ -396,18 +366,17 @@ export const TRANSLATIONS = {
     wmo: {
       0: "cielo despejado", 1: "cielo mayormente despejado", 2: "parcialmente nublado", 3: "cielo cubierto",
       45: "bancos de niebla", 48: "niebla helada",
-      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna densa", // Fix
+      51: "llovizna ligera", 53: "llovizna moderada", 55: "llovizna densa",
       56: "llovizna helada ligera", 57: "llovizna helada densa",
       61: "lluvia ligera", 63: "lluvia moderada", 65: "lluvia fuerte",
       66: "lluvia helada ligera", 67: "lluvia helada fuerte",
       71: "nevada ligera", 73: "nevada moderada", 75: "nevada fuerte",
-      77: "cinarra", // Fix: Snow grains
-      80: "chubascos ligeros", 81: "chubascos moderados", 82: "chubascos torrenciales", // Fix
+      77: "cinarra",
+      80: "chubascos ligeros", 81: "chubascos moderados", 82: "chubascos torrenciales",
       85: "chubascos de nieve", 86: "chubascos de nieve fuertes",
       95: "tormenta eléctrica", 96: "tormenta con granizo", 99: "tormenta severa con granizo"
     },
     
-    // ... (Alertes i tips iguals) ...
     alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
     alertSnow: "Precaución: Nieve acumulada prevista.",
     alertWindExtreme: "Viento huracanado. Peligro exterior.",
@@ -465,7 +434,6 @@ export const TRANSLATIONS = {
   },
 
   en: {
-    // ... (Blocs anteriors igual) ...
     searchPlaceholder: "Search city...",
     favorites: "Favorite Places",
     now: "Now",
@@ -581,7 +549,9 @@ export const TRANSLATIONS = {
     aiRainLight: "Light drizzle or a few drops falling right now. ",
     aiRainHeavy: "Heavy rain falling at this moment. ",
     aiSunRain: "Attention: Sun and rain mixing simultaneously. ",
-    aiThreatening: "Threatening skies, though not raining right now. ",
+    
+    // --- MODIFIED: More cautious ---
+    aiThreatening: "Threatening skies. Risk of precipitation at any moment. ",
     
     aiSummarySnow: "Winter configuration with expected snowfall. ",
     
@@ -680,7 +650,6 @@ export const TRANSLATIONS = {
   },
 
   fr: {
-    // ... (Blocs anteriors igual) ...
     searchPlaceholder: "Rechercher une ville...",
     favorites: "Lieux favoris",
     now: "Maintenant",
@@ -796,7 +765,9 @@ export const TRANSLATIONS = {
     aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
     aiRainHeavy: "Il pleut avec force en ce moment. ",
     aiSunRain: "Attention : Soleil et pluie simultanément. ",
-    aiThreatening: "Ciel menaçant, bien qu'il ne pleuve pas pour l'instant. ",
+    
+    // --- MODIFIÉ: Plus prudent ---
+    aiThreatening: "Ciel menaçant. Risque de précipitations à tout moment. ",
     
     aiSummarySnow: "Configuration hivernale avec chutes de neige prévues. ",
     
@@ -832,7 +803,7 @@ export const TRANSLATIONS = {
       61: "pluie faible", 63: "pluie modérée", 65: "pluie forte",
       66: "pluie verglaçante légère", 67: "pluie verglaçante forte",
       71: "chute de neige faible", 73: "chute de neige modérée", 75: "chute de neige forte",
-      77: "neige en grains",
+      77: "grains de neige",
       80: "averses faibles", 81: "averses modérées", 82: "averses torrentielles",
       85: "averses de neige", 86: "averses de neige fortes",
       95: "orage", 96: "orage avec grêle", 99: "orage violent avec grêle"

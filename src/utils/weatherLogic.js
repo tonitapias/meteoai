@@ -109,8 +109,8 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     
     // Dades de "Finestra" (Radar immediat)
     const precipInstantanea = current.minutely15 ? current.minutely15[0] : 0;
-    const precipNext15 = current.minutely15 ? current.minutely15[1] : 0;
-    
+    const precipNext15 = current.minutely15 ? current.minutely15[1] : 0; // TENDÈNCIA
+
     // Suma dels pròxims 60 minuts (4 quarts d'hora)
     const precip1hSum = current.minutely15 ? current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) : 0;
 
@@ -342,5 +342,9 @@ export const getWeatherLabel = (current, language) => {
       return tr.rainy; 
   }
 
+  // --- CORRECCIÓ FINAL ---
+  // Ja no retornem tr.cloudy si és pluja fantasma.
+  // Deixem que el WMO decideixi el títol, però el text de l'IA (generateAIPrediction)
+  // s'encarregarà d'explicar que "ara no plou" (aiThreatening).
   return tr.wmo[code] || "---";
 };
