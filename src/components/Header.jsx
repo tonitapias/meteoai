@@ -134,10 +134,10 @@ export default function Header({
              </button>
              <button 
        onClick={cycleLang} 
-       className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700"
->
-      <FlagIcon lang={lang} className="w-6 h-4 rounded shadow-sm" />
-           </button>
+       className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700 overflow-hidden"
+            >
+       <FlagIcon lang={lang} className="w-full h-auto rounded-sm shadow-sm" />
+             </button>
          </div>
       </div>
 
