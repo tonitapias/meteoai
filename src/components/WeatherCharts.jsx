@@ -23,21 +23,31 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const paddingX = 20;
   const paddingY = 30;
 
-  const values = data.map(d => d[dataKey] || 0);
-  let allValues = [...values];
+  // Helper per obtenir valor segur (evitant 0 si és null en cota de neu)
+  const getSafeValue = (d) => {
+      const val = d[dataKey];
+      if (val === null || val === undefined) {
+          // Si és cota de neu i no tenim dades, millor no pintar 0 (neu a la platja).
+          // Retornem null per filtrar-ho després o un valor mig.
+          // Per simplicitat visual, si és null, usem 0 per temp/pluja, però per neu és perillós.
+          if (layer === 'snowLevel') return null; 
+          return 0;
+      }
+      return val;
+  };
+
+  // Recopilem tots els valors per calcular l'escala Y (ignorant nulls)
+  const mapValues = (dataset) => dataset.map(getSafeValue).filter(v => v !== null);
   
-  if (comparisonData && comparisonData.gfs) {
-     const gfsVals = comparisonData.gfs.map(d => d[dataKey] || 0);
-     allValues = [...allValues, ...gfsVals];
-  }
-  if (comparisonData && comparisonData.icon) {
-     const iconVals = comparisonData.icon.map(d => d[dataKey] || 0);
-     allValues = [...allValues, ...iconVals];
-  }
+  let allValues = mapValues(data);
+  if (comparisonData && comparisonData.gfs) allValues = [...allValues, ...mapValues(comparisonData.gfs)];
+  if (comparisonData && comparisonData.icon) allValues = [...allValues, ...mapValues(comparisonData.icon)];
 
-  let minVal = Math.min(...allValues);
-  let maxVal = Math.max(...allValues);
+  // Valors per defecte si tot és null
+  let minVal = allValues.length ? Math.min(...allValues) : 0;
+  let maxVal = allValues.length ? Math.max(...allValues) : 100;
 
+  // Ajustem l'escala segons el tipus de dada per a més "realisme" visual
   if (layer === 'temp') {
      minVal -= 2;
      maxVal += 2;
@@ -48,26 +58,34 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
     minVal = 0; 
     maxVal = Math.max(maxVal, 20);
   } else if (layer === 'snowLevel') {
+    // Marge de 500m per veure bé la variació
     minVal = Math.max(0, minVal - 500);
     maxVal = maxVal + 500;
   }
   
   const range = maxVal - minVal || 1;
-  const calcY = (val) => height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
+  const calcY = (val) => {
+      // Si el valor és null (per cota de neu), el treiem fora del gràfic o interpol·lem
+      if (val === null) return height + 10; 
+      return height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
+  };
 
   const points = data.map((d, i) => ({
     x: paddingX + (i / (data.length - 1)) * (width - 2 * paddingX),
-    y: calcY(d[dataKey] || 0),
-    value: d[dataKey] || 0,
-    ...d
+    y: calcY(getSafeValue(d)),
+    value: getSafeValue(d),
+    time: d.time
   }));
 
   const buildSmoothPath = (pts, keyY = 'y') => {
-    if (pts.length === 0) return "";
-    let d = `M ${pts[0].x},${pts[0][keyY]}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i];
-      const p1 = pts[i + 1];
+    // Filtrem punts no vàlids (nulls) per no trencar la línia SVG
+    const validPts = pts.filter(p => p.value !== null && p[keyY] <= height);
+    if (validPts.length === 0) return "";
+
+    let d = `M ${validPts[0].x},${validPts[0][keyY]}`;
+    for (let i = 0; i < validPts.length - 1; i++) {
+      const p0 = validPts[i];
+      const p1 = validPts[i + 1];
       const cx = (p0.x + p1.x) / 2;
       d += ` C ${cx},${p0[keyY]} ${cx},${p1[keyY]} ${p1.x},${p1[keyY]}`;
     }
@@ -75,36 +93,48 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   };
 
   const linePath = buildSmoothPath(points, 'y');
-  const areaPath = `${linePath} L ${width - paddingX},${height} L ${paddingX},${height} Z`;
+  // L'àrea tanca a baix
+  const areaPath = linePath ? `${linePath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z` : "";
 
   let gfsPath = "";
   let iconPath = "";
   
-  const getComparsionValue = (dataset, index) => {
-      if(dataset && dataset[index]) return dataset[index][dataKey];
-      return null;
-  }
-
-  if (comparisonData && layer !== 'snowLevel') {
+  // Generem línies comparatives només si no és SnowLevel (per no embrutar) o si es vol
+  if (comparisonData) {
       if (comparisonData.gfs && comparisonData.gfs.length > 0) {
           const gfsPoints = comparisonData.gfs.map((d, i) => ({
               x: paddingX + (i / (comparisonData.gfs.length - 1)) * (width - 2 * paddingX),
-              y: calcY(d[dataKey] || 0)
+              y: calcY(getSafeValue(d)),
+              value: getSafeValue(d)
           }));
           gfsPath = buildSmoothPath(gfsPoints, 'y');
       }
       if (comparisonData.icon && comparisonData.icon.length > 0) {
           const iconPoints = comparisonData.icon.map((d, i) => ({
               x: paddingX + (i / (comparisonData.icon.length - 1)) * (width - 2 * paddingX),
-              y: calcY(d[dataKey] || 0)
+              y: calcY(getSafeValue(d)),
+              value: getSafeValue(d)
           }));
           iconPath = buildSmoothPath(iconPoints, 'y');
       }
   }
 
   const hoverData = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : null;
-  const gfsValue = hoveredIndex !== null ? getComparsionValue(comparisonData?.gfs, hoveredIndex) : null;
-  const iconValue = hoveredIndex !== null ? getComparsionValue(comparisonData?.icon, hoveredIndex) : null;
+  const gfsDataPoint = (hoveredIndex !== null && comparisonData?.gfs) ? comparisonData.gfs[hoveredIndex] : null;
+  const iconDataPoint = (hoveredIndex !== null && comparisonData?.icon) ? comparisonData.icon[hoveredIndex] : null;
+
+  const gfsValue = gfsDataPoint ? getSafeValue(gfsDataPoint) : null;
+  const iconValue = iconDataPoint ? getSafeValue(iconDataPoint) : null;
+
+  // Formatador especial per al Tooltip (Realisme Cota de Neu)
+  const formatTooltipValue = (val) => {
+      if (val === null || val === undefined) return "--";
+      if (layer === 'snowLevel') {
+          if (val > 4000) return "> 4000";
+          return Math.round(val);
+      }
+      return Math.round(val);
+  };
 
   return (
     <div className="relative w-full">
@@ -121,12 +151,12 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         </defs>
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
         
-        <path d={areaPath} fill={`url(#gradient-${layer})`} />
+        {areaPath && <path d={areaPath} fill={`url(#gradient-${layer})`} />}
 
         {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 4"/>}
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 2"/>}
 
-        <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {linePath && <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
         
         {points.map((p, i) => (
           <g 
@@ -143,7 +173,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           </g>
         ))}
 
-        {hoverData && (
+        {hoverData && hoverData.value !== null && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
             <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
@@ -156,19 +186,26 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
                <line x1="-55" y1="-22" x2="55" y2="-22" stroke="white" strokeOpacity="0.1" />
                <circle cx="-45" cy="-10" r="3" fill={currentConfig.color} />
                <text x="-35" y="-7" textAnchor="start" fill="white" fontSize="10" fontWeight="bold">ECMWF:</text>
-               <text x="50" y="-7" textAnchor="end" fill="white" fontSize="10" fontWeight="bold">{Math.round(hoverData.value)}{unit}</text>
+               <text x="50" y="-7" textAnchor="end" fill="white" fontSize="10" fontWeight="bold">
+                   {formatTooltipValue(hoverData.value)}{unit}
+               </text>
+               
                {gfsValue !== null && (
                  <>
                    <circle cx="-45" cy="8" r="3" fill="#4ade80" />
                    <text x="-35" y="11" textAnchor="start" fill="#cbd5e1" fontSize="10">GFS:</text>
-                   <text x="50" y="11" textAnchor="end" fill="#4ade80" fontSize="10" fontWeight="bold">{Math.round(gfsValue)}{unit}</text>
+                   <text x="50" y="11" textAnchor="end" fill="#4ade80" fontSize="10" fontWeight="bold">
+                       {formatTooltipValue(gfsValue)}{unit}
+                   </text>
                  </>
                )}
                {iconValue !== null && (
                  <>
                    <circle cx="-45" cy="26" r="3" fill="#fbbf24" />
                    <text x="-35" y="29" textAnchor="start" fill="#cbd5e1" fontSize="10">ICON:</text>
-                   <text x="50" y="29" textAnchor="end" fill="#fbbf24" fontSize="10" fontWeight="bold">{Math.round(iconValue)}{unit}</text>
+                   <text x="50" y="29" textAnchor="end" fill="#fbbf24" fontSize="10" fontWeight="bold">
+                       {formatTooltipValue(iconValue)}{unit}
+                   </text>
                  </>
                )}
             </g>

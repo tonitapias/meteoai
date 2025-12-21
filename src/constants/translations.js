@@ -114,6 +114,13 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambient molt humit i tancat. Pluja persistent amb visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació explosiva. Els índexs d'inestabilitat (CAPE) indiquen risc de tempestes severes. ",
     
+    // --- NOVES CLAUS AFEGIDES (REALISME) ---
+    aiRainLight: "Cau un plugim molt feble o quatre gotes ara mateix. ",
+    aiRainHeavy: "Plou amb força intensitat en aquest moment. ",
+    aiSunRain: "Atenció: Sol i pluja simultàniament. ",
+    aiThreatening: "El cel està amenaçador, tot i que ara mateix no plou. ",
+    // ---------------------------------------
+
     aiSummarySnow: "Configuració plenament hivernal amb nevades previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé si sortiu. ",
@@ -191,7 +198,6 @@ export const TRANSLATIONS = {
     rel_low_rain: "⚠️ Incertesa: Divergència de pluja del {diff}%.",
     rel_low_temp: "⚠️ Incertesa tèrmica: Els models varien en {diff}ºC.",
 
-    // --- NOVES CLAUS AFEGIDES ---
     dayDetailTitle: "Previsió detallada del dia",
     max: "Màx",
     min: "Mín",
@@ -318,6 +324,14 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Perturbación activa. Se esperan precipitaciones en la zona. ",
     aiSummaryRainFog: "Ambiente muy húmedo y cerrado. Lluvia persistente con visibilidad reducida por niebla. ",
     aiSummaryStorm: "Situación explosiva. Índices de inestabilidad (CAPE) indican riesgo de tormentas severas. ",
+    
+    // --- NUEVAS CLAVES AÑADIDAS (REALISMO) ---
+    aiRainLight: "Cae una llovizna muy débil o cuatro gotas ahora mismo. ",
+    aiRainHeavy: "Llueve con bastante intensidad en este momento. ",
+    aiSunRain: "Atención: Sol y lluvia simultáneamente. ",
+    aiThreatening: "El cielo está amenazador, aunque ahora mismo no llueve. ",
+    // -----------------------------------------
+
     aiSummarySnow: "Configuración plenamente invernal con nevadas previstas. ",
     
     aiTempFreezing: "Ambiente gélido. Abrígate muy bien si sales. ",
@@ -395,7 +409,6 @@ export const TRANSLATIONS = {
     rel_low_rain: "⚠️ Incertidumbre: Divergencia de lluvia del {diff}%.",
     rel_low_temp: "⚠️ Incertidumbre térmica: Modelos varían en {diff}ºC.",
 
-    // --- NOVES CLAUS AFEGIDES ---
     dayDetailTitle: "Previsión detallada del día",
     max: "Máx",
     min: "Mín",
@@ -522,6 +535,14 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Active disturbance. Precipitation expected in the area. ",
     aiSummaryRainFog: "Very humid and foggy conditions. Persistent rain with reduced visibility. ",
     aiSummaryStorm: "Explosive situation. Instability indices (CAPE) indicate risk of severe storms. ",
+    
+    // --- NEW KEYS ADDED (REALISM) ---
+    aiRainLight: "Light drizzle or a few drops falling right now. ",
+    aiRainHeavy: "Heavy rain falling at this moment. ",
+    aiSunRain: "Attention: Sun and rain mixing simultaneously. ",
+    aiThreatening: "Threatening skies, although it is not raining right now. ",
+    // --------------------------------
+
     aiSummarySnow: "Fully winter configuration with expected snowfall. ",
     
     aiTempFreezing: "Freezing conditions. Bundle up well if you go out. ",
@@ -599,7 +620,6 @@ export const TRANSLATIONS = {
     rel_low_rain: "⚠️ Uncertainty: Rain divergence of {diff}%.",
     rel_low_temp: "⚠️ Thermal uncertainty: Models vary by {diff}ºC.",
 
-    // --- NOVES CLAUS AFEGIDES ---
     dayDetailTitle: "Detailed daily forecast",
     max: "Max",
     min: "Min",
@@ -726,6 +746,14 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Perturbation active. Précipitations attendues sur la zone. ",
     aiSummaryRainFog: "Ambiance très humide et bouchée. Pluie persistante avec visibilité réduite par le brouillard. ",    
     aiSummaryStorm: "Situation explosive. Les indices d'instabilité (CAPE) indiquent un risque d'orages violents. ",
+    
+    // --- NOUVELLES CLÉS AJOUTÉES (RÉALISME) ---
+    aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
+    aiRainHeavy: "Il pleut avec force en ce moment. ",
+    aiSunRain: "Attention : Soleil et pluie simultanément. ",
+    aiThreatening: "Le ciel est menaçant, bien qu'il ne pleuve pas pour l'instant. ",
+    // ------------------------------------------
+
     aiSummarySnow: "Configuration pleinement hivernale avec chutes de neige prévues. ",
     
     aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien si vous sortez. ",
@@ -803,7 +831,6 @@ export const TRANSLATIONS = {
     rel_low_rain: "⚠️ Incertitude : Divergence de pluie de {diff}%.",
     rel_low_temp: "⚠️ Incertitude thermique : Les modèles varient de {diff}ºC.",
 
-    // --- NOVES CLAUS AFEGIDES ---
     dayDetailTitle: "Prévisions détaillées",
     max: "Max",
     min: "Min",

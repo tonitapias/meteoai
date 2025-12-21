@@ -108,39 +108,36 @@ export default function Header({
       <div className="flex items-center gap-3 select-none w-full md:w-auto justify-between md:justify-start md:order-1">
          <div className="flex items-center gap-3">
            <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 animate-[pulse_4s_ease-in-out_infinite]">
-             <BrainCircuit className="w-6 h-6 text-white" strokeWidth={2}/>
+             <BrainCircuit className="w-6 h-6 text-white" strokeWidth={2.5}/>
            </div>
            <span className="font-bold text-xl tracking-tight">Meteo Toni <span className="text-indigo-400">Ai</span></span>
          </div>
          
          {/* Mòbil: Controls bàsics */}
-<div className="md:hidden flex gap-2 items-center">
-    {/* 1. Botó Mode (Ara només icona per estalviar espai) */}
-    <button 
-       onClick={() => setViewMode(viewMode === 'basic' ? 'expert' : 'basic')} 
-       className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
-           viewMode === 'expert' 
-           ? 'bg-indigo-600 text-white shadow-md' 
-           : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'
-       }`}
-       title={viewMode === 'basic' ? t.modeBasic : t.modeExpert}
-    >
-        {viewMode === 'basic' ? <LayoutTemplate size={18} /> : <LayoutDashboard size={18} />}
-    </button>
+         <div className="md:hidden flex gap-2 items-center">
+            <button 
+               onClick={() => setViewMode(viewMode === 'basic' ? 'expert' : 'basic')} 
+               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                   viewMode === 'expert' 
+                   ? 'bg-indigo-600 text-white shadow-md' 
+                   : 'bg-slate-800/50 border border-slate-700/50 text-indigo-300'
+               }`}
+               title={viewMode === 'basic' ? t.modeBasic : t.modeExpert}
+            >
+                {viewMode === 'basic' ? <LayoutTemplate size={18} strokeWidth={2.5} /> : <LayoutDashboard size={18} strokeWidth={2.5} />}
+            </button>
 
-    {/* 2. Botó Unitats */}
-    <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
-        {unit === 'C' ? '°C' : '°F'}
-    </button>
-    
-    {/* 3. Botó Idioma (Arreglat perquè no surti i es vegi bé la bandera) */}
-    <button 
-       onClick={cycleLang} 
-       className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700 overflow-hidden"
-    >
-      <FlagIcon lang={lang} className="w-full h-auto rounded-sm shadow-sm" />
-    </button>
-     </div>
+            <button onClick={() => setUnit(unit === 'C' ? 'F' : 'C')} className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center active:bg-slate-700">
+                {unit === 'C' ? '°C' : '°F'}
+            </button>
+            
+            <button 
+               onClick={cycleLang} 
+               className="bg-slate-800/50 border border-slate-700/50 text-indigo-300 font-bold p-2 rounded-lg w-10 h-10 flex items-center justify-center uppercase text-xs active:bg-slate-700 overflow-hidden"
+            >
+              <FlagIcon lang={lang} className="w-full h-auto rounded-sm shadow-sm" />
+            </button>
+         </div>
       </div>
 
       {/* 2. BARRA DE CERCA */}
@@ -218,10 +215,10 @@ export default function Header({
       <div className="hidden md:flex gap-3 w-full md:w-auto items-center md:order-3 justify-end">
          <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner">
            <button onClick={() => setViewMode('basic')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'basic' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>
-             <LayoutTemplate className="w-4 h-4" /> {t.modeBasic}
+             <LayoutTemplate className="w-4 h-4" strokeWidth={2.5} /> {t.modeBasic}
            </button>
            <button onClick={() => setViewMode('expert')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'expert' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>
-             <LayoutDashboard className="w-4 h-4" /> {t.modeExpert}
+             <LayoutDashboard className="w-4 h-4" strokeWidth={2.5} /> {t.modeExpert}
            </button>
          </div>
 

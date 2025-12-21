@@ -370,32 +370,46 @@ export const CapeWidget = ({ cape, lang = 'ca' }) => {
     )
 };
 
+// --- GINY MILLORAT DE COTA DE NEU (REALISME) ---
 export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
   if (freezingLevel === null || freezingLevel === undefined) return null;
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   
+  // Regla realista: La neu qualla uns 300m per sota de la Isoterma 0ºC
   const snowLevel = Math.max(0, freezingLevel - 300);
+  
+  // Formatem altures
   const formatH = (val) => `${Math.round(val)}m`;
   
+  // Càlcul percentatge visual (Límit visual a 3500m per a l'escala)
+  const maxVisualHeight = 3500;
+  const percentage = Math.max(5, Math.min(100, 100 - (snowLevel / maxVisualHeight * 100)));
+
+  // Determinem color segons alçada (més baix = més fred/blau/blanc)
+  let barColor = 'bg-indigo-500'; // Cota alta
+  if (snowLevel < 1000) barColor = 'bg-cyan-300'; // Cota baixa
+  else if (snowLevel < 2000) barColor = 'bg-blue-400'; // Cota mitja
+
   return (
     <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col justify-between h-full relative overflow-hidden group backdrop-blur-sm">
       <div className="flex items-center gap-2 text-indigo-300 mb-2 z-10">
-        <Mountain className="w-4 h-4" />
+        <Mountain className="w-4 h-4" strokeWidth={2.5} />
         <span className="text-xs font-bold uppercase tracking-wider">{t.snowLevel}</span>
       </div>
 
       <div className="flex flex-col gap-1 z-10 mt-1">
         <div className="flex justify-between items-end">
              <span className="text-3xl font-bold text-white leading-none">
-                {formatH(snowLevel)}
+                {snowLevel > 4000 ? "> 4000m" : formatH(snowLevel)}
              </span>
         </div>
-        <span className="text-xs text-slate-400 font-medium">
-           {t.freezingLevelAt} <span className="text-slate-300">{formatH(freezingLevel)}</span>
+        <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+           {t.freezingLevelAt} <span className="text-slate-200 font-mono bg-white/5 px-1 rounded">{formatH(freezingLevel)}</span>
         </span>
       </div>
 
+      {/* Decoració de fons (Muntanya) */}
       <div className="absolute bottom-0 right-0 w-24 h-24 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none">
          <svg viewBox="0 0 100 100" className="fill-current text-white">
             <path d="M50 10 L90 90 L10 90 Z" />
@@ -403,11 +417,18 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
          </svg>
       </div>
       
-      <div className="mt-3 h-1.5 w-full bg-slate-700 rounded-full overflow-hidden flex z-10">
+      {/* Barra visual que indica "com de baixa està la neu" */}
+      <div className="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex z-10 relative">
           <div 
-            className={`h-full transition-all duration-1000 ${snowLevel < 1000 ? 'bg-cyan-300' : 'bg-indigo-400'}`} 
-            style={{ width: `${Math.max(10, Math.min(100, (3000 - snowLevel) / 30))}%` }} 
+            className={`h-full transition-all duration-1000 ${barColor}`} 
+            style={{ width: `${percentage}%` }} 
           ></div>
+      </div>
+      
+      {/* Etiqueta descriptiva opcional */}
+      <div className="mt-1 text-[9px] text-slate-500 text-right z-10">
+         {snowLevel < 1000 ? (lang === 'ca' ? "Cota baixa" : "Low level") : 
+          snowLevel > 2500 ? (lang === 'ca' ? "Alta muntanya" : "High mountain") : ""}
       </div>
     </div>
   );

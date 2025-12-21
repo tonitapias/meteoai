@@ -16,6 +16,7 @@ export default function DayDetailModal({
 
   if (selectedDayIndex === null || !weatherData) return null;
 
+  // Dades diàries
   const dayData = useMemo(() => {
     const i = selectedDayIndex;
     return {
@@ -32,6 +33,7 @@ export default function DayDetailModal({
     };
   }, [weatherData, selectedDayIndex]);
 
+  // Índexs horaris
   const dayIndices = useMemo(() => {
     if (!dayData.date) return [];
     const targetDayStr = dayData.date.includes('T') ? dayData.date.split('T')[0] : dayData.date;
@@ -45,18 +47,22 @@ export default function DayDetailModal({
       .map(item => item.idx);
   }, [weatherData, dayData]);
 
+  // --- LOGICA MILLORADA PER LA COTA DE NEU HORÀRIA ---
   const hourlyDataForDay = useMemo(() => {
     if (dayIndices.length === 0) return [];
 
     return dayIndices.map(idx => {
-        const fl = weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[idx] : null;
+        // Intentem agafar la isoterma 0 del model principal
+        let fl = weatherData.hourly.freezing_level_height ? weatherData.hourly.freezing_level_height[idx] : null;
         
-        let finalFl = fl;
-        if (finalFl === null || finalFl === undefined) {
-             finalFl = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? 
-                       weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
+        // Fallback: Si el principal falla, mirem GFS o ICON (Comparativa)
+        if (fl === null || fl === undefined) {
+             fl = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? 
+                  weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
         }
-        const snowLevel = (finalFl !== null && finalFl !== undefined) ? Math.max(0, finalFl - 300) : null;
+
+        // Càlcul realista: Isoterma - 300m
+        const snowLevel = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
 
         return {
             time: weatherData.hourly.time[idx],
@@ -82,6 +88,7 @@ export default function DayDetailModal({
               if (!d) return null;
               
               const fl = d.freezing_level_height;
+              // Apliquem la mateixa lògica realista de -300m
               const snowLevel = (fl !== null && fl !== undefined) ? Math.max(0, fl - 300) : null;
 
               return {
@@ -102,16 +109,28 @@ export default function DayDetailModal({
       };
   }, [weatherData, dayIndices]);
 
+  // --- LOGICA MILLORADA PER EL RANG DE COTA (Min - Max) ---
   const snowLevelRange = useMemo(() => {
      if (hourlyDataForDay.length === 0) return "---";
-     const levels = hourlyDataForDay.map(d => d.snowLevel).filter(l => l !== null);
+     
+     // Filtrem valors nuls
+     const levels = hourlyDataForDay.map(d => d.snowLevel).filter(l => l !== null && l !== undefined);
+     
      if (levels.length === 0) return "---";
+     
      const min = Math.min(...levels);
      const max = Math.max(...levels);
-     if (min === max) return `${Math.round(min)}m`;
+     
+     // Si la diferència és petita, mostrem només un valor
+     if (Math.abs(max - min) < 50) return `${Math.round(min)}m`;
+     
+     // Si la cota és extremadament alta tot el dia (> 4500m)
+     if (min > 4500) return "> 4500m";
+
      return `${Math.round(min)} - ${Math.round(max)}m`;
   }, [hourlyDataForDay]);
 
+  // Helpers de format
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString(lang === 'ca' ? 'ca-ES' : lang === 'es' ? 'es-ES' : 'en-US', { 
       weekday: 'long', day: 'numeric', month: 'long' 
@@ -145,11 +164,12 @@ export default function DayDetailModal({
         </button>
 
         <div className="p-6 md:p-8">
+          {/* Capçalera del dia */}
           <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between mb-8 border-b border-white/5 pb-6">
             <div>
                <h2 className="text-3xl font-bold text-white capitalize mb-2">{formatDate(dayData.date)}</h2>
                <div className="flex items-center gap-2 text-slate-400">
-                  <Calendar className="w-4 h-4"/>
+                  <Calendar className="w-4 h-4" strokeWidth={2.5}/>
                   <span className="text-sm font-medium">{t.dayDetailTitle}</span>
                </div>
             </div>
@@ -167,27 +187,28 @@ export default function DayDetailModal({
             </div>
           </div>
 
+          {/* Graella de Dades Principals */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
-                <Droplets className="w-6 h-6 text-blue-400 mb-1"/>
+                <Droplets className="w-6 h-6 text-blue-400 mb-1" strokeWidth={2.5}/>
                 <span className="text-xs text-slate-400 uppercase font-bold">{t.totalPrecipitation}</span>
                 <span className="text-lg font-bold text-slate-200">{dayData.precipSum} mm</span>
              </div>
              
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
-                <Wind className="w-6 h-6 text-teal-400 mb-1"/>
+                <Wind className="w-6 h-6 text-teal-400 mb-1" strokeWidth={2.5}/>
                 <span className="text-xs text-slate-400 uppercase font-bold">{t.windMax}</span>
                 <span className="text-lg font-bold text-slate-200">{dayData.windMax} km/h</span>
              </div>
 
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
-                <Mountain className="w-6 h-6 text-indigo-300 mb-1"/>
+                <Mountain className="w-6 h-6 text-indigo-300 mb-1" strokeWidth={2.5}/>
                 <span className="text-xs text-slate-400 uppercase font-bold">{t.snowLevel}</span>
                 <span className="text-lg font-bold text-slate-200">{snowLevelRange}</span>
              </div>
 
              <div className="bg-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
-                <Sun className="w-6 h-6 text-amber-400 mb-1"/>
+                <Sun className="w-6 h-6 text-amber-400 mb-1" strokeWidth={2.5}/>
                 <span className="text-xs text-slate-400 uppercase font-bold">{t.uvIndex}</span>
                 <span className="text-lg font-bold text-slate-200">
                     {dayData.uvMax} 
@@ -198,6 +219,7 @@ export default function DayDetailModal({
              </div>
           </div>
           
+          {/* Sortida i Posta de Sol */}
           <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between">
                  <div className="flex items-center gap-3">
@@ -220,9 +242,10 @@ export default function DayDetailModal({
               </div>
           </div>
 
+          {/* Gràfic d'Evolució Horària */}
           <div className="bg-slate-950/50 border border-white/5 rounded-3xl p-4 md:p-6">
              <h3 className="font-bold text-white mb-6 flex items-center gap-2">
-                <Thermometer className="w-5 h-5 text-indigo-400"/> {t.hourlyEvolution}
+                <Thermometer className="w-5 h-5 text-indigo-400" strokeWidth={2.5}/> {t.hourlyEvolution}
              </h3>
              
              <HourlyForecastChart 

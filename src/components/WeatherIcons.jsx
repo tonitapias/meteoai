@@ -76,14 +76,13 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
     // 1. PRIORITAT ABSOLUTA: PRECIPITACIÓ REAL
     // Si l'API diu que està caient aigua (precip > 0), ignorem si posa "Núvol".
     if (precip > 0) {
-       return <VariableRainIcon isDay={isDay} {...commonProps} />;
-    }
-
-    // 2. PRIORITAT ALTA: PROBABILITAT DE PLUJA
-    // Si el codi és baix (Sol, Núvol, Boira) però la probabilitat és alta (>50%),
-    // mostrem la icona de pluja variable (Sol/Lluna + Núvol amb pluja).
-    if (rainProb > 50 && (code < 50)) {
-       return <VariableRainIcon isDay={isDay} {...commonProps} />;
+       // MILLORA: Si el codi base és "Clar" (0-2), posem "Sol i Pluja".
+       // Si el codi és "Núvol" (3+), posem "Núvol i Pluja" (perquè no fa sol).
+       if (code <= 2) {
+           return <VariableRainIcon isDay={isDay} {...commonProps} />;
+       }
+       // Ennuvolat + Pluja
+       return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-400 fill-blue-400/20 animate-pulse`} />;
     }
 
     // 3. SELECCIÓ ESTÀNDARD PER CODI WMO

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Wind, CloudSun, CloudRain, CloudLightning, Snowflake, 
   AlertTriangle, Umbrella, Shirt, ThermometerSun, AlertOctagon, 
@@ -28,6 +28,7 @@ import {
   getWeatherLabel
 } from './utils/weatherLogic';
 
+// Movem LivingIcon fora per evitar re-creació constant en cada render
 const LivingIcon = ({ code, isDay, rainProb, windSpeed, precip, children }) => {
   const animationStyle = windSpeed > 25 ? 'wiggle 1s ease-in-out infinite' : 
                          windSpeed > 15 ? 'wiggle 3s ease-in-out infinite' : 'none';
@@ -78,31 +79,33 @@ export default function MeteoIA() {
     if (savedFavs) setFavorites(JSON.parse(savedFavs));
   }, []);
 
-  const saveFavorites = (newFavs) => {
+  const saveFavorites = useCallback((newFavs) => {
     setFavorites(newFavs);
     localStorage.setItem('meteoia-favs', JSON.stringify(newFavs));
-  };
+  }, []);
 
-  const toggleFavorite = () => {
+  const toggleFavorite = useCallback(() => {
     if (!weatherData) return;
     const currentLoc = weatherData.location;
     const isFav = favorites.some(f => f.name === currentLoc.name);
     const newFavs = isFav ? favorites.filter(f => f.name !== currentLoc.name) : [...favorites, currentLoc];
     saveFavorites(newFavs);
-  };
+  }, [weatherData, favorites, saveFavorites]);
 
-  const removeFavorite = (e, name) => {
+  const removeFavorite = useCallback((e, name) => {
     if(e) e.stopPropagation();
     const newFavs = favorites.filter(f => f.name !== name);
     saveFavorites(newFavs);
-  };
+  }, [favorites, saveFavorites]);
 
-  const isCurrentFavorite = weatherData && favorites.some(f => f.name === weatherData.location.name);
+  const isCurrentFavorite = useMemo(() => {
+      return weatherData && favorites.some(f => f.name === weatherData.location.name);
+  }, [weatherData, favorites]);
 
-  const formatTemp = (tempC) => {
+  const formatTemp = useCallback((tempC) => {
     if (unit === 'F') return Math.round((tempC * 9/5) + 32);
     return Math.round(tempC);
-  };
+  }, [unit]);
 
   const getUnitLabel = () => unit === 'F' ? '°F' : '°C';
   const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
@@ -113,37 +116,7 @@ export default function MeteoIA() {
       return new Intl.DateTimeFormat(locales[lang] || locales['ca'], options).format(date);
   };
   
-  const handleSearch = (lat, lon, name, country) => {
-      fetchWeatherByCoords(lat, lon, name, country);
-  };
-
-  const handleGetCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`);
-            const data = await response.json();
-            const locationName = data.address.city || data.address.town || data.address.village || data.address.municipality || "Ubicació";
-            const locationCountry = data.address.country || "";
-            
-            fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
-          } catch (err) {
-            console.error("Error reverse geocoding:", err);
-            fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
-          }
-        },
-        (error) => { 
-          setError("No s'ha pogut obtenir la ubicació."); 
-          setLoading(false); 
-        }
-      );
-    } else { setError("Geolocalització no suportada."); }
-  };
-
-  const fetchWeatherByCoords = async (lat, lon, name, country = "") => {
+  const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
     setLoading(true);
     setError(null);
     setAiAnalysis(null);
@@ -172,7 +145,37 @@ export default function MeteoIA() {
     } finally { 
       setLoading(false); 
     }
-  };
+  }, []);
+
+  const handleSearch = useCallback((lat, lon, name, country) => {
+      fetchWeatherByCoords(lat, lon, name, country);
+  }, [fetchWeatherByCoords]);
+
+  const handleGetCurrentLocation = useCallback(() => {
+    if (navigator.geolocation) {
+      setLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`);
+            const data = await response.json();
+            const locationName = data.address.city || data.address.town || data.address.village || data.address.municipality || "Ubicació";
+            const locationCountry = data.address.country || "";
+            
+            fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
+          } catch (err) {
+            console.error("Error reverse geocoding:", err);
+            fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
+          }
+        },
+        (error) => { 
+          setError("No s'ha pogut obtenir la ubicació."); 
+          setLoading(false); 
+        }
+      );
+    } else { setError("Geolocalització no suportada."); }
+  }, [fetchWeatherByCoords, lang]);
   
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
@@ -198,7 +201,6 @@ export default function MeteoIA() {
         const tMs = new Date(t).getTime();
         return tMs <= nowMs && (tMs + 3600000) > nowMs;
      });
-     // PROTECCIÓ: Comprovem si l'array existeix abans d'accedir-hi
      return (hourIdx !== -1 && weatherData.hourly.precipitation_probability) 
          ? weatherData.hourly.precipitation_probability[hourIdx] 
          : 0;
@@ -218,7 +220,6 @@ export default function MeteoIA() {
       
       if (currentIdx === -1) return null;
       
-      // PROTECCIÓ:
       let val = weatherData.hourly[key] ? weatherData.hourly[key][currentIdx] : null;
       const currentTemp = weatherData.current.temperature_2m;
 
@@ -233,52 +234,46 @@ export default function MeteoIA() {
       }
       
       return (val !== null && val !== undefined) ? val : null;
-
   }, [weatherData, shiftedNow]);
 
-const effectiveWeatherCode = useMemo(() => {
-  if (!weatherData) return 0;
-  
-  const currentCode = weatherData.current.weather_code;
-  
-  const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 
-      ? Math.max(...minutelyPreciseData.slice(0, 2)) 
-      : 0;
-
-  // CANVI: De 0.1 a 0.2
-  // Això ignora la "pluja fantasma" molt feble.
-  if (immediateRain > 0.2) {
-      if (immediateRain > 2) return 65; 
-      if (weatherData.current.temperature_2m < 1) return 71; 
-      return 61; 
-  }
-
-  // ... resta del codi igual ...
-  const cloudCover = weatherData.current.cloud_cover;
-  const windSpeed = weatherData.current.wind_speed_10m;
-
-  if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
-  if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
-  
-  return currentCode;
-}, [weatherData, minutelyPreciseData, shiftedNow]);
-
-  const getDynamicBackground = (code, isDay = 1) => {
-    if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
-    if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
-    if (isSnowCode(code)) return "from-slate-800 via-slate-700 to-cyan-950"; 
-    if (code >= 51) return "from-slate-800 via-slate-900 to-blue-950"; 
+  const effectiveWeatherCode = useMemo(() => {
+    if (!weatherData) return 0;
     
-    if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
-    if (code === 0 && !isDay) return "from-slate-950 via-indigo-950 to-purple-950"; 
-    if (code <= 3 && isDay) return "from-slate-700 via-slate-600 to-blue-800"; 
-    return "from-slate-900 to-indigo-950";
-  };
-  
-  const getRefinedBackground = () => {
+    const currentCode = weatherData.current.weather_code;
+    const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 
+        ? Math.max(...minutelyPreciseData.slice(0, 2)) 
+        : 0;
+
+    if (immediateRain > 0.2) {
+        if (immediateRain > 2) return 65; 
+        if (weatherData.current.temperature_2m < 1) return 71; 
+        return 61; 
+    }
+
+    const cloudCover = weatherData.current.cloud_cover;
+    const windSpeed = weatherData.current.wind_speed_10m;
+
+    if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
+    if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
+    
+    return currentCode;
+  }, [weatherData, minutelyPreciseData, shiftedNow]);
+
+  const currentBg = useMemo(() => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
+
+    const getDynamicBackground = (code, isDay = 1) => {
+        if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
+        if (isSnowCode(code)) return "from-slate-800 via-slate-700 to-cyan-950"; 
+        if (code >= 51) return "from-slate-800 via-slate-900 to-blue-950"; 
+        
+        if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
+        if (code === 0 && !isDay) return "from-slate-950 via-indigo-950 to-purple-950"; 
+        if (code <= 3 && isDay) return "from-slate-700 via-slate-600 to-blue-800"; 
+        return "from-slate-900 to-indigo-950";
+    };
+
     const { is_day, weather_code, cloud_cover } = weatherData.current;
-    
     const code = effectiveWeatherCode || weather_code;
 
     if (code === 45 || code === 48) return "from-slate-600 via-slate-500 to-stone-400";
@@ -300,10 +295,9 @@ const effectiveWeatherCode = useMemo(() => {
     }
     
     return getDynamicBackground(code, is_day);
-  };
+  }, [weatherData, shiftedNow, effectiveWeatherCode]);
 
   const barometricTrend = useMemo(() => {
-      // PROTECCIÓ:
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.pressure_msl) return { trend: 'steady', val: 0 };
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
@@ -320,7 +314,6 @@ const effectiveWeatherCode = useMemo(() => {
   }, [weatherData, shiftedNow]);
 
   const currentCape = useMemo(() => {
-      // PROTECCIÓ:
       if(!weatherData || !weatherData.hourly || !weatherData.hourly.cape) return 0;
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
@@ -376,7 +369,6 @@ const effectiveWeatherCode = useMemo(() => {
     const snowKey = availableKeys.find(k => k === 'freezing_level_height') || 
                     availableKeys.find(k => k.includes('freezing_level_height'));
     
-    // FUNCIÓ SEGURA PER LLEGIR VALORS I EVITAR EL "READING '23'"
     const getSafeVal = (key, i, def = 0) => {
         return (weatherData.hourly[key] && weatherData.hourly[key][i] !== undefined) 
                ? weatherData.hourly[key][i] 
@@ -397,7 +389,6 @@ const effectiveWeatherCode = useMemo(() => {
 
       return {
         temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
-        // ARA UTILITZEM getSafeVal A TOT ARREU
         apparent: unit === 'F' 
             ? Math.round((getSafeVal('apparent_temperature', realIndex) * 9/5) + 32) 
             : getSafeVal('apparent_temperature', realIndex),
@@ -456,9 +447,12 @@ const effectiveWeatherCode = useMemo(() => {
     };
   }, [weatherData]);
 
-  const currentBg = getRefinedBackground();
   const isTodaySnow = weatherData && (isSnowCode(weatherData.current.weather_code) || (weatherData.daily.snowfall_sum && weatherData.daily.snowfall_sum[0] > 0));
   const moonPhaseVal = getMoonPhase(new Date());
+
+  const currentPrecip15 = weatherData?.current?.minutely15 
+      ? weatherData.current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) 
+      : 0;
 
   const hourlyForecastSection = (
     <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-6 backdrop-blur-sm shadow-xl mb-6">
@@ -469,7 +463,7 @@ const effectiveWeatherCode = useMemo(() => {
           {chartData.filter((_, i) => i % 3 === 0).map((h) => (
              <div key={h.time} className="flex flex-col items-center min-w-[3rem]">
                 <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity)}</div>
+                <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity, h.precip)}</div>
                 <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                 <div className="flex flex-col items-center mt-1 h-6 justify-start">
                    {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}
@@ -565,15 +559,11 @@ const effectiveWeatherCode = useMemo(() => {
     </div>
   );
 
-  const currentPrecip15 = weatherData?.current?.minutely15 
-      ? weatherData.current.minutely15.slice(0, 4).reduce((a, b) => a + (b || 0), 0) 
-      : 0;
-
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
       {weatherData && <WeatherParticles code={effectiveWeatherCode} />}
 
-      <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10">
+      <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10 flex flex-col min-h-[calc(100vh-3rem)]">
         
         <Header 
            onSearch={handleSearch}
@@ -589,269 +579,271 @@ const effectiveWeatherCode = useMemo(() => {
            setViewMode={setViewMode}
         />
 
-        {loading && !weatherData && (
-           <div className="animate-pulse space-y-6">
-             <div className="h-64 bg-slate-800/50 rounded-[2.5rem] w-full"></div>
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><div className="grid grid-cols-2 gap-4 h-48"> {[1,2,3,4].map(i => <div key={i} className="bg-slate-800/50 rounded-2xl h-full"></div>)} </div><div className="lg:col-span-2 bg-slate-800/50 rounded-3xl h-48"></div></div>
-           </div>
-        )}
-
-        {error && !loading && (
-           <div className="bg-red-500/10 border border-red-500/20 text-red-200 p-6 rounded-2xl flex items-center justify-center gap-3 animate-in shake">
-             <AlertTriangle className="w-6 h-6"/> <span className="font-medium">{error}</span>
-           </div>
-        )}
-
-        {!weatherData && !loading && !error && (
-           <div className="text-center py-20 md:py-32 animate-in fade-in slide-in-from-bottom-4 px-4">
-              <div className="inline-flex p-6 rounded-full bg-indigo-500/10 mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
-                <CloudSun className="w-16 h-16 text-indigo-400 animate-pulse" strokeWidth={1.5} />
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni AI</h2>
-              <p className="text-slate-400 max-w-md mx-auto">{t.subtitle}</p>
-              <div className="flex flex-wrap gap-3 justify-center mt-8 px-2">
-                 {['ca', 'es', 'en', 'fr'].map(l => (
-                     <button key={l} onClick={() => setLang(l)} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === l ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                        <FlagIcon lang={l} className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> {l === 'ca' ? 'Català' : l === 'es' ? 'Español' : l === 'fr' ? 'Français' : 'English'}
-                     </button>
-                 ))}
-              </div>
-           </div>
-        )}
-
-        {weatherData && (
-          <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6">
-            
-            {aiAnalysis?.alerts?.length > 0 && (
-              <div className="space-y-3">
-                {aiAnalysis.alerts.map((alert, i) => (
-                  <div 
-                    key={i} 
-                    className={`${alert.level === 'high' ? 'bg-red-500/20 border-red-500/40 text-red-100' : 'bg-amber-500/20 border-amber-500/40 text-amber-100'} p-4 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-2 duration-500 shadow-lg`}
-                    style={{animationDelay: `${i*100}ms`}}
-                  >
-                    <div className={`p-2 rounded-full ${alert.level === 'high' ? 'bg-red-500/20' : 'bg-amber-500/20'}`}>
-                      {alert.type === t.storm && <CloudLightning className="w-6 h-6" strokeWidth={2.5}/>}
-                      {!['Tempesta', t.storm].includes(alert.type) && <AlertTriangle className="w-6 h-6"/>}
-                    </div>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-bold uppercase tracking-wider text-xs ${alert.level === 'high' ? 'text-red-400' : 'text-amber-400'} border ${alert.level === 'high' ? 'border-red-500/50' : 'border-amber-500/50'} px-2 py-0.5 rounded-md`}>
-                           {alert.level === 'high' ? t.alertDanger : t.alertWarning}
-                        </span>
-                        <span className="font-bold text-sm">{alert.type}</span>
-                      </div>
-                      <span className="font-medium text-sm mt-1 opacity-90">{alert.msg}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        <div className="flex-1">
+            {loading && !weatherData && (
+            <div className="animate-pulse space-y-6">
+                <div className="h-64 bg-slate-800/50 rounded-[2.5rem] w-full"></div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><div className="grid grid-cols-2 gap-4 h-48"> {[1,2,3,4].map(i => <div key={i} className="bg-slate-800/50 rounded-2xl h-full"></div>)} </div><div className="lg:col-span-2 bg-slate-800/50 rounded-3xl h-48"></div></div>
+            </div>
             )}
 
-            <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
-               <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
-
-               <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
-                   <div className="flex flex-col gap-4 w-full lg:w-auto">
-                       <div className="flex flex-col">
-                           <div className="flex items-center gap-3">
-                                <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
-                                <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
-                                    <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} />
-                                </button>
-                                
-                                <button 
-                                    onClick={() => setShowRadar(true)}
-                                    className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
-                                    title={t.radarTitle}
-                                >
-                                    <Map className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
-                                        {t.radarShort}
-                                    </span>
-                                </button>
-                           </div>
-                           <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
-                                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
-                                <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
-                                <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
-                           </div>
-                       </div>
-
-                       <div className="flex items-center gap-6 mt-2">
-                           <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
-                               <LivingIcon 
-                                  code={effectiveWeatherCode} 
-                                  isDay={weatherData.current.is_day}
-                                  rainProb={currentRainProbability}
-                                  windSpeed={weatherData.current.wind_speed_10m}
-                                  precip={weatherData.current.precipitation}
-                               >
-                                  {getWeatherIcon(
-                                     effectiveWeatherCode, 
-                                     "w-24 h-24 md:w-32 md:h-32", 
-                                     weatherData.current.is_day, 
-                                     currentRainProbability, 
-                                     weatherData.current.wind_speed_10m, 
-                                     weatherData.current.relative_humidity_2m,
-                                     currentPrecip15 
-                                  )}
-                               </LivingIcon>
-                           </div>
-
-                           <div className="flex flex-col justify-center">
-                                <span className="text-8xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
-                                   {formatTemp(weatherData.current.temperature_2m)}°
-                                </span>
-                                <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                                  {getWeatherLabel({ 
-                                      ...weatherData.current, 
-                                      weather_code: effectiveWeatherCode, 
-                                      minutely15: weatherData.minutely_15?.precipitation 
-                                  }, lang)}
-                                </span>
-                           </div>
-                       </div>
-
-                       <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">
-                                <span className="text-rose-300 flex items-center gap-1">↑ {formatTemp(weatherData.daily.temperature_2m_max[0])}°</span>
-                                <span className="w-px h-3 bg-white/20"></span>
-                                <span className="text-cyan-300 flex items-center gap-1">↓ {formatTemp(weatherData.daily.temperature_2m_min[0])}°</span>
-                            </div>
-                            <div className="text-sm text-slate-400 font-medium px-2">
-                                {t.feelsLike} <span className="text-slate-200 font-bold">{formatTemp(weatherData.current.apparent_temperature)}°</span>
-                            </div>
-                       </div>
-                   </div>
-
-                   <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center">
-                     <div className="flex items-center justify-between mb-3">
-                       <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
-                         <BrainCircuit className="w-4 h-4 animate-pulse" strokeWidth={2}/> {t.aiAnalysis}
-                       </div>
-                       {aiAnalysis && (
-                           <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                              aiAnalysis.confidenceLevel === 'high' ? 'text-green-400 border-green-500/30 bg-green-500/10' :
-                              aiAnalysis.confidenceLevel === 'medium' ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' :
-                              'text-red-400 border-red-500/30 bg-red-500/10'
-                           }`}>
-                              {aiAnalysis.confidence}
-                           </span>
-                       )}
-                     </div>
-                     
-                     {aiAnalysis ? (
-                       <div className="space-y-4 animate-in fade-in">
-                          <TypewriterText text={aiAnalysis.text} />
-                          
-                          <div className="flex flex-wrap gap-2 mt-3 mb-4">
-                            {aiAnalysis.tips.map((tip, i) => (
-                              <span key={i} className="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-100 rounded-lg border border-indigo-500/20 flex items-center gap-1.5 shadow-sm animate-in zoom-in duration-500" style={{animationDelay: `${i*150}ms`}}>
-                                {tip.includes('jaqueta') || tip.includes('coat') ? <Shirt className="w-3.5 h-3.5 opacity-70"/> : <AlertTriangle className="w-3.5 h-3.5 opacity-70"/>}
-                                {tip}
-                              </span>
-                            ))}
-                          </div>
-                          
-                          {reliability && (
-                            <div className={`p-3 rounded-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700 ${
-                              reliability.level === 'high' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' :
-                              reliability.level === 'medium' ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' :
-                              'bg-rose-500/10 border-rose-500/20 text-rose-200'
-                            }`}>
-                              <div className="relative shrink-0">
-                                <div className={`w-3 h-3 rounded-full ${
-                                  reliability.level === 'high' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' :
-                                  reliability.level === 'medium' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' :
-                                  'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.6)]'
-                                }`}></div>
-                              </div>
-                              <span className="text-xs font-medium leading-tight">
-                                  {reliability.type === 'ok' && t.rel_high}
-                                  {reliability.type === 'general' && t.rel_medium}
-                                  {reliability.type === 'rain' && t.rel_low_rain.replace('{diff}', reliability.value)}
-                                  {reliability.type === 'temp' && t.rel_low_temp.replace('{diff}', reliability.value)}
-                              </span>
-                            </div>
-                          )}
-                         
-                         <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} currentPrecip={weatherData.current.precipitation} />
-                       </div>
-                     ) : (
-                       <div className="flex items-center gap-2 text-slate-500 text-sm animate-pulse min-h-[3em]">
-                         <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div> {t.generatingTips}
-                       </div>
-                     )}
-                   </div>
-               </div>
+            {error && !loading && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-200 p-6 rounded-2xl flex items-center justify-center gap-3 animate-in shake">
+                <AlertTriangle className="w-6 h-6" strokeWidth={2.5}/> <span className="font-medium">{error}</span>
             </div>
+            )}
 
-            {viewMode === 'expert' && (
-              <div className="animate-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 md:gap-4 auto-rows-fr">
-                     <div className="col-span-1">
-                       <CompassGauge 
-                          degrees={weatherData.current.wind_direction_10m} 
-                          speed={weatherData.current.wind_speed_10m} 
-                          label={t.wind}
-                          lang={lang}
-                       />
-                     </div>
-                     
-                     {/* --- MODIFICAT: WIDGET COTA NEU (Amb seguretat i lang) --- */}
-                     {currentFreezingLevel !== null && currentFreezingLevel < 4000 && (
-                        <div className="col-span-1">
-                            <SnowLevelWidget freezingLevel={currentFreezingLevel} unit={unit} lang={lang} />
-                        </div>
-                     )}
-
-                     <CircularGauge 
-                        icon={<AlertOctagon className="w-6 h-6" strokeWidth={2.5}/>} 
-                        label={t.pressure} 
-                        value={Math.round(weatherData.current.pressure_msl)} 
-                        max={1050} 
-                        subText="hPa"
-                        color="text-pink-400"
-                        trend={barometricTrend.trend}
-                     />
-                     <DewPointWidget value={currentDewPoint} humidity={weatherData.current.relative_humidity_2m} lang={lang} unit={unit} />
-                     <div className="col-span-1"><CapeWidget cape={currentCape} lang={lang} /></div>
-                     <div className="col-span-2 md:col-span-2"><SunArcWidget sunrise={weatherData.daily.sunrise[0]} sunset={weatherData.daily.sunset[0]} lang={lang} shiftedNow={shiftedNow}/></div>
-                     <div className="col-span-2 md:col-span-2"><MoonWidget phase={moonPhaseVal} lat={weatherData.location.latitude} lang={lang}/></div>
-                     <div className="col-span-2 md:col-span-2"><PollenWidget data={aqiData?.current} lang={lang} /></div>
-                  </div>
-
-                  <div className="lg:col-span-2 flex flex-col gap-6">
-                      {hourlyForecastSection}
-                      {sevenDayForecastSection}
-                      <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
-                          <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
-                        </div>
-                        <HourlyForecastChart data={chartData} comparisonData={comparisonData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
-                      </div>
-                  </div>
+            {!weatherData && !loading && !error && (
+            <div className="text-center py-20 md:py-32 animate-in fade-in slide-in-from-bottom-4 px-4">
+                <div className="inline-flex p-6 rounded-full bg-indigo-500/10 mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+                    <CloudSun className="w-16 h-16 text-indigo-400 animate-pulse" strokeWidth={1.5} />
                 </div>
-              </div>
-            )}
-            
-            {viewMode === 'basic' && (
-              <>
-               {hourlyForecastSection}
-               {sevenDayForecastSection}
-              </>
+                <h2 className="text-3xl font-bold text-white mb-3">Meteo Toni AI</h2>
+                <p className="text-slate-400 max-w-md mx-auto">{t.subtitle}</p>
+                <div className="flex flex-wrap gap-3 justify-center mt-8 px-2">
+                    {['ca', 'es', 'en', 'fr'].map(l => (
+                        <button key={l} onClick={() => setLang(l)} className={`px-3 py-2 md:px-4 md:py-2 text-sm md:text-base rounded-full border flex items-center gap-2 transition-all ${lang === l ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-105' : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                            <FlagIcon lang={l} className="w-4 h-3 md:w-5 md:h-4 rounded shadow-sm" /> {l === 'ca' ? 'Català' : l === 'es' ? 'Español' : l === 'fr' ? 'Français' : 'English'}
+                        </button>
+                    ))}
+                </div>
+            </div>
             )}
 
-            <div className="w-full py-8 mt-8 text-center border-t border-white/5">
-              <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70">
-                © {new Date().getFullYear()} Meteo Toni AI
-              </p>
+            {weatherData && (
+            <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6">
+                
+                {aiAnalysis?.alerts?.length > 0 && (
+                <div className="space-y-3">
+                    {aiAnalysis.alerts.map((alert, i) => (
+                    <div 
+                        key={i} 
+                        className={`${alert.level === 'high' ? 'bg-red-500/20 border-red-500/40 text-red-100' : 'bg-amber-500/20 border-amber-500/40 text-amber-100'} p-4 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-2 duration-500 shadow-lg`}
+                        style={{animationDelay: `${i*100}ms`}}
+                    >
+                        <div className={`p-2 rounded-full ${alert.level === 'high' ? 'bg-red-500/20' : 'bg-amber-500/20'}`}>
+                        {alert.type === t.storm && <CloudLightning className="w-6 h-6" strokeWidth={2.5}/>}
+                        {!['Tempesta', t.storm].includes(alert.type) && <AlertTriangle className="w-6 h-6" strokeWidth={2.5}/>}
+                        </div>
+                        <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <span className={`font-bold uppercase tracking-wider text-xs ${alert.level === 'high' ? 'text-red-400' : 'text-amber-400'} border ${alert.level === 'high' ? 'border-red-500/50' : 'border-amber-500/50'} px-2 py-0.5 rounded-md`}>
+                            {alert.level === 'high' ? t.alertDanger : t.alertWarning}
+                            </span>
+                            <span className="font-bold text-sm">{alert.type}</span>
+                        </div>
+                        <span className="font-medium text-sm mt-1 opacity-90">{alert.msg}</span>
+                        </div>
+                    </div>
+                    ))}
+                </div>
+                )}
+
+                <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
+
+                <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
+                    <div className="flex flex-col gap-4 w-full lg:w-auto">
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-3">
+                                    <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{weatherData.location.name}</h2>
+                                    <button onClick={toggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
+                                        <Star className={`w-6 h-6 transition-colors ${isCurrentFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} strokeWidth={2.5} />
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={() => setShowRadar(true)}
+                                        className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
+                                        title={t.radarTitle}
+                                    >
+                                        <Map className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" strokeWidth={2.5} />
+                                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                                            {t.radarShort}
+                                        </span>
+                                    </button>
+                            </div>
+                            <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
+                                    <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {weatherData.location.country}</span>
+                                    <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
+                                    <span className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5"/> {t.localTime}: {shiftedNow.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 mt-2">
+                            <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
+                                <LivingIcon 
+                                    code={effectiveWeatherCode} 
+                                    isDay={weatherData.current.is_day}
+                                    rainProb={currentRainProbability}
+                                    windSpeed={weatherData.current.wind_speed_10m}
+                                    precip={weatherData.current.precipitation}
+                                >
+                                    {getWeatherIcon(
+                                        effectiveWeatherCode, 
+                                        "w-24 h-24 md:w-32 md:h-32", 
+                                        weatherData.current.is_day, 
+                                        currentRainProbability, 
+                                        weatherData.current.wind_speed_10m, 
+                                        weatherData.current.relative_humidity_2m,
+                                        currentPrecip15 
+                                    )}
+                                </LivingIcon>
+                            </div>
+
+                            <div className="flex flex-col justify-center">
+                                    <span className="text-8xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
+                                    {formatTemp(weatherData.current.temperature_2m)}°
+                                    </span>
+                                    <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
+                                    {getWeatherLabel({ 
+                                        ...weatherData.current, 
+                                        weather_code: effectiveWeatherCode, 
+                                        minutely15: weatherData.minutely_15?.precipitation 
+                                    }, lang)}
+                                    </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">
+                                    <span className="text-rose-300 flex items-center gap-1">↑ {formatTemp(weatherData.daily.temperature_2m_max[0])}°</span>
+                                    <span className="w-px h-3 bg-white/20"></span>
+                                    <span className="text-cyan-300 flex items-center gap-1">↓ {formatTemp(weatherData.daily.temperature_2m_min[0])}°</span>
+                                </div>
+                                <div className="text-sm text-slate-400 font-medium px-2">
+                                    {t.feelsLike} <span className="text-slate-200 font-bold">{formatTemp(weatherData.current.apparent_temperature)}°</span>
+                                </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center">
+                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
+                            <BrainCircuit className="w-4 h-4 animate-pulse" strokeWidth={2.5}/> {t.aiAnalysis}
+                        </div>
+                        {aiAnalysis && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                                aiAnalysis.confidenceLevel === 'high' ? 'text-green-400 border-green-500/30 bg-green-500/10' :
+                                aiAnalysis.confidenceLevel === 'medium' ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' :
+                                'text-red-400 border-red-500/30 bg-red-500/10'
+                            }`}>
+                                {aiAnalysis.confidence}
+                            </span>
+                        )}
+                        </div>
+                        
+                        {aiAnalysis ? (
+                        <div className="space-y-4 animate-in fade-in">
+                            <TypewriterText text={aiAnalysis.text} />
+                            
+                            <div className="flex flex-wrap gap-2 mt-3 mb-4">
+                                {aiAnalysis.tips.map((tip, i) => (
+                                <span key={i} className="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-100 rounded-lg border border-indigo-500/20 flex items-center gap-1.5 shadow-sm animate-in zoom-in duration-500" style={{animationDelay: `${i*150}ms`}}>
+                                    {tip.includes('jaqueta') || tip.includes('coat') ? <Shirt className="w-3.5 h-3.5 opacity-70"/> : <AlertTriangle className="w-3.5 h-3.5 opacity-70"/>}
+                                    {tip}
+                                </span>
+                                ))}
+                            </div>
+                            
+                            {reliability && (
+                                <div className={`p-3 rounded-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700 ${
+                                reliability.level === 'high' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' :
+                                reliability.level === 'medium' ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' :
+                                'bg-rose-500/10 border-rose-500/20 text-rose-200'
+                                }`}>
+                                <div className="relative shrink-0">
+                                    <div className={`w-3 h-3 rounded-full ${
+                                    reliability.level === 'high' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' :
+                                    reliability.level === 'medium' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' :
+                                    'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.6)]'
+                                    }`}></div>
+                                </div>
+                                <span className="text-xs font-medium leading-tight">
+                                    {reliability.type === 'ok' && t.rel_high}
+                                    {reliability.type === 'general' && t.rel_medium}
+                                    {reliability.type === 'rain' && t.rel_low_rain.replace('{diff}', reliability.value)}
+                                    {reliability.type === 'temp' && t.rel_low_temp.replace('{diff}', reliability.value)}
+                                </span>
+                                </div>
+                            )}
+                            
+                            <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain} currentPrecip={weatherData.current.precipitation} />
+                        </div>
+                        ) : (
+                        <div className="flex items-center gap-2 text-slate-500 text-sm animate-pulse min-h-[3em]">
+                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div> {t.generatingTips}
+                        </div>
+                        )}
+                    </div>
+                </div>
+                </div>
+
+                {viewMode === 'expert' && (
+                <div className="animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 md:gap-4 auto-rows-fr">
+                        <div className="col-span-1">
+                        <CompassGauge 
+                            degrees={weatherData.current.wind_direction_10m} 
+                            speed={weatherData.current.wind_speed_10m} 
+                            label={t.wind}
+                            lang={lang}
+                        />
+                        </div>
+                        
+                        {currentFreezingLevel !== null && currentFreezingLevel < 4000 && (
+                            <div className="col-span-1">
+                                <SnowLevelWidget freezingLevel={currentFreezingLevel} unit={unit} lang={lang} />
+                            </div>
+                        )}
+
+                        <CircularGauge 
+                            icon={<AlertOctagon className="w-6 h-6" strokeWidth={2.5}/>} 
+                            label={t.pressure} 
+                            value={Math.round(weatherData.current.pressure_msl)} 
+                            max={1050} 
+                            subText="hPa"
+                            color="text-pink-400"
+                            trend={barometricTrend.trend}
+                        />
+                        <DewPointWidget value={currentDewPoint} humidity={weatherData.current.relative_humidity_2m} lang={lang} unit={unit} />
+                        <div className="col-span-1"><CapeWidget cape={currentCape} lang={lang} /></div>
+                        <div className="col-span-2 md:col-span-2"><SunArcWidget sunrise={weatherData.daily.sunrise[0]} sunset={weatherData.daily.sunset[0]} lang={lang} shiftedNow={shiftedNow}/></div>
+                        <div className="col-span-2 md:col-span-2"><MoonWidget phase={moonPhaseVal} lat={weatherData.location.latitude} lang={lang}/></div>
+                        <div className="col-span-2 md:col-span-2"><PollenWidget data={aqiData?.current} lang={lang} /></div>
+                    </div>
+
+                    <div className="lg:col-span-2 flex flex-col gap-6">
+                        {hourlyForecastSection}
+                        {sevenDayForecastSection}
+                        <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
+                            <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
+                            </div>
+                            <HourlyForecastChart data={chartData} comparisonData={comparisonData} unit={getUnitLabel()} lang={lang} shiftedNow={shiftedNow} />
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                )}
+                
+                {viewMode === 'basic' && (
+                <>
+                {hourlyForecastSection}
+                {sevenDayForecastSection}
+                </>
+                )}
             </div>
-          </div>
-        )}
+            )}
+        </div>
+
+        {/* --- FOOTER GLOBAL (ARA FORA DEL CONDICIONAL) --- */}
+        <div className="w-full py-8 mt-8 text-center border-t border-white/5">
+            <p className="text-xs text-slate-500 font-medium tracking-wider uppercase opacity-70">
+            © {new Date().getFullYear()} Meteo Toni AI
+            </p>
+        </div>
 
         <DayDetailModal 
           weatherData={weatherData}
