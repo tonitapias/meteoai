@@ -284,27 +284,34 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
 };
 
 // --- ETIQUETA PRINCIPAL DEFINITIVA I SIMPLIFICADA (CORREGIDA) ---
+// A src/utils/weatherLogic.js
+
 export const getWeatherLabel = (current, language) => {
   const tr = TRANSLATIONS[language];
   if (!tr || !current) return "";
 
   const code = Number(current.weather_code);
   
-  // CORRECCIÓ: Mirem només la precipitació actual per a l'etiqueta en viu
-  const precipActual = current.precipitation || 0;
+  // AQUI LA MÀGIA:
+  // Recuperem la dada 'minutely15' que li passem des de l'App.jsx
+  // Si no existeix, assumim 0.
+  const precipInstantanea = current.minutely15 && current.minutely15.length > 0
+      ? current.minutely15[0] 
+      : 0;
   
-  // 1. PRIORITAT PLUJA REAL:
-  // Només canviem l'etiqueta a "Pluja" si realment està caient aigua (>0)
-  // Encara que el codi sigui "ennuvolat", si cau aigua, direm "Pluja".
-  // PERÒ: Si el codi és núvol i NO cau aigua, NO direm "Pluja".
+  // 1. Lògica de "Radar":
+  // Si el codi diu "Ennuvolat" (3) però el radar diu que cau aigua (>0.1), diem "Pluja".
   if ((code <= 3 || (code >= 45 && code <= 48))) {
-      if (precipActual > 0) return tr.rainy; 
-      // Si és 0, deixem que passi i retorni el text del codi (ex: "Ennuvolat")
+      if (precipInstantanea > 0.1) return tr.rainy; 
   }
 
-  // 2. SIMPLIFICACIÓ:
-  // Agrupem "Plugim feble/moderat/dens" (51, 53, 55) i "Pluja feble" (61) sota l'etiqueta única "Pluja".
+  // 2. Si el codi és de pluja, PERÒ el radar diu 0.0mm:
+  // Opcionalment podries forçar que retorni "Ennuvolat", però els codis WMO
+  // solen actualitzar-se prou bé. El més important és el cas contrari (evitar dir pluja si ja no en cau).
+  
+  // Agrupem codis de pluja sota una etiqueta simple si vols
   if (code === 51 || code === 53 || code === 55 || code === 61) {
+      // Si vols ser molt estricte: if (precipInstantanea === 0) return tr.cloudy;
       return tr.rainy; 
   }
 

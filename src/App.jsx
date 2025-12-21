@@ -236,26 +236,32 @@ export default function MeteoIA() {
 
   }, [weatherData, shiftedNow]);
 
-  const effectiveWeatherCode = useMemo(() => {
-    if (!weatherData) return 0;
-    
-    const currentCode = weatherData.current.weather_code;
-    const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 ? Math.max(...minutelyPreciseData.slice(0, 2)) : 0;
-    const currentPrecip = weatherData.current.precipitation;
-    const cloudCover = weatherData.current.cloud_cover;
-    const windSpeed = weatherData.current.wind_speed_10m;
-    
-    if (currentPrecip > 0 || immediateRain > 0.1) {
-        if (currentPrecip > 2 || immediateRain > 2) return 65; 
-        if (weatherData.current.temperature_2m < 1) return 71; 
-        return 61; 
-    }
+const effectiveWeatherCode = useMemo(() => {
+  if (!weatherData) return 0;
+  
+  const currentCode = weatherData.current.weather_code;
+  
+  const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 
+      ? Math.max(...minutelyPreciseData.slice(0, 2)) 
+      : 0;
 
-    if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
-    if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
-    
-    return currentCode;
-  }, [weatherData, minutelyPreciseData, shiftedNow]);
+  // CANVI: De 0.1 a 0.2
+  // Això ignora la "pluja fantasma" molt feble.
+  if (immediateRain > 0.2) {
+      if (immediateRain > 2) return 65; 
+      if (weatherData.current.temperature_2m < 1) return 71; 
+      return 61; 
+  }
+
+  // ... resta del codi igual ...
+  const cloudCover = weatherData.current.cloud_cover;
+  const windSpeed = weatherData.current.wind_speed_10m;
+
+  if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
+  if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
+  
+  return currentCode;
+}, [weatherData, minutelyPreciseData, shiftedNow]);
 
   const getDynamicBackground = (code, isDay = 1) => {
     if (!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
