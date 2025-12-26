@@ -1,3 +1,4 @@
+// src/components/ExpertWidgets.jsx
 import React from 'react';
 import { AlertOctagon } from 'lucide-react';
 import { 
@@ -7,26 +8,17 @@ import {
 import { calculateDewPoint, getMoonPhase } from '../utils/weatherLogic';
 import { TRANSLATIONS } from '../constants/translations';
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shiftedNow }) {
+// Afegim 'freezingLevel' a les props
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shiftedNow, freezingLevel }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   const { current, daily, hourly } = weatherData;
 
   // Càlculs locals per als widgets
   const currentDewPoint = calculateDewPoint(current.temperature_2m, current.relative_humidity_2m);
-  const moonPhaseVal = getMoonPhase(new Date()); // Usar data real
+  const moonPhaseVal = getMoonPhase(new Date()); 
   
-  // Freezing Level
-  const getFreezingLevel = () => {
-      // (Lògica simplificada per visualitzar, ja que el càlcul robust ja es fa al hook principal, 
-      // però aquí podem agafar directament de l'hourly si cal o passar-ho per props. 
-      // Per simplicitat, agafem el valor del moment actual aprox)
-      if(!hourly?.freezing_level_height) return null;
-      return hourly.freezing_level_height[0] || null; // Molt simplificat
-  };
-  const freezingLevel = getFreezingLevel();
-
   // Barometric trend (simplificat per visualització)
-  const pressureTrend = 'steady'; // Podries passar el càlcul real per props si el vols mantenir
+  const pressureTrend = 'steady'; 
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 md:gap-4 auto-rows-fr mb-6">
@@ -39,7 +31,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shifte
             />
         </div>
         
-        {freezingLevel !== null && freezingLevel < 4000 && (
+        {/* Mostrem el widget si tenim dades i la cota és rellevant (< 4000m) */}
+        {freezingLevel !== null && freezingLevel !== undefined && freezingLevel < 4000 && (
             <div className="col-span-1">
                 <SnowLevelWidget freezingLevel={freezingLevel} unit={unit} lang={lang} />
             </div>

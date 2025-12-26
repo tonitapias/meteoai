@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
@@ -49,6 +50,7 @@ export default function MeteoIA() {
     chartData,
     comparisonData,
     weeklyExtremes,
+    currentFreezingLevel // <--- RECUPEREM LA DADA AQUÍ
   } = useWeatherCalculations(weatherData, unit, now);
 
   // 3. IA
@@ -141,6 +143,7 @@ export default function MeteoIA() {
                                 lang={lang} 
                                 unit={unit}
                                 shiftedNow={shiftedNow}
+                                freezingLevel={currentFreezingLevel} // <--- PASSEM LA DADA AQUÍ
                             />
                         </div>
 

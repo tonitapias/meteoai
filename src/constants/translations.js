@@ -115,10 +115,10 @@ export const TRANSLATIONS = {
     aiSummaryStorm: "Situació inestable. Risc de tempestes actives. ",
     
     aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",
+    aiRainMod: "Està plovent de manera moderada. ", // <--- NOVA CLAU AFEGIDA
     aiRainHeavy: "Plou amb força intensitat en aquest moment. ",
     aiSunRain: "Atenció: Sol i pluja simultàniament. ",
     
-    // --- MODIFICAT: Més prudent ---
     aiThreatening: "Cel amenaçador. Risc de precipitació en qualsevol moment. ",
     
     aiSummarySnow: "Configuració hivernal amb nevades previstes. ",
@@ -331,10 +331,10 @@ export const TRANSLATIONS = {
     aiSummaryStorm: "Situación inestable. Riesgo de tormentas activas. ",
     
     aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",
+    aiRainMod: "Está lloviendo de forma moderada. ", // <--- AÑADIDO
     aiRainHeavy: "Llueve con bastante intensidad en este momento. ",
     aiSunRain: "Atención: Sol y lluvia simultáneamente. ",
     
-    // --- MODIFICADO: Más prudente ---
     aiThreatening: "Cielo amenazador. Riesgo de precipitación en cualquier momento. ",
     
     aiSummarySnow: "Configuración invernal con nevadas previstas. ",
@@ -547,10 +547,10 @@ export const TRANSLATIONS = {
     aiSummaryStorm: "Unstable situation. Risk of active storms. ",
     
     aiRainLight: "Light drizzle or a few drops falling right now. ",
+    aiRainMod: "Moderate rain is falling. ", // <--- ADDED
     aiRainHeavy: "Heavy rain falling at this moment. ",
     aiSunRain: "Attention: Sun and rain mixing simultaneously. ",
     
-    // --- MODIFIED: More cautious ---
     aiThreatening: "Threatening skies. Risk of precipitation at any moment. ",
     
     aiSummarySnow: "Winter configuration with expected snowfall. ",
@@ -763,10 +763,10 @@ export const TRANSLATIONS = {
     aiSummaryStorm: "Situation instable. Risque d'orages actifs. ",
     
     aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
+    aiRainMod: "Il pleut modérément. ", // <--- AJOUTÉ
     aiRainHeavy: "Il pleut avec force en ce moment. ",
     aiSunRain: "Attention : Soleil et pluie simultanément. ",
     
-    // --- MODIFIÉ: Plus prudent ---
     aiThreatening: "Ciel menaçant. Risque de précipitations à tout moment. ",
     
     aiSummarySnow: "Configuration hivernale avec chutes de neige prévues. ",

@@ -1,3 +1,4 @@
+// src/components/WeatherIcons.jsx
 import React from 'react';
 import { 
   Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon, 
@@ -65,30 +66,22 @@ export const WeatherParticles = ({ code }) => {
   );
 };
 
-// --- FUNCIÓ PRINCIPAL DE SELECCIÓ D'ICONA ---
+// --- FUNCIÓ PRINCIPAL SIMPLIFICADA ---
 
-export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0, humidity = 0, precip = 0) => {
+export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb = 0, windSpeed = 0) => {
     const commonProps = {
       strokeWidth: 2, 
       className: `${className} drop-shadow-md transition-all duration-300` 
     };
 
-    // 1. PRIORITAT ABSOLUTA: PRECIPITACIÓ REAL
-    // Si l'API diu que està caient aigua (> 0.1 mm), ignorem si posa "Núvol".
-    if (precip > 0.1) {
-       // Si el codi base és "Clar" (0-2), posem "Sol i Pluja".
-       if (code <= 2) {
-           return <VariableRainIcon isDay={isDay} {...commonProps} />;
-       }
-       // Ennuvolat + Pluja
-       return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-400 fill-blue-400/20 animate-pulse`} />;
-    }
-
-    // 2. SELECCIÓ ESTÀNDARD PER CODI WMO
+    // NOTA: Ara confiem en 'code' perquè useWeatherCalculations ja l'ha corregit si plou.
+    
+    // Codi 0: Sol / Lluna
     if (code === 0) return isDay 
       ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
     
+    // 1-2: Parcialment ennuvolat
     if (code === 1 || code === 2) {
        const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
        return isDay 
@@ -96,27 +89,37 @@ export const getWeatherIcon = (code, className = "w-6 h-6", isDay = 1, rainProb 
          : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400 ${windClass}`} />;
     }
     
+    // 3: Ennuvolat
     if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
 
+    // 45-48: Boira
     if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
     
+    // 51-55: Plugim
     if (code >= 51 && code <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-300 fill-blue-300/20`} />;
 
+    // 56-57: Plugim Engelant
     if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
 
+    // 61-65: Pluja
     if (code >= 61 && code <= 65) {
-        if (!isDay) return <VariableRainIcon isDay={false} {...commonProps} />;
+        if (!isDay && code <= 61) return <VariableRainIcon isDay={false} {...commonProps} />;
         return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-pulse`} />;
     }
 
+    // 66-67: Pluja Engelant
     if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse`} />;
 
+    // 71-77: Neu
     if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
     
+    // 80-82: Xàfecs
     if (code >= 80 && code <= 82) return <VariableRainIcon isDay={isDay} {...commonProps} />;
 
+    // 85-86: Xàfecs de neu
     if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
 
+    // 95+: Tempesta
     if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
     
     // Fallback

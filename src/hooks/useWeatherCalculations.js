@@ -5,15 +5,14 @@ import {
   calculateDewPoint, 
   getMoonPhase, 
   calculateReliability,
-  getWeatherLabel
+  getRealTimeWeatherCode 
 } from '../utils/weatherLogic';
 
-// Helper local que estava a App.jsx
 const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
 export function useWeatherCalculations(weatherData, unit, now) {
   
-  // 1. Ajustar l'hora a la zona horària de la ubicació
+  // 1. Ajustar l'hora
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     const timezone = weatherData.timezone || 'UTC';
@@ -45,10 +44,9 @@ export function useWeatherCalculations(weatherData, unit, now) {
          : 0;
   }, [weatherData, shiftedNow]);
 
-  // 4. Cota de neu (Freezing Level) amb correcció d'errors
+  // 4. Freezing Level
   const currentFreezingLevel = useMemo(() => {
       if(!weatherData || !weatherData.hourly) return null;
-      
       const key = Object.keys(weatherData.hourly).find(k => k.includes('freezing_level_height'));
       if (!key) return null;
       
@@ -62,45 +60,29 @@ export function useWeatherCalculations(weatherData, unit, now) {
       
       let val = weatherData.hourly[key] ? weatherData.hourly[key][currentIdx] : null;
       const currentTemp = weatherData.current.temperature_2m;
-
       const isSuspicious = val === null || val === undefined || (val < 100 && currentTemp > 4);
 
       if (isSuspicious) {
           const gfsVal = weatherData.hourlyComparison?.gfs?.[currentIdx]?.freezing_level_height;
           const iconVal = weatherData.hourlyComparison?.icon?.[currentIdx]?.freezing_level_height;
-          
-          if (gfsVal !== null && gfsVal !== undefined) val = gfsVal;
-          else if (iconVal !== null && iconVal !== undefined) val = iconVal;
+          if (gfsVal != null) val = gfsVal;
+          else if (iconVal != null) val = iconVal;
       }
-      
-      return (val !== null && val !== undefined) ? val : null;
+      return (val != null) ? val : null;
   }, [weatherData, shiftedNow]);
 
-  // 5. Codi de temps efectiu (corregint si plou ara mateix encara que el codi digui sol)
+  // 5. CODI EFECTIU (MODIFICAT: Passem també la probabilitat)
   const effectiveWeatherCode = useMemo(() => {
-    if (!weatherData) return 0;
+    if (!weatherData || !weatherData.current) return 0;
     
-    const currentCode = weatherData.current.weather_code;
-    const immediateRain = minutelyPreciseData && minutelyPreciseData.length > 0 
-        ? Math.max(...minutelyPreciseData.slice(0, 2)) 
-        : 0;
+    return getRealTimeWeatherCode(
+        weatherData.current, 
+        minutelyPreciseData,
+        currentRainProbability // <--- AFEGIT: Factor decisiu quan el radar falla
+    );
+  }, [weatherData, minutelyPreciseData, currentRainProbability]);
 
-    if (immediateRain > 0.2) {
-        if (immediateRain > 2) return 65; 
-        if (weatherData.current.temperature_2m < 1) return 71; 
-        return 61; 
-    }
-
-    const cloudCover = weatherData.current.cloud_cover;
-    const windSpeed = weatherData.current.wind_speed_10m;
-
-    if (windSpeed > 40 && cloudCover > 50 && currentCode < 50) return 3;
-    if (weatherData.current.relative_humidity_2m > 98 && cloudCover < 90 && currentCode < 40) return 45;
-    
-    return currentCode;
-  }, [weatherData, minutelyPreciseData]); // Eliminat shiftedNow de deps ja que minutelyPreciseData ja el té en compte
-
-  // 6. Color de fons dinàmic
+  // 6. Fons Dinàmic
   const currentBg = useMemo(() => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
 
@@ -115,12 +97,8 @@ export function useWeatherCalculations(weatherData, unit, now) {
         return "from-slate-900 to-indigo-950";
     };
 
-    const { is_day, weather_code, cloud_cover } = weatherData.current;
-    const code = effectiveWeatherCode || weather_code;
-
-    if (code === 45 || code === 48) return "from-slate-600 via-slate-500 to-stone-400";
-    if (cloud_cover > 95 && is_day && code < 50) return "from-slate-500 via-slate-400 to-slate-300"; 
-
+    const { is_day } = weatherData.current;
+    
     if (weatherData.daily && weatherData.daily.sunrise && weatherData.daily.sunset) {
         const sunrise = new Date(weatherData.daily.sunrise[0]).getTime();
         const sunset = new Date(weatherData.daily.sunset[0]).getTime();
@@ -136,12 +114,12 @@ export function useWeatherCalculations(weatherData, unit, now) {
         if (Math.abs(nowMs - sunset) < hourMs) return "from-blue-800 via-orange-700 to-yellow-500"; 
     }
     
-    return getDynamicBackground(code, is_day);
+    return getDynamicBackground(effectiveWeatherCode, is_day);
   }, [weatherData, shiftedNow, effectiveWeatherCode]);
 
   // 7. Tendència baromètrica
   const barometricTrend = useMemo(() => {
-      if(!weatherData || !weatherData.hourly || !weatherData.hourly.pressure_msl) return { trend: 'steady', val: 0 };
+      if(!weatherData?.hourly?.pressure_msl) return { trend: 'steady', val: 0 };
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
           const tMs = new Date(t).getTime();
@@ -156,9 +134,9 @@ export function useWeatherCalculations(weatherData, unit, now) {
       return { trend: 'steady', val: diff };
   }, [weatherData, shiftedNow]);
 
-  // 8. Altres mètriques (CAPE, DewPoint, Moon)
+  // 8. Altres mètriques
   const currentCape = useMemo(() => {
-      if(!weatherData || !weatherData.hourly || !weatherData.hourly.cape) return 0;
+      if(!weatherData?.hourly?.cape) return 0;
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
           const tMs = new Date(t).getTime();
@@ -168,12 +146,12 @@ export function useWeatherCalculations(weatherData, unit, now) {
   }, [weatherData, shiftedNow]);
 
   const currentDewPoint = useMemo(() => {
-    if(!weatherData || !weatherData.current) return 0;
+    if(!weatherData?.current) return 0;
     return calculateDewPoint(weatherData.current.temperature_2m, weatherData.current.relative_humidity_2m);
   }, [weatherData]);
 
   const reliability = useMemo(() => {
-    if (!weatherData || !weatherData.daily || !weatherData.dailyComparison) return null;
+    if (!weatherData?.daily || !weatherData?.dailyComparison) return null;
     return calculateReliability(
       weatherData.daily,
       weatherData.dailyComparison.gfs,
@@ -182,11 +160,11 @@ export function useWeatherCalculations(weatherData, unit, now) {
     );
   }, [weatherData]);
   
-  const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); // Utilitzem data real, no shifted
+  const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); 
 
-  // 9. Dades per a Gràfiques (transformació + conversions)
+  // 9. Dades per Gràfics
   const chartData = useMemo(() => {
-    if (!weatherData || !weatherData.hourly || !weatherData.hourly.time) return [];
+    if (!weatherData?.hourly?.time) return [];
     
     const nowTime = shiftedNow.getTime();
     const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
@@ -238,7 +216,7 @@ export function useWeatherCalculations(weatherData, unit, now) {
   }, [weatherData, unit, shiftedNow]);
 
   const comparisonData = useMemo(() => {
-      if (!weatherData || !weatherData.hourlyComparison) return null;
+      if (!weatherData?.hourlyComparison) return null;
       
       const nowTime = shiftedNow.getTime();
       const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
