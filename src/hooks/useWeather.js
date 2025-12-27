@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { normalizeModelData, generateAIPrediction, calculateReliability } from '../utils/weatherLogic';
 
-// CONFIGURACIÓ CACHE: 15 minuts (en mil·lisegons)
+// CONFIGURACIÓ CACHE: 15 minuts
 const CACHE_DURATION = 15 * 60 * 1000; 
 
 export function useWeather(lang, effectiveWeatherCode) {
@@ -15,28 +15,26 @@ export function useWeather(lang, effectiveWeatherCode) {
   const abortControllerRef = useRef(null);
 
   const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
-    // 1. Cancel·lar peticions anteriors en vol
+    // 1. Cancel·lar peticions anteriors
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // 2. CHECK CACHE: Abans de connectar, mirem si tenim dades recents
-    // Utilitzem 4 decimals per la clau per agrupar ubicacions molt properes
-    const cacheKey = `meteoai_cache_${lat.toFixed(4)}_${lon.toFixed(4)}`;
+    // 2. CHECK CACHE OPTIMITZAT
+    // 2 decimals = ~1.1km de precisió. Augmenta els encerts de cache en moviment.
+    const cacheKey = `meteoai_cache_${lat.toFixed(2)}_${lon.toFixed(2)}`;
     const cachedRaw = localStorage.getItem(cacheKey);
 
     if (cachedRaw) {
       try {
         const { timestamp, weather, aqi } = JSON.parse(cachedRaw);
-        // Si les dades tenen menys de 15 minuts, les fem servir
         if (Date.now() - timestamp < CACHE_DURATION) {
           console.log("⚡ Dades carregades des de Cache (sense API)");
-          // Actualitzem el nom per si l'usuari ha canviat d'idioma o context, però mantenim les dades
           setWeatherData({ ...weather, location: { name, country, latitude: lat, longitude: lon } });
           setAqiData(aqi);
           setLoading(false);
           setError(null);
-          return; // SORTIM AQUÍ, no fem fetch
+          return;
         }
       } catch (e) {
         console.warn("Error llegint cache, procedim a descarregar.", e);
@@ -44,7 +42,7 @@ export function useWeather(lang, effectiveWeatherCode) {
       }
     }
 
-    // 3. Si no hi ha cache vàlid, procedim amb la xarxa
+    // 3. XARXA
     const controller = new AbortController();
     abortControllerRef.current = controller;
     const signal = controller.signal;
@@ -72,7 +70,7 @@ export function useWeather(lang, effectiveWeatherCode) {
       const processedWeatherData = normalizeModelData(rawWeatherData);
       const finalWeatherData = { ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } };
 
-      // 4. GUARDAR A CACHE (amb timestamp actual)
+      // 4. GUARDAR A CACHE (Amb neteja automàtica)
       try {
         localStorage.setItem(cacheKey, JSON.stringify({
           timestamp: Date.now(),
@@ -80,8 +78,23 @@ export function useWeather(lang, effectiveWeatherCode) {
           aqi: newAqiData
         }));
       } catch (e) {
-        // Si el localStorage està ple, ho ignorem o netegem (per simplicitat aquí només avisem)
-        console.warn("No s'ha pogut guardar a cache (Quota Exceeded?)");
+        console.warn("Cache plena. Intentant fer espai...");
+        // Esborrem només les dades d'aquesta app per fer lloc
+        try {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('meteoai_cache_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            // Reintentem guardar
+            localStorage.setItem(cacheKey, JSON.stringify({
+                timestamp: Date.now(),
+                weather: finalWeatherData,
+                aqi: newAqiData
+            }));
+        } catch (err2) {
+            console.error("No s'ha pogut guardar ni fent neteja.");
+        }
       }
 
       setWeatherData(finalWeatherData);
@@ -98,14 +111,12 @@ export function useWeather(lang, effectiveWeatherCode) {
     }
   }, []);
 
-  // Cleanup en desmuntar
   useEffect(() => {
     return () => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, []);
 
-  // Geolocalització (sense canvis importants, però utilitza el nou fetch amb cache)
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setError("Geolocalització no suportada.");
@@ -117,7 +128,15 @@ export function useWeather(lang, effectiveWeatherCode) {
     const onPositionFound = async (position) => {
       const { latitude, longitude } = position.coords;
       try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`);
+        // AFEGIT USER-AGENT PER EVITAR BLOQUEIG
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`, {
+            headers: {
+                'User-Agent': 'MeteoToniAi/1.0'
+            }
+        });
+        
+        if(!response.ok) throw new Error("Error geocoding");
+        
         const data = await response.json();
         const address = data.address || {};
         const locationName = address.city || address.town || address.village || address.municipality || address.county || "Ubicació";
@@ -138,18 +157,18 @@ export function useWeather(lang, effectiveWeatherCode) {
 
     navigator.geolocation.getCurrentPosition(onPositionFound, (error) => {
         console.log("Mètode ràpid fallit, activant GPS d'alta precisió...", error);
-        navigator.geolocation.getCurrentPosition(onPositionFound, onPositionError, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+        navigator.geolocation.getCurrentPosition(onPositionFound, onPositionError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
       }, { enableHighAccuracy: false, timeout: 3000, maximumAge: 600000 }
     );
   }, [fetchWeatherByCoords, lang]);
 
-  // Generació de l'anàlisi AI
   useEffect(() => {
      if(weatherData) {
+         // Utilitzem Optional Chaining per seguretat extra
          const reliability = calculateReliability(
             weatherData.daily,
-            weatherData.dailyComparison.gfs,
-            weatherData.dailyComparison.icon,
+            weatherData.dailyComparison?.gfs,
+            weatherData.dailyComparison?.icon,
             0 
          );
 

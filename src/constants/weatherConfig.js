@@ -2,16 +2,21 @@
 
 export const WEATHER_THRESHOLDS = {
   PRECIPITATION: {
-    LIGHT: 0.1,    // AJUSTAT: Ara detecta plugim fi (>0.1mm) en lloc d'esperar a 0.2mm
-    HEAVY: 2.0,    // mm/h - Pluja forta
-    EXTREME: 10.0, // mm/h - Aiguat violent
-    INTENSIFY_FACTOR: 1.5, // Si la tendència puja un 50%
-    DECREASE_FACTOR: 0.5   // Si la tendència baixa un 50%
+    // LLINDARS ESTÀNDARD DE LA INDÚSTRIA
+    // < 0.25mm: "Traça" (No es considera pluja activa per a l'usuari)
+    // >= 0.25mm: Comença a ploure
+    LIGHT: 0.25,    
+    MODERATE: 1.5,  // Pluja normal
+    HEAVY: 4.0,     // Pluja forta
+    EXTREME: 10.0,  // Aiguat / Tempesta
+    
+    INTENSIFY_FACTOR: 1.5,
+    DECREASE_FACTOR: 0.5
   },
   WIND: {
-    MODERATE: 20,  // km/h
-    STRONG: 50,    // km/h - Avís groc
-    EXTREME: 80    // km/h - Avís taronja/vermell
+    MODERATE: 20,
+    STRONG: 50,    // Avís Groc
+    EXTREME: 80    // Avís Taronja/Vermell
   },
   TEMP: {
     FREEZING: 0,
@@ -22,12 +27,12 @@ export const WEATHER_THRESHOLDS = {
     EXTREME_HEAT: 35
   },
   HUMIDITY: {
-    HIGH: 65 // Per calcular xafogor
+    HIGH: 65
   },
   RELIABILITY: {
-    TEMP_DIFF_HIGH: 4,   // Diferència greu entre models
+    TEMP_DIFF_HIGH: 4,
     TEMP_DIFF_MED: 2.5,
-    RAIN_DIFF_HIGH: 40,  // Diferència greu en probabilitat
+    RAIN_DIFF_HIGH: 40,
     RAIN_DIFF_MED: 25
   },
   ALERTS: {

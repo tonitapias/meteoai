@@ -92,18 +92,29 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
     
     let code = current.weather_code;
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
-        ? Math.max(...minutelyPrecipData.slice(0, 2)) 
+        ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
         : 0;
     
-    // 1. RADAR DIU PLUJA (> 0.1mm) -> Forcem Pluja
+    // 1. RADAR DIU PLUJA (> 0.1mm)
     if (precipInstantanea >= PRECIPITATION.LIGHT) {
+        // CORRECCIÓ DE RANGS:
+        // > 2.0mm/15min (~8mm/h) -> Fort (65) o Violent (81)
+        // 0.7 - 2.0mm (~3-8mm/h) -> Moderat (63)
+        // < 0.7mm -> Feble (61) o Plugim (51)
+        
         if (precipInstantanea > PRECIPITATION.EXTREME) code = 81;
-        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 63;
-        else if (current.temperature_2m <= 1) code = 71;
-        // LLINDAR CLAU: >= 0.3 és Pluja (61) / < 0.3 és Plugim (51)
-        else code = precipInstantanea < 0.3 ? 51 : 61; 
+        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; // Abans era 63, ara 65 (forta)
+        else if (precipInstantanea >= 0.7) code = 63; // NOU: Rang intermedi per pluja moderada
+        else if (current.temperature_2m <= 1) code = 71; // Neu
+        else {
+            // Respectem si ja ve codificat com a pluja
+            const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+            if (!isRainCode) {
+                code = precipInstantanea < 0.3 ? 51 : 61; 
+            }
+        }
     } 
-    // 2. RADAR DIU 0 PERÒ...
+    // 2. RADAR DIU 0 PERÒ MODEL DIU PLUJA
     else {
         if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
             // Mantenim
@@ -116,9 +127,10 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
     return code;
 };
 
-// --- GENERACIÓ DE TEXT IA (CORREGIT) ---
+// --- GENERACIÓ DE TEXT IA ---
 export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', effectiveCode = null, reliability = null) => {
-    const tr = TRANSLATIONS[language];
+    const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
+    if (!tr) return { text: "", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
     
     const code = effectiveCode !== null ? effectiveCode : current.weather_code;
     
@@ -160,31 +172,29 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         }
     }
 
-    // 2. TEXT DE PREVISIÓ AMB 3 NIVELLS D'INTENSITAT
+    // 2. TEXT DE PREVISIÓ AMB 3 NIVELLS D'INTENSITAT (CORREGIT)
     const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
 
     if (isRaining) {
-        // NIVELL 1: FORT
-        if (precipInstantanea > PRECIPITATION.HEAVY || code === 63 || code === 65 || code >= 80) {
+        // NIVELL 1: FORT (Codi 65, 67, 82)
+        if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) {
              summaryParts.push(tr.aiRainHeavy || "Cau un bon xàfec."); 
         } 
-        // NIVELL 2: MODERAT (Aquí estava la discrepància)
-        // Si el codi és 61 (pluja), 53 (plugim moderat) o precip > 0.3
-        else if (precipInstantanea >= 0.3 || code === 61 || code === 53 || code === 55) {
+        // NIVELL 2: MODERAT (Codi 63, 81, 53, 55)
+        // Hem pujat el llindar a 0.7 (aprox 2.8mm/h) i hem tret el codi 61 (feble) d'aquí.
+        else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) {
              summaryParts.push(tr.aiRainMod || "Està plovent."); 
         }
-        // NIVELL 3: FEBLE (Default)
+        // NIVELL 3: FEBLE (Codi 61, 51, 80)
         else {
              summaryParts.push(tr.aiRainLight || "Està plovent feblement.");
         }
 
-        // Tendència
         if (precipInstantanea > 0) {
             if (precipNext15 < PRECIPITATION.LIGHT) summaryParts.push(" " + (tr.aiRainStopping || "Pararà aviat."));
             else if (precipNext15 > precipInstantanea * PRECIPITATION.INTENSIFY_FACTOR) summaryParts.push(" " + (tr.aiRainMore || "S'intensificarà."));
         }
     } else {
-        // ... (resta igual) ...
         if (isDay) summaryParts.push(currentHour < 12 ? tr.aiIntroMorning : tr.aiIntroAfternoon);
         else summaryParts.push(tr.aiIntroNight);
 
@@ -199,8 +209,8 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     }
 
     // 3. VENT I TEMPERATURA
-    if (windSpeed > WIND.MODERATE) summaryParts.push(tr.aiWindMod);
     if (windSpeed > WIND.STRONG) summaryParts.push(tr.aiWindStrong); 
+    else if (windSpeed > WIND.MODERATE) summaryParts.push(tr.aiWindMod);
     
     if (feelsLike <= TEMP.FREEZING) summaryParts.push(tr.aiTempFreezing);
     else if (feelsLike > TEMP.FREEZING && feelsLike < TEMP.COLD) summaryParts.push(tr.aiTempCold);
@@ -260,15 +270,18 @@ export const getMoonPhase = (date) => {
 
 export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 0) => {
   if (!dailyGFS || !dailyICON || !dailyBest) return null;
-  const t1 = dailyBest.temperature_2m_max[dayIndex];
-  const t2 = dailyGFS.temperature_2m_max[dayIndex];
-  const t3 = dailyICON.temperature_2m_max[dayIndex];
+  const t1 = dailyBest.temperature_2m_max?.[dayIndex];
+  const t2 = dailyGFS.temperature_2m_max?.[dayIndex];
+  const t3 = dailyICON.temperature_2m_max?.[dayIndex];
   const getRain = (source) => source?.precipitation_probability_max?.[dayIndex] ?? 0;
   const r1 = getRain(dailyBest);
   const r2 = getRain(dailyGFS);
   const r3 = getRain(dailyICON);
-  const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null);
+  const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null && !isNaN(v));
   const rains = [r1, r2, r3];
+  
+  if (temps.length < 2) return { level: 'high', type: 'ok', value: 0 };
+
   const diffTemp = Math.max(...temps) - Math.min(...temps);
   const diffRain = Math.max(...rains) - Math.min(...rains);
   let level = 'high'; let type = 'ok'; let value = 0;
@@ -281,7 +294,7 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
 };
 
 export const getWeatherLabel = (current, language) => {
-  const tr = TRANSLATIONS[language];
+  const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
   if (!tr || !current) return "";
   const code = Number(current.weather_code);
   return tr.wmo[code] || "---";
