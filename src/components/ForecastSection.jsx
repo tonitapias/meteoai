@@ -1,12 +1,13 @@
+// src/components/ForecastSection.jsx
 import React from 'react';
-import { Clock, Calendar, TrendingUp, GitGraph, Umbrella } from 'lucide-react';
+import { Clock, Calendar, TrendingUp, Umbrella } from 'lucide-react';
 import { HourlyForecastChart } from './WeatherCharts';
 import { TempRangeBar, MoonPhaseIcon } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
-import { getMoonPhase } from '../utils/weatherLogic'; // Assegura't que aquesta funció s'importa o es passa
+import { getMoonPhase } from '../utils/weatherLogic';
 import { TRANSLATIONS } from '../constants/translations';
 
-// Funció auxiliar per formatar dates (es podria moure a utils)
+// Funció auxiliar per formatar dates
 const formatDate = (dateString, lang) => {
     const locales = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
     const date = dateString.includes('T') ? new Date(dateString) : new Date(`${dateString}T00:00:00`);
@@ -40,9 +41,10 @@ export default function ForecastSection({
             <h3 className="font-bold text-white flex items-center gap-2 mb-4">
                 <Clock className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.hourlyEvolution} (24h)
             </h3>
-            <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+            {/* UX UPGRADE: Afegit snap-x per millor scroll en mòbil */}
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
                 {chartData.filter((_, i) => i % 3 === 0).map((h) => (
-                    <div key={h.time} className="flex flex-col items-center min-w-[3rem]">
+                    <div key={h.time} className="flex flex-col items-center min-w-[3rem] snap-start">
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
                         <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity, h.precip)}</div>
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
@@ -69,12 +71,10 @@ export default function ForecastSection({
                     const snowSum = dailyData.snowfall_sum[i];
                     const listMoonPhase = getMoonPhase(new Date(day));
                     
-                    // Comprovació de divergència (només si tenim dades de comparació al dailyData, que pot no venir sempre complet en aquesta versió simplificada, però ho mantenim per coherència)
-                    // Nota: Per fer això bé, caldria passar `comparisonData` per dies, aquí ho simplifiquem
-                    
                     return (
                         <button 
                         key={day}
+                        type="button"
                         onClick={() => onDayClick(i)}
                         className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group touch-manipulation active:bg-white/10"
                         >
@@ -125,7 +125,7 @@ export default function ForecastSection({
             </div>
         </div>
 
-        {/* Gràfica de tendència (només si està habilitat el mode expert o es vol mostrar sempre al final) */}
+        {/* Gràfica de tendència */}
         {comparisonEnabled && (
              <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">

@@ -1,7 +1,8 @@
+// src/components/WeatherWidgets.jsx
 import React from 'react';
 import { 
   Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
-  Thermometer, Droplets, Zap, Gauge, Mountain
+  Thermometer, Droplets, Zap, Mountain
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants/translations';
 
@@ -101,7 +102,10 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
 };
 
 export const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) => {
-  const uniqueId = React.useId ? React.useId().replace(/:/g, '') : Math.random().toString(36).substr(2, 9);
+  // CORRECCIÓ: Ús directe de useId (React 18/19 safe) i neteja de caràcters per IDs de SVG
+  const rawId = React.useId();
+  const uniqueId = rawId ? rawId.replace(/:/g, '') : Math.random().toString(36).substr(2, 9);
+  
   const p = phase % 1;
   const r = 9; const cx = 12; const cy = 12; const theta = p * 2 * Math.PI;
   const rx = Math.abs(r * Math.cos(theta));
@@ -370,7 +374,6 @@ export const CapeWidget = ({ cape, lang = 'ca' }) => {
     )
 };
 
-// --- GINY MILLORAT DE COTA DE NEU (REALISME) ---
 export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
   if (freezingLevel === null || freezingLevel === undefined) return null;
 
@@ -417,7 +420,7 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
          </svg>
       </div>
       
-      {/* Barra visual que indica "com de baixa està la neu" */}
+      {/* Barra visual */}
       <div className="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex z-10 relative">
           <div 
             className={`h-full transition-all duration-1000 ${barColor}`} 
@@ -425,7 +428,6 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
           ></div>
       </div>
       
-      {/* Etiqueta descriptiva opcional */}
       <div className="mt-1 text-[9px] text-slate-500 text-right z-10">
          {snowLevel < 1000 ? (lang === 'ca' ? "Cota baixa" : "Low level") : 
           snowLevel > 2500 ? (lang === 'ca' ? "Alta muntanya" : "High mountain") : ""}

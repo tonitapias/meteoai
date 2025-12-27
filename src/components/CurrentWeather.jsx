@@ -1,3 +1,4 @@
+// src/components/CurrentWeather.jsx
 import React from 'react';
 import { Star, Map, MapPin, Clock } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
@@ -43,20 +44,24 @@ export default function CurrentWeather({
   const currentRainProb = data.hourly?.precipitation_probability?.[0] || 0;
   const currentPrecip15 = data.minutely_15?.precipitation?.slice(0, 4).reduce((a, b) => a + (b || 0), 0) || 0;
 
-  // AQUI ÉS ON HEM TRET EL CSS DEL CONTENIDOR I EL BLOB DE FONS
   return (
     <div className="flex flex-col gap-6 w-full lg:w-auto">
             {/* Capçalera: Nom i Botons */}
             <div className="flex flex-col">
                 <div className="flex items-center gap-3">
                         <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{location.name}</h2>
-                        <button onClick={onToggleFavorite} className="hover:scale-110 transition-transform p-1 active:scale-90">
+                        <button 
+                          onClick={onToggleFavorite} 
+                          className="hover:scale-110 transition-transform p-1 active:scale-90"
+                          aria-label={isFavorite ? "Treure de preferits" : "Afegir a preferits"}
+                        >
                             <Star className={`w-6 h-6 transition-colors ${isFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600 hover:text-amber-300'}`} strokeWidth={2.5} />
                         </button>
                         
                         <button 
                             onClick={onShowRadar}
                             className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
+                            aria-label="Obrir mapa de radar"
                         >
                             <Map className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" strokeWidth={2.5} />
                             <span className="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">RADAR</span>
