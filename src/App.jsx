@@ -13,6 +13,7 @@ import ExpertWidgets from './components/ExpertWidgets';
 import WelcomeScreen from './components/WelcomeScreen';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import ErrorBanner from './components/ErrorBanner';
+import ErrorBoundary from './components/ErrorBoundary'; // <--- NOU COMPONENT DE PROTECCIÓ
 
 // Hooks
 import { usePreferences } from './hooks/usePreferences';
@@ -35,7 +36,7 @@ export default function MeteoIA() {
     fetchWeatherByCoords, handleGetCurrentLocation 
   } = useWeather(lang);
 
-  // Rellotge
+  // Rellotge (Actualització cada minut)
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); 
     return () => clearInterval(timer);
@@ -50,7 +51,7 @@ export default function MeteoIA() {
     chartData,
     comparisonData,
     weeklyExtremes,
-    currentFreezingLevel // <--- RECUPEREM LA DADA AQUÍ
+    currentFreezingLevel
   } = useWeatherCalculations(weatherData, unit, now);
 
   // 3. IA
@@ -120,12 +121,15 @@ export default function MeteoIA() {
                             />
                         </div>
                         <div className="w-full lg:w-96 shrink-0 lg:max-w-md h-full">
-                            <AIInsights 
-                                analysis={aiAnalysis} 
-                                minutelyData={minutelyPreciseData} 
-                                currentPrecip={weatherData.current.precipitation}
-                                lang={lang}
-                            />
+                             {/* Protegim la IA per si falla l'anàlisi */}
+                            <ErrorBoundary>
+                                <AIInsights 
+                                    analysis={aiAnalysis} 
+                                    minutelyData={minutelyPreciseData} 
+                                    currentPrecip={weatherData.current.precipitation}
+                                    lang={lang}
+                                />
+                            </ErrorBoundary>
                         </div>
                     </div>
                 </div>
@@ -137,18 +141,38 @@ export default function MeteoIA() {
                         
                         {/* Columna Esquerra: Widgets compactes */}
                         <div className="lg:col-span-1 h-fit">
-                            <ExpertWidgets 
-                                weatherData={weatherData} 
-                                aqiData={aqiData}
-                                lang={lang} 
-                                unit={unit}
-                                shiftedNow={shiftedNow}
-                                freezingLevel={currentFreezingLevel} // <--- PASSEM LA DADA AQUÍ
-                            />
+                            <ErrorBoundary>
+                                <ExpertWidgets 
+                                    weatherData={weatherData} 
+                                    aqiData={aqiData}
+                                    lang={lang} 
+                                    unit={unit}
+                                    shiftedNow={shiftedNow}
+                                    freezingLevel={currentFreezingLevel} 
+                                />
+                            </ErrorBoundary>
                         </div>
 
                         {/* Columna Dreta: Previsions i Gràfics */}
                         <div className="lg:col-span-2 space-y-6">
+                            <ErrorBoundary>
+                                <ForecastSection 
+                                    chartData={chartData}
+                                    comparisonData={comparisonData}
+                                    dailyData={weatherData.daily}
+                                    weeklyExtremes={weeklyExtremes}
+                                    unit={unit}
+                                    lang={lang}
+                                    onDayClick={setSelectedDayIndex}
+                                    comparisonEnabled={true}
+                                />
+                            </ErrorBoundary>
+                        </div>
+                    </div>
+                ) : (
+                    // MODE BÀSIC: Només Previsions en amplada completa
+                    <div className="space-y-6">
+                        <ErrorBoundary>
                             <ForecastSection 
                                 chartData={chartData}
                                 comparisonData={comparisonData}
@@ -157,23 +181,9 @@ export default function MeteoIA() {
                                 unit={unit}
                                 lang={lang}
                                 onDayClick={setSelectedDayIndex}
-                                comparisonEnabled={true}
+                                comparisonEnabled={false}
                             />
-                        </div>
-                    </div>
-                ) : (
-                    // MODE BÀSIC: Només Previsions en amplada completa
-                    <div className="space-y-6">
-                        <ForecastSection 
-                            chartData={chartData}
-                            comparisonData={comparisonData}
-                            dailyData={weatherData.daily}
-                            weeklyExtremes={weeklyExtremes}
-                            unit={unit}
-                            lang={lang}
-                            onDayClick={setSelectedDayIndex}
-                            comparisonEnabled={false}
-                        />
+                        </ErrorBoundary>
                     </div>
                 )}
             </div>

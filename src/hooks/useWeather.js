@@ -13,6 +13,7 @@ export function useWeather(lang, effectiveWeatherCode) {
   const [error, setError] = useState(null);
 
   const abortControllerRef = useRef(null);
+  const lastGeocodeRequest = useRef(0); // CONTROL DE RATE LIMIT
 
   const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
     // 1. Cancel·lar peticions anteriors
@@ -21,7 +22,6 @@ export function useWeather(lang, effectiveWeatherCode) {
     }
 
     // 2. CHECK CACHE OPTIMITZAT
-    // 2 decimals = ~1.1km de precisió. Augmenta els encerts de cache en moviment.
     const cacheKey = `meteoai_cache_${lat.toFixed(2)}_${lon.toFixed(2)}`;
     const cachedRaw = localStorage.getItem(cacheKey);
 
@@ -70,7 +70,7 @@ export function useWeather(lang, effectiveWeatherCode) {
       const processedWeatherData = normalizeModelData(rawWeatherData);
       const finalWeatherData = { ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } };
 
-      // 4. GUARDAR A CACHE (Amb neteja automàtica)
+      // 4. GUARDAR A CACHE
       try {
         localStorage.setItem(cacheKey, JSON.stringify({
           timestamp: Date.now(),
@@ -79,14 +79,12 @@ export function useWeather(lang, effectiveWeatherCode) {
         }));
       } catch (e) {
         console.warn("Cache plena. Intentant fer espai...");
-        // Esborrem només les dades d'aquesta app per fer lloc
         try {
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('meteoai_cache_')) {
                     localStorage.removeItem(key);
                 }
             });
-            // Reintentem guardar
             localStorage.setItem(cacheKey, JSON.stringify({
                 timestamp: Date.now(),
                 weather: finalWeatherData,
@@ -122,19 +120,27 @@ export function useWeather(lang, effectiveWeatherCode) {
       setError("Geolocalització no suportada.");
       return;
     }
+
+    // --- PROTECCIÓ RATE LIMIT ---
+    const now = Date.now();
+    if (now - lastGeocodeRequest.current < 2000) { 
+        console.log("Peticions massa freqüents a Nominatim. Esperant...");
+        return; 
+    }
+    lastGeocodeRequest.current = now;
     
     setLoading(true);
 
     const onPositionFound = async (position) => {
       const { latitude, longitude } = position.coords;
       try {
-        // AFEGIT USER-AGENT PER EVITAR BLOQUEIG
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`, {
             headers: {
                 'User-Agent': 'MeteoToniAi/1.0'
             }
         });
         
+        if (response.status === 429) throw new Error("Massa peticions. Prova-ho en uns segons.");
         if(!response.ok) throw new Error("Error geocoding");
         
         const data = await response.json();
@@ -145,7 +151,8 @@ export function useWeather(lang, effectiveWeatherCode) {
         fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
       } catch (err) {
         console.error("Error reverse geocoding:", err);
-        fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada");
+        // Fallback a coordenades si falla el nom
+        fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada", "");
       }
     };
 
@@ -164,7 +171,6 @@ export function useWeather(lang, effectiveWeatherCode) {
 
   useEffect(() => {
      if(weatherData) {
-         // Utilitzem Optional Chaining per seguretat extra
          const reliability = calculateReliability(
             weatherData.daily,
             weatherData.dailyComparison?.gfs,

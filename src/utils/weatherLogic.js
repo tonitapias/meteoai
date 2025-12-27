@@ -20,6 +20,7 @@ export const calculateDewPoint = (T, RH) => {
   return (b * alpha) / (a - alpha);
 };
 
+// --- FUNCIÓ MODIFICADA: NORMALITZACIÓ SEGURA ---
 export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      
@@ -57,6 +58,8 @@ export const normalizeModelData = (data) => {
      });
 
      const timeLength = data.hourly?.time?.length || 0;
+     
+     // 1. Inicialització segura d'arrays
      result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
      result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
 
@@ -74,7 +77,9 @@ export const normalizeModelData = (data) => {
 
         if (model && cleanKey) {
             const values = data.hourly[key];
+            // 2. Protecció contra desbordament d'índexs
             const safeLength = Math.min(values.length, timeLength);
+            
             for (let i = 0; i < safeLength; i++) {
                 if (result.hourlyComparison[model][i]) {
                     result.hourlyComparison[model][i][cleanKey] = values[i];
@@ -86,7 +91,7 @@ export const normalizeModelData = (data) => {
      return { ...data, ...result };
 };
 
-// --- FUNCIÓ PRINCIPAL DE COHERÈNCIA ---
+// --- FUNCIÓ MODIFICADA: PRIORITAT NEU ---
 export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) => {
     if (!current) return 0;
     
@@ -94,20 +99,31 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
         : 0;
+    const temp = current.temperature_2m;
+
+    // --- PRIORITAT NEU ---
+    // Si la temperatura és <= 1ºC, assumim neu si hi ha precipitació
+    if (temp <= 1) {
+        if (precipInstantanea > 0) {
+            // Reinterpretem la intensitat
+            if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; // Neu forta
+            else if (precipInstantanea >= 0.5) code = 73; // Neu moderada
+            else code = 71; // Neu feble
+            return code; 
+        }
+        // Si el model ja deia neu, mantenim
+        if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+            return code;
+        }
+    }
     
-    // 1. RADAR DIU PLUJA (> 0.1mm)
+    // 1. RADAR DIU PLUJA (> 0.25mm) I NO ÉS NEU
     if (precipInstantanea >= PRECIPITATION.LIGHT) {
-        // CORRECCIÓ DE RANGS:
-        // > 2.0mm/15min (~8mm/h) -> Fort (65) o Violent (81)
-        // 0.7 - 2.0mm (~3-8mm/h) -> Moderat (63)
-        // < 0.7mm -> Feble (61) o Plugim (51)
-        
-        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81;
-        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; // Abans era 63, ara 65 (forta)
-        else if (precipInstantanea >= 0.7) code = 63; // NOU: Rang intermedi per pluja moderada
-        else if (current.temperature_2m <= 1) code = 71; // Neu
+        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; // Violent
+        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; // Forta
+        else if (precipInstantanea >= 0.7) code = 63; // Moderada
+        else if (temp <= 1) code = 71; // Seguretat extra per neu
         else {
-            // Respectem si ja ve codificat com a pluja
             const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
             if (!isRainCode) {
                 code = precipInstantanea < 0.3 ? 51 : 61; 
@@ -127,7 +143,7 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
     return code;
 };
 
-// --- GENERACIÓ DE TEXT IA ---
+// --- GENERACIÓ DE TEXT IA (Sense canvis importants) ---
 export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', effectiveCode = null, reliability = null) => {
     const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
     if (!tr) return { text: "", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
@@ -172,20 +188,15 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         }
     }
 
-    // 2. TEXT DE PREVISIÓ AMB 3 NIVELLS D'INTENSITAT (CORREGIT)
     const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
 
     if (isRaining) {
-        // NIVELL 1: FORT (Codi 65, 67, 82)
         if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) {
              summaryParts.push(tr.aiRainHeavy || "Cau un bon xàfec."); 
         } 
-        // NIVELL 2: MODERAT (Codi 63, 81, 53, 55)
-        // Hem pujat el llindar a 0.7 (aprox 2.8mm/h) i hem tret el codi 61 (feble) d'aquí.
         else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) {
              summaryParts.push(tr.aiRainMod || "Està plovent."); 
         }
-        // NIVELL 3: FEBLE (Codi 61, 51, 80)
         else {
              summaryParts.push(tr.aiRainLight || "Està plovent feblement.");
         }
@@ -208,7 +219,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         else if (current.cloud_cover < 30 && code <= 2) summaryParts.push(tr.aiRainNone);
     }
 
-    // 3. VENT I TEMPERATURA
     if (windSpeed > WIND.STRONG) summaryParts.push(tr.aiWindStrong); 
     else if (windSpeed > WIND.MODERATE) summaryParts.push(tr.aiWindMod);
     
@@ -227,7 +237,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        summaryParts.push(heatText);
     }
 
-    // 4. ALERTES I TIPS
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
