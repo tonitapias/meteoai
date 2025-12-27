@@ -1,24 +1,22 @@
-// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/meteoai/', // Assegura't que coincideix amb el nom del teu repo de GitHub
+  base: '/meteoai/', // Nom del repositori
   build: {
     outDir: 'dist',
-    sourcemap: false, // Desactiva els mapes en producció per estalviar espai
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
+          // Només separem el que realment tens instal·lat al package.json
           vendor: ['react', 'react-dom'],
-          charts: ['recharts'],
-          icons: ['lucide-react'],
-          ui: ['framer-motion', 'clsx', 'tailwind-merge']
+          icons: ['lucide-react']
         }
       }
     },
-    chunkSizeWarningLimit: 1000 // Puja el límit d'avís a 1MB per evitar warnings innecessaris
+    chunkSizeWarningLimit: 1000
   },
   server: {
     open: true,
