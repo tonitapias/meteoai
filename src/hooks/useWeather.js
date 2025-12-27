@@ -1,19 +1,23 @@
 // src/hooks/useWeather.js
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { normalizeModelData, generateAIPrediction, calculateReliability } from '../utils/weatherLogic';
+import { normalizeModelData, generateAIPrediction, calculateReliability, getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { TRANSLATIONS } from '../constants/translations';
 
 // CONFIGURACIÓ CACHE: 15 minuts
 const CACHE_DURATION = 15 * 60 * 1000; 
 
-export function useWeather(lang, effectiveWeatherCode) {
+export function useWeather(lang, unit = 'C') {
   const [weatherData, setWeatherData] = useState(null);
   const [aqiData, setAqiData] = useState(null);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estat per a notificacions (Toasts)
+  const [notification, setNotification] = useState(null);
 
   const abortControllerRef = useRef(null);
-  const lastGeocodeRequest = useRef(0); // CONTROL DE RATE LIMIT
+  const lastGeocodeRequest = useRef(0);
 
   const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
     // 1. Cancel·lar peticions anteriors
@@ -52,7 +56,7 @@ export function useWeather(lang, effectiveWeatherCode) {
     setAiAnalysis(null);
     
     try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,wind_gusts_10m,precipitation,visibility&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`;
 
       const weatherRes = await fetch(weatherUrl, { signal });
@@ -70,28 +74,45 @@ export function useWeather(lang, effectiveWeatherCode) {
       const processedWeatherData = normalizeModelData(rawWeatherData);
       const finalWeatherData = { ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } };
 
-      // 4. GUARDAR A CACHE
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify({
+      // 4. GUARDAR A CACHE (SMART LRU - Least Recently Used)
+      const saveData = JSON.stringify({
           timestamp: Date.now(),
           weather: finalWeatherData,
           aqi: newAqiData
-        }));
+      });
+
+      try {
+        localStorage.setItem(cacheKey, saveData);
       } catch (e) {
-        console.warn("Cache plena. Intentant fer espai...");
+        console.warn("Cache plena. Executant neteja intel·ligent (LRU)...");
         try {
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('meteoai_cache_')) {
-                    localStorage.removeItem(key);
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('meteoai_cache_')) {
+                    keys.push(key);
                 }
-            });
-            localStorage.setItem(cacheKey, JSON.stringify({
-                timestamp: Date.now(),
-                weather: finalWeatherData,
-                aqi: newAqiData
-            }));
+            }
+            // Ordenem per timestamp (els més antics primer)
+            const items = keys.map(key => {
+                try {
+                    const item = JSON.parse(localStorage.getItem(key));
+                    return { key, timestamp: item?.timestamp || 0 };
+                } catch (e) { return { key, timestamp: 0 }; }
+            }).sort((a, b) => a.timestamp - b.timestamp);
+
+            // Esborrem d'un en un fins que hi càpiga el nou
+            while (items.length > 0) {
+                const toRemove = items.shift();
+                localStorage.removeItem(toRemove.key);
+                try {
+                    localStorage.setItem(cacheKey, saveData);
+                    console.log(`Cache alliberada. Esborrat: ${toRemove.key}`);
+                    break; 
+                } catch (e) {}
+            }
         } catch (err2) {
-            console.error("No s'ha pogut guardar ni fent neteja.");
+            console.error("Error LRU final.");
         }
       }
 
@@ -116,15 +137,18 @@ export function useWeather(lang, effectiveWeatherCode) {
   }, []);
 
   const handleGetCurrentLocation = useCallback(() => {
+    // IMPORTACIÓ CORRECTA DE TRADUCCIONS
+    const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+    
     if (!navigator.geolocation) {
       setError("Geolocalització no suportada.");
       return;
     }
 
-    // --- PROTECCIÓ RATE LIMIT ---
     const now = Date.now();
+    // Protecció Rate Limit amb notificació visual (Clau notifWait)
     if (now - lastGeocodeRequest.current < 2000) { 
-        console.log("Peticions massa freqüents a Nominatim. Esperant...");
+        setNotification({ type: 'info', msg: t.notifWait || "Espera..." });
         return; 
     }
     lastGeocodeRequest.current = now;
@@ -135,9 +159,7 @@ export function useWeather(lang, effectiveWeatherCode) {
       const { latitude, longitude } = position.coords;
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=12&accept-language=${lang}`, {
-            headers: {
-                'User-Agent': 'MeteoToniAi/1.0'
-            }
+            headers: { 'User-Agent': 'MeteoToniAi/1.0' }
         });
         
         if (response.status === 429) throw new Error("Massa peticions. Prova-ho en uns segons.");
@@ -149,16 +171,17 @@ export function useWeather(lang, effectiveWeatherCode) {
         const locationCountry = address.country || "";
         
         fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
+        setNotification({ type: 'success', msg: t.notifLocationSuccess || "Fet." });
+
       } catch (err) {
         console.error("Error reverse geocoding:", err);
-        // Fallback a coordenades si falla el nom
         fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada", "");
       }
     };
 
     const onPositionError = (err) => {
       console.warn("Error geolocalització final:", err);
-      setError("No s'ha pogut obtenir la ubicació. Verifica els permisos.");
+      setNotification({ type: 'error', msg: t.notifLocationError || "Error GPS" });
       setLoading(false);
     };
 
@@ -171,6 +194,18 @@ export function useWeather(lang, effectiveWeatherCode) {
 
   useEffect(() => {
      if(weatherData) {
+         const currentHour = new Date().getHours();
+         const freezingLevel = weatherData.hourly?.freezing_level_height?.[currentHour] || 2500;
+         const elevation = weatherData.elevation || 0;
+
+         const effectiveWeatherCode = getRealTimeWeatherCode(
+             weatherData.current, 
+             weatherData.minutely_15?.precipitation,
+             0, 
+             freezingLevel,
+             elevation
+         );
+
          const reliability = calculateReliability(
             weatherData.daily,
             weatherData.dailyComparison?.gfs,
@@ -185,11 +220,12 @@ export function useWeather(lang, effectiveWeatherCode) {
              aqiData?.current?.european_aqi || 0, 
              lang, 
              effectiveWeatherCode,
-             reliability
+             reliability,
+             unit 
          );
          setAiAnalysis(analysis);
      }
-  }, [lang, weatherData, aqiData, effectiveWeatherCode]);
+  }, [lang, weatherData, aqiData, unit]);
 
   return {
     weatherData,
@@ -197,6 +233,8 @@ export function useWeather(lang, effectiveWeatherCode) {
     aiAnalysis,
     loading,
     error,
+    notification,      
+    setNotification,   
     fetchWeatherByCoords,
     handleGetCurrentLocation
   };

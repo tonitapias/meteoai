@@ -4,8 +4,6 @@ import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
 import DayDetailModal from './components/DayDetailModal';
 import RadarModal from './components/RadarModal';
-
-// Components
 import CurrentWeather from './components/CurrentWeather';
 import AIInsights from './components/AIInsights';
 import ForecastSection from './components/ForecastSection';
@@ -13,17 +11,15 @@ import ExpertWidgets from './components/ExpertWidgets';
 import WelcomeScreen from './components/WelcomeScreen';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import ErrorBanner from './components/ErrorBanner';
-import ErrorBoundary from './components/ErrorBoundary'; // <--- NOU COMPONENT DE PROTECCIÓ
+import ErrorBoundary from './components/ErrorBoundary';
+import Toast from './components/Toast'; 
 
-// Hooks
 import { usePreferences } from './hooks/usePreferences';
 import { useWeather } from './hooks/useWeather';
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
-import { useAIAnalysis } from './hooks/useAIAnalysis';
 import { TRANSLATIONS } from './constants/translations';
 
 export default function MeteoIA() {
-  // 1. Estat Global i Preferències
   const [now, setNow] = useState(new Date());
   
   const { 
@@ -32,17 +28,15 @@ export default function MeteoIA() {
   } = usePreferences();
 
   const { 
-    weatherData, aqiData, loading, error, 
+    weatherData, aqiData, aiAnalysis, loading, error, notification, setNotification,
     fetchWeatherByCoords, handleGetCurrentLocation 
-  } = useWeather(lang);
+  } = useWeather(lang, unit);
 
-  // Rellotge (Actualització cada minut)
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Càlculs
   const {
     shiftedNow,
     minutelyPreciseData,
@@ -54,10 +48,6 @@ export default function MeteoIA() {
     currentFreezingLevel
   } = useWeatherCalculations(weatherData, unit, now);
 
-  // 3. IA
-  const aiAnalysis = useAIAnalysis(weatherData, aqiData, effectiveWeatherCode, lang);
-
-  // 4. Events UI
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
   const [showRadar, setShowRadar] = useState(false);
 
@@ -77,6 +67,13 @@ export default function MeteoIA() {
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
       
+      {/* Notificacions Flotants (Toasts) */}
+      <Toast 
+         message={notification?.msg} 
+         type={notification?.type} 
+         onClose={() => setNotification(null)} 
+      />
+
       {weatherData && <WeatherParticles code={effectiveWeatherCode} />}
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10 flex flex-col min-h-[calc(100vh-3rem)]">
@@ -103,7 +100,6 @@ export default function MeteoIA() {
             {weatherData && (
             <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6">
                 
-                {/* 1. SECCIÓ SUPERIOR (Targeta Temps + IA) */}
                 <div className="bg-slate-900/40 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md shadow-2xl group">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000 animate-pulse"></div>
                     
@@ -121,7 +117,6 @@ export default function MeteoIA() {
                             />
                         </div>
                         <div className="w-full lg:w-96 shrink-0 lg:max-w-md h-full">
-                             {/* Protegim la IA per si falla l'anàlisi */}
                             <ErrorBoundary>
                                 <AIInsights 
                                     analysis={aiAnalysis} 
@@ -134,12 +129,8 @@ export default function MeteoIA() {
                     </div>
                 </div>
 
-                {/* 2. LAYOUT CONDICIONAL (EXPERT vs BÀSIC) */}
                 {viewMode === 'expert' ? (
-                    // MODE EXPERT: Graella de 3 columnes (1 Widgets : 2 Gràfics)
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* Columna Esquerra: Widgets compactes */}
                         <div className="lg:col-span-1 h-fit">
                             <ErrorBoundary>
                                 <ExpertWidgets 
@@ -153,7 +144,6 @@ export default function MeteoIA() {
                             </ErrorBoundary>
                         </div>
 
-                        {/* Columna Dreta: Previsions i Gràfics */}
                         <div className="lg:col-span-2 space-y-6">
                             <ErrorBoundary>
                                 <ForecastSection 
@@ -170,7 +160,6 @@ export default function MeteoIA() {
                         </div>
                     </div>
                 ) : (
-                    // MODE BÀSIC: Només Previsions en amplada completa
                     <div className="space-y-6">
                         <ErrorBoundary>
                             <ForecastSection 

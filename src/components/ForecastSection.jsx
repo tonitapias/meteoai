@@ -46,7 +46,8 @@ export default function ForecastSection({
                 {chartData.filter((_, i) => i % 3 === 0).map((h) => (
                     <div key={h.time} className="flex flex-col items-center min-w-[3rem] snap-start">
                         <span className="text-xs text-slate-400">{new Date(h.time).getHours()}h</span>
-                        <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind, h.humidity, h.precip)}</div>
+                        <div className="my-1 scale-75 filter drop-shadow-sm">{getWeatherIcon(h.code, "w-8 h-8", h.isDay, h.rain, h.wind)} </div>   
+
                         <span className="text-sm font-bold">{Math.round(h.temp)}°</span>
                         <div className="flex flex-col items-center mt-1 h-6 justify-start">
                         {h.rain > 0 && <span className="text-[10px] text-blue-400 font-bold">{h.rain}%</span>}

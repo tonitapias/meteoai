@@ -1,5 +1,7 @@
+// src/constants/translations.js
 export const TRANSLATIONS = {
   ca: {
+    // --- CLAUS ORIGINALS ---
     aiConsensus: "Consens de Models",
     aiCloudyNoRain: "No s'espera pluja, tot i l'aspecte gris del cel.",
     searchPlaceholder: "Cerca ciutat...",
@@ -113,9 +115,17 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Pertorbació activa amb precipitacions a la zona. ",
     aiSummaryRainFog: "Ambient tancat. Pluja persistent i visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació inestable. Risc de tempestes actives. ",
+
+    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    aiSummaryFog: "Hi ha boira o bancs de boira baixos.", 
+    alertVisibility: "Visibilitat molt reduïda",
+    notifWait: "Espera uns segons abans de tornar a actualitzar.",
+    notifLocationSuccess: "Ubicació actualitzada correctament.",
+    notifLocationError: "No s'ha pogut obtenir la ubicació. Revisa els permisos.",
+    // ----------------------------------------------------
     
     aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",
-    aiRainMod: "Està plovent de manera moderada. ", // <--- NOVA CLAU AFEGIDA
+    aiRainMod: "Està plovent de manera moderada. ", 
     aiRainHeavy: "Plou amb força intensitat en aquest moment. ",
     aiSunRain: "Atenció: Sol i pluja simultàniament. ",
     
@@ -124,7 +134,7 @@ export const TRANSLATIONS = {
     aiSummarySnow: "Configuració hivernal amb nevades previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé. ",
-    aiTempCold: "Fa fred. Caldrà roba d'abric. ",
+    aiTempCold: "Fa força fred. Caldrà roba d'abric. ",
     aiTempCool: "Ambient fresc. Jaqueta lleugera recomanada. ", 
     aiTempMild: "Temperaturas suaus i agradables. ",
     aiTempWarm: "Ambient càlid, pugen les temperatures. ",
@@ -133,7 +143,7 @@ export const TRANSLATIONS = {
     aiHeatIndex: "Xafogor acusada, sensació de {temp}°C. ",
     
     aiWindLight: "Vent feble. ",
-    aiWindMod: "Vent moderat. ",
+    aiWindMod: "Bufa vent moderat. ",
     aiWindStrong: "Ratxes de vent fortes, precaució. ",
     
     aiRainNone: "No s'esperen precipitacions properament. ",
@@ -148,17 +158,17 @@ export const TRANSLATIONS = {
     aiRainChanceHigh: "Alta probabilitat de pluja en les pròximes hores. ", 
 
     wmo: {
-      0: "cel serè", 1: "cel majoritàriament serè", 2: "parcialment ennuvolat", 3: "cel cobert",
-      45: "bancs de boira", 48: "boira gebradora",
-      51: "plugim feble", 53: "plugim moderat", 55: "plugim dens",
-      56: "plugim engelant feble", 57: "plugim engelant dens",
-      61: "pluja feble", 63: "pluja moderada", 65: "pluja forta",
-      66: "pluja engelant feble", 67: "pluja engelant forta",
-      71: "nevada feble", 73: "nevada moderada", 75: "nevada forta",
-      77: "neu granulada",
-      80: "ruixats febles", 81: "ruixats moderats", 82: "ruixats torrencials",
-      85: "ruixats de neu febles", 86: "ruixats de neu forts",
-      95: "tempesta", 96: "tempesta amb calamarsa", 99: "tempesta severa amb calamarsa"
+      0: "Cel serè", 1: "Majorment serè", 2: "Parcialment ennuvolat", 3: "Cel cobert",
+      45: "Boira", 48: "Boira gebradora",
+      51: "Plugim feble", 53: "Plugim moderat", 55: "Plugim dens",
+      56: "Plugim engelant feble", 57: "Plugim engelant dens",
+      61: "Pluja feble", 63: "Pluja moderada", 65: "Pluja forta",
+      66: "Pluja engelant feble", 67: "Pluja engelant forta",
+      71: "Nevada feble", 73: "Nevada moderada", 75: "Nevada forta",
+      77: "Grans de neu",
+      80: "Ruixats febles", 81: "Ruixats moderats", 82: "Ruixats violents",
+      85: "Ruixats de neu febles", 86: "Ruixats de neu forts",
+      95: "Tempesta", 96: "Tempesta amb calamarsa", 99: "Tempesta severa amb calamarsa"
     },
     
     alertStorm: "Inestabilitat acusada (CAPE alt) i tempestes.",
@@ -218,6 +228,7 @@ export const TRANSLATIONS = {
   },
 
   es: {
+    // --- CLAUS ORIGINALS ---
     searchPlaceholder: "Buscar ciudad...",
     favorites: "Lugares Favoritos",
     now: "Ahora",
@@ -329,9 +340,17 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Perturbación activa con precipitaciones en la zona. ",
     aiSummaryRainFog: "Ambiente muy húmedo. Lluvia persistente y niebla. ",
     aiSummaryStorm: "Situación inestable. Riesgo de tormentas activas. ",
+
+    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    aiSummaryFog: "Hay niebla o bancos de niebla bajos.", 
+    alertVisibility: "Visibilidad muy reducida",
+    notifWait: "Espera unos segundos antes de volver a actualizar.",
+    notifLocationSuccess: "Ubicación actualizada correctamente.",
+    notifLocationError: "No se pudo obtener la ubicación. Revisa los permisos.",
+    // ----------------------------------------------------
     
     aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",
-    aiRainMod: "Está lloviendo de forma moderada. ", // <--- AÑADIDO
+    aiRainMod: "Está lloviendo de forma moderada. ", 
     aiRainHeavy: "Llueve con bastante intensidad en este momento. ",
     aiSunRain: "Atención: Sol y lluvia simultáneamente. ",
     
@@ -434,6 +453,7 @@ export const TRANSLATIONS = {
   },
 
   en: {
+    // --- CLAUS ORIGINALS ---
     searchPlaceholder: "Search city...",
     favorites: "Favorite Places",
     now: "Now",
@@ -545,9 +565,17 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Active disturbance. Precipitation falling in the area. ",
     aiSummaryRainFog: "Humid and foggy. Persistent rain with reduced visibility. ",
     aiSummaryStorm: "Unstable situation. Risk of active storms. ",
+
+    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    aiSummaryFog: "It is foggy or low mist banks present.", 
+    alertVisibility: "Low visibility",
+    notifWait: "Please wait a few seconds before updating again.",
+    notifLocationSuccess: "Location updated successfully.",
+    notifLocationError: "Could not get location. Check permissions.",
+    // ----------------------------------------------------
     
     aiRainLight: "Light drizzle or a few drops falling right now. ",
-    aiRainMod: "Moderate rain is falling. ", // <--- ADDED
+    aiRainMod: "Moderate rain is falling. ", 
     aiRainHeavy: "Heavy rain falling at this moment. ",
     aiSunRain: "Attention: Sun and rain mixing simultaneously. ",
     
@@ -650,6 +678,7 @@ export const TRANSLATIONS = {
   },
 
   fr: {
+    // --- CLAUS ORIGINALS ---
     searchPlaceholder: "Rechercher une ville...",
     favorites: "Lieux favoris",
     now: "Maintenant",
@@ -761,9 +790,17 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Perturbation active. Précipitations sur la zone. ",
     aiSummaryRainFog: "Ambiance bouchée. Pluie persistante et brouillard. ",    
     aiSummaryStorm: "Situation instable. Risque d'orages actifs. ",
+
+    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    aiSummaryFog: "Il y a du brouillard ou des bancs de brume.", 
+    alertVisibility: "Visibilité très réduite",
+    notifWait: "Veuillez patienter quelques secondes avant de mettre à jour.",
+    notifLocationSuccess: "Localisation mise à jour avec succès.",
+    notifLocationError: "Impossible d'obtenir la localisation. Vérifiez les permissions.",
+    // ----------------------------------------------------
     
     aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
-    aiRainMod: "Il pleut modérément. ", // <--- AJOUTÉ
+    aiRainMod: "Il pleut modérément. ", 
     aiRainHeavy: "Il pleut avec force en ce moment. ",
     aiSunRain: "Attention : Soleil et pluie simultanément. ",
     

@@ -6,10 +6,20 @@ const { PRECIPITATION, WIND, TEMP, RELIABILITY, ALERTS, HUMIDITY } = WEATHER_THR
 
 // --- FUNCIONS AUXILIARS ---
 
-export const getShiftedDate = (baseDate, timezone) => {
-  if (!timezone) return baseDate;
-  const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezone });
-  return new Date(targetTimeStr);
+export const getShiftedDate = (baseDate, timezoneOrOffset) => {
+  if (typeof timezoneOrOffset === 'number') {
+      const utcTimestamp = baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000);
+      const targetTimestamp = utcTimestamp + (timezoneOrOffset * 1000);
+      return new Date(targetTimestamp);
+  }
+  if (!timezoneOrOffset) return baseDate;
+  try {
+      const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezoneOrOffset });
+      return new Date(targetTimeStr);
+  } catch (e) {
+      console.warn("Timezone invàlid, retornant hora local", e);
+      return baseDate;
+  }
 };
 
 export const calculateDewPoint = (T, RH) => {
@@ -20,7 +30,7 @@ export const calculateDewPoint = (T, RH) => {
   return (b * alpha) / (a - alpha);
 };
 
-// --- FUNCIÓ MODIFICADA: NORMALITZACIÓ SEGURA ---
+// --- NORMALITZACIÓ ---
 export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      
@@ -32,17 +42,18 @@ export const normalizeModelData = (data) => {
          dailyComparison: { gfs: {}, icon: {} } 
      };
      
-     const mainSuffixRegex = /(_best_match|_ecmwf_ifs4|_ecmwf_ifs025|_ecmwf_aifs04)/g;
+     const modelSuffixRegex = /(_best_match|_ecmwf\w*|_noaa\w*|_meteofrance\w*|_dwd\w*|_jma\w*|_gem\w*)/g;
 
      ['current', 'daily', 'hourly'].forEach(section => {
          if (!data[section]) return;
          
          Object.keys(data[section]).forEach(key => {
             if (key.includes('_gfs_') || key.includes('_icon_')) return;
-
-            if (key.match(mainSuffixRegex)) {
-                const cleanKey = key.replace(mainSuffixRegex, '');
-                result[section][cleanKey] = data[section][key];
+            if (key.match(modelSuffixRegex)) {
+                const cleanKey = key.replace(modelSuffixRegex, '');
+                if (!result[section][cleanKey]) {
+                    result[section][cleanKey] = data[section][key];
+                }
             }
          });
      });
@@ -58,15 +69,12 @@ export const normalizeModelData = (data) => {
      });
 
      const timeLength = data.hourly?.time?.length || 0;
-     
-     // 1. Inicialització segura d'arrays
      result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
      result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
 
      Object.keys(data.hourly || {}).forEach(key => {
         let model = null;
         let cleanKey = null;
-
         if (key.includes('_gfs_')) {
             model = 'gfs';
             cleanKey = key.split('_gfs_')[0];
@@ -74,12 +82,9 @@ export const normalizeModelData = (data) => {
             model = 'icon';
             cleanKey = key.split('_icon_')[0];
         }
-
         if (model && cleanKey) {
             const values = data.hourly[key];
-            // 2. Protecció contra desbordament d'índexs
             const safeLength = Math.min(values.length, timeLength);
-            
             for (let i = 0; i < safeLength; i++) {
                 if (result.hourlyComparison[model][i]) {
                     result.hourlyComparison[model][i][cleanKey] = values[i];
@@ -91,21 +96,28 @@ export const normalizeModelData = (data) => {
      return { ...data, ...result };
 };
 
-// --- FUNCIÓ MODIFICADA: PRIORITAT NEU ---
-export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) => {
+// --- FUNCIÓ MODIFICADA: CÀLCUL AVANÇAT DE NEU I BOIRA ---
+export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, freezingLevel = 2500, elevation = 0) => {
     if (!current) return 0;
     
     let code = current.weather_code;
+    const visibility = current.visibility; 
+    
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
         : 0;
     const temp = current.temperature_2m;
 
-    // --- PRIORITAT NEU ---
-    // Si la temperatura és <= 1ºC, assumim neu si hi ha precipitació
-    if (temp <= 1) {
+    // --- LÒGICA AVANÇADA DE NEU ---
+    // Calculem la distància vertical fins a la isozero
+    const freezingDist = freezingLevel - elevation;
+    
+    // Condició de Neu: Temp <= 1 O (Temp <= 4ºC I la isozero està a menys de 300m del terra)
+    const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
+
+    if (isColdEnoughForSnow) {
         if (precipInstantanea > 0) {
-            // Reinterpretem la intensitat
+            // Està caient precipitació i fa fred suficient per a neu
             if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; // Neu forta
             else if (precipInstantanea >= 0.5) code = 73; // Neu moderada
             else code = 71; // Neu feble
@@ -117,12 +129,21 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
         }
     }
     
-    // 1. RADAR DIU PLUJA (> 0.25mm) I NO ÉS NEU
+    // 2. PRIORITAT BOIRA
+    const isFogCode = code === 45 || code === 48;
+    const isLowVisibility = visibility !== undefined && visibility < 2000; 
+
+    if ((isFogCode || isLowVisibility) && precipInstantanea < 0.5) {
+        if (visibility !== undefined && visibility < 1000) return 45;
+        if (isFogCode) return code;
+    }
+
+    // 3. RADAR DIU PLUJA (> 0.25mm)
     if (precipInstantanea >= PRECIPITATION.LIGHT) {
-        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; // Violent
-        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; // Forta
-        else if (precipInstantanea >= 0.7) code = 63; // Moderada
-        else if (temp <= 1) code = 71; // Seguretat extra per neu
+        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; 
+        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
+        else if (precipInstantanea >= 0.7) code = 63; 
+        // Si no és prou fred per neu, deixem pluja
         else {
             const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
             if (!isRainCode) {
@@ -130,12 +151,12 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
             }
         }
     } 
-    // 2. RADAR DIU 0 PERÒ MODEL DIU PLUJA
+    // 4. RADAR DIU 0 PERÒ MODEL DIU PLUJA
     else {
         if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
             // Mantenim
         }
-        else if (code <= 48 && prob > 60 && current.relative_humidity_2m > 85) {
+        else if (code < 45 && prob > 60 && current.relative_humidity_2m > 85) {
             code = 51; 
         }
     }
@@ -143,8 +164,8 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0) =>
     return code;
 };
 
-// --- GENERACIÓ DE TEXT IA (Sense canvis importants) ---
-export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', effectiveCode = null, reliability = null) => {
+// --- GENERACIÓ DE TEXT IA ---
+export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', effectiveCode = null, reliability = null, unit = 'C') => {
     const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
     if (!tr) return { text: "", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
     
@@ -155,6 +176,7 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     const humidity = current.relative_humidity_2m;
     const windSpeed = current.wind_speed_10m;
     const isDay = current.is_day;
+    const visibility = current.visibility; 
     const currentHour = new Date().getHours();
     
     const precipInstantanea = current.minutely15 ? current.minutely15[0] : 0;
@@ -212,10 +234,16 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         if (code === 0 || code === 1) summaryParts.push(tr.aiSummaryClear);
         else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
         else if (code === 3) summaryParts.push(tr.aiSummaryOvercast); 
-        else if (code >= 45 && code <= 48) summaryParts.push(tr.aiSummaryCloudy);
-        else summaryParts.push(tr.aiSummaryCloudy);
+        else if (code === 45 || code === 48) {
+            // ÚS DE LES CLAUS NOVES
+            summaryParts.push(tr.aiSummaryFog || "Hi ha boira."); 
+            if (visibility !== undefined && visibility < 500) {
+                 alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
+            }
+        }
+        else if (code > 48) summaryParts.push(tr.aiSummaryCloudy);
         
-        if (rainProb > 40) summaryParts.push(tr.aiRainChance);
+        if (rainProb > 40 && !isRaining) summaryParts.push(tr.aiRainChance);
         else if (current.cloud_cover < 30 && code <= 2) summaryParts.push(tr.aiRainNone);
     }
 
@@ -233,7 +261,12 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     else if (feelsLike >= TEMP.HOT) summaryParts.push(tr.aiTempHot);
 
     if (temp > TEMP.WARM && humidity > HUMIDITY.HIGH) {
-       const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(feelsLike)) : "";
+       let displayFeelsLike = feelsLike;
+       if (unit === 'F' || unit === 'imperial') {
+           displayFeelsLike = (feelsLike * 9/5) + 32;
+       }
+       // ÚS DE LA CLAU MODIFICADA
+       const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(displayFeelsLike)) : "";
        summaryParts.push(heatText);
     }
 
