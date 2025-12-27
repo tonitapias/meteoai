@@ -96,7 +96,7 @@ export const normalizeModelData = (data) => {
      return { ...data, ...result };
 };
 
-// --- FUNCIÓ MODIFICADA: CÀLCUL AVANÇAT DE NEU I BOIRA ---
+// --- FUNCIÓ MODIFICADA: CORRECCIÓ BUG VISIBILITAT NULL ---
 export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, freezingLevel = 2500, elevation = 0) => {
     if (!current) return 0;
     
@@ -109,7 +109,6 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
     const temp = current.temperature_2m;
 
     // --- LÒGICA AVANÇADA DE NEU ---
-    // Calculem la distància vertical fins a la isozero
     const freezingDist = freezingLevel - elevation;
     
     // Condició de Neu: Temp <= 1 O (Temp <= 4ºC I la isozero està a menys de 300m del terra)
@@ -117,24 +116,25 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
 
     if (isColdEnoughForSnow) {
         if (precipInstantanea > 0) {
-            // Està caient precipitació i fa fred suficient per a neu
-            if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; // Neu forta
-            else if (precipInstantanea >= 0.5) code = 73; // Neu moderada
-            else code = 71; // Neu feble
+            if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; 
+            else if (precipInstantanea >= 0.5) code = 73; 
+            else code = 71; 
             return code; 
         }
-        // Si el model ja deia neu, mantenim
         if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
             return code;
         }
     }
     
-    // 2. PRIORITAT BOIRA
+    // 2. PRIORITAT BOIRA (CORREGIT)
     const isFogCode = code === 45 || code === 48;
-    const isLowVisibility = visibility !== undefined && visibility < 2000; 
+    // CORRECCIÓ: Comprovem explícitament que no sigui null
+    const hasVisibilityData = visibility !== undefined && visibility !== null; 
+    const isLowVisibility = hasVisibilityData && visibility < 2000; 
 
     if ((isFogCode || isLowVisibility) && precipInstantanea < 0.5) {
-        if (visibility !== undefined && visibility < 1000) return 45;
+        // CORRECCIÓ: Només forcem boira si tenim dada real de visibilitat
+        if (hasVisibilityData && visibility < 1000) return 45;
         if (isFogCode) return code;
     }
 
@@ -143,7 +143,6 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
         if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; 
         else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
         else if (precipInstantanea >= 0.7) code = 63; 
-        // Si no és prou fred per neu, deixem pluja
         else {
             const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
             if (!isRainCode) {
@@ -235,9 +234,9 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         else if (code === 2) summaryParts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
         else if (code === 3) summaryParts.push(tr.aiSummaryOvercast); 
         else if (code === 45 || code === 48) {
-            // ÚS DE LES CLAUS NOVES
             summaryParts.push(tr.aiSummaryFog || "Hi ha boira."); 
-            if (visibility !== undefined && visibility < 500) {
+            // CORRECCIÓ: Comprovem que no sigui null abans d'alertar
+            if (visibility !== undefined && visibility !== null && visibility < 500) {
                  alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
             }
         }
@@ -265,7 +264,6 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
        if (unit === 'F' || unit === 'imperial') {
            displayFeelsLike = (feelsLike * 9/5) + 32;
        }
-       // ÚS DE LA CLAU MODIFICADA
        const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(displayFeelsLike)) : "";
        summaryParts.push(heatText);
     }
