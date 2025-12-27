@@ -3,14 +3,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/meteoai/', // Nom del repositori
+  base: '/meteoai/', // Assegura't que coincideix amb el nom del teu repo
   build: {
     outDir: 'dist',
     sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          // Només separem el que realment tens instal·lat al package.json
+          // Només separem el que realment tens instal·lat: React i Icones
           vendor: ['react', 'react-dom'],
           icons: ['lucide-react']
         }
