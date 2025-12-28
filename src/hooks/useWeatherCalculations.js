@@ -71,14 +71,14 @@ export function useWeatherCalculations(weatherData, unit, now) {
       return (val != null) ? val : null;
   }, [weatherData, shiftedNow]);
 
-  // 5. CODI EFECTIU (MODIFICAT: Passem també la probabilitat)
+  // 5. CODI EFECTIU
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData || !weatherData.current) return 0;
     
     return getRealTimeWeatherCode(
         weatherData.current, 
         minutelyPreciseData,
-        currentRainProbability // <--- AFEGIT: Factor decisiu quan el radar falla
+        currentRainProbability 
     );
   }, [weatherData, minutelyPreciseData, currentRainProbability]);
 
@@ -241,7 +241,9 @@ export function useWeatherCalculations(weatherData, unit, now) {
 
       return {
           gfs: sliceModel(weatherData.hourlyComparison.gfs),
-          icon: sliceModel(weatherData.hourlyComparison.icon)
+          icon: sliceModel(weatherData.hourlyComparison.icon),
+          // --- FIX CLAU: Afegim les dades diàries per a ForecastSection ---
+          daily: weatherData.dailyComparison 
       };
 
   }, [weatherData, unit, shiftedNow]);
