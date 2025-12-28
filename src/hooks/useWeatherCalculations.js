@@ -46,9 +46,9 @@ export function useWeatherCalculations(weatherData, unit, now) {
 
   // 4. Freezing Level
   const currentFreezingLevel = useMemo(() => {
-      if(!weatherData || !weatherData.hourly) return null;
+      if(!weatherData || !weatherData.hourly) return 2500; // Valor per defecte segur
       const key = Object.keys(weatherData.hourly).find(k => k.includes('freezing_level_height'));
-      if (!key) return null;
+      if (!key) return 2500;
       
       const nowMs = shiftedNow.getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
@@ -56,7 +56,7 @@ export function useWeatherCalculations(weatherData, unit, now) {
           return tMs <= nowMs && (tMs + 3600000) > nowMs;
       });
       
-      if (currentIdx === -1) return null;
+      if (currentIdx === -1) return 2500;
       
       let val = weatherData.hourly[key] ? weatherData.hourly[key][currentIdx] : null;
       const currentTemp = weatherData.current.temperature_2m;
@@ -68,19 +68,21 @@ export function useWeatherCalculations(weatherData, unit, now) {
           if (gfsVal != null) val = gfsVal;
           else if (iconVal != null) val = iconVal;
       }
-      return (val != null) ? val : null;
+      return (val != null) ? val : 2500;
   }, [weatherData, shiftedNow]);
 
-  // 5. CODI EFECTIU
+  // 5. CODI EFECTIU (CORREGIT: Passant tots els arguments)
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData || !weatherData.current) return 0;
     
     return getRealTimeWeatherCode(
         weatherData.current, 
         minutelyPreciseData,
-        currentRainProbability 
+        currentRainProbability,
+        currentFreezingLevel,         // <--- AFEGIT
+        weatherData.elevation || 0    // <--- AFEGIT
     );
-  }, [weatherData, minutelyPreciseData, currentRainProbability]);
+  }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
 
   // 6. Fons Dinàmic
   const currentBg = useMemo(() => {
@@ -242,7 +244,6 @@ export function useWeatherCalculations(weatherData, unit, now) {
       return {
           gfs: sliceModel(weatherData.hourlyComparison.gfs),
           icon: sliceModel(weatherData.hourlyComparison.icon),
-          // --- FIX CLAU: Afegim les dades diàries per a ForecastSection ---
           daily: weatherData.dailyComparison 
       };
 

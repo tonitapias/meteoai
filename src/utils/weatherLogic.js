@@ -96,49 +96,57 @@ export const normalizeModelData = (data) => {
      return { ...data, ...result };
 };
 
-// --- FUNCIÓ MODIFICADA: CORRECCIÓ BUG VISIBILITAT NULL ---
+// --- FUNCIÓ MODIFICADA FINAL ---
 export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, freezingLevel = 2500, elevation = 0) => {
     if (!current) return 0;
     
-    let code = current.weather_code;
-    const visibility = current.visibility; 
+    let code = Number(current.weather_code);
+    const temp = Number(current.temperature_2m);
     
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
         : 0;
-    const temp = current.temperature_2m;
 
-    // --- LÒGICA AVANÇADA DE NEU ---
     const freezingDist = freezingLevel - elevation;
     
-    // Condició de Neu: Temp <= 1 O (Temp <= 4ºC I la isozero està a menys de 300m del terra)
+    // Condició: Temp <= 1ºC (Segur és neu) O (Temp <= 4ºC i Isozero prop del terra)
     const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
 
     if (isColdEnoughForSnow) {
+        // A. Si el codi original JA és de pluja/plugim, el convertim a NEU
+        const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+        
+        if (isRainCode) {
+            if (code === 65 || code === 82 || code === 67) return 75; 
+            if (code === 63 || code === 81 || code === 55 || code === 57) return 73; 
+            return 71; 
+        }
+
+        // B. Si el radar detecta precipitació
         if (precipInstantanea > 0) {
             if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; 
             else if (precipInstantanea >= 0.5) code = 73; 
             else code = 71; 
             return code; 
         }
+        
         if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
             return code;
         }
     }
     
-    // 2. PRIORITAT BOIRA (CORREGIT)
+    // --- 2. BOIRA ---
+    const visibility = current.visibility; 
     const isFogCode = code === 45 || code === 48;
-    // CORRECCIÓ: Comprovem explícitament que no sigui null
     const hasVisibilityData = visibility !== undefined && visibility !== null; 
     const isLowVisibility = hasVisibilityData && visibility < 2000; 
 
     if ((isFogCode || isLowVisibility) && precipInstantanea < 0.5) {
-        // CORRECCIÓ: Només forcem boira si tenim dada real de visibilitat
         if (hasVisibilityData && visibility < 1000) return 45;
         if (isFogCode) return code;
     }
 
-    // 3. RADAR DIU PLUJA (> 0.25mm)
+    // --- 3. RADAR DIU PLUJA (i no fa fred, o ja hagués entrat a dalt) ---
     if (precipInstantanea >= PRECIPITATION.LIGHT) {
         if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; 
         else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
@@ -150,13 +158,16 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
             }
         }
     } 
-    // 4. RADAR DIU 0 PERÒ MODEL DIU PLUJA
+    // --- 4. MODEL DIU PLUJA O S'INFEREIX PER HUMITAT ---
     else {
         if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-            // Mantenim
+            // Mantenim pluja (si fes fred ja seria neu pel bloc 1)
         }
         else if (code < 45 && prob > 60 && current.relative_humidity_2m > 85) {
-            code = 51; 
+            // AQUEST ERA EL BUG: Es forçava plugim (51) per humitat alta
+            // encara que fes -4ºC.
+            // ARA: Si fa fred -> Neu feble (71), sinó -> Plugim feble (51)
+            code = isColdEnoughForSnow ? 71 : 51; 
         }
     }
 
@@ -235,10 +246,12 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         else if (code === 3) summaryParts.push(tr.aiSummaryOvercast); 
         else if (code === 45 || code === 48) {
             summaryParts.push(tr.aiSummaryFog || "Hi ha boira."); 
-            // CORRECCIÓ: Comprovem que no sigui null abans d'alertar
             if (visibility !== undefined && visibility !== null && visibility < 500) {
                  alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
             }
+        }
+        else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+             summaryParts.push(tr.aiSummarySnow || "S'esperen nevades.");
         }
         else if (code > 48) summaryParts.push(tr.aiSummaryCloudy);
         
