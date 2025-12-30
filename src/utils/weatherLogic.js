@@ -109,11 +109,10 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
 
     const freezingDist = freezingLevel - elevation;
     
-    // Condició: Temp <= 1ºC (Segur és neu) O (Temp <= 4ºC i Isozero prop del terra)
+    // 1. NEU
     const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
 
     if (isColdEnoughForSnow) {
-        // A. Si el codi original JA és de pluja/plugim, el convertim a NEU
         const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
         
         if (isRainCode) {
@@ -122,7 +121,6 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
             return 71; 
         }
 
-        // B. Si el radar detecta precipitació
         if (precipInstantanea > 0) {
             if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; 
             else if (precipInstantanea >= 0.5) code = 73; 
@@ -146,8 +144,15 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
         if (isFogCode) return code;
     }
 
-    // --- 3. RADAR DIU PLUJA (i no fa fred, o ja hagués entrat a dalt) ---
+    // --- 3. RADAR DIU PLUJA (i no fa fred) ---
     if (precipInstantanea >= PRECIPITATION.LIGHT) {
+        
+        // CORRECCIÓ CLAU: Si ja era tempesta (95+), la respectem encara que plogui molt.
+        // Així no perdem la icona del llamp.
+        if (code >= 95) {
+             return code; 
+        }
+
         if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; 
         else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
         else if (precipInstantanea >= 0.7) code = 63; 
@@ -161,12 +166,9 @@ export const getRealTimeWeatherCode = (current, minutelyPrecipData, prob = 0, fr
     // --- 4. MODEL DIU PLUJA O S'INFEREIX PER HUMITAT ---
     else {
         if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-            // Mantenim pluja (si fes fred ja seria neu pel bloc 1)
+            // Mantenim pluja
         }
         else if (code < 45 && prob > 60 && current.relative_humidity_2m > 85) {
-            // AQUEST ERA EL BUG: Es forçava plugim (51) per humitat alta
-            // encara que fes -4ºC.
-            // ARA: Si fa fred -> Neu feble (71), sinó -> Plugim feble (51)
             code = isColdEnoughForSnow ? 71 : 51; 
         }
     }
@@ -351,4 +353,17 @@ export const getWeatherLabel = (current, language) => {
   if (!tr || !current) return "";
   const code = Number(current.weather_code);
   return tr.wmo[code] || "---";
+};
+
+// --- FUNCIÓ OBLIGATÒRIA PER AL MODE HÍBRID ---
+export const isAromeSupported = (lat, lon) => {
+    if (!lat || !lon) return false;
+    
+    // Rectangle aproximat Europa Occidental
+    const MIN_LAT = 38.0; 
+    const MAX_LAT = 53.0; 
+    const MIN_LON = -8.0; 
+    const MAX_LON = 12.0; 
+
+    return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
 };

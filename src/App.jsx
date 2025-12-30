@@ -4,6 +4,7 @@ import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
 import DayDetailModal from './components/DayDetailModal';
 import RadarModal from './components/RadarModal';
+import AromeModal from './components/AromeModal'; 
 import CurrentWeather from './components/CurrentWeather';
 import AIInsights from './components/AIInsights';
 import ForecastSection from './components/ForecastSection';
@@ -18,6 +19,7 @@ import { usePreferences } from './hooks/usePreferences';
 import { useWeather } from './hooks/useWeather';
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
+import { isAromeSupported } from './utils/weatherLogic'; 
 
 export default function MeteoIA() {
   const [now, setNow] = useState(new Date());
@@ -50,6 +52,7 @@ export default function MeteoIA() {
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
   const [showRadar, setShowRadar] = useState(false);
+  const [showArome, setShowArome] = useState(false);
 
   const handleSearch = useCallback((lat, lon, name, country) => {
     fetchWeatherByCoords(lat, lon, name, country);
@@ -66,8 +69,6 @@ export default function MeteoIA() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-100 font-sans p-4 md:p-6 transition-all duration-1000 selection:bg-indigo-500 selection:text-white`}>
-      
-      {/* Notificacions Flotants (Toasts) */}
       <Toast 
          message={notification?.msg} 
          type={notification?.type} 
@@ -114,6 +115,8 @@ export default function MeteoIA() {
                                 isFavorite={isFavorite(weatherData.location.name)}
                                 onToggleFavorite={handleToggleFavorite}
                                 onShowRadar={() => setShowRadar(true)}
+                                onShowArome={() => setShowArome(true)}
+                                showAromeBtn={isAromeSupported(weatherData.location.latitude, weatherData.location.longitude)}
                             />
                         </div>
                         <div className="w-full lg:w-96 shrink-0 lg:max-w-md h-full">
@@ -199,6 +202,15 @@ export default function MeteoIA() {
                 lat={weatherData.location.latitude} 
                 lon={weatherData.location.longitude} 
                 onClose={() => setShowRadar(false)} 
+                lang={lang} 
+            />
+        )}
+
+        {showArome && weatherData && (
+            <AromeModal 
+                lat={weatherData.location.latitude} 
+                lon={weatherData.location.longitude} 
+                onClose={() => setShowArome(false)} 
                 lang={lang} 
             />
         )}

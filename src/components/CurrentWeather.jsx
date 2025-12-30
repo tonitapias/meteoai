@@ -1,6 +1,6 @@
 // src/components/CurrentWeather.jsx
 import React from 'react';
-import { Star, Map, MapPin, Clock } from 'lucide-react';
+import { Star, Map, MapPin, Clock, Zap, Target } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { getWeatherLabel } from '../utils/weatherLogic';
 
@@ -31,10 +31,15 @@ export default function CurrentWeather({
   shiftedNow, 
   isFavorite, 
   onToggleFavorite, 
-  onShowRadar 
+  onShowRadar,
+  onShowArome,
+  showAromeBtn = false 
 }) {
   const { current, location, daily } = data;
   const { is_day, temperature_2m, wind_speed_10m, precipitation, relative_humidity_2m, apparent_temperature } = current;
+
+  // Detectem l'origen de la dada
+  const isHighPrecision = current.source === 'AROME HD';
 
   const formatTemp = (tempC) => {
     if (unit === 'F') return Math.round((tempC * 9/5) + 32);
@@ -45,11 +50,20 @@ export default function CurrentWeather({
   const currentPrecip15 = data.minutely_15?.precipitation?.slice(0, 4).reduce((a, b) => a + (b || 0), 0) || 0;
 
   return (
-    <div className="flex flex-col gap-6 w-full lg:w-auto">
-            {/* Capçalera: Nom i Botons */}
+    <div className="flex flex-col gap-6 w-full lg:w-auto relative">
+            
+            {/* BADGE DE PRECISIÓ */}
+            {isHighPrecision && (
+                <div className="absolute top-0 right-0 md:-top-4 md:-right-4 bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1 animate-in fade-in zoom-in">
+                    <Target className="w-3 h-3" />
+                    Live HD
+                </div>
+            )}
+
             <div className="flex flex-col">
                 <div className="flex items-center gap-3">
                         <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{location.name}</h2>
+                        
                         <button 
                           onClick={onToggleFavorite} 
                           className="hover:scale-110 transition-transform p-1 active:scale-90"
@@ -61,12 +75,22 @@ export default function CurrentWeather({
                         <button 
                             onClick={onShowRadar}
                             className="ml-2 p-2 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center gap-1.5 md:gap-2 px-3 group"
-                            aria-label="Obrir mapa de radar"
                         >
                             <Map className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" strokeWidth={2.5} />
                             <span className="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">RADAR</span>
                         </button>
+
+                        {showAromeBtn && (
+                          <button 
+                              onClick={onShowArome}
+                              className="p-2 rounded-full bg-fuchsia-500/20 hover:bg-fuchsia-500/40 text-fuchsia-300 transition-colors border border-fuchsia-500/30 flex items-center gap-1.5 md:gap-2 px-3 group animate-in fade-in zoom-in duration-300"
+                          >
+                              <Zap className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform group-hover:text-amber-300" strokeWidth={2.5} />
+                              <span className="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">HD Model</span>
+                          </button>
+                        )}
                 </div>
+                
                 <div className="flex items-center gap-3 text-sm text-indigo-200 font-medium mt-1">
                         <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> {location.country}</span>
                         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
@@ -77,7 +101,6 @@ export default function CurrentWeather({
                 </div>
             </div>
 
-            {/* Cos Principal: Icona i Temperatura */}
             <div className="flex items-center gap-6">
                 <div className="filter drop-shadow-2xl animate-in zoom-in duration-500">
                     <LivingIcon 
@@ -103,13 +126,19 @@ export default function CurrentWeather({
                         <span className="text-8xl md:text-9xl font-bold text-white leading-none tracking-tighter drop-shadow-2xl">
                         {formatTemp(temperature_2m)}°
                         </span>
-                        <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
-                        {getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)}
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
+                                {getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)}
+                            </span>
+                            {isHighPrecision && (
+                                <span className="text-[10px] text-fuchsia-300/70 font-medium uppercase tracking-widest mt-0.5">
+                                    Font: Arome France
+                                </span>
+                            )}
+                        </div>
                 </div>
             </div>
 
-            {/* Peu: Màx/Min i Sensació */}
             <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-3 text-indigo-100 font-bold bg-white/5 border border-white/5 px-4 py-2 rounded-full text-sm backdrop-blur-md shadow-lg">
                         <span className="text-rose-300 flex items-center gap-1">↑ {formatTemp(daily.temperature_2m_max[0])}°</span>
