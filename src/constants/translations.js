@@ -1,4 +1,4 @@
-// src/constants/translations.js
+//
 export const TRANSLATIONS = {
   ca: {
     // --- CLAUS ORIGINALS ---
@@ -122,6 +122,14 @@ export const TRANSLATIONS = {
     notifWait: "Espera uns segons abans de tornar a actualitzar.",
     notifLocationSuccess: "Ubicació actualitzada correctament.",
     notifLocationError: "No s'ha pogut obtenir la ubicació. Revisa els permisos.",
+    
+    // --- GINY NÚVOLS (AFEGIT) ---
+    cloudLayers: {
+      title: "Profunditat de Núvols",
+      high: "Alts",
+      mid: "Mitjans",
+      low: "Baixos"
+    },
     // ----------------------------------------------------
     
     aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",
@@ -131,7 +139,7 @@ export const TRANSLATIONS = {
     
     aiThreatening: "Cel amenaçador. Risc de precipitació en qualsevol moment. ",
     
-    aiSummarySnow: "Configuració hivernal amb nevades previstes. ",
+    aiSummarySnow: "Configuració hivernal amb nevadas previstes. ",
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé. ",
     aiTempCold: "Fa força fred. Caldrà roba d'abric. ",
@@ -347,6 +355,14 @@ export const TRANSLATIONS = {
     notifWait: "Espera unos segundos antes de volver a actualizar.",
     notifLocationSuccess: "Ubicación actualizada correctamente.",
     notifLocationError: "No se pudo obtener la ubicación. Revisa los permisos.",
+    
+    // --- GINY NÚVOLS (AFEGIT) ---
+    cloudLayers: {
+      title: "Profundidad de Nubes",
+      high: "Altos",
+      mid: "Medios",
+      low: "Bajos"
+    },
     // ----------------------------------------------------
     
     aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",
@@ -572,6 +588,14 @@ export const TRANSLATIONS = {
     notifWait: "Please wait a few seconds before updating again.",
     notifLocationSuccess: "Location updated successfully.",
     notifLocationError: "Could not get location. Check permissions.",
+    
+    // --- GINY NÚVOLS (AFEGIT) ---
+    cloudLayers: {
+      title: "Cloud Depth",
+      high: "High",
+      mid: "Mid",
+      low: "Low"
+    },
     // ----------------------------------------------------
     
     aiRainLight: "Light drizzle or a few drops falling right now. ",
@@ -797,6 +821,14 @@ export const TRANSLATIONS = {
     notifWait: "Veuillez patienter quelques secondes avant de mettre à jour.",
     notifLocationSuccess: "Localisation mise à jour avec succès.",
     notifLocationError: "Impossible d'obtenir la localisation. Vérifiez les permissions.",
+    
+    // --- GINY NÚVOLS (AFEGIT) ---
+    cloudLayers: {
+      title: "Profondeur des Nuages",
+      high: "Élevés",
+      mid: "Moyens",
+      low: "Bas"
+    },
     // ----------------------------------------------------
     
     aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
@@ -857,6 +889,7 @@ export const TRANSLATIONS = {
     alertRain: "Précipitations abondantes.",
     alertAir: "Qualité de l'air médiocre.",
     alertUV: "Rayonnement UV Extrême",
+    alertVisibility: "Visibilité très réduite",
 
     cold: "Froid",
     heat: "Chaleur",

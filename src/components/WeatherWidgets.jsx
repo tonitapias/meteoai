@@ -2,9 +2,13 @@
 import React from 'react';
 import { 
   Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
-  Thermometer, Droplets, Zap, Mountain
+  Thermometer, Droplets, Zap, Mountain, Cloud
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants/translations';
+
+// --- ESTIL BASE COMÚ (MICRO-INTERACCIONS) ---
+// Aquesta constant defineix l'estil "Glassmorphism" i les animacions de Hover
+const WIDGET_BASE_STYLE = "bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl backdrop-blur-sm relative group transition-all duration-300 hover:scale-[1.02] hover:bg-white/10 hover:border-white/30 hover:shadow-2xl h-full flex flex-col justify-between";
 
 // --- HELPERS ---
 const getMoonPhaseText = (phase, lang = 'ca') => {
@@ -74,7 +78,7 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
   const sunY = cy - r * Math.sin(angle); 
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
+    <div className={`${WIDGET_BASE_STYLE} min-h-[140px] items-center justify-center`}>
        <div className="w-full flex justify-between items-center text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
           <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400" strokeWidth={2.5}/> {t.sunrise}</span>
           <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400" strokeWidth={2.5}/></span>
@@ -102,7 +106,6 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }) => {
 };
 
 export const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }) => {
-  // CORRECCIÓ: Ús directe de useId (React 18/19 safe) i neteja de caràcters per IDs de SVG
   const rawId = React.useId();
   const uniqueId = rawId ? rawId.replace(/:/g, '') : Math.random().toString(36).substr(2, 9);
   
@@ -137,7 +140,7 @@ export const MoonWidget = ({ phase, lat, lang = 'ca' }) => {
   const phaseName = getMoonPhaseText(phase, lang);
   const illumination = Math.round((1 - Math.abs((phase - 0.5) * 2)) * 100);
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full min-h-[140px]">
+    <div className={`${WIDGET_BASE_STYLE} min-h-[140px] items-center justify-center`}>
        <div className="absolute top-4 left-4 flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider"><Moon className="w-3 h-3" strokeWidth={2.5} /> {t.moonPhase}</div>
        <div className="flex flex-col items-center justify-center mt-2">
           <div className="relative">
@@ -172,7 +175,7 @@ export const PollenWidget = ({ data, lang = 'ca' }) => {
   };
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl backdrop-blur-sm relative h-full min-h-[140px] flex flex-col">
+    <div className={`${WIDGET_BASE_STYLE} min-h-[140px]`}>
        <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider mb-3">
          <Flower2 className="w-3 h-3" strokeWidth={2.5} /> {t.pollen}
        </div>
@@ -200,7 +203,7 @@ export const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }) =>
   const W = directions[6];
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
+    <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
       <div className="relative w-24 h-24 flex items-center justify-center mb-1">
          <div className="absolute inset-0 rounded-full border-2 border-slate-800 flex items-center justify-center">
             <span className="absolute top-1 text-[8px] text-slate-500 font-bold">{N}</span>
@@ -237,7 +240,7 @@ export const CircularGauge = ({ value, max = 100, label, icon, color = "text-ind
   const strokeDashoffset = circumference - normalizedValue * circumference;
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative group h-full">
+    <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
       <div className="relative w-24 h-24 flex items-center justify-center">
          <svg className="w-full h-full transform -rotate-90">
             <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-800" />
@@ -307,7 +310,7 @@ export const DewPointWidget = ({ value, humidity, lang = 'ca', unit }) => {
     const displayValue = unit === 'F' ? Math.round((value * 9/5) + 32) : Math.round(value);
 
     return (
-        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
+        <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
             <div className="absolute top-2 left-3 flex items-center gap-1.5">
                 <Thermometer className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.dewPoint}</span>
@@ -355,7 +358,7 @@ export const CapeWidget = ({ cape, lang = 'ca' }) => {
     }
 
     return (
-        <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm relative h-full group">
+        <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
             <div className="absolute top-2 left-3 flex items-center gap-1.5">
                 <Zap className={`w-3.5 h-3.5 ${color}`} strokeWidth={2.5} />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.stormPotential}</span>
@@ -395,7 +398,7 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
   else if (snowLevel < 2000) barColor = 'bg-blue-400'; // Cota mitja
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/50 p-4 rounded-2xl flex flex-col justify-between h-full relative overflow-hidden group backdrop-blur-sm">
+    <div className={`${WIDGET_BASE_STYLE} overflow-hidden`}>
       <div className="flex items-center gap-2 text-indigo-300 mb-2 z-10">
         <Mountain className="w-4 h-4" strokeWidth={2.5} />
         <span className="text-xs font-bold uppercase tracking-wider">{t.snowLevel}</span>
@@ -434,4 +437,59 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }) => {
       </div>
     </div>
   );
+};
+
+// --- NOU WIDGET DE NÚVOLS AMB TRADUCCIONS CENTRALITZADES ---
+export const CloudLayersWidget = ({ low, mid, high, lang }) => {
+    // Si no hi ha dades, posem 0
+    const l = Math.round(low || 0);
+    const m = Math.round(mid || 0);
+    const h = Math.round(high || 0);
+    
+    // ÚS DE TRANSLATIONS.JS (Correcte)
+    const t = TRANSLATIONS[lang]?.cloudLayers || TRANSLATIONS['ca'].cloudLayers;
+
+    return (
+        <div className={`${WIDGET_BASE_STYLE}`}>
+            <div className="flex items-center gap-2 mb-3">
+                <Cloud className="w-5 h-5 text-indigo-300" strokeWidth={2.5} />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t?.title || "Núvols"}</span>
+            </div>
+            
+            <div className="flex flex-col gap-3 flex-grow justify-center">
+                {/* Capa Alta */}
+                <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-indigo-200">
+                        <span>{t?.high || "Alts"}</span>
+                        <span>{h}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-950/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-300/80 rounded-full transition-all duration-1000" style={{ width: `${h}%` }}></div>
+                    </div>
+                </div>
+
+                {/* Capa Mitjana */}
+                <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-indigo-200">
+                        <span>{t?.mid || "Mitjans"}</span>
+                        <span>{m}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-950/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-400/80 rounded-full transition-all duration-1000" style={{ width: `${m}%` }}></div>
+                    </div>
+                </div>
+
+                {/* Capa Baixa */}
+                <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-indigo-200">
+                        <span>{t?.low || "Baixos"}</span>
+                        <span>{l}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-950/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${l}%` }}></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };

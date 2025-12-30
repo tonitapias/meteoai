@@ -41,5 +41,10 @@ export const WEATHER_THRESHOLDS = {
     UV_HIGH: 7,
     UV_EXTREME: 10,
     AQI_BAD: 100
+  },
+  // --- NOVA SECCIÓ AFEGIDA ---
+  DEFAULTS: {
+    FREEZING_LEVEL_AVG: 2500,  // Valor per defecte si no hi ha dades de cota de neu
+    MAX_DISPLAY_SNOW_LEVEL: 4000 // Si la cota de neu és superior a 4000m, no mostrem el widget
   }
 };
