@@ -1,6 +1,6 @@
 // src/components/CurrentWeather.jsx
 import React from 'react';
-import { Star, Map, MapPin, Clock, Zap, Target } from 'lucide-react';
+import { Star, Map, MapPin, Clock, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { getWeatherLabel } from '../utils/weatherLogic';
 
@@ -52,13 +52,20 @@ export default function CurrentWeather({
   return (
     <div className="flex flex-col gap-6 w-full lg:w-auto relative">
             
-            {/* BADGE DE PRECISIÓ */}
-            {isHighPrecision && (
-                <div className="absolute top-0 right-0 md:-top-4 md:-right-4 bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1 animate-in fade-in zoom-in">
-                    <Target className="w-3 h-3" />
-                    Live HD
-                </div>
-            )}
+            {/* INDICADOR D'ESTAT MINIMALISTA (Punt Verd) */}
+{isHighPrecision && (
+    <div 
+        className="absolute top-2 right-2 md:-top-5 md:-right-2 flex items-center justify-center animate-in fade-in zoom-in duration-500"
+        title="Dades d'Alta Precisió (AROME) Actives" // Tooltip per si algú posa el ratolí a sobre
+    >
+        <span className="relative flex h-3 w-3">
+          {/* Ona expansiva (Ping) */}
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          {/* Punt central sòlid */}
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></span>
+        </span>
+    </div>
+)}
 
             <div className="flex flex-col">
                 <div className="flex items-center gap-3">
@@ -80,13 +87,19 @@ export default function CurrentWeather({
                             <span className="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">RADAR</span>
                         </button>
 
+                        {/* BOTÓ ACTIVAR AROME (NOU DISSENY OPCIÓ A) */}
                         {showAromeBtn && (
                           <button 
                               onClick={onShowArome}
-                              className="p-2 rounded-full bg-fuchsia-500/20 hover:bg-fuchsia-500/40 text-fuchsia-300 transition-colors border border-fuchsia-500/30 flex items-center gap-1.5 md:gap-2 px-3 group animate-in fade-in zoom-in duration-300"
+                              className="relative overflow-hidden p-2 px-4 rounded-full bg-slate-900/40 hover:bg-cyan-950/30 text-slate-300 hover:text-cyan-200 transition-all border border-slate-700/50 hover:border-cyan-500/50 flex items-center gap-2 group shadow-sm hover:shadow-[0_0_20px_rgba(34,211,238,0.1)]"
                           >
-                              <Zap className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform group-hover:text-amber-300" strokeWidth={2.5} />
-                              <span className="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">HD Model</span>
+                              {/* Efecte de brillantor al fer hover */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-700 ease-in-out" />
+                              
+                              <Zap className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" strokeWidth={2.5} />
+                              <span className="hidden md:inline text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                                AROME
+                              </span>
                           </button>
                         )}
                 </div>
@@ -130,8 +143,9 @@ export default function CurrentWeather({
                             <span className="text-xl md:text-2xl font-medium text-indigo-200 capitalize mt-2">
                                 {getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)}
                             </span>
+                            {/* ETIQUETA DE FONT ACTUALITZADA AL COLOR CYAN */}
                             {isHighPrecision && (
-                                <span className="text-[10px] text-fuchsia-300/70 font-medium uppercase tracking-widest mt-0.5">
+                                <span className="text-[10px] text-cyan-300/70 font-medium uppercase tracking-widest mt-0.5 animate-in fade-in">
                                     Font: Arome France
                                 </span>
                             )}

@@ -1,96 +1,126 @@
-# 🌤️ Meteo Toni AI
+# 🌤️ MeteoToniAi
 
-Una aplicació meteorològica avançada construïda amb **React**, **Vite** i **Tailwind CSS**. Aquest projecte destaca per la seva interfície moderna ("Glassmorphism"), l'ús d'intel·ligència artificial per interpretar les dades del temps i una arquitectura altament modular i escalable.
+**MeteoToniAi** és una aplicació meteorològica avançada construïda amb React 19 i Vite. A diferència de les apps convencionals, no només mostra dades crues, sinó que utilitza un **Motor Híbrid Intel·ligent** que combina models globals (ECMWF) amb models d'alta resolució (AROME) i un sistema expert ("AI") per interpretar el temps en llenguatge natural.
 
-## 🚀 Novetats de l'Arquitectura (Refactoring)
+---
 
-Aquesta aplicació ha estat completament refactoritzada per separar la lògica de la presentació, millorant el rendiment i la facilitat de manteniment.
+## 🚀 Novetats de la Versió 7 (v7)
 
-### 📂 Estructura del Projecte
+Aquesta versió introdueix millores significatives en la precisió de les dades i la interfície d'usuari:
 
-```text
-src/
-├── 🧩 components/           # Components Visuals (UI pur)
-│   ├── AIInsights.jsx       # Panell d'anàlisi intel·ligent i consells
-│   ├── CurrentWeather.jsx   # Targeta principal amb temperatura i icona animada
-│   ├── ExpertWidgets.jsx    # Giny de brúixola, pressió, pol·len, sol/lluna
-│   ├── ForecastSection.jsx  # Carrusel horari i llista de 7 dies
-│   ├── Header.jsx           # Cercador i controls globals
-│   ├── DayDetailModal.jsx   # Detall del dia seleccionat
-│   ├── RadarModal.jsx       # Mapa de precipitació
-│   └── ... (WeatherIcons, WeatherUI, etc.)
-│
-├── 🎣 hooks/                # Custom Hooks (Lògica de Negoci)
-│   ├── useWeather.js            # Connexió API (Open-Meteo) i Geolocalització
-│   ├── useWeatherCalculations.js # Càlculs pesats (mitjanes, gràfiques, fons dinàmics)
-│   ├── usePreferences.js        # Gestió de localStorage (Idiomes, Unitats, Favorits)
-│   └── useAIAnalysis.js         # Generació de textos i alertes basats en dades
-│
-├── 🛠️ utils/                # Funcions d'ajuda pures
-│   └── weatherLogic.js      # Lògica interna de predicció i icones
-│
-└── 📄 App.jsx               # Controlador principal (Layout i Composició)
+* **🟢 UI "Emerald" Minimalista:** Nou indicador d'estat per al model d'alta precisió. Hem substituït les etiquetes de text per un **punt de llum verd maragda que batega** (`animate-ping`), indicant que les dades AROME estan actives sense soroll visual.
+* **☁️ Hibridació de Núvols Millorada:** S'ha corregit la injecció de dades a `useWeather`. Ara, els widgets de nuvolositat (`CloudLayersWidget`) mostren les dades d'alta resolució en temps real quan estan disponibles, en lloc de recaure en el model global.
+* **💎 Botons "Glassmorphism" Refinats:** Els controls per activar el Radar i el Model HD tenen nous estils amb efectes de brillantor (`shine`) i colors cian/turquesa per denotar tecnologia i precisió.
+* **🧠 Lògica de Resiliència:** El sistema prioritza automàticament el model AROME (1.3km) a Europa Occidental, però fa un *fallback* transparent al model global (ECMWF) si hi ha fallades de connexió.
 
-```
+---
 
 ## ✨ Característiques Principals
 
-* **Mode Expert vs Bàsic:** Disseny responsiu que s'adapta per mostrar graelles de dades avançades o una vista simplificada.
-* **Living Icons:** Icones meteorològiques que reaccionen al vent, la pluja i l'hora del dia.
-* **Anàlisi AI:** Interpretació automàtica de les dades per oferir consells de roba i alertes de seguretat.
-* **Previsió Precisa:** Dades minut a minut, horàries i a 7 dies utilitzant models múltiples (GFS, ICON, ECMWF).
-* **Radar:** Integració de mapes de precipitació en temps real.
-* **Multi-idioma:** Suport complet per a CA, ES, EN, FR.
+### 1. Motor Híbrid Intel·ligent
 
-## 🛠️ Instal·lació i Ús
+L'aplicació decideix dinàmicament quina font de dades utilitzar:
 
-1. **Clonar el repositori:**
-```bash
-git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
-cd meteoai
+* **ECMWF IFS (Global):** Per a previsions a llarg termini i zones fora d'Europa.
+* **AROME France (Alta Resolució):** "Injectat" automàticament per a les pròximes 48h quan l'usuari és a la zona de cobertura. Millora dràsticament la precisió en tempestes, vent i orografia.
+
+### 2. El "Cervell" (AI System)
+
+No és només un panell de números. L'arxiu `weatherLogic.js` conté un sistema expert que:
+
+* Analitza múltiples variables (CAPE, Punt de Rosada, Vent, Isoterma 0ºC).
+* Genera resums textuals ("Està plovent feblement, però pararà aviat").
+* Emet alertes de seguretat i consells de roba basats en la sensació tèrmica.
+
+### 3. Widgets Avançats
+
+* **Capes de Núvols:** Visualització percentual de núvols Baixos, Mitjans i Alts.
+* **Cota de Neu:** Gràfic visual de l'alçada on la pluja es converteix en neu.
+* **Arc Solar:** Posició exacta del sol i hores de llum restants.
+* **Consens de Models:** Calcula la fiabilitat de la predicció comparant GFS, ICON i ECMWF.
+
+---
+
+## 📂 Estructura del Projecte
+
+Aquest és l'arbre de fitxers actualitzat amb els components clau:
+
+```text
+meteoai/
+├── public/
+│   ├── Robots.txt
+│   ├── Sitemap.xml
+│   └── vite.svg
+├── src/
+│   ├── assets/
+│   ├── components/              # UI i Widgets
+│   │   ├── AIInsights.jsx       # Panell de text intel·ligent
+│   │   ├── AromeModal.jsx       # Informació sobre el model HD
+│   │   ├── CurrentWeather.jsx   # Capçalera principal (Nou disseny Emerald)
+│   │   ├── DayDetailModal.jsx   # Detall diari
+│   │   ├── ErrorBanner.jsx
+│   │   ├── ExpertWidgets.jsx    # Graella de widgets tècnics
+│   │   ├── ForecastSection.jsx  # Previsió horària i diària
+│   │   ├── Header.jsx           # Cerca i Geolocalització
+│   │   ├── RadarMap.jsx         # Mapa de precipitació (Leaflet)
+│   │   ├── WeatherCharts.jsx    # Gràfiques de tendència
+│   │   └── WeatherWidgets.jsx   # Components individuals (Compass, Moon, CloudLayers)
+│   ├── constants/
+│   │   ├── translations.js      # Diccionari multi-idioma (CA, ES, EN, FR)
+│   │   └── weatherConfig.js     # Llindars de vent, pluja, temperatura
+│   ├── hooks/                   # Lògica de negoci (Custom Hooks)
+│   │   ├── useAIAnalysis.js     # Generador de text
+│   │   ├── useArome.js          # Fetcher específic model AROME
+│   │   ├── usePreferences.js    # Gestió de favorits i configuració
+│   │   └── useWeather.js        # Hook Principal (Gestor d'Estat i Hibridació)
+│   ├── utils/
+│   │   ├── formatters.js        # Formateig de dates i hores
+│   │   └── weatherLogic.js      # Algoritmes de normalització i càlcul "AI"
+│   ├── App.jsx
+│   ├── index.css                # Estils globals i Tailwind
+│   └── main.jsx
+├── index.html
+├── package.json
+├── tailwind.config.js
+└── vite.config.js
 
 ```
 
+---
 
-2. **Instal·lar dependències:**
+## 🛠️ Instal·lació i Desplegament
+
+### Desenvolupament Local
+
 ```bash
+# Instal·lar dependències
 npm install
 
-```
-
-
-3. **Executar en local:**
-```bash
+# Iniciar servidor de desenvolupament
 npm run dev
 
 ```
 
+### Build i Producció
 
-4. **Compilar per a producció:**
+El projecte està configurat per desplegar-se automàticament a GitHub Pages:
+
 ```bash
-npm run build
+# Generar build i desplegar
+npm run deploy
 
 ```
 
-
-
-## 🔧 Tecnologies Utilitzades
-
-* **React 18**: Llibreria UI.
-* **Vite**: Build tool ultraràpid.
-* **Tailwind CSS**: Estils i disseny responsiu.
-* **Lucide React**: Iconografia vectorial.
-* **Recharts**: Gràfiques de temperatura i pluja.
-* **Open-Meteo API**: Font de dades meteorològiques (sense API Key).
-
-## 🤝 Contribució
-
-Gràcies a la nova estructura modular, afegir funcionalitats és molt senzill:
-
-1. Si és **lògica nova**, crea un Hook a `src/hooks/`.
-2. Si és **visual**, crea un component a `src/components/`.
-3. Importa-ho a `App.jsx`.
+*Aquesta comanda executa `vite build` i puja la carpeta `dist` a la branca `gh-pages`.*
 
 ---
 
-© 2025 Meteo Toni AI - Desenvolupat amb ❤️ i React.
+## 🌍 Crèdits de Dades
+
+* **Meteorologia:** [Open-Meteo API](https://open-meteo.com/) (Models: ECMWF IFS, AROME France, GFS, ICON).
+* **Geocoding:** [OpenStreetMap / Nominatim](https://nominatim.org/).
+* **Qualitat Aire:** Copernicus Atmosphere Monitoring Service.
+
+---
+
+Desenvolupat amb ❤️ per **Toni Tapias**
