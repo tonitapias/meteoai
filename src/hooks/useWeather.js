@@ -116,8 +116,12 @@ export function useWeather(lang, unit = 'C') {
                                   target.freezing_level_height[globalIndex] = source.freezing_level_height[aromeIndex];
                               }
 
-                              // Núvols
-                              if (source.cloud_cover?.[aromeIndex] !== undefined) target.cloud_cover[globalIndex] = source.cloud_cover[aromeIndex];
+                              // Núvols (CORREGIT: Afegida comprovació d'inicialització)
+                              if (source.cloud_cover?.[aromeIndex] !== undefined) {
+                                  if (!target.cloud_cover) target.cloud_cover = [];
+                                  target.cloud_cover[globalIndex] = source.cloud_cover[aromeIndex];
+                              }
+                              
                               if (source.cloud_cover_low?.[aromeIndex] !== undefined) {
                                   if(!target.cloud_cover_low) target.cloud_cover_low = [];
                                   target.cloud_cover_low[globalIndex] = source.cloud_cover_low[aromeIndex];
