@@ -19,7 +19,12 @@ export function useWeatherCalculations(weatherData, unit, now) {
     return getShiftedDate(now, timezone);
   }, [weatherData, now]);
 
-  // 2. Dades minut a minut
+  // OPTIMITZACIÓ: Clau estable per hora (per evitar recalcular gràfics cada minut)
+  const currentHourKey = useMemo(() => {
+      return shiftedNow.toISOString().substring(0, 13); // Format: "YYYY-MM-DDTHH"
+  }, [shiftedNow]);
+
+  // 2. Dades minut a minut (Aquestes SI necessiten precisió minut)
   const minutelyPreciseData = useMemo(() => {
     if (!weatherData || !weatherData.minutely_15 || !weatherData.minutely_15.precipitation) return [];
     
@@ -42,11 +47,11 @@ export function useWeatherCalculations(weatherData, unit, now) {
      return (hourIdx !== -1 && weatherData.hourly.precipitation_probability) 
          ? weatherData.hourly.precipitation_probability[hourIdx] 
          : 0;
-  }, [weatherData, shiftedNow]);
+  }, [weatherData, currentHourKey]); // Canviat a currentHourKey
 
   // 4. Freezing Level
   const currentFreezingLevel = useMemo(() => {
-      if(!weatherData || !weatherData.hourly) return 2500; // Valor per defecte segur
+      if(!weatherData || !weatherData.hourly) return 2500;
       const key = Object.keys(weatherData.hourly).find(k => k.includes('freezing_level_height'));
       if (!key) return 2500;
       
@@ -69,9 +74,9 @@ export function useWeatherCalculations(weatherData, unit, now) {
           else if (iconVal != null) val = iconVal;
       }
       return (val != null) ? val : 2500;
-  }, [weatherData, shiftedNow]);
+  }, [weatherData, currentHourKey]);
 
-  // 5. CODI EFECTIU (CORREGIT: Passant tots els arguments)
+  // 5. CODI EFECTIU
   const effectiveWeatherCode = useMemo(() => {
     if (!weatherData || !weatherData.current) return 0;
     
@@ -79,12 +84,12 @@ export function useWeatherCalculations(weatherData, unit, now) {
         weatherData.current, 
         minutelyPreciseData,
         currentRainProbability,
-        currentFreezingLevel,         // <--- AFEGIT
-        weatherData.elevation || 0    // <--- AFEGIT
+        currentFreezingLevel,
+        weatherData.elevation || 0
     );
   }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
 
-  // 6. Fons Dinàmic
+  // 6. Fons Dinàmic (Manté shiftedNow per transicions suaus de sol/nit)
   const currentBg = useMemo(() => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
 
@@ -122,7 +127,9 @@ export function useWeatherCalculations(weatherData, unit, now) {
   // 7. Tendència baromètrica
   const barometricTrend = useMemo(() => {
       if(!weatherData?.hourly?.pressure_msl) return { trend: 'steady', val: 0 };
-      const nowMs = shiftedNow.getTime();
+      // Usem currentHourKey per no recalcular innecessàriament
+      const nowMs = new Date(currentHourKey + ":00:00").getTime();
+      
       const currentIdx = weatherData.hourly.time.findIndex(t => {
           const tMs = new Date(t).getTime();
           return tMs <= nowMs && (tMs + 3600000) > nowMs;
@@ -134,18 +141,18 @@ export function useWeatherCalculations(weatherData, unit, now) {
       if (diff >= 1) return { trend: 'rising', val: diff };
       if (diff <= -1) return { trend: 'falling', val: diff };
       return { trend: 'steady', val: diff };
-  }, [weatherData, shiftedNow]);
+  }, [weatherData, currentHourKey]);
 
   // 8. Altres mètriques
   const currentCape = useMemo(() => {
       if(!weatherData?.hourly?.cape) return 0;
-      const nowMs = shiftedNow.getTime();
+      const nowMs = new Date(currentHourKey + ":00:00").getTime();
       const currentIdx = weatherData.hourly.time.findIndex(t => {
           const tMs = new Date(t).getTime();
           return tMs <= nowMs && (tMs + 3600000) > nowMs;
       });
       return (currentIdx !== -1 && weatherData.hourly.cape[currentIdx]) || 0;
-  }, [weatherData, shiftedNow]);
+  }, [weatherData, currentHourKey]);
 
   const currentDewPoint = useMemo(() => {
     if(!weatherData?.current) return 0;
@@ -164,11 +171,13 @@ export function useWeatherCalculations(weatherData, unit, now) {
   
   const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); 
 
-  // 9. Dades per Gràfics
+  // 9. Dades per Gràfics (OPTIMITZAT amb currentHourKey)
   const chartData = useMemo(() => {
     if (!weatherData?.hourly?.time) return [];
     
-    const nowTime = shiftedNow.getTime();
+    // Utilitzem l'hora arrodonida per l'índex, evitant re-renders al minut
+    const nowTime = new Date(currentHourKey + ":00:00").getTime();
+    
     const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
     let startIndex = 0;
     if (idx !== -1) startIndex = Math.max(0, idx);
@@ -215,12 +224,12 @@ export function useWeatherCalculations(weatherData, unit, now) {
         code: getSafeVal('weather_code', realIndex, 0)
       };
     });
-  }, [weatherData, unit, shiftedNow]);
+  }, [weatherData, unit, currentHourKey]); // Dependència optimitzada
 
   const comparisonData = useMemo(() => {
       if (!weatherData?.hourlyComparison) return null;
       
-      const nowTime = shiftedNow.getTime();
+      const nowTime = new Date(currentHourKey + ":00:00").getTime();
       const idx = weatherData.hourly.time.findIndex(t => new Date(t).getTime() >= nowTime);
       let startIndex = 0;
       if (idx !== -1) startIndex = Math.max(0, idx);
@@ -247,7 +256,7 @@ export function useWeatherCalculations(weatherData, unit, now) {
           daily: weatherData.dailyComparison 
       };
 
-  }, [weatherData, unit, shiftedNow]);
+  }, [weatherData, unit, currentHourKey]);
 
   const weeklyExtremes = useMemo(() => {
     if(!weatherData) return { min: 0, max: 100 };

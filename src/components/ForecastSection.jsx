@@ -1,5 +1,5 @@
 // src/components/ForecastSection.jsx
-import React from 'react';
+import React, { memo } from 'react';
 import { Clock, Calendar, TrendingUp, Umbrella, AlertTriangle } from 'lucide-react';
 import { HourlyForecastChart } from './WeatherCharts';
 import { TempRangeBar, MoonPhaseIcon } from './WeatherWidgets';
@@ -16,7 +16,7 @@ const formatDate = (dateString, lang) => {
 
 const isSnowCode = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
-export default function ForecastSection({ 
+const ForecastSection = memo(function ForecastSection({ 
     chartData, 
     comparisonData, 
     dailyData, 
@@ -71,8 +71,6 @@ export default function ForecastSection({
                     const snowSum = dailyData.snowfall_sum[i];
                     const listMoonPhase = getMoonPhase(new Date(day));
                     
-                    // --- CÀLCUL DE DIVERGÈNCIA (CORREGIT) ---
-                    // Ara accedim a .daily.gfs en lloc de .gfs directament gràcies al fix del hook
                     const gfsMax = comparisonData?.daily?.gfs?.temperature_2m_max?.[i];
                     const iconMax = comparisonData?.daily?.icon?.temperature_2m_max?.[i];
                     
@@ -80,7 +78,6 @@ export default function ForecastSection({
                         ? Math.abs(gfsMax - iconMax) 
                         : 0;
                     
-                    // Alerta si diferència >= 2 graus i mode Expert actiu
                     const showDivergence = comparisonEnabled && diff >= 2;
 
                     return (
@@ -130,7 +127,6 @@ export default function ForecastSection({
                                 displayMin={formatTemp(dailyData.temperature_2m_min[i])}
                                 displayMax={formatTemp(dailyData.temperature_2m_max[i])}
                             />
-                            {/* ALERTA DE DIVERGÈNCIA */}
                             {showDivergence && (
                                 <div className="flex items-center gap-1 text-[10px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">
                                     <AlertTriangle className="w-3 h-3" strokeWidth={3} />
@@ -150,10 +146,11 @@ export default function ForecastSection({
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 z-10 gap-4">
                 <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400 drop-shadow-sm fill-indigo-400/20" strokeWidth={2.5}/> {t.trend24h}</h3>
                 </div>
-                {/* Nota: La gràfica encara fa servir comparisonData.gfs que és correcte */}
                 <HourlyForecastChart data={chartData} comparisonData={comparisonData} unit={getUnitLabel()} lang={lang} />
             </div>
         )}
     </div>
   );
-}
+});
+
+export default ForecastSection;

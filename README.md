@@ -1,117 +1,94 @@
-# 🌤️ MeteoToniAi
+# 🌤️ MeteoToniAi (PWA Edition)
 
-**MeteoToniAi** és una aplicació meteorològica avançada construïda amb React 19 i Vite. A diferència de les apps convencionals, no només mostra dades crues, sinó que utilitza un **Motor Híbrid Intel·ligent** que combina models globals (ECMWF) amb models d'alta resolució (AROME) i un sistema expert ("AI") per interpretar el temps en llenguatge natural.
+**MeteoToniAi** és una aplicació meteorològica d'última generació construïda amb **React 19** i **Vite**.
+
+Més enllà de mostrar dades crues, utilitza un **Motor Híbrid Intel·ligent** que combina models globals (ECMWF) amb models d'alta resolució (AROME) i un sistema expert ("AI") per interpretar el temps en llenguatge natural.
+
+> **🚀 NOVETAT:** Ara és una **Progressive Web App (PWA)**. Pots instal·lar-la al teu mòbil com una aplicació nativa!
 
 ---
 
-## 🚀 Novetats de la Versió 7 (v7)
+## 📱 Novetats de la Versió "PWA"
 
-Aquesta versió introdueix millores significatives en la precisió de les dades i la interfície d'usuari:
+Hem transformat l'experiència web en una aplicació mòbil completa:
 
-* **🟢 UI "Emerald" Minimalista:** Nou indicador d'estat per al model d'alta precisió. Hem substituït les etiquetes de text per un **punt de llum verd maragda que batega** (`animate-ping`), indicant que les dades AROME estan actives sense soroll visual.
-* **☁️ Hibridació de Núvols Millorada:** S'ha corregit la injecció de dades a `useWeather`. Ara, els widgets de nuvolositat (`CloudLayersWidget`) mostren les dades d'alta resolució en temps real quan estan disponibles, en lloc de recaure en el model global.
-* **💎 Botons "Glassmorphism" Refinats:** Els controls per activar el Radar i el Model HD tenen nous estils amb efectes de brillantor (`shine`) i colors cian/turquesa per denotar tecnologia i precisió.
-* **🧠 Lògica de Resiliència:** El sistema prioritza automàticament el model AROME (1.3km) a Europa Occidental, però fa un *fallback* transparent al model global (ECMWF) si hi ha fallades de connexió.
+* **📲 Instal·lable:** Afegeix l'app a la pantalla d'inici del teu Android o iPhone. Sense passar per la botiga d'aplicacions.
+* **⚡ Rendiment Extrem:** Càrrega intel·ligent de components (*Lazy Loading*) i optimització de gràfics (*React.memo*). L'app és ara molt més ràpida i lleugera.
+* **🖼️ Mode Immersiu:** Funciona a pantalla completa ("standalone"), eliminant la barra del navegador per a una experiència 100% nativa.
+* **🎨 Icones Adaptatives:** Noves icones d'alta resolució que s'adapten perfectament a iOS i Android.
 
 ---
 
 ## ✨ Característiques Principals
 
 ### 1. Motor Híbrid Intel·ligent
-
-L'aplicació decideix dinàmicament quina font de dades utilitzar:
-
-* **ECMWF IFS (Global):** Per a previsions a llarg termini i zones fora d'Europa.
-* **AROME France (Alta Resolució):** "Injectat" automàticament per a les pròximes 48h quan l'usuari és a la zona de cobertura. Millora dràsticament la precisió en tempestes, vent i orografia.
+L'aplicació decideix dinàmicament quina font de dades utilitzar segons la ubicació i necessitat:
+* **ECMWF IFS (Global):** Per a previsions generals a llarg termini.
+* **AROME France (Alta Resolució - 1.3km):** S'injecta automàticament ("Híbrid") per a les pròximes 48h a Europa Occidental. Millora dràsticament la precisió en tempestes, vent local i orografia.
 
 ### 2. El "Cervell" (AI System)
+Un sistema expert local (no requereix API externa de xat) que:
+* Analitza variables complexes (CAPE, Punt de Rosada, Isoterma 0ºC).
+* Genera resums en llenguatge natural: *"Està plovent feblement, però s'espera que pari en 20 minuts."*
+* Emet **alertes de seguretat** i consells de roba basats en la sensació tèrmica real.
 
-No és només un panell de números. L'arxiu `weatherLogic.js` conté un sistema expert que:
-
-* Analitza múltiples variables (CAPE, Punt de Rosada, Vent, Isoterma 0ºC).
-* Genera resums textuals ("Està plovent feblement, però pararà aviat").
-* Emet alertes de seguretat i consells de roba basats en la sensació tèrmica.
-
-### 3. Widgets Avançats
-
-* **Capes de Núvols:** Visualització percentual de núvols Baixos, Mitjans i Alts.
-* **Cota de Neu:** Gràfic visual de l'alçada on la pluja es converteix en neu.
-* **Arc Solar:** Posició exacta del sol i hores de llum restants.
-* **Consens de Models:** Calcula la fiabilitat de la predicció comparant GFS, ICON i ECMWF.
+### 3. UI "Emerald" & Glassmorphism
+* **Indicador de Batec:** Un punt de llum verd (`animate-ping`) indica quan el model d'alta precisió AROME està actiu.
+* **Disseny Modern:** Transparències, efectes de vidre i colors cian/turquesa per denotar tecnologia.
 
 ---
 
-## 📂 Estructura del Projecte
+## 🛠️ Stack Tecnològic
 
-Aquest és l'arbre de fitxers actualitzat amb els components clau:
-
-```text
-meteoai/
-├── public/
-│   ├── Robots.txt
-│   ├── Sitemap.xml
-│   └── vite.svg
-├── src/
-│   ├── assets/
-│   ├── components/              # UI i Widgets
-│   │   ├── AIInsights.jsx       # Panell de text intel·ligent
-│   │   ├── AromeModal.jsx       # Informació sobre el model HD
-│   │   ├── CurrentWeather.jsx   # Capçalera principal (Nou disseny Emerald)
-│   │   ├── DayDetailModal.jsx   # Detall diari
-│   │   ├── ErrorBanner.jsx
-│   │   ├── ExpertWidgets.jsx    # Graella de widgets tècnics
-│   │   ├── ForecastSection.jsx  # Previsió horària i diària
-│   │   ├── Header.jsx           # Cerca i Geolocalització
-│   │   ├── RadarMap.jsx         # Mapa de precipitació (Leaflet)
-│   │   ├── WeatherCharts.jsx    # Gràfiques de tendència
-│   │   └── WeatherWidgets.jsx   # Components individuals (Compass, Moon, CloudLayers)
-│   ├── constants/
-│   │   ├── translations.js      # Diccionari multi-idioma (CA, ES, EN, FR)
-│   │   └── weatherConfig.js     # Llindars de vent, pluja, temperatura
-│   ├── hooks/                   # Lògica de negoci (Custom Hooks)
-│   │   ├── useAIAnalysis.js     # Generador de text
-│   │   ├── useArome.js          # Fetcher específic model AROME
-│   │   ├── usePreferences.js    # Gestió de favorits i configuració
-│   │   └── useWeather.js        # Hook Principal (Gestor d'Estat i Hibridació)
-│   ├── utils/
-│   │   ├── formatters.js        # Formateig de dates i hores
-│   │   └── weatherLogic.js      # Algoritmes de normalització i càlcul "AI"
-│   ├── App.jsx
-│   ├── index.css                # Estils globals i Tailwind
-│   └── main.jsx
-├── index.html
-├── package.json
-├── tailwind.config.js
-└── vite.config.js
-
-```
+* **Core:** React 19 + Vite
+* **Estils:** Tailwind CSS 3
+* **Mapes:** Leaflet + React-Leaflet
+* **PWA:** Vite Plugin PWA (Service Workers + Manifest)
+* **Icones:** Lucide React
 
 ---
 
-## 🛠️ Instal·lació i Desplegament
+## 📂 Com instal·lar al mòbil
 
-### Desenvolupament Local
+Un cop desplegada, visita la web des del teu dispositiu:
 
+### 🤖 Android (Chrome)
+1.  Obre el menú (els 3 punts a dalt a la dreta).
+2.  Prem **"Instal·lar aplicació"** o **"Afegir a la pantalla d'inici"**.
+
+### 🍎 iOS (Safari)
+1.  Prem el botó **"Compartir"** (quadrat amb fletxa, a baix al centre).
+2.  Desplaça't cap avall i selecciona **"Afegir a la pantalla d'inici"**.
+
+---
+
+## 🚀 Desenvolupament i Desplegament
+
+### Executar en local
 ```bash
-# Instal·lar dependències
 npm install
-
-# Iniciar servidor de desenvolupament
 npm run dev
 
 ```
 
-### Build i Producció
+### Provar la PWA en local (Build Preview)
 
-El projecte està configurat per desplegar-se automàticament a GitHub Pages:
+Les característiques PWA (instal·lació, service workers) només funcionen amb la build de producció:
 
 ```bash
-# Generar build i desplegar
-npm run deploy
+npm run build
+npm run preview
 
 ```
 
-*Aquesta comanda executa `vite build` i puja la carpeta `dist` a la branca `gh-pages`.*
+### Desplegar a GitHub Pages
+
+El projecte està configurat per pujar automàticament la carpeta `dist` optimitzada:
+
+```bash
+npm run deploy
+
+```
 
 ---
 
@@ -124,3 +101,7 @@ npm run deploy
 ---
 
 Desenvolupat amb ❤️ per **Toni Tapias**
+
+```
+
+```

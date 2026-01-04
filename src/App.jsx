@@ -1,10 +1,12 @@
 // src/App.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
-import DayDetailModal from './components/DayDetailModal';
-import RadarModal from './components/RadarModal';
-import AromeModal from './components/AromeModal'; 
+// Modals carregats sota demanda (Lazy Loading) per millorar la càrrega inicial
+const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
+const RadarModal = lazy(() => import('./components/RadarModal'));
+const AromeModal = lazy(() => import('./components/AromeModal'));
+
 import CurrentWeather from './components/CurrentWeather';
 import AIInsights from './components/AIInsights';
 import ForecastSection from './components/ForecastSection';
@@ -34,6 +36,9 @@ export default function MeteoIA() {
     fetchWeatherByCoords, handleGetCurrentLocation 
   } = useWeather(lang, unit);
 
+  // El rellotge actualitza 'now' cada minut.
+  // Gràcies a React.memo a ForecastSection i els hooks optimitzats,
+  // això ja no causarà repintats massius innecessaris.
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); 
     return () => clearInterval(timer);
@@ -188,32 +193,37 @@ export default function MeteoIA() {
             </p>
         </div>
 
-        <DayDetailModal 
-          weatherData={weatherData}
-          selectedDayIndex={selectedDayIndex}
-          onClose={() => setSelectedDayIndex(null)}
-          unit={unit}
-          lang={lang}
-          shiftedNow={shiftedNow}
-        />
+        {/* Suspense embolcalla els modals Lazy Loaded */}
+        <Suspense fallback={null}>
+            {selectedDayIndex !== null && (
+                <DayDetailModal 
+                  weatherData={weatherData}
+                  selectedDayIndex={selectedDayIndex}
+                  onClose={() => setSelectedDayIndex(null)}
+                  unit={unit}
+                  lang={lang}
+                  shiftedNow={shiftedNow}
+                />
+            )}
 
-        {showRadar && weatherData && (
-            <RadarModal 
-                lat={weatherData.location.latitude} 
-                lon={weatherData.location.longitude} 
-                onClose={() => setShowRadar(false)} 
-                lang={lang} 
-            />
-        )}
+            {showRadar && weatherData && (
+                <RadarModal 
+                    lat={weatherData.location.latitude} 
+                    lon={weatherData.location.longitude} 
+                    onClose={() => setShowRadar(false)} 
+                    lang={lang} 
+                />
+            )}
 
-        {showArome && weatherData && (
-            <AromeModal 
-                lat={weatherData.location.latitude} 
-                lon={weatherData.location.longitude} 
-                onClose={() => setShowArome(false)} 
-                lang={lang} 
-            />
-        )}
+            {showArome && weatherData && (
+                <AromeModal 
+                    lat={weatherData.location.latitude} 
+                    lon={weatherData.location.longitude} 
+                    onClose={() => setShowArome(false)} 
+                    lang={lang} 
+                />
+            )}
+        </Suspense>
       </div>
     </div>
   );

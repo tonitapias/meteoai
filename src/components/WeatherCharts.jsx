@@ -1,10 +1,10 @@
 // src/components/WeatherCharts.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CloudRain } from 'lucide-react';
 import { TRANSLATIONS } from '../constants/translations';
 
 // --- GRÀFIC INDIVIDUAL (SVG) ---
-export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 140, lang = 'ca', shiftedNow }) => {
+export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 140, lang = 'ca' }) => {
   if (!data || data.length === 0) return null;
   const t = TRANSLATIONS[lang];
 
@@ -23,116 +23,88 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const paddingX = 20;
   const paddingY = 30;
 
-  // Helper per obtenir valor segur (evitant 0 si és null en cota de neu)
-  const getSafeValue = (d) => {
-      const val = d[dataKey];
-      if (val === null || val === undefined) {
-          // Si és cota de neu i no tenim dades, millor no pintar 0 (neu a la platja).
-          // Retornem null per filtrar-ho després o un valor mig.
-          // Per simplicitat visual, si és null, usem 0 per temp/pluja, però per neu és perillós.
-          if (layer === 'snowLevel') return null; 
-          return 0;
-      }
-      return val;
-  };
+  // 1. MEMOITZACIÓ DELS CÀLCULS GEOMÈTRICS (La clau del rendiment)
+  // Això evita recalcular min/max i coordenades cada cop que mous el ratolí.
+  const { points, gfsPoints, iconPoints, minVal, range } = useMemo(() => {
+    const getSafeValue = (d) => {
+        const val = d[dataKey];
+        if (val === null || val === undefined) {
+            if (layer === 'snowLevel') return null; 
+            return 0;
+        }
+        return val;
+    };
 
-  // Recopilem tots els valors per calcular l'escala Y (ignorant nulls)
-  const mapValues = (dataset) => dataset.map(getSafeValue).filter(v => v !== null);
-  
-  let allValues = mapValues(data);
-  if (comparisonData && comparisonData.gfs) allValues = [...allValues, ...mapValues(comparisonData.gfs)];
-  if (comparisonData && comparisonData.icon) allValues = [...allValues, ...mapValues(comparisonData.icon)];
+    const mapValues = (dataset) => dataset.map(getSafeValue).filter(v => v !== null);
+    
+    let allValues = mapValues(data);
+    if (comparisonData?.gfs) allValues = [...allValues, ...mapValues(comparisonData.gfs)];
+    if (comparisonData?.icon) allValues = [...allValues, ...mapValues(comparisonData.icon)];
 
-  // Valors per defecte si tot és null
-  let minVal = allValues.length ? Math.min(...allValues) : 0;
-  let maxVal = allValues.length ? Math.max(...allValues) : 100;
+    let min = allValues.length ? Math.min(...allValues) : 0;
+    let max = allValues.length ? Math.max(...allValues) : 100;
 
-  // Ajustem l'escala segons el tipus de dada per a més "realisme" visual
-  if (layer === 'temp') {
-     minVal -= 2;
-     maxVal += 2;
-  } else if (layer === 'rain' || layer === 'cloud' || layer === 'humidity') {
-    minVal = 0;
-    maxVal = 100;
-  } else if (layer === 'wind') {
-    minVal = 0; 
-    maxVal = Math.max(maxVal, 20);
-  } else if (layer === 'snowLevel') {
-    // Marge de 500m per veure bé la variació
-    minVal = Math.max(0, minVal - 500);
-    maxVal = maxVal + 500;
-  }
-  
-  const range = maxVal - minVal || 1;
-  const calcY = (val) => {
-      // Si el valor és null (per cota de neu), el treiem fora del gràfic o interpol·lem
-      if (val === null) return height + 10; 
-      return height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
-  };
+    if (layer === 'temp') { min -= 2; max += 2; } 
+    else if (['rain', 'cloud', 'humidity'].includes(layer)) { min = 0; max = 100; } 
+    else if (layer === 'wind') { min = 0; max = Math.max(max, 20); } 
+    else if (layer === 'snowLevel') { min = Math.max(0, min - 500); max = max + 500; }
+    
+    const rng = max - min || 1;
+    const calcY = (val) => {
+        if (val === null) return height + 10; 
+        return height - paddingY - ((val - min) / rng) * (height - 2 * paddingY);
+    };
 
-  const points = data.map((d, i) => ({
-    x: paddingX + (i / (data.length - 1)) * (width - 2 * paddingX),
-    y: calcY(getSafeValue(d)),
-    value: getSafeValue(d),
-    time: d.time
-  }));
+    const createPoints = (dataset) => dataset.map((d, i) => ({
+        x: paddingX + (i / (dataset.length - 1)) * (width - 2 * paddingX),
+        y: calcY(getSafeValue(d)),
+        value: getSafeValue(d),
+        time: d.time
+    }));
 
-  const buildSmoothPath = (pts, keyY = 'y') => {
-    // Filtrem punts no vàlids (nulls) per no trencar la línia SVG
-    const validPts = pts.filter(p => p.value !== null && p[keyY] <= height);
-    if (validPts.length === 0) return "";
+    return {
+        points: createPoints(data),
+        gfsPoints: comparisonData?.gfs ? createPoints(comparisonData.gfs) : [],
+        iconPoints: comparisonData?.icon ? createPoints(comparisonData.icon) : [],
+        minVal: min,
+        range: rng
+    };
+  }, [data, comparisonData, layer, height, dataKey]);
 
-    let d = `M ${validPts[0].x},${validPts[0][keyY]}`;
-    for (let i = 0; i < validPts.length - 1; i++) {
-      const p0 = validPts[i];
-      const p1 = validPts[i + 1];
-      const cx = (p0.x + p1.x) / 2;
-      d += ` C ${cx},${p0[keyY]} ${cx},${p1[keyY]} ${p1.x},${p1[keyY]}`;
-    }
-    return d;
-  };
+  // 2. MEMOITZACIÓ DELS PATHS SVG
+  const { areaPath, linePath, gfsPath, iconPath } = useMemo(() => {
+      const buildSmoothPath = (pts) => {
+        const validPts = pts.filter(p => p.value !== null && p.y <= height);
+        if (validPts.length === 0) return "";
+        let d = `M ${validPts[0].x},${validPts[0].y}`;
+        for (let i = 0; i < validPts.length - 1; i++) {
+          const p0 = validPts[i];
+          const p1 = validPts[i + 1];
+          const cx = (p0.x + p1.x) / 2;
+          d += ` C ${cx},${p0.y} ${cx},${p1.y} ${p1.x},${p1.y}`;
+        }
+        return d;
+      };
 
-  const linePath = buildSmoothPath(points, 'y');
-  // L'àrea tanca a baix
-  const areaPath = linePath ? `${linePath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z` : "";
+      const lPath = buildSmoothPath(points);
+      const aPath = lPath ? `${lPath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z` : "";
+      
+      return {
+          linePath: lPath,
+          areaPath: aPath,
+          gfsPath: comparisonData?.gfs ? buildSmoothPath(gfsPoints) : "",
+          iconPath: comparisonData?.icon ? buildSmoothPath(iconPoints) : ""
+      };
+  }, [points, gfsPoints, iconPoints, height, comparisonData, width]);
 
-  let gfsPath = "";
-  let iconPath = "";
-  
-  // Generem línies comparatives només si no és SnowLevel (per no embrutar) o si es vol
-  if (comparisonData) {
-      if (comparisonData.gfs && comparisonData.gfs.length > 0) {
-          const gfsPoints = comparisonData.gfs.map((d, i) => ({
-              x: paddingX + (i / (comparisonData.gfs.length - 1)) * (width - 2 * paddingX),
-              y: calcY(getSafeValue(d)),
-              value: getSafeValue(d)
-          }));
-          gfsPath = buildSmoothPath(gfsPoints, 'y');
-      }
-      if (comparisonData.icon && comparisonData.icon.length > 0) {
-          const iconPoints = comparisonData.icon.map((d, i) => ({
-              x: paddingX + (i / (comparisonData.icon.length - 1)) * (width - 2 * paddingX),
-              y: calcY(getSafeValue(d)),
-              value: getSafeValue(d)
-          }));
-          iconPath = buildSmoothPath(iconPoints, 'y');
-      }
-  }
-
+  // Dades dinàmiques per al tooltip (això sí que canvia amb el hover)
   const hoverData = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : null;
-  const gfsDataPoint = (hoveredIndex !== null && comparisonData?.gfs) ? comparisonData.gfs[hoveredIndex] : null;
-  const iconDataPoint = (hoveredIndex !== null && comparisonData?.icon) ? comparisonData.icon[hoveredIndex] : null;
+  const gfsValue = (hoveredIndex !== null && gfsPoints[hoveredIndex]) ? gfsPoints[hoveredIndex].value : null;
+  const iconValue = (hoveredIndex !== null && iconPoints[hoveredIndex]) ? iconPoints[hoveredIndex].value : null;
 
-  const gfsValue = gfsDataPoint ? getSafeValue(gfsDataPoint) : null;
-  const iconValue = iconDataPoint ? getSafeValue(iconDataPoint) : null;
-
-  // Formatador especial per al Tooltip (Realisme Cota de Neu)
   const formatTooltipValue = (val) => {
       if (val === null || val === undefined) return "--";
-      if (layer === 'snowLevel') {
-          if (val > 4000) return "> 4000";
-          return Math.round(val);
-      }
+      if (layer === 'snowLevel') return val > 4000 ? "> 4000" : Math.round(val);
       return Math.round(val);
   };
 
@@ -152,27 +124,36 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
         
         {areaPath && <path d={areaPath} fill={`url(#gradient-${layer})`} />}
-
         {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 4"/>}
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 2"/>}
-
         {linePath && <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
         
+        {/* Zona interactiva invisible */}
         {points.map((p, i) => (
-          <g 
+          <rect 
             key={i} 
+            x={p.x - (width / points.length / 2)} 
+            y={0} 
+            width={width / points.length} 
+            height={height} 
+            fill="transparent" 
             onMouseEnter={() => setHoveredIndex(i)}
             onClick={() => setHoveredIndex(i)}
             onTouchStart={() => setHoveredIndex(i)}
             className="cursor-pointer"
-          >
-            <rect x={p.x - (width / points.length / 2)} y={0} width={width / points.length} height={height} fill="transparent" />
-            {(i % (points.length > 12 ? 3 : 1) === 0) && (
-              <text x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">{new Date(p.time).getHours()}h</text>
-            )}
-          </g>
+          />
         ))}
 
+        {/* Eix X (Hores) - Pintat només si cal */}
+        {points.map((p, i) => (
+             (i % (points.length > 12 ? 3 : 1) === 0) && (
+              <text key={`txt-${i}`} x={p.x} y={height - 2} textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="bold">
+                  {new Date(p.time).getHours()}h
+              </text>
+            )
+        ))}
+
+        {/* Tooltip Dinàmic */}
         {hoverData && hoverData.value !== null && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
@@ -217,7 +198,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
 };
 
 // --- GRÀFIC PREVISIÓ HORÀRIA (Container) ---
-export const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', shiftedNow }) => {
+export const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca' }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const t = TRANSLATIONS[lang];
 
@@ -251,71 +232,62 @@ export const HourlyForecastChart = ({ data, comparisonData, unit, lang = 'ca', s
   );
 };
 
-// --- GRÀFIC PRECIPITACIÓ MINUT A MINUT ---
+// Mantenim l'altre component igual...
 export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }) => {
-  let chartData = data ? [...data] : [];
-  if(chartData.length === 0) return null; 
-  
-  while(chartData.length < 4) chartData.push(0);
-  chartData = chartData.slice(0, 4);
+    // ... (el mateix codi que tenies, no cal tocar-lo)
+    let chartData = data ? [...data] : [];
+    if(chartData.length === 0) return null; 
+    while(chartData.length < 4) chartData.push(0);
+    chartData = chartData.slice(0, 4);
+    if (currentPrecip > 0 && chartData[0] === 0) chartData[0] = currentPrecip;
+    if (chartData.every(v => v === 0)) return null;
+    const max = Math.max(...chartData, 0.5); 
+    const getIntensityColor = (val) => {
+        if (val === 0) return 'bg-blue-900/50';
+        if (val < 2.5) return 'bg-blue-400'; 
+        if (val < 7.6) return 'bg-yellow-400'; 
+        if (val < 50) return 'bg-orange-500'; 
+        return 'bg-red-600'; 
+    };
 
-  if (currentPrecip > 0 && chartData[0] === 0) {
-      chartData[0] = currentPrecip;
-  }
-
-  if (chartData.every(v => v === 0)) return null;
-  const max = Math.max(...chartData, 0.5); 
-
-  const getIntensityColor = (val) => {
-      if (val === 0) return 'bg-blue-900/50';
-      if (val < 2.5) return 'bg-blue-400'; 
-      if (val < 7.6) return 'bg-yellow-400'; 
-      if (val < 50) return 'bg-orange-500'; 
-      return 'bg-red-600'; 
-  };
-
-  return (
-    <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in relative">
-        <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-                <CloudRain className="w-3 h-3 text-blue-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
+    return (
+        <div className="w-full mt-3 bg-blue-950/20 rounded-xl p-3 border border-blue-500/20 animate-in fade-in relative">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                    <CloudRain className="w-3 h-3 text-blue-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">{label}</span>
+                </div>
+                {max > 2.5 && <span className="text-[9px] text-slate-400 font-medium">Màx: {max.toFixed(1)}mm</span>}
             </div>
-            {max > 2.5 && <span className="text-[9px] text-slate-400 font-medium">Màx: {max.toFixed(1)}mm</span>}
+            <div className="relative h-16 w-full pb-1">
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                    <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
+                    <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
+                    <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
+                </div>
+                <div className="flex items-end gap-2 h-full w-full relative z-10">
+                {chartData.map((val, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
+                        {val > 0 && (
+                            <span className={`text-[9px] font-bold mb-0.5 animate-in slide-in-from-bottom-1 ${val > 7.6 ? 'text-white' : 'text-blue-200'}`}>
+                                {val >= 10 ? Math.round(val) : val.toFixed(1)}
+                            </span>
+                        )}
+                        <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
+                            <div 
+                            className={`w-full rounded-sm transition-all group-hover:opacity-80 ${getIntensityColor(val)}`}
+                            style={{ height: `${(val / max) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
+                            ></div>
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-medium">{i === 0 ? 'Ara' : `+${i * 15}m`}</span>
+                    </div>
+                ))}
+                </div>
+            </div>
+            <div className="flex justify-between items-center text-[9px] text-blue-400/70 mt-1 px-1">
+            <span>Intensitat (mm)</span>
+            <span>Previsió 1h</span>
+            </div>
         </div>
-        
-        <div className="relative h-16 w-full pb-1">
-             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
-                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
-                 <div className="w-full h-px bg-white border-dashed border-t border-white/50"></div>
-             </div>
-
-             <div className="flex items-end gap-2 h-full w-full relative z-10">
-               {chartData.map((val, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
-                     {val > 0 && (
-                        <span className={`text-[9px] font-bold mb-0.5 animate-in slide-in-from-bottom-1 ${val > 7.6 ? 'text-white' : 'text-blue-200'}`}>
-                            {val >= 10 ? Math.round(val) : val.toFixed(1)}
-                        </span>
-                     )}
-                     <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
-                        <div 
-                          className={`w-full rounded-sm transition-all group-hover:opacity-80 ${getIntensityColor(val)}`}
-                          style={{ height: `${(val / max) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
-                        ></div>
-                     </div>
-                     <span className="text-[9px] text-slate-400 font-medium">
-                        {i === 0 ? 'Ara' : `+${i * 15}m`}
-                     </span>
-                  </div>
-               ))}
-             </div>
-        </div>
-        <div className="flex justify-between items-center text-[9px] text-blue-400/70 mt-1 px-1">
-           <span>Intensitat (mm)</span>
-           <span>Previsió 1h</span>
-        </div>
-    </div>
-  )
+    );
 };

@@ -8,12 +8,6 @@ const { PRECIPITATION, WIND, TEMP, RELIABILITY, ALERTS, HUMIDITY } = WEATHER_THR
 // 1. FUNCIONS AUXILIARS BÀSIQUES
 // ==========================================
 
-/**
- * Ajusta una data segons la zona horària o l'offset proporcionat.
- * @param {Date} baseDate - La data original.
- * @param {string|number} timezoneOrOffset - Zona horària (ex: 'Europe/Madrid') o offset en segons.
- * @returns {Date} La data ajustada.
- */
 export const getShiftedDate = (baseDate, timezoneOrOffset) => {
   if (typeof timezoneOrOffset === 'number') {
       const utcTimestamp = baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000);
@@ -30,12 +24,6 @@ export const getShiftedDate = (baseDate, timezoneOrOffset) => {
   }
 };
 
-/**
- * Calcula el Punt de Rosada (Dew Point).
- * @param {number} T - Temperatura en graus Celsius.
- * @param {number} RH - Humitat relativa (%).
- * @returns {number} Punt de rosada en graus Celsius.
- */
 export const calculateDewPoint = (T, RH) => {
   const a = 17.27;
   const b = 237.7;
@@ -44,11 +32,6 @@ export const calculateDewPoint = (T, RH) => {
   return (b * alpha) / (a - alpha);
 };
 
-/**
- * Calcula la fase lunar actual (0.0 a 1.0).
- * @param {Date} date - Data per calcular la fase.
- * @returns {number} Valor entre 0 (Lluna Nova) i 1 (final de cicle). 0.5 és Lluna Plena.
- */
 export const getMoonPhase = (date) => {
   let year = date.getFullYear();
   let month = date.getMonth() + 1;
@@ -62,12 +45,6 @@ export const getMoonPhase = (date) => {
   return phase; 
 };
 
-/**
- * Obté l'etiqueta de text (WMO) per a un codi de temps.
- * @param {object} current - Objecte del temps actual.
- * @param {string} language - Idioma ('ca', 'es', 'en').
- * @returns {string} Descripció del temps (ex: "Cel serè").
- */
 export const getWeatherLabel = (current, language) => {
   const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
   if (!tr || !current) return "";
@@ -79,12 +56,6 @@ export const getWeatherLabel = (current, language) => {
 // 2. NORMALITZACIÓ I CÀLCULS COMPLEXOS
 // ==========================================
 
-/**
- * Normalitza les dades de l'API d'Open-Meteo per facilitar-ne l'ús.
- * Separa les dades comparatives (GFS, ICON) en estructures pròpies.
- * @param {object} data - Dades crues de l'API.
- * @returns {object} Dades normalitzades amb hourlyComparison i dailyComparison.
- */
 export const normalizeModelData = (data) => {
      if (!data || !data.current) return data;
      
@@ -150,10 +121,6 @@ export const normalizeModelData = (data) => {
      return { ...data, ...result };
 };
 
-/**
- * Calcula la fiabilitat de la predicció comparant 3 models (Best, GFS, ICON).
- * @returns {{level: 'high'|'medium'|'low', type: string, value: number}|null} Nivell de confiança.
- */
 export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 0) => {
   if (!dailyGFS || !dailyICON || !dailyBest) return null;
   const t1 = dailyBest.temperature_2m_max?.[dayIndex];
@@ -179,16 +146,6 @@ export const calculateReliability = (dailyBest, dailyGFS, dailyICON, dayIndex = 
   return { level, type, value };
 };
 
-/**
- * Determina el codi de temps real basant-se en sensors minuts, radar i temperatures.
- * Corregeix errors comuns dels models (ex: pluja vs neu, o sol vs radar plovent).
- * * @param {object} current - Dades actuals.
- * @param {number[]} minutelyPrecipData - Array de precipitació (propera hora).
- * @param {number} prob - Probabilitat de pluja horària.
- * @param {number} freezingLevel - Cota de neu en metres (per defecte CONFIG).
- * @param {number} elevation - Altitud de la ubicació actual.
- * @returns {number} Codi WMO corregit.
- */
 export const getRealTimeWeatherCode = (
     current, 
     minutelyPrecipData, 
@@ -277,21 +234,21 @@ const analyzePrecipitation = (isRaining, precipInstantanea, code, precipNext15, 
     let parts = [];
     if (isRaining) {
         if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) {
-             parts.push(tr.aiRainHeavy || "Cau un bon xàfec."); 
+             parts.push(tr.aiRainHeavy); 
         } 
         else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) {
-             parts.push(tr.aiRainMod || "Està plovent."); 
+             parts.push(tr.aiRainMod); 
         }
         else {
-             parts.push(tr.aiRainLight || "Està plovent feblement.");
+             parts.push(tr.aiRainLight);
         }
 
         if (precipInstantanea > 0) {
-            if (precipNext15 < PRECIPITATION.LIGHT) parts.push(" " + (tr.aiRainStopping || "Pararà aviat."));
-            else if (precipNext15 > precipInstantanea * PRECIPITATION.INTENSIFY_FACTOR) parts.push(" " + (tr.aiRainMore || "S'intensificarà."));
+            if (precipNext15 < PRECIPITATION.LIGHT) parts.push(" " + tr.aiRainStopping);
+            else if (precipNext15 > precipInstantanea * PRECIPITATION.INTENSIFY_FACTOR) parts.push(" " + tr.aiRainMore);
         }
     }
-    return parts;
+    return parts.filter(Boolean);
 };
 
 const analyzeSky = (code, isDay, currentHour, visibility, rainProb, cloudCover, tr, alerts) => {
@@ -304,20 +261,20 @@ const analyzeSky = (code, isDay, currentHour, visibility, rainProb, cloudCover, 
     else if (code === 2) parts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
     else if (code === 3) parts.push(tr.aiSummaryOvercast); 
     else if (code === 45 || code === 48) {
-        parts.push(tr.aiSummaryFog || "Hi ha boira."); 
+        parts.push(tr.aiSummaryFog); 
         if (visibility !== undefined && visibility !== null && visibility < 500) {
                 alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
         }
     }
     else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
-            parts.push(tr.aiSummarySnow || "S'esperen nevades.");
+            parts.push(tr.aiSummarySnow);
     }
     else if (code > 48) parts.push(tr.aiSummaryCloudy);
     
     if (rainProb > 40) parts.push(tr.aiRainChance);
     else if (cloudCover < 30 && code <= 2) parts.push(tr.aiRainNone);
 
-    return parts;
+    return parts.filter(Boolean);
 };
 
 const analyzeTemperature = (feelsLike, temp, humidity, dailyMin, currentHour, unit, tr) => {
@@ -341,7 +298,7 @@ const analyzeTemperature = (feelsLike, temp, humidity, dailyMin, currentHour, un
        const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(displayFeelsLike)) : "";
        parts.push(heatText);
     }
-    return parts;
+    return parts.filter(Boolean);
 };
 
 const generateAlertsAndTips = (params, tr) => {
@@ -380,30 +337,12 @@ const generateAlertsAndTips = (params, tr) => {
     return { alerts, tips: [...new Set(tips)].slice(0, 4) };
 };
 
-/**
- * Comprova si la ubicació està dins de la cobertura del model AROME (Europa Occidental).
- * @param {number} lat - Latitud.
- * @param {number} lon - Longitud.
- * @returns {boolean} True si està suportat.
- */
 export const isAromeSupported = (lat, lon) => {
     if (!lat || !lon) return false;
     const MIN_LAT = 38.0; const MAX_LAT = 53.0; const MIN_LON = -8.0; const MAX_LON = 12.0; 
     return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
 };
 
-/**
- * Genera el resum intel·ligent, consells i alertes basat en totes les dades.
- * Aquesta és la funció principal "Cervell" de l'App.
- * * @param {object} current - Dades actuals (amb minutely15 injectat).
- * @param {object} daily - Dades diàries.
- * @param {object} hourly - Dades horàries.
- * @param {number} aqiValue - Valor de qualitat de l'aire.
- * @param {string} language - Idioma.
- * @param {number} effectiveCode - Codi de temps corregit (getRealTimeWeatherCode).
- * @param {object} reliability - Objecte de fiabilitat.
- * @returns {{text: string, tips: string[], alerts: object[], confidence: string, confidenceLevel: string}} Resultat final.
- */
 export const generateAIPrediction = (current, daily, hourly, aqiValue, language = 'ca', effectiveCode = null, reliability = null, unit = 'C') => {
     const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
     if (!tr) return { text: "", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
@@ -467,11 +406,12 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
     let confidenceText = tr.aiConfidence; 
     let confidenceLevel = 'high';
     if (reliability) {
-        if (reliability.level === 'low') { confidenceLevel = 'low'; confidenceText = tr.aiConfidenceLow || "Divergència Alta"; } 
-        else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod || "Divergència Moderada"; }
+        if (reliability.level === 'low') { confidenceLevel = 'low'; confidenceText = tr.aiConfidenceLow; } 
+        else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod; }
     }
 
-    const finalString = summaryParts.join("").replace(/\s+/g, ' ');
+    // Filtrar parts undefined o nulles i unir
+    const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
     
     return { 
         text: finalString, 

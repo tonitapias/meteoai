@@ -19,7 +19,6 @@ export function useWeather(lang, unit = 'C') {
   const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
 
-    // V7: Nova clau per forçar la recàrrega amb els NÚVOLS AROME reactivats
     const cacheKey = `meteoai_v7_cache_${lat.toFixed(2)}_${lon.toFixed(2)}`;
     const cachedRaw = localStorage.getItem(cacheKey);
 
@@ -35,6 +34,7 @@ export function useWeather(lang, unit = 'C') {
           return;
         }
       } catch (e) {
+        console.warn("Cache corrupta detectada, netejant...", e);
         localStorage.removeItem(cacheKey);
       }
     }
@@ -65,22 +65,23 @@ export function useWeather(lang, unit = 'C') {
       // 2. INJECCIÓ HÍBRIDA COMPLETA (AROME HD)
       if (isAromeSupported(lat, lon)) {
           try {
-              // Sol·licitem dades extra a AROME (incloent núvols horaris)
               const aromeUrl = `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,wind_gusts_10m,precipitation,visibility&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day,cape,freezing_level_height,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&minutely_15=precipitation,weather_code&timezone=auto`;
               
               const aromeRes = await fetch(aromeUrl, { signal });
               if (aromeRes.ok) {
                   const aromeData = await aromeRes.json();
                   
-                  // A. Actualització de Dades "Current" (Bàsiques)
+                  // A. Actualització de Dades "Current"
                   if (aromeData.current) {
-                      rawWeatherData.current.temperature_2m = aromeData.current.temperature_2m;
-                      rawWeatherData.current.wind_speed_10m = aromeData.current.wind_speed_10m;
-                      rawWeatherData.current.wind_gusts_10m = aromeData.current.wind_gusts_10m;
-                      rawWeatherData.current.wind_direction_10m = aromeData.current.wind_direction_10m;
-                      rawWeatherData.current.weather_code = aromeData.current.weather_code;
-                      rawWeatherData.current.precipitation = aromeData.current.precipitation;
-                      rawWeatherData.current.source = 'AROME HD'; // Marca d'aigua per a la UI
+                      Object.assign(rawWeatherData.current, {
+                          temperature_2m: aromeData.current.temperature_2m,
+                          wind_speed_10m: aromeData.current.wind_speed_10m,
+                          wind_gusts_10m: aromeData.current.wind_gusts_10m,
+                          wind_direction_10m: aromeData.current.wind_direction_10m,
+                          weather_code: aromeData.current.weather_code,
+                          precipitation: aromeData.current.precipitation,
+                          source: 'AROME HD'
+                      });
                   }
                   
                   // B. Minut a minut
@@ -88,80 +89,79 @@ export function useWeather(lang, unit = 'C') {
                        rawWeatherData.minutely_15 = aromeData.minutely_15;
                   }
 
-                  // C. Fusió de dades horàries
+                  // C. Fusió de dades horàries (OPTIMITZAT)
                   if (aromeData.hourly && rawWeatherData.hourly) {
+                      // Creem un Mapa per cerca O(1) en lloc de O(N) dins del bucle
+                      const globalTimeIndexMap = new Map();
+                      rawWeatherData.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
+
                       aromeData.hourly.time.forEach((timeValue, aromeIndex) => {
-                          const globalIndex = rawWeatherData.hourly.time.indexOf(timeValue);
+                          const globalIndex = globalTimeIndexMap.get(timeValue);
                           
-                          if (globalIndex !== -1) {
-                              // Variables existents...
-                              if (aromeData.hourly.temperature_2m[aromeIndex] !== undefined) rawWeatherData.hourly.temperature_2m[globalIndex] = aromeData.hourly.temperature_2m[aromeIndex];
-                              if (aromeData.hourly.wind_speed_10m[aromeIndex] !== undefined) rawWeatherData.hourly.wind_speed_10m[globalIndex] = aromeData.hourly.wind_speed_10m[aromeIndex];
-                              if (aromeData.hourly.wind_gusts_10m[aromeIndex] !== undefined) rawWeatherData.hourly.wind_gusts_10m[globalIndex] = aromeData.hourly.wind_gusts_10m[aromeIndex];
-                              if (aromeData.hourly.precipitation[aromeIndex] !== undefined) rawWeatherData.hourly.precipitation[globalIndex] = aromeData.hourly.precipitation[aromeIndex];
+                          if (globalIndex !== undefined) {
+                              const source = aromeData.hourly;
+                              const target = rawWeatherData.hourly;
+
+                              if (source.temperature_2m[aromeIndex] !== undefined) target.temperature_2m[globalIndex] = source.temperature_2m[aromeIndex];
+                              if (source.wind_speed_10m[aromeIndex] !== undefined) target.wind_speed_10m[globalIndex] = source.wind_speed_10m[aromeIndex];
+                              if (source.wind_gusts_10m[aromeIndex] !== undefined) target.wind_gusts_10m[globalIndex] = source.wind_gusts_10m[aromeIndex];
+                              if (source.precipitation[aromeIndex] !== undefined) target.precipitation[globalIndex] = source.precipitation[aromeIndex];
                               
-                              if (aromeData.hourly.cape?.[aromeIndex] !== undefined) {
-                                  if (!rawWeatherData.hourly.cape) rawWeatherData.hourly.cape = [];
-                                  rawWeatherData.hourly.cape[globalIndex] = aromeData.hourly.cape[aromeIndex];
+                              if (source.cape?.[aromeIndex] !== undefined) {
+                                  if (!target.cape) target.cape = [];
+                                  target.cape[globalIndex] = source.cape[aromeIndex];
                               }
-                              if (aromeData.hourly.freezing_level_height?.[aromeIndex] !== undefined) {
-                                  if (!rawWeatherData.hourly.freezing_level_height) rawWeatherData.hourly.freezing_level_height = [];
-                                  rawWeatherData.hourly.freezing_level_height[globalIndex] = aromeData.hourly.freezing_level_height[aromeIndex];
+                              if (source.freezing_level_height?.[aromeIndex] !== undefined) {
+                                  if (!target.freezing_level_height) target.freezing_level_height = [];
+                                  target.freezing_level_height[globalIndex] = source.freezing_level_height[aromeIndex];
                               }
 
-                              // --- NÚVOLS AROME (Horari) ---
-                              if (aromeData.hourly.cloud_cover?.[aromeIndex] !== undefined) rawWeatherData.hourly.cloud_cover[globalIndex] = aromeData.hourly.cloud_cover[aromeIndex];
-                              
-                              if (aromeData.hourly.cloud_cover_low?.[aromeIndex] !== undefined) {
-                                  if(!rawWeatherData.hourly.cloud_cover_low) rawWeatherData.hourly.cloud_cover_low = [];
-                                  rawWeatherData.hourly.cloud_cover_low[globalIndex] = aromeData.hourly.cloud_cover_low[aromeIndex];
+                              // Núvols
+                              if (source.cloud_cover?.[aromeIndex] !== undefined) target.cloud_cover[globalIndex] = source.cloud_cover[aromeIndex];
+                              if (source.cloud_cover_low?.[aromeIndex] !== undefined) {
+                                  if(!target.cloud_cover_low) target.cloud_cover_low = [];
+                                  target.cloud_cover_low[globalIndex] = source.cloud_cover_low[aromeIndex];
                               }
-                              if (aromeData.hourly.cloud_cover_mid?.[aromeIndex] !== undefined) {
-                                  if(!rawWeatherData.hourly.cloud_cover_mid) rawWeatherData.hourly.cloud_cover_mid = [];
-                                  rawWeatherData.hourly.cloud_cover_mid[globalIndex] = aromeData.hourly.cloud_cover_mid[aromeIndex];
+                              if (source.cloud_cover_mid?.[aromeIndex] !== undefined) {
+                                  if(!target.cloud_cover_mid) target.cloud_cover_mid = [];
+                                  target.cloud_cover_mid[globalIndex] = source.cloud_cover_mid[aromeIndex];
                               }
-                              if (aromeData.hourly.cloud_cover_high?.[aromeIndex] !== undefined) {
-                                  if(!rawWeatherData.hourly.cloud_cover_high) rawWeatherData.hourly.cloud_cover_high = [];
-                                  rawWeatherData.hourly.cloud_cover_high[globalIndex] = aromeData.hourly.cloud_cover_high[aromeIndex];
+                              if (source.cloud_cover_high?.[aromeIndex] !== undefined) {
+                                  if(!target.cloud_cover_high) target.cloud_cover_high = [];
+                                  target.cloud_cover_high[globalIndex] = source.cloud_cover_high[aromeIndex];
                               }
                           }
                       });
 
-                      // --- FIX: ACTUALITZACIÓ CURRENT PER AL GINY DE NÚVOLS ---
-                      // Busquem l'índex horari corresponent a l'hora actual (current.time)
-                      // per injectar les dades de núvols d'alta resolució a la vista "Ara".
+                      // Actualització Current de núvols (Optimitzat)
                       if (rawWeatherData.current && rawWeatherData.current.time) {
                           const currentDt = new Date(rawWeatherData.current.time).getTime();
-                          
-                          // Busquem l'índex a l'array AROME que coincideix amb l'hora actual
+                          // Cerca amb marge de 30 minuts
                           const aromeCurrentIndex = aromeData.hourly.time.findIndex(t => 
-                              Math.abs(new Date(t).getTime() - currentDt) < 30 * 60 * 1000 // Marge de 30 minuts
+                              Math.abs(new Date(t).getTime() - currentDt) < 30 * 60 * 1000 
                           );
 
                           if (aromeCurrentIndex !== -1) {
-                              // Sobreescrivim les dades globals del "current" amb les d'AROME
-                              if (aromeData.hourly.cloud_cover?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover = aromeData.hourly.cloud_cover[aromeCurrentIndex];
-                                  
-                              if (aromeData.hourly.cloud_cover_low?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover_low = aromeData.hourly.cloud_cover_low[aromeCurrentIndex];
-                                  
-                              if (aromeData.hourly.cloud_cover_mid?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover_mid = aromeData.hourly.cloud_cover_mid[aromeCurrentIndex];
-                                  
-                              if (aromeData.hourly.cloud_cover_high?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover_high = aromeData.hourly.cloud_cover_high[aromeCurrentIndex];
+                              const ah = aromeData.hourly;
+                              if (ah.cloud_cover?.[aromeCurrentIndex] !== undefined) 
+                                  rawWeatherData.current.cloud_cover = ah.cloud_cover[aromeCurrentIndex];
+                              if (ah.cloud_cover_low?.[aromeCurrentIndex] !== undefined) 
+                                  rawWeatherData.current.cloud_cover_low = ah.cloud_cover_low[aromeCurrentIndex];
+                              if (ah.cloud_cover_mid?.[aromeCurrentIndex] !== undefined) 
+                                  rawWeatherData.current.cloud_cover_mid = ah.cloud_cover_mid[aromeCurrentIndex];
+                              if (ah.cloud_cover_high?.[aromeCurrentIndex] !== undefined) 
+                                  rawWeatherData.current.cloud_cover_high = ah.cloud_cover_high[aromeCurrentIndex];
                           }
                       }
                   }
-                  console.log("🎯 Dades Híbrides TOTALS: AROME (inclòs núvols a Current i Hourly)");
+                  console.log("🎯 Dades Híbrides TOTALS: AROME Injectat (Optimitzat)");
               }
           } catch (aromeErr) {
-              console.warn("Error AROME", aromeErr);
+              console.warn("Error AROME, utilitzant fallback ECMWF", aromeErr);
           }
       }
 
-      // 3. PONT DE DADES (Manté la lògica de recerca temporal per evitar 0s innecessaris en camps buits)
+      // 3. PONT DE DADES
       if (rawWeatherData.current && rawWeatherData.hourly && rawWeatherData.hourly.time) {
           const currentDt = new Date(rawWeatherData.current.time).getTime();
           let closestIndex = 0;
@@ -175,11 +175,8 @@ export function useWeather(lang, unit = 'C') {
               }
           });
 
-          // Camps que normalment no venen al 'current' standard de l'ECMWF o que volem reforçar
           const missingFields = ['cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'cape', 'freezing_level_height'];
-          
           missingFields.forEach(field => {
-              // Només omplim si és undefined o null (si ja l'hem omplert amb AROME, això no farà res, correcte)
               if ((rawWeatherData.current[field] === undefined || rawWeatherData.current[field] === null) && rawWeatherData.hourly[field]) {
                   rawWeatherData.current[field] = rawWeatherData.hourly[field][closestIndex];
               }
@@ -194,7 +191,7 @@ export function useWeather(lang, unit = 'C') {
           weather: finalWeatherData,
           aqi: newAqiData
       });
-      try { localStorage.setItem(cacheKey, saveData); } catch (e) {}
+      try { localStorage.setItem(cacheKey, saveData); } catch (e) { console.warn("Quota localStorage excedida"); }
 
       setWeatherData(finalWeatherData);
       setAqiData(newAqiData);
