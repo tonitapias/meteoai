@@ -89,9 +89,8 @@ export function useWeather(lang, unit = 'C') {
                        rawWeatherData.minutely_15 = aromeData.minutely_15;
                   }
 
-                  // C. Fusió de dades horàries (OPTIMITZAT)
+                  // C. Fusió de dades horàries (OPTIMITZAT I SEGUR)
                   if (aromeData.hourly && rawWeatherData.hourly) {
-                      // Creem un Mapa per cerca O(1) en lloc de O(N) dins del bucle
                       const globalTimeIndexMap = new Map();
                       rawWeatherData.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
 
@@ -102,51 +101,41 @@ export function useWeather(lang, unit = 'C') {
                               const source = aromeData.hourly;
                               const target = rawWeatherData.hourly;
 
-                              if (source.temperature_2m[aromeIndex] !== undefined) target.temperature_2m[globalIndex] = source.temperature_2m[aromeIndex];
-                              if (source.wind_speed_10m[aromeIndex] !== undefined) target.wind_speed_10m[globalIndex] = source.wind_speed_10m[aromeIndex];
-                              if (source.wind_gusts_10m[aromeIndex] !== undefined) target.wind_gusts_10m[globalIndex] = source.wind_gusts_10m[aromeIndex];
-                              if (source.precipitation[aromeIndex] !== undefined) target.precipitation[globalIndex] = source.precipitation[aromeIndex];
-                              
-                              if (source.cape?.[aromeIndex] !== undefined) {
-                                  if (!target.cape) target.cape = [];
-                                  target.cape[globalIndex] = source.cape[aromeIndex];
-                              }
-                              if (source.freezing_level_height?.[aromeIndex] !== undefined) {
-                                  if (!target.freezing_level_height) target.freezing_level_height = [];
-                                  target.freezing_level_height[globalIndex] = source.freezing_level_height[aromeIndex];
-                              }
+                              // --- FIX: Funció d'assignació segura ---
+                              // Crea l'array destí si no existeix per evitar el crash
+                              const safeSet = (field) => {
+                                  if (source[field]?.[aromeIndex] !== undefined) {
+                                      if (!target[field]) target[field] = [];
+                                      target[field][globalIndex] = source[field][aromeIndex];
+                                  }
+                              };
 
-                              // Núvols (CORREGIT: Afegida comprovació d'inicialització)
-                              if (source.cloud_cover?.[aromeIndex] !== undefined) {
-                                  if (!target.cloud_cover) target.cloud_cover = [];
-                                  target.cloud_cover[globalIndex] = source.cloud_cover[aromeIndex];
-                              }
+                              // Assignem tots els camps amb seguretat
+                              safeSet('temperature_2m');
+                              safeSet('wind_speed_10m');
+                              safeSet('wind_gusts_10m');
+                              safeSet('precipitation');
+                              safeSet('cape');
+                              safeSet('freezing_level_height');
                               
-                              if (source.cloud_cover_low?.[aromeIndex] !== undefined) {
-                                  if(!target.cloud_cover_low) target.cloud_cover_low = [];
-                                  target.cloud_cover_low[globalIndex] = source.cloud_cover_low[aromeIndex];
-                              }
-                              if (source.cloud_cover_mid?.[aromeIndex] !== undefined) {
-                                  if(!target.cloud_cover_mid) target.cloud_cover_mid = [];
-                                  target.cloud_cover_mid[globalIndex] = source.cloud_cover_mid[aromeIndex];
-                              }
-                              if (source.cloud_cover_high?.[aromeIndex] !== undefined) {
-                                  if(!target.cloud_cover_high) target.cloud_cover_high = [];
-                                  target.cloud_cover_high[globalIndex] = source.cloud_cover_high[aromeIndex];
-                              }
+                              // Camps de nuvolositat (on fallava abans)
+                              safeSet('cloud_cover');
+                              safeSet('cloud_cover_low');
+                              safeSet('cloud_cover_mid');
+                              safeSet('cloud_cover_high');
                           }
                       });
 
                       // Actualització Current de núvols (Optimitzat)
                       if (rawWeatherData.current && rawWeatherData.current.time) {
                           const currentDt = new Date(rawWeatherData.current.time).getTime();
-                          // Cerca amb marge de 30 minuts
                           const aromeCurrentIndex = aromeData.hourly.time.findIndex(t => 
                               Math.abs(new Date(t).getTime() - currentDt) < 30 * 60 * 1000 
                           );
 
                           if (aromeCurrentIndex !== -1) {
                               const ah = aromeData.hourly;
+                              // Assignació directa (segura perquè comprovem l'origen)
                               if (ah.cloud_cover?.[aromeCurrentIndex] !== undefined) 
                                   rawWeatherData.current.cloud_cover = ah.cloud_cover[aromeCurrentIndex];
                               if (ah.cloud_cover_low?.[aromeCurrentIndex] !== undefined) 
@@ -165,7 +154,7 @@ export function useWeather(lang, unit = 'C') {
           }
       }
 
-      // 3. PONT DE DADES
+      // 3. PONT DE DADES (Omplir forats a 'current' amb dades horàries)
       if (rawWeatherData.current && rawWeatherData.hourly && rawWeatherData.hourly.time) {
           const currentDt = new Date(rawWeatherData.current.time).getTime();
           let closestIndex = 0;
@@ -195,7 +184,19 @@ export function useWeather(lang, unit = 'C') {
           weather: finalWeatherData,
           aqi: newAqiData
       });
-      try { localStorage.setItem(cacheKey, saveData); } catch (e) { console.warn("Quota localStorage excedida"); }
+
+      // --- FIX: Gestió segura de localStorage ---
+      try { 
+          localStorage.setItem(cacheKey, saveData); 
+      } catch (e) { 
+          console.warn("Quota localStorage excedida, netejant cache antiga...");
+          try {
+              localStorage.clear(); // Intentem fer lloc esborrant tot
+              localStorage.setItem(cacheKey, saveData); // Reintentem guardar
+          } catch (retryErr) {
+              console.error("No s'ha pogut guardar a cache ni després de netejar", retryErr);
+          }
+      }
 
       setWeatherData(finalWeatherData);
       setAqiData(newAqiData);
