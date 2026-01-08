@@ -227,7 +227,7 @@ export const getRealTimeWeatherCode = (
 };
 
 // ==========================================
-// 3. GENERADOR D'IA (REFACTORITZAT)
+// 3. GENERADOR D'IA
 // ==========================================
 
 const analyzePrecipitation = (isRaining, precipInstantanea, code, precipNext15, tr) => {
@@ -420,4 +420,89 @@ export const generateAIPrediction = (current, daily, hourly, aqiValue, language 
         confidenceLevel, 
         alerts: [...alerts, ...alertsAndTips.alerts] 
     };
+};
+
+// ==========================================
+// 4. FUSIÓ DE MODELS (NOU - REFACTORITZAT)
+// ==========================================
+export const injectHighResModels = (baseData, highResData) => {
+    // Si no hi ha dades d'alta resolució, retornem el base intacte
+    if (!baseData || !highResData) return baseData;
+    
+    // Fem una còpia per seguretat (encara que treballarem sobre referència per rendiment a l'app)
+    // Però aquí millor mutar l'objecte "baseData" ja que ve de JSON.parse fresc
+    const target = baseData;
+    const source = highResData;
+
+    // A. Actualització de Dades "Current" (Dades instantànies)
+    if (source.current && target.current) {
+        Object.assign(target.current, {
+            temperature_2m: source.current.temperature_2m,
+            wind_speed_10m: source.current.wind_speed_10m,
+            wind_gusts_10m: source.current.wind_gusts_10m,
+            wind_direction_10m: source.current.wind_direction_10m,
+            weather_code: source.current.weather_code,
+            precipitation: source.current.precipitation,
+            source: 'AROME HD'
+        });
+    }
+
+    // B. Minut a minut (si el model HD en té)
+    if (source.minutely_15) {
+        target.minutely_15 = source.minutely_15;
+    }
+
+    // C. Fusió de dades horàries (Complexa)
+    if (source.hourly && target.hourly && target.hourly.time) {
+        const globalTimeIndexMap = new Map();
+        target.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
+
+        source.hourly.time.forEach((timeValue, sourceIndex) => {
+            const globalIndex = globalTimeIndexMap.get(timeValue);
+            
+            if (globalIndex !== undefined) {
+                const sH = source.hourly;
+                const tH = target.hourly;
+
+                const safeSet = (field) => {
+                    if (sH[field]?.[sourceIndex] !== undefined) {
+                        if (!tH[field]) tH[field] = [];
+                        tH[field][globalIndex] = sH[field][sourceIndex];
+                    }
+                };
+
+                // Camps prioritaris d'alta resolució
+                safeSet('temperature_2m');
+                safeSet('wind_speed_10m');
+                safeSet('wind_gusts_10m');
+                safeSet('precipitation');
+                safeSet('cape');
+                safeSet('freezing_level_height');
+                safeSet('cloud_cover');
+                safeSet('cloud_cover_low');
+                safeSet('cloud_cover_mid');
+                safeSet('cloud_cover_high');
+            }
+        });
+
+        // Actualització extra: Si estem en una hora "entre hores", actualitzem els núvols current
+        // basant-nos en la dada horària més propera de l'AROME
+        if (target.current && target.current.time) {
+            const currentDt = new Date(target.current.time).getTime();
+            const closestIndex = source.hourly.time.findIndex(t => 
+                Math.abs(new Date(t).getTime() - currentDt) < 30 * 60 * 1000 
+            );
+
+            if (closestIndex !== -1) {
+                const sh = source.hourly;
+                if (sh.cloud_cover?.[closestIndex] !== undefined) target.current.cloud_cover = sh.cloud_cover[closestIndex];
+                if (sh.cloud_cover_low?.[closestIndex] !== undefined) target.current.cloud_cover_low = sh.cloud_cover_low[closestIndex];
+                if (sh.cloud_cover_mid?.[closestIndex] !== undefined) target.current.cloud_cover_mid = sh.cloud_cover_mid[closestIndex];
+                if (sh.cloud_cover_high?.[closestIndex] !== undefined) target.current.cloud_cover_high = sh.cloud_cover_high[closestIndex];
+            }
+        }
+    }
+
+    console.log("🎯 Dades Híbrides: Fusió realitzada amb èxit.");
+    return target;
 };

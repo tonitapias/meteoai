@@ -1,9 +1,51 @@
 // src/hooks/useWeather.js
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { normalizeModelData, generateAIPrediction, calculateReliability, getRealTimeWeatherCode, isAromeSupported } from '../utils/weatherLogic';
+import { 
+    normalizeModelData, 
+    generateAIPrediction, 
+    calculateReliability, 
+    getRealTimeWeatherCode, 
+    isAromeSupported,
+    injectHighResModels 
+} from '../utils/weatherLogic';
 import { TRANSLATIONS } from '../constants/translations';
 
 const CACHE_DURATION = 15 * 60 * 1000; 
+
+// Variable global (per sessió) per desactivar la cache si detectem que no funciona
+let isCacheDisabled = false;
+
+// --- FUNCIÓ AUXILIAR PER GESTIÓ DE MEMÒRIA ---
+const cleanOldCache = (forceAll = false) => {
+  try {
+    const items = [];
+    const prefix = 'meteoai_v7_cache_';
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        try {
+          const item = JSON.parse(localStorage.getItem(key));
+          if (item && item.timestamp) items.push({ key, timestamp: item.timestamp });
+          else localStorage.removeItem(key);
+        } catch (e) { localStorage.removeItem(key); }
+      }
+    }
+
+    if (forceAll) {
+        items.forEach(item => localStorage.removeItem(item.key));
+        return;
+    }
+
+    items.sort((a, b) => a.timestamp - b.timestamp);
+    if (items.length > 0) {
+        const toDelete = items.slice(0, Math.ceil(items.length / 2));
+        toDelete.forEach(item => localStorage.removeItem(item.key));
+    }
+  } catch (err) {
+    // Silenciós
+  }
+};
 
 export function useWeather(lang, unit = 'C') {
   const [weatherData, setWeatherData] = useState(null);
@@ -19,24 +61,27 @@ export function useWeather(lang, unit = 'C') {
   const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
 
+    // 1. INTENTAR LLEGIR DE CACHE (Només si no està desactivada)
     const cacheKey = `meteoai_v7_cache_${lat.toFixed(2)}_${lon.toFixed(2)}`;
-    const cachedRaw = localStorage.getItem(cacheKey);
-
-    if (cachedRaw) {
-      try {
-        const { timestamp, weather, aqi } = JSON.parse(cachedRaw);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          console.log("⚡ Dades carregades des de Cache");
-          setWeatherData({ ...weather, location: { name, country, latitude: lat, longitude: lon } });
-          setAqiData(aqi);
-          setLoading(false);
-          setError(null);
-          return;
+    
+    if (!isCacheDisabled) {
+        try {
+            const cachedRaw = localStorage.getItem(cacheKey);
+            if (cachedRaw) {
+                const { timestamp, weather, aqi } = JSON.parse(cachedRaw);
+                if (Date.now() - timestamp < CACHE_DURATION) {
+                    console.log("⚡ Dades carregades des de Cache");
+                    setWeatherData({ ...weather, location: { name, country, latitude: lat, longitude: lon } });
+                    setAqiData(aqi);
+                    setLoading(false);
+                    setError(null);
+                    return;
+                }
+            }
+        } catch (e) {
+            // Si llegir falla, esborrem la clau corrupta i continuem
+            try { localStorage.removeItem(cacheKey); } catch(err) {}
         }
-      } catch (e) {
-        console.warn("Cache corrupta detectada, netejant...", e);
-        localStorage.removeItem(cacheKey);
-      }
     }
 
     const controller = new AbortController();
@@ -48,7 +93,7 @@ export function useWeather(lang, unit = 'C') {
     setAiAnalysis(null);
     
     try {
-      // 1. PETICIÓ BASE (ECMWF / GLOBAL)
+      // 2. PETICIÓ AL SERVIDOR (Open-Meteo)
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,wind_gusts_10m,precipitation,visibility&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`;
 
@@ -62,7 +107,7 @@ export function useWeather(lang, unit = 'C') {
       let rawWeatherData = await weatherRes.value.json();
       let newAqiData = (aqiRes.status === 'fulfilled' && aqiRes.value.ok) ? await aqiRes.value.json() : null;
 
-      // 2. INJECCIÓ HÍBRIDA COMPLETA (AROME HD)
+      // 3. INJECCIÓ HÍBRIDA (AROME HD)
       if (isAromeSupported(lat, lon)) {
           try {
               const aromeUrl = `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,wind_gusts_10m,precipitation,visibility&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day,cape,freezing_level_height,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&minutely_15=precipitation,weather_code&timezone=auto`;
@@ -70,91 +115,14 @@ export function useWeather(lang, unit = 'C') {
               const aromeRes = await fetch(aromeUrl, { signal });
               if (aromeRes.ok) {
                   const aromeData = await aromeRes.json();
-                  
-                  // A. Actualització de Dades "Current"
-                  if (aromeData.current) {
-                      Object.assign(rawWeatherData.current, {
-                          temperature_2m: aromeData.current.temperature_2m,
-                          wind_speed_10m: aromeData.current.wind_speed_10m,
-                          wind_gusts_10m: aromeData.current.wind_gusts_10m,
-                          wind_direction_10m: aromeData.current.wind_direction_10m,
-                          weather_code: aromeData.current.weather_code,
-                          precipitation: aromeData.current.precipitation,
-                          source: 'AROME HD'
-                      });
-                  }
-                  
-                  // B. Minut a minut
-                  if (aromeData.minutely_15) {
-                       rawWeatherData.minutely_15 = aromeData.minutely_15;
-                  }
-
-                  // C. Fusió de dades horàries (OPTIMITZAT I SEGUR)
-                  if (aromeData.hourly && rawWeatherData.hourly) {
-                      const globalTimeIndexMap = new Map();
-                      rawWeatherData.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
-
-                      aromeData.hourly.time.forEach((timeValue, aromeIndex) => {
-                          const globalIndex = globalTimeIndexMap.get(timeValue);
-                          
-                          if (globalIndex !== undefined) {
-                              const source = aromeData.hourly;
-                              const target = rawWeatherData.hourly;
-
-                              // --- FIX: Funció d'assignació segura ---
-                              // Crea l'array destí si no existeix per evitar el crash
-                              const safeSet = (field) => {
-                                  if (source[field]?.[aromeIndex] !== undefined) {
-                                      if (!target[field]) target[field] = [];
-                                      target[field][globalIndex] = source[field][aromeIndex];
-                                  }
-                              };
-
-                              // Assignem tots els camps amb seguretat
-                              safeSet('temperature_2m');
-                              safeSet('wind_speed_10m');
-                              safeSet('wind_gusts_10m');
-                              safeSet('precipitation');
-                              safeSet('cape');
-                              safeSet('freezing_level_height');
-                              
-                              // Camps de nuvolositat (on fallava abans)
-                              safeSet('cloud_cover');
-                              safeSet('cloud_cover_low');
-                              safeSet('cloud_cover_mid');
-                              safeSet('cloud_cover_high');
-                          }
-                      });
-
-                      // Actualització Current de núvols (Optimitzat)
-                      if (rawWeatherData.current && rawWeatherData.current.time) {
-                          const currentDt = new Date(rawWeatherData.current.time).getTime();
-                          const aromeCurrentIndex = aromeData.hourly.time.findIndex(t => 
-                              Math.abs(new Date(t).getTime() - currentDt) < 30 * 60 * 1000 
-                          );
-
-                          if (aromeCurrentIndex !== -1) {
-                              const ah = aromeData.hourly;
-                              // Assignació directa (segura perquè comprovem l'origen)
-                              if (ah.cloud_cover?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover = ah.cloud_cover[aromeCurrentIndex];
-                              if (ah.cloud_cover_low?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover_low = ah.cloud_cover_low[aromeCurrentIndex];
-                              if (ah.cloud_cover_mid?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover_mid = ah.cloud_cover_mid[aromeCurrentIndex];
-                              if (ah.cloud_cover_high?.[aromeCurrentIndex] !== undefined) 
-                                  rawWeatherData.current.cloud_cover_high = ah.cloud_cover_high[aromeCurrentIndex];
-                          }
-                      }
-                  }
-                  console.log("🎯 Dades Híbrides TOTALS: AROME Injectat (Optimitzat)");
+                  rawWeatherData = injectHighResModels(rawWeatherData, aromeData);
               }
           } catch (aromeErr) {
-              console.warn("Error AROME, utilitzant fallback ECMWF", aromeErr);
+              // Silenciós: si falla AROME, simplement no l'utilitzem
           }
       }
 
-      // 3. PONT DE DADES (Omplir forats a 'current' amb dades horàries)
+      // 4. PONT DE DADES
       if (rawWeatherData.current && rawWeatherData.hourly && rawWeatherData.hourly.time) {
           const currentDt = new Date(rawWeatherData.current.time).getTime();
           let closestIndex = 0;
@@ -162,10 +130,7 @@ export function useWeather(lang, unit = 'C') {
 
           rawWeatherData.hourly.time.forEach((t, i) => {
               const diff = Math.abs(new Date(t).getTime() - currentDt);
-              if (diff < minDiff) {
-                  minDiff = diff;
-                  closestIndex = i;
-              }
+              if (diff < minDiff) { minDiff = diff; closestIndex = i; }
           });
 
           const missingFields = ['cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'cape', 'freezing_level_height'];
@@ -179,22 +144,27 @@ export function useWeather(lang, unit = 'C') {
       const processedWeatherData = normalizeModelData(rawWeatherData);
       const finalWeatherData = { ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } };
 
-      const saveData = JSON.stringify({
-          timestamp: Date.now(),
-          weather: finalWeatherData,
-          aqi: newAqiData
-      });
-
-      // --- FIX: Gestió segura de localStorage ---
-      try { 
-          localStorage.setItem(cacheKey, saveData); 
-      } catch (e) { 
-          console.warn("Quota localStorage excedida, netejant cache antiga...");
-          try {
-              localStorage.clear(); // Intentem fer lloc esborrant tot
-              localStorage.setItem(cacheKey, saveData); // Reintentem guardar
-          } catch (retryErr) {
-              console.error("No s'ha pogut guardar a cache ni després de netejar", retryErr);
+      // 5. INTENTAR GUARDAR A CACHE (Amb mode silenciós si falla)
+      if (!isCacheDisabled) {
+          const saveData = JSON.stringify({ timestamp: Date.now(), weather: finalWeatherData, aqi: newAqiData });
+          try { 
+              localStorage.setItem(cacheKey, saveData); 
+          } catch (e) { 
+              // Primer intent: neteja parcial
+              try {
+                  cleanOldCache(false); 
+                  localStorage.setItem(cacheKey, saveData);
+              } catch (retryErr) {
+                  // Segon intent: neteja total
+                  try {
+                      cleanOldCache(true); 
+                      localStorage.setItem(cacheKey, saveData);
+                  } catch (finalErr) {
+                      // Si falla tot, desactivem la cache per aquesta sessió i no molestem més
+                      console.log("⚠️ Cache desactivada: No hi ha espai disponible o mode incògnit actiu.");
+                      isCacheDisabled = true;
+                  }
+              }
           }
       }
 
@@ -210,9 +180,7 @@ export function useWeather(lang, unit = 'C') {
     }
   }, []);
 
-  useEffect(() => {
-    return () => { if (abortControllerRef.current) abortControllerRef.current.abort(); };
-  }, []);
+  useEffect(() => { return () => { if (abortControllerRef.current) abortControllerRef.current.abort(); }; }, []);
 
   const handleGetCurrentLocation = useCallback(() => {
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
