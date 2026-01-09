@@ -215,9 +215,14 @@ export function useWeather(lang, unit = 'C') {
          // 2. MILLORA GEMINI (Amb Cache Local per estalviar quota)
          const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
          
-         // Utilitzem una clau única basada en l'hora de la previsió i l'idioma
+         // CORRECCIÓ: CLAU ÚNICA PER HORA I UBICACIÓ
+         // Ara afegim lat/lon (amb 2 decimals) a la clau de la cache.
+         // Així evitem que mostri el text d'una altra ciutat.
          const weatherTimestamp = weatherData.current?.time; 
-         const aiCacheKey = `meteoai_ai_${weatherTimestamp}_${lang}`;
+         const latKey = weatherData.location?.latitude?.toFixed(2) || '0';
+         const lonKey = weatherData.location?.longitude?.toFixed(2) || '0';
+         
+         const aiCacheKey = `meteoai_ai_${weatherTimestamp}_${latKey}_${lonKey}_${lang}`;
 
          // A) Intentem recuperar de memòria
          const cachedAI = localStorage.getItem(aiCacheKey);
