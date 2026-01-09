@@ -1,106 +1,109 @@
-# 🌤️ MeteoToniAi (PWA Edition)
+# 🌦️ MeteoToni Ai - El Temps amb Personalitat
 
-**MeteoToniAi** és una aplicació meteorològica d'última generació construïda amb **React 19** i **Vite**.
+**MeteoToni Ai** no és només una aplicació del temps. És un assistent meteorològic intel·ligent que combina dades d'alta precisió amb la potència de la **IA Generativa (Google Gemini)** per oferir-te prediccions humanes, properes i útils.
 
-Més enllà de mostrar dades crues, utilitza un **Motor Híbrid Intel·ligent** que combina models globals (ECMWF) amb models d'alta resolució (AROME) i un sistema expert ("AI") per interpretar el temps en llenguatge natural.
-
-> **🚀 NOVETAT:** Ara és una **Progressive Web App (PWA)**. Pots instal·lar-la al teu mòbil com una aplicació nativa!
-
----
-
-## 📱 Novetats de la Versió "PWA"
-
-Hem transformat l'experiència web en una aplicació mòbil completa:
-
-* **📲 Instal·lable:** Afegeix l'app a la pantalla d'inici del teu Android o iPhone. Sense passar per la botiga d'aplicacions.
-* **⚡ Rendiment Extrem:** Càrrega intel·ligent de components (*Lazy Loading*) i optimització de gràfics (*React.memo*). L'app és ara molt més ràpida i lleugera.
-* **🖼️ Mode Immersiu:** Funciona a pantalla completa ("standalone"), eliminant la barra del navegador per a una experiència 100% nativa.
-* **🎨 Icones Adaptatives:** Noves icones d'alta resolució que s'adapten perfectament a iOS i Android.
+![Estat del Projecte](https://img.shields.io/badge/Status-Producció-green)
+![Tecnologia](https://img.shields.io/badge/Stack-React_|_Vite_|_Tailwind-blue)
+![IA](https://img.shields.io/badge/AI-Google_Gemini-purple)
 
 ---
 
 ## ✨ Característiques Principals
 
-### 1. Motor Híbrid Intel·ligent
-L'aplicació decideix dinàmicament quina font de dades utilitzar segons la ubicació i necessitat:
-* **ECMWF IFS (Global):** Per a previsions generals a llarg termini.
-* **AROME France (Alta Resolució - 1.3km):** S'injecta automàticament ("Híbrid") per a les pròximes 48h a Europa Occidental. Millora dràsticament la precisió en tempestes, vent local i orografia.
+### 🧠 1. La IA "MeteoToni"
+L'aplicació analitza les dades fredes i les converteix en consells pràctics amb dos modes automàtics:
+* **Mode Enginy:** Si el temps és tranquil, el MeteoToni farà broma, utilitzarà expressions locals i serà proper.
+* **Mode Alerta:** Si detecta condicions severes (vent fort, tempestes), es posa seriós i prioritza la seguretat.
+* **Memòria Intel·ligent:** Utilitza un sistema de *Smart Caching* per recordar la predicció i no gastar quota d'API innecessàriament.
 
-### 2. El "Cervell" (AI System)
-Un sistema expert local (no requereix API externa de xat) que:
-* Analitza variables complexes (CAPE, Punt de Rosada, Isoterma 0ºC).
-* Genera resums en llenguatge natural: *"Està plovent feblement, però s'espera que pari en 20 minuts."*
-* Emet **alertes de seguretat** i consells de roba basats en la sensació tèrmica real.
+### 📡 2. Arquitectura de Dades Híbrida
+* **Open-Meteo:** Dades globals de base.
+* **Injecció AROME HD:** Quan és possible, injecta dades d'alta resolució (model francès de 1.3km) per a una precisió extrema a Catalunya i rodalies.
+* **Fallback Automàtic:** Si una font falla, l'aplicació es degrada suaument sense mostrar errors a l'usuari.
 
-### 3. UI "Emerald" & Glassmorphism
-* **Indicador de Batec:** Un punt de llum verd (`animate-ping`) indica quan el model d'alta precisió AROME està actiu.
-* **Disseny Modern:** Transparències, efectes de vidre i colors cian/turquesa per denotar tecnologia.
+### 🗺️ 3. Radar de Pluja i Mapes
+* **Visualització Interactiva:** Accés directe a mapes meteorològics per veure l'evolució de les pluges i núvols en temps real.
+* **Capes HD:** Suport per a visualització d'alta definició de les precipitacions.
 
----
+### 📍 4. Geolocalització Avançada
+* Sistema de detecció millorat que troba correctament **pobles petits, llogarets i municipis**, no només grans ciutats.
+* Optimitzat per evitar crides GPS redundants.
 
-## 🛠️ Stack Tecnològic
-
-* **Core:** React 19 + Vite
-* **Estils:** Tailwind CSS 3
-* **Mapes:** Leaflet + React-Leaflet
-* **PWA:** Vite Plugin PWA (Service Workers + Manifest)
-* **Icones:** Lucide React
+### ⚡ 5. Rendiment i Eficiència
+* **Zero-Latency UX:** Mostra dades de la caché (`localStorage`) a l'instant mentre actualitza el fons.
+* **Estalvi de Quota:** Protecció contra el límit `429` de Google mitjançant la persistència de les respostes de la IA (1 hora de validesa).
 
 ---
 
-## 📂 Com instal·lar al mòbil
+## 🛠️ Instal·lació i Execució Local
 
-Un cop desplegada, visita la web des del teu dispositiu:
+1.  **Clona el repositori:**
+    ```bash
+    git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
+    cd meteoai
+    ```
 
-### 🤖 Android (Chrome)
-1.  Obre el menú (els 3 punts a dalt a la dreta).
-2.  Prem **"Instal·lar aplicació"** o **"Afegir a la pantalla d'inici"**.
+2.  **Instal·la les dependències:**
+    ```bash
+    npm install
+    ```
 
-### 🍎 iOS (Safari)
-1.  Prem el botó **"Compartir"** (quadrat amb fletxa, a baix al centre).
-2.  Desplaça't cap avall i selecciona **"Afegir a la pantalla d'inici"**.
+3.  **Configura les Variables d'Entorn:**
+    Crea un fitxer `.env` a l'arrel del projecte i afegeix la teva clau de Google Gemini:
+    ```env
+    VITE_GEMINI_API_KEY=la_teva_clau_aqui
+    ```
+    *(Nota: Aquest fitxer està ignorat per `.gitignore` per seguretat).*
+
+4.  **Engega el servidor de desenvolupament:**
+    ```bash
+    npm run dev
+    ```
 
 ---
 
-## 🚀 Desenvolupament i Desplegament
+## 🚀 Desplegament (Producció)
 
-### Executar en local
-```bash
-npm install
-npm run dev
+Aquest projecte utilitza **GitHub Actions** per desplegar automàticament a **GitHub Pages**.
+
+### Configuració de Seguretat (Secrets)
+Perquè la IA funcioni en producció sense exposar la clau al codi font:
+
+1.  Vés al repositori a GitHub → **Settings** → **Secrets and variables** → **Actions**.
+2.  Crea un **New repository secret**:
+    * Nom: `VITE_GEMINI_API_KEY`
+    * Valor: `La teva clau de Google AI Studio`
+
+### Workflow
+Cada vegada que facis un `push` a la branca `main`, l'acció `.github/workflows/deploy.yml`:
+1.  Construirà l'aplicació (`npm run build`).
+2.  Injectarà la clau API de forma segura.
+3.  Publicarà la web a `https://<usuari>.github.io/meteoai/`.
+
+---
+
+## 📂 Estructura del Projecte
+
+```text
+src/
+├── components/    # Elements visuals (Targetes, Gràfics, etc.)
+├── hooks/         # Lògica principal (useWeather.js amb la gestió de caché i IA)
+├── services/      # Connexió amb Gemini (gemini.js amb gestió d'errors i prompts)
+├── utils/         # Algoritmes de càlcul meteorològic
+└── App.jsx        # Punt d'entrada
 
 ```
 
-### Provar la PWA en local (Build Preview)
+---
 
-Les característiques PWA (instal·lació, service workers) només funcionen amb la build de producció:
+## 🛡️ Notes de Privacitat i Límits
 
-```bash
-npm run build
-npm run preview
-
-```
-
-### Desplegar a GitHub Pages
-
-El projecte està configurat per pujar automàticament la carpeta `dist` optimitzada:
-
-```bash
-npm run deploy
-
-```
+* **API Quota:** L'aplicació està optimitzada per funcionar dins del *Free Tier* de Google Gemini (15 RPM / 1.500 RPD).
+* **Geolocalització:** Les dades d'ubicació només s'utilitzen al navegador de l'usuari per consultar l'API del temps i no es guarden en cap servidor extern.
 
 ---
 
-## 🌍 Crèdits de Dades
-
-* **Meteorologia:** [Open-Meteo API](https://open-meteo.com/) (Models: ECMWF IFS, AROME France, GFS, ICON).
-* **Geocoding:** [OpenStreetMap / Nominatim](https://nominatim.org/).
-* **Qualitat Aire:** Copernicus Atmosphere Monitoring Service.
-
----
-
-Desenvolupat amb ❤️ per **Toni Tapias**
+Fet amb ❤️ i 🌧️ per **Toni Tapias**.
 
 ```
 
