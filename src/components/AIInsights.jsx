@@ -1,11 +1,11 @@
 // src/components/AIInsights.jsx
 import React from 'react';
-import { BrainCircuit, Shirt, AlertTriangle, AlertOctagon, Info } from 'lucide-react';
+import { BrainCircuit, Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap } from 'lucide-react';
 import { MinutelyPreciseChart } from './WeatherCharts';
 import { TypewriterText } from './WeatherUI';
 import { TRANSLATIONS } from '../constants/translations';
 
-// --- SUB-COMPONENTS (Per mantenir el codi net) ---
+// --- SUB-COMPONENTS ---
 
 const ConfidenceBadge = ({ analysis }) => {
   if (!analysis) return null;
@@ -19,7 +19,7 @@ const ConfidenceBadge = ({ analysis }) => {
   const currentStyle = styles[analysis.confidenceLevel] || styles.low;
 
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${currentStyle}`}>
+    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${currentStyle} flex items-center gap-1`}>
       {analysis.confidence}
     </span>
   );
@@ -27,7 +27,6 @@ const ConfidenceBadge = ({ analysis }) => {
 
 const InsightAlert = ({ alert, t }) => {
   const isHigh = alert.level === 'high';
-  
   return (
     <div className={`flex items-start gap-3 p-3 rounded-lg border shadow-sm ${
       isHigh 
@@ -55,7 +54,7 @@ const InsightAlert = ({ alert, t }) => {
 };
 
 const InsightTip = ({ tip, index }) => {
-  const isClothingTip = tip.includes('jaqueta') || tip.includes('coat') || tip.includes('tèrmica');
+  const isClothingTip = ['jaqueta', 'coat', 'tèrmica', 'abric', 'màniga'].some(k => tip.toLowerCase().includes(k));
   
   return (
     <span 
@@ -81,19 +80,45 @@ const LoadingState = ({ t }) => (
 export default function AIInsights({ analysis, minutelyData, currentPrecip, lang }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
+  if (!analysis) return (
+      <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md h-full flex items-center justify-center">
+        <LoadingState t={t} />
+      </div>
+  );
+
+  // Detectem si la font és Gemini per canviar l'estil
+  const isGemini = analysis.source === 'gemini';
+
   return (
-    <div className="flex-1 w-full lg:max-w-md bg-slate-950/30 border border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center h-full">
+    <div className={`flex-1 w-full lg:max-w-md border rounded-2xl p-5 backdrop-blur-md shadow-inner relative overflow-hidden self-stretch flex flex-col justify-center h-full transition-all duration-1000 ${
+        isGemini 
+            ? 'bg-gradient-to-br from-indigo-950/40 to-purple-900/20 border-indigo-400/30' 
+            : 'bg-slate-950/30 border-white/10'
+    }`}>
         
         {/* Capçalera */}
-        <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300 tracking-wider">
-                <BrainCircuit className="w-4 h-4 animate-pulse" strokeWidth={2.5}/> {t.aiAnalysis}
+        <div className="flex items-center justify-between mb-4">
+            <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors duration-500 ${
+                isGemini ? 'text-indigo-200' : 'text-slate-400'
+            }`}>
+                {isGemini ? (
+                    <>
+                        <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" /> 
+                        <span className="bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                            MeteoAI Gemini
+                        </span>
+                    </>
+                ) : (
+                    <>
+                        <Zap className="w-4 h-4" /> 
+                        <span>{t.aiAnalysis}</span>
+                    </>
+                )}
             </div>
             <ConfidenceBadge analysis={analysis} />
         </div>
         
         {/* Contingut Principal */}
-        {analysis ? (
         <div className="space-y-4 animate-in fade-in">
             
             {/* Llista d'Alertes */}
@@ -105,8 +130,10 @@ export default function AIInsights({ analysis, minutelyData, currentPrecip, lang
                 </div>
             )}
 
-            {/* Text Generat */}
-            <TypewriterText text={analysis.text} />
+            {/* Text Generat (Clau única per forçar re-render de l'animació typewriter quan canvia la font) */}
+            <div key={analysis.source} className="min-h-[3rem]">
+                <TypewriterText text={analysis.text} />
+            </div>
             
             {/* Badges/Consells */}
             <div className="flex flex-wrap gap-2 mt-3 mb-4">
@@ -118,9 +145,6 @@ export default function AIInsights({ analysis, minutelyData, currentPrecip, lang
             {/* Gràfica */}
             <MinutelyPreciseChart data={minutelyData} label={t.preciseRain} currentPrecip={currentPrecip} />
         </div>
-        ) : (
-            <LoadingState t={t} />
-        )}
     </div>
   );
 }

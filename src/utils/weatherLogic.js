@@ -227,7 +227,7 @@ export const getRealTimeWeatherCode = (
 };
 
 // ==========================================
-// 3. GENERADOR D'IA
+// 3. GENERADOR D'IA (BASED ON RULES)
 // ==========================================
 
 const analyzePrecipitation = (isRaining, precipInstantanea, code, precipNext15, tr) => {
@@ -505,4 +505,37 @@ export const injectHighResModels = (baseData, highResData) => {
 
     console.log("🎯 Dades Híbrides: Fusió realitzada amb èxit.");
     return target;
+};
+
+// ==========================================
+// 5. HELPER PER AI CONTEXT (NOU)
+// ==========================================
+
+export const prepareContextForAI = (current, daily, hourly) => {
+    if (!current || !daily) return null;
+
+    // Agafem només les properes 4 hores per context immediat i reduir tokens
+    const nextHours = hourly?.temperature_2m?.slice(0, 4) || [];
+    const rainProb = hourly?.precipitation_probability?.slice(0, 4) || [];
+    const windHours = hourly?.wind_speed_10m?.slice(0, 4) || [];
+
+    return {
+        timestamp: current.time,
+        temp_now: current.temperature_2m,
+        feels_like: current.apparent_temperature,
+        is_raining: current.precipitation > 0,
+        wind_speed: current.wind_speed_10m,
+        weather_code: current.weather_code,
+        daily_summary: {
+            max: daily.temperature_2m_max?.[0],
+            min: daily.temperature_2m_min?.[0],
+            uv_max: daily.uv_index_max?.[0],
+            rain_sum: daily.precipitation_sum?.[0]
+        },
+        short_term_trend: {
+            temps: nextHours,
+            rain_prob: rainProb,
+            wind: windHours
+        }
+    };
 };
