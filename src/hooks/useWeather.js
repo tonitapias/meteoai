@@ -190,7 +190,7 @@ export function useWeather(lang, unit = 'C') {
     }, { enableHighAccuracy: false, timeout: 5000 });
   }, [fetchWeatherByCoords, lang]);
 
-  // --- LÒGICA HÍBRIDA AI + CACHE DE IA ---
+  // --- LÒGICA HÍBRIDA AI + CACHE DE IA (AMB FIX D'IDIOMA) ---
   useEffect(() => {
      if(weatherData) {
          const currentHour = new Date().getHours();
@@ -210,14 +210,18 @@ export function useWeather(lang, unit = 'C') {
              lang, effectiveWeatherCode, reliability, unit 
          );
          
+         // Actualitzem immediatament a l'idioma nou
          setAiAnalysis({ ...baseAnalysis, source: 'algorithm' });
 
-         // 2. MILLORA GEMINI (Amb Cache Local per estalviar quota)
-         const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
+         // 2. MILLORA GEMINI (Amb protecció d'idioma)
+         let context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
          
-         // CORRECCIÓ: CLAU ÚNICA PER HORA I UBICACIÓ
-         // Ara afegim lat/lon (amb 2 decimals) a la clau de la cache.
-         // Així evitem que mostri el text d'una altra ciutat.
+         // --- FIX IDIOMA: Forcem l'idioma al context per evitar confusions ---
+         if (typeof context === 'object') {
+             context = { ...context, userRequestedLanguage: lang };
+         }
+         
+         // CLAU ÚNICA: Hora + Lloc + Idioma
          const weatherTimestamp = weatherData.current?.time; 
          const latKey = weatherData.location?.latitude?.toFixed(2) || '0';
          const lonKey = weatherData.location?.longitude?.toFixed(2) || '0';
@@ -227,30 +231,36 @@ export function useWeather(lang, unit = 'C') {
          // A) Intentem recuperar de memòria
          const cachedAI = localStorage.getItem(aiCacheKey);
          if (cachedAI) {
-             console.log("💾 MeteoToni recuperat de la memòria (Estalvi de quota!)");
+             console.log(`💾 MeteoToni recuperat de la memòria (${lang})`);
              setAiAnalysis(prev => ({ ...prev, text: cachedAI, source: 'gemini' }));
              return; 
          }
 
-         // B) Si no hi és, truquem a Gemini (amb protecció de re-render)
+         // B) Si no hi és, truquem a Gemini
          const currentSignature = JSON.stringify({ c: context, l: lang });
-         if (lastGeminiCallSignature.current !== currentSignature) {
-            lastGeminiCallSignature.current = currentSignature;
+         
+         // Guardem la signatura abans de cridar
+         lastGeminiCallSignature.current = currentSignature;
 
-            fetchEnhancedForecast(context, lang).then(enhancedText => {
-                if (enhancedText) {
-                    console.log("✨ Text nou generat per Gemini.");
-                    // Guardem a la memòria per la propera vegada
-                    try { localStorage.setItem(aiCacheKey, enhancedText); } catch (e) {}
+         fetchEnhancedForecast(context, lang).then(enhancedText => {
+            // --- PROTECCIÓ CRÍTICA ---
+            // Si la signatura ha canviat (l'usuari ha canviat d'idioma mentre pensàvem), ignorem això.
+            if (lastGeminiCallSignature.current !== currentSignature) {
+                console.log("🛑 Resposta de IA descartada per canvi d'idioma/lloc.");
+                return;
+            }
 
-                    setAiAnalysis(prev => ({
-                        ...prev,
-                        text: enhancedText,
-                        source: 'gemini' 
-                    }));
-                }
-            }).catch(err => console.error("Error silenciós Gemini:", err));
-         }
+            if (enhancedText) {
+                console.log(`✨ Text nou generat per Gemini en [${lang}].`);
+                try { localStorage.setItem(aiCacheKey, enhancedText); } catch (e) {}
+
+                setAiAnalysis(prev => ({
+                    ...prev,
+                    text: enhancedText,
+                    source: 'gemini' 
+                }));
+            }
+         }).catch(err => console.error("Error silenciós Gemini:", err));
      }
   }, [lang, weatherData, aqiData, unit]);
 

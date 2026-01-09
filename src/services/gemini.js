@@ -1,3 +1,4 @@
+// src/services/gemini.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -5,7 +6,7 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 // Cache per no haver de buscar el model cada vegada
 let cachedModelName = null;
 
-// Funció per trobar el nom real del model disponible per a la teva clau
+// --- 1. FUNCIÓ ESTABLE DE CERCA DE MODELS (LA TEVA VERSIÓ QUE FUNCIONA) ---
 const findAvailableModel = async () => {
   if (cachedModelName) return cachedModelName;
 
@@ -20,11 +21,12 @@ const findAvailableModel = async () => {
 
     const modelNames = (data.models || []).map(m => m.name);
 
-    // LLISTA DE PRIORITAT (Optimitzada)
+    // LLISTA DE PRIORITAT 
     const candidates = [
-      'models/gemini-flash-latest',    
+      'models/gemini-1.5-flash',
       'models/gemini-1.5-flash-latest',
-      'models/gemini-pro-latest',      
+      'models/gemini-1.5-flash-001',
+      'models/gemini-flash-latest',    
       'models/gemini-pro',
       'models/gemini-2.0-flash'
     ];
@@ -45,40 +47,64 @@ const findAvailableModel = async () => {
   }
 };
 
+// --- 2. CONFIGURACIÓ DE PERSONALITATS (PER ARREGLAR TRADUCCIONS) ---
+const PERSONAS = {
+    ca: {
+        langName: "Català",
+        role: "Ets el MeteoToni, un meteoròleg català expert.",
+        style: "Proper, simpàtic, amb expressions locals ('Déu n'hi do', 'quin fred').",
+        alertMode: "Seriós, concís i prioritzant la seguretat."
+    },
+    es: {
+        langName: "Español",
+        role: "Eres MeteoToni, un meteorólogo local experto.",
+        style: "Cercano, simpático, con expresiones naturales.",
+        alertMode: "Serio, conciso, priorizando la seguridad."
+    },
+    en: {
+        langName: "English",
+        role: "You are MeteoToni, an expert local weatherman.",
+        style: "Friendly, witty, using natural phrasing.",
+        alertMode: "Serious, concise, safety first."
+    },
+    fr: {
+        langName: "Français",
+        role: "Vous êtes MeteoToni, un expert météo local.",
+        style: "Amical, spirituel, langage naturel.",
+        alertMode: "Sérieux, concis, priorité à la sécurité."
+    }
+};
+
 export const fetchEnhancedForecast = async (weatherContext, language = 'ca') => {
   try {
+    // 1. Trobem el model que funciona (Codi estable)
     const modelName = await findAvailableModel();
     if (!modelName) return null;
 
     const genAI = new GoogleGenerativeAI(API_KEY);
     const model = genAI.getGenerativeModel({ model: modelName });
 
-    // --- PROMPT AVANÇAT: AUTO-AVALUACIÓ DE RISC + EMOJI ---
+    // 2. Seleccionem la personalitat correcta
+    const persona = PERSONAS[language] || PERSONAS['ca'];
+
+    // 3. PROMPT DINÀMIC ARREGLAT
+    // Ara injectem les instruccions en l'idioma correcte i eliminem contradiccions.
     const prompt = `
-      Actua com el "MeteoToni", un meteoròleg expert.
+      ROL: ${persona.role}
       
       Dades Tècniques:
       ${JSON.stringify(weatherContext)}
       
       PAS 1: ANALITZA LA SEVERITAT
-      - Mira si hi ha vent > 50km/h, pluges fortes, o temperatures extremes (>35ºC o <0ºC).
-      - SI ÉS EXTREM: Activa el "MODE ALERTA" (Seriós, concís, prioritat seguretat).
-      - SI ÉS NORMAL: Activa el "MODE ENGINY" (Proper, simpàtic, expressions locals).
+      - Mira si hi ha vent > 50km/h, pluges fortes, o temperatures extremes.
+      - SI ÉS EXTREM: Activa el "MODE ALERTA" (${persona.alertMode}).
+      - SI ÉS NORMAL: Activa l'estil habitual (${persona.style}).
 
       PAS 2: REDACTA EL MISSATGE
-      1. IDIOMA: ${language} (Català natural).
+      1. IDIOMA OBLIGATORI: ${persona.langName}.
       2. ESTRUCTURA (Màx 3 frases curtes):
          - Situació actual + Acció clara + Tendència.
-      3. ESTIL:
-         - En MODE ALERTA: "Compte amb el vent fort! Evita zones arbrades..."
-         - En MODE ENGINY: "Déu n'hi do quin ventet! Agafa un tallavents..."
-      4. FINAL OBLIGATORI: Afegeix UN únic emoji al final que resumeixi la previsió.
-      
-      Exemple sortida (Normal):
-      "Fa un dia de postal per sortir a passejar! No cal que agafis jaqueta, s'està de luxe al sol. Aprofita que a la tarda es taparà. 😎"
-      
-      Exemple sortida (Alerta):
-      "Precaució màxima amb la tempesta elèctrica. Queda't a casa si pots i desconnecta aparells sensibles. La intensitat baixarà cap al vespre. ⛈️"
+      3. FINAL OBLIGATORI: Afegeix UN únic emoji al final.
     `;
 
     const result = await model.generateContent(prompt);
