@@ -12,33 +12,35 @@ import {
 import { fetchEnhancedForecast } from '../services/gemini'; 
 import { TRANSLATIONS } from '../constants/translations';
 
-const CACHE_DURATION = 15 * 60 * 1000; 
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minuts per la méteo
+const AI_CACHE_DURATION = 60 * 60 * 1000; // 1 hora per la IA (per estalviar quota)
 
 let isCacheDisabled = false;
 
 // --- FUNCIÓ AUXILIAR PER GESTIÓ DE MEMÒRIA ---
 const cleanOldCache = (forceAll = false) => {
   try {
-    const items = [];
-    const prefix = 'meteoai_v7_cache_';
+    const now = Date.now();
+    const prefixWeather = 'meteoai_v7_cache_';
+    const prefixAI = 'meteoai_ai_';
+    
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
-        try {
-          const item = JSON.parse(localStorage.getItem(key));
-          if (item && item.timestamp) items.push({ key, timestamp: item.timestamp });
-          else localStorage.removeItem(key);
-        } catch (e) { localStorage.removeItem(key); }
+      // Neteja intel·ligent: Esborra si és molt vell o si forcem neteja
+      if (key && (key.startsWith(prefixWeather) || key.startsWith(prefixAI))) {
+         if (forceAll) {
+             localStorage.removeItem(key);
+         } else {
+             // Intentem veure si ha caducat
+             try {
+                 const item = JSON.parse(localStorage.getItem(key));
+                 // Si la dada té més de 24h, escombraries fora
+                 if (now - item.timestamp > 24 * 60 * 60 * 1000) {
+                     localStorage.removeItem(key);
+                 }
+             } catch(e) { localStorage.removeItem(key); }
+         }
       }
-    }
-    if (forceAll) {
-        items.forEach(item => localStorage.removeItem(item.key));
-        return;
-    }
-    items.sort((a, b) => a.timestamp - b.timestamp);
-    if (items.length > 0) {
-        const toDelete = items.slice(0, Math.ceil(items.length / 2));
-        toDelete.forEach(item => localStorage.removeItem(item.key));
     }
   } catch (err) { }
 };
@@ -53,8 +55,6 @@ export function useWeather(lang, unit = 'C') {
 
   const abortControllerRef = useRef(null);
   const lastGeocodeRequest = useRef(0);
-  
-  // NOU: Ref per evitar crides duplicades a la IA
   const lastGeminiCallSignature = useRef(null);
 
   const fetchWeatherByCoords = useCallback(async (lat, lon, name, country = "") => {
@@ -62,6 +62,7 @@ export function useWeather(lang, unit = 'C') {
 
     const cacheKey = `meteoai_v7_cache_${lat.toFixed(2)}_${lon.toFixed(2)}`;
     
+    // 1. LLEGIR DE CACHE (METEO)
     if (!isCacheDisabled) {
         try {
             const cachedRaw = localStorage.getItem(cacheKey);
@@ -86,9 +87,10 @@ export function useWeather(lang, unit = 'C') {
     setLoading(true);
     setError(null);
     setAiAnalysis(null);
-    lastGeminiCallSignature.current = null; // Resetegem la signatura en nova cerca
+    lastGeminiCallSignature.current = null; // Reset per nova ubicació
     
     try {
+      // 2. PETICIÓ OPEN-METEO
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,wind_gusts_10m,precipitation,visibility&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,wind_gusts_10m,uv_index,is_day,freezing_level_height,pressure_msl,cape,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&models=ecmwf_ifs025,gfs_seamless,icon_seamless&minutely_15=precipitation,weather_code&forecast_days=8`;
       const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`;
 
@@ -99,6 +101,7 @@ export function useWeather(lang, unit = 'C') {
       let rawWeatherData = await weatherRes.value.json();
       let newAqiData = (aqiRes.status === 'fulfilled' && aqiRes.value.ok) ? await aqiRes.value.json() : null;
 
+      // 3. INJECCIÓ AROME (Alta Resolució)
       if (isAromeSupported(lat, lon)) {
           try {
               const aromeUrl = `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,wind_gusts_10m,precipitation,visibility&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day,cape,freezing_level_height,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&minutely_15=precipitation,weather_code&timezone=auto`;
@@ -107,9 +110,10 @@ export function useWeather(lang, unit = 'C') {
                   const aromeData = await aromeRes.json();
                   rawWeatherData = injectHighResModels(rawWeatherData, aromeData);
               }
-          } catch (aromeErr) {}
+          } catch (aromeErr) { /* Ignorem errors d'AROME */ }
       }
 
+      // 4. NORMALITZACIÓ I OMPLIMENT DE FORATS
       if (rawWeatherData.current && rawWeatherData.hourly && rawWeatherData.hourly.time) {
           const currentDt = new Date(rawWeatherData.current.time).getTime();
           let closestIndex = 0; let minDiff = Infinity;
@@ -127,14 +131,12 @@ export function useWeather(lang, unit = 'C') {
       const processedWeatherData = normalizeModelData(rawWeatherData);
       const finalWeatherData = { ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } };
 
+      // 5. GUARDAR A CACHE
       if (!isCacheDisabled) {
           const saveData = JSON.stringify({ timestamp: Date.now(), weather: finalWeatherData, aqi: newAqiData });
           try { localStorage.setItem(cacheKey, saveData); } catch (e) { 
-              try { cleanOldCache(false); localStorage.setItem(cacheKey, saveData); } catch (retryErr) {
-                  try { cleanOldCache(true); localStorage.setItem(cacheKey, saveData); } catch (finalErr) {
-                      isCacheDisabled = true;
-                  }
-              }
+               cleanOldCache(true); 
+               try { localStorage.setItem(cacheKey, saveData); } catch(err) { isCacheDisabled = true; }
           }
       }
 
@@ -164,7 +166,21 @@ export function useWeather(lang, unit = 'C') {
         if(!response.ok) throw new Error("Error geocoding");
         const data = await response.json();
         const address = data.address || {};
-        fetchWeatherByCoords(latitude, longitude, address.city || address.town || "Ubicació", address.country || "");
+        
+        // --- DETECCIÓ DE NOM MILLORADA ---
+        const locationName = 
+            address.city || 
+            address.town || 
+            address.village || 
+            address.municipality || 
+            address.hamlet || 
+            address.suburb || 
+            address.county || 
+            "Ubicació"; 
+
+        const locationCountry = address.country || "";
+        
+        fetchWeatherByCoords(latitude, longitude, locationName, locationCountry);
         setNotification({ type: 'success', msg: t.notifLocationSuccess || "Fet." });
       } catch (err) { fetchWeatherByCoords(latitude, longitude, "Ubicació Detectada", ""); }
     };
@@ -174,7 +190,7 @@ export function useWeather(lang, unit = 'C') {
     }, { enableHighAccuracy: false, timeout: 5000 });
   }, [fetchWeatherByCoords, lang]);
 
-  // --- LÒGICA HÍBRIDA AI (OPTIMITZADA) ---
+  // --- LÒGICA HÍBRIDA AI + CACHE DE IA ---
   useEffect(() => {
      if(weatherData) {
          const currentHour = new Date().getHours();
@@ -188,7 +204,6 @@ export function useWeather(lang, unit = 'C') {
          );
 
          // 1. GENERACIÓ INSTANTÀNIA (Algorisme)
-         // Sempre l'executem primer per tenir resposta ràpida
          const baseAnalysis = generateAIPrediction(
              { ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation }, 
              weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, 
@@ -197,19 +212,32 @@ export function useWeather(lang, unit = 'C') {
          
          setAiAnalysis({ ...baseAnalysis, source: 'algorithm' });
 
-         // 2. MILLORA GEMINI (Amb control de duplicats)
+         // 2. MILLORA GEMINI (Amb Cache Local per estalviar quota)
          const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
          
-         // Creem una signatura única: Dades + Idioma. Si això no canvia, no tornem a cridar Gemini.
-         const currentSignature = JSON.stringify({ c: context, l: lang });
+         // Utilitzem una clau única basada en l'hora de la previsió i l'idioma
+         const weatherTimestamp = weatherData.current?.time; 
+         const aiCacheKey = `meteoai_ai_${weatherTimestamp}_${lang}`;
 
+         // A) Intentem recuperar de memòria
+         const cachedAI = localStorage.getItem(aiCacheKey);
+         if (cachedAI) {
+             console.log("💾 MeteoToni recuperat de la memòria (Estalvi de quota!)");
+             setAiAnalysis(prev => ({ ...prev, text: cachedAI, source: 'gemini' }));
+             return; 
+         }
+
+         // B) Si no hi és, truquem a Gemini (amb protecció de re-render)
+         const currentSignature = JSON.stringify({ c: context, l: lang });
          if (lastGeminiCallSignature.current !== currentSignature) {
-            // Marquem que estem processant aquesta petició per no repetir-la
             lastGeminiCallSignature.current = currentSignature;
 
             fetchEnhancedForecast(context, lang).then(enhancedText => {
                 if (enhancedText) {
-                    console.log("✨ Text millorat per Gemini rebut (Única crida).");
+                    console.log("✨ Text nou generat per Gemini.");
+                    // Guardem a la memòria per la propera vegada
+                    try { localStorage.setItem(aiCacheKey, enhancedText); } catch (e) {}
+
                     setAiAnalysis(prev => ({
                         ...prev,
                         text: enhancedText,
