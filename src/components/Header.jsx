@@ -221,7 +221,7 @@ export default function Header({
                    </div>
                )}
 
-               {/* RESULTATS DE LA CERCA (AQUÍ ESTÀ LA MILLORA VISUAL) */}
+               {/* RESULTATS DE LA CERCA */}
                {query.length > 2 && (
                    <div>
                        {isSearching ? (
@@ -238,16 +238,13 @@ export default function Header({
                                         ? 'bg-indigo-500/20' 
                                         : 'hover:bg-white/5'
                                     }`}>
-                                     {/* Icona alineada a dalt */}
                                      <MapPin className={`w-4 h-4 mt-1 shrink-0 ${idx === activeSuggestionIndex ? 'text-white' : 'text-slate-500'}`} />
                                      
-                                     {/* Estructura Vertical: Nom a dalt, Detalls a sota */}
                                      <div className="flex flex-col">
                                         <span className={`text-sm font-semibold ${idx === activeSuggestionIndex ? 'text-white' : 'text-indigo-300'}`}>
                                             {place.name}
                                         </span>
                                         <span className={`text-xs ${idx === activeSuggestionIndex ? 'text-slate-300' : 'text-slate-500'}`}>
-                                            {/* Mostrem Regió i País separats per coma, si existeixen */}
                                             {[place.admin1, place.country].filter(Boolean).join(', ')}
                                         </span>
                                      </div>
@@ -267,11 +264,14 @@ export default function Header({
         {/* CONTROLS DRETA - z-50 */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end relative z-50">
          <div className="flex p-1 bg-slate-950/50 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner">
+           {/* FIX RESPONSIVE: 'hidden md:inline' per amagar el text en mòbils */}
            <button onClick={() => setViewMode('basic')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'basic' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>
-             <LayoutTemplate className="w-4 h-4" strokeWidth={2.5} /> {t.modeBasic}
+             <LayoutTemplate className="w-4 h-4" strokeWidth={2.5} /> 
+             <span className="hidden md:inline">{t.modeBasic}</span>
            </button>
            <button onClick={() => setViewMode('expert')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'expert' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>
-             <LayoutDashboard className="w-4 h-4" strokeWidth={2.5} /> {t.modeExpert}
+             <LayoutDashboard className="w-4 h-4" strokeWidth={2.5} /> 
+             <span className="hidden md:inline">{t.modeExpert}</span>
            </button>
          </div>
          <button onClick={cycleLang} className="bg-slate-950/50 border border-slate-700/50 text-indigo-300 font-bold p-3 rounded-xl hover:bg-indigo-500 hover:text-white transition-all w-12 h-12 flex items-center justify-center uppercase shadow-lg">
