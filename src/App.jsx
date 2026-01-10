@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
-// Modals carregats sota demanda (Lazy Loading) per millorar la càrrega inicial
+// Modals
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
 const AromeModal = lazy(() => import('./components/AromeModal'));
@@ -17,7 +17,7 @@ import ErrorBanner from './components/ErrorBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import Toast from './components/Toast'; 
 
-import { usePreferences } from './hooks/usePreferences';
+import { usePreferences } from './hooks/usePreferences'; // Ara usa el Context!
 import { useWeather } from './hooks/useWeather';
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
@@ -26,33 +26,26 @@ import { isAromeSupported } from './utils/weatherLogic';
 export default function MeteoIA() {
   const [now, setNow] = useState(new Date());
   
+  // 1. CONTEXT: Recuperem tot d'una línia, sense props drilling
   const { 
-    lang, setLang, unit, setUnit, viewMode, setViewMode, 
-    favorites, addFavorite, removeFavorite, isFavorite 
+    lang, setLang, unit, viewMode, 
+    addFavorite, removeFavorite, isFavorite 
   } = usePreferences();
 
+  // useWeather necessita lang i unit, que ara venen del Context
   const { 
     weatherData, aqiData, aiAnalysis, loading, error, notification, setNotification,
     fetchWeatherByCoords, handleGetCurrentLocation 
   } = useWeather(lang, unit);
 
-  // El rellotge actualitza 'now' cada minut.
-  // Gràcies a React.memo a ForecastSection i els hooks optimitzats,
-  // això ja no causarà repintats massius innecessaris.
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
 
   const {
-    shiftedNow,
-    minutelyPreciseData,
-    effectiveWeatherCode,
-    currentBg,
-    chartData,
-    comparisonData,
-    weeklyExtremes,
-    currentFreezingLevel
+    shiftedNow, minutelyPreciseData, effectiveWeatherCode, currentBg,
+    chartData, comparisonData, weeklyExtremes, currentFreezingLevel
   } = useWeatherCalculations(weatherData, unit, now);
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
@@ -84,15 +77,13 @@ export default function MeteoIA() {
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10 flex flex-col min-h-[calc(100vh-3rem)]">
         
+        {/* NETEJA TOTAL: Fixa't que Header ara només rep funcions de cerca/loc.
+            Tota la resta (lang, unit, favorites...) ho agafa ell sol del context.
+        */}
         <Header 
            onSearch={handleSearch}
            onLocate={handleGetCurrentLocation}
            loading={loading}
-           favorites={favorites}
-           onRemoveFavorite={(e, name) => { e.stopPropagation(); removeFavorite(name); }}
-           lang={lang} setLang={setLang}
-           unit={unit} setUnit={setUnit}
-           viewMode={viewMode} setViewMode={setViewMode}
         />
 
         <div className="flex-1">
@@ -111,6 +102,7 @@ export default function MeteoIA() {
                     
                     <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
                         <div className="flex-1 w-full lg:w-auto">
+                            {/* Nota: Els altres components encara reben props, però podries fer el mateix que amb Header si volguessis */}
                             <CurrentWeather 
                                 data={weatherData}
                                 effectiveCode={effectiveWeatherCode}
@@ -193,7 +185,6 @@ export default function MeteoIA() {
             </p>
         </div>
 
-        {/* Suspense embolcalla els modals Lazy Loaded */}
         <Suspense fallback={null}>
             {selectedDayIndex !== null && (
                 <DayDetailModal 
@@ -205,7 +196,6 @@ export default function MeteoIA() {
                   shiftedNow={shiftedNow}
                 />
             )}
-
             {showRadar && weatherData && (
                 <RadarModal 
                     lat={weatherData.location.latitude} 
@@ -214,7 +204,6 @@ export default function MeteoIA() {
                     lang={lang} 
                 />
             )}
-
             {showArome && weatherData && (
                 <AromeModal 
                     lat={weatherData.location.latitude} 
