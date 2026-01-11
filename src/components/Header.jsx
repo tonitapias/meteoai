@@ -177,9 +177,12 @@ export default function Header({
             <div className="relative flex items-center bg-slate-950/50 border border-slate-700/50 rounded-xl focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-inner">
               <Search className={`w-5 h-5 ml-4 ${isSearching ? 'text-indigo-400 animate-pulse' : 'text-slate-400'}`} />
               
+              {/* MODIFICACIÓ AQUÍ: Afegits id i name */}
               <input 
                 ref={inputRef}
                 type="text" 
+                name="search"            // <--- Per evitar l'avís del navegador
+                id="search-input"        // <--- Per bones pràctiques d'accessibilitat
                 value={query}
                 onChange={(e) => { 
                     setQuery(e.target.value); 
