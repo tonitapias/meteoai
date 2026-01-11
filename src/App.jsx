@@ -17,8 +17,9 @@ import ErrorBanner from './components/ErrorBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import Toast from './components/Toast'; 
 
-import { usePreferences } from './hooks/usePreferences'; // Ara usa el Context!
+import { usePreferences } from './hooks/usePreferences';
 import { useWeather } from './hooks/useWeather';
+import { useWeatherAI } from './hooks/useWeatherAI'; // <--- 1. NOU IMPORT
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
@@ -26,17 +27,21 @@ import { isAromeSupported } from './utils/weatherLogic';
 export default function MeteoIA() {
   const [now, setNow] = useState(new Date());
   
-  // 1. CONTEXT: Recuperem tot d'una línia, sense props drilling
+  // CONTEXT
   const { 
     lang, setLang, unit, viewMode, 
     addFavorite, removeFavorite, isFavorite 
   } = usePreferences();
 
-  // useWeather necessita lang i unit, que ara venen del Context
+  // 2. HOOK DE DADES (Ja no retorna aiAnalysis)
   const { 
-    weatherData, aqiData, aiAnalysis, loading, error, notification, setNotification,
+    weatherData, aqiData, loading, error, notification, setNotification,
     fetchWeatherByCoords, handleGetCurrentLocation 
   } = useWeather(lang, unit);
+
+  // 3. HOOK D'INTEL·LIGÈNCIA (Nou)
+  // Només s'activa quan weatherData té contingut
+  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); 
@@ -77,9 +82,6 @@ export default function MeteoIA() {
 
       <div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0 relative z-10 flex flex-col min-h-[calc(100vh-3rem)]">
         
-        {/* NETEJA TOTAL: Fixa't que Header ara només rep funcions de cerca/loc.
-            Tota la resta (lang, unit, favorites...) ho agafa ell sol del context.
-        */}
         <Header 
            onSearch={handleSearch}
            onLocate={handleGetCurrentLocation}
@@ -102,7 +104,6 @@ export default function MeteoIA() {
                     
                     <div className="flex flex-col lg:flex-row gap-8 items-start justify-between relative z-10">
                         <div className="flex-1 w-full lg:w-auto">
-                            {/* Nota: Els altres components encara reben props, però podries fer el mateix que amb Header si volguessis */}
                             <CurrentWeather 
                                 data={weatherData}
                                 effectiveCode={effectiveWeatherCode}

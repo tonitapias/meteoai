@@ -2,14 +2,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { 
     normalizeModelData, 
-    generateAIPrediction, 
-    calculateReliability, 
-    getRealTimeWeatherCode, 
     isAromeSupported,
-    injectHighResModels,
-    prepareContextForAI 
+    injectHighResModels 
 } from '../utils/weatherLogic';
-import { fetchEnhancedForecast } from '../services/gemini'; 
 import { TRANSLATIONS } from '../constants/translations';
 import { 
     fetchForecast, 
@@ -41,14 +36,12 @@ const fillMissingCurrentData = (data) => {
 export function useWeather(lang, unit = 'C') {
   const [weatherData, setWeatherData] = useState(null);
   const [aqiData, setAqiData] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
 
   const abortControllerRef = useRef(null);
   const lastGeocodeRequest = useRef(0);
-  const lastGeminiCallSignature = useRef(null);
 
   // Intentem netejar la DB al carregar l'app un cop
   useEffect(() => { cacheService.clean(); }, []);
@@ -61,8 +54,7 @@ export function useWeather(lang, unit = 'C') {
 
     const cacheKey = cacheService.generateWeatherKey(lat, lon);
     
-    // --- CANVI CRÍTIC: AWAIT PER INDEXEDDB ---
-    // Ara la caché és asíncrona, hem d'esperar que llegeixi el disc
+    // 1. Llegim caché
     const cachedData = await cacheService.get(cacheKey); 
 
     if (cachedData) {
@@ -77,8 +69,6 @@ export function useWeather(lang, unit = 'C') {
 
     setLoading(true);
     setError(null);
-    setAiAnalysis(null);
-    lastGeminiCallSignature.current = null;
     
     try {
       const [weatherRes, aqiRes] = await Promise.allSettled([
@@ -102,7 +92,7 @@ export function useWeather(lang, unit = 'C') {
       const processedWeatherData = normalizeModelData(rawWeatherData);
       const finalWeatherData = { ...processedWeatherData, location: { name, country, latitude: lat, longitude: lon } };
 
-      // --- CANVI CRÍTIC: AWAIT PER GUARDAR ---
+      // 2. Guardem a la caché
       await cacheService.set(cacheKey, { weather: finalWeatherData, aqi: newAqiData });
 
       setWeatherData(finalWeatherData);
@@ -138,52 +128,14 @@ export function useWeather(lang, unit = 'C') {
     }, { enableHighAccuracy: false, timeout: 5000 });
   }, [fetchWeatherByCoords, lang]);
 
-  useEffect(() => {
-     if(weatherData) {
-         const currentHour = new Date().getHours();
-         const freezingLevel = weatherData.hourly?.freezing_level_height?.[currentHour] || 2500;
-         const elevation = weatherData.elevation || 0;
-         const effectiveWeatherCode = getRealTimeWeatherCode(weatherData.current, weatherData.minutely_15?.precipitation, 0, freezingLevel, elevation);
-         const reliability = calculateReliability(weatherData.daily, weatherData.dailyComparison?.gfs, weatherData.dailyComparison?.icon, 0);
-
-         const baseAnalysis = generateAIPrediction({ ...weatherData.current, minutely15: weatherData.minutely_15?.precipitation }, weatherData.daily, weatherData.hourly, aqiData?.current?.european_aqi || 0, lang, effectiveWeatherCode, reliability, unit);
-         setAiAnalysis({ ...baseAnalysis, source: 'algorithm' });
-
-         let context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
-         if (typeof context === 'object') { context = { ...context, userRequestedLanguage: lang }; }
-         
-         const weatherTimestamp = weatherData.current?.time; 
-         const lat = weatherData.location?.latitude || 0;
-         const lon = weatherData.location?.longitude || 0;
-         const aiCacheKey = cacheService.generateAiKey(weatherTimestamp, lat, lon, lang);
-
-         // --- LÒGICA ASÍNCRONA PER IA ---
-         const checkCacheAndFetch = async () => {
-             // 1. AWAIT per llegir caché IA
-             const cachedAI = await cacheService.get(aiCacheKey, 24 * 60 * 60 * 1000); 
-             if (cachedAI) {
-                 console.log(`💾 IA recuperada de IndexedDB (${lang})`);
-                 setAiAnalysis(prev => ({ ...prev, text: cachedAI, source: 'gemini' }));
-                 return; 
-             }
-
-             const currentSignature = JSON.stringify({ c: context, l: lang });
-             lastGeminiCallSignature.current = currentSignature;
-
-             fetchEnhancedForecast(context, lang).then(async (enhancedText) => {
-                if (lastGeminiCallSignature.current !== currentSignature) return;
-                if (enhancedText) {
-                    console.log(`✨ Nova IA generada (${lang})`);
-                    // 2. AWAIT per guardar caché IA
-                    await cacheService.set(aiCacheKey, enhancedText); 
-                    setAiAnalysis(prev => ({ ...prev, text: enhancedText, source: 'gemini' }));
-                }
-             }).catch(err => console.error("Error silenciós Gemini:", err));
-         };
-
-         checkCacheAndFetch();
-     }
-  }, [lang, weatherData, aqiData, unit]);
-
-  return { weatherData, aqiData, aiAnalysis, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation };
+  return { 
+      weatherData, 
+      aqiData, 
+      loading, 
+      error, 
+      notification, 
+      setNotification, 
+      fetchWeatherByCoords, 
+      handleGetCurrentLocation 
+  };
 }
