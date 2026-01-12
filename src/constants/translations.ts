@@ -1,4 +1,7 @@
+// src/constants/translations.ts
+
 export type Language = 'ca' | 'es' | 'en' | 'fr';
+
 export const TRANSLATIONS = {
   ca: {
     // --- CLAUS ORIGINALS ---
@@ -116,6 +119,15 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambient tancat. Pluja persistent i visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació inestable. Risc de tempestes actives. ",
 
+    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    aiAnalysisDescription: "Previsió meteorològica d'alta precisió impulsada per intel·ligència artificial.",
+    searchCity: "Cerca Ciutat",
+    useLocation: "Utilitzar Ubicació",
+    selectLanguage: "Selecciona Idioma",
+    autoGPS: "GPS Automàtic",
+    manualSearch: "Busca manualment",
+    // ------------------------------------
+
     // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
     aiSummaryFog: "Hi ha boira o bancs de boira baixos.", 
     alertVisibility: "Visibilitat molt reduïda",
@@ -187,7 +199,7 @@ export const TRANSLATIONS = {
     alertHeatHigh: "Temperatures altes. Hidrata't.",
     alertColdExtreme: "Fred sever. Risc congelació.",
     alertColdHigh: "Glaçades. Calçades relliscoses.",
-    alertRain: "Precipitacions abundants.",
+    alertRain: "Precipitacions abundantes.",
     alertAir: "Qualitat de l'aire deficient.",
     alertUV: "Radiació UV Extrema",
     
@@ -348,6 +360,15 @@ export const TRANSLATIONS = {
     aiSummaryRain: "Perturbación activa con precipitaciones en la zona. ",
     aiSummaryRainFog: "Ambiente muy húmedo. Lluvia persistente y niebla. ",
     aiSummaryStorm: "Situación inestable. Riesgo de tormentas activas. ",
+
+    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    aiAnalysisDescription: "Previsión meteorológica de alta precisión impulsada por inteligencia artificial.",
+    searchCity: "Buscar Ciudad",
+    useLocation: "Usar Ubicación",
+    selectLanguage: "Selecciona Idioma",
+    autoGPS: "GPS Automático",
+    manualSearch: "Búsqueda manual",
+    // ------------------------------------
 
     // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
     aiSummaryFog: "Hay niebla o bancos de niebla bajos.", 
@@ -582,6 +603,15 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Humid and foggy. Persistent rain with reduced visibility. ",
     aiSummaryStorm: "Unstable situation. Risk of active storms. ",
 
+    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    aiAnalysisDescription: "High-precision weather forecast powered by artificial intelligence.",
+    searchCity: "Search City",
+    useLocation: "Use Location",
+    selectLanguage: "Select Language",
+    autoGPS: "Automatic GPS",
+    manualSearch: "Manual search",
+    // ------------------------------------
+
     // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
     aiSummaryFog: "It is foggy or low mist banks present.", 
     alertVisibility: "Low visibility",
@@ -815,6 +845,15 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambiance bouchée. Pluie persistante et brouillard. ",    
     aiSummaryStorm: "Situation instable. Risque d'orages actifs. ",
 
+    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    aiAnalysisDescription: "Prévisions météorologiques de haute précision alimentées par l'intelligence artificielle.",
+    searchCity: "Chercher Ville",
+    useLocation: "Ma Position",
+    selectLanguage: "Choisir Langue",
+    autoGPS: "GPS Automatique",
+    manualSearch: "Recherche manuelle",
+    // ------------------------------------
+
     // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
     aiSummaryFog: "Il y a du brouillard ou des bancs de brume.", 
     alertVisibility: "Visibilité très réduite",
@@ -933,4 +972,4 @@ export const TRANSLATIONS = {
     radarData: "Données: RainViewer",
     radarFail: "Si ça échoue, appuyez sur \"Ouvrir\" ↗"
   }
-  } as const;
+} as const;
