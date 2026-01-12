@@ -68,12 +68,12 @@ export default function MeteoIA() {
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
   // --- VISTA 1: PANTALLA D'INICI (WELCOME) ---
-  if (!weatherData && !loading && !error && favorites.length === 0) {
+  // CORRECCIÓ: Ara es mostra sempre que no hi hagi dades, tingui favorits o no.
+  if (!weatherData && !loading && !error) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col font-sans transition-colors duration-1000">
          <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
          <div className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-4xl mx-auto">
-            {/* AQUÍ ESTÀ EL CANVI CLAU: connectem onLocate */}
             <WelcomeScreen 
                 lang={lang} 
                 setLang={setLang} 
