@@ -81,7 +81,7 @@ npm run build
 
 | Vista Mòbil | Vista Escriptori |
 | --- | --- |
-| *(Pots afegir aquí una captura del mòbil)* | *(Pots afegir aquí una captura del PC)* |
+| https://github.com/tonitapias/meteoai/blob/main/public/screenshot-mobile.png | https://github.com/tonitapias/meteoai/blob/main/public/screenshot-desktop.png |
 
 ## 🌍 Idiomes Suportats
 
