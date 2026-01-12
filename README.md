@@ -1,96 +1,115 @@
-# 🌦️ Meteo Toni AI (v2.5 Pro)
+# 🌤️ MeteoToni AI (v2.5.0-PRO)
 
-> Una aplicació meteorològica de nova generació impulsada per Intel·ligència Artificial i dissenyada amb una interfície "Glassmorphism" professional.
+> **La previsió meteorològica de nova generació.**
+> Una Progressive Web App (PWA) construïda amb React, Vite i TailwindCSS que fusiona models d'alta resolució (AROME) amb la potència de la Intel·ligència Artificial Generativa (Google Gemini) per oferir prediccions hiperlocalitzades i humanes.
 
-![Version](https://img.shields.io/badge/version-2.5%20Pro-blue) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite](https://img.shields.io/badge/Vite-5-646CFF) ![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC)
+![MeteoToni AI Banner](public/screenshot-desktop.png)
 
 ## ✨ Característiques Principals
 
-### 🧠 Intel·ligència Artificial (Gemini Flash)
-- **Anàlisi en Temps Real:** Generació de resums meteorològics detallats, consells de roba i alertes basades en les dades actuals.
-- **Dades Híbrides:** Fusió intel·ligent de models meteorològics per oferir la màxima precisió.
+### 🧠 Intel·ligència Artificial (MeteoAI Gemini)
+- **Anàlisi en Llenguatge Natural:** Utilitza **Google Gemini 1.5 Flash** per analitzar milers de dades meteorològiques i generar resums escrits en un to proper (i amb un toc d'humor local).
+- **Consells Contextuals:** Recomanacions de roba ("vesteix per capes") i alertes de seguretat basades en la sensació tèrmica i fenòmens severs.
+- **Fiabilitat:** Sistema de semàfors (Confiança Alta/Mitjana/Baixa) basat en la convergència dels models.
 
-### 🎨 Disseny & UX (Glassmorphism)
-- **Interfície Adaptativa (Responsive):**
-  - **Mòbil:** Gràfics optimitzats amb pestanyes (Temp | Pluja | Vent) i scroll horitzontal per evitar distorsions.
-  - **Escriptori:** Layout asimètric professional (Panell de Control vs Tauler de Dades).
-- **Icones Vives:** Animacions suaus segons la velocitat del vent i la precipitació.
-- **Fons Dinàmics:** Canvien automàticament segons l'hora del dia (sortida/posta de sol) i el codi del temps (neu, tempesta, sol, etc.).
+### 🗺️ Motor Meteorològic Híbrid
+- **Fusió de Models:** Combina **ECMWF/GFS** (Global) amb **AROME HD** (Alta Resolució 1.3km) per a zones com Catalunya, Andorra i els Pirineus.
+- **Dades en Temps Real:** Precipitació minut a minut, radar de pluja en viu i seguiment de tempestes.
+- **Multimodel:** Comparativa visual entre GFS, ICON i ECMWF en gràfiques unificades.
 
-### 📊 Dades Meteorològiques Avançades
-- **Models Comparatius:** Visualització simultània de **ECMWF, GFS i ICON**.
-- **Previsió AROME HD:** Accés a dades d'alta resolució (1.3km) amb indicador "Live HD" i detall hora a hora.
-- **Quantitats Precises:** Previsió de precipitació en **mm** (pluja) i **cm** (neu acumulada).
-- **Incertesa i Divergència:** Alerta automàtica quan els models discrepen significativament.
+### 🎨 Experiència d'Usuari (Glassmorphism 2.0)
+- **Interfície Bento Grid:** Disseny modular, net i adaptatiu (Responsive) que organitza grans volums de dades sense aclaparar.
+- **Mode Essencial vs. Expert:** L'usuari pot triar entre una vista simplificada o un tauler de control complet amb mètriques tècniques (CAPE, Cota de Neu, Punt de Rosada, etc.).
+- **Visuals Immersius:** Fons dinàmics que canvien segons l'hora (alba, dia, capvespre, nit) i la condició climàtica, amb efectes de partícules.
 
-### 🛠️ Ginys Experts
-- **Radar i Satèl·lit:** Mapes interactius.
-- **Cota de Neu:** Gràfic dedicat per a la isoterma 0ºC.
-- **Qualitat de l'Aire:** Nivells de pol·len i índex AQI europeu.
-- **Astronomia:** Arc solar i fases lunars precises.
-
-## 🚀 Tecnologies
-
-- **Core:** [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/).
-- **Estils:** [Tailwind CSS](https://tailwindcss.com/), [Lucide React](https://lucide.dev/) (Icones).
-- **Dades:** - [Open-Meteo API](https://open-meteo.com/) (Temps i Models).
-  - [BigDataCloud API](https://www.bigdatacloud.com/) (Geocodificació inversa CORS-friendly).
-  - [Google Gemini API](https://ai.google.dev/) (Intel·ligència Artificial).
-- **Rendiment:** `IndexedDB` per a cau local i `React.memo` per a renderitzat eficient.
-
-## ⚙️ Instal·lació i Execució
-
-1. **Clonar el repositori:**
-   ```bash
-   git clone [https://github.com/el-teu-usuari/meteo-toni-ai.git](https://github.com/el-teu-usuari/meteo-toni-ai.git)
-   cd meteo-toni-ai
-
-```
-
-2. **Instal·lar dependències:**
-```bash
-npm install
-
-```
-
-
-3. **Configurar variables d'entorn:**
-Crea un fitxer `.env` a l'arrel i afegeix la teva clau de Gemini:
-```env
-VITE_GEMINI_API_KEY=la_teva_clau_api_aqui
-
-```
-
-
-4. **Arrencar en mode desenvolupament:**
-```bash
-npm run dev
-
-```
-
-
-5. **Compilar per a producció:**
-```bash
-npm run build
-
-```
-
-
-## 🌍 Idiomes Suportats
-
-* Català (Per defecte)
-* Castellà
-* Anglès
-* Francès
-
-## 📄 Llicència
-
-Aquest projecte està sota la llicència MIT.
+### 📱 Progressive Web App (PWA)
+- **Instal·lable:** Funciona com una app nativa a iOS i Android.
+- **Offline First:** Estratègia de catxé robusta (`IndexedDB`) per consultar l'última previsió sense connexió.
+- **Geo-Intel·ligència:** Cercador optimitzat amb suport per a noms en Català, Castellà, Anglès i Francès.
 
 ---
 
-**Designed by MeteoAIToni** | Powered by Open-Meteo & Google Gemini
+## 🛠️ Stack Tecnològic
+
+- **Frontend:** React 18, TypeScript, Vite.
+- **Estils:** TailwindCSS (amb efectes de vidre/blur avançats).
+- **Gràfics i Mapes:** Recharts (gràfiques interactives), React-Leaflet (mapes de radar).
+- **Iconografia:** Lucide React (icones vectorials netes).
+- **IA:** Google Generative AI SDK.
+- **Dades:** Open-Meteo API (font principal).
+- **Deploy:** GitHub Pages (via GitHub Actions).
+
+---
+
+## 🚀 Instal·lació i Desenvolupament Local
+
+1.  **Clonar el repositori:**
+    ```bash
+    git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
+    cd meteoai
+    ```
+
+2.  **Instal·lar dependències:**
+    ```bash
+    npm install
+    ```
+
+3.  **Configurar Variables d'Entorn:**
+    Crea un fitxer `.env` a l'arrel del projecte i afegeix la teva clau de l'API de Gemini:
+    ```env
+    VITE_GEMINI_API_KEY=la_teva_clau_api_de_google
+    ```
+
+4.  **Executar en local:**
+    ```bash
+    npm run dev
+    ```
+    Obre `http://localhost:5173` al teu navegador.
+
+---
+
+## 📦 Desplegament (GitHub Pages)
+
+Aquest projecte està configurat per desplegar-se automàticament a GitHub Pages mitjançant **GitHub Actions**.
+
+1.  Ves a **Settings > Secrets and variables > Actions** al teu repositori de GitHub.
+2.  Crea un nou secret anomenat `VITE_GEMINI_API_KEY` amb la teva clau de Google AI.
+3.  Fes un `push` a la branca `main` i l'acció s'executarà automàticament.
+
+L'aplicació estarà disponible a: `https://tonitapias.github.io/meteoai/`
+
+---
+
+## 📂 Estructura del Projecte
+
 
 ```
+
+src/
+├── components/       # Components UI (Header, Widgets, Charts, etc.)
+├── context/          # Gestió d'estat global (Preferències)
+├── hooks/            # Custom Hooks (useWeather, useAI, useArome)
+├── services/         # Connexió amb APIs externes i Cache
+├── utils/            # Lògica de negoci, càlculs i formatadors
+├── constants/        # Traduccions i configuracions estàtiques
+└── App.tsx           # Component principal i layout
+
+```
+
+---
+
+## 📄 Llicència i Crèdits
+
+© 2024-2026 **MeteoAI Engineering**. All rights reserved.
+
+- **Dades Meteorològiques:** [Open-Meteo API](https://open-meteo.com/) (Llicència CC BY 4.0).
+- **Models:** AROME (Météo-France), GFS (NOAA), ICON (DWD), ECMWF.
+- **Desenvolupament:** Toni Tapias.
+
+---
+
+<div align="center">
+  <sub>Creat amb ❤️ i TypeScript a Catalunya.</sub>
+</div>
 
 ```
