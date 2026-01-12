@@ -41,8 +41,8 @@ export default function CurrentWeather({
                         {location?.country || "Local"}
                     </span>
                     {isUsingArome && (
-                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-                            <span className="animate-pulse w-1.5 h-1.5 rounded-full bg-emerald-400"></span> LIVE HD
+                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-widest text-emerald-400 ring-1 ring-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                            <span className="animate-pulse w-1.5 h-1.5 rounded-full bg-emerald-400"></span> AROME HD
                         </span>
                     )}
                 </div>

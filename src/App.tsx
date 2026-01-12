@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
-import { TrendingUp } from 'lucide-react'; 
+import { TrendingUp, Database, ShieldCheck } from 'lucide-react'; // AFEGITS NOUS IMPORTS
 
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
@@ -26,20 +26,39 @@ import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 
-// Footer simplificat i net
-const Footer = () => (
-  <div className="w-full py-6 mt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-medium tracking-wider uppercase">
-      <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-400">© {new Date().getFullYear()} Meteo Toni AI</span>
-          <span className="hidden md:inline text-slate-700">|</span>
-          <span>Bento UI Edition</span>
-      </div>
-      <div className="flex items-center gap-4 opacity-70">
-          <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-          <span>v3.0 Ultra</span>
-      </div>
-  </div>
-);
+// --- NOU FOOTER PROFESSIONAL ---
+const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
+  const year = new Date().getFullYear();
+  const isWelcome = mode === 'welcome';
+  
+  return (
+    <footer className={`w-full flex flex-col items-center gap-4 py-8 mt-auto z-10 transition-opacity duration-1000 ${isWelcome ? 'text-slate-400 opacity-80 pb-8' : 'text-slate-500 border-t border-white/5 pt-8'}`}>
+        
+        {/* LOGOS / CREDITS */}
+        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[10px] font-bold tracking-widest uppercase opacity-70">
+            <span className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors cursor-default" title="Data Source">
+                <Database className="w-3 h-3" /> Open-Meteo API
+            </span>
+            <span className="hidden md:inline text-slate-700">|</span>
+            <span className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-default" title="High Resolution Model">
+                <ShieldCheck className="w-3 h-3" /> AROME / GFS / ICON
+            </span>
+        </div>
+
+        {/* COPYRIGHT I VERSIÓ */}
+        <div className="flex flex-col md:flex-row items-center gap-2 text-[11px] font-medium">
+            <span className="opacity-90">© {year} MeteoAI Engineering.</span>
+            <span className="hidden md:inline opacity-30 mx-2">/</span>
+            <span className="opacity-50 flex items-center gap-2">
+                All rights reserved. 
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isWelcome ? 'bg-white/10 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                    v2.5.0-PRO
+                </span>
+            </span>
+        </div>
+    </footer>
+  );
+};
 
 export default function MeteoIA() {
   const [now, setNow] = useState<Date>(new Date());
@@ -47,6 +66,7 @@ export default function MeteoIA() {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const { weatherData, aqiData, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation } = useWeather(lang, unit);
+  // Extreiem chartData aquí
   const { shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, currentBg, chartData, comparisonData, weeklyExtremes } = useWeatherCalculations(weatherData, unit, now);
   const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit);
 
@@ -65,23 +85,23 @@ export default function MeteoIA() {
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
-  // --- VISTA 1: WELCOME SCREEN (ACTUALITZADA) ---
+  // --- VISTA 1: WELCOME SCREEN ---
   if (!weatherData && !loading && !error) {
     return (
-      // Fons degradat immersiu en lloc de color pla
       <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
-         {/* Partícules de fons subtils (Codi 0 = Serena/Estrelles) */}
          <div className="fixed inset-0 opacity-30 pointer-events-none">
             <WeatherParticles code={0} />
          </div>
          
-         <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10">
-            {/* Header transparent */}
+         {/* Afegit h-screen per assegurar que el footer quedi a baix de tot */}
+         <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
             <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
-            
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} />
             </div>
+            
+            {/* FOOTER EN MODE BENVINGUDA */}
+            <Footer mode="welcome" />
          </div>
       </div>
     );
@@ -92,7 +112,6 @@ export default function MeteoIA() {
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col`}>
       <WeatherParticles code={effectiveWeatherCode} />
       
-      {/* Texture Overlay */}
       <div className="fixed inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
 
       <Toast message={notification?.msg || null} type={notification?.type} onClose={() => setNotification(null)} />
@@ -107,10 +126,8 @@ export default function MeteoIA() {
             {weatherData && !loading && (
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                 
-                {/* --- BENTO GRID LAYOUT --- */}
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                     
-                    {/* COLUMNA ESQUERRA (Hero & AI) - 4 Columnes */}
                     <div className="xl:col-span-4 flex flex-col gap-6 xl:sticky xl:top-6">
                         <CurrentWeather 
                             data={weatherData} effectiveCode={effectiveWeatherCode} unit={unit} lang={lang} shiftedNow={shiftedNow}
@@ -120,17 +137,18 @@ export default function MeteoIA() {
                         />
                         <ErrorBoundary>
                             <div className="bento-card p-6 min-h-[200px] flex flex-col justify-center">
+                                {/* Passem el VOLUM (precip) del hook */}
                                 <AIInsights 
-                                    analysis={aiAnalysis} minutelyData={minutelyPreciseData} 
-                                    currentPrecip={currentRainProbability} lang={lang}
+                                    analysis={aiAnalysis} 
+                                    minutelyData={minutelyPreciseData} 
+                                    currentPrecip={chartData?.[0]?.precip || 0} 
+                                    lang={lang}
                                 />
                             </div>
                         </ErrorBoundary>
                     </div>
 
-                    {/* COLUMNA DRETA (Dades & Previsió) - 8 Columnes */}
                     <div className="xl:col-span-8 flex flex-col gap-6">
-                        
                         {viewMode === 'expert' && (
                             <div className="animate-in fade-in duration-700">
                                 <h3 className="label-upper px-1 mb-4">Mètriques Avançades</h3>
@@ -154,7 +172,6 @@ export default function MeteoIA() {
                     </div>
                 </div>
 
-                {/* --- SECCIÓ GRÀFICS FULL WIDTH (Inferior) --- */}
                 {viewMode === 'expert' && (
                     <div className="mt-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 w-full">
                          <div className="bento-card p-6 md:p-8">
@@ -173,7 +190,8 @@ export default function MeteoIA() {
             )}
         </div>
 
-        <Footer />
+        {/* FOOTER EN MODE DASHBOARD */}
+        <Footer mode="dashboard" />
 
         <Suspense fallback={null}>
             {selectedDayIndex !== null && weatherData && <DayDetailModal weatherData={weatherData} selectedDayIndex={selectedDayIndex} onClose={() => setSelectedDayIndex(null)} unit={unit} lang={lang} shiftedNow={shiftedNow} />}

@@ -23,17 +23,14 @@ interface SingleHourlyChartProps {
 export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca' }: SingleHourlyChartProps) => {
   if (!data || data.length === 0) return null;
   
-  // REFERÈNCIA PER DETECTAR AMPLADA REAL
   const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(1000); // Valor inicial per defecte
+  const [width, setWidth] = useState(1000); 
 
-  // ResizeObserver per ajustar-se al píxel
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.contentRect) {
-          // Assegurem que l'amplada no sigui 0 per evitar errors de SVG
           setWidth(Math.max(entry.contentRect.width, 100));
         }
       }
@@ -56,7 +53,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const currentConfig = layersConfig[layer];
   const dataKey = currentConfig.key;
   
-  // Marges dinàmics (si és molt estret, reduïm marges)
   const paddingX = width < 500 ? 10 : 20;
   const paddingY = 30;
 
@@ -99,7 +95,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         gfsPoints: comparisonData?.gfs ? createPoints(comparisonData.gfs) : [],
         iconPoints: comparisonData?.icon ? createPoints(comparisonData.icon) : [],
     };
-  }, [data, comparisonData, layer, height, dataKey, width, paddingX]); // Afegit 'width' a dependències
+  }, [data, comparisonData, layer, height, dataKey, width, paddingX]);
 
   const { areaPath, linePath, gfsPath, iconPath } = useMemo(() => {
       const buildSmoothPath = (pts: any[]) => {
@@ -137,7 +133,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
          {currentConfig.title}
       </div>
 
-      {/* SVG sense 'preserveAspectRatio' forçat, utilitzant coordenades reals */}
       <svg width={width} height={height} className="w-full h-full drop-shadow-sm touch-pan-x block">
         <defs>
           <linearGradient id={`gradient-${layer}`} x1="0" y1="0" x2="0" y2="1">
@@ -146,7 +141,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           </linearGradient>
         </defs>
         
-        {/* Línies de referència esteses a tota l'amplada */}
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
         <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" />
 
@@ -155,7 +149,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="2 2"/>}
         {linePath && <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" />}
         
-        {/* Zores d'interacció invisibles per millor UX en ratolí/tàctil */}
         {points.map((p, i) => (
           <rect 
             key={i} 
@@ -170,9 +163,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           />
         ))}
 
-        {/* Etiquetes d'hora intel·ligents (eviten solapaments segons amplada) */}
         {points.map((p, i) => {
-             // Mostrem menys hores si l'amplada és petita, més si és gran
              const step = width < 600 ? 4 : 3; 
              return (i % step === 0) && (
               <text key={`txt-${i}`} x={p.x} y={height - 5} textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="500">
@@ -181,13 +172,11 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
             )
         })}
 
-        {/* Tooltip flotant que s'ajusta a les vores */}
         {hoverData && hoverData.value !== null && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
             <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
             
-            {/* Lògica per evitar que el tooltip surti de la pantalla */}
             <g transform={`translate(${Math.min(width - 120, Math.max(70, hoverData.x))}, 20)`}>
                <rect x="-70" y="-15" width="140" height="70" rx="8" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" filter="drop-shadow(0 4px 6px rgb(0 0 0 / 0.5))" />
                <text x="0" y="8" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">
@@ -227,8 +216,6 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
 
   return (
     <div className="w-full flex flex-col gap-4">
-      
-      {/* 1. SELECTOR DE PESTANYES (Mòbil) */}
       <div className="flex md:hidden bg-slate-950/50 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
           {tabs.map((tab) => (
               <button
@@ -246,10 +233,7 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
           ))}
       </div>
 
-      {/* 2. ZONA DE GRÀFICS */}
       <div className="relative w-full bg-slate-900/30 rounded-2xl border border-white/5 p-2 md:p-6 overflow-hidden" onMouseLeave={() => setHoveredIndex(null)}>
-          
-          {/* MÒBIL: Pestanya activa */}
           <div className="md:hidden w-full overflow-x-auto custom-scrollbar pb-2">
              <div className="min-w-[800px] h-64">
                  <SingleHourlyChart 
@@ -265,13 +249,10 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
              </div>
           </div>
 
-          {/* PC: TOTS ELS GRÀFICS APILATS (XXL & FULL WIDTH) */}
           <div className="hidden md:flex flex-col gap-8 w-full">
-             {/* Ara utilitzen el 100% de l'ample disponible gràcies al ResizeObserver */}
              <div className="h-96 w-full shadow-inner bg-slate-950/20 rounded-xl border border-white/5 overflow-hidden">
                 <SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={384} lang={lang} />
              </div>
-             
              <div className="h-64 w-full shadow-inner bg-slate-950/20 rounded-xl border border-white/5 overflow-hidden">
                 <SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={256} lang={lang} />
              </div>
@@ -283,7 +264,6 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
              </div>
           </div>
 
-          {/* LLEGENDA */}
           <div className="flex justify-center items-center gap-4 mt-6 pt-2 border-t border-white/5 opacity-70">
                 <span className="text-[9px] text-slate-400 uppercase font-bold tracking-widest">{t.modelsLegend}:</span>
                 <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div><span className="text-[10px] text-slate-300">ECMWF</span></div>
@@ -295,14 +275,24 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
   );
 };
 
+// --- COMPONENT CORREGIT: MINUTELY PRECISE CHART ---
 export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }: { data: number[], label: string, currentPrecip: number }) => {
     let chartData = data ? [...data] : [];
     if(chartData.length === 0) return null; 
+    
+    // Normalitzem per tenir mínim 4 barres
     while(chartData.length < 4) chartData.push(0);
     chartData = chartData.slice(0, 4);
-    if (currentPrecip > 0 && chartData[0] === 0) chartData[0] = currentPrecip;
+    
+    // BUG FIX CRÍTIC:
+    // Abans aquí hi havia una línia que injectava la probabilitat (%) com si fos volum (mm)
+    // if (currentPrecip > 0 && chartData[0] === 0) chartData[0] = currentPrecip; <--- ELIMINADA
+    
     if (chartData.every(v => v === 0)) return null;
+    
+    // Escala gràfica: mínim 0.5mm per que es vegi algo si plou poc
     const max = Math.max(...chartData, 0.5); 
+    
     const getIntensityColor = (val: number) => {
         if (val === 0) return 'bg-blue-900/50';
         if (val < 2.5) return 'bg-blue-400'; 
@@ -323,7 +313,8 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }: { data:
                 <div className="flex items-end gap-2 h-full w-full relative z-10">
                 {chartData.map((val, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
-                        {val > 0 && <span className="text-[9px] font-bold mb-0.5 text-blue-200">{val.toFixed(1)}</span>}
+                        {/* AFEGIT 'mm' AL VALOR PER EVITAR CONFUSIÓ */}
+                        {val > 0 && <span className="text-[9px] font-bold mb-0.5 text-blue-200">{val.toFixed(1)}mm</span>}
                         <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
                             <div className={`w-full rounded-sm transition-all ${getIntensityColor(val)}`} style={{ height: `${(val / max) * 100}%` }}></div>
                         </div>

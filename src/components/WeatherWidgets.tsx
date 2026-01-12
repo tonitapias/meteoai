@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
-  Thermometer, Droplets, Zap, Mountain, Cloud
+  Thermometer, Droplets, Zap, Mountain, Cloud, Eye
 } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../constants/translations';
 import { WeatherUnit } from '../utils/formatters';
@@ -31,7 +31,8 @@ interface BaseWidgetProps { lang?: Language; }
 interface TempRangeBarProps {
     min: number; max: number;
     globalMin: number; globalMax: number;
-    displayMin: number; displayMax: number;
+    displayMin: number | string; // FIX: Acceptar strings formatejats
+    displayMax: number | string; // FIX: Acceptar strings formatejats
 }
 export const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }: TempRangeBarProps) => {
   const totalRange = globalMax - globalMin || 1;
@@ -399,6 +400,39 @@ export const CloudLayersWidget = ({ low, mid, high, lang = 'ca' }: CloudLayersWi
                         <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${l}%` }}></div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+interface VisibilityWidgetProps extends BaseWidgetProps { visibility: number; unit?: string; }
+export const VisibilityWidget = ({ visibility, lang = 'ca', unit = 'km' }: VisibilityWidgetProps) => {
+    // visibility comes in meters usually (OpenMeteo)
+    const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+    const visKm = visibility / 1000;
+    const percentage = Math.min((visibility / 24000) * 100, 100); // 24km com a límit visual clar
+    
+    // Status text (Fallback manual si no existeix a traduccions)
+    let status = '';
+    if (visibility < 1000) status = (t as any).fog || "Boira";
+    else if (visibility < 5000) status = (t as any).haze || "Bruma";
+    else if (visibility < 10000) status = (t as any).clear || "Visible";
+    else status = (t as any).excellent || "Excel·lent";
+
+    return (
+        <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
+            <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                <Eye className="w-3 h-3 text-indigo-400" strokeWidth={2.5} />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{(t as any).visibility || "Visibilitat"}</span>
+            </div>
+            <div className="flex flex-col items-center mt-3 w-full">
+                 <span className="text-2xl font-bold text-white">{visKm.toFixed(1)} <span className="text-sm font-medium text-slate-500">km</span></span>
+                 <div className="w-20 h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-indigo-400 transition-all duration-1000" style={{width: `${percentage}%`}}></div>
+                 </div>
+                 <span className="text-[9px] font-bold mt-2 px-2 py-0.5 rounded border border-white/5 bg-white/5 text-indigo-300">
+                    {status}
+                 </span>
             </div>
         </div>
     );
