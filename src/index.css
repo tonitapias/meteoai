@@ -2,13 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Animacions per a les icones del temps (mogut des de LivingIcon) */
+@layer base {
+  body {
+    @apply antialiased text-slate-50 selection:bg-indigo-500/30 selection:text-white bg-slate-950;
+  }
+}
+
+@layer components {
+  /* --- BENTO GRID SYSTEM --- */
+  .bento-card {
+    @apply relative overflow-hidden rounded-[2rem] backdrop-blur-xl transition-all duration-500;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .bento-card:hover {
+    @apply border-white/15 bg-white/[0.07] shadow-2xl scale-[1.002];
+  }
+
+  /* --- TYPOGRAPHY --- */
+  .text-glow {
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+  }
+  
+  .label-upper {
+    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400/80 mb-3 ml-1;
+  }
+}
+
+/* --- UTILITIES --- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 @keyframes wiggle {
   0%, 100% { transform: rotate(-3deg); }
   50% { transform: rotate(3deg); }
-}
-
-@keyframes pulse-precip {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
 }

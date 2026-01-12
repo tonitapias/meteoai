@@ -1,6 +1,6 @@
 // src/components/AIInsights.tsx
 import React from 'react';
-import { BrainCircuit, Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap } from 'lucide-react';
+import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap } from 'lucide-react';
 import { MinutelyPreciseChart } from './WeatherCharts';
 import { TypewriterText } from './WeatherUI';
 import { TRANSLATIONS, Language } from '../constants/translations';
@@ -114,7 +114,7 @@ export default function AIInsights({ analysis, minutelyData, currentPrecip, lang
         
         {/* ZONA DE CONTINGUT AMB SCROLL */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 pt-2 relative z-10">
-            <div className="space-y-4 animate-in fade-in">
+            <div className="space-y-6 animate-in fade-in">
                 {/* Llista d'Alertes */}
                 {analysis.alerts && analysis.alerts.length > 0 && (
                     <div className="flex flex-col gap-2 mb-2">
@@ -124,9 +124,12 @@ export default function AIInsights({ analysis, minutelyData, currentPrecip, lang
                     </div>
                 )}
 
-                {/* Text Generat */}
+                {/* Text Generat - ARA AMB MÉS PROTAGONISME */}
                 <div key={analysis.source} className="min-h-[3rem]">
-                    <TypewriterText text={analysis.text} />
+                    <TypewriterText 
+                        text={analysis.text} 
+                        className="text-lg md:text-xl text-white font-medium leading-relaxed drop-shadow-sm whitespace-pre-wrap"
+                    />
                 </div>
                 
                 {/* Badges/Consells */}

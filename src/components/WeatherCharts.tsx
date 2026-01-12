@@ -1,5 +1,5 @@
 // src/components/WeatherCharts.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../constants/translations';
 
@@ -22,6 +22,26 @@ interface SingleHourlyChartProps {
 
 export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca' }: SingleHourlyChartProps) => {
   if (!data || data.length === 0) return null;
+  
+  // REFERÈNCIA PER DETECTAR AMPLADA REAL
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(1000); // Valor inicial per defecte
+
+  // ResizeObserver per ajustar-se al píxel
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect) {
+          // Assegurem que l'amplada no sigui 0 per evitar errors de SVG
+          setWidth(Math.max(entry.contentRect.width, 100));
+        }
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const layersConfig: any = {
@@ -36,8 +56,8 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const currentConfig = layersConfig[layer];
   const dataKey = currentConfig.key;
   
-  const width = 1000;
-  const paddingX = 20;
+  // Marges dinàmics (si és molt estret, reduïm marges)
+  const paddingX = width < 500 ? 10 : 20;
   const paddingY = 30;
 
   const { points, gfsPoints, iconPoints } = useMemo(() => {
@@ -79,7 +99,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         gfsPoints: comparisonData?.gfs ? createPoints(comparisonData.gfs) : [],
         iconPoints: comparisonData?.icon ? createPoints(comparisonData.icon) : [],
     };
-  }, [data, comparisonData, layer, height, dataKey]);
+  }, [data, comparisonData, layer, height, dataKey, width, paddingX]); // Afegit 'width' a dependències
 
   const { areaPath, linePath, gfsPath, iconPath } = useMemo(() => {
       const buildSmoothPath = (pts: any[]) => {
@@ -104,20 +124,21 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           gfsPath: comparisonData?.gfs ? buildSmoothPath(gfsPoints) : "",
           iconPath: comparisonData?.icon ? buildSmoothPath(iconPoints) : ""
       };
-  }, [points, gfsPoints, iconPoints, height, comparisonData, width]);
+  }, [points, gfsPoints, iconPoints, height, comparisonData, width, paddingX]);
 
   const hoverData = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : null;
   const gfsValue = (hoveredIndex !== null && gfsPoints[hoveredIndex]) ? gfsPoints[hoveredIndex].value : null;
   const iconValue = (hoveredIndex !== null && iconPoints[hoveredIndex]) ? iconPoints[hoveredIndex].value : null;
 
   return (
-    <div className="relative w-full h-full group">
+    <div ref={containerRef} className="relative w-full h-full group select-none">
       <div className="absolute top-2 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest z-10 flex items-center gap-2 bg-slate-900/50 px-2 py-1 rounded-full backdrop-blur-sm border border-white/5">
          <span className={`w-1.5 h-1.5 rounded-full`} style={{backgroundColor: currentConfig.color}}></span>
          {currentConfig.title}
       </div>
 
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full drop-shadow-sm touch-pan-x" preserveAspectRatio="none">
+      {/* SVG sense 'preserveAspectRatio' forçat, utilitzant coordenades reals */}
+      <svg width={width} height={height} className="w-full h-full drop-shadow-sm touch-pan-x block">
         <defs>
           <linearGradient id={`gradient-${layer}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={currentConfig.gradientStart} stopOpacity="0.3" />
@@ -125,6 +146,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           </linearGradient>
         </defs>
         
+        {/* Línies de referència esteses a tota l'amplada */}
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
         <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" />
 
@@ -133,6 +155,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="2 2"/>}
         {linePath && <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" />}
         
+        {/* Zores d'interacció invisibles per millor UX en ratolí/tàctil */}
         {points.map((p, i) => (
           <rect 
             key={i} 
@@ -147,20 +170,25 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           />
         ))}
 
-        {points.map((p, i) => (
-             (i % 3 === 0) && (
+        {/* Etiquetes d'hora intel·ligents (eviten solapaments segons amplada) */}
+        {points.map((p, i) => {
+             // Mostrem menys hores si l'amplada és petita, més si és gran
+             const step = width < 600 ? 4 : 3; 
+             return (i % step === 0) && (
               <text key={`txt-${i}`} x={p.x} y={height - 5} textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="500">
                   {new Date(p.time).getHours()}h
               </text>
             )
-        ))}
+        })}
 
+        {/* Tooltip flotant que s'ajusta a les vores */}
         {hoverData && hoverData.value !== null && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
             <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
             
-            <g transform={`translate(${Math.min(width - 120, Math.max(120, hoverData.x))}, 20)`}>
+            {/* Lògica per evitar que el tooltip surti de la pantalla */}
+            <g transform={`translate(${Math.min(width - 120, Math.max(70, hoverData.x))}, 20)`}>
                <rect x="-70" y="-15" width="140" height="70" rx="8" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" filter="drop-shadow(0 4px 6px rgb(0 0 0 / 0.5))" />
                <text x="0" y="8" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">
                  {new Date(hoverData.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
@@ -169,7 +197,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
                    {Math.round(hoverData.value)}{unit}
                </text>
                
-               {/* CORRECCIÓ AQUI: Afegim {unit} a GFS i ICON */}
                <text x="-60" y="45" textAnchor="start" fill="#4ade80" fontSize="9">
                    GFS: {gfsValue != null ? `${Math.round(gfsValue)}${unit}` : '-'}
                </text>
@@ -220,9 +247,9 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
       </div>
 
       {/* 2. ZONA DE GRÀFICS */}
-      <div className="relative w-full bg-slate-900/30 rounded-2xl border border-white/5 p-2 md:p-4 overflow-hidden" onMouseLeave={() => setHoveredIndex(null)}>
+      <div className="relative w-full bg-slate-900/30 rounded-2xl border border-white/5 p-2 md:p-6 overflow-hidden" onMouseLeave={() => setHoveredIndex(null)}>
           
-          {/* MÒBIL: Pestanya activa AMB SCROLL HORITZONTAL */}
+          {/* MÒBIL: Pestanya activa */}
           <div className="md:hidden w-full overflow-x-auto custom-scrollbar pb-2">
              <div className="min-w-[800px] h-64">
                  <SingleHourlyChart 
@@ -238,16 +265,26 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
              </div>
           </div>
 
-          {/* PC: TOTS ELS GRÀFICS APILATS */}
-          <div className="hidden md:flex flex-col gap-6">
-             <div className="h-48 w-full"><SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} lang={lang} /></div>
-             <div className="h-40 w-full"><SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} lang={lang} /></div>
-             <div className="h-40 w-full"><SingleHourlyChart data={data} comparisonData={comparisonData} layer="wind" unit="km/h" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} lang={lang} /></div>
-             <div className="h-40 w-full"><SingleHourlyChart data={data} comparisonData={comparisonData} layer="snowLevel" unit="m" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} lang={lang} /></div>
+          {/* PC: TOTS ELS GRÀFICS APILATS (XXL & FULL WIDTH) */}
+          <div className="hidden md:flex flex-col gap-8 w-full">
+             {/* Ara utilitzen el 100% de l'ample disponible gràcies al ResizeObserver */}
+             <div className="h-96 w-full shadow-inner bg-slate-950/20 rounded-xl border border-white/5 overflow-hidden">
+                <SingleHourlyChart data={data} comparisonData={comparisonData} layer="temp" unit={unit} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={384} lang={lang} />
+             </div>
+             
+             <div className="h-64 w-full shadow-inner bg-slate-950/20 rounded-xl border border-white/5 overflow-hidden">
+                <SingleHourlyChart data={data} comparisonData={comparisonData} layer="rain" unit="%" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={256} lang={lang} />
+             </div>
+             <div className="h-64 w-full shadow-inner bg-slate-950/20 rounded-xl border border-white/5 overflow-hidden">
+                <SingleHourlyChart data={data} comparisonData={comparisonData} layer="wind" unit="km/h" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={256} lang={lang} />
+             </div>
+             <div className="h-64 w-full shadow-inner bg-slate-950/20 rounded-xl border border-white/5 overflow-hidden">
+                <SingleHourlyChart data={data} comparisonData={comparisonData} layer="snowLevel" unit="m" hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} height={256} lang={lang} />
+             </div>
           </div>
 
           {/* LLEGENDA */}
-          <div className="flex justify-center items-center gap-4 mt-4 pt-2 border-t border-white/5 opacity-70">
+          <div className="flex justify-center items-center gap-4 mt-6 pt-2 border-t border-white/5 opacity-70">
                 <span className="text-[9px] text-slate-400 uppercase font-bold tracking-widest">{t.modelsLegend}:</span>
                 <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div><span className="text-[10px] text-slate-300">ECMWF</span></div>
                 <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-green-400 border-t border-b border-green-400 border-dashed w-3"></div><span className="text-[10px] text-slate-300">GFS</span></div>

@@ -1,132 +1,65 @@
-// src/components/WelcomeScreen.tsx
 import React from 'react';
-import { CloudSun, Search, MapPin, Globe, Sparkles, Navigation } from 'lucide-react';
+import { MapPin, Sparkles, Globe, CloudSun, Command } from 'lucide-react';
 import { Language } from '../constants/translations';
-import { FlagIcon } from './WeatherUI';
 
 interface WelcomeScreenProps {
   lang: Language;
-  setLang: (l: Language) => void;
+  setLang: (lang: Language) => void;
   t: any;
   onLocate: () => void;
 }
 
 export default function WelcomeScreen({ lang, setLang, t, onLocate }: WelcomeScreenProps) {
-  
-  const langs: { id: Language; label: string }[] = [
-      { id: 'ca', label: 'CA' },
-      { id: 'es', label: 'ES' },
-      { id: 'en', label: 'EN' },
-      { id: 'fr', label: 'FR' },
-  ];
-
-  const handleSearchClick = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
-        const input = document.querySelector('input[type="text"]');
-        if (input instanceof HTMLInputElement) input.focus();
-    }, 600);
-  };
-
   return (
-    // CANVI: padding reduït en mòbil (py-6) i alçada mínima flexible
-    <div className="relative w-full flex flex-col items-center justify-center py-6 md:py-10 min-h-[50vh] md:min-h-[65vh] overflow-hidden">
+    <div className="relative w-full flex flex-col items-center justify-center text-center gap-8 md:gap-12 animate-in fade-in zoom-in duration-700">
+      
+      {/* BACKGROUND FX */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 mix-blend-screen animate-pulse"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[80px] pointer-events-none z-0 mix-blend-screen ml-20 -mt-20"></div>
+
+      {/* MAIN CARD */}
+      <div className="relative z-10 bento-card p-10 md:p-16 max-w-2xl w-full flex flex-col items-center border-white/10 shadow-2xl bg-white/5 backdrop-blur-2xl">
+        <div className="relative mb-6">
+            <div className="absolute inset-0 bg-amber-400 blur-2xl opacity-20 animate-pulse"></div>
+            <CloudSun className="w-24 h-24 text-white relative z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" strokeWidth={1.5} />
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-400 mb-4 drop-shadow-lg">
+          Meteo Toni AI
+        </h1>
         
-        {/* 1. ATMOSPHERE BACKGROUND (Responsive) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-             {/* CANVI: Mida del cercle reduïda en mòbil (w-64) per no desbordar */}
-             <div className="w-64 h-64 md:w-[500px] md:h-[500px] bg-gradient-to-tr from-indigo-600/20 to-purple-500/20 rounded-full blur-[60px] md:blur-[100px] animate-pulse opacity-60"></div>
+        <p className="text-lg md:text-xl text-indigo-200/80 font-medium max-w-lg leading-relaxed mb-8">
+          {lang === 'ca' ? "La previsió meteorològica més avançada amb intel·ligència artificial." :
+           lang === 'en' ? "The most advanced weather forecast powered by Artificial Intelligence." :
+           lang === 'es' ? "La previsión meteorológica más avanzada con inteligencia artificial." :
+           "Prévisions météo avancées alimentées par l'Intelligence Artificielle."}
+        </p>
+
+        <button 
+            onClick={onLocate}
+            className="group relative w-full max-w-sm flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all duration-300 shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.7)] hover:scale-[1.02] active:scale-95 overflow-hidden"
+        >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+            <MapPin className="w-5 h-5 animate-bounce" />
+            <span className="tracking-wide">{t.useCurrentLocation}</span>
+        </button>
+
+        <div className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500 bg-slate-900/50 px-3 py-1.5 rounded-full border border-white/5">
+            <Command className="w-3 h-3" />
+            <span>{t.searchPlaceholder || "O utilitza el cercador superior"}</span>
         </div>
+      </div>
 
-        {/* 2. CONTINGUT PRINCIPAL */}
-        <div className="relative z-10 w-full max-w-lg px-4 flex flex-col gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            
-            {/* HEADER: Identitat de Marca */}
-            <div className="text-center space-y-3 md:space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-sm mb-1">
-                    <Sparkles className="w-3 h-3 text-amber-300" />
-                    <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">v2.5 Pro AI</span>
-                </div>
-                
-                {/* CANVI: Text més petit en mòbil (4xl) per evitar salts de línia lletjos */}
-                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-sm leading-tight">
-                    Meteo Toni
-                </h1>
-                
-                <p className="text-sm md:text-base text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">
-                    {t.aiAnalysisDescription}
-                </p>
-            </div>
-
-            {/* ACTION GRID (Disseny Bento) */}
-            <div className="grid grid-cols-1 gap-3 md:gap-4 w-full">
-                
-                {/* TARGETA 1: GPS (Hero Action) */}
-                <button 
-                    onClick={onLocate}
-                    className="group relative w-full h-20 md:h-24 overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-r from-indigo-600 to-blue-600 shadow-xl shadow-indigo-900/30 transition-all duration-300 hover:shadow-indigo-600/40 hover:scale-[1.02] active:scale-95 touch-manipulation"
-                >
-                    {/* Efectes de fons */}
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Navigation className="w-16 h-16 md:w-24 md:h-24 transform rotate-12 -translate-y-4 translate-x-4" />
-                    </div>
-                    
-                    <div className="relative h-full flex items-center justify-between px-5 md:px-6">
-                        <div className="flex flex-col items-start text-left">
-                            <span className="text-[9px] md:text-[10px] font-bold text-indigo-200 uppercase tracking-wider mb-0.5">Recomanat</span>
-                            <span className="text-lg md:text-2xl font-bold text-white">{t.useLocation}</span>
-                            <span className="text-[10px] md:text-xs text-indigo-100/80 mt-0.5 flex items-center gap-1">
-                                <MapPin className="w-3 h-3" /> {t.autoGPS}
-                            </span>
-                        </div>
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
-                            <Navigation className="w-4 h-4 md:w-5 md:h-5 text-white transform group-hover:rotate-45 transition-transform duration-300" fill="currentColor" />
-                        </div>
-                    </div>
-                </button>
-
-                {/* TARGETA 2: CERCA (Glass Action) */}
-                <button 
-                    onClick={handleSearchClick}
-                    className="group relative w-full h-16 md:h-20 overflow-hidden rounded-2xl md:rounded-3xl bg-slate-800/40 border border-white/5 hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md active:scale-95 touch-manipulation"
-                >
-                    <div className="relative h-full flex items-center justify-between px-5 md:px-6">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center shadow-inner border border-white/5">
-                                <Search className="w-4 h-4 md:w-5 md:h-5 text-slate-300 group-hover:text-white transition-colors" />
-                            </div>
-                            <div className="flex flex-col items-start text-left">
-                                <span className="text-base md:text-lg font-bold text-slate-200 group-hover:text-white transition-colors">{t.searchCity}</span>
-                                <span className="text-[10px] md:text-xs text-slate-500 group-hover:text-slate-400">{t.manualSearch}</span>
-                            </div>
-                        </div>
-                    </div>
-                </button>
-            </div>
-
-            {/* FOOTER: Idiomes (Minimalista i segur per a dits) */}
-            <div className="flex flex-col items-center gap-2 md:gap-3 pt-2 md:pt-4 pb-4">
-                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-600 flex items-center gap-2">
-                    <Globe className="w-3 h-3" /> {t.selectLanguage}
-                </span>
-                <div className="flex items-center gap-1.5 md:gap-2 p-1 md:p-1.5 rounded-full bg-slate-900/40 border border-white/5 backdrop-blur-xl">
-                    {langs.map((l) => (
-                        <button
-                            key={l.id}
-                            onClick={() => setLang(l.id)}
-                            className={`relative px-3 py-1.5 md:px-4 rounded-full text-[10px] md:text-xs font-bold transition-all duration-300 touch-manipulation ${
-                                lang === l.id 
-                                ? 'bg-slate-700 text-white shadow-lg' 
-                                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-                            }`}
-                        >
-                            {l.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-        </div>
+      {/* LANGUAGE SELECTOR */}
+      <div className="flex items-center gap-3 p-1.5 bg-slate-900/40 backdrop-blur-md rounded-full border border-white/10 z-10">
+        <Globe className="w-4 h-4 text-slate-400 ml-2" />
+        <div className="h-4 w-px bg-white/10"></div>
+        {(['ca', 'es', 'en', 'fr'] as Language[]).map((l) => (
+            <button key={l} onClick={() => setLang(l)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 uppercase tracking-wider ${lang === l ? 'bg-white text-indigo-950 shadow-lg scale-105' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                {l}
+            </button>
+        ))}
+      </div>
     </div>
   );
 }

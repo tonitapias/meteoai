@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
+import { TrendingUp } from 'lucide-react'; 
 
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
@@ -11,6 +12,7 @@ import CurrentWeather from './components/CurrentWeather';
 import AIInsights from './components/AIInsights';
 import ForecastSection from './components/ForecastSection';
 import ExpertWidgets from './components/ExpertWidgets';
+import { SmartForecastCharts } from './components/WeatherCharts'; 
 import WelcomeScreen from './components/WelcomeScreen';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import ErrorBanner from './components/ErrorBanner';
@@ -24,28 +26,24 @@ import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 
-// --- COMPONENT DE PEU DE PÀGINA REUTILITZABLE ---
+// Footer simplificat i net
 const Footer = () => (
-  <div className="w-full py-8 mt-auto border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-medium tracking-wider uppercase">
-      {/* Esquerra: Copyright */}
+  <div className="w-full py-6 mt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-medium tracking-wider uppercase">
       <div className="flex items-center gap-2">
           <span className="font-bold text-slate-400">© {new Date().getFullYear()} Meteo Toni AI</span>
           <span className="hidden md:inline text-slate-700">|</span>
-          <span>Designed by Toni</span>
+          <span>Bento UI Edition</span>
       </div>
-
-      {/* Dreta: Dades i Versió */}
       <div className="flex items-center gap-4 opacity-70">
-          <span className="hover:text-indigo-400 transition-colors cursor-help" title="Motor de predicció">v2.5 Pro</span>
           <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-          <span>Powered by <span className="font-bold text-slate-400">Open-Meteo</span> & <span className="font-bold text-slate-400">Google Gemini</span></span>
+          <span>v3.0 Ultra</span>
       </div>
   </div>
 );
 
 export default function MeteoIA() {
   const [now, setNow] = useState<Date>(new Date());
-  const { lang, setLang, unit, viewMode, addFavorite, removeFavorite, isFavorite, favorites } = usePreferences();
+  const { lang, setLang, unit, viewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const { weatherData, aqiData, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation } = useWeather(lang, unit);
@@ -67,53 +65,53 @@ export default function MeteoIA() {
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
-  // --- VISTA 1: PANTALLA D'INICI (WELCOME) ---
-  // CORRECCIÓ: Ara es mostra sempre que no hi hagi dades, tingui favorits o no.
+  // --- VISTA 1: WELCOME SCREEN (ACTUALITZADA) ---
   if (!weatherData && !loading && !error) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col font-sans transition-colors duration-1000">
-         <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
-         <div className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-4xl mx-auto">
-            <WelcomeScreen 
-                lang={lang} 
-                setLang={setLang} 
-                t={t} 
-                onLocate={handleGetCurrentLocation} 
-            />
+      // Fons degradat immersiu en lloc de color pla
+      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
+         {/* Partícules de fons subtils (Codi 0 = Serena/Estrelles) */}
+         <div className="fixed inset-0 opacity-30 pointer-events-none">
+            <WeatherParticles code={0} />
          </div>
-         {/* Footer a la pantalla d'inici */}
-         <div className="px-6 md:px-8 w-full max-w-[1800px] mx-auto">
-            <Footer />
+         
+         <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10">
+            {/* Header transparent */}
+            <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
+            
+            <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
+                <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} />
+            </div>
          </div>
       </div>
     );
   }
 
-  // --- VISTA 2: APP PRINCIPAL ---
+  // --- VISTA 2: MAIN DASHBOARD ---
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col`}>
       <WeatherParticles code={effectiveWeatherCode} />
       
       {/* Texture Overlay */}
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
+      <div className="fixed inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
 
       <Toast message={notification?.msg || null} type={notification?.type} onClose={() => setNotification(null)} />
 
-      <div className="w-full max-w-[1800px] mx-auto px-4 py-4 md:px-8 md:py-8 flex-1 flex flex-col relative z-10">
+      <div className="w-full max-w-[1920px] mx-auto px-4 py-4 md:px-6 md:py-6 flex-1 flex flex-col relative z-10">
         <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
 
-        <div className="mt-8 flex-1">
+        <div className="mt-6 md:mt-10 flex-1">
             {error && <ErrorBanner message={error} />}
             {loading && !weatherData && <LoadingSkeleton />}
 
             {weatherData && !loading && (
-            <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                 
-                {/* LAYOUT PROFESSIONAL */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                {/* --- BENTO GRID LAYOUT --- */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                     
-                    {/* COLUMNA ESQUERRA (FIX) */}
-                    <div className="xl:col-span-4 flex flex-col gap-6 xl:sticky xl:top-8">
+                    {/* COLUMNA ESQUERRA (Hero & AI) - 4 Columnes */}
+                    <div className="xl:col-span-4 flex flex-col gap-6 xl:sticky xl:top-6">
                         <CurrentWeather 
                             data={weatherData} effectiveCode={effectiveWeatherCode} unit={unit} lang={lang} shiftedNow={shiftedNow}
                             isFavorite={isFavorite(weatherData.location?.name || "")} onToggleFavorite={handleToggleFavorite}
@@ -121,44 +119,60 @@ export default function MeteoIA() {
                             aqiData={aqiData} showAromeBtn={supportsArome}
                         />
                         <ErrorBoundary>
-                            <AIInsights 
-                                analysis={aiAnalysis} minutelyData={minutelyPreciseData} 
-                                currentPrecip={currentRainProbability} lang={lang}
-                            />
+                            <div className="bento-card p-6 min-h-[200px] flex flex-col justify-center">
+                                <AIInsights 
+                                    analysis={aiAnalysis} minutelyData={minutelyPreciseData} 
+                                    currentPrecip={currentRainProbability} lang={lang}
+                                />
+                            </div>
                         </ErrorBoundary>
                     </div>
 
-                    {/* COLUMNA DRETA (SCROLL) */}
-                    <div className="xl:col-span-8 flex flex-col gap-8">
+                    {/* COLUMNA DRETA (Dades & Previsió) - 8 Columnes */}
+                    <div className="xl:col-span-8 flex flex-col gap-6">
+                        
                         {viewMode === 'expert' && (
-                            <section>
-                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Condicions Actuals</h3>
+                            <div className="animate-in fade-in duration-700">
+                                <h3 className="label-upper px-1 mb-4">Mètriques Avançades</h3>
                                 <ErrorBoundary>
                                     <ExpertWidgets 
                                         weatherData={weatherData} aqiData={aqiData} lang={lang} unit={unit} 
                                         shiftedNow={shiftedNow} freezingLevel={currentFreezingLevel}
                                     />
                                 </ErrorBoundary>
-                            </section>
+                            </div>
                         )}
-                        
-                        <section>
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Previsió i Models</h3>
-                            <ErrorBoundary>
-                                <ForecastSection 
-                                    chartData={chartData} comparisonData={comparisonData} dailyData={weatherData.daily}
-                                    weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
-                                    comparisonEnabled={viewMode === 'expert'}
-                                />
-                            </ErrorBoundary>
-                        </section>
+
+                        <ErrorBoundary>
+                            <ForecastSection 
+                                chartData={chartData} comparisonData={comparisonData} dailyData={weatherData.daily}
+                                weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
+                                comparisonEnabled={viewMode === 'expert'}
+                                showCharts={false} 
+                            />
+                        </ErrorBoundary>
                     </div>
                 </div>
+
+                {/* --- SECCIÓ GRÀFICS FULL WIDTH (Inferior) --- */}
+                {viewMode === 'expert' && (
+                    <div className="mt-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 w-full">
+                         <div className="bento-card p-6 md:p-8">
+                            <h3 className="label-upper mb-8 flex items-center gap-2 text-lg">
+                                <TrendingUp className="w-5 h-5 text-emerald-400"/> {t.trend24h}
+                            </h3>
+                            <SmartForecastCharts 
+                                data={chartData} comparisonData={comparisonData} 
+                                unit={unit === 'F' ? '°F' : '°C'} lang={lang} 
+                            />
+                        </div>
+                    </div>
+                )}
+
             </div>
             )}
         </div>
 
-        {/* Footer a l'App Principal */}
         <Footer />
 
         <Suspense fallback={null}>
