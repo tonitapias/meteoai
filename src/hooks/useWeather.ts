@@ -1,164 +1,134 @@
-// src/hooks/useWeather.ts
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { 
     normalizeModelData, 
-    isAromeSupported,
+    isAromeSupported, 
     injectHighResModels,
-    ExtendedWeatherData
+    ExtendedWeatherData 
 } from '../utils/weatherLogic';
-import { TRANSLATIONS, Language } from '../constants/translations';
-import { 
-    fetchForecast, 
-    fetchAirQuality, 
-    fetchAromeForecast, 
-    fetchLocationName,
-    AirQualityData
-} from '../services/weatherApi';
-import { cacheService } from '../services/cacheService';
+import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
 import { WeatherUnit } from '../utils/formatters';
+import { Language } from '../constants/translations';
 
-interface NotificationState {
-  type: 'info' | 'success' | 'error';
-  msg: string;
-}
+const weatherCache = new Map<string, ExtendedWeatherData>();
 
-interface CachedWeatherPayload {
-    weather: ExtendedWeatherData;
-    aqi: AirQualityData | null;
-}
-
-const fillMissingCurrentData = (data: any): any => {
-    if (data.current && data.hourly && data.hourly.time) {
-        const currentDt = new Date(data.current.time).getTime();
-        // Cerca simple del índex més proper
-        let closestIndex = 0; 
-        let minDiff = Infinity;
-        
-        // Tipem 't' com string (ISO date)
-        data.hourly.time.forEach((t: string, i: number) => {
-            const diff = Math.abs(new Date(t).getTime() - currentDt);
-            if (diff < minDiff) { minDiff = diff; closestIndex = i; }
-        });
-
-        ['cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'cape', 'freezing_level_height'].forEach(field => {
-            if ((data.current[field] === undefined || data.current[field] === null) && data.hourly[field]) {
-                data.current[field] = data.hourly[field][closestIndex];
-            }
-        });
-    }
-    return data;
-};
-
-export function useWeather(lang: Language, unit: WeatherUnit = 'C') {
+export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
-  const [aqiData, setAqiData] = useState<AirQualityData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [aqiData, setAqiData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notification, setNotification] = useState<NotificationState | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const lastGeocodeRequest = useRef<number>(0);
+  const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
-  useEffect(() => { cacheService.clean(); }, []);
+  // MODIFICACIÓ: Afegim 'country' com a paràmetre opcional
+  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName?: string, country?: string) => {
+    const now = Date.now();
+    const cacheKey = `${lat.toFixed(3)}-${lon.toFixed(3)}-${unit}`;
 
-  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, name: string, country: string = "") => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    const signal = controller.signal;
-
-    const cacheKey = cacheService.generateWeatherKey(lat, lon);
-    
-    // Recuperem especificant el tipus genèric que esperem
-    const cachedData = await cacheService.get<CachedWeatherPayload>(cacheKey); 
-
-    if (cachedData) {
-        console.log("⚡ Dades carregades des de IndexedDB");
-        const { weather, aqi } = cachedData;
-        // Assegurem que location existeix i està actualitzada amb el nom sol·licitat
-        setWeatherData({ ...weather, location: { name, country, latitude: lat, longitude: lon } } as ExtendedWeatherData);
-        setAqiData(aqi);
+    // 1. SI ÉS UN DUPLICAT RECENT
+    if (lastFetchRef.current && 
+        lastFetchRef.current.lat === lat && 
+        lastFetchRef.current.lon === lon &&
+        (now - lastFetchRef.current.time) < 3000) {
         setLoading(false);
-        setError(null);
-        return;
+        return true; 
+    }
+
+    // 2. SI ESTÀ A LA CACHE
+    if (weatherCache.has(cacheKey)) {
+        setWeatherData(weatherCache.get(cacheKey)!);
+        setLoading(false);
+        return true; 
     }
 
     setLoading(true);
     setError(null);
-    
-    try {
-      const [weatherRes, aqiRes] = await Promise.allSettled([
-          fetchForecast(lat, lon, signal),
-          fetchAirQuality(lat, lon, signal)
-      ]);
+    lastFetchRef.current = { lat, lon, unit, time: now };
 
-      if (weatherRes.status !== 'fulfilled') throw new Error("Error connectant amb el satèl·lit");
+    try {
+      const weatherPromise = getWeatherData(lat, lon, unit);
       
-      let rawWeatherData: any = weatherRes.value;
-      let newAqiData = (aqiRes.status === 'fulfilled') ? aqiRes.value : null;
+      // GESTIÓ DEL NOM I PAÍS
+      // Si és "La Meva Ubicació" (GPS), fem servir Nominatim per obtenir ciutat I PAÍS
+      const namePromise = (locationName === "La Meva Ubicació") 
+        ? Promise.race([
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`).then(res => res.json()),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+          ]).catch(() => ({ address: { city: "La Meva Ubicació", country: "Local" } }))
+        : Promise.resolve({ address: { city: locationName, country: country } }); // Si ve del cercador, passem el país
+
+      const [data, geoData] = await Promise.all([weatherPromise, namePromise]);
+
+      let processedData = normalizeModelData(data);
+      
+      // Extreiem el nom i el país de la millor font possible
+      const finalName = (geoData as any).address?.city || (geoData as any).address?.town || (geoData as any).address?.village || locationName || "Ubicació actual";
+      const finalCountry = (geoData as any).address?.country || country || "Local"; // <--- AQUÍ GUARDEM EL PAÍS
+
+      getAirQualityData(lat, lon).then(setAqiData).catch(() => null);
 
       if (isAromeSupported(lat, lon)) {
           try {
-              const aromeData = await fetchAromeForecast(lat, lon, signal);
-              if (aromeData) rawWeatherData = injectHighResModels(rawWeatherData, aromeData);
-          } catch (aromeErr) { console.warn("AROME no disponible:", aromeErr); }
+             const aromeRaw = await getAromeData(lat, lon);
+             processedData = injectHighResModels(processedData, aromeRaw);
+          } catch (e) { console.warn("Arome no disponible"); }
       }
 
-      rawWeatherData = fillMissingCurrentData(rawWeatherData);
-      const processedWeatherData = normalizeModelData(rawWeatherData);
-      
-      // Injectem la location explícitament
-      const finalWeatherData: ExtendedWeatherData = { 
-          ...processedWeatherData, 
-          location: { name, country, latitude: lat, longitude: lon },
+      processedData.location = { 
+          ...processedData.location, 
+          name: finalName,
+          country: finalCountry, // <--- I L'ASSIGNEM A L'OBJECTE FINAL
           latitude: lat,
-          longitude: lon
+          longitude: lon 
       };
 
-      await cacheService.set<CachedWeatherPayload>(cacheKey, { weather: finalWeatherData, aqi: newAqiData });
+      weatherCache.set(cacheKey, processedData);
+      setWeatherData(processedData);
+      return true;
 
-      setWeatherData(finalWeatherData);
-      setAqiData(newAqiData);
-      
     } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      setError(err.message || "Error desconegut");
-    } finally { 
-      if (abortControllerRef.current === controller) setLoading(false); 
+      console.error("❌ Error en fetchWeather:", err);
+      setError('No s\'ha pogut carregar el temps.');
+      return false;
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  useEffect(() => { return () => { if (abortControllerRef.current) abortControllerRef.current.abort(); }; }, []);
+  }, [unit]);
 
   const handleGetCurrentLocation = useCallback(() => {
-    const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-    if (!navigator.geolocation) { setError("Geolocalització no suportada."); return; }
+    if (!navigator.geolocation) {
+      setNotification({ type: 'error', msg: 'Geolocalització no suportada.' });
+      return;
+    }
     
-    const now = Date.now();
-    if (now - lastGeocodeRequest.current < 2000) { setNotification({ type: 'info', msg: t.notifWait || "Espera..." }); return; }
-    lastGeocodeRequest.current = now;
     setLoading(true);
+    
+    const geoOptions = {
+      enableHighAccuracy: false, 
+      timeout: 8000,             
+      maximumAge: 0 
+    };
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-        // fetchLocationName torna { name, country }
-        const locationInfo = await fetchLocationName(latitude, longitude, lang);
-        fetchWeatherByCoords(latitude, longitude, locationInfo.name, locationInfo.country);
-        setNotification({ type: 'success', msg: t.notifLocationSuccess || "Fet." });
-    }, (error) => {
-        setNotification({ type: 'error', msg: t.notifLocationError || "Error GPS" });
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
+        
+        if (success) {
+          setNotification({ type: 'success', msg: 'Ubicació actualitzada amb èxit' });
+          setTimeout(() => setNotification(null), 3000);
+        }
+      },
+      (err) => {
+        console.warn("Error GPS:", err.message);
+        setNotification({ type: 'error', msg: 'GPS no trobat. Revisa els permisos.' });
         setLoading(false);
-    }, { enableHighAccuracy: false, timeout: 5000 });
-  }, [fetchWeatherByCoords, lang]);
+      },
+      geoOptions
+    );
+  }, [fetchWeatherByCoords]);
 
   return { 
-      weatherData, 
-      aqiData, 
-      loading, 
-      error, 
-      notification, 
-      setNotification, 
-      fetchWeatherByCoords, 
-      handleGetCurrentLocation 
+    weatherData, aqiData, loading, error, notification, 
+    setNotification, fetchWeatherByCoords, handleGetCurrentLocation 
   };
 }

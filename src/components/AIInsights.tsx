@@ -1,11 +1,10 @@
 // src/components/AIInsights.tsx
 import React from 'react';
-import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap } from 'lucide-react';
-import { MinutelyPreciseChart } from './WeatherCharts';
-import { TypewriterText } from './WeatherUI';
+import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella, ShieldAlert } from 'lucide-react';
+import { TypewriterText } from './WeatherUI'; // <--- Eliminat MinutelyPreciseChart dels imports
 import { TRANSLATIONS, Language } from '../constants/translations';
 
-// --- SUB-COMPONENTS ---
+// --- INTERFACES ---
 
 interface AnalysisResult {
     text: string;
@@ -13,7 +12,7 @@ interface AnalysisResult {
     confidence: string;
     alerts: Array<{ type: string; msg: string; level: 'high' | 'warning' }>;
     tips: string[];
-    source?: 'algorithm' | 'gemini';
+    source?: string;
 }
 
 interface AIInsightsProps {
@@ -23,16 +22,20 @@ interface AIInsightsProps {
     lang: Language;
 }
 
+// --- SUB-COMPONENTS D'ESTIL ---
+
 const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
   if (!analysis) return null;
   const styles = {
-    high: 'text-green-400 border-green-500/30 bg-green-500/10',
-    medium: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
-    low: 'text-red-400 border-red-500/30 bg-red-500/10'
+    high: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+    medium: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+    low: 'text-rose-400 border-rose-500/30 bg-rose-500/10'
   };
-  const currentStyle = styles[analysis.confidenceLevel] || styles.low;
+  const level = analysis.confidenceLevel || 'medium';
+  const currentStyle = styles[level] || styles.medium;
+  
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${currentStyle} flex items-center gap-1 shrink-0`}>
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentStyle} flex items-center gap-1 shrink-0 uppercase tracking-wider`}>
       {analysis.confidence}
     </span>
   );
@@ -42,17 +45,17 @@ const InsightAlert = ({ alert, t }: { alert: any, t: any }) => {
   const isHigh = alert.level === 'high';
   return (
     <div className={`flex items-start gap-3 p-3 rounded-lg border shadow-sm ${
-      isHigh ? 'bg-red-500/10 border-red-500/30 text-red-200' : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+      isHigh ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-amber-500/10 border-amber-500/20 text-amber-200'
     } animate-in slide-in-from-top-2 duration-500`}>
         <div className="shrink-0 mt-0.5">
-            {isHigh ? <AlertOctagon className="w-5 h-5 text-red-400 animate-pulse" /> : <AlertTriangle className="w-5 h-5 text-amber-400" />}
+            {isHigh ? <AlertOctagon className="w-5 h-5 text-rose-400 animate-pulse" /> : <AlertTriangle className="w-5 h-5 text-amber-400" />}
         </div>
         <div>
-            <h4 className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${isHigh ? 'text-red-400' : 'text-amber-400'}`}>
+            <h4 className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${isHigh ? 'text-rose-400' : 'text-amber-400'}`}>
                 {isHigh ? t.alertDanger : t.alertWarning}
             </h4>
-            <p className="text-xs font-medium leading-relaxed opacity-90 text-left">
-                <span className="font-bold">{alert.type}:</span> {alert.msg}
+            <p className="text-sm font-medium leading-relaxed opacity-90 text-left">
+                <span className="font-bold opacity-70 mr-1">{alert.type}:</span>{alert.msg}
             </p>
         </div>
     </div>
@@ -60,44 +63,65 @@ const InsightAlert = ({ alert, t }: { alert: any, t: any }) => {
 };
 
 const InsightTip = ({ tip, index }: { tip: string, index: number }) => {
-  const isClothingTip = ['jaqueta', 'coat', 'tèrmica', 'abric', 'màniga', 'manteau'].some(k => tip.toLowerCase().includes(k));
+  const lowerTip = tip.toLowerCase();
+  let Icon = Info;
+  if (['jaqueta', 'coat', 'tèrmica', 'abric', 'màniga', 'manteau', 'roba'].some(k => lowerTip.includes(k))) Icon = Shirt;
+  else if (['cotxe', 'conducció', 'carretera', 'drive', 'traffic', 'trànsit'].some(k => lowerTip.includes(k))) Icon = Car;
+  else if (['paraigua', 'umbrella', 'parapluie', 'mullar'].some(k => lowerTip.includes(k))) Icon = Umbrella;
+  else if (['cuidado', 'precaució', 'atenció', 'warning'].some(k => lowerTip.includes(k))) Icon = ShieldAlert;
+
   return (
-    <span className="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-100 rounded-lg border border-indigo-500/20 flex items-center gap-1.5 shadow-sm animate-in zoom-in duration-500" style={{animationDelay: `${index * 150}ms`}}>
-        {isClothingTip ? <Shirt className="w-3.5 h-3.5 opacity-70"/> : <Info className="w-3.5 h-3.5 opacity-70"/>}
-        {tip}
-    </span>
+    <div 
+        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 text-indigo-100 rounded-full border border-white/10 flex items-center gap-2 shadow-sm transition-colors animate-in zoom-in duration-300 fill-mode-backwards" 
+        style={{animationDelay: `${index * 100}ms`}}
+    >
+        <Icon className="w-3.5 h-3.5 opacity-70 text-indigo-300"/>
+        <span>{tip}</span>
+    </div>
   );
 };
 
-const LoadingState = ({ t }: { t: any }) => (
-  <div className="flex items-center justify-center gap-2 text-slate-500 text-sm animate-pulse min-h-[10rem]">
-      <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div> {t.generatingTips}
+const InsightSkeleton = ({ t }: { t: any }) => (
+  <div className="flex flex-col gap-4 w-full h-full p-6 animate-pulse">
+      <div className="flex justify-between items-center mb-2">
+          <div className="h-4 w-24 bg-slate-700/50 rounded"></div>
+          <div className="h-4 w-16 bg-slate-700/50 rounded-full"></div>
+      </div>
+      <div className="space-y-3">
+          <div className="h-4 w-3/4 bg-slate-700/30 rounded"></div>
+          <div className="h-4 w-full bg-slate-700/30 rounded"></div>
+          <div className="h-4 w-5/6 bg-slate-700/30 rounded"></div>
+      </div>
   </div>
 );
 
 // --- COMPONENT PRINCIPAL ---
 
-export default function AIInsights({ analysis, minutelyData, currentPrecip, lang }: AIInsightsProps) {
+export default function AIInsights({ analysis, lang }: AIInsightsProps) { // <--- Ja no fem servir les props de gràfic
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   if (!analysis) return (
-      <div className="flex-1 w-full bg-slate-900/40 border border-white/10 rounded-3xl p-5 backdrop-blur-md h-full flex items-center justify-center min-h-[200px]">
-        <LoadingState t={t} />
+      <div className="flex-1 w-full bg-slate-900/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px]">
+        <InsightSkeleton t={t} />
       </div>
   );
 
-  const isGemini = analysis.source === 'gemini';
+  const isGemini = analysis.source && analysis.source.includes('Gemini');
 
   return (
-    <div className={`flex flex-col w-full h-full min-h-[250px] border rounded-3xl backdrop-blur-md shadow-inner relative overflow-hidden transition-all duration-1000 ${
+    <div className={`flex flex-col w-full h-full min-h-[200px] border rounded-3xl backdrop-blur-md shadow-2xl relative overflow-hidden transition-all duration-1000 ${
         isGemini 
-            ? 'bg-gradient-to-br from-indigo-950/60 to-purple-900/30 border-indigo-400/30' 
-            : 'bg-slate-950/40 border-white/10'
+            ? 'bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-purple-950/50 border-indigo-400/30 shadow-indigo-900/20' 
+            : 'bg-slate-950/40 border-white/5'
     }`}>
         
-        {/* CAPÇALERA FIXA */}
-        <div className="flex items-center justify-between p-5 pb-2 shrink-0 z-10">
-            <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors duration-500 ${isGemini ? 'text-indigo-200' : 'text-slate-400'}`}>
+        {isGemini && (
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none"></div>
+        )}
+
+        {/* CAPÇALERA */}
+        <div className="flex items-center justify-between p-6 pb-2 shrink-0 z-10">
+            <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors duration-500 ${isGemini ? 'text-indigo-200' : 'text-slate-400'}`}>
                 {isGemini ? (
                     <>
                         <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" /> 
@@ -112,36 +136,38 @@ export default function AIInsights({ analysis, minutelyData, currentPrecip, lang
             <ConfidenceBadge analysis={analysis} />
         </div>
         
-        {/* ZONA DE CONTINGUT AMB SCROLL */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 pt-2 relative z-10">
-            <div className="space-y-6 animate-in fade-in">
-                {/* Llista d'Alertes */}
+        {/* CONTINGUT SCROLLABLE */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-3 relative z-10 flex flex-col">
+            <div className="space-y-5 animate-in fade-in duration-700">
+                
+                {/* 1. Alertes Prioritàries */}
                 {analysis.alerts && analysis.alerts.length > 0 && (
-                    <div className="flex flex-col gap-2 mb-2">
+                    <div className="flex flex-col gap-2">
                         {analysis.alerts.map((alert, i) => (
                             <InsightAlert key={i} alert={alert} t={t} />
                         ))}
                     </div>
                 )}
 
-                {/* Text Generat - ARA AMB MÉS PROTAGONISME */}
-                <div key={analysis.source} className="min-h-[3rem]">
+                {/* 2. Text Principal (Typewriter) */}
+                <div key={analysis.source} className="min-h-[3rem]"> 
                     <TypewriterText 
                         text={analysis.text} 
-                        className="text-lg md:text-xl text-white font-medium leading-relaxed drop-shadow-sm whitespace-pre-wrap"
+                        className="text-lg md:text-xl text-slate-100 font-medium leading-relaxed drop-shadow-sm whitespace-pre-wrap"
                     />
                 </div>
                 
-                {/* Badges/Consells */}
-                <div className="flex flex-wrap gap-2 mt-3 mb-4">
-                    {analysis.tips.map((tip, i) => (
-                        <InsightTip key={i} tip={tip} index={i} />
-                    ))}
-                </div>
-                
-                {/* Gràfica */}
-                <MinutelyPreciseChart data={minutelyData} label={t.preciseRain} currentPrecip={currentPrecip} />
+                {/* 3. Consells / Tips */}
+                {analysis.tips && analysis.tips.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {analysis.tips.map((tip, i) => (
+                            <InsightTip key={i} tip={tip} index={i} />
+                        ))}
+                    </div>
+                )}
             </div>
+            
+            {/* ELIMINAT: El gràfic de precipitació ja no és aquí */}
         </div>
     </div>
   );

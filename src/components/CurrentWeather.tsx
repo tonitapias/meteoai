@@ -19,17 +19,15 @@ interface CurrentWeatherProps {
   aqiData: AirQualityData | null; showAromeBtn?: boolean;
 }
 
-// FIX: Helpers per parsejar l'hora i data "CRUES" sense conversions de zona horària del navegador
+// Helpers per parsejar hora/data sense conversions automàtiques de navegador
 const getRawTime = (isoString: string): string => {
     if (!isoString || !isoString.includes('T')) return "--:--";
-    // Exemple: "2023-10-27T15:30" -> split 'T' -> "15:30"
     return isoString.split('T')[1].substring(0, 5); 
 };
 
 const getRawDate = (isoString: string, lang: Language): string => {
     if (!isoString) return "";
     try {
-        // Truc: Creem la data a les 12:00 del migdia per evitar que els offsets de zona horària canviïn el dia
         const datePart = isoString.split('T')[0];
         const [y, m, d] = datePart.split('-').map(Number);
         const safeDate = new Date(y, m - 1, d, 12, 0, 0); 
@@ -46,9 +44,11 @@ export default function CurrentWeather({
   const isUsingArome = current.source === 'AROME HD';
   const getTemp = (t: number) => formatTemp(t, unit);
   
-  // FIX: Usem les dades "crues" de l'API per visualitzar text, ignorant l'objecte Date local
   const displayTime = getRawTime(current.time as string); 
   const displayDate = getRawDate(current.time as string, lang);
+
+  // Normalitzem el nom del país (si és molt llarg, el CSS s'encarregarà)
+  const countryName = location?.country || "Local";
 
   return (
     <div className="bento-card h-full flex flex-col justify-between p-6 md:p-8 group min-h-[550px] relative z-0">
@@ -59,20 +59,27 @@ export default function CurrentWeather({
 
         {/* HEADER */}
         <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-300">
-                        {location?.country || "Local"}
+            <div className="flex flex-col gap-2 w-full">
+                <div className="flex items-center gap-2 flex-wrap">
+                    {/* COUNTRY BADGE (AMB TRUNCATE PER NOMS LLARGS) */}
+                    <span 
+                        className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-300 max-w-[150px] truncate"
+                        title={countryName} // Tooltip natiu per si es talla el nom
+                    >
+                        {countryName}
                     </span>
+
+                    {/* AROME BADGE */}
                     {isUsingArome && (
-                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-widest text-emerald-400 ring-1 ring-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-widest text-emerald-400 ring-1 ring-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] shrink-0">
                             <span className="animate-pulse w-1.5 h-1.5 rounded-full bg-emerald-400"></span> AROME HD
                         </span>
                     )}
                 </div>
+                
                 <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter flex items-center gap-3">
-                    {location?.name}
-                    <button onClick={onToggleFavorite} className="text-slate-500 hover:text-amber-400 transition-colors active:scale-90">
+                    <span className="truncate max-w-[300px] md:max-w-full" title={location?.name}>{location?.name}</span>
+                    <button onClick={onToggleFavorite} className="text-slate-500 hover:text-amber-400 transition-colors active:scale-90 shrink-0">
                         <Star className={`w-6 h-6 ${isFavorite ? 'fill-current text-amber-400' : ''}`} />
                     </button>
                 </h2>

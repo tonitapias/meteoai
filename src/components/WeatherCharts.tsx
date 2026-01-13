@@ -20,24 +20,34 @@ interface SingleHourlyChartProps {
     lang?: Language;
 }
 
-// FIX: Helper per extreure l'hora REAL de la ubicació (ignorant el timezone del navegador)
+// Parser segur (Timezone Safe)
 const getRawHour = (isoString: string): number => {
-    if (!isoString) return 0;
-    // "2023-10-27T15:00" -> split 'T' -> "15:00" -> split ':' -> "15"
+    if (!isoString || typeof isoString !== 'string') return 0;
     try {
-        return parseInt(isoString.split('T')[1].split(':')[0], 10);
+        if (isoString.includes('T')) {
+            const timePart = isoString.split('T')[1];
+            if (timePart) {
+                const hourStr = timePart.split(':')[0];
+                const val = parseInt(hourStr, 10);
+                if (!isNaN(val)) return val;
+            }
+        }
+        const d = new Date(isoString);
+        if (!isNaN(d.getTime())) return d.getHours();
+        return 0;
     } catch (e) {
-        return new Date(isoString).getHours(); // Fallback
+        return 0;
     }
 };
 
-// FIX: Helper per formatar l'hora visualment (ex: "15:00") sense conversions
 const formatRawTime = (isoString: string): string => {
      if (!isoString) return "--:--";
      try {
-         return isoString.split('T')[1].substring(0, 5); // Retorna "HH:MM" directe
-     } catch (e) {
+         const parts = isoString.split('T');
+         if(parts.length > 1) return parts[1].substring(0, 5);
          return new Date(isoString).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+     } catch (e) {
+         return "--:--";
      }
 };
 
@@ -63,9 +73,10 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   // CONFIGURACIÓ DE CAPES
+  // FIX: Canviat 'pop' per 'rain' com a clau principal per coherència
   const layersConfig: any = {
     temp: { key: 'temp', color: '#818cf8', gradientStart: '#818cf8', title: t.temp },
-    rain: { key: 'pop', color: '#3b82f6', gradientStart: '#3b82f6', title: t.rainProb },
+    rain: { key: 'rain', color: '#3b82f6', gradientStart: '#3b82f6', title: t.rainProb },
     precip: { key: 'precip', color: '#60a5fa', gradientStart: '#2563eb', title: "Volum (mm)" },
     wind: { key: 'wind', color: '#2dd4bf', gradientStart: '#2dd4bf', title: t.wind },
     cloud: { key: 'cloud', color: '#94a3b8', gradientStart: '#94a3b8', title: t.cloud },
@@ -80,10 +91,21 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const paddingY = 30;
 
   const { points, gfsPoints, iconPoints } = useMemo(() => {
+    // FIX CRÍTIC: Funció extractora robusta que prova diferents claus
     const getSafeValue = (d: ChartDataPoint) => {
-        const val = d[dataKey];
+        if (!d) return null;
+        let val = d[dataKey];
+
+        // Fallbacks intel·ligents si la clau principal falla
+        if (val === undefined || val === null) {
+            if (dataKey === 'rain') val = d['pop'] ?? d['precipitation_probability'];
+            else if (dataKey === 'precip') val = d['precipitation'] ?? d['qpf'];
+            else if (dataKey === 'wind') val = d['wind_speed_10m'];
+            else if (dataKey === 'humidity') val = d['relative_humidity_2m'];
+        }
+
         if (val === null || val === undefined) return layer === 'snowLevel' ? null : null; 
-        return val;
+        return Number(val);
     };
 
     const mapValues = (dataset: ChartDataPoint[]) => dataset.map(getSafeValue).filter(v => v !== null) as number[];
@@ -95,10 +117,14 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
     let min = allValues.length ? Math.min(...allValues) : 0;
     let max = allValues.length ? Math.max(...allValues) : 100;
 
-    // Escales ajustades
+    // Escales ajustades i lògica de minims
     if (layer === 'temp') { min -= 2; max += 2; } 
     else if (['rain', 'cloud', 'humidity'].includes(layer)) { min = 0; max = 100; } 
-    else if (layer === 'precip') { min = 0; max = Math.max(max, 5); }
+    else if (layer === 'precip') { 
+        min = 0; 
+        // FIX: Si plou molt poc (ex 0.2mm), no forcem escala de 5mm o la gràfica es veu plana
+        max = Math.max(max * 1.2, 3); 
+    }
     else if (layer === 'wind') { min = 0; max = Math.max(max, 25); } 
     else if (layer === 'snowLevel') { min = Math.max(0, min - 500); max = max + 500; }
     
@@ -122,9 +148,11 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
     };
   }, [data, comparisonData, layer, height, dataKey, width, paddingX]);
 
+  // Generació de paths SVG
   const { areaPath, linePath, gfsPath, iconPath } = useMemo(() => {
       const buildSmoothPath = (pts: any[]) => {
-        const validPts = pts.filter(p => p.value !== null && p.y <= height);
+        // Filtrem punts nuls per evitar línies que cauen a l'infern
+        const validPts = pts.filter(p => p.value !== null && p.y <= height + 50);
         if (validPts.length < 2) return "";
         
         let d = `M ${validPts[0].x},${validPts[0].y}`;
@@ -138,6 +166,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
       };
 
       const lPath = buildSmoothPath(points);
+      // Àrea tancada correctament
       const aPath = lPath ? `${lPath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z` : "";
       
       return {
@@ -152,7 +181,11 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const hoverGfs = hoveredIndex !== null ? gfsPoints[hoveredIndex] : null;
   const hoverIcon = hoveredIndex !== null ? iconPoints[hoveredIndex] : null;
   
-  const fmtVal = (val: number) => layer === 'precip' ? val.toFixed(1) : Math.round(val);
+  const fmtVal = (val: number | null | undefined) => {
+      if (val === null || val === undefined) return "-";
+      return layer === 'precip' ? val.toFixed(1) : Math.round(val);
+  };
+  
   const showComparison = (hoverGfs && hoverGfs.value !== null) || (hoverIcon && hoverIcon.value !== null);
 
   return (
@@ -170,16 +203,21 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           </linearGradient>
         </defs>
         
+        {/* Grid Lines */}
         <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
         <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" />
 
+        {/* Àrea Principal */}
         {areaPath && <path d={areaPath} fill={`url(#gradient-${layer})`} />}
         
+        {/* Comparatives */}
         {gfsPath && <path d={gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="4 4"/>}
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="2 2"/>}
         
+        {/* Línia Principal */}
         {linePath && <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" />}
         
+        {/* Àrees interactives invisibles per millor touch */}
         {points.map((p, i) => (
           <rect 
             key={i} 
@@ -194,7 +232,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           />
         ))}
 
-        {/* Eix X: ARA UTILITZA L'HORA REAL DE LA UBICACIÓ */}
+        {/* Eix X (Hores) */}
         {points.map((p, i) => {
              const step = width < 600 ? 4 : 3; 
              return (i % step === 0) && (
@@ -204,7 +242,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
             )
         })}
 
-        {/* TOOLTIP */}
+        {/* Tooltip Dinàmic */}
         {hoverData && hoverData.value !== null && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
@@ -227,7 +265,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
                    filter="drop-shadow(0 4px 6px rgb(0 0 0 / 0.5))" 
                />
                
-               {/* HORA DEL TOOLTIP: CORREGIDA PER MOSTRAR HORA LOCAL DEL LLOC */}
                <text x="0" y="8" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">
                  {formatRawTime(hoverData.time)}
                </text>

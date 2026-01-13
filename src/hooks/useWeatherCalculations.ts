@@ -10,7 +10,7 @@ import {
 } from '../utils/weatherLogic';
 import { WeatherUnit } from '../utils/formatters';
 
-const getVal = (data: any, key: string, i: number) => {
+const getComparisonVal = (data: any, key: string, i: number) => {
     if (!data) return null;
     if (Array.isArray(data[key])) return data[key][i]; 
     if (data[i]) return data[i][key]; 
@@ -19,131 +19,191 @@ const getVal = (data: any, key: string, i: number) => {
 
 export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, unit: WeatherUnit, now: Date) {
   
-  // 1. DATA I HORA (Només per visualització UI, no per lògica interna)
+  // 1. DATA I HORA
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     return getShiftedDate(now, weatherData.timezone || 'UTC');
   }, [weatherData, now]);
 
-  // 2. DADES MINUT A MINUT (Optimitzat)
-  const minutelyPreciseData = useMemo<number[]>(() => {
-    if (!weatherData?.minutely_15?.precipitation) return [];
-    
-    // Usem temps real per sincronitzar, no el temps desplaçat
-    const currentMs = new Date().getTime(); 
-    const timesRaw = weatherData.minutely_15.time;
-    
-    // Cerca ràpida sense crear arrays de Dates massius
-    let idx = -1;
-    for(let i = 0; i < timesRaw.length; i++) {
-        // Assumim ISO string que JS parseja correctament en UTC/Local
-        if (new Date(timesRaw[i]).getTime() > currentMs) {
-            idx = i;
-            break;
-        }
-    }
-    
-    let currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
-    return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
-  }, [weatherData]); // Eliminada dependència innecessària de shiftedNow per evitar re-loops
-
-  // 3. INDEX ACTUAL (CORREGIT: TIMEZONE SAFE)
+  // 2. ÍNDEX ACTUAL (Mogut a dalt perquè el necessitem per al Fallback de pluja)
   const currentHourlyIndex = useMemo(() => {
-     if (!weatherData?.hourly?.time) return 0;
-     
-     // FIX CRÍTIC: Comparació estricta en UTC.
-     // L'hora actual del dispositiu (now) vs l'hora absoluta del moment.
-     const nowUTC = new Date().getTime(); 
-     
-     const idx = weatherData.hourly.time.findIndex((t: string) => {
-        const tMs = new Date(t).getTime();
-        // Busquem l'interval on l'hora actual cau dins (hora inici <= ara < hora fi)
-        return tMs <= nowUTC && (tMs + 3600000) > nowUTC;
-     });
+     if (!weatherData?.hourly?.time || !weatherData?.current?.time) return 0;
+     const apiCurrentTimeStr = weatherData.current.time; 
+     const exactIdx = weatherData.hourly.time.findIndex((t: string) => t === apiCurrentTimeStr);
+     if (exactIdx !== -1) return exactIdx;
+     const currentHourStr = apiCurrentTimeStr.slice(0, 13);
+     const partialIdx = weatherData.hourly.time.findIndex((t: string) => t.startsWith(currentHourStr));
+     return partialIdx !== -1 ? partialIdx : 0;
+  }, [weatherData]);
 
-     // Fallback de seguretat
-     if (idx === -1) {
-         // Si estem fora de rang (futur llunyà o passat), busquem el més proper
-         const times = weatherData.hourly.time.map((t: string) => new Date(t).getTime());
-         let closest = 0;
-         let minDiff = Infinity;
-         times.forEach((t, i) => {
-             const diff = Math.abs(t - nowUTC);
-             if(diff < minDiff) { minDiff = diff; closest = i; }
-         });
-         return closest;
-     }
-     return idx;
-  }, [weatherData]); // 'shiftedNow' eliminat de dependències per evitar índexs falsos
+  // 3. MINUT A MINUT (AMB FALLBACK AROME/HORARI)
+  const minutelyPreciseData = useMemo<number[]>(() => {
+    // A. Intentem obtenir dades reals de minutely_15
+    let preciseData: number[] = [];
+    
+    if (weatherData?.minutely_15?.precipitation) {
+        const currentMs = new Date().getTime(); 
+        const timesRaw = weatherData.minutely_15.time;
+        let idx = -1;
+        for(let i = 0; i < timesRaw.length; i++) {
+            if (new Date(timesRaw[i]).getTime() > currentMs) { idx = i; break; }
+        }
+        // Ajustem per agafar el tram actual (aprox. pròxima hora)
+        let currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
+        preciseData = weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
+    }
 
-  // 4. CHART DATA
-  const chartData = useMemo(() => {
+    // B. Comprovació: Tenim pluja real al minut a minut?
+    const hasMinutelyRain = preciseData.some(v => v > 0);
+
+    if (hasMinutelyRain) {
+        return preciseData;
+    }
+
+    // C. ESTRATÈGIA FALLBACK: Si minutely és 0 però AROME (Hourly) diu que plou
+    // Busquem la pluja de l'hora actual utilitzant l'índex que hem calculat abans
+    const currentHourPrecip = weatherData?.hourly?.precipitation?.[currentHourlyIndex] || 0;
+    
+    if (currentHourPrecip > 0) {
+        // Si plou a l'hora actual (ex: 1.9mm com a la foto), repartim visualment en 4 quarts
+        // Això garanteix que el giny surti coincidint amb la realitat del model
+        const estimatedQuarter = Number((currentHourPrecip / 4).toFixed(2));
+        return [estimatedQuarter, estimatedQuarter, estimatedQuarter, estimatedQuarter];
+    }
+
+    // Si no hi ha res enlloc, retornem array de zeros (o el que tinguéssim)
+    return preciseData.length > 0 ? preciseData : [0,0,0,0];
+
+  }, [weatherData, currentHourlyIndex]);
+
+  // 4. GENERACIÓ DE DADES MESTRA (168 Hores - 7 Dies)
+  const allHourlyData = useMemo(() => {
     if (!weatherData?.hourly?.time) return [];
     
+    // Comencem des de l'hora actual, però capturem TOTA la setmana disponible
     const startIndex = Math.max(0, currentHourlyIndex);
-    const endIndex = startIndex + 24;
+    const availableTime = weatherData.hourly.time;
+    
+    // Helper: Validació estricta
+    const isValid = (val: any) => val !== null && val !== undefined && !Number.isNaN(val);
 
-    return weatherData.hourly.time.slice(startIndex, endIndex).map((tRaw: string, i: number) => {
+    // Variables per mantenir l'últim valor conegut (Persistència)
+    let lastTemp = 0, lastWind = 0, lastPressure = 1013, lastHum = 50;
+
+    const getSmartVal = (key: string, idx: number, fallback: number, lastKnown: number) => {
+        // 1. Primari
+        let val = weatherData.hourly[key]?.[idx];
+        if (isValid(val)) return val;
+
+        // 2. GFS
+        if (weatherData.hourlyComparison?.gfs) {
+            val = getComparisonVal(weatherData.hourlyComparison.gfs, key, idx);
+            if (isValid(val)) return val;
+        }
+        
+        // 3. ICON
+        if (weatherData.hourlyComparison?.icon) {
+            val = getComparisonVal(weatherData.hourlyComparison.icon, key, idx);
+            if (isValid(val)) return val;
+        }
+
+        // 4. Últim conegut o Defecte
+        return lastKnown ?? fallback;
+    };
+
+    return availableTime.slice(startIndex).map((tRaw: string, i: number) => {
       const realIndex = startIndex + i;
-      
-      const temp = weatherData.hourly.temperature_2m[realIndex] || 0;
-      const appTemp = weatherData.hourly.apparent_temperature[realIndex] || 0;
-      const rainProb = weatherData.hourly.precipitation_probability[realIndex] || 0;
-      const precipVol = weatherData.hourly.precipitation[realIndex] || 0;
 
-      let fl = null;
-      if (weatherData.hourly.freezing_level_height) {
-          fl = weatherData.hourly.freezing_level_height[realIndex];
+      // Recuperació amb persistència
+      const tempVal = getSmartVal('temperature_2m', realIndex, 0, lastTemp);
+      if (isValid(tempVal)) lastTemp = tempVal; 
+
+      const appTempVal = getSmartVal('apparent_temperature', realIndex, tempVal, tempVal);
+      
+      const rainProbVal = getSmartVal('precipitation_probability', realIndex, 0, 0); 
+      const precipVolVal = getSmartVal('precipitation', realIndex, 0, 0);
+      
+      const windVal = getSmartVal('wind_speed_10m', realIndex, 0, lastWind);
+      if (isValid(windVal)) lastWind = windVal;
+
+      const gustsVal = getSmartVal('wind_gusts_10m', realIndex, windVal, windVal);
+      const windDirVal = getSmartVal('wind_direction_10m', realIndex, 0, 0);
+      
+      const cloudVal = getSmartVal('cloud_cover', realIndex, 0, 0);
+      
+      const humidityVal = getSmartVal('relative_humidity_2m', realIndex, 50, lastHum);
+      if (isValid(humidityVal)) lastHum = humidityVal;
+
+      const uvVal = getSmartVal('uv_index', realIndex, 0, 0);
+      
+      const pressureVal = getSmartVal('surface_pressure', realIndex, 1013, lastPressure);
+      if (isValid(pressureVal)) lastPressure = pressureVal;
+      
+      const isDayVal = getSmartVal('is_day', realIndex, 1, 1);
+      const codeVal = getSmartVal('weather_code', realIndex, 0, 0);
+
+      // Cota de neu
+      let flVal = weatherData.hourly.freezing_level_height?.[realIndex];
+      if (!isValid(flVal)) {
+         if (weatherData.hourlyComparison?.gfs) flVal = getComparisonVal(weatherData.hourlyComparison.gfs, 'freezing_level_height', realIndex);
+         if (!isValid(flVal) && weatherData.hourlyComparison?.icon) flVal = getComparisonVal(weatherData.hourlyComparison.icon, 'freezing_level_height', realIndex);
       }
-      if (fl == null && weatherData.hourlyComparison?.gfs) {
-          fl = getVal(weatherData.hourlyComparison.gfs, 'freezing_level_height', realIndex);
-      }
+
+      const tempFinal = unit === 'F' ? Math.round((tempVal * 9/5) + 32) : tempVal;
+      const appTempFinal = unit === 'F' ? Math.round((appTempVal * 9/5) + 32) : appTempVal;
 
       return {
         time: tRaw,
-        temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
-        apparent: unit === 'F' ? Math.round((appTemp * 9/5) + 32) : appTemp,
-        rain: rainProb, // Això és probabilitat (POP)
-        precip: precipVol, // Això és volum (QPF)
-        pop: rainProb,
-        qpf: precipVol,
-        wind: weatherData.hourly.wind_speed_10m[realIndex],
-        gusts: weatherData.hourly.wind_gusts_10m[realIndex],
-        windDir: weatherData.hourly.wind_direction_10m[realIndex],
-        cloud: weatherData.hourly.cloud_cover[realIndex],
-        humidity: weatherData.hourly.relative_humidity_2m[realIndex],
-        uv: weatherData.hourly.uv_index?.[realIndex] || 0,
-        snowLevel: (fl !== null) ? Math.max(0, fl - 300) : null,
-        isDay: weatherData.hourly.is_day[realIndex] ?? 1,
-        code: weatherData.hourly.weather_code[realIndex] ?? 0
+        timestamp: new Date(tRaw).getTime(),
+        temp: tempFinal,
+        apparent: appTempFinal,
+        rain: rainProbVal, 
+        pop: rainProbVal, 
+        precip: precipVolVal,
+        qpf: precipVolVal,
+        wind: windVal,
+        gusts: gustsVal,
+        windDir: windDirVal,
+        cloud: cloudVal,
+        humidity: humidityVal,
+        uv: uvVal,
+        pressure: pressureVal,
+        snowLevel: isValid(flVal) ? Math.max(0, flVal - 300) : null,
+        isDay: isDayVal,
+        code: codeVal
       };
     });
   }, [weatherData, unit, currentHourlyIndex]);
 
-  // 5. COMPARISON DATA
+  // 5. DIVISIÓ DE DADES (FIX PANTALLA PRINCIPAL)
+  const chartData24h = useMemo(() => allHourlyData.slice(0, 24), [allHourlyData]);
+  const chartDataFull = useMemo(() => allHourlyData, [allHourlyData]);
+
+  // 6. COMPARATIVES (LIMITAT A 24h PER PERFORMANCE UI)
   const comparisonData = useMemo(() => {
       if (!weatherData?.hourlyComparison) return null;
-      
       const startIndex = Math.max(0, currentHourlyIndex);
 
       const sliceModel = (modelData: any) => {
          if(!modelData) return [];
-         return Array.from({ length: 24 }).map((_, i) => {
+         return Array.from({ length: 24 }).map((_, i) => { 
              const targetIdx = startIndex + i;
-             const temp = getVal(modelData, 'temperature_2m', targetIdx);
-             if (temp == null) return null; 
+             if (targetIdx >= (weatherData.hourly?.time?.length || 0)) return null;
 
-             const rainP = getVal(modelData, 'precipitation_probability', targetIdx) || 0;
-             const fl = getVal(modelData, 'freezing_level_height', targetIdx);
+             const temp = getComparisonVal(modelData, 'temperature_2m', targetIdx);
+             if (temp == null || isNaN(temp)) return null; 
+
+             const rainP = getComparisonVal(modelData, 'precipitation_probability', targetIdx) || 0;
+             const fl = getComparisonVal(modelData, 'freezing_level_height', targetIdx);
 
              return {
                  time: weatherData.hourly.time[targetIdx],
                  temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
                  rain: rainP,
                  pop: rainP,
-                 wind: getVal(modelData, 'wind_speed_10m', targetIdx),
-                 cloud: getVal(modelData, 'cloud_cover', targetIdx),
-                 humidity: getVal(modelData, 'relative_humidity_2m', targetIdx),
+                 wind: getComparisonVal(modelData, 'wind_speed_10m', targetIdx),
+                 cloud: getComparisonVal(modelData, 'cloud_cover', targetIdx),
+                 humidity: getComparisonVal(modelData, 'relative_humidity_2m', targetIdx),
                  snowLevel: (fl != null) ? Math.max(0, fl - 300) : null
              };
          }).filter(Boolean);
@@ -156,28 +216,15 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
       };
   }, [weatherData, unit, currentHourlyIndex]);
 
-  // RESTA DE CÀLCULS BÀSICS
-  const currentRainProbability = useMemo(() => {
-     if (!chartData.length) return 0;
-     return chartData[0].rain || 0; 
-  }, [chartData]);
-
-  const currentFreezingLevel = useMemo(() => {
-      if (chartData.length > 0 && chartData[0].snowLevel !== null) return chartData[0].snowLevel + 300;
-      return 2500;
-  }, [chartData]);
-
-  const effectiveWeatherCode = useMemo(() => {
-    if (!weatherData?.current) return 0;
-    return getRealTimeWeatherCode(weatherData.current, minutelyPreciseData, currentRainProbability, currentFreezingLevel, weatherData.elevation || 0);
-  }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
-
+  // ALTRES CÀLCULS
+  const currentRainProbability = useMemo(() => chartData24h[0]?.rain || 0, [chartData24h]);
+  const currentFreezingLevel = useMemo(() => (chartData24h.length > 0 && chartData24h[0].snowLevel !== null) ? chartData24h[0].snowLevel + 300 : 2500, [chartData24h]);
+  const effectiveWeatherCode = useMemo(() => (!weatherData?.current ? 0 : getRealTimeWeatherCode(weatherData.current, minutelyPreciseData, currentRainProbability, currentFreezingLevel, weatherData.elevation || 0)), [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
+  
   const currentBg = useMemo(() => {
     if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
-    
     const { is_day } = weatherData.current;
-    const isDay = is_day; 
-    
+    const isDay = is_day !== undefined ? is_day : 1; 
     const code = effectiveWeatherCode;
     if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
     if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
@@ -185,12 +232,19 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     return "from-slate-900 to-indigo-950";
   }, [weatherData, effectiveWeatherCode]);
 
-  const currentCape = useMemo(() => getVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
+  const currentCape = useMemo(() => getComparisonVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
   const weeklyExtremes = useMemo(() => (!weatherData ? {min:0,max:100} : { min: Math.min(...weatherData.daily.temperature_2m_min), max: Math.max(...weatherData.daily.temperature_2m_max)}), [weatherData]);
   const currentDewPoint = useMemo(() => calculateDewPoint(weatherData?.current?.temperature_2m || 0, weatherData?.current?.relative_humidity_2m || 0), [weatherData]);
   const reliability = useMemo(() => calculateReliability(weatherData?.daily, weatherData?.dailyComparison?.gfs, weatherData?.dailyComparison?.icon, 0), [weatherData]);
   const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); 
   const barometricTrend = useMemo(() => ({ trend: 'steady', val: 0 }), []); 
 
-  return { shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, currentBg, barometricTrend, currentCape, currentDewPoint, reliability, moonPhaseVal, chartData, comparisonData, weeklyExtremes };
+  // RETORNEM DUES VERSIONS DE LES DADES
+  return { 
+    shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, currentBg, 
+    barometricTrend, currentCape, currentDewPoint, reliability, moonPhaseVal, 
+    chartData24h, 
+    chartDataFull, 
+    comparisonData, weeklyExtremes 
+  };
 }

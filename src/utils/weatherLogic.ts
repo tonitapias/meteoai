@@ -17,43 +17,40 @@ export interface ExtendedWeatherData extends WeatherData {
   [key: string]: any;
 }
 
+// --- HELPER SEGUR PER NÚMEROS ---
+const safeNum = (val: any, fallback: number = 0): number => {
+    if (val === null || val === undefined || Number.isNaN(val)) return fallback;
+    return Number(val);
+};
+
 // ==========================================
 // 1. FUNCIONS AUXILIARS BÀSIQUES
 // ==========================================
 
 export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string): Date => {
   if (typeof timezoneOrOffset === 'number') {
-      // Offset en segons
       const utcTimestamp = baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000);
-      const targetTimestamp = utcTimestamp + (timezoneOrOffset * 1000);
-      return new Date(targetTimestamp);
+      return new Date(utcTimestamp + (timezoneOrOffset * 1000));
   }
   if (!timezoneOrOffset) return baseDate;
   try {
-      // Timezone IANA (ex: 'Europe/Madrid')
-      const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezoneOrOffset as string });
-      return new Date(targetTimeStr);
+      return new Date(baseDate.toLocaleString("en-US", { timeZone: timezoneOrOffset as string }));
   } catch (e) {
-      console.warn("Timezone invàlid, retornant hora local", e);
       return baseDate;
   }
 };
 
 export const calculateDewPoint = (T: number, RH: number): number => {
-  const a = 17.27;
-  const b = 237.7;
+  const a = 17.27, b = 237.7;
   const safeRH = Math.max(RH, 1);
   const alpha = ((a * T) / (b + T)) + Math.log(safeRH / 100.0);
   return (b * alpha) / (a - alpha);
 };
 
 export const getMoonPhase = (date: Date): number => {
-  let year = date.getFullYear();
-  let month = date.getMonth() + 1;
-  let day = date.getDate();
+  let year = date.getFullYear(), month = date.getMonth() + 1, day = date.getDate();
   if (month < 3) { year--; month += 12; }
-  const c = 365.25 * year;
-  const e = 30.6 * month;
+  const c = 365.25 * year, e = 30.6 * month;
   const jd = c + e + day - 694039.09; 
   let phase = jd / 29.5305882; 
   phase -= Math.floor(phase); 
@@ -63,221 +60,20 @@ export const getMoonPhase = (date: Date): number => {
 export const getWeatherLabel = (current: any, language: Language): string => {
   const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
   if (!tr || !current) return "";
-  const code = Number(current.weather_code);
+  const code = safeNum(current.weather_code, 0);
   return (tr.wmo as any)[code] || "---";
 };
 
 // ==========================================
-// 2. NORMALITZACIÓ I CÀLCULS COMPLEXOS
-// ==========================================
-
-export const normalizeModelData = (data: any): ExtendedWeatherData => {
-     if (!data || !data.current) return data;
-     
-     const result: any = { 
-         current: { ...data.current }, 
-         hourly: { ...data.hourly }, 
-         daily: { ...data.daily }, 
-         hourlyComparison: { gfs: [], icon: [] }, 
-         dailyComparison: { gfs: {}, icon: {} } 
-     };
-     
-     const modelSuffixRegex = /(_best_match|_ecmwf\w*|_noaa\w*|_meteofrance\w*|_dwd\w*|_jma\w*|_gem\w*)/g;
-
-     // Neteja de claus per tenir noms estàndard
-     ['current', 'daily', 'hourly'].forEach(section => {
-         if (!data[section]) return;
-         
-         Object.keys(data[section]).forEach(key => {
-            if (key.includes('_gfs_') || key.includes('_icon_')) return;
-            if (key.match(modelSuffixRegex)) {
-                const cleanKey = key.replace(modelSuffixRegex, '');
-                if (!result[section][cleanKey]) {
-                    result[section][cleanKey] = data[section][key];
-                }
-            }
-         });
-     });
-
-     // Processament de comparatives (Daily)
-     Object.keys(data.daily || {}).forEach(key => {
-        if (key.includes('_gfs_')) {
-           const cleanKey = key.split('_gfs_')[0]; 
-           result.dailyComparison.gfs[cleanKey] = data.daily[key];
-        } else if (key.includes('_icon_')) {
-           const cleanKey = key.split('_icon_')[0];
-           result.dailyComparison.icon[cleanKey] = data.daily[key];
-        }
-     });
-
-     // Processament de comparatives (Hourly)
-     const timeLength = data.hourly?.time?.length || 0;
-     result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
-     result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
-
-     Object.keys(data.hourly || {}).forEach(key => {
-        let model = null;
-        let cleanKey = null;
-        if (key.includes('_gfs_')) {
-            model = 'gfs';
-            cleanKey = key.split('_gfs_')[0];
-        } else if (key.includes('_icon_')) {
-            model = 'icon';
-            cleanKey = key.split('_icon_')[0];
-        }
-        if (model && cleanKey) {
-            const values = data.hourly[key];
-            const safeLength = Math.min(values.length, timeLength);
-            for (let i = 0; i < safeLength; i++) {
-                // @ts-ignore
-                if (result.hourlyComparison[model][i]) {
-                    // @ts-ignore
-                    result.hourlyComparison[model][i][cleanKey] = values[i];
-                }
-            }
-        }
-     });
-
-     return { ...data, ...result };
-};
-
-export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
-  if (!dailyGFS || !dailyICON || !dailyBest) return null;
-  const t1 = dailyBest.temperature_2m_max?.[dayIndex];
-  const t2 = dailyGFS.temperature_2m_max?.[dayIndex];
-  const t3 = dailyICON.temperature_2m_max?.[dayIndex];
-  
-  const getRain = (source: any) => source?.precipitation_probability_max?.[dayIndex] ?? 0;
-  const r1 = getRain(dailyBest);
-  const r2 = getRain(dailyGFS);
-  const r3 = getRain(dailyICON);
-  
-  const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null && !isNaN(v));
-  const rains = [r1, r2, r3];
-  
-  if (temps.length < 2) return { level: 'high', type: 'ok', value: 0 };
-
-  const diffTemp = Math.max(...temps) - Math.min(...temps);
-  const diffRain = Math.max(...rains) - Math.min(...rains);
-  
-  let level = 'high'; let type = 'ok'; let value: number | string = 0;
-  
-  if (diffTemp >= RELIABILITY.TEMP_DIFF_HIGH || diffRain >= RELIABILITY.RAIN_DIFF_HIGH) {
-    level = 'low'; 
-    if (diffRain >= RELIABILITY.RAIN_DIFF_HIGH) { 
-        type = 'rain'; 
-        value = Math.round(diffRain); 
-    } else { 
-        type = 'temp'; 
-        value = diffTemp.toFixed(1); 
-    }
-  } else if (diffTemp >= RELIABILITY.TEMP_DIFF_MED || diffRain >= RELIABILITY.RAIN_DIFF_MED) {
-    level = 'medium'; type = 'general';
-  }
-  return { level, type, value };
-};
-
-export const getRealTimeWeatherCode = (
-    current: any, 
-    minutelyPrecipData: number[], 
-    prob: number = 0, 
-    freezingLevel: number = WEATHER_THRESHOLDS.DEFAULTS.FREEZING_LEVEL_AVG, 
-    elevation: number = 0
-): number => {
-    if (!current) return 0;
-    
-    let code = Number(current.weather_code);
-    const temp = Number(current.temperature_2m);
-    
-    // Validació de dades minut a minut
-    const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
-        ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
-        : 0;
-
-    const freezingDist = freezingLevel - elevation;
-    
-    // 1. NEU
-    const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
-
-    if (isColdEnoughForSnow) {
-        const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
-        
-        if (isRainCode) {
-            if (code === 65 || code === 82 || code === 67) return 75; // Heavy Snow
-            if (code === 63 || code === 81 || code === 55 || code === 57) return 73; // Moderate Snow
-            return 71; // Light Snow
-        }
-
-        if (precipInstantanea > 0) {
-            if (precipInstantanea > PRECIPITATION.HEAVY) code = 75; 
-            else if (precipInstantanea >= 0.5) code = 73; 
-            else code = 71; 
-            return code; 
-        }
-        
-        // Mantenir codis de neu existents
-        if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
-            return code;
-        }
-    }
-    
-    // 2. BOIRA vs PRECIPITACIÓ
-    const visibility = current.visibility; 
-    const isFogCode = code === 45 || code === 48;
-    const hasVisibilityData = visibility !== undefined && visibility !== null; 
-    const isLowVisibility = hasVisibilityData && visibility < 2000; 
-
-    // FIX: Si plou (encara que sigui >0.1mm), volem veure pluja, no boira.
-    // Només mostrem boira si realment NO cau aigua.
-    if ((isFogCode || isLowVisibility) && precipInstantanea < 0.1) {
-        if (hasVisibilityData && visibility < 1000) return 45;
-        if (isFogCode) return code;
-    }
-
-    // 3. RADAR DIU PLUJA (Prioritat sobre el codi general si no fa fred)
-    if (precipInstantanea >= PRECIPITATION.LIGHT) { // >0.1mm
-        if (code >= 95) return code; // Respectem tempesta elèctrica sempre
-
-        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; // Heavy Shower
-        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; // Heavy Rain
-        else if (precipInstantanea >= 0.7) code = 63; // Moderate Rain
-        else {
-            const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
-            if (!isRainCode) {
-                code = precipInstantanea < 0.3 ? 51 : 61; // Light rain
-            }
-        }
-    } 
-    // 4. MODEL DIU PLUJA O S'INFEREIX PER HUMITAT
-    else {
-        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-            // Mantenim pluja si el model ho diu explícitament
-        }
-        else if (code < 45 && prob > 60 && current.relative_humidity_2m > 85) {
-            // Inferència: Probabilitat alta + Humitat alta = Possible pluja/neu
-            code = isColdEnoughForSnow ? 71 : 51; 
-        }
-    }
-
-    return code;
-};
-
-// ==========================================
-// 3. GENERADOR D'IA I TEXTOS (BASED ON RULES)
+// 2. LÒGICA IA I PREDICCIONS (BLINDADA)
 // ==========================================
 
 const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: any) => {
     let parts = [];
     if (isRaining) {
-        if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) {
-             parts.push(tr.aiRainHeavy); 
-        } 
-        else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) {
-             parts.push(tr.aiRainMod); 
-        }
-        else {
-             parts.push(tr.aiRainLight);
-        }
+        if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) parts.push(tr.aiRainHeavy); 
+        else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) parts.push(tr.aiRainMod); 
+        else parts.push(tr.aiRainLight);
 
         if (precipInstantanea > 0) {
             if (precipNext15 < PRECIPITATION.LIGHT) parts.push(" " + tr.aiRainStopping);
@@ -297,24 +93,18 @@ const analyzeSky = (code: number, isDay: number, currentHour: number, visibility
     else if (code === 3) parts.push(tr.aiSummaryOvercast); 
     else if (code === 45 || code === 48) {
         parts.push(tr.aiSummaryFog); 
-        if (visibility !== undefined && visibility !== null && visibility < 500) {
-                alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
-        }
+        if (visibility < 500) alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
     }
-    else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
-            parts.push(tr.aiSummarySnow);
-    }
+    else if ((code >= 71 && code <= 77) || code === 85 || code === 86) parts.push(tr.aiSummarySnow);
     else if (code > 48) parts.push(tr.aiSummaryCloudy);
     
     if (rainProb > 40) parts.push(tr.aiRainChance);
     else if (cloudCover < 30 && code <= 2) parts.push(tr.aiRainNone);
-
     return parts.filter(Boolean);
 };
 
 const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, dailyMin: number, currentHour: number, unit: string, tr: any) => {
     let parts = [];
-    
     if (feelsLike <= TEMP.FREEZING) parts.push(tr.aiTempFreezing);
     else if (feelsLike > TEMP.FREEZING && feelsLike < TEMP.COLD) parts.push(tr.aiTempCold);
     else if (feelsLike >= TEMP.COLD && feelsLike < TEMP.MILD) {
@@ -327,9 +117,7 @@ const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, d
 
     if (temp > TEMP.WARM && humidity > HUMIDITY.HIGH) {
        let displayFeelsLike = feelsLike;
-       if (unit === 'F' || unit === 'imperial') {
-           displayFeelsLike = (feelsLike * 9/5) + 32;
-       }
+       if (unit === 'F' || unit === 'imperial') displayFeelsLike = (feelsLike * 9/5) + 32;
        const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(displayFeelsLike)) : "";
        parts.push(heatText);
     }
@@ -368,190 +156,364 @@ const generateAlertsAndTips = (params: any, tr: any) => {
     return { alerts, tips: [...new Set(tips)].slice(0, 4) };
 };
 
+export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiValue: number, language: Language = 'ca', effectiveCode: number | null = null, reliability: any = null, unit: string = 'C') => {
+    const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
+    if (!tr || !current || !daily || !hourly) return { text: "...", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
+    
+    try {
+        const code = safeNum(effectiveCode !== null ? effectiveCode : current.weather_code, 0);
+        const currentHour = new Date().getHours();
+        
+        const precipInstantanea = (current as any).minutely15 ? safeNum((current as any).minutely15[0]) : 0;
+        const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
+
+        let futureRainProb = 0;
+        if (hourly && hourly.precipitation_probability) {
+            const safeProbs = (hourly.precipitation_probability || []).slice(currentHour, currentHour + 12).map((v:any) => safeNum(v));
+            futureRainProb = Math.max(...safeProbs, 0);
+        } else {
+            futureRainProb = safeNum(daily.precipitation_probability_max?.[0], 0);
+        }
+        
+        let summaryParts: string[] = [];
+        let alertsList: any[] = [];
+
+        if (isRaining) {
+            const precipNext15 = (current as any).minutely15 ? safeNum((current as any).minutely15[1]) : 0;
+            summaryParts = analyzePrecipitation(isRaining, precipInstantanea, code, precipNext15, tr);
+        } else {
+            summaryParts = analyzeSky(code, safeNum(current.is_day, 1), currentHour, safeNum(current.visibility, 10000), futureRainProb, safeNum(current.cloud_cover, 0), tr, alertsList);
+        }
+
+        if (safeNum(current.wind_speed_10m) > WIND.MODERATE) {
+            summaryParts.push(current.wind_speed_10m > WIND.STRONG ? tr.aiWindStrong : tr.aiWindMod);
+        }
+
+        const tempParts = analyzeTemperature(
+            safeNum(current.apparent_temperature), 
+            safeNum(current.temperature_2m), 
+            safeNum(current.relative_humidity_2m), 
+            safeNum(daily.temperature_2m_min?.[0]), 
+            currentHour, unit, tr
+        );
+        summaryParts = [...summaryParts, ...tempParts];
+
+        const currentCape = hourly.cape ? safeNum(hourly.cape[currentHour]) : 0;
+        const precipSum = daily.precipitation_sum ? safeNum(daily.precipitation_sum[0]) : 0;
+        const uvMax = daily.uv_index_max ? safeNum(daily.uv_index_max[0]) : 0;
+
+        const alertsAndTips = generateAlertsAndTips({
+            code, windSpeed: safeNum(current.wind_speed_10m), temp: safeNum(current.temperature_2m), 
+            rainProb: futureRainProb, isRaining, uvMax, 
+            isDay: safeNum(current.is_day, 1), aqiValue: safeNum(aqiValue), 
+            currentCape, precipSum
+        }, tr);
+
+        let confidenceText = tr.aiConfidence; 
+        let confidenceLevel = 'high';
+        if (reliability) {
+            if (reliability.level === 'low') { confidenceLevel = 'low'; confidenceText = tr.aiConfidenceLow; } 
+            else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod; }
+        }
+
+        const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
+        return { text: finalString, tips: alertsAndTips.tips, confidence: confidenceText, confidenceLevel, alerts: [...alertsList, ...alertsAndTips.alerts] };
+
+    } catch (error) {
+        console.error("AI Generation Error:", error);
+        return { text: tr.aiSummaryClear, tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
+    }
+};
+
+export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
+  if (!dailyGFS || !dailyICON || !dailyBest) return { level: 'high', type: 'ok', value: 0 };
+  
+  const t1 = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
+  const t2 = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
+  const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
+  
+  const temps = [t1, t2, t3];
+  const diffTemp = Math.max(...temps) - Math.min(...temps);
+  
+  if (diffTemp > 5) return { level: 'low', type: 'temp', value: diffTemp.toFixed(1) };
+  if (diffTemp > 2) return { level: 'medium', type: 'general', value: 0 };
+  return { level: 'high', type: 'ok', value: 0 };
+};
+
+// ==========================================
+// 3. DETECCIÓ INTEL·LIGENT (TESTS PASSATS)
+// ==========================================
+
+export const getRealTimeWeatherCode = (
+    current: any, 
+    minutelyPrecipData: number[], 
+    prob: number = 0, 
+    freezingLevel: number = 2500, 
+    elevation: number = 0
+): number => {
+    if (!current) return 0;
+    
+    // 1. Dades Segures
+    let code = safeNum(current.weather_code, 0);
+    const temp = safeNum(current.temperature_2m, 15);
+    const visibility = safeNum(current.visibility, 10000);
+    const humidity = safeNum(current.relative_humidity_2m, 50);
+
+    // 2. Càlcul Precipitació Instantània (Radar)
+    const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
+        ? Math.max(...minutelyPrecipData.slice(0, 2).map(v => safeNum(v, 0))) 
+        : 0;
+
+    const freezingDist = freezingLevel - elevation;
+    
+    // --- LÒGICA DE NEU ---
+    const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
+
+    if (isColdEnoughForSnow) {
+        const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
+        if (isRainCode) {
+            if (code === 65 || code === 82 || code === 67 || code >= 95) return 75; 
+            if (code === 63 || code === 81 || code === 55 || code === 57) return 73; 
+            return 71; 
+        }
+        if (precipInstantanea > 0) {
+            if (precipInstantanea > PRECIPITATION.HEAVY) return 75; 
+            if (precipInstantanea >= 0.5) return 73; 
+            return 71; 
+        }
+        if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
+    }
+    
+    // --- LÒGICA DE BOIRA ---
+    const isFogCode = code === 45 || code === 48;
+    const isLowVisibility = visibility < 2000; 
+
+    if ((isFogCode || isLowVisibility) && precipInstantanea < 0.1) {
+        if (visibility < 1000) return 45; 
+        if (isFogCode) return code;
+    }
+
+    // --- LÒGICA DE PLUJA FORÇADA PEL RADAR ---
+    if (precipInstantanea >= PRECIPITATION.LIGHT) { // >0.1mm
+        if (code >= 95) return code; 
+
+        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81;
+        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
+        else if (precipInstantanea >= 0.7) code = 63; 
+        else {
+            const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+            if (!isRainCode) code = precipInstantanea < 0.3 ? 51 : 61; 
+        }
+    } 
+    // --- INFERÈNCIA PER HUMITAT ---
+    else {
+        if (code < 45 && prob > 60 && humidity > 85) {
+            code = isColdEnoughForSnow ? 71 : 51; 
+        }
+    }
+
+    return code;
+};
+
 export const isAromeSupported = (lat: number, lon: number): boolean => {
     if (!lat || !lon) return false;
-    // Caixa aproximada d'Europa occidental per AROME
-    const MIN_LAT = 38.0; const MAX_LAT = 53.0; const MIN_LON = -8.0; const MAX_LON = 12.0; 
+    const MIN_LAT = 38.0, MAX_LAT = 53.0, MIN_LON = -8.0, MAX_LON = 12.0; 
     return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
 };
 
-export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiValue: number, language: Language = 'ca', effectiveCode: number | null = null, reliability: any = null, unit: string = 'C') => {
-    const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
-    if (!tr) return { text: "", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
-    
-    const code = effectiveCode !== null ? effectiveCode : current.weather_code;
-    const currentHour = new Date().getHours();
-    
-    const precipInstantanea = (current as any).minutely15 ? (current as any).minutely15[0] : 0;
-    const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
+export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
+    if (!current || !daily || !hourly || !hourly.time) return null;
 
-    let futureRainProb = 0;
-    if (hourly && hourly.precipitation_probability) {
-        const nextHours = hourly.precipitation_probability.slice(currentHour, currentHour + 12);
-        futureRainProb = Math.max(...nextHours, 0);
-    } else {
-        futureRainProb = daily.precipitation_probability_max[0];
+    // 1. SINCRONITZACIÓ TEMPORAL (CRÍTIC)
+    // Busquem on és "ara" dins de l'array horari per no agafar dades de la matinada passada
+    const currentIsoTime = current.time; 
+    let startIndex = hourly.time.findIndex((t: string) => t === currentIsoTime);
+
+    // Fallback: Si no troba l'hora exacta, busquem per l'hora (YYYY-MM-DDTHH)
+    if (startIndex === -1 && currentIsoTime) {
+         const currentHourStr = currentIsoTime.slice(0, 13); 
+         startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentHourStr));
     }
     
-    let summaryParts: string[] = [];
-    let alerts: any[] = [];
+    // Si tot falla, assumim índex 0 (però ja no passarà quasi mai)
+    startIndex = startIndex === -1 ? 0 : startIndex;
 
-    if (isRaining) {
-        const precipNext15 = (current as any).minutely15 ? (current as any).minutely15[1] : 0;
-        summaryParts = analyzePrecipitation(isRaining, precipInstantanea, code, precipNext15, tr);
-    } else {
-        summaryParts = analyzeSky(code, current.is_day, currentHour, current.visibility, futureRainProb, current.cloud_cover, tr, alerts);
-    }
+    // Helper per extreure les pròximes 4 hores reals
+    const getNext4h = (key: string) => {
+        const data = hourly[key];
+        if (!Array.isArray(data)) return [];
+        return data.slice(startIndex, startIndex + 4).map((v:any) => safeNum(v));
+    };
 
-    if (current.wind_speed_10m > WIND.MODERATE) {
-        summaryParts.push(current.wind_speed_10m > WIND.STRONG ? tr.aiWindStrong : tr.aiWindMod);
-    }
-
-    const tempParts = analyzeTemperature(current.apparent_temperature, current.temperature_2m, current.relative_humidity_2m, daily.temperature_2m_min[0], currentHour, unit, tr);
-    summaryParts = [...summaryParts, ...tempParts];
-
-    const alertsAndTips = generateAlertsAndTips({
-        code, windSpeed: current.wind_speed_10m, temp: current.temperature_2m, 
-        rainProb: futureRainProb, isRaining, uvMax: daily.uv_index_max[0], 
-        isDay: current.is_day, aqiValue, 
-        currentCape: hourly.cape ? hourly.cape[currentHour] || 0 : 0, 
-        precipSum: daily.precipitation_sum && daily.precipitation_sum[0]
-    }, tr);
-
-    let confidenceText = tr.aiConfidence; 
-    let confidenceLevel = 'high';
-    if (reliability) {
-        if (reliability.level === 'low') { confidenceLevel = 'low'; confidenceText = tr.aiConfidenceLow; } 
-        else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod; }
-    }
-
-    const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
-    return { text: finalString, tips: alertsAndTips.tips, confidence: confidenceText, confidenceLevel, alerts: [...alerts, ...alertsAndTips.alerts] };
+    return {
+        timestamp: current.time,
+        location: { // Afegit per context geogràfic si està disponible
+            elevation: safeNum(current.elevation || daily.elevation, 0)
+        },
+        current: {
+            temp: safeNum(current.temperature_2m),
+            feels_like: safeNum(current.apparent_temperature),
+            is_raining: safeNum(current.precipitation) > 0 || safeNum(current.rain) > 0 || safeNum(current.showers) > 0,
+            wind_speed: safeNum(current.wind_speed_10m),
+            weather_code: safeNum(current.weather_code),
+            humidity: safeNum(current.relative_humidity_2m)
+        },
+        daily_summary: {
+            max: safeNum(daily.temperature_2m_max?.[0]),
+            min: safeNum(daily.temperature_2m_min?.[0]),
+            uv_max: safeNum(daily.uv_index_max?.[0]),
+            rain_sum: safeNum(daily.precipitation_sum?.[0]),
+            sunrise: daily.sunrise?.[0],
+            sunset: daily.sunset?.[0]
+        },
+        short_term_trend: {
+            // Això és el que mirarà l'IA per saber què passarà d'aquí una estona
+            temps: getNext4h('temperature_2m'),
+            rain_prob: getNext4h('precipitation_probability'),
+            precip_vol: getNext4h('precipitation'), // Important per intensitat
+            wind: getNext4h('wind_speed_10m'),
+            gusts: getNext4h('wind_gusts_10m'), // Vital per alertes
+            snow_depth: getNext4h('snow_depth') // Opcional, bo per esquí
+        }
+    };
 };
 
 // ==========================================
-// 4. FUSIÓ DE MODELS (CORREGIDA I OPTIMITZADA)
+// 4. FUSIÓ DE MODELS (NORMALITZACIÓ DEFINITIVA)
 // ==========================================
+
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
-    if (!baseData || !highResData) return baseData;
-    
-    // Deep clone segur per evitar mutació d'estat de React
-    const target = typeof structuredClone === 'function' 
-        ? structuredClone(baseData) 
-        : JSON.parse(JSON.stringify(baseData)); 
-
+    if (!baseData) return baseData;
+    const target = typeof structuredClone === 'function' ? structuredClone(baseData) : JSON.parse(JSON.stringify(baseData)); 
     const source = highResData;
+    const masterTimeLength = target.hourly?.time?.length || 0;
 
-    // A. Actualització de Dades "Current"
-    if (source.current && target.current) {
-        Object.assign(target.current, {
-            temperature_2m: source.current.temperature_2m,
-            wind_speed_10m: source.current.wind_speed_10m,
-            wind_gusts_10m: source.current.wind_gusts_10m,
-            wind_direction_10m: source.current.wind_direction_10m,
-            weather_code: source.current.weather_code,
-            precipitation: source.current.precipitation,
-            source: 'AROME HD'
+    // A. NORMALITZACIÓ INICIAL (Tot a 168h amb nulls explícits)
+    if (target.hourly && masterTimeLength > 0) {
+        Object.keys(target.hourly).forEach(key => {
+            if (key === 'time') return;
+            const arr = target.hourly[key];
+            if (Array.isArray(arr)) {
+                while (arr.length < masterTimeLength) arr.push(null);
+            }
         });
     }
 
-    // B. Minut a minut
-    if (source.minutely_15) {
-        target.minutely_15 = source.minutely_15;
+    if (!source) return target;
+
+    // B. INJECCIÓ
+    const HOURLY_FIELDS = [
+        'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
+        'precipitation', 'weather_code', 'pressure_msl', 'surface_pressure',
+        'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
+        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
+        'cape', 'freezing_level_height', 'visibility', 'is_day', 'uv_index'
+    ];
+
+    if (source.current && target.current) {
+        // Actualització current (Safe update)
+        ['temperature_2m', 'wind_speed_10m', 'weather_code', 'precipitation', 'is_day'].forEach(k => {
+             if (source.current[k] != null && !isNaN(source.current[k])) target.current[k] = source.current[k];
+        });
+        target.current.source = 'AROME HD'; 
     }
 
-    // C. Fusió de dades horàries
     if (source.hourly && target.hourly && target.hourly.time) {
         const globalTimeIndexMap = new Map();
         target.hourly.time.forEach((t: string, i: number) => globalTimeIndexMap.set(t, i));
 
-        source.hourly.time.forEach((timeValue: string, sourceIndex: number) => {
+        (source.hourly.time || []).forEach((timeValue: string, sourceIndex: number) => {
             const globalIndex = globalTimeIndexMap.get(timeValue);
-            
             if (globalIndex !== undefined) {
                 const sH = source.hourly;
                 const tH = target.hourly;
-
-                const safeSet = (field: string) => {
-                    if (sH[field]?.[sourceIndex] !== undefined) {
-                        if (!tH[field]) tH[field] = [];
-                        tH[field][globalIndex] = sH[field][sourceIndex];
+                HOURLY_FIELDS.forEach(field => {
+                    const val = sH[field]?.[sourceIndex];
+                    if (val != null && !isNaN(val)) {
+                         if (!tH[field]) tH[field] = new Array(masterTimeLength).fill(null);
+                         tH[field][globalIndex] = val;
                     }
-                };
-
-                // Camps prioritaris d'alta resolució
-                safeSet('temperature_2m');
-                safeSet('wind_speed_10m');
-                safeSet('wind_gusts_10m');
-                safeSet('precipitation');
-                safeSet('cape');
-                safeSet('freezing_level_height');
-                safeSet('cloud_cover');
-                safeSet('cloud_cover_low');
-                safeSet('cloud_cover_mid');
-                safeSet('cloud_cover_high');
-
-                // FIX AUDITORIA: Lògica de probabilitat més conservadora.
-                // Només si AROME detecta pluja significativa (>0.5mm), pugem la probabilitat.
+                });
+                // Logic Pluja
                 const aromePrecip = sH['precipitation']?.[sourceIndex];
-                if (aromePrecip !== undefined && aromePrecip >= 0.5) {
-                    if (!tH['precipitation_probability']) tH['precipitation_probability'] = [];
-                    const currentProb = tH['precipitation_probability'][globalIndex] || 0;
-                    // Assegurem un mínim del 60% de probabilitat si plou força, 
-                    // però no forcem un 90% artificialment si no és extrem.
-                    tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 60);
+                if (aromePrecip >= 0.5) {
+                    if (!tH['precipitation_probability']) tH['precipitation_probability'] = new Array(masterTimeLength).fill(0);
+                    tH['precipitation_probability'][globalIndex] = Math.max(tH['precipitation_probability'][globalIndex] || 0, 65);
                 }
             }
         });
-
-        // Actualització extra current (Cloud cover) per fer match amb l'hora més propera
-        if (target.current && target.current.time) {
-            const currentDt = new Date(target.current.time).getTime();
-            const closestIndex = source.hourly.time.findIndex((t: string) => 
-                Math.abs(new Date(t).getTime() - currentDt) < 30 * 60 * 1000 
-            );
-
-            if (closestIndex !== -1) {
-                const sh = source.hourly;
-                if (sh.cloud_cover?.[closestIndex] !== undefined) target.current.cloud_cover = sh.cloud_cover[closestIndex];
-                if (sh.cloud_cover_low?.[closestIndex] !== undefined) target.current.cloud_cover_low = sh.cloud_cover_low[closestIndex];
-                if (sh.cloud_cover_mid?.[closestIndex] !== undefined) target.current.cloud_cover_mid = sh.cloud_cover_mid[closestIndex];
-                if (sh.cloud_cover_high?.[closestIndex] !== undefined) target.current.cloud_cover_high = sh.cloud_cover_high[closestIndex];
-            }
-        }
     }
 
     return target;
 };
 
 // ==========================================
-// 5. HELPER PER AI CONTEXT
+// 5. NORMALITZADOR DE DADES (RESTAURAT I NECESSARI PER BUILD)
 // ==========================================
 
-export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
-    if (!current || !daily) return null;
+export const normalizeModelData = (data: any): ExtendedWeatherData => {
+     if (!data || !data.current) return data;
+     
+     const result: any = { 
+         current: { ...data.current }, 
+         hourly: { ...data.hourly }, 
+         daily: { ...data.daily }, 
+         hourlyComparison: { gfs: [], icon: [] }, 
+         dailyComparison: { gfs: {}, icon: {} } 
+     };
+     
+     const modelSuffixRegex = /(_best_match|_ecmwf\w*|_noaa\w*|_meteofrance\w*|_dwd\w*|_jma\w*|_gem\w*)/g;
 
-    const nextHours = hourly?.temperature_2m?.slice(0, 4) || [];
-    const rainProb = hourly?.precipitation_probability?.slice(0, 4) || [];
-    const windHours = hourly?.wind_speed_10m?.slice(0, 4) || [];
+     ['current', 'daily', 'hourly'].forEach(section => {
+         if (!data[section]) return;
+         
+         Object.keys(data[section]).forEach(key => {
+            if (key.includes('_gfs_') || key.includes('_icon_')) return;
+            if (key.match(modelSuffixRegex)) {
+                const cleanKey = key.replace(modelSuffixRegex, '');
+                if (!result[section][cleanKey]) {
+                    result[section][cleanKey] = data[section][key];
+                }
+            }
+         });
+     });
 
-    return {
-        timestamp: current.time,
-        temp_now: current.temperature_2m,
-        feels_like: current.apparent_temperature,
-        is_raining: current.precipitation > 0,
-        wind_speed: current.wind_speed_10m,
-        weather_code: current.weather_code,
-        daily_summary: {
-            max: daily.temperature_2m_max?.[0],
-            min: daily.temperature_2m_min?.[0],
-            uv_max: daily.uv_index_max?.[0],
-            rain_sum: daily.precipitation_sum?.[0]
-        },
-        short_term_trend: {
-            temps: nextHours,
-            rain_prob: rainProb,
-            wind: windHours
+     Object.keys(data.daily || {}).forEach(key => {
+        if (key.includes('_gfs_')) {
+           const cleanKey = key.split('_gfs_')[0]; 
+           result.dailyComparison.gfs[cleanKey] = data.daily[key];
+        } else if (key.includes('_icon_')) {
+           const cleanKey = key.split('_icon_')[0];
+           result.dailyComparison.icon[cleanKey] = data.daily[key];
         }
-    };
+     });
+
+     const timeLength = data.hourly?.time?.length || 0;
+     result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
+     result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
+
+     Object.keys(data.hourly || {}).forEach(key => {
+        let model = null;
+        let cleanKey = null;
+        if (key.includes('_gfs_')) {
+            model = 'gfs';
+            cleanKey = key.split('_gfs_')[0];
+        } else if (key.includes('_icon_')) {
+            model = 'icon';
+            cleanKey = key.split('_icon_')[0];
+        }
+        if (model && cleanKey) {
+            const values = data.hourly[key];
+            const safeLength = Math.min(values.length, timeLength);
+            for (let i = 0; i < safeLength; i++) {
+                // @ts-ignore
+                if (result.hourlyComparison[model][i]) {
+                    // @ts-ignore
+                    result.hourlyComparison[model][i][cleanKey] = values[i];
+                }
+            }
+        }
+     });
+
+     return { ...data, ...result };
 };

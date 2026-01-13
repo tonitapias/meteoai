@@ -1,119 +1,67 @@
 // src/hooks/useWeatherAI.ts
 import { useState, useEffect, useRef } from 'react';
-import { 
-    generateAIPrediction, 
-    calculateReliability, 
-    getRealTimeWeatherCode, 
-    prepareContextForAI,
-    ExtendedWeatherData
-} from '../utils/weatherLogic';
-import { fetchEnhancedForecast } from '../services/gemini';
-import { cacheService } from '../services/cacheService';
-import { AirQualityData } from '../services/weatherApi';
-import { Language } from '../constants/translations';
-import { WeatherUnit } from '../utils/formatters';
+import { generateAIPrediction } from '../utils/weatherLogic';
+import { getGeminiAnalysis } from '../services/geminiService';
 
-interface AIAnalysisResult {
-    text: string;
-    tips: string[];
-    alerts: any[];
-    confidence: string;
-    confidenceLevel: string;
-    source?: 'algorithm' | 'gemini';
-}
+// ATENCIÓ: La clau és aquest "export" davant de function
+export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: any) {
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  
+  // 1. REF DE CONTROL
+  const lastProcessedKey = useRef<string>("");
 
-export function useWeatherAI(
-    weatherData: ExtendedWeatherData | null, 
-    aqiData: AirQualityData | null, 
-    lang: Language, 
-    unit: WeatherUnit
-) {
-    const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
-    const lastGeminiCallSignature = useRef<string | null>(null);
+  useEffect(() => {
+    if (!weatherData?.current) return;
 
-    useEffect(() => {
-        if (!weatherData) return;
+    // 2. GENEREM LA CLAU ÚNICA
+    const lat = weatherData.location?.latitude || weatherData.current?.latitude;
+    const lon = weatherData.location?.longitude || weatherData.current?.longitude;
+    const weatherCode = weatherData.current?.weather_code;
+    const currentKey = `${lat}-${lon}-${weatherCode}-${lang}-${unit}`;
 
-        // 1. Generació Algorítmica Immediata
-        const currentHour = new Date().getHours();
-        const freezingLevel = weatherData.hourly?.freezing_level_height?.[currentHour] || 2500;
-        const elevation = weatherData.elevation || 0;
+    // 3. BLOQUEIG DE SEGURETAT (CIRCUIT BREAKER)
+    if (lastProcessedKey.current === currentKey) {
+      return; 
+    }
+
+    // Marquem la clau com a processada IMMEDIATAMENT (síncronament).
+    lastProcessedKey.current = currentKey;
+
+    const fetchAI = async () => {
+      try {
+        // 4. LÒGICA LOCAL (Immediata)
+        const local = generateAIPrediction(
+          weatherData.current, weatherData.daily, weatherData.hourly, 
+          aqiData?.current?.us_aqi || 0, lang, null, null, unit
+        );
         
-        const effectiveWeatherCode = getRealTimeWeatherCode(
-            weatherData.current, 
-            weatherData.minutely_15?.precipitation as any, // Cast necessari si minutely_15 no està tipat estrictament
-            0, 
-            freezingLevel, 
-            elevation
-        );
+        // Actualitzem l'estat local primer
+        setAiAnalysis(local);
 
-        const reliability = calculateReliability(
-            weatherData.daily, 
-            weatherData.dailyComparison?.gfs, 
-            weatherData.dailyComparison?.icon, 
-            0
-        );
-
-        // Preparem dades per la funció síncrona
-        const currentForAlgo = { 
-            ...weatherData.current, 
-            minutely15: weatherData.minutely_15?.precipitation 
-        };
-
-        const baseAnalysis = generateAIPrediction(
-            currentForAlgo, 
-            weatherData.daily, 
-            weatherData.hourly, 
-            aqiData?.current?.european_aqi || 0, 
-            lang, 
-            effectiveWeatherCode, 
-            reliability, 
-            unit
-        );
-
-        setAiAnalysis({ ...baseAnalysis, source: 'algorithm' } as AIAnalysisResult);
-
-        // 2. Preparació per a Gemini
-        let context: any = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
-        if (context) { 
-            context = { ...context, userRequestedLanguage: lang }; 
+        // 5. MILLORA AMB GEMINI IA (Asíncrona)
+        console.log("🤖 MeteoAI: Demanant nova anàlisi a Gemini...");
+        
+        const gemini = await getGeminiAnalysis(weatherData, lang);
+        
+        if (gemini && gemini.text) {
+          // Verifiquem que el component encara vol aquesta resposta
+          if (lastProcessedKey.current === currentKey) {
+            setAiAnalysis((prev: any) => ({
+              ...prev,
+              text: gemini.text,
+              tips: gemini.tips?.length ? gemini.tips : prev.tips,
+              source: 'Gemini AI'
+            }));
+          }
         }
-        
-        // Comprovem existència abans d'accedir a propietats opcionals
-        const weatherTimestamp = weatherData.current?.time; 
-        const lat = weatherData.latitude || 0; // weatherData root té lat/lon
-        const lon = weatherData.longitude || 0;
-        
-        // Si no tenim timestamp, no podem generar clau
-        if (!weatherTimestamp) return;
+      } catch (e) {
+        console.error("🚨 Error en el flux de useWeatherAI:", e);
+      }
+    };
 
-        const aiCacheKey = cacheService.generateAiKey(weatherTimestamp as string, lat, lon, lang);
+    fetchAI();
 
-        const checkCacheAndFetch = async () => {
-            const cachedAI = await cacheService.get<string>(aiCacheKey, 24 * 60 * 60 * 1000); 
-            if (cachedAI) {
-                console.log(`💾 IA recuperada de IndexedDB (${lang})`);
-                setAiAnalysis(prev => prev ? ({ ...prev, text: cachedAI, source: 'gemini' }) : null);
-                return; 
-            }
+  }, [weatherData, aqiData, lang, unit]);
 
-            const currentSignature = JSON.stringify({ c: context, l: lang });
-            lastGeminiCallSignature.current = currentSignature;
-
-            fetchEnhancedForecast(context, lang).then(async (enhancedText) => {
-               if (lastGeminiCallSignature.current !== currentSignature) return;
-               
-               if (enhancedText) {
-                   console.log(`✨ Nova IA generada (${lang})`);
-                   await cacheService.set(aiCacheKey, enhancedText); 
-                   setAiAnalysis(prev => prev ? ({ ...prev, text: enhancedText, source: 'gemini' }) : null);
-               }
-            }).catch(err => console.error("Error silenciós Gemini:", err));
-        };
-
-        checkCacheAndFetch();
-
-    }, [weatherData, aqiData, lang, unit]);
-
-    return { aiAnalysis };
+  return { aiAnalysis };
 }
