@@ -9,7 +9,7 @@ export interface WeatherData {
         name: string;
         latitude: number;
         longitude: number;
-        country?: string; // <--- AFEGIT: Camp per guardar el país
+        country?: string; 
     };
     current_units?: any;
     hourly_units?: any;
@@ -25,7 +25,8 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F' =
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
-        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+        // AFEGIT: cloud_cover_low, cloud_cover_mid, cloud_cover_high al final
+        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high",
         hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,is_day,freezing_level_height,cape",
         daily: "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
         minutely_15: "precipitation",
@@ -61,7 +62,8 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
-        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+        // AFEGIT: cloud_cover_low, cloud_cover_mid, cloud_cover_high també aquí per coherència
+        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high",
         hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,freezing_level_height",
         minutely_15: "precipitation", 
         timezone: "auto",
