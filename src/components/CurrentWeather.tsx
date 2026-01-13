@@ -1,3 +1,4 @@
+// src/components/CurrentWeather.tsx
 import React from 'react';
 import { Star, Map, Zap, Wind, Droplets, ThermometerSun, ArrowUp, ArrowDown } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
@@ -18,13 +19,36 @@ interface CurrentWeatherProps {
   aqiData: AirQualityData | null; showAromeBtn?: boolean;
 }
 
+// FIX: Helpers per parsejar l'hora i data "CRUES" sense conversions de zona horària del navegador
+const getRawTime = (isoString: string): string => {
+    if (!isoString || !isoString.includes('T')) return "--:--";
+    // Exemple: "2023-10-27T15:30" -> split 'T' -> "15:30"
+    return isoString.split('T')[1].substring(0, 5); 
+};
+
+const getRawDate = (isoString: string, lang: Language): string => {
+    if (!isoString) return "";
+    try {
+        // Truc: Creem la data a les 12:00 del migdia per evitar que els offsets de zona horària canviïn el dia
+        const datePart = isoString.split('T')[0];
+        const [y, m, d] = datePart.split('-').map(Number);
+        const safeDate = new Date(y, m - 1, d, 12, 0, 0); 
+        return new Intl.DateTimeFormat(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(safeDate);
+    } catch (e) {
+        return isoString.split('T')[0];
+    }
+};
+
 export default function CurrentWeather({ 
   data, effectiveCode, unit, lang, shiftedNow, isFavorite, onToggleFavorite, onShowRadar, onShowArome, showAromeBtn 
 }: CurrentWeatherProps) {
   const { current, location, daily } = data;
   const isUsingArome = current.source === 'AROME HD';
   const getTemp = (t: number) => formatTemp(t, unit);
-  const dateStr = new Intl.DateTimeFormat(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(shiftedNow);
+  
+  // FIX: Usem les dades "crues" de l'API per visualitzar text, ignorant l'objecte Date local
+  const displayTime = getRawTime(current.time as string); 
+  const displayDate = getRawDate(current.time as string, lang);
 
   return (
     <div className="bento-card h-full flex flex-col justify-between p-6 md:p-8 group min-h-[550px] relative z-0">
@@ -53,7 +77,7 @@ export default function CurrentWeather({
                     </button>
                 </h2>
                 <div className="text-slate-400 text-sm font-medium capitalize flex items-center gap-2">
-                    {dateStr} <span className="opacity-50">|</span> {shiftedNow.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {displayDate} <span className="opacity-50">|</span> {displayTime}
                 </div>
             </div>
         </div>

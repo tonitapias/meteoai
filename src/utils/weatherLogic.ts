@@ -23,12 +23,14 @@ export interface ExtendedWeatherData extends WeatherData {
 
 export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string): Date => {
   if (typeof timezoneOrOffset === 'number') {
+      // Offset en segons
       const utcTimestamp = baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000);
       const targetTimestamp = utcTimestamp + (timezoneOrOffset * 1000);
       return new Date(targetTimestamp);
   }
   if (!timezoneOrOffset) return baseDate;
   try {
+      // Timezone IANA (ex: 'Europe/Madrid')
       const targetTimeStr = baseDate.toLocaleString("en-US", { timeZone: timezoneOrOffset as string });
       return new Date(targetTimeStr);
   } catch (e) {
@@ -82,6 +84,7 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
      
      const modelSuffixRegex = /(_best_match|_ecmwf\w*|_noaa\w*|_meteofrance\w*|_dwd\w*|_jma\w*|_gem\w*)/g;
 
+     // Neteja de claus per tenir noms estàndard
      ['current', 'daily', 'hourly'].forEach(section => {
          if (!data[section]) return;
          
@@ -96,6 +99,7 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
          });
      });
 
+     // Processament de comparatives (Daily)
      Object.keys(data.daily || {}).forEach(key => {
         if (key.includes('_gfs_')) {
            const cleanKey = key.split('_gfs_')[0]; 
@@ -106,6 +110,7 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
         }
      });
 
+     // Processament de comparatives (Hourly)
      const timeLength = data.hourly?.time?.length || 0;
      result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
      result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
@@ -124,7 +129,9 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
             const values = data.hourly[key];
             const safeLength = Math.min(values.length, timeLength);
             for (let i = 0; i < safeLength; i++) {
+                // @ts-ignore
                 if (result.hourlyComparison[model][i]) {
+                    // @ts-ignore
                     result.hourlyComparison[model][i][cleanKey] = values[i];
                 }
             }
@@ -139,10 +146,12 @@ export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: a
   const t1 = dailyBest.temperature_2m_max?.[dayIndex];
   const t2 = dailyGFS.temperature_2m_max?.[dayIndex];
   const t3 = dailyICON.temperature_2m_max?.[dayIndex];
+  
   const getRain = (source: any) => source?.precipitation_probability_max?.[dayIndex] ?? 0;
   const r1 = getRain(dailyBest);
   const r2 = getRain(dailyGFS);
   const r3 = getRain(dailyICON);
+  
   const temps = [t1, t2, t3].filter(v => v !== undefined && v !== null && !isNaN(v));
   const rains = [r1, r2, r3];
   
@@ -150,7 +159,9 @@ export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: a
 
   const diffTemp = Math.max(...temps) - Math.min(...temps);
   const diffRain = Math.max(...rains) - Math.min(...rains);
+  
   let level = 'high'; let type = 'ok'; let value: number | string = 0;
+  
   if (diffTemp >= RELIABILITY.TEMP_DIFF_HIGH || diffRain >= RELIABILITY.RAIN_DIFF_HIGH) {
     level = 'low'; 
     if (diffRain >= RELIABILITY.RAIN_DIFF_HIGH) { 
@@ -178,7 +189,7 @@ export const getRealTimeWeatherCode = (
     let code = Number(current.weather_code);
     const temp = Number(current.temperature_2m);
     
-    // Validació de dades
+    // Validació de dades minut a minut
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
         : 0;
@@ -192,9 +203,9 @@ export const getRealTimeWeatherCode = (
         const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
         
         if (isRainCode) {
-            if (code === 65 || code === 82 || code === 67) return 75; 
-            if (code === 63 || code === 81 || code === 55 || code === 57) return 73; 
-            return 71; 
+            if (code === 65 || code === 82 || code === 67) return 75; // Heavy Snow
+            if (code === 63 || code === 81 || code === 55 || code === 57) return 73; // Moderate Snow
+            return 71; // Light Snow
         }
 
         if (precipInstantanea > 0) {
@@ -204,6 +215,7 @@ export const getRealTimeWeatherCode = (
             return code; 
         }
         
+        // Mantenir codis de neu existents
         if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
             return code;
         }
@@ -215,32 +227,34 @@ export const getRealTimeWeatherCode = (
     const hasVisibilityData = visibility !== undefined && visibility !== null; 
     const isLowVisibility = hasVisibilityData && visibility < 2000; 
 
-    // FIX: Reduït de 0.5 a 0.1. Si plou (encara que sigui poc), volem veure pluja, no boira.
+    // FIX: Si plou (encara que sigui >0.1mm), volem veure pluja, no boira.
+    // Només mostrem boira si realment NO cau aigua.
     if ((isFogCode || isLowVisibility) && precipInstantanea < 0.1) {
         if (hasVisibilityData && visibility < 1000) return 45;
         if (isFogCode) return code;
     }
 
-    // 3. RADAR DIU PLUJA (i no fa fred)
-    if (precipInstantanea >= PRECIPITATION.LIGHT) {
-        if (code >= 95) return code; // Respectem tempesta
+    // 3. RADAR DIU PLUJA (Prioritat sobre el codi general si no fa fred)
+    if (precipInstantanea >= PRECIPITATION.LIGHT) { // >0.1mm
+        if (code >= 95) return code; // Respectem tempesta elèctrica sempre
 
-        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; 
-        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
-        else if (precipInstantanea >= 0.7) code = 63; 
+        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81; // Heavy Shower
+        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; // Heavy Rain
+        else if (precipInstantanea >= 0.7) code = 63; // Moderate Rain
         else {
             const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
             if (!isRainCode) {
-                code = precipInstantanea < 0.3 ? 51 : 61; 
+                code = precipInstantanea < 0.3 ? 51 : 61; // Light rain
             }
         }
     } 
     // 4. MODEL DIU PLUJA O S'INFEREIX PER HUMITAT
     else {
         if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-            // Mantenim pluja
+            // Mantenim pluja si el model ho diu explícitament
         }
         else if (code < 45 && prob > 60 && current.relative_humidity_2m > 85) {
+            // Inferència: Probabilitat alta + Humitat alta = Possible pluja/neu
             code = isColdEnoughForSnow ? 71 : 51; 
         }
     }
@@ -249,12 +263,8 @@ export const getRealTimeWeatherCode = (
 };
 
 // ==========================================
-// 3. GENERADOR D'IA (BASED ON RULES)
+// 3. GENERADOR D'IA I TEXTOS (BASED ON RULES)
 // ==========================================
-// ... (Les funcions analyzePrecipitation, analyzeSky, etc. no han canviat, 
-// però per brevetat assumeixo que estan aquí com l'original. 
-// He mantingut la lògica original aquí ja que no presentava errors crítics).
-// Si cal, puc enganxar el bloc sencer, però per espai em centro en el fix de sota.
 
 const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: any) => {
     let parts = [];
@@ -360,6 +370,7 @@ const generateAlertsAndTips = (params: any, tr: any) => {
 
 export const isAromeSupported = (lat: number, lon: number): boolean => {
     if (!lat || !lon) return false;
+    // Caixa aproximada d'Europa occidental per AROME
     const MIN_LAT = 38.0; const MAX_LAT = 53.0; const MIN_LON = -8.0; const MAX_LON = 12.0; 
     return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
 };
@@ -419,19 +430,19 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
 };
 
 // ==========================================
-// 4. FUSIÓ DE MODELS
+// 4. FUSIÓ DE MODELS (CORREGIDA I OPTIMITZADA)
 // ==========================================
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
     if (!baseData || !highResData) return baseData;
     
-    // FIX CRÍTIC: Deep clone per evitar mutació d'estat i assegurar re-render
+    // Deep clone segur per evitar mutació d'estat de React
     const target = typeof structuredClone === 'function' 
         ? structuredClone(baseData) 
-        : JSON.parse(JSON.stringify(baseData)); // Fallback per entorns antics
+        : JSON.parse(JSON.stringify(baseData)); 
 
     const source = highResData;
 
-    // A. Actualització de Dades "Current" (Dades instantànies)
+    // A. Actualització de Dades "Current"
     if (source.current && target.current) {
         Object.assign(target.current, {
             temperature_2m: source.current.temperature_2m,
@@ -444,12 +455,12 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         });
     }
 
-    // B. Minut a minut (si el model HD en té)
+    // B. Minut a minut
     if (source.minutely_15) {
         target.minutely_15 = source.minutely_15;
     }
 
-    // C. Fusió de dades horàries (Complexa)
+    // C. Fusió de dades horàries
     if (source.hourly && target.hourly && target.hourly.time) {
         const globalTimeIndexMap = new Map();
         target.hourly.time.forEach((t: string, i: number) => globalTimeIndexMap.set(t, i));
@@ -480,19 +491,20 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                 safeSet('cloud_cover_mid');
                 safeSet('cloud_cover_high');
 
-                // FIX LÒGIC: Sincronització de probabilitat.
-                // Si AROME diu que plou, no podem tenir 0% de probabilitat.
+                // FIX AUDITORIA: Lògica de probabilitat més conservadora.
+                // Només si AROME detecta pluja significativa (>0.5mm), pugem la probabilitat.
                 const aromePrecip = sH['precipitation']?.[sourceIndex];
-                if (aromePrecip !== undefined && aromePrecip >= 0.1) {
+                if (aromePrecip !== undefined && aromePrecip >= 0.5) {
                     if (!tH['precipitation_probability']) tH['precipitation_probability'] = [];
                     const currentProb = tH['precipitation_probability'][globalIndex] || 0;
-                    // Pugem la probabilitat a 90% mínim si hi ha pluja tangible
-                    tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 90);
+                    // Assegurem un mínim del 60% de probabilitat si plou força, 
+                    // però no forcem un 90% artificialment si no és extrem.
+                    tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 60);
                 }
             }
         });
 
-        // Actualització extra current (Cloud cover)
+        // Actualització extra current (Cloud cover) per fer match amb l'hora més propera
         if (target.current && target.current.time) {
             const currentDt = new Date(target.current.time).getTime();
             const closestIndex = source.hourly.time.findIndex((t: string) => 
@@ -509,7 +521,6 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         }
     }
 
-    console.log("🎯 Dades Híbrides: Fusió realitzada amb èxit.");
     return target;
 };
 

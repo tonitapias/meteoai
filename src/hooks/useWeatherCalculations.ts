@@ -19,32 +19,62 @@ const getVal = (data: any, key: string, i: number) => {
 
 export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, unit: WeatherUnit, now: Date) {
   
-  // 1. DATA I HORA
+  // 1. DATA I HORA (Només per visualització UI, no per lògica interna)
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     return getShiftedDate(now, weatherData.timezone || 'UTC');
   }, [weatherData, now]);
 
-  // 2. DADES MINUT A MINUT
+  // 2. DADES MINUT A MINUT (Optimitzat)
   const minutelyPreciseData = useMemo<number[]>(() => {
     if (!weatherData?.minutely_15?.precipitation) return [];
-    const currentMs = shiftedNow.getTime();
-    const times = weatherData.minutely_15.time.map((t: string) => new Date(t).getTime());
-    let idx = times.findIndex(t => t > currentMs);
-    let currentIdx = (idx === -1) ? times.length - 1 : Math.max(0, idx - 1);
+    
+    // Usem temps real per sincronitzar, no el temps desplaçat
+    const currentMs = new Date().getTime(); 
+    const timesRaw = weatherData.minutely_15.time;
+    
+    // Cerca ràpida sense crear arrays de Dates massius
+    let idx = -1;
+    for(let i = 0; i < timesRaw.length; i++) {
+        // Assumim ISO string que JS parseja correctament en UTC/Local
+        if (new Date(timesRaw[i]).getTime() > currentMs) {
+            idx = i;
+            break;
+        }
+    }
+    
+    let currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
     return weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
-  }, [weatherData, shiftedNow]);
+  }, [weatherData]); // Eliminada dependència innecessària de shiftedNow per evitar re-loops
 
-  // 3. INDEX ACTUAL
+  // 3. INDEX ACTUAL (CORREGIT: TIMEZONE SAFE)
   const currentHourlyIndex = useMemo(() => {
      if (!weatherData?.hourly?.time) return 0;
-     const nowMs = shiftedNow.getTime();
+     
+     // FIX CRÍTIC: Comparació estricta en UTC.
+     // L'hora actual del dispositiu (now) vs l'hora absoluta del moment.
+     const nowUTC = new Date().getTime(); 
+     
      const idx = weatherData.hourly.time.findIndex((t: string) => {
         const tMs = new Date(t).getTime();
-        return tMs <= nowMs && (tMs + 3600000) > nowMs;
+        // Busquem l'interval on l'hora actual cau dins (hora inici <= ara < hora fi)
+        return tMs <= nowUTC && (tMs + 3600000) > nowUTC;
      });
-     return idx !== -1 ? idx : 0;
-  }, [weatherData, shiftedNow]);
+
+     // Fallback de seguretat
+     if (idx === -1) {
+         // Si estem fora de rang (futur llunyà o passat), busquem el més proper
+         const times = weatherData.hourly.time.map((t: string) => new Date(t).getTime());
+         let closest = 0;
+         let minDiff = Infinity;
+         times.forEach((t, i) => {
+             const diff = Math.abs(t - nowUTC);
+             if(diff < minDiff) { minDiff = diff; closest = i; }
+         });
+         return closest;
+     }
+     return idx;
+  }, [weatherData]); // 'shiftedNow' eliminat de dependències per evitar índexs falsos
 
   // 4. CHART DATA
   const chartData = useMemo(() => {
@@ -73,8 +103,8 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
         time: tRaw,
         temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
         apparent: unit === 'F' ? Math.round((appTemp * 9/5) + 32) : appTemp,
-        rain: rainProb,
-        precip: precipVol,
+        rain: rainProb, // Això és probabilitat (POP)
+        precip: precipVol, // Això és volum (QPF)
         pop: rainProb,
         qpf: precipVol,
         wind: weatherData.hourly.wind_speed_10m[realIndex],

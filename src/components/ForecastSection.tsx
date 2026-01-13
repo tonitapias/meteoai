@@ -1,3 +1,4 @@
+// src/components/ForecastSection.tsx
 import React, { memo } from 'react';
 import { Clock, Calendar, TrendingUp, ChevronRight, Droplets, Snowflake, Umbrella } from 'lucide-react';
 import { SmartForecastCharts } from './WeatherCharts';
@@ -17,9 +18,23 @@ const ForecastSection = memo(function ForecastSection({
     chartData, comparisonData, dailyData, weeklyExtremes, unit, lang, onDayClick, comparisonEnabled, showCharts = true 
 }: ForecastSectionProps) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+  
+  // FIX: Format segur que evita el timezone shift ("salt de dia"). 
+  // Forcem l'hora a les 12:00 del migdia per assegurar que el dia de la setmana es manté estable.
   const formatDate = (dateString: string) => {
-      const d = dateString.includes('T') ? new Date(dateString) : new Date(`${dateString}T00:00:00`);
-      return new Intl.DateTimeFormat(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'short', day: 'numeric' }).format(d);
+      const datePart = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+      const [y, m, d] = datePart.split('-').map(Number);
+      const safeDate = new Date(y, m - 1, d, 12, 0, 0); 
+      return new Intl.DateTimeFormat(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'short', day: 'numeric' }).format(safeDate);
+  };
+
+  // FIX: Helper per extreure l'hora crua (HH) de l'ISO string
+  const getRawHour = (isoString: string) => {
+      try {
+          return parseInt(isoString.split('T')[1].split(':')[0], 10);
+      } catch (e) {
+          return new Date(isoString).getHours();
+      }
   };
 
   return (
@@ -35,31 +50,26 @@ const ForecastSection = memo(function ForecastSection({
                     const isSnow = h.temp < 1.5;
                     const precipProb = h.rain || 0;
                     const precipAmount = h.precip || 0; 
-                    
-                    // CORRECCIÓ: Mostrem si hi ha probabilitat O si hi ha volum > 0.1mm
                     const showPrecipitation = precipProb > 0 || precipAmount >= 0.1;
 
                     return (
                         <div key={i} className="flex flex-col items-center min-w-[4.5rem] snap-start p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                            <span className="text-xs text-slate-400 font-bold mb-2">{new Date(h.time).getHours()}h</span>
+                            {/* FIX: Use raw hour extraction per evitar hores incorrectes */}
+                            <span className="text-xs text-slate-400 font-bold mb-2">{getRawHour(h.time)}h</span>
                             <div className="mb-2 scale-110 drop-shadow-md">
                                 {getWeatherIcon(h.code, "w-8 h-8", h.isDay)}
                             </div>   
                             <span className="text-lg font-bold text-white mb-1">{Math.round(h.temp)}°</span>
                             
-                            {/* BARRA + TEXT DE PRECIPITACIÓ */}
                             <div className="flex flex-col items-center w-full gap-1 mt-1 min-h-[1.5rem] justify-end">
                                 {showPrecipitation ? (
                                     <>
-                                        {/* Barra de probabilitat (si és 0 però hi ha mm, mostrem una barra mínima grisa o transparent) */}
                                         <div className="h-1 w-full bg-slate-700/50 rounded-full overflow-hidden">
                                             <div 
                                                 className={`h-full ${isSnow ? 'bg-slate-200' : 'bg-blue-500'}`} 
                                                 style={{ width: `${Math.max(Math.min(precipProb, 100), precipAmount > 0 ? 10 : 0)}%` }}
                                             ></div>
                                         </div>
-                                        
-                                        {/* Mostrem mm si n'hi ha, o % si només és probabilitat */}
                                         {precipAmount >= 0.1 ? (
                                             <span className={`text-[9px] font-bold ${isSnow ? 'text-slate-300' : 'text-blue-300'}`}>
                                                 {precipAmount >= 1 ? Math.round(precipAmount) : precipAmount.toFixed(1)}
@@ -90,13 +100,12 @@ const ForecastSection = memo(function ForecastSection({
                     const precipSum = dailyData.precipitation_sum ? dailyData.precipitation_sum[i] : 0;
                     const precipProb = dailyData.precipitation_probability_max ? dailyData.precipitation_probability_max[i] : 0;
                     const isSnow = dailyData.snowfall_sum && dailyData.snowfall_sum[i] > 0;
-                    
-                    // CORRECCIÓ TAMBÉ AQUÍ: Mostrem si hi ha probabilitat O suma > 0
                     const hasPrecip = precipProb > 0 || precipSum > 0;
 
                     return (
                         <button key={day} onClick={() => onDayClick(i)} className="flex items-center justify-between p-3.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all group w-full active:scale-[0.99]">
                             <div className="flex items-center gap-4 w-28 md:w-32">
+                                {/* FIX: Ensure formatDate uses safety logic */}
                                 <span className="font-bold text-slate-200 capitalize w-10 text-sm text-left">{formatDate(day).split(' ')[0]}</span>
                                 <div className="scale-100">{getWeatherIcon(dailyData.weather_code[i], "w-8 h-8", 1)}</div>
                             </div>
