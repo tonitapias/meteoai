@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
-import { TrendingUp, Database, ShieldCheck } from 'lucide-react'; // AFEGITS NOUS IMPORTS
+import { TrendingUp, Database, ShieldCheck } from 'lucide-react';
 
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
@@ -26,7 +26,7 @@ import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 
-// --- NOU FOOTER PROFESSIONAL ---
+// --- FOOTER ---
 const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
   const year = new Date().getFullYear();
   const isWelcome = mode === 'welcome';
@@ -34,7 +34,6 @@ const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
   return (
     <footer className={`w-full flex flex-col items-center gap-4 py-8 mt-auto z-10 transition-opacity duration-1000 ${isWelcome ? 'text-slate-400 opacity-80 pb-8' : 'text-slate-500 border-t border-white/5 pt-8'}`}>
         
-        {/* LOGOS / CREDITS */}
         <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[10px] font-bold tracking-widest uppercase opacity-70">
             <span className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors cursor-default" title="Data Source">
                 <Database className="w-3 h-3" /> Open-Meteo API
@@ -45,7 +44,6 @@ const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
             </span>
         </div>
 
-        {/* COPYRIGHT I VERSIÓ */}
         <div className="flex flex-col md:flex-row items-center gap-2 text-[11px] font-medium">
             <span className="opacity-90">© {year} MeteoAI Engineering.</span>
             <span className="hidden md:inline opacity-30 mx-2">/</span>
@@ -66,7 +64,7 @@ export default function MeteoIA() {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const { weatherData, aqiData, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation } = useWeather(lang, unit);
-  // Extreiem chartData aquí
+  
   const { shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, currentBg, chartData, comparisonData, weeklyExtremes } = useWeatherCalculations(weatherData, unit, now);
   const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit);
 
@@ -85,7 +83,7 @@ export default function MeteoIA() {
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
-  // --- VISTA 1: WELCOME SCREEN ---
+  // --- WELCOME SCREEN ---
   if (!weatherData && !loading && !error) {
     return (
       <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
@@ -93,21 +91,18 @@ export default function MeteoIA() {
             <WeatherParticles code={0} />
          </div>
          
-         {/* Afegit h-screen per assegurar que el footer quedi a baix de tot */}
          <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
             <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} />
             </div>
-            
-            {/* FOOTER EN MODE BENVINGUDA */}
             <Footer mode="welcome" />
          </div>
       </div>
     );
   }
 
-  // --- VISTA 2: MAIN DASHBOARD ---
+  // --- DASHBOARD ---
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col`}>
       <WeatherParticles code={effectiveWeatherCode} />
@@ -137,7 +132,6 @@ export default function MeteoIA() {
                         />
                         <ErrorBoundary>
                             <div className="bento-card p-6 min-h-[200px] flex flex-col justify-center">
-                                {/* Passem el VOLUM (precip) del hook */}
                                 <AIInsights 
                                     analysis={aiAnalysis} 
                                     minutelyData={minutelyPreciseData} 
@@ -190,7 +184,6 @@ export default function MeteoIA() {
             )}
         </div>
 
-        {/* FOOTER EN MODE DASHBOARD */}
         <Footer mode="dashboard" />
 
         <Suspense fallback={null}>

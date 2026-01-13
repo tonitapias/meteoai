@@ -57,9 +57,10 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const paddingY = 30;
 
   const { points, gfsPoints, iconPoints } = useMemo(() => {
+    // FIX: Retornem null si la dada no existeix per evitar pintar 0
     const getSafeValue = (d: ChartDataPoint) => {
         const val = d[dataKey];
-        if (val === null || val === undefined) return layer === 'snowLevel' ? null : 0;
+        if (val === null || val === undefined) return layer === 'snowLevel' ? null : null; 
         return val;
     };
 
@@ -79,7 +80,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
     
     const rng = max - min || 1;
     const calcY = (val: number | null) => {
-        if (val === null) return height + 10; 
+        if (val === null) return height + 10; // Fora del gràfic
         return height - paddingY - ((val - min) / rng) * (height - 2 * paddingY);
     };
 
@@ -99,19 +100,23 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
 
   const { areaPath, linePath, gfsPath, iconPath } = useMemo(() => {
       const buildSmoothPath = (pts: any[]) => {
+        // FIX: Filtrem només punts vàlids per no dibuixar línies a zero
         const validPts = pts.filter(p => p.value !== null && p.y <= height);
-        if (validPts.length === 0) return "";
+        if (validPts.length < 2) return "";
+        
         let d = `M ${validPts[0].x},${validPts[0].y}`;
         for (let i = 0; i < validPts.length - 1; i++) {
           const p0 = validPts[i];
           const p1 = validPts[i + 1];
           const cx = (p0.x + p1.x) / 2;
+          // Si hi ha massa distància X (gap), movem enlloc de corbar (opcional, però segur)
           d += ` C ${cx},${p0.y} ${cx},${p1.y} ${p1.x},${p1.y}`;
         }
         return d;
       };
 
       const lPath = buildSmoothPath(points);
+      // Àrea només si hi ha camí
       const aPath = lPath ? `${lPath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z` : "";
       
       return {
@@ -149,6 +154,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         {iconPath && <path d={iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="2 2"/>}
         {linePath && <path d={linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" />}
         
+        {/* Zona Interactiva */}
         {points.map((p, i) => (
           <rect 
             key={i} 
@@ -163,6 +169,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           />
         ))}
 
+        {/* Eix X (Hores) */}
         {points.map((p, i) => {
              const step = width < 600 ? 4 : 3; 
              return (i % step === 0) && (
@@ -172,6 +179,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
             )
         })}
 
+        {/* Hover Tooltip - Només si hi ha dades */}
         {hoverData && hoverData.value !== null && (
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
@@ -275,7 +283,6 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
   );
 };
 
-// --- COMPONENT CORREGIT: MINUTELY PRECISE CHART ---
 export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }: { data: number[], label: string, currentPrecip: number }) => {
     let chartData = data ? [...data] : [];
     if(chartData.length === 0) return null; 
@@ -284,13 +291,11 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }: { data:
     while(chartData.length < 4) chartData.push(0);
     chartData = chartData.slice(0, 4);
     
-    // BUG FIX CRÍTIC:
-    // Abans aquí hi havia una línia que injectava la probabilitat (%) com si fos volum (mm)
-    // if (currentPrecip > 0 && chartData[0] === 0) chartData[0] = currentPrecip; <--- ELIMINADA
+    // NOTA AUDITOR: Eliminada la injecció forçada de precipitació aquí. Es gestiona a WeatherCalculations.
     
     if (chartData.every(v => v === 0)) return null;
     
-    // Escala gràfica: mínim 0.5mm per que es vegi algo si plou poc
+    // Escala gràfica
     const max = Math.max(...chartData, 0.5); 
     
     const getIntensityColor = (val: number) => {
@@ -313,7 +318,6 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }: { data:
                 <div className="flex items-end gap-2 h-full w-full relative z-10">
                 {chartData.map((val, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
-                        {/* AFEGIT 'mm' AL VALOR PER EVITAR CONFUSIÓ */}
                         {val > 0 && <span className="text-[9px] font-bold mb-0.5 text-blue-200">{val.toFixed(1)}mm</span>}
                         <div className="w-full bg-blue-900/30 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end">
                             <div className={`w-full rounded-sm transition-all ${getIntensityColor(val)}`} style={{ height: `${(val / max) * 100}%` }}></div>

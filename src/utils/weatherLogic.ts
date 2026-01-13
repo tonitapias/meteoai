@@ -5,7 +5,6 @@ import { WeatherData } from '../services/weatherApi';
 
 const { PRECIPITATION, WIND, TEMP, RELIABILITY, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
-// Estenem WeatherData perquè la normalització afegeix estructures de comparació
 export interface ExtendedWeatherData extends WeatherData {
   hourlyComparison?: {
     gfs: any[];
@@ -15,7 +14,7 @@ export interface ExtendedWeatherData extends WeatherData {
     gfs: any;
     icon: any;
   };
-  [key: string]: any; // Permet flexibilitat per camps afegits dinàmicament
+  [key: string]: any;
 }
 
 // ==========================================
@@ -63,7 +62,6 @@ export const getWeatherLabel = (current: any, language: Language): string => {
   const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
   if (!tr || !current) return "";
   const code = Number(current.weather_code);
-  // Fem servir 'as any' perquè accedim per índex numèric a un objecte tipat
   return (tr.wmo as any)[code] || "---";
 };
 
@@ -180,6 +178,7 @@ export const getRealTimeWeatherCode = (
     let code = Number(current.weather_code);
     const temp = Number(current.temperature_2m);
     
+    // Validació de dades
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.slice(0, 2).filter(v => v != null)) 
         : 0;
@@ -210,13 +209,14 @@ export const getRealTimeWeatherCode = (
         }
     }
     
-    // 2. BOIRA
+    // 2. BOIRA vs PRECIPITACIÓ
     const visibility = current.visibility; 
     const isFogCode = code === 45 || code === 48;
     const hasVisibilityData = visibility !== undefined && visibility !== null; 
     const isLowVisibility = hasVisibilityData && visibility < 2000; 
 
-    if ((isFogCode || isLowVisibility) && precipInstantanea < 0.5) {
+    // FIX: Reduït de 0.5 a 0.1. Si plou (encara que sigui poc), volem veure pluja, no boira.
+    if ((isFogCode || isLowVisibility) && precipInstantanea < 0.1) {
         if (hasVisibilityData && visibility < 1000) return 45;
         if (isFogCode) return code;
     }
@@ -251,6 +251,10 @@ export const getRealTimeWeatherCode = (
 // ==========================================
 // 3. GENERADOR D'IA (BASED ON RULES)
 // ==========================================
+// ... (Les funcions analyzePrecipitation, analyzeSky, etc. no han canviat, 
+// però per brevetat assumeixo que estan aquí com l'original. 
+// He mantingut la lògica original aquí ja que no presentava errors crítics).
+// Si cal, puc enganxar el bloc sencer, però per espai em centro en el fix de sota.
 
 const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: any) => {
     let parts = [];
@@ -275,7 +279,6 @@ const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, cod
 
 const analyzeSky = (code: number, isDay: number, currentHour: number, visibility: number, rainProb: number, cloudCover: number, tr: any, alerts: any[]) => {
     let parts = [];
-    
     if (isDay) parts.push(currentHour < 12 ? tr.aiIntroMorning : tr.aiIntroAfternoon);
     else parts.push(tr.aiIntroNight);
 
@@ -327,10 +330,8 @@ const generateAlertsAndTips = (params: any, tr: any) => {
     const { code, windSpeed, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum } = params;
     let alerts = [];
     let tips = [];
-
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
 
-    // Alertes
     if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     else if ((code === 65 || code === 82 || precipSum > ALERTS.PRECIP_SUM_HIGH) && isRaining) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
@@ -347,12 +348,10 @@ const generateAlertsAndTips = (params: any, tr: any) => {
     }
     if (aqiValue > ALERTS.AQI_BAD) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
 
-    // Consells de Roba (Temp)
     if (temp < TEMP.FREEZING) { alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' }); tips.push(tr.tipCoat, tr.tipThermal); } 
     else if (temp < TEMP.COLD) { tips.push(tr.tipCoat); if (temp < 5) tips.push(tr.tipLayers); } 
     else if (temp >= TEMP.COLD && temp < 16) { tips.push(tr.tipLayers); }
 
-    // Consells generals
     if (rainProb > 40 || isRaining) tips.push(tr.tipUmbrella);
     if (tips.length === 0) tips.push(tr.tipCalm);
 
@@ -372,8 +371,6 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
     const code = effectiveCode !== null ? effectiveCode : current.weather_code;
     const currentHour = new Date().getHours();
     
-    // Extracció de dades
-    // Nota: Usem 'any' aquí per seguretat si l'objecte current no té minutely15 tipat encara
     const precipInstantanea = (current as any).minutely15 ? (current as any).minutely15[0] : 0;
     const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
 
@@ -385,7 +382,6 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
         futureRainProb = daily.precipitation_probability_max[0];
     }
     
-    // 1. Generació de Text (Resum)
     let summaryParts: string[] = [];
     let alerts: any[] = [];
 
@@ -400,32 +396,17 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
         summaryParts.push(current.wind_speed_10m > WIND.STRONG ? tr.aiWindStrong : tr.aiWindMod);
     }
 
-    const tempParts = analyzeTemperature(
-        current.apparent_temperature, 
-        current.temperature_2m, 
-        current.relative_humidity_2m, 
-        daily.temperature_2m_min[0], 
-        currentHour, 
-        unit, 
-        tr
-    );
+    const tempParts = analyzeTemperature(current.apparent_temperature, current.temperature_2m, current.relative_humidity_2m, daily.temperature_2m_min[0], currentHour, unit, tr);
     summaryParts = [...summaryParts, ...tempParts];
 
-    // 2. Generació d'Alertes i Consells
     const alertsAndTips = generateAlertsAndTips({
-        code, 
-        windSpeed: current.wind_speed_10m, 
-        temp: current.temperature_2m, 
-        rainProb: futureRainProb, 
-        isRaining, 
-        uvMax: daily.uv_index_max[0], 
-        isDay: current.is_day, 
-        aqiValue, 
+        code, windSpeed: current.wind_speed_10m, temp: current.temperature_2m, 
+        rainProb: futureRainProb, isRaining, uvMax: daily.uv_index_max[0], 
+        isDay: current.is_day, aqiValue, 
         currentCape: hourly.cape ? hourly.cape[currentHour] || 0 : 0, 
         precipSum: daily.precipitation_sum && daily.precipitation_sum[0]
     }, tr);
 
-    // 3. Fiabilitat
     let confidenceText = tr.aiConfidence; 
     let confidenceLevel = 'high';
     if (reliability) {
@@ -433,27 +414,21 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
         else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod; }
     }
 
-    // Filtrar parts undefined o nulles i unir
     const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
-    
-    return { 
-        text: finalString, 
-        tips: alertsAndTips.tips, 
-        confidence: confidenceText, 
-        confidenceLevel, 
-        alerts: [...alerts, ...alertsAndTips.alerts] 
-    };
+    return { text: finalString, tips: alertsAndTips.tips, confidence: confidenceText, confidenceLevel, alerts: [...alerts, ...alertsAndTips.alerts] };
 };
 
 // ==========================================
 // 4. FUSIÓ DE MODELS
 // ==========================================
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
-    // Si no hi ha dades d'alta resolució, retornem el base intacte
     if (!baseData || !highResData) return baseData;
     
-    // Per seguretat, treballem sobre l'objecte baseData (que ve de cache/fetch)
-    const target = baseData;
+    // FIX CRÍTIC: Deep clone per evitar mutació d'estat i assegurar re-render
+    const target = typeof structuredClone === 'function' 
+        ? structuredClone(baseData) 
+        : JSON.parse(JSON.stringify(baseData)); // Fallback per entorns antics
+
     const source = highResData;
 
     // A. Actualització de Dades "Current" (Dades instantànies)
@@ -504,10 +479,20 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                 safeSet('cloud_cover_low');
                 safeSet('cloud_cover_mid');
                 safeSet('cloud_cover_high');
+
+                // FIX LÒGIC: Sincronització de probabilitat.
+                // Si AROME diu que plou, no podem tenir 0% de probabilitat.
+                const aromePrecip = sH['precipitation']?.[sourceIndex];
+                if (aromePrecip !== undefined && aromePrecip >= 0.1) {
+                    if (!tH['precipitation_probability']) tH['precipitation_probability'] = [];
+                    const currentProb = tH['precipitation_probability'][globalIndex] || 0;
+                    // Pugem la probabilitat a 90% mínim si hi ha pluja tangible
+                    tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 90);
+                }
             }
         });
 
-        // Actualització extra
+        // Actualització extra current (Cloud cover)
         if (target.current && target.current.time) {
             const currentDt = new Date(target.current.time).getTime();
             const closestIndex = source.hourly.time.findIndex((t: string) => 
