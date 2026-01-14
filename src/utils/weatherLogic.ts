@@ -384,11 +384,12 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
 
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
     if (!baseData) return baseData;
+    // Clonem per seguretat
     const target = typeof structuredClone === 'function' ? structuredClone(baseData) : JSON.parse(JSON.stringify(baseData)); 
     const source = highResData;
     const masterTimeLength = target.hourly?.time?.length || 0;
 
-    // A. NORMALITZACIÓ INICIAL (Tot a 168h amb nulls explícits)
+    // A. NORMALITZACIÓ INICIAL (Tot a 168h amb nulls explícits per evitar errors a les gràfiques)
     if (target.hourly && masterTimeLength > 0) {
         Object.keys(target.hourly).forEach(key => {
             if (key === 'time') return;
@@ -399,9 +400,32 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         });
     }
 
+    // Si no hi ha dades d'AROME, retornem l'Europeu intacte (Fallback)
     if (!source) return target;
 
-    // B. INJECCIÓ
+    // B. INJECCIÓ MASSIVA AL 'CURRENT' (PRIORITAT AROME)
+    // Això fa que el giny principal mostri les dades d'alta resolució
+    const CURRENT_FIELDS_TO_OVERWRITE = [
+        'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'dew_point_2m',
+        'is_day', 'precipitation', 'rain', 'showers', 'snowfall', 'weather_code',
+        'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
+        'pressure_msl', 'surface_pressure',
+        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'
+    ];
+
+    if (source.current && target.current) {
+        CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
+             // Només sobreescrivim si AROME té una dada vàlida (no null/undefined)
+             if (source.current[k] != null && !isNaN(Number(source.current[k]))) {
+                 target.current[k] = source.current[k];
+             }
+        });
+        // Marquem que estem usant dades híbrides/AROME
+        target.current.source = 'AROME HD'; 
+    }
+
+    // C. INJECCIÓ HORÀRIA (HÍBRIDA)
+    // Fusiona les primeres hores d'AROME amb la resta de dies d'ECMWF per a les gràfiques
     const HOURLY_FIELDS = [
         'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
         'precipitation', 'weather_code', 'pressure_msl', 'surface_pressure',
@@ -410,35 +434,38 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         'cape', 'freezing_level_height', 'visibility', 'is_day', 'uv_index'
     ];
 
-    if (source.current && target.current) {
-        // Actualització current (Safe update)
-        ['temperature_2m', 'wind_speed_10m', 'weather_code', 'precipitation', 'is_day'].forEach(k => {
-             if (source.current[k] != null && !isNaN(source.current[k])) target.current[k] = source.current[k];
-        });
-        target.current.source = 'AROME HD'; 
-    }
-
     if (source.hourly && target.hourly && target.hourly.time) {
         const globalTimeIndexMap = new Map();
         target.hourly.time.forEach((t: string, i: number) => globalTimeIndexMap.set(t, i));
 
         (source.hourly.time || []).forEach((timeValue: string, sourceIndex: number) => {
             const globalIndex = globalTimeIndexMap.get(timeValue);
+            
+            // Només injectem si l'hora existeix al model base (per no trencar gràfiques)
             if (globalIndex !== undefined) {
                 const sH = source.hourly;
                 const tH = target.hourly;
+                
                 HOURLY_FIELDS.forEach(field => {
                     const val = sH[field]?.[sourceIndex];
                     if (val != null && !isNaN(val)) {
+                         // Assegurem que l'array destí existeix
                          if (!tH[field]) tH[field] = new Array(masterTimeLength).fill(null);
+                         // Sobreescrivim la dada horària amb la d'AROME
                          tH[field][globalIndex] = val;
                     }
                 });
-                // Logic Pluja
+
+                // Lògica extra: Si AROME detecta pluja forta, pugem la probabilitat de pluja
+                // (ja que AROME no sempre dóna "probability", però si dóna "precipitation" mm)
                 const aromePrecip = sH['precipitation']?.[sourceIndex];
-                if (aromePrecip >= 0.5) {
+                if (aromePrecip >= 0.1) {
                     if (!tH['precipitation_probability']) tH['precipitation_probability'] = new Array(masterTimeLength).fill(0);
-                    tH['precipitation_probability'][globalIndex] = Math.max(tH['precipitation_probability'][globalIndex] || 0, 65);
+                    // Si AROME diu que plou, posem probabilitat alta al model base si aquesta era baixa
+                    const currentProb = tH['precipitation_probability'][globalIndex] || 0;
+                    if (currentProb < 50) {
+                        tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 70);
+                    }
                 }
             }
         });
