@@ -3,16 +3,16 @@ import { TRANSLATIONS, Language } from '../constants/translations';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { WeatherData } from '../services/weatherApi';
 
-const { PRECIPITATION, WIND, TEMP, RELIABILITY, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
+const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
 export interface ExtendedWeatherData extends WeatherData {
   hourlyComparison?: {
-    ecmwf: any[]; // Afegit
+    ecmwf: any[];
     gfs: any[];
     icon: any[];
   };
   dailyComparison?: {
-    ecmwf: any; // Afegit
+    ecmwf: any;
     gfs: any;
     icon: any;
   };
@@ -227,21 +227,6 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
     }
 };
 
-export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
-  if (!dailyGFS || !dailyICON || !dailyBest) return { level: 'high', type: 'ok', value: 0 };
-  
-  const t1 = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
-  const t2 = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
-  const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
-  
-  const temps = [t1, t2, t3];
-  const diffTemp = Math.max(...temps) - Math.min(...temps);
-  
-  if (diffTemp > 5) return { level: 'low', type: 'temp', value: diffTemp.toFixed(1) };
-  if (diffTemp > 2) return { level: 'medium', type: 'general', value: 0 };
-  return { level: 'high', type: 'ok', value: 0 };
-};
-
 // ==========================================
 // 3. DETECCIÓ INTEL·LIGENT (TESTS PASSATS)
 // ==========================================
@@ -326,21 +311,16 @@ export const isAromeSupported = (lat: number, lon: number): boolean => {
 export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
     if (!current || !daily || !hourly || !hourly.time) return null;
 
-    // 1. SINCRONITZACIÓ TEMPORAL (CRÍTIC)
-    // Busquem on és "ara" dins de l'array horari per no agafar dades de la matinada passada
     const currentIsoTime = current.time; 
     let startIndex = hourly.time.findIndex((t: string) => t === currentIsoTime);
 
-    // Fallback: Si no troba l'hora exacta, busquem per l'hora (YYYY-MM-DDTHH)
     if (startIndex === -1 && currentIsoTime) {
          const currentHourStr = currentIsoTime.slice(0, 13); 
          startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentHourStr));
     }
     
-    // Si tot falla, assumim índex 0 (però ja no passarà quasi mai)
     startIndex = startIndex === -1 ? 0 : startIndex;
 
-    // Helper per extreure les pròximes 4 hores reals
     const getNext4h = (key: string) => {
         const data = hourly[key];
         if (!Array.isArray(data)) return [];
@@ -349,7 +329,7 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
 
     return {
         timestamp: current.time,
-        location: { // Afegit per context geogràfic si està disponible
+        location: { 
             elevation: safeNum(current.elevation || daily.elevation, 0)
         },
         current: {
@@ -369,13 +349,12 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
             sunset: daily.sunset?.[0]
         },
         short_term_trend: {
-            // Això és el que mirarà l'IA per saber què passarà d'aquí una estona
             temps: getNext4h('temperature_2m'),
             rain_prob: getNext4h('precipitation_probability'),
-            precip_vol: getNext4h('precipitation'), // Important per intensitat
+            precip_vol: getNext4h('precipitation'), 
             wind: getNext4h('wind_speed_10m'),
-            gusts: getNext4h('wind_gusts_10m'), // Vital per alertes
-            snow_depth: getNext4h('snow_depth') // Opcional, bo per esquí
+            gusts: getNext4h('wind_gusts_10m'),
+            snow_depth: getNext4h('snow_depth') 
         }
     };
 };
@@ -386,12 +365,10 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
 
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
     if (!baseData) return baseData;
-    // Clonem per seguretat
     const target = typeof structuredClone === 'function' ? structuredClone(baseData) : JSON.parse(JSON.stringify(baseData)); 
     const source = highResData;
     const masterTimeLength = target.hourly?.time?.length || 0;
 
-    // A. NORMALITZACIÓ INICIAL (Tot a 168h amb nulls explícits per evitar errors a les gràfiques)
     if (target.hourly && masterTimeLength > 0) {
         Object.keys(target.hourly).forEach(key => {
             if (key === 'time') return;
@@ -402,11 +379,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         });
     }
 
-    // Si no hi ha dades d'AROME, retornem l'Europeu intacte (Fallback)
     if (!source) return target;
 
-    // B. INJECCIÓ MASSIVA AL 'CURRENT' (PRIORITAT AROME)
-    // Això fa que el giny principal mostri les dades d'alta resolució
     const CURRENT_FIELDS_TO_OVERWRITE = [
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'dew_point_2m',
         'is_day', 'precipitation', 'rain', 'showers', 'snowfall', 'weather_code',
@@ -417,17 +391,13 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
 
     if (source.current && target.current) {
         CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
-             // Només sobreescrivim si AROME té una dada vàlida (no null/undefined)
              if (source.current[k] != null && !isNaN(Number(source.current[k]))) {
                  target.current[k] = source.current[k];
              }
         });
-        // Marquem que estem usant dades híbrides/AROME
         target.current.source = 'AROME HD'; 
     }
 
-    // C. INJECCIÓ HORÀRIA (HÍBRIDA)
-    // Fusiona les primeres hores d'AROME amb la resta de dies d'ECMWF per a les gràfiques
     const HOURLY_FIELDS = [
         'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
         'precipitation', 'weather_code', 'pressure_msl', 'surface_pressure',
@@ -443,7 +413,6 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         (source.hourly.time || []).forEach((timeValue: string, sourceIndex: number) => {
             const globalIndex = globalTimeIndexMap.get(timeValue);
             
-            // Només injectem si l'hora existeix al model base (per no trencar gràfiques)
             if (globalIndex !== undefined) {
                 const sH = source.hourly;
                 const tH = target.hourly;
@@ -451,19 +420,14 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                 HOURLY_FIELDS.forEach(field => {
                     const val = sH[field]?.[sourceIndex];
                     if (val != null && !isNaN(val)) {
-                         // Assegurem que l'array destí existeix
                          if (!tH[field]) tH[field] = new Array(masterTimeLength).fill(null);
-                         // Sobreescrivim la dada horària amb la d'AROME
                          tH[field][globalIndex] = val;
                     }
                 });
 
-                // Lògica extra: Si AROME detecta pluja forta, pugem la probabilitat de pluja
-                // (ja que AROME no sempre dóna "probability", però si dóna "precipitation" mm)
                 const aromePrecip = sH['precipitation']?.[sourceIndex];
                 if (aromePrecip >= 0.1) {
                     if (!tH['precipitation_probability']) tH['precipitation_probability'] = new Array(masterTimeLength).fill(0);
-                    // Si AROME diu que plou, posem probabilitat alta al model base si aquesta era baixa
                     const currentProb = tH['precipitation_probability'][globalIndex] || 0;
                     if (currentProb < 50) {
                         tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 70);
@@ -491,11 +455,10 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
         dailyComparison: { ecmwf: {}, gfs: {}, icon: {} } 
     };
     
-    // 1. Normalització Daily (Neteja de claus principals i comparatives)
     Object.keys(data.daily || {}).forEach(key => {
         if (key.includes('_best_match')) {
             const cleanKey = key.split('_best_match')[0];
-            result.daily[cleanKey] = data.daily[key]; // Posem la dada "best" com a principal
+            result.daily[cleanKey] = data.daily[key]; 
         } else {
             let model = null;
             if (key.includes('_ecmwf_')) model = 'ecmwf';
@@ -509,7 +472,6 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
         }
     });
 
-    // 2. Normalització Hourly
     const timeLength = data.hourly?.time?.length || 0;
     ['ecmwf', 'gfs', 'icon'].forEach(m => {
         result.hourlyComparison[m] = Array.from({ length: timeLength }, () => ({}));
@@ -518,7 +480,7 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
     Object.keys(data.hourly || {}).forEach(key => {
         if (key.includes('_best_match')) {
             const cleanKey = key.split('_best_match')[0];
-            result.hourly[cleanKey] = data.hourly[key]; // Dada horària principal
+            result.hourly[cleanKey] = data.hourly[key];
         } else {
             let model = null;
             if (key.includes('_ecmwf_')) model = 'ecmwf';
@@ -535,7 +497,6 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
         }
     });
 
-    // 3. Normalització Current (Important per a la temperatura principal)
     Object.keys(data.current || {}).forEach(key => {
         if (key.includes('_best_match')) {
             const cleanKey = key.split('_best_match')[0];
@@ -544,4 +505,43 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
     });
 
     return result;
+};
+
+// ==========================================
+// 6. CÀLCUL DE FIABILITAT (MILLORAT)
+// ==========================================
+
+export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
+  // MILLORA 1: Evitar falsos positius
+  // Si falta algun model per comparar, no podem dir que la fiabilitat és alta.
+  if (!dailyGFS || !dailyICON || !dailyBest) {
+      return { level: 'medium', type: 'general', value: 0 }; 
+  }
+  
+  // 1. Consens de Temperatura
+  const t1 = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
+  const t2 = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
+  const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
+  const diffTemp = Math.max(t1, t2, t3) - Math.min(t1, t2, t3);
+  
+  // 2. Consens de Precipitació (NOVA FUNCIONALITAT)
+  const p1 = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
+  const p2 = safeNum(dailyGFS.precipitation_sum?.[dayIndex]);
+  const p3 = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
+  const diffPrecip = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);
+
+  // LÒGICA DE COLORS (CASCADA)
+  
+  // VERMELL: Molta discrepància en temperatura (>5°C) o pluja (>10mm)
+  if (diffTemp > 5 || diffPrecip > 10) {
+      return { level: 'low', type: 'unstable', value: diffTemp.toFixed(1) };
+  }
+  
+  // GROC: Discrepància moderada (>2°C o >3mm)
+  if (diffTemp > 2 || diffPrecip > 3) {
+      return { level: 'medium', type: 'divergent', value: 0 };
+  }
+  
+  // VERD: Els tres models diuen pràcticament el mateix
+  return { level: 'high', type: 'ok', value: 0 };
 };

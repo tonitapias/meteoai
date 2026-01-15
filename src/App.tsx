@@ -66,13 +66,15 @@ export default function MeteoIA() {
   const { weatherData, aqiData, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation } = useWeather(lang, unit);
   
   // 1. Càlculs Numèrics i Gràfics
+  // MILLORA: Recuperem 'reliability' dels càlculs
   const { 
       shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, 
-      currentBg, chartData24h, chartDataFull, comparisonData, weeklyExtremes 
+      currentBg, chartData24h, chartDataFull, comparisonData, weeklyExtremes, reliability 
   } = useWeatherCalculations(weatherData, unit, now);
 
   // 2. Intel·ligència Artificial
-  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit);
+  // MILLORA: Passem 'reliability' a la IA perquè l'indicador de consens funcioni
+  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, reliability);
 
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [showRadar, setShowRadar] = useState(false);
@@ -90,7 +92,6 @@ export default function MeteoIA() {
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
   // --- WELCOME SCREEN ---
-  // MODIFICAT: Ara permetem que es mostri encara que estigui loading per veure l'spinner al botó
   if (!weatherData && !error) { 
     return (
       <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
@@ -100,7 +101,6 @@ export default function MeteoIA() {
          <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
             <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
-                {/* MODIFICAT: Passem loading com a prop */}
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} loading={loading} />
             </div>
             <Footer mode="welcome" />
@@ -123,7 +123,6 @@ export default function MeteoIA() {
 
         <div className="mt-6 md:mt-10 flex-1">
             {error && <ErrorBanner message={error} />}
-            {/* Mantinc LoadingSkeleton només si ja estem dins del dashboard i canviem de ciutat */}
             {loading && !weatherData && <LoadingSkeleton />}
 
             {weatherData && !loading && (
@@ -145,7 +144,7 @@ export default function MeteoIA() {
                                      <svg className="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                                      </svg>
-                                     <span className="text-xs font-bold uppercase tracking-widest">{t.preciseRain || "Previsió 1h (DEBUG)"}</span>
+                                     <span className="text-xs font-bold uppercase tracking-widest">{t.preciseRain || "Previsió 1h"}</span>
                                 </div>
                                 <MinutelyPreciseChart 
                                     data={minutelyPreciseData} 
@@ -157,10 +156,9 @@ export default function MeteoIA() {
 
                         <ErrorBoundary>
                             <div className="bento-card p-6 min-h-[200px] flex flex-col justify-center">
+                                {/* AIInsights ara rep el badge de color correcte */}
                                 <AIInsights 
                                     analysis={aiAnalysis} 
-                                    minutelyData={minutelyPreciseData} 
-                                    currentPrecip={chartData24h?.[0]?.precip || 0} 
                                     lang={lang}
                                 />
                             </div>

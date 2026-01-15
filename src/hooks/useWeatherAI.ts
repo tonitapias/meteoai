@@ -3,42 +3,43 @@ import { useState, useEffect, useRef } from 'react';
 import { generateAIPrediction } from '../utils/weatherLogic';
 import { getGeminiAnalysis } from '../services/geminiService';
 
-export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: any) {
+// MILLORA: Afegit paràmetre 'reliability'
+export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: any, reliability: any) {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const lastProcessedKey = useRef<string>("");
 
   useEffect(() => {
-    // 1. FILTRO DE SEGURIDAD: No actuar si faltan datos críticos
+    // 1. Validació inicial
     const current = weatherData?.current;
     if (!current || current.weather_code === undefined) return;
 
-    // 2. LLAVE ESTABLE: Inclou l'AQI a la clau per forçar actualització si arriba tard
+    // 2. Construcció de la clau única (incloent fiabilitat)
     const lat = (weatherData.location?.latitude || current.latitude)?.toFixed(3);
     const lon = (weatherData.location?.longitude || current.longitude)?.toFixed(3);
     const weatherCode = current.weather_code;
     const aqiVal = aqiData?.current?.european_aqi || 0;
     
-    // Afegim l'AQI a la clau única per garantir que si canvia, es recalculi
-    const currentKey = `${lat}-${lon}-${weatherCode}-${lang}-${unit}-${aqiVal}`;
+    // Si reliability canvia, la clau també canviarà i forçarà el recàlcul
+    const relLevel = reliability?.level || 'high';
+    const currentKey = `${lat}-${lon}-${weatherCode}-${lang}-${unit}-${aqiVal}-${relLevel}`;
 
-    // 3. CIRCUIT BREAKER
+    // 3. Circuit Breaker (Evitar bucles)
     if (lastProcessedKey.current === currentKey) return;
     lastProcessedKey.current = currentKey;
 
     const fetchAI = async () => {
       try {
-        // Predicción local inmediata (sin IA externa)
-        // Ara aqiVal ja tindrà el valor correcte des del principi gràcies al fix de useWeather
+        // MILLORA: Passem reliability a la funció generadora
         const local = generateAIPrediction(
           current, weatherData.daily, weatherData.hourly, 
-          aqiVal, lang, null, null, unit
+          aqiVal, lang, null, reliability, unit
         );
         setAiAnalysis(local);
 
-        // Intento de mejora con Gemini (primero revisará su propia cache interna)
+        // Crida externa a Gemini
         const gemini = await getGeminiAnalysis(weatherData, lang);
         
-        // Verifiquem que la clau no hagi canviat mentre esperàvem (evitar race conditions)
+        // Només actualitzem si la clau no ha canviat mentre esperàvem
         if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
           setAiAnalysis((prev: any) => ({
             ...prev,
@@ -52,11 +53,10 @@ export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: an
       }
     };
 
-    // Debouncing: Esperar medio segundo de estabilidad antes de actuar
     const timer = setTimeout(fetchAI, 500);
     return () => clearTimeout(timer);
 
-  }, [weatherData, aqiData, lang, unit]);
+  }, [weatherData, aqiData, lang, unit, reliability]); // Important: reliability a les dependències
 
   return { aiAnalysis };
 }

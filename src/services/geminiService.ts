@@ -85,32 +85,32 @@ export const getGeminiAnalysis = async (weatherData: any, lang: string = 'ca') =
     // Detecció de severitat per ajustar el to professional
     const isSevere = (weatherData.current?.weather_code >= 60) || (weatherData.current?.wind_speed_10m > 40);
     
+    // MODIFICAT: To més humà i proper, mantenint rigor en cas d'emergència
     const toneInstruction = isSevere 
-        ? "TONE: Critical, authoritative, strictly objective, and safety-focused. Prioritize data thresholds and immediate risks." 
-        : "TONE: Professional, technical, concise, and formal. Avoid any personal advice, humor, or lifestyle references.";
+        ? "TONE: Autoritat professional i serietat màxima. Prioritza la seguretat i explica els riscos de forma clara i directa, sense alarmismes però amb fermesa." 
+        : "TONE: Professional, amable i divulgatiu. Utilitza un relat fluid i natural, com si fessis la crònica del temps a la ràdio o TV per a un públic general.";
 
     const targetLanguage = LANG_MAP[lang] || 'Catalan';
 
+    // MODIFICAT: Prompt optimitzat per evitar tecnicismes i millorar la narrativa
     const prompt = `
-      You are the Technical Meteorological Analysis System (TMAS). Your role is to provide rigorous, high-precision weather assessments based on numerical data.
+      Actua com un meteoròleg expert amb gran capacitat de comunicació. La teva missió és traduir dades numèriques complexes en un relat entenedor, precís i seriós per a l'usuari.
       
-      DATA CONTEXT (JSON):
+      CONTEXT DE DADES (JSON):
       ${contextString}
 
-      MISSION INSTRUCTIONS:
-      1. ANALYZE DATA: Evaluate 'short_term_trend' (next 4h) for significant shifts in thermal gradients, wind velocity, and convective stability (CAPE).
-      2. STRICT PROFESSIONALISM: ${toneInstruction}
-      3. NO LIFESTYLE: Do NOT mention coffee, clothes, washing cars, or running. Focus ONLY on meteorological impacts.
-      4. OUTPUT LANGUAGE: ${targetLanguage}.
+      INSTRUCCIONS DE RELAT:
+      1. SENSE TECNICISMES: No utilitzis paraules com 'gradients', 'higrometria', 'convectiu' o 'isoterma'. En lloc d'això, explica l'efecte real (ex: 'canvi sobtat de temperatura', 'humitat que augmenta la sensació de xafogor').
+      2. RELAT PROPER: Explica el "perquè" i el "què esperar" de les pròximes hores de forma natural. 
+      3. SERIETAT PROFESSIONAL: Evita bromes o frases massa col·loquials. Manté el rigor científic però amb paraules del dia a dia.
+      4. IDIOMA DE SORTIDA: ${targetLanguage}.
+      5. ${toneInstruction}
       
-      RESPONSE OBJECTIVES (JSON):
-      - "text": Technical impact summary (max 2 sentences). Start directly with the analysis. 
-        * Focus on atmospheric stability, hygrometry (humidity impacts), and precise timing of hydrometeors.
-      
-      - "tips": 2 short, technical tactical recommendations based on operational risks.
-        * Focus on surface conditions (hydroplaning, ice), wind load constraints, or visibility thresholds.
+      OBJECTIUS DE LA RESPOSTA (JSON):
+      - "text": Resum de l'estat actual i tendència immediata (màxim 3 frases). Ha de ser un paràgraf fluid, no una llista.
+      - "tips": 2 recomanacions pràctiques i tàctiques basades en les condicions (ex: visibilitat en carretera, precaució amb el vent, hidratació).
 
-      REQUIRED OUTPUT FORMAT (Valid JSON, no markdown):
+      FORMAT REQUERIT (JSON pur, sense markdown):
       {"text": "...", "tips": ["...", "..."]}
     `;
 

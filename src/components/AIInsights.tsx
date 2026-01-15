@@ -1,7 +1,7 @@
 // src/components/AIInsights.tsx
 import React from 'react';
 import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella, ShieldAlert } from 'lucide-react';
-import { TypewriterText } from './WeatherUI'; // <--- Eliminat MinutelyPreciseChart dels imports
+import { TypewriterText } from './WeatherUI';
 import { TRANSLATIONS, Language } from '../constants/translations';
 
 // --- INTERFACES ---
@@ -15,10 +15,9 @@ interface AnalysisResult {
     source?: string;
 }
 
+// MILLORA: Eliminades props 'minutelyData' i 'currentPrecip' que no es feien servir
 interface AIInsightsProps {
     analysis: AnalysisResult | null;
-    minutelyData: number[];
-    currentPrecip: number;
     lang: Language;
 }
 
@@ -97,7 +96,7 @@ const InsightSkeleton = ({ t }: { t: any }) => (
 
 // --- COMPONENT PRINCIPAL ---
 
-export default function AIInsights({ analysis, lang }: AIInsightsProps) { // <--- Ja no fem servir les props de gràfic
+export default function AIInsights({ analysis, lang }: AIInsightsProps) { 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   if (!analysis) return (
@@ -166,8 +165,6 @@ export default function AIInsights({ analysis, lang }: AIInsightsProps) { // <--
                     </div>
                 )}
             </div>
-            
-            {/* ELIMINAT: El gràfic de precipitació ja no és aquí */}
         </div>
     </div>
   );

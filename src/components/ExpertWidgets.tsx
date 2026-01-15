@@ -8,7 +8,14 @@ import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { AirQualityData } from '../services/weatherApi';
 import { WeatherUnit } from '../utils/formatters';
 
-interface ExpertWidgetsProps { weatherData: ExtendedWeatherData; aqiData: AirQualityData | null; lang: Language; unit: WeatherUnit; shiftedNow: Date; freezingLevel: number; }
+interface ExpertWidgetsProps { 
+    weatherData: ExtendedWeatherData; 
+    aqiData: AirQualityData | null; 
+    lang: Language; 
+    unit: WeatherUnit; 
+    shiftedNow: Date; 
+    freezingLevel: number; 
+}
 
 export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shiftedNow, freezingLevel }: ExpertWidgetsProps) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
@@ -22,25 +29,36 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shifte
     </div>
   );
 
+  // Lògica per mostrar neu o núvols segons la temperatura
+  const showSnowWidget = freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
+        {/* 1. Vent */}
         <WidgetCard><CompassGauge degrees={current.wind_direction_10m} speed={current.wind_speed_10m} label={t.wind} lang={lang} /></WidgetCard>
         
-        {freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL ? (
+        {/* 2. Cota de Neu o Capes de Núvols (Slot Dinàmic) */}
+        {showSnowWidget ? (
             <WidgetCard><SnowLevelWidget freezingLevel={freezingLevel} unit={unit} lang={lang} /></WidgetCard>
         ) : (
             <WidgetCard><CloudLayersWidget low={current.cloud_cover_low} mid={current.cloud_cover_mid} high={current.cloud_cover_high} lang={lang} /></WidgetCard>
         )}
 
+        {/* 3. Pressió */}
         <WidgetCard><CircularGauge icon={<AlertOctagon className="w-6 h-6"/>} label={t.pressure} value={Math.round(current.pressure_msl)} max={1050} subText="hPa" color="text-pink-400" trend={'steady'} /></WidgetCard>
+        
+        {/* 4. Punt de Rosada */}
         <WidgetCard><DewPointWidget value={currentDewPoint} humidity={current.relative_humidity_2m} lang={lang} unit={unit} /></WidgetCard>
+        
+        {/* 5. CAPE (Inestabilitat) */}
         <WidgetCard><CapeWidget cape={hourly?.cape?.[0] || 0} lang={lang} /></WidgetCard>
         
-        {/* El que sobra el posem aquí si no hi ha neu */}
-        {freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL && (
+        {/* 6. Slot Extra: Si hem mostrat Neu abans, mostrem els Núvols aquí per no perdre la dada */}
+        {showSnowWidget && (
              <WidgetCard><CloudLayersWidget low={current.cloud_cover_low} mid={current.cloud_cover_mid} high={current.cloud_cover_high} lang={lang} /></WidgetCard>
         )}
 
+        {/* 7, 8, 9. Ginys Dobles */}
         <WidgetCard cols={2}><SunArcWidget sunrise={daily.sunrise[0]} sunset={daily.sunset[0]} lang={lang} shiftedNow={shiftedNow}/></WidgetCard>
         <WidgetCard cols={2}><MoonWidget phase={moonPhaseVal} lat={weatherData.location?.latitude || 41} lang={lang}/></WidgetCard>
         <WidgetCard cols={2}><PollenWidget data={aqiData?.current} lang={lang} /></WidgetCard>
