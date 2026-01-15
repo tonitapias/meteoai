@@ -19,6 +19,21 @@ export interface WeatherData {
 
 const BASE_URL = "https://api.open-meteo.com/v1/forecast";
 const AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
+const TIMEOUT_MS = 10000; // 10 segons màxim per esperar el temps
+
+// --- Utilitat interna per evitar bloquejos infinits ---
+const fetchWithTimeout = async (url: string): Promise<Response> => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+};
 
 // 1. Funció Principal (ECMWF + GFS + ICON)
 export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F' = 'C'): Promise<WeatherData> => {
@@ -37,7 +52,7 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F' =
         timeformat: "iso8601",
     });
 
-    const response = await fetch(`${BASE_URL}?${params.toString()}`);
+    const response = await fetchWithTimeout(`${BASE_URL}?${params.toString()}`);
     if (!response.ok) throw new Error("Error connectant amb Open-Meteo");
     return response.json();
 };
@@ -51,7 +66,7 @@ export const getAirQualityData = async (lat: number, lon: number) => {
         timezone: "auto"
     });
 
-    const response = await fetch(`${AIR_QUALITY_URL}?${params.toString()}`);
+    const response = await fetchWithTimeout(`${AIR_QUALITY_URL}?${params.toString()}`);
     if (!response.ok) throw new Error("Error obtenint qualitat de l'aire");
     return response.json();
 };
@@ -62,7 +77,6 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
         latitude: lat.toString(),
         longitude: lon.toString(),
         current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high",
-        // CORRECCIÓ: Afegit 'is_day' al final de la llista horària
         hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,freezing_level_height,is_day",
         minutely_15: "precipitation", 
         timezone: "auto",
@@ -72,7 +86,7 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
         timeformat: "iso8601",
     });
 
-    const response = await fetch(`${BASE_URL}?${params.toString()}`);
+    const response = await fetchWithTimeout(`${BASE_URL}?${params.toString()}`);
     if (!response.ok) throw new Error("Error connectant amb AROME");
     return response.json();
 };

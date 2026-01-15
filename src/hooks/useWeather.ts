@@ -7,16 +7,19 @@ import {
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
+import { reverseGeocode } from '../services/geocodingService'; // NOU IMPORT
 import { WeatherUnit } from '../utils/formatters';
 import { Language } from '../constants/translations';
 
-// MODIFICACIÓ: Ara la caché guarda tant el temps com l'AQI per evitar desincronitzacions
+// Interfície actualitzada amb timestamp per controlar la caducitat
 interface CacheEntry {
     weather: ExtendedWeatherData;
     aqi: any;
+    timestamp: number;
 }
 
 const weatherCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minuts de vida útil
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
@@ -31,7 +34,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const now = Date.now();
     const cacheKey = `${lat.toFixed(3)}-${lon.toFixed(3)}-${unit}`;
 
-    // 1. SI ÉS UN DUPLICAT RECENT (Anti-rebots)
+    // 1. ANTI-REBOTS (Protecció immediata)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -39,11 +42,11 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
         return true; 
     }
 
-    // 2. SI ESTÀ A LA CACHE (Recuperem TOTES les dades)
-    if (weatherCache.has(cacheKey)) {
-        const cached = weatherCache.get(cacheKey)!;
+    // 2. CACHÉ AMB TTL (Si les dades són recents (<15 min), les usem)
+    const cached = weatherCache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
         setWeatherData(cached.weather);
-        setAqiData(cached.aqi); // Important: Restaurem també l'AQI
+        setAqiData(cached.aqi);
         setLoading(false);
         return true; 
     }
@@ -53,37 +56,22 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 3. LLANCEM TOTES LES PETICIONS EN PARAL·LEL
-      // Afegim aqiPromise aquí perquè 'loading' no es posi a false fins que tinguem l'AQI
+      // 3. PETICIONS EN PARAL·LEL
       const weatherPromise = getWeatherData(lat, lon, unit);
       const aqiPromise = getAirQualityData(lat, lon);
       
+      // Deleguem la lògica al nou servei segur
       const namePromise = (locationName === "La Meva Ubicació") 
-        ? Promise.race([
-            // CANVI: Usem BigDataCloud en lloc de Nominatim per evitar errors CORS/403
-            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ca`)
-                .then(res => res.json())
-                .then(data => ({
-                    // Adaptem la resposta al format que esperava l'app (simulant l'estructura de Nominatim)
-                    address: { 
-                        city: data.city || data.locality || data.principalSubdivision || "Ubicació desconeguda", 
-                        country: data.countryName 
-                    }
-                })),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
-          ]).catch(() => ({ address: { city: "La Meva Ubicació", country: "Local" } }))
-        : Promise.resolve({ address: { city: locationName, country: country } });
+        ? reverseGeocode(lat, lon, lang)
+        : Promise.resolve({ city: locationName || "Ubicació actual", country: country || "Local" });
 
-      // Esperem a tenir-ho TOT abans de processar
+      // Esperem totes les promeses
       const [data, geoData, airData] = await Promise.all([weatherPromise, namePromise, aqiPromise]);
 
-      // 4. PROCESSEM LES DADES
+      // 4. PROCESSAMENT DE DADES
       let processedData = normalizeModelData(data);
       
-      const finalName = (geoData as any).address?.city || (geoData as any).address?.town || (geoData as any).address?.village || locationName || "Ubicació actual";
-      const finalCountry = (geoData as any).address?.country || country || "Local";
-
-      // 5. INJECCIÓ AROME (Si s'escau)
+      // 5. INJECCIÓ AROME (Es manté intacta)
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
@@ -91,16 +79,21 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           } catch (e) { console.warn("Arome no disponible"); }
       }
 
+      // Actualitzem la ubicació amb les dades normalitzades
       processedData.location = { 
           ...processedData.location, 
-          name: finalName,
-          country: finalCountry,
+          name: geoData.city,
+          country: geoData.country,
           latitude: lat,
           longitude: lon 
       };
 
-      // 6. GUARDEM A L'ESTAT I A LA CACHÉ
-      const entry: CacheEntry = { weather: processedData, aqi: airData };
+      // 6. GUARDEM A LA CACHÉ AMB TIMESTAMP
+      const entry: CacheEntry = { 
+          weather: processedData, 
+          aqi: airData, 
+          timestamp: now 
+      };
       weatherCache.set(cacheKey, entry);
       
       setAqiData(airData);
@@ -113,11 +106,11 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       setError('No s\'ha pogut carregar el temps.');
       return false;
     } finally {
-      // Ara segur que tenim Weather + AQI abans de treure el spinner
       setLoading(false);
     }
-  }, [unit]);
+  }, [unit, lang]); // Afegim 'lang' perquè la geocodificació respongui al canvi d'idioma
 
+  // Aquesta funció es manté igual per no trencar la integració amb el botó de GPS
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setNotification({ type: 'error', msg: 'Geolocalització no suportada.' });
