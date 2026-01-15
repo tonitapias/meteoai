@@ -228,7 +228,7 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
 };
 
 // ==========================================
-// 3. DETECCIÓ INTEL·LIGENT (FIX: INFERÈNCIA NUVOLOSITAT)
+// 3. DETECCIÓ INTEL·LIGENT (CALIBRADA I REALISTA)
 // ==========================================
 
 export const getRealTimeWeatherCode = (
@@ -236,79 +236,70 @@ export const getRealTimeWeatherCode = (
     minutelyPrecipData: number[], 
     prob: number = 0, 
     freezingLevel: number = 2500, 
-    elevation: number = 0
+    elevation: number = 0,
+    cape: number = 0 // Afegim CAPE per detectar tempestes
 ): number => {
     if (!current) return 0;
     
-    // 1. Dades Segures
     let code = safeNum(current.weather_code, 0);
-    const cloudCover = safeNum(current.cloud_cover, 0); // VARIABLE CLAU
+    const cloudCover = safeNum(current.cloud_cover, 0); 
     const temp = safeNum(current.temperature_2m, 15);
     const visibility = safeNum(current.visibility, 10000);
     const humidity = safeNum(current.relative_humidity_2m, 50);
 
-    // FIX: INFERÈNCIA DE NUVOLOSITAT
-    // Si el model diu "0, 1, 2, 3" (rang no pluja) i tenim dades de núvols,
-    // corregim el codi per reflectir la realitat visual.
+    // FIX 1: CALIBRATGE DE NUVOLOSITAT REALISTA (Equilibrat)
+    // Llindars ajustats per no ser ni massa optimistes ni massa pessimistes.
+    // > 85% = Tancat | > 45% = Intervals evidents | > 15% = Algun núvol
     if (code <= 3) {
         if (cloudCover > 85) code = 3;      // Ennuvolat (Overcast)
         else if (cloudCover > 45) code = 2; // Intervals de núvols (Partly Cloudy)
         else if (cloudCover > 15) code = 1; // Majorment serè (Mostly Clear)
-        // Si < 15, es queda com a 0 (Serè)
+        else code = 0;                      // Serè totalment
     }
 
-    // 2. Càlcul Precipitació Instantània (Radar)
+    // FIX 2: FILTRE D'HUMITAT RELAXAT
+    // Només prohibim el sol (0) si la humitat és extrema (>92%), típic de boirina espessa.
+    // Això evita que dies normals de platja (80-85%) surtin com ennuvolats.
+    if (code === 0 && humidity > 92) {
+        code = 1; 
+    }
+
+    // FIX 3: INESTABILITAT (TEMPESTES D'ESTIU)
+    // Si hi ha molt CAPE i núvols, marquem amenaça de tempesta
+    if (cape > 1000 && cloudCover > 50 && code < 95) {
+        code = 95; 
+    }
+
+    // 4. LÒGICA DE PRECIPITACIÓ
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
-        ? Math.max(...minutelyPrecipData.slice(0, 2).map(v => safeNum(v, 0))) 
+        ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
         : 0;
 
     const freezingDist = freezingLevel - elevation;
-    
-    // --- LÒGICA DE NEU ---
     const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
 
     if (isColdEnoughForSnow) {
         const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
-        if (isRainCode) {
-            if (code === 65 || code === 82 || code === 67 || code >= 95) return 75; 
-            if (code === 63 || code === 81 || code === 55 || code === 57) return 73; 
-            return 71; 
-        }
-        if (precipInstantanea > 0) {
-            if (precipInstantanea > PRECIPITATION.HEAVY) return 75; 
-            if (precipInstantanea >= 0.5) return 73; 
+        if (isRainCode || precipInstantanea > 0) {
+            if (code === 65 || code === 82 || code === 67 || code >= 95 || precipInstantanea > 1.5) return 75; 
+            if (code === 63 || code === 81 || code === 55 || code === 57 || precipInstantanea >= 0.5) return 73; 
             return 71; 
         }
         if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
     }
     
-    // --- LÒGICA DE BOIRA ---
-    const isFogCode = code === 45 || code === 48;
-    const isLowVisibility = visibility < 2000; 
-
-    if ((isFogCode || isLowVisibility) && precipInstantanea < 0.1) {
-        if (visibility < 1000) return 45; 
-        if (isFogCode) return code;
+    // 5. LÒGICA DE BOIRA
+    if ((code === 45 || code === 48 || visibility < 1000) && precipInstantanea < 0.1) {
+        return 45;
     }
 
-    // --- LÒGICA DE PLUJA FORÇADA PEL RADAR ---
-    if (precipInstantanea >= PRECIPITATION.LIGHT) { // >0.1mm
+    // 6. LÒGICA DE PLUJA FORÇADA
+    if (precipInstantanea > 0.01) { 
         if (code >= 95) return code; 
-
-        if (precipInstantanea > PRECIPITATION.EXTREME) code = 81;
-        else if (precipInstantanea > PRECIPITATION.HEAVY) code = 65; 
-        else if (precipInstantanea >= 0.7) code = 63; 
-        else {
-            const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
-            if (!isRainCode) code = precipInstantanea < 0.3 ? 51 : 61; 
-        }
+        if (precipInstantanea > 4.0) code = 65; 
+        else if (precipInstantanea >= 1.0) code = 63; 
+        else code = 61; 
     } 
-    // --- INFERÈNCIA PER HUMITAT ---
-    else {
-        if (code < 45 && prob > 60 && humidity > 85) {
-            code = isColdEnoughForSnow ? 71 : 51; 
-        }
-    }
 
     return code;
 };
@@ -369,10 +360,6 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
         }
     };
 };
-
-// ==========================================
-// 4. FUSIÓ DE MODELS
-// ==========================================
 
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
     if (!baseData) return baseData;
@@ -451,10 +438,6 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     return target;
 };
 
-// ==========================================
-// 5. NORMALITZADOR DE DADES
-// ==========================================
-
 export const normalizeModelData = (data: any): ExtendedWeatherData => {
     if (!data || !data.current) return data;
     
@@ -518,31 +501,21 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
     return result;
 };
 
-// ==========================================
-// 6. CÀLCUL DE FIABILITAT (CORREGIT)
-// ==========================================
-
 export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
-  // Si falta algun model per comparar, no podem dir que la fiabilitat és alta.
   if (!dailyGFS || !dailyICON || !dailyBest) {
       return { level: 'medium', type: 'general', value: 0 }; 
   }
   
-  // 1. Consens de Temperatura
   const t1 = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
   const t2 = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
   const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
   const diffTemp = Math.max(t1, t2, t3) - Math.min(t1, t2, t3);
   
-  // 2. Consens de Precipitació
   const p1 = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
   const p2 = safeNum(dailyGFS.precipitation_sum?.[dayIndex]);
   const p3 = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
   const diffPrecip = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);
 
-  // LÒGICA DE COLORS CORREGIDA (Vitest Compatible)
-  
-  // VERMELL: Molta discrepància
   if (diffTemp > 5) {
       return { level: 'low', type: 'temp', value: diffTemp.toFixed(1) };
   }
@@ -550,11 +523,9 @@ export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: a
       return { level: 'low', type: 'precip', value: diffPrecip.toFixed(1) };
   }
   
-  // GROC: Discrepància moderada
   if (diffTemp > 2 || diffPrecip > 3) {
       return { level: 'medium', type: 'divergent', value: 0 };
   }
   
-  // VERD: Consens
   return { level: 'high', type: 'ok', value: 0 };
 };

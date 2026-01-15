@@ -47,7 +47,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     const rows: HourlyRow[] = [];
     const timeLength = h.time.length;
 
-    // BUCLE ESTRICTE PER GESTIÓ DE FINAL DE MODEL
     for (let i = 0; i < timeLength; i++) {
         const t = h.time[i];
         const dateStr = t.slice(0, 10);
@@ -57,34 +56,53 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         if (dateStr < todayDateStr) continue;
         if (dateStr === todayDateStr && hour < nowHour) continue;
 
-        // 2. TALL DE SEGURETAT (Fix Cobertura)
-        // Si la temperatura és null, el model AROME s'ha acabat (aprox 42h).
-        // Aturem el bucle immediatament.
+        // 2. TALL DE SEGURETAT
         if (h.temperature_2m?.[i] === null || h.temperature_2m?.[i] === undefined) {
             break; 
         }
 
+        // --- CÀLCUL MANUAL DE 'isDay' ---
+        const isDay = h.is_day?.[i] !== undefined 
+            ? h.is_day[i] === 1 
+            : (hour >= 7 && hour <= 21);
+
+        // --- SISTEMA LOOK-AHEAD (ANTICIPACIÓ) ---
+        const precipActual = h.precipitation?.[i] ?? 0;
+        const precipSeguent = h.precipitation?.[i + 1] ?? 0;
+        const probabilitatVisual = Math.max(precipActual, precipSeguent);
+
+        // --- FIX: PONDERACIÓ DE CAPES (Visualització Realista) ---
+        // Els núvols alts (high) deixen passar el sol (factor 0.4).
+        // Els baixos i mitjans (factor 1.0 implícit) són els que realment tapen.
+        const low = h.cloud_cover_low?.[i] ?? 0;
+        const mid = h.cloud_cover_mid?.[i] ?? 0;
+        const high = h.cloud_cover_high?.[i] ?? 0;
+        const total = h.cloud_cover?.[i] ?? 0;
+
+        // Fórmula calibrada:
+        const visualCloudCover = Math.max(low, mid, high * 0.4, total * 0.7);
+
         // 3. PREPARACIÓ DADES FÍSIQUES
         const simulatedCurrent = {
-            weather_code: h.weather_code?.[i],
+            weather_code: h.weather_code?.[i], 
             temperature_2m: h.temperature_2m[i],
             visibility: h.visibility?.[i] ?? 10000,
             relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
-            // PAS CRÍTIC: Passem la cobertura de núvols al motor lògic
-            cloud_cover: h.cloud_cover?.[i] ?? 0 
+            cloud_cover: visualCloudCover, // Passem la cobertura ponderada
+            is_day: isDay ? 1 : 0 
         };
 
-        const precip = h.precipitation?.[i] ?? 0;
         const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
         const elevation = aromeData.elevation || 0;
 
-        // 4. CÀLCUL D'ICONA (Motor Centralitzat)
+        // 4. CÀLCUL D'ICONA
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
-            [precip], 
-            0,        
+            [probabilitatVisual], 
+            probabilitatVisual > 0 ? 80 : 0, 
             freezingLevel,
-            elevation
+            elevation,
+            h.cape?.[i] ?? 0
         );
 
         rows.push({
@@ -92,13 +110,13 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             hour: hour,
             date: dateStr,
             temp: h.temperature_2m[i],
-            precip: precip,
+            precip: precipActual,
             code: finalCode,
             wind: h.wind_speed_10m?.[i] ?? 0,
             gust: h.wind_gusts_10m?.[i] ?? 0,
             cape: h.cape?.[i] ?? 0,
-            isDay: h.is_day?.[i] === 1,
-            cloudCover: h.cloud_cover?.[i] ?? 0
+            isDay: isDay, 
+            cloudCover: visualCloudCover
         });
     }
 
@@ -188,7 +206,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                             <div className="flex items-center gap-4 w-1/3">
                                                 <div className="text-lg font-bold text-white tabular-nums">{row.hour}:00</div>
                                                 <div className="filter drop-shadow-md">
-                                                    {getWeatherIcon(row.code, "w-9 h-9", row.isDay)}
+                                                    {getWeatherIcon(row.code,"w-9 h-9",row.isDay,row.precip > 0 ? 90 : 0,row.wind)}
                                                 </div>
                                             </div>
 
