@@ -56,7 +56,7 @@ export default function CurrentWeather({
 
         {/* HEADER */}
         <div className="flex justify-between items-start w-full overflow-hidden">
-            <div className="flex flex-col gap-1 w-full min-w-0"> {/* min-w-0 permet que el truncament funcioni */}
+            <div className="flex flex-col gap-1 w-full min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span 
                         className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[9px] font-bold uppercase tracking-widest text-slate-300 truncate max-w-[120px]"
@@ -82,7 +82,7 @@ export default function CurrentWeather({
                     
                     <button 
                         onClick={onToggleFavorite} 
-                        className="text-slate-500 hover:text-amber-400 transition-colors active:scale-90 shrink-0 mt-1"
+                        className="text-slate-500 hover:text-amber-400 transition-colors active:scale-95 shrink-0 mt-1"
                     >
                         <Star className={`w-6 h-6 ${isFavorite ? 'fill-current text-amber-400' : ''}`} />
                     </button>
@@ -94,16 +94,20 @@ export default function CurrentWeather({
             </div>
         </div>
 
-        {/* CENTER: BIG TEMP & ICON */}
-        <div className="flex-1 flex flex-col items-center justify-center py-4">
+        {/* CENTER: BIG TEMP & ICON - CORRECCIÓ D'ESPAIAT RESPONSIVA */}
+        <div className="flex-1 flex flex-col items-center justify-center py-2 sm:py-4">
             <LivingIcon windSpeed={current.wind_speed_10m} precip={current.precipitation}>
-                {getWeatherIcon(effectiveCode, "w-40 h-40 md:w-56 md:h-56", current.is_day)}
+                {/* Reduïm una mica la icona en mòbils molt petits per guanyar aire */}
+                {getWeatherIcon(effectiveCode, "w-36 h-36 md:w-56 md:h-56", current.is_day)}
             </LivingIcon>
-            <div className="text-center -mt-4 relative">
-                <h1 className="text-[6.5rem] md:text-[8.5rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 leading-none tracking-tighter text-glow select-none">
+            
+            {/* FIX: Eliminem el marge negatiu en mòbil i el posem només en escriptori (md:-mt-6) */}
+            <div className="text-center mt-2 md:-mt-6 relative">
+                {/* Ajustem la mida de la font en mòbil de 6.5rem a 5.5rem per evitar el solapament */}
+                <h1 className="text-[5.5rem] md:text-[8.5rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 leading-none tracking-tighter text-glow select-none">
                     {getTemp(current.temperature_2m)}°
                 </h1>
-                <p className="text-lg md:text-xl font-medium text-indigo-100/90 capitalize tracking-wide">
+                <p className="text-lg md:text-xl font-medium text-indigo-100/90 capitalize tracking-wide mt-1">
                     {getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)}
                 </p>
             </div>

@@ -57,10 +57,21 @@ interface SunArcWidgetProps extends BaseWidgetProps {
 }
 export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }: SunArcWidgetProps) => {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+  
+  // Mantenim els objectes Date només per al càlcul del percentatge del gràfic
   const sunriseTime = new Date(sunrise).getTime();
   const sunsetTime = new Date(sunset).getTime();
   const now = shiftedNow.getTime();
   const isToday = shiftedNow.toDateString() === new Date(sunrise).toDateString();
+  
+  // --- FUNCIÓ DE BLINDATGE (Extreu l'hora real del text ISO) ---
+  const formatRealTime = (isoString: string) => {
+    if (!isoString || !isoString.includes('T')) return "--:--";
+    return isoString.split('T')[1].substring(0, 5); 
+  };
+
+  const displaySunrise = formatRealTime(sunrise);
+  const displaySunset = formatRealTime(sunset);
   
   let progress = 0; let nextEventText = "";
   
@@ -79,7 +90,7 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }: SunAr
      } else { nextEventText = t.sunSetDone; }
   } else if (now > sunsetTime) { progress = 1; nextEventText = t.sunSetDone; }
   
-  const r = 32; const cx = 50; const cy = 50; // Radius ajustat
+  const r = 32; const cx = 50; const cy = 50;
   const angle = Math.PI - (progress * Math.PI);
   const sunX = cx + r * Math.cos(angle);
   const sunY = cy - r * Math.sin(angle); 
@@ -104,9 +115,11 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }: SunAr
           </div>
        </div>
        <div className="w-full flex justify-between items-end -mt-3 z-10">
-          <span className="text-xs font-bold text-white">{new Date(sunrise).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          {/* USAR displaySunrise en lloc de toLocaleTimeString */}
+          <span className="text-xs font-bold text-white">{displaySunrise}</span>
           <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">{isToday ? (progress > 0 && progress < 1 ? t.day : t.night) : t.sun}</span>
-          <span className="text-xs font-bold text-white">{new Date(sunset).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          {/* USAR displaySunset en lloc de toLocaleTimeString */}
+          <span className="text-xs font-bold text-white">{displaySunset}</span>
        </div>
     </div>
   );
