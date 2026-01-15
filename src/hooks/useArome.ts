@@ -1,7 +1,8 @@
 // src/hooks/useArome.ts
 import { useState, useCallback } from 'react';
+import { getAromeData } from '../services/weatherApi';
+import { normalizeModelData } from '../utils/weatherLogic';
 
-// Definim una interfície simple pel retorn de l'API AROME
 interface AromeData {
   hourly: any;
   hourly_units: any;
@@ -18,37 +19,18 @@ export function useArome() {
     setError(null);
     
     try {
-      const params = new URLSearchParams({
-        latitude: lat.toString(),
-        longitude: lon.toString(),
-        hourly: 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cape,is_day',
-        models: 'arome_france',
-        timezone: 'auto',
-        forecast_days: '2'
-      });
-
-      const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
-      
-      const res = await fetch(url);
-      
-      if (!res.ok) {
-        if (res.status === 400) {
-           throw new Error("Ubicació fora del rang del model AROME (Només Europa Occidental/Pirineus).");
-        }
-        throw new Error(`Error connectant amb MeteoFrance: ${res.status}`);
-      }
-      
-      const rawData = await res.json();
+      const rawData = await getAromeData(lat, lon);
+      // Normalitzem per netejar claus com temperature_2m_meteofrance...
+      const normalized = normalizeModelData(rawData);
       
       setAromeData({
-        hourly: rawData.hourly,
-        hourly_units: rawData.hourly_units,
-        elevation: rawData.elevation
+        hourly: normalized.hourly,
+        hourly_units: normalized.hourly_units,
+        elevation: normalized.elevation
       });
 
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Error desconegut carregant AROME");
+      setError(err.message || "Error carregant dades AROME HD");
     } finally {
       setLoading(false);
     }
@@ -59,11 +41,5 @@ export function useArome() {
     setError(null);
   }, []);
 
-  return { 
-    aromeData, 
-    loading, 
-    error, 
-    fetchArome,
-    clearArome 
-  };
+  return { aromeData, loading, error, fetchArome, clearArome };
 }

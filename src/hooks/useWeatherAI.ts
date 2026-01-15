@@ -3,63 +3,53 @@ import { useState, useEffect, useRef } from 'react';
 import { generateAIPrediction } from '../utils/weatherLogic';
 import { getGeminiAnalysis } from '../services/geminiService';
 
-// ATENCIÓ: La clau és aquest "export" davant de function
 export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: any) {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-  
-  // 1. REF DE CONTROL
   const lastProcessedKey = useRef<string>("");
 
   useEffect(() => {
-    if (!weatherData?.current) return;
+    // 1. FILTRO DE SEGURIDAD: No actuar si faltan datos críticos
+    const current = weatherData?.current;
+    if (!current || current.weather_code === undefined) return;
 
-    // 2. GENEREM LA CLAU ÚNICA
-    const lat = weatherData.location?.latitude || weatherData.current?.latitude;
-    const lon = weatherData.location?.longitude || weatherData.current?.longitude;
-    const weatherCode = weatherData.current?.weather_code;
+    // 2. LLAVE ESTABLE: Redondeo a 3 decimales para evitar fluctuaciones del GPS
+    const lat = (weatherData.location?.latitude || current.latitude)?.toFixed(3);
+    const lon = (weatherData.location?.longitude || current.longitude)?.toFixed(3);
+    const weatherCode = current.weather_code;
     const currentKey = `${lat}-${lon}-${weatherCode}-${lang}-${unit}`;
 
-    // 3. BLOQUEIG DE SEGURETAT (CIRCUIT BREAKER)
-    if (lastProcessedKey.current === currentKey) {
-      return; 
-    }
-
-    // Marquem la clau com a processada IMMEDIATAMENT (síncronament).
+    // 3. CIRCUIT BREAKER: Detener si la situación meteorológica es la misma
+    if (lastProcessedKey.current === currentKey) return;
     lastProcessedKey.current = currentKey;
 
     const fetchAI = async () => {
       try {
-        // 4. LÒGICA LOCAL (Immediata)
+        // Predicción local inmediata (sin IA)
         const local = generateAIPrediction(
-          weatherData.current, weatherData.daily, weatherData.hourly, 
-          aqiData?.current?.us_aqi || 0, lang, null, null, unit
+          current, weatherData.daily, weatherData.hourly, 
+          aqiData?.current?.european_aqi || 0, lang, null, null, unit
         );
-        
-        // Actualitzem l'estat local primer
         setAiAnalysis(local);
 
-        // 5. MILLORA AMB GEMINI IA (Asíncrona)
-        console.log("🤖 MeteoAI: Demanant nova anàlisi a Gemini...");
-        
+        // Intento de mejora con Gemini (primero revisará su propia cache interna)
         const gemini = await getGeminiAnalysis(weatherData, lang);
         
-        if (gemini && gemini.text) {
-          // Verifiquem que el component encara vol aquesta resposta
-          if (lastProcessedKey.current === currentKey) {
-            setAiAnalysis((prev: any) => ({
-              ...prev,
-              text: gemini.text,
-              tips: gemini.tips?.length ? gemini.tips : prev.tips,
-              source: 'Gemini AI'
-            }));
-          }
+        if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
+          setAiAnalysis((prev: any) => ({
+            ...prev,
+            text: gemini.text,
+            tips: gemini.tips?.length ? gemini.tips : prev.tips,
+            source: 'Gemini AI'
+          }));
         }
       } catch (e) {
-        console.error("🚨 Error en el flux de useWeatherAI:", e);
+        console.error("🚨 Error useWeatherAI:", e);
       }
     };
 
-    fetchAI();
+    // Debouncing: Esperar medio segundo de estabilidad antes de actuar
+    const timer = setTimeout(fetchAI, 500);
+    return () => clearTimeout(timer);
 
   }, [weatherData, aqiData, lang, unit]);
 

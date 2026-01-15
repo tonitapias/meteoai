@@ -7,10 +7,12 @@ const { PRECIPITATION, WIND, TEMP, RELIABILITY, ALERTS, HUMIDITY } = WEATHER_THR
 
 export interface ExtendedWeatherData extends WeatherData {
   hourlyComparison?: {
+    ecmwf: any[]; // Afegit
     gfs: any[];
     icon: any[];
   };
   dailyComparison?: {
+    ecmwf: any; // Afegit
     gfs: any;
     icon: any;
   };
@@ -479,68 +481,67 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
 // ==========================================
 
 export const normalizeModelData = (data: any): ExtendedWeatherData => {
-     if (!data || !data.current) return data;
-     
-     const result: any = { 
-         current: { ...data.current }, 
-         hourly: { ...data.hourly }, 
-         daily: { ...data.daily }, 
-         hourlyComparison: { gfs: [], icon: [] }, 
-         dailyComparison: { gfs: {}, icon: {} } 
-     };
-     
-     const modelSuffixRegex = /(_best_match|_ecmwf\w*|_noaa\w*|_meteofrance\w*|_dwd\w*|_jma\w*|_gem\w*)/g;
+    if (!data || !data.current) return data;
+    
+    const result: any = { 
+        current: { ...data.current }, 
+        hourly: { ...data.hourly }, 
+        daily: { ...data.daily }, 
+        hourlyComparison: { ecmwf: [], gfs: [], icon: [] }, 
+        dailyComparison: { ecmwf: {}, gfs: {}, icon: {} } 
+    };
+    
+    // 1. Normalització Daily (Neteja de claus principals i comparatives)
+    Object.keys(data.daily || {}).forEach(key => {
+        if (key.includes('_best_match')) {
+            const cleanKey = key.split('_best_match')[0];
+            result.daily[cleanKey] = data.daily[key]; // Posem la dada "best" com a principal
+        } else {
+            let model = null;
+            if (key.includes('_ecmwf_')) model = 'ecmwf';
+            else if (key.includes('_gfs_')) model = 'gfs';
+            else if (key.includes('_icon_')) model = 'icon';
 
-     ['current', 'daily', 'hourly'].forEach(section => {
-         if (!data[section]) return;
-         
-         Object.keys(data[section]).forEach(key => {
-            if (key.includes('_gfs_') || key.includes('_icon_')) return;
-            if (key.match(modelSuffixRegex)) {
-                const cleanKey = key.replace(modelSuffixRegex, '');
-                if (!result[section][cleanKey]) {
-                    result[section][cleanKey] = data[section][key];
-                }
+            if (model) {
+                const cleanKey = key.split(`_${model}_`)[0];
+                result.dailyComparison[model][cleanKey] = data.daily[key];
             }
-         });
-     });
-
-     Object.keys(data.daily || {}).forEach(key => {
-        if (key.includes('_gfs_')) {
-           const cleanKey = key.split('_gfs_')[0]; 
-           result.dailyComparison.gfs[cleanKey] = data.daily[key];
-        } else if (key.includes('_icon_')) {
-           const cleanKey = key.split('_icon_')[0];
-           result.dailyComparison.icon[cleanKey] = data.daily[key];
         }
-     });
+    });
 
-     const timeLength = data.hourly?.time?.length || 0;
-     result.hourlyComparison.gfs = Array.from({ length: timeLength }, () => ({}));
-     result.hourlyComparison.icon = Array.from({ length: timeLength }, () => ({}));
+    // 2. Normalització Hourly
+    const timeLength = data.hourly?.time?.length || 0;
+    ['ecmwf', 'gfs', 'icon'].forEach(m => {
+        result.hourlyComparison[m] = Array.from({ length: timeLength }, () => ({}));
+    });
 
-     Object.keys(data.hourly || {}).forEach(key => {
-        let model = null;
-        let cleanKey = null;
-        if (key.includes('_gfs_')) {
-            model = 'gfs';
-            cleanKey = key.split('_gfs_')[0];
-        } else if (key.includes('_icon_')) {
-            model = 'icon';
-            cleanKey = key.split('_icon_')[0];
-        }
-        if (model && cleanKey) {
-            const values = data.hourly[key];
-            const safeLength = Math.min(values.length, timeLength);
-            for (let i = 0; i < safeLength; i++) {
-                // @ts-ignore
-                if (result.hourlyComparison[model][i]) {
-                    // @ts-ignore
+    Object.keys(data.hourly || {}).forEach(key => {
+        if (key.includes('_best_match')) {
+            const cleanKey = key.split('_best_match')[0];
+            result.hourly[cleanKey] = data.hourly[key]; // Dada horària principal
+        } else {
+            let model = null;
+            if (key.includes('_ecmwf_')) model = 'ecmwf';
+            else if (key.includes('_gfs_')) model = 'gfs';
+            else if (key.includes('_icon_')) model = 'icon';
+            
+            if (model) {
+                const cleanKey = key.split(`_${model}_`)[0];
+                const values = data.hourly[key];
+                for (let i = 0; i < Math.min(values.length, timeLength); i++) {
                     result.hourlyComparison[model][i][cleanKey] = values[i];
                 }
             }
         }
-     });
+    });
 
-     return { ...data, ...result };
+    // 3. Normalització Current (Important per a la temperatura principal)
+    Object.keys(data.current || {}).forEach(key => {
+        if (key.includes('_best_match')) {
+            const cleanKey = key.split('_best_match')[0];
+            result.current[cleanKey] = data.current[key];
+        }
+    });
+
+    return result;
 };
