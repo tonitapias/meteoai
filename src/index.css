@@ -11,23 +11,54 @@
 @layer components {
   /* --- BENTO GRID SYSTEM --- */
   .bento-card {
-    @apply relative overflow-hidden rounded-[2rem] backdrop-blur-xl transition-all duration-500;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* MILLORA: Blur més intens (2xl) per difuminar detalls del fons que distreguin */
+    @apply relative overflow-hidden rounded-[2rem] backdrop-blur-2xl transition-all duration-500;
+    
+    /* MILLORA CRÍTICA DE CONTRAST: 
+       Utilitzem una base fosca (rgba 2,6,23) en lloc de blanca.
+       Això actua com un filtre polaritzat: en fons foscos és invisible,
+       però en fons clars (cel blau) enfosqueix l'àrea per fer llegible el text blanc. */
+    background: linear-gradient(to bottom, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.15) 100%);
+    
+    /* Vora més nítida per separar visualment la targeta del cel */
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    
+    /* Ombra més profunda */
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 
   .bento-card:hover {
-    @apply border-white/15 bg-white/[0.07] shadow-2xl scale-[1.002];
+    /* En hover, enfosquim una mica més per focalitzar l'atenció */
+    @apply border-white/25 bg-slate-950/40 shadow-2xl scale-[1.002];
   }
 
   /* --- TYPOGRAPHY --- */
   .text-glow {
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    /* Afegim una ombra negra subtil (0 2px 4px) darrere la brillantor blanca.
+       Això garanteix llegibilitat fins i tot sobre blanc pur. */
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.25), 0 2px 4px rgba(0, 0, 0, 0.4);
   }
   
   .label-upper {
-    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400/80 mb-3 ml-1;
+    /* Augmentem contrast del text secundari */
+    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300/90 mb-3 ml-1;
+  }
+
+  /* --- SCROLLBARS (Necessari per AromeModal i llistes) --- */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -38,4 +69,13 @@
 @keyframes wiggle {
   0%, 100% { transform: rotate(-3deg); }
   50% { transform: rotate(3deg); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
 }
