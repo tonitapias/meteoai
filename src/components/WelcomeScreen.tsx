@@ -1,5 +1,6 @@
+// src/components/WelcomeScreen.tsx
 import React from 'react';
-import { MapPin, Sparkles, Globe, CloudSun, Command } from 'lucide-react';
+import { MapPin, Sparkles, Globe, CloudSun, Command, Loader2 } from 'lucide-react';
 import { Language } from '../constants/translations';
 
 interface WelcomeScreenProps {
@@ -7,9 +8,10 @@ interface WelcomeScreenProps {
   setLang: (lang: Language) => void;
   t: any;
   onLocate: () => void;
+  loading: boolean; // Prop afegida
 }
 
-export default function WelcomeScreen({ lang, setLang, t, onLocate }: WelcomeScreenProps) {
+export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: WelcomeScreenProps) {
   return (
     <div className="relative w-full flex flex-col items-center justify-center text-center gap-8 md:gap-12 animate-in fade-in zoom-in duration-700">
       
@@ -37,11 +39,23 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate }: WelcomeScr
 
         <button 
             onClick={onLocate}
-            className="group relative w-full max-w-sm flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all duration-300 shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.7)] hover:scale-[1.02] active:scale-95 overflow-hidden"
+            disabled={loading} // Deshabilitem per evitar doble click
+            className={`group relative w-full max-w-sm flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all duration-300 overflow-hidden ${
+                loading ? 'bg-indigo-800/80 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.7)] hover:scale-[1.02] active:scale-95'
+            }`}
         >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
-            <MapPin className="w-5 h-5 animate-bounce" />
-            <span className="tracking-wide">{t.useCurrentLocation}</span>
+            {loading ? (
+                <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="tracking-wide animate-pulse">{lang === 'ca' ? "Obtenint ubicació..." : "Locating..."}</span>
+                </>
+            ) : (
+                <>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+                    <MapPin className="w-5 h-5 animate-bounce" />
+                    <span className="tracking-wide">{t.useCurrentLocation}</span>
+                </>
+            )}
         </button>
 
         <div className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500 bg-slate-900/50 px-3 py-1.5 rounded-full border border-white/5">

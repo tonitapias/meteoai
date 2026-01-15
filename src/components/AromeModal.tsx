@@ -34,6 +34,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     return () => clearArome();
   }, [lat, lon, fetchArome, clearArome]);
 
+  // 1. GENERACIÓ DE FILES FILTRADES I NETES
   const hourlyRows = useMemo<HourlyRow[]>(() => {
     if (!aromeData?.hourly) return [];
     
@@ -44,20 +45,27 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     const rows: HourlyRow[] = [];
     const h = aromeData.hourly;
 
-    // Fem servir el temps com a guia i comprovem que els altres arrays existeixin
     (h.time || []).forEach((t: string, i: number) => {
       const dateStr = t.slice(0, 10); 
       const hourStr = t.slice(11, 13);
       const hour = parseInt(hourStr, 10);
       
+      // Filtre temporal: No mostrar passat
       if (dateStr < todayDateStr) return;
       if (dateStr === todayDateStr && hour < nowHour) return;
+      
+      // MILLORA CRÍTICA: FILTRE DE VALIDESA
+      // Si el model AROME no té dada de temperatura, assumim que s'ha acabat la predicció.
+      // Això evita que surtin files amb valors a 0 al final de la llista.
+      if (h.temperature_2m?.[i] === null || h.temperature_2m?.[i] === undefined) {
+          return;
+      }
       
       rows.push({
           time: t,
           hour: hour,
           date: dateStr,
-          temp: h.temperature_2m?.[i] ?? 0,
+          temp: h.temperature_2m[i],
           precip: h.precipitation?.[i] ?? 0,
           code: h.weather_code?.[i] ?? 0,
           wind: h.wind_speed_10m?.[i] ?? 0,
@@ -69,27 +77,40 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     return rows;
   }, [aromeData]);
 
-  const maxGust = aromeData?.hourly?.wind_gusts_10m ? Math.max(...aromeData.hourly.wind_gusts_10m) : 0;
-  const maxCape = aromeData?.hourly?.cape ? Math.max(...aromeData.hourly.cape) : 0;
-  const totalRain = aromeData?.hourly?.precipitation ? aromeData.hourly.precipitation.reduce((a: number, b: number) => a + b, 0) : 0;
+  // 2. CÀLCULS BASATS EN LES DADES FILTRADES (Més precís)
+  const maxGust = useMemo(() => {
+      if (hourlyRows.length === 0) return 0;
+      return Math.max(...hourlyRows.map(r => r.gust));
+  }, [hourlyRows]);
+
+  const maxCape = useMemo(() => {
+      if (hourlyRows.length === 0) return 0;
+      return Math.max(...hourlyRows.map(r => r.cape));
+  }, [hourlyRows]);
+
+  const totalRain = useMemo(() => {
+      return hourlyRows.reduce((acc, row) => acc + row.precip, 0);
+  }, [hourlyRows]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
       <div className="bg-slate-900 border border-fuchsia-500/30 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl relative flex flex-col">
         
+        {/* CAPÇALERA */}
         <div className="bg-slate-900/95 backdrop-blur border-b border-white/5 p-5 flex justify-between items-start shrink-0">
             <div>
                 <div className="flex items-center gap-3 mb-1">
                     <span className="bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">HD Live</span>
                     <h2 className="text-xl font-bold text-white tracking-tight">AROME <span className="text-fuchsia-400">1.3km</span></h2>
                 </div>
-                <p className="text-slate-400 text-xs md:text-sm">Detall d'alta precisió per a les properes 48h.</p>
+                <p className="text-slate-400 text-xs md:text-sm">Detall d'alta precisió per a les properes 36-48h.</p>
             </div>
             <button onClick={onClose} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
             </button>
         </div>
 
+        {/* LLISTA AMB SCROLL */}
         <div className="flex-1 overflow-y-auto custom-scrollbar" ref={listRef}>
             {loading && (
                 <div className="flex flex-col items-center justify-center h-64 space-y-4">
@@ -107,9 +128,10 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
 
             {aromeData && !loading && (
                 <div>
+                    {/* RESUM ESTATÍSTIC (Calculat sobre les dades filtrades) */}
                     <div className="grid grid-cols-3 gap-2 p-4 bg-slate-800/30 border-b border-white/5">
                          <div className="text-center">
-                            <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Precip. 48h</div>
+                            <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Precip. Total</div>
                             <div className="text-xl font-bold text-blue-200">{totalRain.toFixed(1)}<span className="text-xs font-normal ml-0.5 text-slate-500">mm</span></div>
                          </div>
                          <div className="text-center border-l border-white/5">
@@ -122,43 +144,50 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                          </div>
                     </div>
 
+                    {/* LLISTAT D'HORES */}
                     <div className="divide-y divide-white/5">
-                        {hourlyRows.map((row, index) => {
-                            const isNewDay = index > 0 && hourlyRows[index-1].date !== row.date;
-                            const isRaining = row.precip > 0;
-                            const isSnow = row.temp < 1.5 && isRaining;
-                            
-                            return (
-                                <div key={row.time}>
-                                    {isNewDay && (
-                                        <div className="sticky top-0 z-10 bg-slate-800 py-1 px-4 text-[10px] font-bold uppercase text-fuchsia-400 tracking-widest border-y border-white/5">
-                                            Demà
-                                        </div>
-                                    )}
-                                    <div className={`flex items-center justify-between p-4 ${isRaining ? 'bg-blue-900/10' : ''}`}>
-                                        <div className="flex items-center gap-4 w-1/3">
-                                            <div className="text-lg font-bold text-white">{row.hour}:00</div>
-                                            {getWeatherIcon(row.code, "w-8 h-8", row.isDay)}
-                                        </div>
-                                        <div className="flex-1 flex justify-center items-center gap-4">
-                                            <div className="text-xl font-bold text-slate-200">{Math.round(row.temp)}°</div>
-                                            <div className="w-16">
-                                                {isRaining && (
-                                                    <div className="flex items-center gap-1 text-blue-300 font-bold text-sm">
-                                                        {isSnow ? <Snowflake className="w-3 h-3 text-white" /> : <Droplets className="w-3 h-3" />}
-                                                        {row.precip.toFixed(1)}
-                                                    </div>
-                                                )}
+                        {hourlyRows.length === 0 ? (
+                            <div className="p-8 text-center text-slate-500 text-sm">
+                                Dades no disponibles temporalment o fora de rang.
+                            </div>
+                        ) : (
+                            hourlyRows.map((row, index) => {
+                                const isNewDay = index > 0 && hourlyRows[index-1].date !== row.date;
+                                const isRaining = row.precip > 0;
+                                const isSnow = row.temp < 1.5 && isRaining;
+                                
+                                return (
+                                    <div key={row.time}>
+                                        {isNewDay && (
+                                            <div className="sticky top-0 z-10 bg-slate-800 py-1 px-4 text-[10px] font-bold uppercase text-fuchsia-400 tracking-widest border-y border-white/5">
+                                                Demà
+                                            </div>
+                                        )}
+                                        <div className={`flex items-center justify-between p-4 ${isRaining ? 'bg-blue-900/10' : ''}`}>
+                                            <div className="flex items-center gap-4 w-1/3">
+                                                <div className="text-lg font-bold text-white">{row.hour}:00</div>
+                                                {getWeatherIcon(row.code, "w-8 h-8", row.isDay)}
+                                            </div>
+                                            <div className="flex-1 flex justify-center items-center gap-4">
+                                                <div className="text-xl font-bold text-slate-200">{Math.round(row.temp)}°</div>
+                                                <div className="w-16">
+                                                    {isRaining && (
+                                                        <div className="flex items-center gap-1 text-blue-300 font-bold text-sm">
+                                                            {isSnow ? <Snowflake className="w-3 h-3 text-white" /> : <Droplets className="w-3 h-3" />}
+                                                            {row.precip.toFixed(1)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="w-1/4 flex items-center justify-end gap-1.5 text-slate-400 font-medium">
+                                                <Wind className="w-3.5 h-3.5" />
+                                                {Math.round(row.wind)}
                                             </div>
                                         </div>
-                                        <div className="w-1/4 flex items-center justify-end gap-1.5 text-slate-400 font-medium">
-                                            <Wind className="w-3.5 h-3.5" />
-                                            {Math.round(row.wind)}
-                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })
+                        )}
                     </div>
                 </div>
             )}

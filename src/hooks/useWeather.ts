@@ -1,3 +1,4 @@
+// src/hooks/useWeather.ts
 import { useState, useCallback, useRef } from 'react';
 import { 
     normalizeModelData, 
@@ -9,7 +10,13 @@ import { getWeatherData, getAirQualityData, getAromeData } from '../services/wea
 import { WeatherUnit } from '../utils/formatters';
 import { Language } from '../constants/translations';
 
-const weatherCache = new Map<string, ExtendedWeatherData>();
+// MODIFICACIÓ: Ara la caché guarda tant el temps com l'AQI per evitar desincronitzacions
+interface CacheEntry {
+    weather: ExtendedWeatherData;
+    aqi: any;
+}
+
+const weatherCache = new Map<string, CacheEntry>();
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
@@ -20,23 +27,23 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
-  // MODIFICACIÓ: Afegim 'country' com a paràmetre opcional
   const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName?: string, country?: string) => {
     const now = Date.now();
     const cacheKey = `${lat.toFixed(3)}-${lon.toFixed(3)}-${unit}`;
 
-    // 1. SI ÉS UN DUPLICAT RECENT
+    // 1. SI ÉS UN DUPLICAT RECENT (Anti-rebots)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
         (now - lastFetchRef.current.time) < 3000) {
-        setLoading(false);
         return true; 
     }
 
-    // 2. SI ESTÀ A LA CACHE
+    // 2. SI ESTÀ A LA CACHE (Recuperem TOTES les dades)
     if (weatherCache.has(cacheKey)) {
-        setWeatherData(weatherCache.get(cacheKey)!);
+        const cached = weatherCache.get(cacheKey)!;
+        setWeatherData(cached.weather);
+        setAqiData(cached.aqi); // Important: Restaurem també l'AQI
         setLoading(false);
         return true; 
     }
@@ -46,27 +53,28 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
+      // 3. LLANCEM TOTES LES PETICIONS EN PARAL·LEL
+      // Afegim aqiPromise aquí perquè 'loading' no es posi a false fins que tinguem l'AQI
       const weatherPromise = getWeatherData(lat, lon, unit);
+      const aqiPromise = getAirQualityData(lat, lon);
       
-      // GESTIÓ DEL NOM I PAÍS
-      // Si és "La Meva Ubicació" (GPS), fem servir Nominatim per obtenir ciutat I PAÍS
       const namePromise = (locationName === "La Meva Ubicació") 
         ? Promise.race([
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`).then(res => res.json()),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
           ]).catch(() => ({ address: { city: "La Meva Ubicació", country: "Local" } }))
-        : Promise.resolve({ address: { city: locationName, country: country } }); // Si ve del cercador, passem el país
+        : Promise.resolve({ address: { city: locationName, country: country } });
 
-      const [data, geoData] = await Promise.all([weatherPromise, namePromise]);
+      // Esperem a tenir-ho TOT abans de processar
+      const [data, geoData, airData] = await Promise.all([weatherPromise, namePromise, aqiPromise]);
 
+      // 4. PROCESSEM LES DADES
       let processedData = normalizeModelData(data);
       
-      // Extreiem el nom i el país de la millor font possible
       const finalName = (geoData as any).address?.city || (geoData as any).address?.town || (geoData as any).address?.village || locationName || "Ubicació actual";
-      const finalCountry = (geoData as any).address?.country || country || "Local"; // <--- AQUÍ GUARDEM EL PAÍS
+      const finalCountry = (geoData as any).address?.country || country || "Local";
 
-      getAirQualityData(lat, lon).then(setAqiData).catch(() => null);
-
+      // 5. INJECCIÓ AROME (Si s'escau)
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
@@ -77,13 +85,18 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       processedData.location = { 
           ...processedData.location, 
           name: finalName,
-          country: finalCountry, // <--- I L'ASSIGNEM A L'OBJECTE FINAL
+          country: finalCountry,
           latitude: lat,
           longitude: lon 
       };
 
-      weatherCache.set(cacheKey, processedData);
+      // 6. GUARDEM A L'ESTAT I A LA CACHÉ
+      const entry: CacheEntry = { weather: processedData, aqi: airData };
+      weatherCache.set(cacheKey, entry);
+      
+      setAqiData(airData);
       setWeatherData(processedData);
+      
       return true;
 
     } catch (err: any) {
@@ -91,6 +104,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       setError('No s\'ha pogut carregar el temps.');
       return false;
     } finally {
+      // Ara segur que tenim Weather + AQI abans de treure el spinner
       setLoading(false);
     }
   }, [unit]);
@@ -112,7 +126,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
-        
         if (success) {
           setNotification({ type: 'success', msg: 'Ubicació actualitzada amb èxit' });
           setTimeout(() => setNotification(null), 3000);

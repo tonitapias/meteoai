@@ -90,7 +90,8 @@ export default function MeteoIA() {
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
   // --- WELCOME SCREEN ---
-  if (!weatherData && !loading && !error) {
+  // MODIFICAT: Ara permetem que es mostri encara que estigui loading per veure l'spinner al botó
+  if (!weatherData && !error) { 
     return (
       <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
          <div className="fixed inset-0 opacity-30 pointer-events-none">
@@ -99,7 +100,8 @@ export default function MeteoIA() {
          <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
             <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
-                <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} />
+                {/* MODIFICAT: Passem loading com a prop */}
+                <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} loading={loading} />
             </div>
             <Footer mode="welcome" />
          </div>
@@ -121,6 +123,7 @@ export default function MeteoIA() {
 
         <div className="mt-6 md:mt-10 flex-1">
             {error && <ErrorBanner message={error} />}
+            {/* Mantinc LoadingSkeleton només si ja estem dins del dashboard i canviem de ciutat */}
             {loading && !weatherData && <LoadingSkeleton />}
 
             {weatherData && !loading && (
@@ -136,8 +139,6 @@ export default function MeteoIA() {
                             aqiData={aqiData} showAromeBtn={supportsArome}
                         />
 
-                        {/* (2) BLOC MODIFICAT: ARA ES MOSTRA SEMPRE (DEBUG MODE) */}
-                        {/* Hem eliminat la condició .some(val => val > 0) per forçar la visualització */}
                         {minutelyPreciseData && (
                             <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border-indigo-500/30 bg-indigo-950/20 shadow-lg shadow-indigo-900/20">
                                 <div className="flex items-center gap-2 mb-3 text-indigo-200">
@@ -167,7 +168,6 @@ export default function MeteoIA() {
                     </div>
 
                     <div className="xl:col-span-8 flex flex-col gap-6">
-                        {/* WIDGETS AVANÇATS (SEMPRE VISIBLES EN MODE EXPERT) */}
                         {viewMode === 'expert' && (
                             <div className="animate-in fade-in duration-700">
                                 <h3 className="label-upper px-1 mb-4">Mètriques Avançades</h3>
@@ -192,7 +192,6 @@ export default function MeteoIA() {
                     </div>
                 </div>
 
-                {/* GRÀFICS DE TENDÈNCIA (SOL EN EXPERT) */}
                 {viewMode === 'expert' && (
                     <div className="mt-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 w-full">
                          <div className="bento-card p-6 md:p-8">

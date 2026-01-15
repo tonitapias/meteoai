@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, X, Star, Trash2, LocateFixed, LayoutDashboard, LayoutTemplate } from 'lucide-react';
 import { usePreferences } from '../hooks/usePreferences';
@@ -102,7 +103,6 @@ export default function Header({ onSearch, onLocate, loading }: HeaderProps) {
 
   const isFavoritesMode = query.trim().length <= 2;
 
-  // Component intern per als botons de vista (per reutilitzar estil)
   const ViewToggleButtons = () => (
     <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-xl p-1 flex items-center gap-1 shadow-lg">
         <button 
@@ -131,7 +131,6 @@ export default function Header({ onSearch, onLocate, loading }: HeaderProps) {
         </div>
 
         {/* CONTROLS DE VISTA (ESQUERRA - NOMÉS ESCRIPTORI) */}
-        {/* Aquests es mantenen a l'esquerra absoluta en pantalles grans */}
         <div className="hidden md:flex items-center gap-1 pointer-events-auto absolute left-0">
             <ViewToggleButtons />
         </div>
@@ -168,7 +167,7 @@ export default function Header({ onSearch, onLocate, loading }: HeaderProps) {
                 </div>
             </div>
 
-            {/* DESPLEGABLE DE RESULTATS (Igual que abans...) */}
+            {/* DESPLEGABLE DE RESULTATS */}
             {showDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
                     <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
@@ -235,19 +234,24 @@ export default function Header({ onSearch, onLocate, loading }: HeaderProps) {
         {/* BOTONS D'ACCIÓ (DRETA) */}
         <div className="flex items-center gap-3 pointer-events-auto md:ml-auto z-10">
             
-            {/* --- FIX MÒBIL: CONTROLS DE VISTA AQUÍ (Només mòbil) --- */}
-            {/* Això els col·loca al costat del botó de geolocalització quan estem en mòbil */}
             <div className="flex md:hidden">
                 <ViewToggleButtons />
             </div>
 
             <button 
                 onClick={onLocate} 
-                className="p-3.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 text-indigo-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 transition-all shadow-lg active:scale-95 group relative overflow-hidden"
+                disabled={loading} // MODIFICAT
+                className={`p-3.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/10 transition-all shadow-lg active:scale-95 group relative overflow-hidden ${
+                    loading ? 'cursor-wait text-slate-500 border-white/5' : 'text-indigo-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-500'
+                }`}
                 title={lang === 'ca' ? "La meva ubicació" : "My location"}
             >
                 <div className="absolute inset-0 bg-indigo-400/20 blur-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <LocateFixed className="w-5 h-5 relative z-10 group-hover:animate-spin-slow" />
+                {loading ? (
+                    <Loader2 className="w-5 h-5 relative z-10 animate-spin" />
+                ) : (
+                    <LocateFixed className="w-5 h-5 relative z-10 group-hover:animate-spin-slow" />
+                )}
             </button>
         </div>
     </header>
