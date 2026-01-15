@@ -76,8 +76,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         const mid = h.cloud_cover_mid?.[i] ?? 0;
         const high = h.cloud_cover_high?.[i] ?? 0;
         const total = h.cloud_cover?.[i] ?? 0;
-        
-        // Fórmula calibrada: Baixos i mitjans manen, alts compten poc (0.4)
         const visualCloudCover = Math.max(low, mid, high * 0.4, total * 0.7);
 
         // 3. PREPARACIÓ DADES FÍSIQUES
@@ -86,14 +84,14 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             temperature_2m: h.temperature_2m[i],
             visibility: h.visibility?.[i] ?? 10000,
             relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
-            cloud_cover: visualCloudCover, // Passem la cobertura ponderada
+            cloud_cover: visualCloudCover,
             is_day: isDay ? 1 : 0 
         };
 
         const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
         const elevation = aromeData.elevation || 0;
 
-        // 4. CÀLCUL D'ICONA (Motor Calibrat)
+        // 4. CÀLCUL D'ICONA
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
             [probabilitatVisual], 
@@ -163,7 +161,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             {aromeData && !loading && (
                 <div className="animate-in slide-in-from-bottom-4 duration-500">
                     
-                    {/* RESUM DE MÈTRIQUES */}
                     <div className="grid grid-cols-3 gap-2 p-4 bg-slate-800/30 border-b border-white/5">
                          <div className="text-center">
                             <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Precip. Total</div>
@@ -179,7 +176,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                          </div>
                     </div>
 
-                    {/* FILES HORÀRIES */}
                     <div className="divide-y divide-white/5">
                         {hourlyRows.length === 0 ? (
                             <div className="p-10 text-center text-slate-500 text-sm">
@@ -187,7 +183,9 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                             </div>
                         ) : (
                             hourlyRows.map((row, index) => {
-                                const isNewDay = index > 0 && hourlyRows[index-1].date !== row.date;
+                                // --- CORRECCIÓ DE L'ETIQUETA DE DATA ---
+                                const isNewDay = index === 0 || (index > 0 && hourlyRows[index-1].date !== row.date);
+                                
                                 const isRaining = row.precip > 0.1;
                                 const isSnow = (row.code >= 71 && row.code <= 77) || row.code === 85 || row.code === 86;
                                 
@@ -195,13 +193,21 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                     <div key={row.time}>
                                         {isNewDay && (
                                             <div className="sticky top-0 z-10 bg-slate-800/95 backdrop-blur py-1.5 px-5 text-[10px] font-bold uppercase text-fuchsia-400 tracking-widest border-y border-white/5 shadow-sm">
-                                                Demà
+                                                {(() => {
+                                                    const today = new Date().toISOString().split('T')[0];
+                                                    const tomorrowDate = new Date();
+                                                    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+                                                    const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+                                                    
+                                                    if (row.date === today) return "Avui";
+                                                    if (row.date === tomorrowStr) return "Demà";
+                                                    
+                                                    const dayName = new Intl.DateTimeFormat('ca-ES', { weekday: 'long' }).format(new Date(row.date + 'T12:00:00'));
+                                                    return dayName.charAt(0).toUpperCase() + dayName.slice(1);
+                                                })()}
                                             </div>
                                         )}
-                                        {/* FIX VISUAL: Ajustat per evitar solapaments en mòbil */}
                                         <div className={`flex items-center justify-between p-4 px-3 sm:px-5 ${isRaining ? 'bg-blue-900/10' : 'hover:bg-white/5'} transition-colors group`}>
-                                            
-                                            {/* HORA I ICONA: Amplada reduïda en mòbil (w-[28%]) */}
                                             <div className="flex items-center gap-2 sm:gap-4 w-[28%] sm:w-1/3">
                                                 <div className="text-base sm:text-lg font-bold text-white tabular-nums">{row.hour}:00</div>
                                                 <div className="filter drop-shadow-md shrink-0">
@@ -209,7 +215,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                 </div>
                                             </div>
 
-                                            {/* TEMPERATURA I PLUJA: Flexibilitat central i gaps reduïts */}
                                             <div className="flex-1 flex justify-center items-center gap-2 sm:gap-6 px-1">
                                                 <div className="text-xl sm:text-2xl font-bold text-slate-200 tabular-nums">{Math.round(row.temp)}°</div>
                                                 <div className="min-w-[45px] sm:w-16 flex justify-start">
@@ -222,7 +227,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                 </div>
                                             </div>
 
-                                            {/* VENT: Mida de text i icones ajustada en mòbil */}
                                             <div className="w-[28%] sm:w-1/3 flex items-center justify-end gap-2 text-slate-400 font-medium">
                                                 <div className="flex flex-col items-end">
                                                     <span className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-base">
