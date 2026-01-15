@@ -4,7 +4,6 @@ import { useArome } from '../hooks/useArome';
 import { X, Wind, Droplets, Snowflake } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../constants/translations';
-// IMPORT IMPRESCINDIBLE: Lògica centralitzada
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 
 interface AromeModalProps {
@@ -38,67 +37,70 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   }, [lat, lon, fetchArome, clearArome]);
 
   const hourlyRows = useMemo<HourlyRow[]>(() => {
-    if (!aromeData?.hourly) return [];
+    if (!aromeData?.hourly || !aromeData.hourly.time) return [];
     
     const h = aromeData.hourly;
     const now = new Date();
     const todayDateStr = now.toISOString().split('T')[0];
     const nowHour = now.getHours();
     
-    const rows = (h.time || []).map((t: string, i: number) => {
-      const dateStr = t.slice(0, 10); 
-      const hourStr = t.slice(11, 13);
-      const hour = parseInt(hourStr, 10);
-      
-      // FILTRE 1: Ignorar passat
-      if (dateStr < todayDateStr) return null;
-      if (dateStr === todayDateStr && hour < nowHour) return null;
-      
-      // FILTRE 2: TALL DE SEGURETAT (Solució al problema de cobertura)
-      // Si la temperatura és null/undefined, el model s'ha acabat.
-      if (h.temperature_2m?.[i] === null || h.temperature_2m?.[i] === undefined) {
-          return null;
-      }
+    const rows: HourlyRow[] = [];
+    const timeLength = h.time.length;
 
-      // Preparem dades per al càlcul d'icona
-      // (Ara funcionen gràcies al hook netejat)
-      const simulatedCurrent = {
-          weather_code: h.weather_code?.[i],
-          temperature_2m: h.temperature_2m[i],
-          visibility: h.visibility?.[i] ?? 10000,
-          relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
-      };
+    // BUCLE ESTRICTE PER GESTIÓ DE FINAL DE MODEL
+    for (let i = 0; i < timeLength; i++) {
+        const t = h.time[i];
+        const dateStr = t.slice(0, 10);
+        const hour = parseInt(t.slice(11, 13), 10);
 
-      const precip = h.precipitation?.[i] ?? 0;
-      const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
-      const elevation = aromeData.elevation || 0;
+        // 1. Ignorar el passat
+        if (dateStr < todayDateStr) continue;
+        if (dateStr === todayDateStr && hour < nowHour) continue;
 
-      // CÀLCUL D'ICONA PRECISA
-      const finalCode = getRealTimeWeatherCode(
-          simulatedCurrent,
-          [precip], 
-          0,        
-          freezingLevel,
-          elevation
-      );
+        // 2. TALL DE SEGURETAT (Fix Cobertura)
+        // Si la temperatura és null, el model AROME s'ha acabat (aprox 42h).
+        // Aturem el bucle immediatament.
+        if (h.temperature_2m?.[i] === null || h.temperature_2m?.[i] === undefined) {
+            break; 
+        }
 
-      // DIA/NIT: Usem la dada directa del model
-      const isDayVal = h.is_day?.[i] === 1;
+        // 3. PREPARACIÓ DADES FÍSIQUES
+        const simulatedCurrent = {
+            weather_code: h.weather_code?.[i],
+            temperature_2m: h.temperature_2m[i],
+            visibility: h.visibility?.[i] ?? 10000,
+            relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
+            // PAS CRÍTIC: Passem la cobertura de núvols al motor lògic
+            cloud_cover: h.cloud_cover?.[i] ?? 0 
+        };
 
-      return {
-          time: t,
-          hour: hour,
-          date: dateStr,
-          temp: h.temperature_2m[i],
-          precip: precip,
-          code: finalCode,
-          wind: h.wind_speed_10m?.[i] ?? 0,
-          gust: h.wind_gusts_10m?.[i] ?? 0,
-          cape: h.cape?.[i] ?? 0,
-          isDay: isDayVal,
-          cloudCover: h.cloud_cover?.[i] ?? 0
-      };
-    }).filter((row): row is HourlyRow => row !== null);
+        const precip = h.precipitation?.[i] ?? 0;
+        const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
+        const elevation = aromeData.elevation || 0;
+
+        // 4. CÀLCUL D'ICONA (Motor Centralitzat)
+        const finalCode = getRealTimeWeatherCode(
+            simulatedCurrent,
+            [precip], 
+            0,        
+            freezingLevel,
+            elevation
+        );
+
+        rows.push({
+            time: t,
+            hour: hour,
+            date: dateStr,
+            temp: h.temperature_2m[i],
+            precip: precip,
+            code: finalCode,
+            wind: h.wind_speed_10m?.[i] ?? 0,
+            gust: h.wind_gusts_10m?.[i] ?? 0,
+            cape: h.cape?.[i] ?? 0,
+            isDay: h.is_day?.[i] === 1,
+            cloudCover: h.cloud_cover?.[i] ?? 0
+        });
+    }
 
     return rows;
   }, [aromeData]);
@@ -165,7 +167,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                     <div className="divide-y divide-white/5">
                         {hourlyRows.length === 0 ? (
                             <div className="p-10 text-center text-slate-500 text-sm">
-                                Dades no disponibles temporalment.
+                                Final de la previsió d'alta resolució.
                             </div>
                         ) : (
                             hourlyRows.map((row, index) => {

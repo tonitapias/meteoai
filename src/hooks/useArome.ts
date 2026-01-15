@@ -3,8 +3,8 @@ import { useState, useCallback } from 'react';
 import { getAromeData } from '../services/weatherApi';
 
 interface AromeData {
-  hourly: any;
-  hourly_units: any;
+  hourly: Record<string, any>;
+  hourly_units: Record<string, string>;
   elevation: number;
 }
 
@@ -20,23 +20,26 @@ export function useArome() {
     try {
       const rawData = await getAromeData(lat, lon);
       
-      // --- PAS CRÍTIC: NETEJA DE CLAUS ---
-      // L'API AROME retorna claus amb sufix (ex: "temperature_2m_meteofrance_arome_france_hd")
-      // Les convertim a format estàndard (ex: "temperature_2m")
-      const cleanHourly: any = {};
-      const suffix = "_meteofrance_arome_france_hd";
-
-      if (rawData.hourly) {
-        Object.keys(rawData.hourly).forEach(key => {
-          const cleanKey = key.replace(suffix, '');
-          cleanHourly[cleanKey] = rawData.hourly[key];
+      // --- NORMALITZADOR DE MODEL (ROBUST) ---
+      // L'API retorna claus com "cloud_cover_meteofrance_arome_france_hd".
+      // Aquesta funció detecta i elimina qualsevol sufix de proveïdor per estandarditzar-ho.
+      const cleanData = (obj: any) => {
+        if (!obj) return {};
+        const cleanObj: any = {};
+        Object.keys(obj).forEach(key => {
+          // Tallem la clau just abans del sufix del proveïdor
+          const cleanKey = key.includes('_meteofrance') 
+            ? key.split('_meteofrance')[0] 
+            : key;
+          cleanObj[cleanKey] = obj[key];
         });
-      }
+        return cleanObj;
+      };
 
       setAromeData({
-        hourly: cleanHourly, // Ara el component rep claus netes
-        hourly_units: rawData.hourly_units,
-        elevation: rawData.elevation
+        hourly: cleanData(rawData.hourly),
+        hourly_units: cleanData(rawData.hourly_units),
+        elevation: rawData.elevation || 0
       });
 
     } catch (err: any) {

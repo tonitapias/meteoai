@@ -67,7 +67,7 @@ export const getWeatherLabel = (current: any, language: Language): string => {
 };
 
 // ==========================================
-// 2. LÒGICA IA I PREDICCIONS (BLINDADA)
+// 2. LÒGICA IA I PREDICCIONS
 // ==========================================
 
 const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: any) => {
@@ -228,7 +228,7 @@ export const generateAIPrediction = (current: any, daily: any, hourly: any, aqiV
 };
 
 // ==========================================
-// 3. DETECCIÓ INTEL·LIGENT (TESTS PASSATS)
+// 3. DETECCIÓ INTEL·LIGENT (FIX: INFERÈNCIA NUVOLOSITAT)
 // ==========================================
 
 export const getRealTimeWeatherCode = (
@@ -242,9 +242,20 @@ export const getRealTimeWeatherCode = (
     
     // 1. Dades Segures
     let code = safeNum(current.weather_code, 0);
+    const cloudCover = safeNum(current.cloud_cover, 0); // VARIABLE CLAU
     const temp = safeNum(current.temperature_2m, 15);
     const visibility = safeNum(current.visibility, 10000);
     const humidity = safeNum(current.relative_humidity_2m, 50);
+
+    // FIX: INFERÈNCIA DE NUVOLOSITAT
+    // Si el model diu "0, 1, 2, 3" (rang no pluja) i tenim dades de núvols,
+    // corregim el codi per reflectir la realitat visual.
+    if (code <= 3) {
+        if (cloudCover > 85) code = 3;      // Ennuvolat (Overcast)
+        else if (cloudCover > 45) code = 2; // Intervals de núvols (Partly Cloudy)
+        else if (cloudCover > 15) code = 1; // Majorment serè (Mostly Clear)
+        // Si < 15, es queda com a 0 (Serè)
+    }
 
     // 2. Càlcul Precipitació Instantània (Radar)
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
@@ -360,7 +371,7 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
 };
 
 // ==========================================
-// 4. FUSIÓ DE MODELS (NORMALITZACIÓ DEFINITIVA)
+// 4. FUSIÓ DE MODELS
 // ==========================================
 
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
@@ -441,7 +452,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
 };
 
 // ==========================================
-// 5. NORMALITZADOR DE DADES (RESTAURAT I NECESSARI PER BUILD)
+// 5. NORMALITZADOR DE DADES
 // ==========================================
 
 export const normalizeModelData = (data: any): ExtendedWeatherData => {
@@ -529,7 +540,7 @@ export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: a
   const p3 = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
   const diffPrecip = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);
 
-  // LÒGICA DE COLORS (CORREGIDA PER ALS TESTS)
+  // LÒGICA DE COLORS CORREGIDA (Vitest Compatible)
   
   // VERMELL: Molta discrepància
   if (diffTemp > 5) {
