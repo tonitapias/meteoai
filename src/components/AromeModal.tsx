@@ -4,6 +4,8 @@ import { useArome } from '../hooks/useArome';
 import { X, Wind, Droplets, Snowflake } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../constants/translations';
+// IMPORT IMPRESCINDIBLE: Lògica centralitzada
+import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 
 interface AromeModalProps {
   lat: number;
@@ -25,21 +27,6 @@ interface HourlyRow {
   isDay: boolean;
   cloudCover: number;
 }
-
-// Funció auxiliar per calcular el dia/nit segons l'època de l'any
-// Això evita que surti sol a les 21h a l'hivern o lluna a les 21h a l'estiu
-const estimateIsDay = (hour: number): boolean => {
-    const month = new Date().getMonth(); // 0 = Gener, 11 = Desembre
-    
-    // Hivern (Nov-Feb): Dia curt (08:00 - 18:00)
-    if (month <= 1 || month >= 10) return hour >= 8 && hour < 18;
-    
-    // Estiu (Maig-Ago): Dia llarg (06:00 - 22:00)
-    if (month >= 4 && month <= 7) return hour >= 6 && hour < 22;
-    
-    // Primavera/Tardor: Estàndard (07:00 - 20:00)
-    return hour >= 7 && hour < 20;
-};
 
 export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
@@ -67,65 +54,49 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
       if (dateStr < todayDateStr) return null;
       if (dateStr === todayDateStr && hour < nowHour) return null;
       
-      // FILTRE 2: Validació de dades
+      // FILTRE 2: TALL DE SEGURETAT (Solució al problema de cobertura)
+      // Si la temperatura és null/undefined, el model s'ha acabat.
       if (h.temperature_2m?.[i] === null || h.temperature_2m?.[i] === undefined) {
           return null;
       }
 
-      // 1. CÀLCUL DIA/NIT
-      // Prioritzem la dada de l'API. Si falta, usem l'estimació estacional.
-      const isDayVal = (h.is_day && h.is_day[i] !== undefined)
-          ? h.is_day[i] === 1 
-          : estimateIsDay(hour);
+      // Preparem dades per al càlcul d'icona
+      // (Ara funcionen gràcies al hook netejat)
+      const simulatedCurrent = {
+          weather_code: h.weather_code?.[i],
+          temperature_2m: h.temperature_2m[i],
+          visibility: h.visibility?.[i] ?? 10000,
+          relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
+      };
 
-      // --- SINTETITZADOR METEOROLÒGIC (SOLUCIÓ AL PROBLEMA D'ICONES) ---
       const precip = h.precipitation?.[i] ?? 0;
-      const clouds = h.cloud_cover?.[i] ?? 0;   // 0 a 100%
-      const visibility = h.visibility?.[i] ?? 10000;
-      const temp = h.temperature_2m[i];
-      const cape = h.cape?.[i] ?? 0;
-      
-      let finalCode = 0; // Per defecte: Cel Serè
+      const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
+      const elevation = aromeData.elevation || 0;
 
-      // NIVELL 1: Tempesta (CAPE alt + Pluja)
-      if (cape > 500 && precip > 0.5) {
-          finalCode = 95; 
-      }
-      // NIVELL 2: Precipitació (Pluja o Neu)
-      else if (precip > 0.1) {
-          if (temp < 1.0) {
-              finalCode = 71; // Neu
-          } else {
-              if (precip > 2.0) finalCode = 63;      // Pluja forta
-              else if (precip > 0.5) finalCode = 61; // Pluja moderada
-              else finalCode = 51;                   // Plugim
-          }
-      }
-      // NIVELL 3: Boira (Baixa visibilitat sense pluja)
-      else if (visibility < 2000) {
-          finalCode = 45; 
-      }
-      // NIVELL 4: NÚVOLS (La correcció clau)
-      // Si AROME diu "0" però clouds > 15%, forcem la icona de núvol.
-      else {
-          if (clouds > 85) finalCode = 3;       // Cobert (Gris total)
-          else if (clouds > 50) finalCode = 2;  // Molt ennuvolat (Broken)
-          else if (clouds > 15) finalCode = 1;  // Parcialment ennuvolat (Scattered)
-          else finalCode = 0;                   // Serè (Sol/Lluna)
-      }
+      // CÀLCUL D'ICONA PRECISA
+      const finalCode = getRealTimeWeatherCode(
+          simulatedCurrent,
+          [precip], 
+          0,        
+          freezingLevel,
+          elevation
+      );
+
+      // DIA/NIT: Usem la dada directa del model
+      const isDayVal = h.is_day?.[i] === 1;
 
       return {
           time: t,
           hour: hour,
           date: dateStr,
-          temp: temp,
+          temp: h.temperature_2m[i],
           precip: precip,
-          code: finalCode, // Icona calculada manualment
+          code: finalCode,
           wind: h.wind_speed_10m?.[i] ?? 0,
           gust: h.wind_gusts_10m?.[i] ?? 0,
-          cape: cape,
+          cape: h.cape?.[i] ?? 0,
           isDay: isDayVal,
-          cloudCover: clouds
+          cloudCover: h.cloud_cover?.[i] ?? 0
       };
     }).filter((row): row is HourlyRow => row !== null);
 
@@ -147,7 +118,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                     <span className="bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-[0_0_10px_rgba(192,38,211,0.4)]">HD Live</span>
                     <h2 className="text-xl font-bold text-white tracking-tight">AROME <span className="text-fuchsia-400">1.3km</span></h2>
                 </div>
-                <p className="text-slate-400 text-xs md:text-sm">Previsió d'alta precisió (Icones Sintetitzades)</p>
+                <p className="text-slate-400 text-xs md:text-sm">Previsió d'alta resolució (Precisió Física)</p>
             </div>
             <button onClick={onClose} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors active:scale-95">
                 <X className="w-5 h-5" />
@@ -159,7 +130,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             {loading && (
                 <div className="flex flex-col items-center justify-center h-64 space-y-4">
                     <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-fuchsia-300 text-sm animate-pulse">Processant física atmosfèrica...</p>
+                    <p className="text-fuchsia-300 text-sm animate-pulse">Calculant física atmosfèrica...</p>
                 </div>
             )}
 
@@ -200,7 +171,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                             hourlyRows.map((row, index) => {
                                 const isNewDay = index > 0 && hourlyRows[index-1].date !== row.date;
                                 const isRaining = row.precip > 0.1;
-                                const isSnow = row.temp < 1.0 && isRaining;
+                                const isSnow = (row.code >= 71 && row.code <= 77) || row.code === 85 || row.code === 86;
                                 
                                 return (
                                     <div key={row.time}>

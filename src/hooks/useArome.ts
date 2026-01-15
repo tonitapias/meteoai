@@ -1,7 +1,6 @@
 // src/hooks/useArome.ts
 import { useState, useCallback } from 'react';
 import { getAromeData } from '../services/weatherApi';
-import { normalizeModelData } from '../utils/weatherLogic';
 
 interface AromeData {
   hourly: any;
@@ -20,16 +19,28 @@ export function useArome() {
     
     try {
       const rawData = await getAromeData(lat, lon);
-      // Normalitzem per netejar claus com temperature_2m_meteofrance...
-      const normalized = normalizeModelData(rawData);
       
+      // --- PAS CRÍTIC: NETEJA DE CLAUS ---
+      // L'API AROME retorna claus amb sufix (ex: "temperature_2m_meteofrance_arome_france_hd")
+      // Les convertim a format estàndard (ex: "temperature_2m")
+      const cleanHourly: any = {};
+      const suffix = "_meteofrance_arome_france_hd";
+
+      if (rawData.hourly) {
+        Object.keys(rawData.hourly).forEach(key => {
+          const cleanKey = key.replace(suffix, '');
+          cleanHourly[cleanKey] = rawData.hourly[key];
+        });
+      }
+
       setAromeData({
-        hourly: normalized.hourly,
-        hourly_units: normalized.hourly_units,
-        elevation: normalized.elevation
+        hourly: cleanHourly, // Ara el component rep claus netes
+        hourly_units: rawData.hourly_units,
+        elevation: rawData.elevation
       });
 
     } catch (err: any) {
+      console.error("Error fetching AROME:", err);
       setError(err.message || "Error carregant dades AROME HD");
     } finally {
       setLoading(false);

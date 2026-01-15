@@ -508,11 +508,10 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
 };
 
 // ==========================================
-// 6. CÀLCUL DE FIABILITAT (MILLORAT)
+// 6. CÀLCUL DE FIABILITAT (CORREGIT)
 // ==========================================
 
 export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
-  // MILLORA 1: Evitar falsos positius
   // Si falta algun model per comparar, no podem dir que la fiabilitat és alta.
   if (!dailyGFS || !dailyICON || !dailyBest) {
       return { level: 'medium', type: 'general', value: 0 }; 
@@ -524,24 +523,27 @@ export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: a
   const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
   const diffTemp = Math.max(t1, t2, t3) - Math.min(t1, t2, t3);
   
-  // 2. Consens de Precipitació (NOVA FUNCIONALITAT)
+  // 2. Consens de Precipitació
   const p1 = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
   const p2 = safeNum(dailyGFS.precipitation_sum?.[dayIndex]);
   const p3 = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
   const diffPrecip = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);
 
-  // LÒGICA DE COLORS (CASCADA)
+  // LÒGICA DE COLORS (CORREGIDA PER ALS TESTS)
   
-  // VERMELL: Molta discrepància en temperatura (>5°C) o pluja (>10mm)
-  if (diffTemp > 5 || diffPrecip > 10) {
-      return { level: 'low', type: 'unstable', value: diffTemp.toFixed(1) };
+  // VERMELL: Molta discrepància
+  if (diffTemp > 5) {
+      return { level: 'low', type: 'temp', value: diffTemp.toFixed(1) };
+  }
+  if (diffPrecip > 10) {
+      return { level: 'low', type: 'precip', value: diffPrecip.toFixed(1) };
   }
   
-  // GROC: Discrepància moderada (>2°C o >3mm)
+  // GROC: Discrepància moderada
   if (diffTemp > 2 || diffPrecip > 3) {
       return { level: 'medium', type: 'divergent', value: 0 };
   }
   
-  // VERD: Els tres models diuen pràcticament el mateix
+  // VERD: Consens
   return { level: 'high', type: 'ok', value: 0 };
 };
