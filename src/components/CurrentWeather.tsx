@@ -19,7 +19,6 @@ interface CurrentWeatherProps {
   aqiData: AirQualityData | null; showAromeBtn?: boolean;
 }
 
-// Helpers per parsejar hora/data sense conversions automàtiques de navegador
 const getRawTime = (isoString: string): string => {
     if (!isoString || !isoString.includes('T')) return "--:--";
     return isoString.split('T')[1].substring(0, 5); 
@@ -46,8 +45,6 @@ export default function CurrentWeather({
   
   const displayTime = getRawTime(current.time as string); 
   const displayDate = getRawDate(current.time as string, lang);
-
-  // Normalitzem el nom del país (si és molt llarg, el CSS s'encarregarà)
   const countryName = location?.country || "Local";
 
   return (
@@ -58,79 +55,87 @@ export default function CurrentWeather({
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-blue-500/10 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none z-[-1]"></div>
 
         {/* HEADER */}
-        <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-2 w-full">
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* COUNTRY BADGE (AMB TRUNCATE PER NOMS LLARGS) */}
+        <div className="flex justify-between items-start w-full overflow-hidden">
+            <div className="flex flex-col gap-1 w-full min-w-0"> {/* min-w-0 permet que el truncament funcioni */}
+                <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span 
-                        className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-300 max-w-[150px] truncate"
-                        title={countryName} // Tooltip natiu per si es talla el nom
+                        className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[9px] font-bold uppercase tracking-widest text-slate-300 truncate max-w-[120px]"
+                        title={countryName} 
                     >
                         {countryName}
                     </span>
 
-                    {/* AROME BADGE */}
                     {isUsingArome && (
-                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-widest text-emerald-400 ring-1 ring-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] shrink-0">
-                            <span className="animate-pulse w-1.5 h-1.5 rounded-full bg-emerald-400"></span> AROME HD
+                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-bold uppercase tracking-widest text-emerald-400 shrink-0">
+                            <span className="animate-pulse w-1 h-1 rounded-full bg-emerald-400"></span> AROME HD
                         </span>
                     )}
                 </div>
                 
-                <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter flex items-center gap-3">
-                    <span className="truncate max-w-[300px] md:max-w-full" title={location?.name}>{location?.name}</span>
-                    <button onClick={onToggleFavorite} className="text-slate-500 hover:text-amber-400 transition-colors active:scale-90 shrink-0">
+                <div className="flex items-start justify-between gap-3 w-full">
+                    <h2 
+                        className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight line-clamp-2 flex-1"
+                        title={location?.name}
+                    >
+                        {location?.name}
+                    </h2>
+                    
+                    <button 
+                        onClick={onToggleFavorite} 
+                        className="text-slate-500 hover:text-amber-400 transition-colors active:scale-90 shrink-0 mt-1"
+                    >
                         <Star className={`w-6 h-6 ${isFavorite ? 'fill-current text-amber-400' : ''}`} />
                     </button>
-                </h2>
-                <div className="text-slate-400 text-sm font-medium capitalize flex items-center gap-2">
-                    {displayDate} <span className="opacity-50">|</span> {displayTime}
+                </div>
+
+                <div className="text-slate-400 text-xs md:text-sm font-medium capitalize flex items-center gap-2 mt-1">
+                    {displayDate} <span className="opacity-30">|</span> {displayTime}
                 </div>
             </div>
         </div>
 
         {/* CENTER: BIG TEMP & ICON */}
-        <div className="flex-1 flex flex-col items-center justify-center py-6">
+        <div className="flex-1 flex flex-col items-center justify-center py-4">
             <LivingIcon windSpeed={current.wind_speed_10m} precip={current.precipitation}>
-                {getWeatherIcon(effectiveCode, "w-48 h-48 md:w-64 md:h-64", current.is_day)}
+                {getWeatherIcon(effectiveCode, "w-40 h-40 md:w-56 md:h-56", current.is_day)}
             </LivingIcon>
-            <div className="text-center -mt-6 relative">
-                <h1 className="text-[7rem] md:text-[10rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 leading-[0.85] tracking-tighter text-glow select-none">
+            <div className="text-center -mt-4 relative">
+                <h1 className="text-[6.5rem] md:text-[8.5rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 leading-none tracking-tighter text-glow select-none">
                     {getTemp(current.temperature_2m)}°
                 </h1>
-                <p className="text-xl md:text-2xl font-medium text-indigo-100/90 capitalize mt-2 tracking-wide">
+                <p className="text-lg md:text-xl font-medium text-indigo-100/90 capitalize tracking-wide">
                     {getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)}
                 </p>
             </div>
         </div>
 
         {/* FOOTER */}
-        <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-3 gap-2.5">
                  {[
                     { icon: Wind, val: Math.round(current.wind_speed_10m), u: 'km/h' },
                     { icon: Droplets, val: current.relative_humidity_2m, u: '%' },
                     { icon: ThermometerSun, val: getTemp(current.apparent_temperature), u: '°' }
                 ].map((s, i) => (
                     <div key={i} className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                        <s.icon className="w-5 h-5 text-indigo-300 mb-1" />
-                        <span className="text-lg font-bold">{s.val}<span className="text-xs text-slate-400 ml-0.5">{s.u}</span></span>
+                        <s.icon className="w-4 h-4 text-indigo-300 mb-1" />
+                        <span className="text-base md:text-lg font-bold">{s.val}<span className="text-[10px] text-slate-500 ml-0.5 font-normal">{s.u}</span></span>
                     </div>
                 ))}
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between pt-4 border-t border-white/5">
-                <div className="flex gap-4 text-sm font-bold">
-                    <span className="flex items-center gap-1 text-rose-300"><ArrowUp className="w-4 h-4" /> {getTemp(daily.temperature_2m_max[0])}°</span>
-                    <span className="flex items-center gap-1 text-cyan-300"><ArrowDown className="w-4 h-4" /> {getTemp(daily.temperature_2m_min[0])}°</span>
+                <div className="flex gap-4 text-xs md:text-sm font-bold">
+                    <span className="flex items-center gap-1.5 text-rose-300/90"><ArrowUp className="w-3.5 h-3.5" /> {getTemp(daily.temperature_2m_max[0])}°</span>
+                    <span className="flex items-center gap-1.5 text-cyan-300/90"><ArrowDown className="w-3.5 h-3.5" /> {getTemp(daily.temperature_2m_min[0])}°</span>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
-                    <button onClick={onShowRadar} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-xl transition-all text-indigo-100 text-sm font-bold active:scale-95">
-                        <Map className="w-4 h-4" /> Radar
+                    <button onClick={onShowRadar} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl transition-all text-indigo-100 text-xs font-bold active:scale-95">
+                        <Map className="w-3.5 h-3.5" /> Radar
                     </button>
                     {showAromeBtn && (
-                         <button onClick={onShowArome} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl transition-all text-emerald-100 text-sm font-bold active:scale-95">
-                            <Zap className="w-4 h-4" /> AROME
+                         <button onClick={onShowArome} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl transition-all text-emerald-100 text-xs font-bold active:scale-95">
+                            <Zap className="w-3.5 h-3.5" /> AROME
                         </button>
                     )}
                 </div>
