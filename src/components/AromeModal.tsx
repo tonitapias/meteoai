@@ -71,15 +71,13 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         const precipSeguent = h.precipitation?.[i + 1] ?? 0;
         const probabilitatVisual = Math.max(precipActual, precipSeguent);
 
-        // --- FIX: PONDERACIÓ DE CAPES (Visualització Realista) ---
-        // Els núvols alts (high) deixen passar el sol (factor 0.4).
-        // Els baixos i mitjans (factor 1.0 implícit) són els que realment tapen.
+        // --- PONDERACIÓ DE CAPES (Visualització Realista) ---
         const low = h.cloud_cover_low?.[i] ?? 0;
         const mid = h.cloud_cover_mid?.[i] ?? 0;
         const high = h.cloud_cover_high?.[i] ?? 0;
         const total = h.cloud_cover?.[i] ?? 0;
-
-        // Fórmula calibrada:
+        
+        // Fórmula calibrada: Baixos i mitjans manen, alts compten poc (0.4)
         const visualCloudCover = Math.max(low, mid, high * 0.4, total * 0.7);
 
         // 3. PREPARACIÓ DADES FÍSIQUES
@@ -95,7 +93,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
         const elevation = aromeData.elevation || 0;
 
-        // 4. CÀLCUL D'ICONA
+        // 4. CÀLCUL D'ICONA (Motor Calibrat)
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
             [probabilitatVisual], 
@@ -200,38 +198,39 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                 Demà
                                             </div>
                                         )}
-                                        <div className={`flex items-center justify-between p-4 px-5 ${isRaining ? 'bg-blue-900/10' : 'hover:bg-white/5'} transition-colors group`}>
+                                        {/* FIX VISUAL: Ajustat per evitar solapaments en mòbil */}
+                                        <div className={`flex items-center justify-between p-4 px-3 sm:px-5 ${isRaining ? 'bg-blue-900/10' : 'hover:bg-white/5'} transition-colors group`}>
                                             
-                                            {/* HORA I ICONA */}
-                                            <div className="flex items-center gap-4 w-1/3">
-                                                <div className="text-lg font-bold text-white tabular-nums">{row.hour}:00</div>
-                                                <div className="filter drop-shadow-md">
-                                                    {getWeatherIcon(row.code,"w-9 h-9",row.isDay,row.precip > 0 ? 90 : 0,row.wind)}
+                                            {/* HORA I ICONA: Amplada reduïda en mòbil (w-[28%]) */}
+                                            <div className="flex items-center gap-2 sm:gap-4 w-[28%] sm:w-1/3">
+                                                <div className="text-base sm:text-lg font-bold text-white tabular-nums">{row.hour}:00</div>
+                                                <div className="filter drop-shadow-md shrink-0">
+                                                    {getWeatherIcon(row.code, "w-8 h-8 sm:w-9 sm:h-9", row.isDay, row.precip > 0 ? 90 : 0, row.wind)}
                                                 </div>
                                             </div>
 
-                                            {/* TEMPERATURA I PLUJA */}
-                                            <div className="flex-1 flex justify-center items-center gap-6">
-                                                <div className="text-2xl font-bold text-slate-200 tabular-nums">{Math.round(row.temp)}°</div>
-                                                <div className="w-16 flex justify-start">
+                                            {/* TEMPERATURA I PLUJA: Flexibilitat central i gaps reduïts */}
+                                            <div className="flex-1 flex justify-center items-center gap-2 sm:gap-6 px-1">
+                                                <div className="text-xl sm:text-2xl font-bold text-slate-200 tabular-nums">{Math.round(row.temp)}°</div>
+                                                <div className="min-w-[45px] sm:w-16 flex justify-start">
                                                     {isRaining && (
-                                                        <div className="flex items-center gap-1.5 text-blue-300 font-bold text-sm bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
-                                                            {isSnow ? <Snowflake className="w-3.5 h-3.5" /> : <Droplets className="w-3.5 h-3.5" />}
+                                                        <div className="flex items-center gap-1 text-blue-300 font-bold text-[10px] sm:text-sm bg-blue-500/10 px-1.5 sm:px-2 py-0.5 rounded-full border border-blue-500/20">
+                                                            {isSnow ? <Snowflake className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Droplets className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                                                             {row.precip.toFixed(1)}
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            {/* VENT */}
-                                            <div className="w-1/3 flex items-center justify-end gap-2 text-slate-400 font-medium">
+                                            {/* VENT: Mida de text i icones ajustada en mòbil */}
+                                            <div className="w-[28%] sm:w-1/3 flex items-center justify-end gap-2 text-slate-400 font-medium">
                                                 <div className="flex flex-col items-end">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Wind className="w-3.5 h-3.5" />
+                                                    <span className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-base">
+                                                        <Wind className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                                                         {Math.round(row.wind)}
                                                     </span>
                                                     {row.gust > row.wind + 10 && (
-                                                        <span className="text-[10px] text-slate-500">
+                                                        <span className="text-[9px] sm:text-[10px] text-slate-500">
                                                             r. {Math.round(row.gust)}
                                                         </span>
                                                     )}

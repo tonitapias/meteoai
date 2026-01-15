@@ -60,7 +60,16 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       
       const namePromise = (locationName === "La Meva Ubicació") 
         ? Promise.race([
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`).then(res => res.json()),
+            // CANVI: Usem BigDataCloud en lloc de Nominatim per evitar errors CORS/403
+            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ca`)
+                .then(res => res.json())
+                .then(data => ({
+                    // Adaptem la resposta al format que esperava l'app (simulant l'estructura de Nominatim)
+                    address: { 
+                        city: data.city || data.locality || data.principalSubdivision || "Ubicació desconeguda", 
+                        country: data.countryName 
+                    }
+                })),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
           ]).catch(() => ({ address: { city: "La Meva Ubicació", country: "Local" } }))
         : Promise.resolve({ address: { city: locationName, country: country } });
