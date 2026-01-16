@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/meteoai/', // Correcte per GitHub Pages
   plugins: [
     react(),
-    VitePWA({ 
+    VitePWA({
       registerType: 'autoUpdate',
       // Afegim la nova icona maskable als assets per assegurar que es guarda a la caché
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-96x96.png', 'maskable-icon.png'],
@@ -21,7 +21,7 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/meteoai/',
         start_url: '/meteoai/',
-        
+
         // 1. CONFIGURACIÓ D'ICONES ARREGLADA
         icons: [
           {
@@ -32,16 +32,15 @@ export default defineConfig({
           {
             src: 'android-chrome-512x512.png',
             sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any' // Icona estàndard (amb transparència)
+            type: 'image/png'
           },
           {
-            // ⚠️ HAS DE CREAR AQUESTA IMATGE: Una versió de 512x512 amb fons sòlid (#0f172a)
-            // i el logo una mica més petit al centre (zona segura).
-            src: 'maskable-icon.png', 
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable' // Icona adaptativa per Android
+             // ⚠️ HAS DE CREAR AQUESTA IMATGE: Una versió de 512x512 amb fons sòlid (#0f172a)
+             // i el logo una mica més petit al centre (zona segura).
+             src: 'maskable-icon.png',
+             sizes: '512x512',
+             type: 'image/png',
+             purpose: 'maskable' // Icona adaptativa per Android
           }
         ],
 
@@ -66,21 +65,11 @@ export default defineConfig({
       }
     })
   ],
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'lucide-react'],
-          'vendor-maps': ['leaflet', 'react-leaflet'],
-        },
-      },
-    },
-    chunkSizeWarningLimit: 1000,
-  },
-  server: {
-    open: true,
-    host: true
+
+  // --- CONFIGURACIÓ DE TESTS (NOVA) ---
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
   }
 });
