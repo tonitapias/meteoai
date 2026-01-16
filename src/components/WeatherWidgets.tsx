@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../constants/translations';
 import { WeatherUnit } from '../utils/formatters';
+// NOVA IMPORTACIÓ: Necessària per al càlcul correcte de temps relatiu
+import { getShiftedDate } from '../utils/weatherLogic';
 
 // --- ESTIL BASE AJUSTAT (Padding reduït per evitar overflow) ---
 const WIDGET_BASE_STYLE = "bg-slate-900/60 border border-slate-800/50 p-3.5 rounded-2xl backdrop-blur-sm relative group transition-all duration-300 hover:scale-[1.02] hover:bg-white/10 hover:border-white/30 hover:shadow-2xl h-full flex flex-col justify-between overflow-hidden";
@@ -52,26 +54,40 @@ export const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displ
   )
 };
 
+// MODIFICACIÓ: Afegida la propietat 'timezone'
 interface SunArcWidgetProps extends BaseWidgetProps {
-    sunrise: string; sunset: string; shiftedNow: Date;
+    sunrise: string; sunset: string; shiftedNow: Date; timezone: string;
 }
-export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }: SunArcWidgetProps) => {
+
+export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow, timezone }: SunArcWidgetProps) => {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   
-  // Mantenim els objectes Date només per al càlcul del percentatge del gràfic
-  const sunriseTime = new Date(sunrise).getTime();
-  const sunsetTime = new Date(sunset).getTime();
-  const now = shiftedNow.getTime();
-  const isToday = shiftedNow.toDateString() === new Date(sunrise).toDateString();
-  
-  // --- FUNCIÓ DE BLINDATGE (Extreu l'hora real del text ISO) ---
-  const formatRealTime = (isoString: string) => {
-    if (!isoString || !isoString.includes('T')) return "--:--";
-    return isoString.split('T')[1].substring(0, 5); 
+  // NOU: Funció de formatat robusta usant Intl i la timezone real de la ubicació
+  const formatWithTZ = (isoString: string, tz: string, locale: string) => {
+    if (!isoString) return "--:--";
+    try {
+      const date = new Date(isoString);
+      return new Intl.DateTimeFormat(locale, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: tz
+      }).format(date);
+    } catch (e) {
+      // Fallback segur
+      return isoString.split('T')[1]?.substring(0, 5) || "--:--";
+    }
   };
 
-  const displaySunrise = formatRealTime(sunrise);
-  const displaySunset = formatRealTime(sunset);
+  const displaySunrise = formatWithTZ(sunrise, timezone, lang);
+  const displaySunset = formatWithTZ(sunset, timezone, lang);
+  
+  // NOU: Càlculs temporals alineats amb 'shiftedNow' usant getShiftedDate
+  // Això evita el desfasament horari entre l'hora del navegador i la de la ciutat
+  const sunriseTime = getShiftedDate(new Date(sunrise), timezone).getTime();
+  const sunsetTime = getShiftedDate(new Date(sunset), timezone).getTime();
+  const now = shiftedNow.getTime();
+  const isToday = shiftedNow.toDateString() === new Date(sunriseTime).toDateString();
   
   let progress = 0; let nextEventText = "";
   
@@ -115,10 +131,8 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow }: SunAr
           </div>
        </div>
        <div className="w-full flex justify-between items-end -mt-3 z-10">
-          {/* USAR displaySunrise en lloc de toLocaleTimeString */}
           <span className="text-xs font-bold text-white">{displaySunrise}</span>
           <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">{isToday ? (progress > 0 && progress < 1 ? t.day : t.night) : t.sun}</span>
-          {/* USAR displaySunset en lloc de toLocaleTimeString */}
           <span className="text-xs font-bold text-white">{displaySunset}</span>
        </div>
     </div>
