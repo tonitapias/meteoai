@@ -31,7 +31,6 @@ const safeNum = (val: any, fallback: number = 0): number => {
 
 export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string): Date => {
   if (typeof timezoneOrOffset === 'number') {
-      // FIX: Càlcul pur (Timestamp + Offset). Eliminem la dependència del navegador.
       const utcTimestamp = baseDate.getTime(); 
       return new Date(utcTimestamp + (timezoneOrOffset * 1000));
   }
@@ -128,7 +127,7 @@ const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, d
 };
 
 const generateAlertsAndTips = (params: any, tr: any) => {
-    const { code, windSpeed, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum } = params;
+    const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum } = params;
     let alerts = [];
     let tips = [];
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
@@ -137,8 +136,15 @@ const generateAlertsAndTips = (params: any, tr: any) => {
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     else if ((code === 65 || code === 82 || precipSum > ALERTS.PRECIP_SUM_HIGH) && isRaining) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
 
-    if (windSpeed > WIND.STRONG) { alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' }); tips.push(tr.tipWindbreaker); } 
-    else if (windSpeed > WIND.EXTREME) alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
+    if (windGusts > 50) {
+        alerts.push({ type: tr.wind, msg: "Ràfegues de vent fortes", level: 'warning' });
+        tips.push(tr.tipWindbreaker);
+    } else if (windSpeed > WIND.STRONG) { 
+        alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' }); 
+        tips.push(tr.tipWindbreaker); 
+    } else if (windSpeed > WIND.EXTREME) {
+        alerts.push({ type: tr.wind, msg: tr.alertWindExtreme, level: 'high' });
+    }
     
     if (temp > TEMP.EXTREME_HEAT) { alerts.push({ type: tr.heat, msg: tr.alertHeatExtreme, level: 'high' }); tips.push(tr.tipHydration, tr.tipSunscreen); } 
     else if (temp > 30) { alerts.push({ type: tr.heat, msg: tr.alertHeatHigh, level: 'warning' }); tips.push(tr.tipHydration); }
@@ -202,6 +208,7 @@ export const generateAIPrediction = (
         const futureRainProb = getFutureRainProbability(hourly, daily, currentHour);
         
         const windSpeed = safeNum(current.wind_speed_10m);
+        const windGusts = safeNum(current.wind_gusts_10m);
         const visibility = safeNum(current.visibility, 10000);
         const cloudCover = safeNum(current.cloud_cover, 0);
         const isDay = safeNum(current.is_day, 1);
@@ -213,6 +220,15 @@ export const generateAIPrediction = (
             summaryParts = analyzePrecipitation(isRaining, precipInstantanea, code, precipNext15, tr);
         } else {
             summaryParts = analyzeSky(code, isDay, currentHour, visibility, futureRainProb, cloudCover, tr, alertsList);
+        }
+
+        const currentRainVol = hourly.precipitation ? safeNum(hourly.precipitation[currentHour]) : 0;
+        const nextHourRainVol = hourly.precipitation ? safeNum(hourly.precipitation[currentHour + 1]) : 0;
+        
+        if (nextHourRainVol > currentRainVol * 2 && nextHourRainVol > 1) {
+            summaryParts.push(" Atenció: la pluja s'intensificarà notablement aviat.");
+        } else if (currentRainVol > 0 && nextHourRainVol === 0) {
+            summaryParts.push(" La pluja anirà remetent properament.");
         }
 
         const windText = analyzeWind(windSpeed, tr);
@@ -232,7 +248,7 @@ export const generateAIPrediction = (
         const uvMax = daily.uv_index_max ? safeNum(daily.uv_index_max[0]) : 0;
 
         const alertsAndTips = generateAlertsAndTips({
-            code, windSpeed, temp: safeNum(current.temperature_2m), 
+            code, windSpeed, windGusts, temp: safeNum(current.temperature_2m), 
             rainProb: futureRainProb, isRaining, uvMax, 
             isDay, aqiValue: safeNum(aqiValue), 
             currentCape, precipSum
@@ -261,6 +277,10 @@ export const generateAIPrediction = (
     }
 };
 
+// ==========================================
+// 3. CÀLCUL CODI TEMPS REAL (TOTALMENT OPTIMITZAT)
+// ==========================================
+
 export const getRealTimeWeatherCode = (
     current: any, 
     minutelyPrecipData: number[], 
@@ -272,29 +292,56 @@ export const getRealTimeWeatherCode = (
     if (!current) return 0;
     
     let code = safeNum(current.weather_code, 0);
-    const cloudCover = safeNum(current.cloud_cover, 0); 
+    const isArome = current.source === 'AROME HD'; // Identifiquem la font d'alta resolució
+
     const temp = safeNum(current.temperature_2m, 15);
     const visibility = safeNum(current.visibility, 10000);
     const humidity = safeNum(current.relative_humidity_2m, 50);
 
+    const lowClouds = safeNum(current.cloud_cover_low, 0);
+    const midClouds = safeNum(current.cloud_cover_mid, 0);
+    const highClouds = safeNum(current.cloud_cover_high, 0);
+    
+    // Ponderació de nuvolositat efectiva
+    const effectiveCloudCover = Math.min(100, (lowClouds * 1.0) + (midClouds * 0.4) + (highClouds * 0.1));
+
     if (code <= 3) {
-        if (cloudCover > 85) code = 3;      
-        else if (cloudCover > 45) code = 2; 
-        else if (cloudCover > 15) code = 1; 
+        if (effectiveCloudCover > 85) code = 3;      
+        else if (effectiveCloudCover > 45) code = 2; 
+        else if (effectiveCloudCover > 15) code = 1; 
         else code = 0;                      
-    }
-
-    if (code === 0 && humidity > 92) {
-        code = 1; 
-    }
-
-    if (cape > 1000 && cloudCover > 50 && code < 95) {
-        code = 95; 
     }
 
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
-        : 0;
+        : safeNum(current.precipitation, 0);
+
+    // --- MILLORA PAS 3: Sensibilitat de precipitació extrema d'AROME ---
+    // Si AROME detecta > 0.02mm (plugim molt fi), forcem codi de pluja lleugera.
+    if (isArome && precipInstantanea > 0.02 && code < 51) {
+        code = 61; 
+    }
+
+    // Detecció de boira
+    const dewPoint = calculateDewPoint(temp, humidity);
+    const dewPointSpread = temp - dewPoint;
+
+    if (code < 45 && dewPointSpread < 1.2 && humidity > 96 && effectiveCloudCover > 50) {
+        code = 45; 
+    } else if (code === 0 && humidity > 92) {
+        code = 1; 
+    }
+
+    // --- MILLORA PAS 3: Alerta preventiva de tempesta per CAPE ---
+    // Si l'energia convèctiva és alta (>1200) i hi ha núvols, marquem tempesta (95)
+    // encara que no plogui en aquest moment.
+    if (cape > 1000) {
+        // Llindar més agressiu per a AROME, més relaxat per a globals
+        const capeThreshold = isArome ? 1200 : 1500;
+        if (cape > capeThreshold && effectiveCloudCover > 60 && code < 95) {
+            code = 95;
+        }
+    }
 
     const freezingDist = freezingLevel - elevation;
     const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
@@ -403,7 +450,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         'is_day', 'precipitation', 'rain', 'showers', 'snowfall', 'weather_code',
         'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
         'pressure_msl', 'surface_pressure',
-        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'
+        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
+        'visibility', 'uv_index'
     ];
 
     if (source.current && target.current) {
@@ -461,7 +509,7 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
     if (!data || !data.current) return data;
     
     const result: any = { 
-        ...data, // <--- AQUESTA LÍNIA ÉS IMPRESCINDIBLE
+        ...data, 
         current: { ...data.current }, 
         hourly: { ...data.hourly }, 
         daily: { ...data.daily }, 

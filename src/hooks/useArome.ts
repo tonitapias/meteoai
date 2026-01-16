@@ -4,6 +4,7 @@ import { getAromeData } from '../services/weatherApi';
 
 interface AromeData {
   hourly: Record<string, any>;
+  minutely_15: Record<string, any>; // NOVA CAPTURA: Física de 15 minuts
   hourly_units: Record<string, string>;
   elevation: number;
 }
@@ -21,16 +22,13 @@ export function useArome() {
       const rawData = await getAromeData(lat, lon);
       
       // --- NORMALITZADOR DE MODEL (ROBUST) ---
-      // L'API retorna claus com "cloud_cover_meteofrance_arome_france_hd".
-      // Aquesta funció detecta i elimina qualsevol sufix de proveïdor per estandarditzar-ho.
+      // Aquesta funció elimina qualsevol sufix de proveïdor (arome, ecmwf, best_match...)
+      // per garantir que sempre treballem amb claus netes com 'temperature_2m' o 'precipitation'.
       const cleanData = (obj: any) => {
         if (!obj) return {};
         const cleanObj: any = {};
         Object.keys(obj).forEach(key => {
-          // Tallem la clau just abans del sufix del proveïdor
-          const cleanKey = key.includes('_meteofrance') 
-            ? key.split('_meteofrance')[0] 
-            : key;
+          const cleanKey = key.replace(/_meteofrance_arome_france_hd|_best_match|_ecmwf|_gfs|_icon/g, '');
           cleanObj[cleanKey] = obj[key];
         });
         return cleanObj;
@@ -38,6 +36,7 @@ export function useArome() {
 
       setAromeData({
         hourly: cleanData(rawData.hourly),
+        minutely_15: cleanData(rawData.minutely_15), // Ara capturem la física d'alta freqüència
         hourly_units: cleanData(rawData.hourly_units),
         elevation: rawData.elevation || 0
       });

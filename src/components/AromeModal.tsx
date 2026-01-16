@@ -56,49 +56,58 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         if (dateStr < todayDateStr) continue;
         if (dateStr === todayDateStr && hour < nowHour) continue;
 
-        // 2. TALL DE SEGURETAT
+        // 2. TALL DE SEGURETAT DE DADES
         if (h.temperature_2m?.[i] === null || h.temperature_2m?.[i] === undefined) {
             break; 
         }
 
         // --- CÀLCUL MANUAL DE 'isDay' ---
+        // AROME a vegades no envia is_day, ho calculem per seguretat (7h-21h aprox com a fallback)
         const isDay = h.is_day?.[i] !== undefined 
             ? h.is_day[i] === 1 
             : (hour >= 7 && hour <= 21);
 
         // --- SISTEMA LOOK-AHEAD (ANTICIPACIÓ) ---
+        // Mirem si plou ara o a l'hora següent per activar la icona de pluja preventivament
         const precipActual = h.precipitation?.[i] ?? 0;
         const precipSeguent = h.precipitation?.[i + 1] ?? 0;
-        const probabilitatVisual = Math.max(precipActual, precipSeguent);
-
-        // --- PONDERACIÓ DE CAPES (Visualització Realista) ---
+        
+        // --- PONDERACIÓ DE CAPES (Visualització Realista unificada amb weatherLogic) ---
         const low = h.cloud_cover_low?.[i] ?? 0;
         const mid = h.cloud_cover_mid?.[i] ?? 0;
         const high = h.cloud_cover_high?.[i] ?? 0;
-        const total = h.cloud_cover?.[i] ?? 0;
-        const visualCloudCover = Math.max(low, mid, high * 0.4, total * 0.7);
+        
+        // Pesos físics: Baixos (Opacs) vs Alts (Transparents)
+        const effectiveCloudCover = Math.min(100, (low * 1.0) + (mid * 0.4) + (high * 0.1));
 
-        // 3. PREPARACIÓ DADES FÍSIQUES
+        // 3. PREPARACIÓ CONTEXTUAL PER AL MOTOR LÒGIC
+        // Creem un objecte que simula ser "current" perquè getRealTimeWeatherCode el pugui processar
         const simulatedCurrent = {
+            source: 'AROME HD', // CLAU: Això activa la sensibilitat extrema (>0.02mm) al motor
             weather_code: h.weather_code?.[i], 
             temperature_2m: h.temperature_2m[i],
             visibility: h.visibility?.[i] ?? 10000,
             relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
-            cloud_cover: visualCloudCover,
+            cloud_cover_low: low,
+            cloud_cover_mid: mid,
+            cloud_cover_high: high,
+            cloud_cover: effectiveCloudCover,
             is_day: isDay ? 1 : 0 
         };
 
         const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
         const elevation = aromeData.elevation || 0;
+        const cape = h.cape?.[i] ?? 0;
 
-        // 4. CÀLCUL D'ICONA
+        // 4. CÀLCUL D'ICONA CENTRALITZAT
+        // Passem [precipActual, precipSeguent] com a "minutelyPrecipData" per forçar la sensibilitat
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
-            [probabilitatVisual], 
-            probabilitatVisual > 0 ? 80 : 0, 
+            [precipActual, precipSeguent], 
+            precipActual > 0 ? 100 : 0, 
             freezingLevel,
             elevation,
-            h.cape?.[i] ?? 0
+            cape
         );
 
         rows.push({
@@ -110,15 +119,16 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             code: finalCode,
             wind: h.wind_speed_10m?.[i] ?? 0,
             gust: h.wind_gusts_10m?.[i] ?? 0,
-            cape: h.cape?.[i] ?? 0,
+            cape: cape,
             isDay: isDay, 
-            cloudCover: visualCloudCover
+            cloudCover: effectiveCloudCover
         });
     }
 
     return rows;
   }, [aromeData]);
 
+  // Càlculs de resum
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);
   const maxCape = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.cape)), [hourlyRows]);
   const totalRain = useMemo(() => hourlyRows.reduce((acc, row) => acc + row.precip, 0), [hourlyRows]);
@@ -161,6 +171,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             {aromeData && !loading && (
                 <div className="animate-in slide-in-from-bottom-4 duration-500">
                     
+                    {/* RESUM DE DADES */}
                     <div className="grid grid-cols-3 gap-2 p-4 bg-slate-800/30 border-b border-white/5">
                          <div className="text-center">
                             <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Precip. Total</div>
@@ -172,7 +183,11 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                          </div>
                          <div className="text-center border-l border-white/5">
                             <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Inestabilitat</div>
-                            <div className={`text-xl font-bold ${maxCape > 500 ? 'text-amber-400' : 'text-slate-200'}`}>{Math.round(maxCape)}</div>
+                            {/* MILLORA: Colors de CAPE calibrats per risc sever real */}
+                            <div className={`text-xl font-bold ${maxCape > 1500 ? 'text-rose-500' : maxCape > 800 ? 'text-amber-400' : 'text-slate-200'}`}>
+                                {Math.round(maxCape)}
+                                <span className="text-[9px] font-normal ml-1 text-slate-500">J/kg</span>
+                            </div>
                          </div>
                     </div>
 
@@ -183,10 +198,10 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                             </div>
                         ) : (
                             hourlyRows.map((row, index) => {
-                                // --- CORRECCIÓ DE L'ETIQUETA DE DATA ---
                                 const isNewDay = index === 0 || (index > 0 && hourlyRows[index-1].date !== row.date);
                                 
-                                const isRaining = row.precip > 0.1;
+                                // Ús de 0.05 com a llindar visual per pintar la fila, però la icona ja ve decidida per getRealTimeWeatherCode
+                                const isRaining = row.precip > 0.05; 
                                 const isSnow = (row.code >= 71 && row.code <= 77) || row.code === 85 || row.code === 86;
                                 
                                 return (
@@ -218,7 +233,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                             <div className="flex-1 flex justify-center items-center gap-2 sm:gap-6 px-1">
                                                 <div className="text-xl sm:text-2xl font-bold text-slate-200 tabular-nums">{Math.round(row.temp)}°</div>
                                                 <div className="min-w-[45px] sm:w-16 flex justify-start">
-                                                    {isRaining && (
+                                                    {row.precip > 0 && (
                                                         <div className="flex items-center gap-1 text-blue-300 font-bold text-[10px] sm:text-sm bg-blue-500/10 px-1.5 sm:px-2 py-0.5 rounded-full border border-blue-500/20">
                                                             {isSnow ? <Snowflake className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Droplets className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                                                             {row.precip.toFixed(1)}
@@ -233,6 +248,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                         <Wind className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                                                         {Math.round(row.wind)}
                                                     </span>
+                                                    {/* MILLORA: Només mostrem ràfega si és significativament superior al vent mitjà (> +10km/h) */}
                                                     {row.gust > row.wind + 10 && (
                                                         <span className="text-[9px] sm:text-[10px] text-slate-500">
                                                             r. {Math.round(row.gust)}
