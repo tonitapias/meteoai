@@ -17,9 +17,9 @@ interface ExpertWidgetsProps {
     freezingLevel: number; 
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shiftedNow, freezingLevel }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel }: ExpertWidgetsProps) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-  const { current, daily, hourly } = weatherData;
+  const { current, daily, hourly, utc_offset_seconds } = weatherData;
   const currentDewPoint = calculateDewPoint(current.temperature_2m, current.relative_humidity_2m);
   const moonPhaseVal = getMoonPhase(new Date()); 
 
@@ -29,7 +29,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shifte
     </div>
   );
 
-  // Lògica per mostrar neu o núvols segons la temperatura
   const showSnowWidget = freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
   return (
@@ -37,7 +36,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shifte
         {/* 1. Vent */}
         <WidgetCard><CompassGauge degrees={current.wind_direction_10m} speed={current.wind_speed_10m} label={t.wind} lang={lang} /></WidgetCard>
         
-        {/* 2. Cota de Neu o Capes de Núvols (Slot Dinàmic) */}
+        {/* 2. Cota de Neu o Capes */}
         {showSnowWidget ? (
             <WidgetCard><SnowLevelWidget freezingLevel={freezingLevel} unit={unit} lang={lang} /></WidgetCard>
         ) : (
@@ -50,16 +49,18 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, shifte
         {/* 4. Punt de Rosada */}
         <WidgetCard><DewPointWidget value={currentDewPoint} humidity={current.relative_humidity_2m} lang={lang} unit={unit} /></WidgetCard>
         
-        {/* 5. CAPE (Inestabilitat) */}
+        {/* 5. CAPE */}
         <WidgetCard><CapeWidget cape={hourly?.cape?.[0] || 0} lang={lang} /></WidgetCard>
         
-        {/* 6. Slot Extra: Si hem mostrat Neu abans, mostrem els Núvols aquí per no perdre la dada */}
+        {/* 6. Extra Slot */}
         {showSnowWidget && (
              <WidgetCard><CloudLayersWidget low={current.cloud_cover_low} mid={current.cloud_cover_mid} high={current.cloud_cover_high} lang={lang} /></WidgetCard>
         )}
 
         {/* 7, 8, 9. Ginys Dobles */}
-        <WidgetCard cols={2}><SunArcWidget sunrise={daily.sunrise[0]} sunset={daily.sunset[0]} lang={lang} shiftedNow={shiftedNow}/></WidgetCard>
+        {/* FIX: Connectem 'utcOffset' en lloc de 'shiftedNow' */}
+        <WidgetCard cols={2}><SunArcWidget sunrise={daily.sunrise[0]} sunset={daily.sunset[0]} lang={lang} utcOffset={utc_offset_seconds} /></WidgetCard>
+        
         <WidgetCard cols={2}><MoonWidget phase={moonPhaseVal} lat={weatherData.location?.latitude || 41} lang={lang}/></WidgetCard>
         <WidgetCard cols={2}><PollenWidget data={aqiData?.current} lang={lang} /></WidgetCard>
     </div>

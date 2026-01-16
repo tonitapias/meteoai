@@ -1,18 +1,14 @@
 // src/components/WeatherWidgets.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
   Thermometer, Droplets, Zap, Mountain, Cloud, Eye
 } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../constants/translations';
 import { WeatherUnit } from '../utils/formatters';
-// NOVA IMPORTACIÓ: Necessària per al càlcul correcte de temps relatiu
-import { getShiftedDate } from '../utils/weatherLogic';
 
-// --- ESTIL BASE AJUSTAT (Padding reduït per evitar overflow) ---
 const WIDGET_BASE_STYLE = "bg-slate-900/60 border border-slate-800/50 p-3.5 rounded-2xl backdrop-blur-sm relative group transition-all duration-300 hover:scale-[1.02] hover:bg-white/10 hover:border-white/30 hover:shadow-2xl h-full flex flex-col justify-between overflow-hidden";
 
-// --- HELPERS ---
 const getMoonPhaseText = (phase: number, lang: Language = 'ca') => {
   const t = TRANSLATIONS[lang] ? TRANSLATIONS[lang].moonPhases : TRANSLATIONS['ca'].moonPhases;
   if (phase < 0.03 || phase > 0.97) return t.new;
@@ -25,16 +21,11 @@ const getMoonPhaseText = (phase: number, lang: Language = 'ca') => {
   return t.waningCrescent;
 };
 
-// --- INTERFÍCIES ---
-interface BaseWidgetProps { lang?: Language; }
-
-// --- WIDGETS ---
-
 interface TempRangeBarProps {
     min: number; max: number;
     globalMin: number; globalMax: number;
-    displayMin: number | string; // FIX: Acceptar strings formatejats
-    displayMax: number | string; // FIX: Acceptar strings formatejats
+    displayMin: number | string;
+    displayMax: number | string;
 }
 export const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }: TempRangeBarProps) => {
   const totalRange = globalMax - globalMin || 1;
@@ -54,57 +45,74 @@ export const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displ
   )
 };
 
-// MODIFICACIÓ: Afegida la propietat 'timezone'
-interface SunArcWidgetProps extends BaseWidgetProps {
-    sunrise: string; sunset: string; shiftedNow: Date; timezone: string;
+interface SunArcWidgetProps {
+    sunrise: string; 
+    sunset: string; 
+    utcOffset: number; // Offset segons API
+    lang?: Language;
 }
 
-export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow, timezone }: SunArcWidgetProps) => {
+export const SunArcWidget = ({ sunrise, sunset, utcOffset, lang = 'ca' }: SunArcWidgetProps) => {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   
-  // NOU: Funció de formatat robusta usant Intl i la timezone real de la ubicació
-  const formatWithTZ = (isoString: string, tz: string, locale: string) => {
-    if (!isoString) return "--:--";
-    try {
-      const date = new Date(isoString);
-      return new Intl.DateTimeFormat(locale, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: tz
-      }).format(date);
-    } catch (e) {
-      // Fallback segur
-      return isoString.split('T')[1]?.substring(0, 5) || "--:--";
-    }
+  // 1. CÀLCUL DEL RELLOTGE EN VIU
+  const [currentMins, setCurrentMins] = useState(0);
+
+  useEffect(() => {
+    const updateTime = () => {
+        const nowMs = Date.now();
+        const targetMs = nowMs + ((utcOffset || 0) * 1000);
+        const targetDate = new Date(targetMs);
+        // getUTCHours retorna l'hora visual correcta gràcies a l'offset manual
+        setCurrentMins(targetDate.getUTCHours() * 60 + targetDate.getUTCMinutes());
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 10000); 
+    return () => clearInterval(timer);
+  }, [utcOffset]);
+
+  // 2. PARSEIG D'HORES (Simple string split, ja que l'API envia hora local visual)
+  const getIsoMinutes = (isoString: string) => {
+    if (!isoString) return 0;
+    const timePart = isoString.split('T')[1]; 
+    if (!timePart) return 0;
+    const [h, m] = timePart.split(':').map(Number);
+    return h * 60 + m;
   };
 
-  const displaySunrise = formatWithTZ(sunrise, timezone, lang);
-  const displaySunset = formatWithTZ(sunset, timezone, lang);
+  const sunriseMins = getIsoMinutes(sunrise);
+  const sunsetMins = getIsoMinutes(sunset);
+
+  const displaySunrise = sunrise.split('T')[1]?.substring(0, 5) || "--:--";
+  const displaySunset = sunset.split('T')[1]?.substring(0, 5) || "--:--";
   
-  // NOU: Càlculs temporals alineats amb 'shiftedNow' usant getShiftedDate
-  // Això evita el desfasament horari entre l'hora del navegador i la de la ciutat
-  const sunriseTime = getShiftedDate(new Date(sunrise), timezone).getTime();
-  const sunsetTime = getShiftedDate(new Date(sunset), timezone).getTime();
-  const now = shiftedNow.getTime();
-  const isToday = shiftedNow.toDateString() === new Date(sunriseTime).toDateString();
+  // 3. LÒGICA DE PROGRÉS
+  let progress = 0; 
+  let nextEventText = "";
   
-  let progress = 0; let nextEventText = "";
-  
-  if (isToday) {
-     const totalDayLength = sunsetTime - sunriseTime;
-     const elapsed = now - sunriseTime;
-     progress = Math.max(0, Math.min(1, elapsed / totalDayLength));
-     if (now < sunriseTime) {
-        const diff = sunriseTime - now;
-        const h = Math.floor(diff / 3600000); const m = Math.floor((diff % 3600000) / 60000);
-        nextEventText = `${t.sunRiseIn} ${h}h ${m}m`;
-     } else if (now < sunsetTime) {
-        const diff = sunsetTime - now;
-        const h = Math.floor(diff / 3600000); const m = Math.floor((diff % 3600000) / 60000);
+  const isDayTime = currentMins >= sunriseMins && currentMins < sunsetMins;
+
+  if (isDayTime) {
+        const totalDayLength = sunsetMins - sunriseMins;
+        const elapsed = currentMins - sunriseMins;
+        progress = Math.max(0, Math.min(1, elapsed / totalDayLength));
+        
+        const diff = sunsetMins - currentMins;
+        const h = Math.floor(diff / 60);
+        const m = diff % 60;
         nextEventText = `${t.sunSetIn} ${h}h ${m}m`;
-     } else { nextEventText = t.sunSetDone; }
-  } else if (now > sunsetTime) { progress = 1; nextEventText = t.sunSetDone; }
+  } else {
+     if (currentMins < sunriseMins) {
+        progress = 0;
+        const diff = sunriseMins - currentMins;
+        const h = Math.floor(diff / 60);
+        const m = diff % 60;
+        nextEventText = `${t.sunRiseIn} ${h}h ${m}m`;
+     } else {
+        progress = 1;
+        nextEventText = t.sunSetDone;
+     }
+  }
   
   const r = 32; const cx = 50; const cy = 50;
   const angle = Math.PI - (progress * Math.PI);
@@ -127,12 +135,16 @@ export const SunArcWidget = ({ sunrise, sunset, lang = 'ca', shiftedNow, timezon
              <line x1="0" y1="55" x2="100" y2="55" stroke="#1e293b" strokeWidth="1" />
           </svg>
           <div className="absolute bottom-1 left-0 right-0 text-center">
-             <span className="text-[9px] font-bold text-amber-300 bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-500/20 backdrop-blur-sm">{nextEventText}</span>
+             <span className="text-[9px] font-bold text-amber-300 bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-500/20 backdrop-blur-sm">
+                {nextEventText}
+             </span>
           </div>
        </div>
        <div className="w-full flex justify-between items-end -mt-3 z-10">
           <span className="text-xs font-bold text-white">{displaySunrise}</span>
-          <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">{isToday ? (progress > 0 && progress < 1 ? t.day : t.night) : t.sun}</span>
+          <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+            {isDayTime ? t.day : t.night}
+          </span>
           <span className="text-xs font-bold text-white">{displaySunset}</span>
        </div>
     </div>
@@ -227,7 +239,6 @@ export const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }: Co
   const dirText = directions[index];
   const N = directions[0]; const S = directions[4]; const E = directions[2]; const W = directions[6];
 
-  // REDUÏT: de w-24 a w-20
   return (
     <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
       <div className="relative w-20 h-20 flex items-center justify-center mb-1">
@@ -255,7 +266,7 @@ export const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }: Co
 
 interface CircularGaugeProps extends BaseWidgetProps { value: number; max?: number; label: string; icon: React.ReactNode; color?: string; subText?: string; trend?: string | null; trendLabel?: string | null; }
 export const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText, trend = null, trendLabel = null }: CircularGaugeProps) => {
-  const radius = 26; // Més petit (abans 30)
+  const radius = 26;
   const circumference = 2 * Math.PI * radius;
   const normalizedValue = label.includes("Pressió") || label.includes("Pressure") || label.includes("Presión") 
       ? Math.max(0, Math.min((value - 950) / 100, 1)) 
@@ -298,7 +309,6 @@ export const DewPointWidget = ({ value, humidity, lang = 'ca', unit }: DewPointW
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
     let status = t.dpComfortable; let color = "text-teal-400"; let bgColor = "bg-teal-500"; let bgOpacity = "bg-teal-500/10";
     const percentage = Math.min(Math.max((value / 28) * 100, 0), 100);
-    // (Lògica de colors igual...)
     if (value < 10) { status = t.dpDry; color = "text-blue-400"; bgColor = "bg-blue-500"; bgOpacity = "bg-blue-500/10"; }
     else if (value >= 10 && value <= 15) { status = t.dpComfortable; color = "text-green-400"; bgColor = "bg-green-500"; bgOpacity = "bg-green-500/10"; }
     else if (value > 15 && value <= 20) { status = t.dpHumid; color = "text-yellow-400"; bgColor = "bg-yellow-500"; bgOpacity = "bg-yellow-500/10"; }
@@ -434,12 +444,9 @@ export const CloudLayersWidget = ({ low, mid, high, lang = 'ca' }: CloudLayersWi
 
 interface VisibilityWidgetProps extends BaseWidgetProps { visibility: number; unit?: string; }
 export const VisibilityWidget = ({ visibility, lang = 'ca', unit = 'km' }: VisibilityWidgetProps) => {
-    // visibility comes in meters usually (OpenMeteo)
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
     const visKm = visibility / 1000;
-    const percentage = Math.min((visibility / 24000) * 100, 100); // 24km com a límit visual clar
-    
-    // Status text (Fallback manual si no existeix a traduccions)
+    const percentage = Math.min((visibility / 24000) * 100, 100);
     let status = '';
     if (visibility < 1000) status = (t as any).fog || "Boira";
     else if (visibility < 5000) status = (t as any).haze || "Bruma";

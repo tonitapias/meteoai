@@ -31,7 +31,8 @@ const safeNum = (val: any, fallback: number = 0): number => {
 
 export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string): Date => {
   if (typeof timezoneOrOffset === 'number') {
-      const utcTimestamp = baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000);
+      // FIX: Càlcul pur (Timestamp + Offset). Eliminem la dependència del navegador.
+      const utcTimestamp = baseDate.getTime(); 
       return new Date(utcTimestamp + (timezoneOrOffset * 1000));
   }
   if (!timezoneOrOffset) return baseDate;
@@ -158,9 +159,6 @@ const generateAlertsAndTips = (params: any, tr: any) => {
     return { alerts, tips: [...new Set(tips)].slice(0, 4) };
 };
 
-// --- NOUS HELPERS PER A LA REFACTORITZACIÓ ---
-
-// Extreu la probabilitat de pluja futura (mira 12h vista o diària)
 const getFutureRainProbability = (hourly: any, daily: any, currentHour: number): number => {
     if (hourly && hourly.precipitation_probability) {
         const safeProbs = (hourly.precipitation_probability || [])
@@ -171,7 +169,6 @@ const getFutureRainProbability = (hourly: any, daily: any, currentHour: number):
     return safeNum(daily.precipitation_probability_max?.[0], 0);
 };
 
-// Genera el text del vent si supera els llindars
 const analyzeWind = (windSpeed: number, tr: any) => {
     if (windSpeed > WIND.MODERATE) {
         return windSpeed > WIND.STRONG ? tr.aiWindStrong : tr.aiWindMod;
@@ -190,46 +187,37 @@ export const generateAIPrediction = (
     unit: string = 'C'
 ) => {
     const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
-    // Validació defensiva bàsica
     if (!tr || !current || !daily || !hourly) {
         return { text: "...", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
     }
     
     try {
-        // 1. PREPARACIÓ DE DADES (Normalització)
         const currentHour = new Date().getHours();
         const code = safeNum(effectiveCode !== null ? effectiveCode : current.weather_code, 0);
         
-        // Dades de precipitació
         const precipInstantanea = (current as any).minutely15 ? safeNum((current as any).minutely15[0]) : 0;
         const precipNext15 = (current as any).minutely15 ? safeNum((current as any).minutely15[1]) : 0;
         
-        // Lògica booleanes
         const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
         const futureRainProb = getFutureRainProbability(hourly, daily, currentHour);
         
-        // Dades atmosfèriques
         const windSpeed = safeNum(current.wind_speed_10m);
         const visibility = safeNum(current.visibility, 10000);
         const cloudCover = safeNum(current.cloud_cover, 0);
         const isDay = safeNum(current.is_day, 1);
 
-        // 2. GENERACIÓ DEL RESUM (Text)
         let summaryParts: string[] = [];
-        let alertsList: any[] = []; // Es passa per referència a analyzeSky
+        let alertsList: any[] = []; 
 
-        // A. Cel i Precipitació
         if (isRaining) {
             summaryParts = analyzePrecipitation(isRaining, precipInstantanea, code, precipNext15, tr);
         } else {
             summaryParts = analyzeSky(code, isDay, currentHour, visibility, futureRainProb, cloudCover, tr, alertsList);
         }
 
-        // B. Vent (Refactoritzat amb el nou helper)
         const windText = analyzeWind(windSpeed, tr);
         if (windText) summaryParts.push(windText);
 
-        // C. Temperatura
         const tempParts = analyzeTemperature(
             safeNum(current.apparent_temperature), 
             safeNum(current.temperature_2m), 
@@ -239,7 +227,6 @@ export const generateAIPrediction = (
         );
         summaryParts = [...summaryParts, ...tempParts];
 
-        // 3. GENERACIÓ D'ALERTES I CONSELLS
         const currentCape = hourly.cape ? safeNum(hourly.cape[currentHour]) : 0;
         const precipSum = daily.precipitation_sum ? safeNum(daily.precipitation_sum[0]) : 0;
         const uvMax = daily.uv_index_max ? safeNum(daily.uv_index_max[0]) : 0;
@@ -251,7 +238,6 @@ export const generateAIPrediction = (
             currentCape, precipSum
         }, tr);
 
-        // 4. FIABILITAT I FORMAT FINAL
         let confidenceText = tr.aiConfidence; 
         let confidenceLevel = 'high';
         if (reliability) {
@@ -281,7 +267,7 @@ export const getRealTimeWeatherCode = (
     prob: number = 0, 
     freezingLevel: number = 2500, 
     elevation: number = 0,
-    cape: number = 0 // Afegim CAPE per detectar tempestes
+    cape: number = 0 
 ): number => {
     if (!current) return 0;
     
@@ -291,30 +277,21 @@ export const getRealTimeWeatherCode = (
     const visibility = safeNum(current.visibility, 10000);
     const humidity = safeNum(current.relative_humidity_2m, 50);
 
-    // FIX 1: CALIBRATGE DE NUVOLOSITAT REALISTA (Equilibrat)
-    // Llindars ajustats per no ser ni massa optimistes ni massa pessimistes.
-    // > 85% = Tancat | > 45% = Intervals evidents | > 15% = Algun núvol
     if (code <= 3) {
-        if (cloudCover > 85) code = 3;      // Ennuvolat (Overcast)
-        else if (cloudCover > 45) code = 2; // Intervals de núvols (Partly Cloudy)
-        else if (cloudCover > 15) code = 1; // Majorment serè (Mostly Clear)
-        else code = 0;                      // Serè totalment
+        if (cloudCover > 85) code = 3;      
+        else if (cloudCover > 45) code = 2; 
+        else if (cloudCover > 15) code = 1; 
+        else code = 0;                      
     }
 
-    // FIX 2: FILTRE D'HUMITAT RELAXAT
-    // Només prohibim el sol (0) si la humitat és extrema (>92%), típic de boirina espessa.
-    // Això evita que dies normals de platja (80-85%) surtin com ennuvolats.
     if (code === 0 && humidity > 92) {
         code = 1; 
     }
 
-    // FIX 3: INESTABILITAT (TEMPESTES D'ESTIU)
-    // Si hi ha molt CAPE i núvols, marquem amenaça de tempesta
     if (cape > 1000 && cloudCover > 50 && code < 95) {
         code = 95; 
     }
 
-    // 4. LÒGICA DE PRECIPITACIÓ
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
         : 0;
@@ -332,12 +309,10 @@ export const getRealTimeWeatherCode = (
         if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
     }
     
-    // 5. LÒGICA DE BOIRA
     if ((code === 45 || code === 48 || visibility < 1000) && precipInstantanea < 0.1) {
         return 45;
     }
 
-    // 6. LÒGICA DE PLUJA FORÇADA
     if (precipInstantanea > 0.01) { 
         if (code >= 95) return code; 
         if (precipInstantanea > 4.0) code = 65; 
@@ -486,6 +461,7 @@ export const normalizeModelData = (data: any): ExtendedWeatherData => {
     if (!data || !data.current) return data;
     
     const result: any = { 
+        ...data, // <--- AQUESTA LÍNIA ÉS IMPRESCINDIBLE
         current: { ...data.current }, 
         hourly: { ...data.hourly }, 
         daily: { ...data.daily }, 
