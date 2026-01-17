@@ -5,6 +5,7 @@ import { X, Wind, Droplets, Snowflake } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../constants/translations';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { WEATHER_THRESHOLDS } from '../constants/weatherConfig'; // Importat per consistència
 
 interface AromeModalProps {
   lat: number;
@@ -62,28 +63,23 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         }
 
         // --- CÀLCUL MANUAL DE 'isDay' ---
-        // AROME a vegades no envia is_day, ho calculem per seguretat (7h-21h aprox com a fallback)
         const isDay = h.is_day?.[i] !== undefined 
             ? h.is_day[i] === 1 
             : (hour >= 7 && hour <= 21);
 
-        // --- SISTEMA LOOK-AHEAD (ANTICIPACIÓ) ---
-        // Mirem si plou ara o a l'hora següent per activar la icona de pluja preventivament
         const precipActual = h.precipitation?.[i] ?? 0;
-        const precipSeguent = h.precipitation?.[i + 1] ?? 0;
         
-        // --- PONDERACIÓ DE CAPES (Visualització Realista unificada amb weatherLogic) ---
+        // --- PONDERACIÓ DE CAPES (Calibrat amb weatherLogic) ---
         const low = h.cloud_cover_low?.[i] ?? 0;
         const mid = h.cloud_cover_mid?.[i] ?? 0;
         const high = h.cloud_cover_high?.[i] ?? 0;
         
-        // Pesos físics: Baixos (Opacs) vs Alts (Transparents)
-        const effectiveCloudCover = Math.min(100, (low * 1.0) + (mid * 0.4) + (high * 0.1));
+        // Pesos físics actualitzats: més importància als alts per coherència visual
+        const effectiveCloudCover = Math.min(100, (low * 1.0) + (mid * 0.6) + (high * 0.3));
 
         // 3. PREPARACIÓ CONTEXTUAL PER AL MOTOR LÒGIC
-        // Creem un objecte que simula ser "current" perquè getRealTimeWeatherCode el pugui processar
         const simulatedCurrent = {
-            source: 'AROME HD', // CLAU: Això activa la sensibilitat extrema (>0.02mm) al motor
+            source: 'AROME HD',
             weather_code: h.weather_code?.[i], 
             temperature_2m: h.temperature_2m[i],
             visibility: h.visibility?.[i] ?? 10000,
@@ -100,10 +96,11 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         const cape = h.cape?.[i] ?? 0;
 
         // 4. CÀLCUL D'ICONA CENTRALITZAT
-        // Passem [precipActual, precipSeguent] com a "minutelyPrecipData" per forçar la sensibilitat
+        // SOLUCIÓ LOOK-AHEAD: Passem només [precipActual] per evitar que l'hora actual 
+        // mostri la tempesta de l'hora següent.
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
-            [precipActual, precipSeguent], 
+            [precipActual], 
             precipActual > 0 ? 100 : 0, 
             freezingLevel,
             elevation,
@@ -183,7 +180,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                          </div>
                          <div className="text-center border-l border-white/5">
                             <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Inestabilitat</div>
-                            {/* MILLORA: Colors de CAPE calibrats per risc sever real */}
                             <div className={`text-xl font-bold ${maxCape > 1500 ? 'text-rose-500' : maxCape > 800 ? 'text-amber-400' : 'text-slate-200'}`}>
                                 {Math.round(maxCape)}
                                 <span className="text-[9px] font-normal ml-1 text-slate-500">J/kg</span>
@@ -200,8 +196,8 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                             hourlyRows.map((row, index) => {
                                 const isNewDay = index === 0 || (index > 0 && hourlyRows[index-1].date !== row.date);
                                 
-                                // Ús de 0.05 com a llindar visual per pintar la fila, però la icona ja ve decidida per getRealTimeWeatherCode
-                                const isRaining = row.precip > 0.05; 
+                                // Ús de TRACE (0.1) o un valor visual (0.05) per destacar la fila
+                                const isRaining = row.precip >= 0.05; 
                                 const isSnow = (row.code >= 71 && row.code <= 77) || row.code === 85 || row.code === 86;
                                 
                                 return (
@@ -248,7 +244,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                         <Wind className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                                                         {Math.round(row.wind)}
                                                     </span>
-                                                    {/* MILLORA: Només mostrem ràfega si és significativament superior al vent mitjà (> +10km/h) */}
+                                                    {/* Només mostrem ràfega si és significativament superior al vent mitjà (> +10km/h) */}
                                                     {row.gust > row.wind + 10 && (
                                                         <span className="text-[9px] sm:text-[10px] text-slate-500">
                                                             r. {Math.round(row.gust)}

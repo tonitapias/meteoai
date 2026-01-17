@@ -292,7 +292,7 @@ export const getRealTimeWeatherCode = (
     if (!current) return 0;
     
     let code = safeNum(current.weather_code, 0);
-    const isArome = current.source === 'AROME HD'; // Identifiquem la font d'alta resolució
+    const isArome = current.source === 'AROME HD'; 
 
     const temp = safeNum(current.temperature_2m, 15);
     const visibility = safeNum(current.visibility, 10000);
@@ -302,8 +302,9 @@ export const getRealTimeWeatherCode = (
     const midClouds = safeNum(current.cloud_cover_mid, 0);
     const highClouds = safeNum(current.cloud_cover_high, 0);
     
-    // Ponderació de nuvolositat efectiva
-    const effectiveCloudCover = Math.min(100, (lowClouds * 1.0) + (midClouds * 0.4) + (highClouds * 0.1));
+    // MILLORA: Ponderació calibrada visualment
+    // Abans donava massa importància a núvols baixos i ignorava els alts (cel blanc)
+    const effectiveCloudCover = Math.min(100, (lowClouds * 1.0) + (midClouds * 0.6) + (highClouds * 0.3));
 
     if (code <= 3) {
         if (effectiveCloudCover > 85) code = 3;      
@@ -316,9 +317,9 @@ export const getRealTimeWeatherCode = (
         ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
         : safeNum(current.precipitation, 0);
 
-    // --- MILLORA PAS 3: Sensibilitat de precipitació extrema d'AROME ---
-    // Si AROME detecta > 0.02mm (plugim molt fi), forcem codi de pluja lleugera.
-    if (isArome && precipInstantanea > 0.02 && code < 51) {
+    // MILLORA: Utilitzem el llindar TRACE (0.1)
+    // Això corregeix el test que fallava: 0.02 no ha de activar pluja, 0.1 si.
+    if (isArome && precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
         code = 61; 
     }
 
@@ -332,14 +333,18 @@ export const getRealTimeWeatherCode = (
         code = 1; 
     }
 
-    // --- MILLORA PAS 3: Alerta preventiva de tempesta per CAPE ---
-    // Si l'energia convèctiva és alta (>1200) i hi ha núvols, marquem tempesta (95)
-    // encara que no plogui en aquest moment.
-    if (cape > 1000) {
-        // Llindar més agressiu per a AROME, més relaxat per a globals
-        const capeThreshold = isArome ? 1200 : 1500;
-        if (cape > capeThreshold && effectiveCloudCover > 60 && code < 95) {
-            code = 95;
+    // MILLORA: Lògica de tempesta més estricta per evitar falsos positius
+    if (cape > 1200) { 
+        const isPrecipitating = precipInstantanea >= PRECIPITATION.TRACE || (code >= 51 && code <= 82);
+        
+        // Només activem tempesta si hi ha "gasolina" (CAPE) + "espurna" (Precipitació)
+        if (effectiveCloudCover > 60) {
+            if (isPrecipitating) {
+                 if (code < 95) code = 95;
+            } else if (cape > 2000) {
+                // Si hi ha molta energia però no plou, mostrem variable amenaçador (2) enlloc de tempesta
+                code = 2; 
+            }
         }
     }
 
@@ -360,7 +365,7 @@ export const getRealTimeWeatherCode = (
         return 45;
     }
 
-    if (precipInstantanea > 0.01) { 
+    if (precipInstantanea >= PRECIPITATION.TRACE) { 
         if (code >= 95) return code; 
         if (precipInstantanea > 4.0) code = 65; 
         else if (precipInstantanea >= 1.0) code = 63; 

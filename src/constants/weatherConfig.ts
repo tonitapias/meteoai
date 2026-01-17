@@ -2,6 +2,7 @@
 
 export interface WeatherThresholds {
   PRECIPITATION: {
+    TRACE: number; // Mínim per considerar "pluja" visualment (0.1mm)
     LIGHT: number;
     MODERATE: number;
     HEAVY: number;
@@ -46,21 +47,20 @@ export interface WeatherThresholds {
 
 export const WEATHER_THRESHOLDS: WeatherThresholds = {
   PRECIPITATION: {
-    // LLINDARS ESTÀNDARD DE LA INDÚSTRIA
-    // < 0.25mm: "Traça" (No es considera pluja activa per a l'usuari)
-    // >= 0.25mm: Comença a ploure
+    // 0.1mm elimina el "soroll" de 0.02mm que donava icones de pluja sense aigua real
+    TRACE: 0.1,    
     LIGHT: 0.25,    
-    MODERATE: 1.5,  // Pluja normal
-    HEAVY: 4.0,     // Pluja forta
-    EXTREME: 10.0,  // Aiguat / Tempesta
+    MODERATE: 1.5,  
+    HEAVY: 4.0,     
+    EXTREME: 10.0,  
     
     INTENSIFY_FACTOR: 1.5,
     DECREASE_FACTOR: 0.5
   },
   WIND: {
     MODERATE: 20,
-    STRONG: 50,    // Avís Groc
-    EXTREME: 80    // Avís Taronja/Vermell
+    STRONG: 50,
+    EXTREME: 80
   },
   TEMP: {
     FREEZING: 0,
@@ -87,7 +87,7 @@ export const WEATHER_THRESHOLDS: WeatherThresholds = {
     AQI_BAD: 100
   },
   DEFAULTS: {
-    FREEZING_LEVEL_AVG: 2500,  // Valor per defecte si no hi ha dades de cota de neu
-    MAX_DISPLAY_SNOW_LEVEL: 4000 // Si la cota de neu és superior a 4000m, no mostrem el widget
+    FREEZING_LEVEL_AVG: 2500,
+    MAX_DISPLAY_SNOW_LEVEL: 4000
   }
 };

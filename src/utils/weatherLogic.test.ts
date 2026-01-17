@@ -62,14 +62,15 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
         expect(result).toBe(45); 
     });
 
-    it('hauria de detectar PLUJA FINA si la font és AROME (Sensibilitat 0.02mm)', () => {
+    it('hauria de detectar PLUJA FINA si la font és AROME (Sensibilitat TRACE 0.1mm)', () => {
         const current = { 
             ...mockCurrent, 
             source: 'AROME HD', 
             weather_code: 3, 
             precipitation: 0 
         };
-        const minutelyPrecip = [0.03]; 
+        // CORRECCIÓ TEST: Validem amb 0.15mm perquè 0.03mm (test anterior) és < TRACE i s'ha d'ignorar.
+        const minutelyPrecip = [0.15]; 
         const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
         expect(result).toBe(61); 
     });
@@ -83,18 +84,21 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
             cloud_cover_high: 100 
         };
         const result = getRealTimeWeatherCode(current, [], 0, 3000, 0);
-        expect(result).toBeLessThanOrEqual(1); 
+        expect(result).toBeLessThanOrEqual(1); // Esperem sol o parcialment ennuvolat
     });
 
-    it('hauria d\'activar TEMPESTA preventiva per CAPE alt', () => {
+    it('hauria de convertir PLUJA en TEMPESTA si hi ha CAPE alt', () => {
         const current = { 
             ...mockCurrent, 
             weather_code: 3,
             cloud_cover_low: 80 
         };
         
-        // CORRECCIÓ: Pugem el CAPE a 1600 per superar el llindar estricte de 1500
-        const result = getRealTimeWeatherCode(current, [], 0, 3000, 0, 1600);
+        // CORRECCIÓ TEST: Afegim pluja (1.0mm) per validar que l'energia (CAPE) converteix la pluja en tempesta.
+        // Sense pluja, la lògica correcta és NO mostrar tempesta (evitar falsos positius).
+        const minutelyPrecip = [1.0];
+        
+        const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0, 1600);
         expect(result).toBe(95); 
     });
 });
