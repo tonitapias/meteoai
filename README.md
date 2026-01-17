@@ -19,15 +19,15 @@ MeteoToni AI redefineix l'experiència de consultar el temps. No és només una 
 *(Substitueix aquestes imatges per captures reals de la teva aplicació per un efecte "wow")*
 
 <div align="center">
-  <img src="./public/screenshots/desktop-dashboard.png" alt="Tauler Principal Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+  <img src="./public/screenshot-desktop.png" alt="Tauler Principal Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
   <p><em>El tauler principal amb disseny Bento-Grid, mostrant dades actuals, gràfics i el resum de la IA.</em></p>
 </div>
 
 <br/>
 
 <div align="center" style="display: flex; justify-content: center; gap: 20px;">
-  <img src="./public/screenshots/mobile-arome.png" alt="Vista Mòbil AROME" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-  <img src="./public/screenshots/mobile-widgets.png" alt="Widgets Avançats" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+  <img src="./public/screenshot-mobile.png" alt="Vista Mòbil AROME" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+  <img src="./public/screenshot-mobile-widgets.png" alt="Widgets Avançats" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
 </div>
 <div align="center">
   <p><em>Esquerra: Previsió horària d'alta resolució AROME HD. Dreta: Widgets experts (Cota de neu, Punt de rosada).</em></p>
