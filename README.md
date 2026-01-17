@@ -1,101 +1,119 @@
-# 🌦️ MeteoToni AI (v2.5.0-PRO)
+# 🌦️ MeteoToni AI
 
-> **Més que una aplicació del temps.** Un meteoròleg tàctic personalitzat impulsat per IA i models d'alta resolució.
+[![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite_6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Gemini AI](https://img.shields.io/badge/Google_Gemini_2.0-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Ready-success?style=for-the-badge&logo=pwa&logoColor=white)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-![React](https://img.shields.io/badge/React-18-blue) ![Vite](https://img.shields.io/badge/Vite-5-purple) ![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20Pro-orange) ![License](https://img.shields.io/badge/License-MIT-green)
+> **La meteorologia de precisió es troba amb la narrativa intel·ligent.**
 
-## 🚀 Sobre el Projecte
-
-**MeteoToni AI** redefineix l'experiència de consultar el temps. En lloc de mostrar només números freds, utilitza **Google Gemini** per analitzar patrons complexos i oferir consells accionables ("Lifestyle" vs "Seguretat") basats en la severitat del clima.
-
-Combina la precisió del model **AROME HD** (1.3km) amb un sistema de **fallback intel·ligent** per garantir que, si plou, ho sàpigues abans de sortir de casa.
-
----
-
-## ✨ Funcionalitats Estel·lars
-
-### 🧠 1. IA amb "Personalitat Tàctica"
-El sistema no només resumeix el temps; l'entén.
-- **Mode Lifestyle:** Si fa bo, et suggereix rentar el cotxe, assecar roba o fer esport.
-- **Mode Seguretat:** Si detecta vent >40km/h o tempestes, canvia el to a autoritari i prioritza alertes.
-- **Cache Intel·ligent:** Guarda les anàlisis a `localStorage` (30 min) per estalviar costos d'API i millorar la velocitat.
-
-### ☔ 2. Monitor de Precipitació "Zero-Error"
-Un giny exclusiu que només apareix quan hi ha amenaça de pluja en la pròxima hora.
-- **Lògica de Fallback:**
-  1.  Prioritza dades de **Radar en Viu** (minut a minut).
-  2.  Si el radar falla (zona cega), salta automàticament al model **AROME HD**.
-  3.  Divideix la previsió horària en segments de 15 minuts per generar una gràfica sintètica.
-
-### 🎨 3. UI/UX Premium
-- **Disseny Bento Grid:** Organització modular i neta.
-- **Vidre Esmaltat (Glassmorphism):** Estètica moderna amb fons dinàmics segons el clima.
-- **Country Aware:** Reconeixement automàtic de Ciutat i País (via Nominatim).
-- **Multi-idioma:** Suport natiu (Català, Anglès, Castellà, Francès) amb traducció de prompts d'IA.
+MeteoToni AI redefineix l'experiència de consultar el temps. No és només una altra app de dades; és un sistema híbrid que combina la física atmosfèrica d'alta resolució (models d'1.3km) amb la capacitat d'una IA generativa d'última generació per explicar-te què passarà realment al teu carrer, amb un llenguatge humà i conscient de la incertesa.
 
 ---
 
-## 🛠️ Stack Tecnològic
+## ✨ Visió General de la Interfície
 
-* **Frontend:** React 18 + TypeScript + Vite
-* **Estils:** Tailwind CSS + Shadcn/UI (conceptes) + Lucide Icons
-* **Dades Meteorològiques:** Open-Meteo API (Models: AROME, GFS, ICON, ECMWF)
-* **Intel·ligència Artificial:** Google Generative AI SDK (Gemini 1.5 Flash / Pro)
-* **Geolocalització:** Browser GPS + Nominatim (Reverse Geocoding)
-* **Gràfics:** Recharts (Personalitzats per a pluja i temperatura)
+*(Substitueix aquestes imatges per captures reals de la teva aplicació per un efecte "wow")*
+
+<div align="center">
+  <img src="./public/screenshots/desktop-dashboard.png" alt="Tauler Principal Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+  <p><em>El tauler principal amb disseny Bento-Grid, mostrant dades actuals, gràfics i el resum de la IA.</em></p>
+</div>
+
+<br/>
+
+<div align="center" style="display: flex; justify-content: center; gap: 20px;">
+  <img src="./public/screenshots/mobile-arome.png" alt="Vista Mòbil AROME" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+  <img src="./public/screenshots/mobile-widgets.png" alt="Widgets Avançats" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+</div>
+<div align="center">
+  <p><em>Esquerra: Previsió horària d'alta resolució AROME HD. Dreta: Widgets experts (Cota de neu, Punt de rosada).</em></p>
+</div>
 
 ---
 
-## ⚙️ Instal·lació i Desplegament
+## 🚀 Característiques Clau: Més enllà de les Dades
 
-### Prerequisits
-Necessites una API Key de Google Gemini (Gratuïta).
+### 🧠 El Cervell: IA Híbrida i Conscient
+A diferència dels chatbots estàndard, l'IA de MeteoToni està profundament integrada en el motor de dades:
+* **Arquitectura de Doble Capa:** Generació de prediccions locals instantànies (zero latència) mentre Gemini 2.0 processa un relat enriquit en segon pla.
+* **Consciència de Fiabilitat:** La IA sap si els models matemàtics discrepen. Si la fiabilitat és baixa, el resum t'ho comunicarà en lloc de donar falses certeses.
+* **Narrativa Humana:** Entrenada per evitar tecnicismes ("gradients", "isoterma") i explicar fenòmens complexos com la xafogor o el risc de tempesta amb un to proper.
 
-1.  **Clonar el repositori:**
+### 🏗️ El Motor: Física d'Alta Resolució (AROME HD)
+Hem auditat i ajustat els algorismes per reflectir la realitat física:
+* **Model AROME 1.3km:** Injecció de dades hiper-locals sobre els models globals (GFS/ECMWF) per a les primeres 48 hores.
+* **Física de Núvols Realista:** Nou càlcul de nuvolositat efectiva que pondera més els núvols alts i mitjans, evitant icones de "sol" quan el cel està emblanquinat.
+* **Tempestes Precises (CAPE):** Un sistema d'alertes que només activa la icona de tempesta si hi ha una combinació d'energia convectiva alta i precipitació activa, eliminant falsos positius.
+* **Llindar "TRACE" (0.1mm):** Filtratge de dades perquè les icones de pluja només apareguin quan la precipitació és visualment perceptible.
+
+### 📱 L'Experiència: PWA Moderna
+* **Rendiment Extrem:** Construïda amb React 19 i Vite 6, amb *code-splitting* basat en rutes i components (Modals Lazy).
+* **Offline-First:** Estratègia de caché robusta utilitzant **IndexedDB**, permetent que l'app funcioni i mostri les últimes dades fins i tot sense connexió.
+* **Disseny Responsiu:** Interfície fluida inspirada en el disseny "Bento" que s'adapta des de mòbils fins a pantalles 4K.
+
+---
+
+## ⚙️ Arquitectura Tècnica (Under the Hood)
+
+Una mirada ràpida a com està construïda l'aplicació per dins, basada en l'auditoria de producció:
+
+| Capa | Tecnologia | Detalls d'Implementació Clau |
+| :--- | :--- | :--- |
+| **Frontend Core** | React 19 + TypeScript | Tipat estricte, Hooks personalitzats (`useWeather`, `useWeatherCalculations`) per separar lògica d'UI. |
+| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA, generació d'actius i *tree-shaking* agressiu. |
+| **Estils** | Tailwind CSS | Sistema de disseny utilitari amb animacions CSS natives i Lucide Icons. |
+| **Gestió d'Estat** | Context API + IDB | Memòria cau persistent d'alt rendiment (`idb-keyval`) amb *bucketing* geoespacial i TTL diferenciat (dades vs IA). |
+| **Dades Externes** | Open-Meteo API | Fusió intel·ligent de múltiples models (AROME, ECMWF, GFS, ICON). |
+| **Intel·ligència** | Google Gemini API | Integració via SDK amb *prompt engineering* dinàmic basat en la severitat del clima. |
+| **CI/CD** | GitHub Actions | Flux de treball automatitzat per a build, validació de tipus i desplegament segur a GitHub Pages. |
+
+---
+
+## 🛠️ Instal·lació Local
+
+Si vols explorar el codi font:
+
+1.  **Clona el repositori:**
     ```bash
-    git clone [https://github.com/tu-usuari/meteo-toni-ai.git](https://github.com/tu-usuari/meteo-toni-ai.git)
-    cd meteo-toni-ai
+    git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
+    cd meteoai
     ```
 
-2.  **Instal·lar dependències:**
+2.  **Instal·la les dependències:**
     ```bash
     npm install
     ```
 
-3.  **Configurar l'entorn:**
-    Crea un fitxer `.env` a l'arrel:
+3.  **Configura l'entorn:**
+    Crea un fitxer `.env` a l'arrel i afegeix la teva clau d'API de Google Gemini:
     ```env
-    VITE_GEMINI_API_KEY=la_teva_clau_api_aqui
+    VITE_GEMINI_API_KEY=la_teva_clau_aquí
     ```
 
-4.  **Executar en local:**
+4.  **Arranca el servidor de desenvolupament:**
     ```bash
     npm run dev
     ```
 
-5.  **Compilar per a producció:**
+5.  **Executa els tests (Validació de lògica física):**
     ```bash
-    npm run build
+    npm test
     ```
 
 ---
 
-## 📂 Estructura del Codi (Clau)
+## 📄 Llicència i Crèdits
 
-* **`src/hooks/useWeatherCalculations.ts`**: El cervell numèric. Aquí resideix la lògica del "Fallback de Pluja" i la normalització de models.
-* **`src/services/geminiService.ts`**: El cervell creatiu. Conté l'enginyeria de prompts avançada (mapa d'idiomes, detecció de to).
-* **`src/components/CurrentWeather.tsx`**: Targeta principal amb lògica visual (Badges de País/AROME).
-* **`src/utils/weatherLogic.ts`**: Pre-processament de dades per "alimentar" l'IA amb context net.
-
----
-
-## 🤝 Contribucions
-
-Les Pull Requests són benvingudes. Per a canvis majors, si us plau obre una *issue* primer per discutir el que t'agradaria canviar.
+* Desenvolupat per Toni Tapias - © 2025.
+* Llicència MIT.
+* Dades meteorològiques proporcionades per [Open-Meteo](https://open-meteo.com/) sota llicència Creative Commons.
+* IA impulsada per Google Gemini.
 
 ---
-
 <div align="center">
-  <p>Fet amb ❤️ i molt de ☕ per <b>Toni</b></p>
-  <p><i>v2.5.0-PRO - Stable Release</i></p>
+  <p><em>Fet amb ❤️, ⚛️ i molts ☁️ a Barcelona.</em></p>
 </div>
