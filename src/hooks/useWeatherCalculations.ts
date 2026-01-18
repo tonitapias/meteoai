@@ -47,7 +47,8 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
         for(let i = 0; i < timesRaw.length; i++) {
             if (new Date(timesRaw[i]).getTime() > currentMs) { idx = i; break; }
         }
-        let currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
+        // FIX: Canviat de 'let' a 'const' (Soluciona l'error 50:13)
+        const currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
         preciseData = weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
     }
 
@@ -214,7 +215,6 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
 
   const currentCape = useMemo(() => getComparisonVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
 
-  // --- BLOC FIXAT: EXTREMS DE LA SETMANA ---
   const weeklyExtremes = useMemo(() => {
     const minTemps = weatherData?.daily?.temperature_2m_min;
     const maxTemps = weatherData?.daily?.temperature_2m_max;

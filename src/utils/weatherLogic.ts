@@ -19,7 +19,6 @@ export interface ExtendedWeatherData extends WeatherData {
   [key: string]: any;
 }
 
-// --- HELPER SEGUR PER NÚMEROS ---
 const safeNum = (val: any, fallback: number = 0): number => {
     if (val === null || val === undefined || Number.isNaN(val)) return fallback;
     return Number(val);
@@ -50,7 +49,11 @@ export const calculateDewPoint = (T: number, RH: number): number => {
 };
 
 export const getMoonPhase = (date: Date): number => {
-  let year = date.getFullYear(), month = date.getMonth() + 1, day = date.getDate();
+  let year = date.getFullYear();
+  let month = date.getMonth() + 1;
+  // eslint-disable-next-line prefer-const
+  let day = date.getDate(); 
+  
   if (month < 3) { year--; month += 12; }
   const c = 365.25 * year, e = 30.6 * month;
   const jd = c + e + day - 694039.09; 
@@ -71,7 +74,7 @@ export const getWeatherLabel = (current: any, language: Language): string => {
 // ==========================================
 
 const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: any) => {
-    let parts = [];
+    const parts = []; 
     if (isRaining) {
         if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) parts.push(tr.aiRainHeavy); 
         else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) parts.push(tr.aiRainMod); 
@@ -86,7 +89,7 @@ const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, cod
 };
 
 const analyzeSky = (code: number, isDay: number, currentHour: number, visibility: number, rainProb: number, cloudCover: number, tr: any, alerts: any[]) => {
-    let parts = [];
+    const parts = []; 
     if (isDay) parts.push(currentHour < 12 ? tr.aiIntroMorning : tr.aiIntroAfternoon);
     else parts.push(tr.aiIntroNight);
 
@@ -106,7 +109,7 @@ const analyzeSky = (code: number, isDay: number, currentHour: number, visibility
 };
 
 const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, dailyMin: number, currentHour: number, unit: string, tr: any) => {
-    let parts = [];
+    const parts = []; 
     if (feelsLike <= TEMP.FREEZING) parts.push(tr.aiTempFreezing);
     else if (feelsLike > TEMP.FREEZING && feelsLike < TEMP.COLD) parts.push(tr.aiTempCold);
     else if (feelsLike >= TEMP.COLD && feelsLike < TEMP.MILD) {
@@ -128,8 +131,8 @@ const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, d
 
 const generateAlertsAndTips = (params: any, tr: any) => {
     const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum } = params;
-    let alerts = [];
-    let tips = [];
+    const alerts = []; 
+    const tips = [];   
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
 
     if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
@@ -214,7 +217,7 @@ export const generateAIPrediction = (
         const isDay = safeNum(current.is_day, 1);
 
         let summaryParts: string[] = [];
-        let alertsList: any[] = []; 
+        const alertsList: any[] = []; 
 
         if (isRaining) {
             summaryParts = analyzePrecipitation(isRaining, precipInstantanea, code, precipNext15, tr);
@@ -277,10 +280,6 @@ export const generateAIPrediction = (
     }
 };
 
-// ==========================================
-// 3. CÀLCUL CODI TEMPS REAL (TOTALMENT OPTIMITZAT)
-// ==========================================
-
 export const getRealTimeWeatherCode = (
     current: any, 
     minutelyPrecipData: number[], 
@@ -302,8 +301,6 @@ export const getRealTimeWeatherCode = (
     const midClouds = safeNum(current.cloud_cover_mid, 0);
     const highClouds = safeNum(current.cloud_cover_high, 0);
     
-    // MILLORA: Ponderació calibrada visualment
-    // Abans donava massa importància a núvols baixos i ignorava els alts (cel blanc)
     const effectiveCloudCover = Math.min(100, (lowClouds * 1.0) + (midClouds * 0.6) + (highClouds * 0.3));
 
     if (code <= 3) {
@@ -317,13 +314,10 @@ export const getRealTimeWeatherCode = (
         ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
         : safeNum(current.precipitation, 0);
 
-    // MILLORA: Utilitzem el llindar TRACE (0.1)
-    // Això corregeix el test que fallava: 0.02 no ha de activar pluja, 0.1 si.
     if (isArome && precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
         code = 61; 
     }
 
-    // Detecció de boira
     const dewPoint = calculateDewPoint(temp, humidity);
     const dewPointSpread = temp - dewPoint;
 
@@ -333,16 +327,13 @@ export const getRealTimeWeatherCode = (
         code = 1; 
     }
 
-    // MILLORA: Lògica de tempesta més estricta per evitar falsos positius
     if (cape > 1200) { 
         const isPrecipitating = precipInstantanea >= PRECIPITATION.TRACE || (code >= 51 && code <= 82);
         
-        // Només activem tempesta si hi ha "gasolina" (CAPE) + "espurna" (Precipitació)
         if (effectiveCloudCover > 60) {
             if (isPrecipitating) {
                  if (code < 95) code = 95;
             } else if (cape > 2000) {
-                // Si hi ha molta energia però no plou, mostrem variable amenaçador (2) enlloc de tempesta
                 code = 2; 
             }
         }

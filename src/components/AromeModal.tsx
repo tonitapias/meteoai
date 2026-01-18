@@ -141,7 +141,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                     <span className="bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-[0_0_10px_rgba(192,38,211,0.4)]">HD Live</span>
                     <h2 className="text-xl font-bold text-white tracking-tight">AROME <span className="text-fuchsia-400">1.3km</span></h2>
                 </div>
-                <p className="text-slate-400 text-xs md:text-sm">Previsió d'alta resolució (Precisió Física)</p>
+                <p className="text-slate-400 text-xs md:text-sm">Previsió d&apos;alta resolució (Precisió Física)</p>
             </div>
             <button onClick={onClose} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors active:scale-95">
                 <X className="w-5 h-5" />
@@ -190,7 +190,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                     <div className="divide-y divide-white/5">
                         {hourlyRows.length === 0 ? (
                             <div className="p-10 text-center text-slate-500 text-sm">
-                                Final de la previsió d'alta resolució.
+                                Final de la Previsió d&apos;alta resolució.
                             </div>
                         ) : (
                             hourlyRows.map((row, index) => {

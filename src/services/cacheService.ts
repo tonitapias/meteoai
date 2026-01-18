@@ -4,7 +4,6 @@ import { get, set, del, entries, delMany, IDBValidKey } from 'idb-keyval';
 const WEATHER_PREFIX = 'meteoai_v7_cache_';
 const AI_PREFIX = 'meteoai_ai_';
 const MAX_AGE_WEATHER = 15 * 60 * 1000; // 15 minuts
-const MAX_AGE_AI = 24 * 60 * 60 * 1000; // 24 hores
 
 // Definim la "forma" de les dades guardades
 interface CacheItem<T> {
@@ -23,7 +22,6 @@ export const cacheService = {
         data: data
       };
       await set(key, payload);
-      console.log("💾 Dades guardades a IndexedDB");
     } catch (err) {
       console.error("❌ Error guardant a DB:", err);
     }
@@ -31,7 +29,6 @@ export const cacheService = {
 
   /**
    * Recupera dades. Utilitza <T> per indicar què esperes rebre.
-   * Exemple: const data = await cacheService.get<WeatherData>(key);
    */
   get: async <T>(key: string, maxAge: number = MAX_AGE_WEATHER): Promise<T | null> => {
     try {
@@ -83,7 +80,6 @@ export const cacheService = {
 
       if (keysToDelete.length > 0) {
           await delMany(keysToDelete);
-          console.log(`🧹 Netejats ${keysToDelete.length} elements antics de la caché.`);
       }
     } catch (err) {
       console.error("Error netejant DB:", err);

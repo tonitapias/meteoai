@@ -25,6 +25,7 @@ import { useWeatherAI } from './hooks/useWeatherAI';
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
+import { useModalHistory } from './hooks/useModalHistory'; // <--- NOVA IMPORTACIÓ
 
 // --- FOOTER ---
 const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
@@ -79,6 +80,28 @@ export default function MeteoIA() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [showRadar, setShowRadar] = useState(false);
   const [showArome, setShowArome] = useState(false);
+
+  // --- INTEGRACIÓ HISTORY API ---
+  // Això permet tancar els modals amb el botó "enrere" del dispositiu sense sortir de l'app.
+  
+  // Gestió per al detall del dia
+  useModalHistory(
+    selectedDayIndex !== null, 
+    useCallback(() => setSelectedDayIndex(null), [])
+  );
+
+  // Gestió per al Radar
+  useModalHistory(
+    showRadar, 
+    useCallback(() => setShowRadar(false), [])
+  );
+
+  // Gestió per al model AROME
+  useModalHistory(
+    showArome, 
+    useCallback(() => setShowArome(false), [])
+  );
+  // -----------------------------
 
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer); }, []);
 

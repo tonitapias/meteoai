@@ -57,7 +57,6 @@ export const getGeminiAnalysis = async (weatherData: any, lang: string = 'ca') =
   if (aiResponseCache.has(cacheKey)) {
     const cached = aiResponseCache.get(cacheKey)!;
     if (now - cached.timestamp < CACHE_TTL) {
-      console.log(`📦 MeteoAI: Anàlisi recuperada del localStorage per a ${cacheKey}`);
       return cached.data;
     }
     // Si ha caducat, l'esborrem

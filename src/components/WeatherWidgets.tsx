@@ -345,7 +345,7 @@ interface CapeWidgetProps extends BaseWidgetProps { cape: number; }
 export const CapeWidget = ({ cape, lang = 'ca' }: CapeWidgetProps) => {
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
     let status = t.capeStable; let color = "text-green-400"; let bgColor = "bg-green-500";
-    let percentage = Math.min((cape / 3000) * 100, 100);
+    const percentage = Math.min((cape / 3000) * 100, 100);
     if (cape > 1000 && cape <= 2500) { status = t.capeModerate; color = "text-orange-400"; bgColor = "bg-orange-500"; }
     else if (cape > 2500) { status = t.capeExtreme; color = "text-red-500 animate-pulse"; bgColor = "bg-red-500"; }
 
