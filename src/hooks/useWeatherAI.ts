@@ -1,21 +1,54 @@
 // src/hooks/useWeatherAI.ts
 import { useState, useEffect, useRef } from 'react';
-import { generateAIPrediction } from '../utils/weatherLogic';
+import { 
+    generateAIPrediction, 
+    ExtendedWeatherData, 
+    ReliabilityResult, 
+    AIPredictionResult 
+} from '../utils/weatherLogic';
 import { getGeminiAnalysis } from '../services/geminiService';
+import { Language } from '../constants/translations';
+import { WeatherUnit } from '../utils/formatters';
 
-// MILLORA: Afegit paràmetre 'reliability'
-export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: any, reliability: any) {
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+// Ampliem el tipus base per incloure el camp 'source' opcional que afegeix el hook
+interface AIAnalysisState extends AIPredictionResult {
+    source?: string;
+}
+
+// Tipus simple per a AQI
+interface AQIData {
+    current?: {
+        european_aqi?: number;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+export function useWeatherAI(
+    weatherData: ExtendedWeatherData | null, 
+    aqiData: AQIData | null, 
+    lang: Language, 
+    unit: WeatherUnit, 
+    reliability: ReliabilityResult | null
+) {
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisState | null>(null);
   const lastProcessedKey = useRef<string>("");
 
   useEffect(() => {
     // 1. Validació inicial
-    const current = weatherData?.current;
-    if (!current || current.weather_code === undefined) return;
+    if (!weatherData?.current) return;
+    const current = weatherData.current;
+    
+    if (current.weather_code === undefined) return;
 
     // 2. Construcció de la clau única (incloent fiabilitat)
-    const lat = (weatherData.location?.latitude || current.latitude)?.toFixed(3);
-    const lon = (weatherData.location?.longitude || current.longitude)?.toFixed(3);
+    // Accés segur a coordenades (fallback si no existeixen a location)
+    const currentProps = current as Record<string, unknown>;
+    const latVal = weatherData.location?.latitude ?? (typeof currentProps.latitude === 'number' ? currentProps.latitude : 0);
+    const lonVal = weatherData.location?.longitude ?? (typeof currentProps.longitude === 'number' ? currentProps.longitude : 0);
+
+    const lat = Number(latVal).toFixed(3);
+    const lon = Number(lonVal).toFixed(3);
     const weatherCode = current.weather_code;
     const aqiVal = aqiData?.current?.european_aqi || 0;
     
@@ -41,12 +74,15 @@ export function useWeatherAI(weatherData: any, aqiData: any, lang: any, unit: an
         
         // Només actualitzem si la clau no ha canviat mentre esperàvem
         if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
-          setAiAnalysis((prev: any) => ({
-            ...prev,
-            text: gemini.text,
-            tips: gemini.tips?.length ? gemini.tips : prev.tips,
-            source: 'Gemini AI'
-          }));
+          setAiAnalysis((prev) => {
+              if (!prev) return prev; // Protecció si el component s'ha desmuntat o estat és null
+              return {
+                ...prev,
+                text: gemini.text,
+                tips: gemini.tips?.length ? gemini.tips : prev.tips,
+                source: 'Gemini AI'
+              };
+          });
         }
       } catch (e) {
         console.error("🚨 Error useWeatherAI:", e);

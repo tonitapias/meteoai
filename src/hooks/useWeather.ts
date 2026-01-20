@@ -7,14 +7,17 @@ import {
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
-import { reverseGeocode } from '../services/geocodingService'; // NOU IMPORT
+import { reverseGeocode } from '../services/geocodingService';
 import { WeatherUnit } from '../utils/formatters';
 import { Language } from '../constants/translations';
+
+// Definim un tipus genèric per a les dades de qualitat de l'aire
+type AQIData = Record<string, unknown>;
 
 // Interfície actualitzada amb timestamp per controlar la caducitat
 interface CacheEntry {
     weather: ExtendedWeatherData;
-    aqi: any;
+    aqi: AQIData | null;
     timestamp: number;
 }
 
@@ -23,7 +26,7 @@ const CACHE_TTL = 15 * 60 * 1000; // 15 minuts de vida útil
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
-  const [aqiData, setAqiData] = useState<any>(null);
+  const [aqiData, setAqiData] = useState<AQIData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
@@ -66,7 +69,8 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
         : Promise.resolve({ city: locationName || "Ubicació actual", country: country || "Local" });
 
       // Esperem totes les promeses
-      const [data, geoData, airData] = await Promise.all([weatherPromise, namePromise, aqiPromise]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [data, geoData, airData] = await Promise.all([weatherPromise, namePromise, aqiPromise]) as [any, any, AQIData];
 
       // 4. PROCESSAMENT DE DADES
       let processedData = normalizeModelData(data);
@@ -76,7 +80,9 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
              processedData = injectHighResModels(processedData, aromeRaw);
-          } catch (e) { console.warn("Arome no disponible"); }
+          } catch { 
+              console.warn("Arome no disponible"); 
+          }
       }
 
       // Actualitzem la ubicació amb les dades normalitzades
@@ -101,16 +107,16 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       
       return true;
 
-    } catch (err: any) {
-      console.error("❌ Error en fetchWeather:", err);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error("❌ Error en fetchWeather:", errorMessage);
       setError('No s\'ha pogut carregar el temps.');
       return false;
     } finally {
       setLoading(false);
     }
-  }, [unit, lang]); // Afegim 'lang' perquè la geocodificació respongui al canvi d'idioma
+  }, [unit, lang]); 
 
-  // Aquesta funció es manté igual per no trencar la integració amb el botó de GPS
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setNotification({ type: 'error', msg: 'Geolocalització no suportada.' });

@@ -1,12 +1,20 @@
 // src/utils/weatherLogic.test.ts
 import { describe, it, expect } from 'vitest';
-import { getRealTimeWeatherCode, injectHighResModels, calculateReliability, ExtendedWeatherData } from './weatherLogic';
+import { 
+    getRealTimeWeatherCode, 
+    injectHighResModels, 
+    calculateReliability, 
+    ExtendedWeatherData, 
+    StrictCurrentWeather,
+    StrictDailyWeather,
+    StrictHourlyWeather
+} from './weatherLogic';
 
 // ==============================================
 // 1. TESTS DE CODIS DE TEMPS (CASOS BÀSICS)
 // ==============================================
 
-const mockCurrent: any = {
+const mockCurrent: StrictCurrentWeather = {
   weather_code: 3, 
   temperature_2m: 15,
   relative_humidity_2m: 80,
@@ -15,7 +23,10 @@ const mockCurrent: any = {
   cloud_cover: 50,
   cloud_cover_low: 50,
   cloud_cover_mid: 0,
-  cloud_cover_high: 0
+  cloud_cover_high: 0,
+  apparent_temperature: 15,
+  wind_speed_10m: 10,
+  time: '2023-01-01T12:00'
 };
 
 describe('getRealTimeWeatherCode - Detecció Intel·ligent', () => {
@@ -69,7 +80,6 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
             weather_code: 3, 
             precipitation: 0 
         };
-        // CORRECCIÓ TEST: Validem amb 0.15mm perquè 0.03mm (test anterior) és < TRACE i s'ha d'ignorar.
         const minutelyPrecip = [0.15]; 
         const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
         expect(result).toBe(61); 
@@ -84,7 +94,7 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
             cloud_cover_high: 100 
         };
         const result = getRealTimeWeatherCode(current, [], 0, 3000, 0);
-        expect(result).toBeLessThanOrEqual(1); // Esperem sol o parcialment ennuvolat
+        expect(result).toBeLessThanOrEqual(1); 
     });
 
     it('hauria de convertir PLUJA en TEMPESTA si hi ha CAPE alt', () => {
@@ -93,11 +103,7 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
             weather_code: 3,
             cloud_cover_low: 80 
         };
-        
-        // CORRECCIÓ TEST: Afegim pluja (1.0mm) per validar que l'energia (CAPE) converteix la pluja en tempesta.
-        // Sense pluja, la lògica correcta és NO mostrar tempesta (evitar falsos positius).
         const minutelyPrecip = [1.0];
-        
         const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0, 1600);
         expect(result).toBe(95); 
     });
@@ -115,14 +121,18 @@ describe('injectHighResModels - Fusió AROME', () => {
             wind_speed_10m: 20,
             weather_code: 3,
             time: '2023-01-01T12:00'
-        } as any,
-        hourly: { time: ['2023-01-01T12:00', '2023-01-01T13:00'], temperature_2m: [10, 11] } as any
+        } as unknown as StrictCurrentWeather,
+        // CORRECCIÓ: Substituït 'as any' per 'as StrictHourlyWeather'
+        hourly: { 
+            time: ['2023-01-01T12:00', '2023-01-01T13:00'], 
+            temperature_2m: [10, 11] 
+        } as unknown as StrictHourlyWeather
     };
 
     const aromeData = {
         current: { temperature_2m: 12.5, wind_speed_10m: 25, weather_code: 61, precipitation: 5.0 },
         hourly: { time: ['2023-01-01T12:00', '2023-01-01T13:00'], temperature_2m: [12.5, 11.5], precipitation: [5.0, 5.0] }
-    };
+    } as unknown as ExtendedWeatherData;
 
     const result = injectHighResModels(baseData as ExtendedWeatherData, aromeData);
     expect(result.hourly.precipitation[0]).toBe(5.0); 
@@ -132,7 +142,7 @@ describe('injectHighResModels - Fusió AROME', () => {
   });
 
   it('hauria de gestionar correctament si falten dades AROME', () => {
-    const baseData = { current: { temperature_2m: 10 } } as any;
+    const baseData = { current: { temperature_2m: 10 } } as unknown as ExtendedWeatherData;
     const result = injectHighResModels(baseData, null);
     expect(result).toEqual(baseData); 
   });
@@ -145,9 +155,9 @@ describe('injectHighResModels - Fusió AROME', () => {
 describe('Càlcul de Fiabilitat (Reliability)', () => {
   it('hauria de marcar fiabilitat BAIXA si els models discrepen molt', () => {
     const result = calculateReliability(
-      { temperature_2m_max: [20] }, 
-      { temperature_2m_max: [10] }, 
-      { temperature_2m_max: [18] }
+      { temperature_2m_max: [20] } as unknown as StrictDailyWeather, 
+      { temperature_2m_max: [10] } as unknown as StrictDailyWeather, 
+      { temperature_2m_max: [18] } as unknown as StrictDailyWeather
     );
     expect(result?.level).toBe('low');
     expect(result?.type).toBe('temp');
@@ -155,9 +165,9 @@ describe('Càlcul de Fiabilitat (Reliability)', () => {
 
   it('hauria de marcar fiabilitat ALTA si els models coincideixen', () => {
     const result = calculateReliability(
-      { temperature_2m_max: [20], precipitation_probability_max: [0] }, 
-      { temperature_2m_max: [20.5], precipitation_probability_max: [0] }, 
-      { temperature_2m_max: [19.8], precipitation_probability_max: [10] }
+      { temperature_2m_max: [20], precipitation_probability_max: [0] } as unknown as StrictDailyWeather, 
+      { temperature_2m_max: [20.5], precipitation_probability_max: [0] } as unknown as StrictDailyWeather, 
+      { temperature_2m_max: [19.8], precipitation_probability_max: [10] } as unknown as StrictDailyWeather
     );
     expect(result?.level).toBe('high');
   });

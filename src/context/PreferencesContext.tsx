@@ -18,13 +18,15 @@ export interface PreferencesContextType {
   isFavorite: (name: string) => boolean;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
 
 export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
-  // Cast segur per llegir de localStorage (assumim que el valor guardat és correcte o usem default)
+  // Cast segur per llegir de localStorage
   const [unit, setUnit] = useState<WeatherUnit>(() => (localStorage.getItem('meteoia-unit') as WeatherUnit) || 'C');
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('meteoia-lang') as Language) || 'ca');
   const [viewMode, setViewMode] = useState<string>(() => localStorage.getItem('meteoia-view') || 'basic');
+  
   const [favorites, setFavorites] = useState<LocationData[]>(() => {
     const saved = localStorage.getItem('meteoia-favs');
     return saved ? (JSON.parse(saved) as LocationData[]) : [];
@@ -55,9 +57,12 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
   }, [favorites]);
 
   const value: PreferencesContextType = {
-    lang, setLang,
-    unit, setUnit,
-    viewMode, setViewMode,
+    lang,
+    setLang,
+    unit,
+    setUnit,
+    viewMode,
+    setViewMode,
     favorites,
     addFavorite,
     removeFavorite,

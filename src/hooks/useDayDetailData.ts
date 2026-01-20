@@ -22,11 +22,11 @@ export const useDayDetailData = (
       date: daily.time[i],
       maxTemp: daily.temperature_2m_max[i],
       minTemp: daily.temperature_2m_min[i],
-      precipSum: daily.precipitation_sum[i],
-      windMax: daily.wind_speed_10m_max[i],
-      sunrise: daily.sunrise[i],
-      sunset: daily.sunset[i],
-      uvMax: daily.uv_index_max[i]
+      precipSum: daily.precipitation_sum?.[i],
+      windMax: daily.wind_speed_10m_max?.[i],
+      sunrise: daily.sunrise?.[i],
+      sunset: daily.sunset?.[i],
+      uvMax: daily.uv_index_max?.[i]
     };
   }, [weatherData, selectedDayIndex]);
 
@@ -57,8 +57,9 @@ export const useDayDetailData = (
         
         // Fallback: Si no tenim cota de neu a l'Open-Meteo, busquem als models
         if (fl == null) {
-             fl = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height ?? 
-                  weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
+             const gfsVal = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height;
+             const iconVal = weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
+             fl = (typeof gfsVal === 'number' ? gfsVal : typeof iconVal === 'number' ? iconVal : null);
         }
         
         const snowLevel = (fl != null) ? Math.max(0, fl - 300) : null;
@@ -66,7 +67,7 @@ export const useDayDetailData = (
         return {
             time: weatherData.hourly.time[idx],
             temp: weatherData.hourly.temperature_2m[idx],
-            rain: weatherData.hourly.precipitation_probability[idx],
+            rain: weatherData.hourly.precipitation_probability?.[idx],
             snowLevel,
             precip: weatherData.hourly.precipitation[idx],
             wind: weatherData.hourly.wind_speed_10m[idx],
@@ -79,7 +80,7 @@ export const useDayDetailData = (
   const comparisonData = useMemo(() => {
       if (!weatherData?.hourlyComparison || dayIndices.length === 0) return null;
 
-      const extract = (modelArr: any[]) => {
+      const extract = (modelArr: Record<string, unknown>[]) => {
           if (!modelArr?.length) return [];
           return dayIndices.map(idx => {
               const d = modelArr[idx];

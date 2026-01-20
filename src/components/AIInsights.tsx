@@ -6,11 +6,17 @@ import { TRANSLATIONS, Language } from '../constants/translations';
 
 // --- INTERFACES ---
 
+interface AlertItem {
+    type: string;
+    msg: string;
+    level: 'high' | 'warning';
+}
+
 interface AnalysisResult {
     text: string;
     confidenceLevel: 'high' | 'medium' | 'low';
     confidence: string;
-    alerts: Array<{ type: string; msg: string; level: 'high' | 'warning' }>;
+    alerts: AlertItem[];
     tips: string[];
     source?: string;
 }
@@ -21,7 +27,10 @@ interface AIInsightsProps {
     lang: Language;
 }
 
-// --- SUB-COMPONENTS D'ESTIL ---
+// Definim un subconjunt segur de traduccions per al component
+type TranslationSubset = Record<string, string>;
+
+// --- SUB-COMPONENTS D'ESTIL ---\
 
 const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
   if (!analysis) return null;
@@ -40,7 +49,7 @@ const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
   );
 };
 
-const InsightAlert = ({ alert, t }: { alert: any, t: any }) => {
+const InsightAlert = ({ alert, t }: { alert: AlertItem, t: TranslationSubset }) => {
   const isHigh = alert.level === 'high';
   return (
     <div className={`flex items-start gap-3 p-3 rounded-lg border shadow-sm ${
@@ -80,7 +89,7 @@ const InsightTip = ({ tip, index }: { tip: string, index: number }) => {
   );
 };
 
-const InsightSkeleton = ({ t }: { t: any }) => (
+const InsightSkeleton = () => (
   <div className="flex flex-col gap-4 w-full h-full p-6 animate-pulse">
       <div className="flex justify-between items-center mb-2">
           <div className="h-4 w-24 bg-slate-700/50 rounded"></div>
@@ -97,11 +106,11 @@ const InsightSkeleton = ({ t }: { t: any }) => (
 // --- COMPONENT PRINCIPAL ---
 
 export default function AIInsights({ analysis, lang }: AIInsightsProps) { 
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+  const t = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as TranslationSubset;
 
   if (!analysis) return (
       <div className="flex-1 w-full bg-slate-900/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px]">
-        <InsightSkeleton t={t} />
+        <InsightSkeleton />
       </div>
   );
 

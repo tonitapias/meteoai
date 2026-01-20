@@ -4,7 +4,7 @@ export type Language = 'ca' | 'es' | 'en' | 'fr';
 
 export const TRANSLATIONS = {
   ca: {
-    // --- CLAUS ORIGINALS ---
+    // --- CLAUS ORIGINALS & CORE ---
     aiConsensus: "Consens de Models",
     aiCloudyNoRain: "No s'espera pluja, tot i l'aspecte gris del cel.",
     searchPlaceholder: "Cerca ciutat...",
@@ -28,6 +28,7 @@ export const TRANSLATIONS = {
     snowLevel: "Cota de neu",
     forecast7days: "Previsió 7 Dies",
     today: "Avui",
+    tomorrow: "Demà", // AFEGIT
     detailedForecast: "Previsió detallada",
     hourlyEvolution: "Evolució Horària",
     snowAccumulated: "Neu Acumulada",
@@ -119,13 +120,55 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambient tancat. Pluja persistent i visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació inestable. Risc de tempestes actives. ",
 
-    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
     aiAnalysisDescription: "Previsió meteorològica d'alta precisió impulsada per intel·ligència artificial.",
     searchCity: "Cerca Ciutat",
     useLocation: "Utilitzar Ubicació",
     selectLanguage: "Selecciona Idioma",
     autoGPS: "GPS Automàtic",
     manualSearch: "Busca manualment",
+    
+    // --- NOVES SECCIONS (AUDITORIA) ---
+    welcome: {
+      tagline: "Next Gen Weather",
+      desc: "Sistema d'intel·ligència atmosfèrica d'alta precisió.",
+      connecting: "Connectant satèl·lit...",
+      start: "INICIAR SISTEMA",
+      manual: "O Cerca Manual"
+    },
+    arome: {
+      subtitle: "Previsió d'alta resolució (Precisió Física)",
+      loading: "Calculant física atmosfèrica...",
+      end: "Final de la previsió d'alta resolució.",
+      error: "Error de dades",
+      close: "Tancar"
+    },
+    dayDetail: {
+      uv: "Índex UV",
+      precip: "PRECIPITACIÓ",
+      wind: "VENT MÀX",
+      snowLevel: "COTA NEU",
+      sunrise: "SORTIDA",
+      sunset: "POSTA",
+      thermalEvol: "EVOLUCIÓ TÈRMICA",
+      hourlyTitle: "PREVISIÓ PER HORES",
+      forecast: "DETALL DEL DIA",
+      headers: {
+        time: "HORA",
+        sky: "CEL",
+        temp: "TEMP",
+        rain: "PLUJA",
+        wind: "VENT"
+      }
+    },
+    common: {
+      none: "CAP",
+      state: "ESTAT",
+      range: "RANG TÈRMIC",
+      precip: "PRECIPITACIÓ",
+      loading: "Carregant...",
+      error: "Error"
+    },
     // ------------------------------------
 
     // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
@@ -134,15 +177,15 @@ export const TRANSLATIONS = {
     notifWait: "Espera uns segons abans de tornar a actualitzar.",
     notifLocationSuccess: "Ubicació actualitzada correctament.",
     notifLocationError: "No s'ha pogut obtenir la ubicació. Revisa els permisos.",
+    radarShort: "Radar",
     
-    // --- GINY NÚVOLS (AFEGIT) ---
+    // --- GINY NÚVOLS ---
     cloudLayers: {
       title: "Profunditat de Núvols",
       high: "Alts",
       mid: "Mitjans",
       low: "Baixos"
     },
-    // ----------------------------------------------------
     
     aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",
     aiRainMod: "Està plovent de manera moderada. ", 
@@ -151,7 +194,7 @@ export const TRANSLATIONS = {
     
     aiThreatening: "Cel amenaçador. Risc de precipitació en qualsevol moment. ",
     
-    aiSummarySnow: "Configuració hivernal amb nevadas previstes. ",
+    aiSummarySnow: "Configuració hivernal amb nevades previstes. ", // CORREGIT (nevadas -> nevades)
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé. ",
     aiTempCold: "Fa força fred. Caldrà roba d'abric. ",
@@ -199,7 +242,7 @@ export const TRANSLATIONS = {
     alertHeatHigh: "Temperatures altes. Hidrata't.",
     alertColdExtreme: "Fred sever. Risc congelació.",
     alertColdHigh: "Glaçades. Calçades relliscoses.",
-    alertRain: "Precipitacions abundantes.",
+    alertRain: "Precipitacions abundants.",
     alertAir: "Qualitat de l'aire deficient.",
     alertUV: "Radiació UV Extrema",
     
@@ -240,7 +283,6 @@ export const TRANSLATIONS = {
     removeFavorite: "Eliminar favorit",
     myLocation: "La meva ubicació",
     radarTitle: "Radar de Precipitació",
-    radarShort: "Radar",
     openExternal: "Obrir fora",
     openBrowser: "Obrir en navegador extern",
     radarData: "Dades: RainViewer",
@@ -270,6 +312,7 @@ export const TRANSLATIONS = {
     snowLevel: "Cota de nieve",
     forecast7days: "Previsión 7 Días",
     today: "Hoy",
+    tomorrow: "Mañana", // AFEGIT
     detailedForecast: "Previsión detallada",
     hourlyEvolution: "Evolución Horaria",
     snowAccumulated: "Nieve Acumulada",
@@ -345,11 +388,11 @@ export const TRANSLATIONS = {
     dpComfortable: "Confortable",
     dpHumid: "Bochornoso",
     dpOppressive: "Opresivo",
-    dpExtreme: "Insuperable",
+    dpExtreme: "Insuportable", // CORREGIT
     
     aiIntroMorning: "Buenos días. Situación actualizada: ",
     aiIntroAfternoon: "Buenas tardes. Evolución atmosférica: ",
-    aiIntroEvening: "Buenas noches. Previsión inmediata: ",
+    aiIntroEvening: "Buenas tardes-noche. Previsión inmediata: ", // CORREGIT (To MeteoToni)
     aiIntroNight: "Buenas noches. Situación nocturna: ",
     
     aiSummaryClear: "Cielo despejado y ambiente tranquilo. ", 
@@ -361,30 +404,72 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambiente muy húmedo. Lluvia persistente y niebla. ",
     aiSummaryStorm: "Situación inestable. Riesgo de tormentas activas. ",
 
-    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
     aiAnalysisDescription: "Previsión meteorológica de alta precisión impulsada por inteligencia artificial.",
     searchCity: "Buscar Ciudad",
     useLocation: "Usar Ubicación",
     selectLanguage: "Selecciona Idioma",
     autoGPS: "GPS Automático",
     manualSearch: "Búsqueda manual",
+    
+    // --- NOVES SECCIONS (AUDITORIA) ---
+    welcome: {
+      tagline: "Next Gen Weather",
+      desc: "Sistema de inteligencia atmosférica de alta precisión.",
+      connecting: "Conectando satélite...",
+      start: "INICIAR SISTEMA",
+      manual: "O Búsqueda Manual"
+    },
+    arome: {
+      subtitle: "Previsión de alta resolución (Precisión Física)",
+      loading: "Calculando física atmosférica...",
+      end: "Fin de la previsión de alta resolución.",
+      error: "Error de datos",
+      close: "Cerrar"
+    },
+    dayDetail: {
+      uv: "Índice UV",
+      precip: "PRECIPITACIÓN",
+      wind: "VIENTO MÁX",
+      snowLevel: "COTA NIEVE",
+      sunrise: "SALIDA",
+      sunset: "PUESTA",
+      thermalEvol: "EVOLUCIÓN TÉRMICA",
+      hourlyTitle: "PREVISIÓN POR HORAS",
+      forecast: "DETALLE DEL DÍA",
+      headers: {
+        time: "HORA",
+        sky: "CIELO",
+        temp: "TEMP",
+        rain: "LLUVIA",
+        wind: "VIENTO"
+      }
+    },
+    common: {
+      none: "NADA",
+      state: "ESTADO",
+      range: "RANGO TÉRMICO",
+      precip: "PRECIPITACIÓN",
+      loading: "Cargando...",
+      error: "Error"
+    },
     // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    // --- NOVES CLAUS AFEGIDES ---
     aiSummaryFog: "Hay niebla o bancos de niebla bajos.", 
     alertVisibility: "Visibilidad muy reducida",
     notifWait: "Espera unos segundos antes de volver a actualizar.",
     notifLocationSuccess: "Ubicación actualizada correctamente.",
     notifLocationError: "No se pudo obtener la ubicación. Revisa los permisos.",
+    radarShort: "Radar",
     
-    // --- GINY NÚVOLS (AFEGIT) ---
+    // --- GINY NÚVOLS ---
     cloudLayers: {
       title: "Profundidad de Nubes",
       high: "Altos",
       mid: "Medios",
       low: "Bajos"
     },
-    // ----------------------------------------------------
     
     aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",
     aiRainMod: "Está lloviendo de forma moderada. ", 
@@ -482,7 +567,6 @@ export const TRANSLATIONS = {
     removeFavorite: "Eliminar favorito",
     myLocation: "Mi ubicación",
     radarTitle: "Radar de Precipitación",
-    radarShort: "Radar",
     openExternal: "Abrir fuera",
     openBrowser: "Abrir en navegador externo",
     radarData: "Datos: RainViewer",
@@ -512,6 +596,7 @@ export const TRANSLATIONS = {
     snowLevel: "Snow Level",
     forecast7days: "7-Day Forecast",
     today: "Today",
+    tomorrow: "Tomorrow", // AFEGIT
     detailedForecast: "Detailed Forecast",
     hourlyEvolution: "Hourly Evolution",
     snowAccumulated: "Accumulated Snow",
@@ -548,7 +633,7 @@ export const TRANSLATIONS = {
     sun: "Sun",
     clear: "Clear",
     partlyCloudy: "Partly Cloudy",
-    partlyCloudyNight: "Partly Cloudy",
+    partlyCloudyNight: "Passing clouds", // MILLORAT
     cloudy: "Cloudy",
     snow: "Snow",
     rainy: "Rain",
@@ -603,30 +688,72 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Humid and foggy. Persistent rain with reduced visibility. ",
     aiSummaryStorm: "Unstable situation. Risk of active storms. ",
 
-    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
     aiAnalysisDescription: "High-precision weather forecast powered by artificial intelligence.",
     searchCity: "Search City",
     useLocation: "Use Location",
     selectLanguage: "Select Language",
     autoGPS: "Automatic GPS",
     manualSearch: "Manual search",
+    
+    // --- NOVES SECCIONS (AUDITORIA) ---
+    welcome: {
+      tagline: "Next Gen Weather",
+      desc: "High-precision atmospheric intelligence system.",
+      connecting: "Connecting satellite...",
+      start: "START SYSTEM",
+      manual: "Or Manual Search"
+    },
+    arome: {
+      subtitle: "High-resolution forecast (Physical Precision)",
+      loading: "Computing atmospheric physics...",
+      end: "End of high-resolution forecast.",
+      error: "Data error",
+      close: "Close"
+    },
+    dayDetail: {
+      uv: "UV Index",
+      precip: "PRECIPITATION",
+      wind: "MAX WIND",
+      snowLevel: "SNOW LEVEL",
+      sunrise: "SUNRISE",
+      sunset: "SUNSET",
+      thermalEvol: "THERMAL EVOLUTION",
+      hourlyTitle: "HOURLY FORECAST",
+      forecast: "DAILY DETAIL",
+      headers: {
+        time: "TIME",
+        sky: "SKY",
+        temp: "TEMP",
+        rain: "RAIN",
+        wind: "WIND"
+      }
+    },
+    common: {
+      none: "NONE",
+      state: "STATUS",
+      range: "THERMAL RANGE",
+      precip: "PRECIPITATION",
+      loading: "Loading...",
+      error: "Error"
+    },
     // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    // --- NOVES CLAUS AFEGIDES ---
     aiSummaryFog: "It is foggy or low mist banks present.", 
     alertVisibility: "Low visibility",
     notifWait: "Please wait a few seconds before updating again.",
     notifLocationSuccess: "Location updated successfully.",
     notifLocationError: "Could not get location. Check permissions.",
+    radarShort: "Radar",
     
-    // --- GINY NÚVOLS (AFEGIT) ---
+    // --- GINY NÚVOLS ---
     cloudLayers: {
       title: "Cloud Depth",
       high: "High",
       mid: "Mid",
       low: "Low"
     },
-    // ----------------------------------------------------
     
     aiRainLight: "Light drizzle or a few drops falling right now. ",
     aiRainMod: "Moderate rain is falling. ", 
@@ -724,7 +851,6 @@ export const TRANSLATIONS = {
     removeFavorite: "Remove favorite",
     myLocation: "My location",
     radarTitle: "Precipitation Radar",
-    radarShort: "Radar",
     openExternal: "Open external",
     openBrowser: "Open in external browser",
     radarData: "Data: RainViewer",
@@ -754,6 +880,7 @@ export const TRANSLATIONS = {
     snowLevel: "Limite neige",
     forecast7days: "Prévisions 7 Jours",
     today: "Aujourd'hui",
+    tomorrow: "Demain", // AFEGIT
     detailedForecast: "Prévisions détaillées",
     hourlyEvolution: "Évolution horaire",
     snowAccumulated: "Neige accumulée",
@@ -845,30 +972,72 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambiance bouchée. Pluie persistante et brouillard. ",    
     aiSummaryStorm: "Situation instable. Risque d'orages actifs. ",
 
-    // --- PANTALLA DE BENVINGUDA (NOU) ---
+    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
     aiAnalysisDescription: "Prévisions météorologiques de haute précision alimentées par l'intelligence artificielle.",
     searchCity: "Chercher Ville",
     useLocation: "Ma Position",
     selectLanguage: "Choisir Langue",
     autoGPS: "GPS Automatique",
     manualSearch: "Recherche manuelle",
+    
+    // --- NOVES SECCIONS (AUDITORIA) ---
+    welcome: {
+      tagline: "Next Gen Weather",
+      desc: "Système d'intelligence atmosphérique de haute précision.",
+      connecting: "Connexion satellite...",
+      start: "LANCER SYSTÈME",
+      manual: "Ou Recherche Manuelle"
+    },
+    arome: {
+      subtitle: "Prévisions haute résolution (Précision Physique)",
+      loading: "Calcul de la physique atmosphérique...",
+      end: "Fin des prévisions haute résolution.",
+      error: "Erreur de données",
+      close: "Fermer"
+    },
+    dayDetail: {
+      uv: "Indice UV",
+      precip: "PRÉCIPITATION",
+      wind: "VENT MAX",
+      snowLevel: "LIMITE NEIGE",
+      sunrise: "LEVER",
+      sunset: "COUCHER",
+      thermalEvol: "ÉVOLUTION THERMIQUE",
+      hourlyTitle: "PRÉVISIONS PAR HEURE",
+      forecast: "DÉTAIL DE LA JOURNÉE",
+      headers: {
+        time: "HEURE",
+        sky: "CIEL",
+        temp: "TEMP",
+        rain: "PLUIE",
+        wind: "VENT"
+      }
+    },
+    common: {
+      none: "RIEN",
+      state: "ÉTAT",
+      range: "AMPLITUDE THERMIQUE",
+      precip: "PRÉCIPITATION",
+      loading: "Chargement...",
+      error: "Erreur"
+    },
     // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    // --- NOVES CLAUS AFEGIDES ---
     aiSummaryFog: "Il y a du brouillard ou des bancs de brume.", 
     alertVisibility: "Visibilité très réduite",
     notifWait: "Veuillez patienter quelques secondes avant de mettre à jour.",
     notifLocationSuccess: "Localisation mise à jour avec succès.",
     notifLocationError: "Impossible d'obtenir la localisation. Vérifiez les permissions.",
+    radarShort: "Radar",
     
-    // --- GINY NÚVOLS (AFEGIT) ---
+    // --- GINY NÚVOLS ---
     cloudLayers: {
       title: "Profondeur des Nuages",
       high: "Élevés",
       mid: "Moyens",
       low: "Bas"
     },
-    // ----------------------------------------------------
     
     aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",
     aiRainMod: "Il pleut modérément. ", 
@@ -935,7 +1104,7 @@ export const TRANSLATIONS = {
     tipHydration: "Hydratation",
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
-    tipMugginess: "Lourd",
+    tipMugginess: "Vêtements légers", // CORREGIT
     tipUmbrella: "Prenez un parapluie",
     tipSunscreen: "Écran solaire",
     tipCalm: "Profitez",
@@ -966,7 +1135,6 @@ export const TRANSLATIONS = {
     removeFavorite: "Supprimer le favori",
     myLocation: "Ma position",
     radarTitle: "Radar de Précipitations",
-    radarShort: "Radar",
     openExternal: "Ouvrir",
     openBrowser: "Ouvrir dans le navigateur",
     radarData: "Données: RainViewer",

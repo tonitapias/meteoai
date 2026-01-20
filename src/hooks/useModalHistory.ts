@@ -19,7 +19,7 @@ export const useModalHistory = (isOpen: boolean, onClose: () => void) => {
       window.history.pushState({ modalOpen: true }, '', window.location.href);
 
       // 2. Definim el manejador per a l'esdeveniment 'popstate' (botó enrere)
-      const handlePopState = (event: PopStateEvent) => {
+      const handlePopState = (_event: PopStateEvent) => {
         // Marquem que el tancament ve del navegador
         causedByBackRef.current = true;
         onClose();

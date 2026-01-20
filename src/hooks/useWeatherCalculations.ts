@@ -10,10 +10,28 @@ import {
 } from '../utils/weatherLogic';
 import { WeatherUnit } from '../utils/formatters';
 
-const getComparisonVal = (data: any, key: string, i: number) => {
+// Funció helper tipada per extreure valors de dades complexes (files o columnes)
+const getComparisonVal = (data: unknown, key: string, i: number): number | null => {
     if (!data) return null;
-    if (Array.isArray(data[key])) return data[key][i]; 
-    if (data[i]) return data[i][key]; 
+    
+    // Cas 1: Dades per columnes (Hourly Object: { temp: [1,2,3], ... })
+    if (typeof data === 'object' && !Array.isArray(data)) {
+        const col = (data as Record<string, unknown>)[key];
+        if (Array.isArray(col)) {
+             const val = col[i];
+             return (typeof val === 'number') ? val : null;
+        }
+    }
+    
+    // Cas 2: Dades per files (Array d'objectes: [{temp: 1}, {temp: 2}])
+    if (Array.isArray(data)) {
+        const row = data[i] as Record<string, unknown> | undefined;
+        if (row) {
+            const val = row[key];
+            return (typeof val === 'number') ? val : null;
+        }
+    }
+    
     return null;
 };
 
@@ -42,14 +60,14 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     
     if (weatherData?.minutely_15?.precipitation) {
         const currentMs = new Date().getTime(); 
-        const timesRaw = weatherData.minutely_15.time;
+        const timesRaw = weatherData.minutely_15.time as string[];
         let idx = -1;
         for(let i = 0; i < timesRaw.length; i++) {
             if (new Date(timesRaw[i]).getTime() > currentMs) { idx = i; break; }
         }
-        // FIX: Canviat de 'let' a 'const' (Soluciona l'error 50:13)
         const currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
-        preciseData = weatherData.minutely_15.precipitation.slice(currentIdx, currentIdx + 4);
+        const precipArr = weatherData.minutely_15.precipitation as number[];
+        preciseData = precipArr.slice(currentIdx, currentIdx + 4);
     }
 
     const hasMinutelyRain = preciseData.some(v => v > 0);
@@ -75,12 +93,13 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     
     const startIndex = Math.max(0, currentHourlyIndex);
     const availableTime = weatherData.hourly.time;
-    const isValid = (val: any) => val !== null && val !== undefined && !Number.isNaN(val);
+    // Type Guard per assegurar que el valor és numèric i vàlid
+    const isValid = (val: unknown): val is number => val !== null && val !== undefined && typeof val === 'number' && !Number.isNaN(val);
 
     let lastTemp = 0, lastWind = 0, lastPressure = 1013, lastHum = 50;
 
     const getSmartVal = (key: string, idx: number, fallback: number, lastKnown: number) => {
-        let val = weatherData.hourly[key]?.[idx];
+        let val: unknown = weatherData.hourly[key]?.[idx];
         if (isValid(val)) return val;
 
         if (weatherData.hourlyComparison?.gfs) {
@@ -123,7 +142,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
       const isDayVal = getSmartVal('is_day', realIndex, 1, 1);
       const codeVal = getSmartVal('weather_code', realIndex, 0, 0);
 
-      let flVal = weatherData.hourly.freezing_level_height?.[realIndex];
+      let flVal: unknown = weatherData.hourly.freezing_level_height?.[realIndex];
       if (!isValid(flVal)) {
          if (weatherData.hourlyComparison?.gfs) flVal = getComparisonVal(weatherData.hourlyComparison.gfs, 'freezing_level_height', realIndex);
          if (!isValid(flVal) && weatherData.hourlyComparison?.icon) flVal = getComparisonVal(weatherData.hourlyComparison.icon, 'freezing_level_height', realIndex);
@@ -164,7 +183,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
       if (!weatherData?.hourlyComparison) return null;
       const startIndex = Math.max(0, currentHourlyIndex);
 
-      const sliceModel = (modelData: any[]) => {
+      const sliceModel = (modelData: Record<string, unknown>[]) => {
          if(!modelData || !modelData.length) return [];
          return Array.from({ length: 24 }).map((_, i) => { 
              const targetIdx = startIndex + i;
@@ -172,9 +191,9 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
              if (!d || !weatherData.hourly?.time?.[targetIdx]) return null;
 
              const temp = d.temperature_2m;
-             if (temp == null || isNaN(temp)) return null; 
+             if (typeof temp !== 'number' || isNaN(temp)) return null; 
 
-             const rainP = d.precipitation_probability || 0;
+             const rainP = (typeof d.precipitation_probability === 'number') ? d.precipitation_probability : 0;
              const fl = d.freezing_level_height;
 
              return {
@@ -185,7 +204,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
                  wind: d.wind_speed_10m,
                  cloud: d.cloud_cover,
                  humidity: d.relative_humidity_2m,
-                 snowLevel: (fl != null) ? Math.max(0, fl - 300) : null
+                 snowLevel: (typeof fl === 'number') ? Math.max(0, fl - 300) : null
              };
          }).filter(Boolean);
       };
@@ -224,8 +243,8 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     }
 
     return { 
-        min: Math.min(...minTemps), 
-        max: Math.max(...maxTemps)
+        min: Math.min(...(minTemps as number[])), 
+        max: Math.max(...(maxTemps as number[]))
     };
   }, [weatherData]);
 

@@ -10,6 +10,14 @@ interface CommonIconProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
 }
 
+interface Particle {
+  id: number;
+  left: number;
+  delay: number;
+  duration: number;
+  opacity: number;
+}
+
 const VariableWeatherIcon = ({ isDay, className, ...props }: CommonIconProps) => {
   return (
     <div className={`${className} relative flex items-center justify-center`} {...props}>
@@ -44,7 +52,7 @@ export const WeatherParticles = ({ code }: { code: number }) => {
   const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
   
-  const [particles, setParticles] = useState<any[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
       // FIX DEFINITIU: setTimeout treu l'actualització del cicle síncron
@@ -56,7 +64,7 @@ export const WeatherParticles = ({ code }: { code: number }) => {
           }
           
           const count = 30; 
-          const newParticles = [...Array(count)].map((_, i) => ({
+          const newParticles: Particle[] = [...Array(count)].map((_, i) => ({
               id: i,
               left: Math.random() * 100,
               delay: Math.random() * 5,
@@ -90,11 +98,12 @@ export const WeatherParticles = ({ code }: { code: number }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const getWeatherIcon = (
     code: number, 
     className: string = "w-6 h-6", 
     isDay: number | boolean = 1, 
-    rainProb: number = 0, 
+    _rainProb: number = 0, 
     windSpeed: number = 0
 ): React.ReactNode => {
     const commonProps = {

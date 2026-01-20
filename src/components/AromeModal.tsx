@@ -5,7 +5,6 @@ import { X, Wind, Droplets, Snowflake } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../constants/translations';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
-import { WEATHER_THRESHOLDS } from '../constants/weatherConfig'; // Importat per consistència
 
 interface AromeModalProps {
   lat: number;

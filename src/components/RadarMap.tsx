@@ -10,8 +10,9 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Fix icones
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+// Fix icones (Tipat segur)
+// El cast a 'unknown' intermedi és necessari per accedir a propietats privades de Leaflet sense usar 'any'
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
@@ -30,6 +31,13 @@ interface RadarFrame {
   path: string;
 }
 
+interface RainViewerResponse {
+    radar: {
+        past: RadarFrame[];
+        nowcast: RadarFrame[];
+    }
+}
+
 interface RadarMapProps {
   lat: number;
   lon: number;
@@ -46,7 +54,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
     const fetchRadarConfig = async () => {
       try {
         const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-        const data = await response.json();
+        const data = await response.json() as RainViewerResponse;
         
         const allFrames: RadarFrame[] = [
            ...(data.radar?.past || []), 

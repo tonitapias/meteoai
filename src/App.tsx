@@ -1,14 +1,16 @@
-// src/App.tsx
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+// AFEGIT: Importem les icones necessàries pel nou Footer
+import { Globe, Cpu, Wifi, ShieldCheck } from 'lucide-react';
+
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
-import { TrendingUp, Database, ShieldCheck } from 'lucide-react';
 
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
 const AromeModal = lazy(() => import('./components/AromeModal'));
 
 import CurrentWeather from './components/CurrentWeather';
+import Forecast24h from './components/Forecast24h';
 import AIInsights from './components/AIInsights';
 import ForecastSection from './components/ForecastSection';
 import ExpertWidgets from './components/ExpertWidgets';
@@ -25,35 +27,53 @@ import { useWeatherAI } from './hooks/useWeatherAI';
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './constants/translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
-import { useModalHistory } from './hooks/useModalHistory'; // <--- NOVA IMPORTACIÓ
+import { useModalHistory } from './hooks/useModalHistory';
 
-// --- FOOTER ---
+// --- NOU FOOTER PROFESSIONAL INTEGRAT ---
 const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
   const year = new Date().getFullYear();
   const isWelcome = mode === 'welcome';
-  
+
   return (
-    <footer className={`w-full flex flex-col items-center gap-4 py-8 mt-auto z-10 transition-opacity duration-1000 ${isWelcome ? 'text-slate-400 opacity-80 pb-8' : 'text-slate-500 border-t border-white/5 pt-8'}`}>
-        
-        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[10px] font-bold tracking-widest uppercase opacity-70">
-            <span className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors cursor-default" title="Data Source">
-                <Database className="w-3 h-3" /> Open-Meteo API
-            </span>
-            <span className="hidden md:inline text-slate-700">|</span>
-            <span className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-default" title="High Resolution Model">
-                <ShieldCheck className="w-3 h-3" /> AROME / GFS / ICON
-            </span>
+    <footer className={`
+        w-full flex flex-col md:flex-row items-center justify-between gap-4 py-6 px-6 z-30 
+        text-[10px] font-mono uppercase tracking-widest mt-auto
+        ${isWelcome ? 'text-slate-500 bg-transparent' : 'text-slate-500 border-t border-white/5 bg-[#0B0C15]/40 backdrop-blur-md'}
+    `}>
+        {/* ESQUERRA: ESTAT DEL SISTEMA */}
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-emerald-500/80 font-bold">SYSTEM ONLINE</span>
+            </div>
+            {!isWelcome && (
+                <div className="hidden md:flex items-center gap-2 text-indigo-500/60">
+                    <Cpu className="w-3 h-3" />
+                    <span>CORE: V.3.1.0</span>
+                </div>
+            )}
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-2 text-[11px] font-medium">
-            <span className="opacity-90">© {year} MeteoToni AI.</span>
-            <span className="hidden md:inline opacity-30 mx-2">/</span>
-            <span className="opacity-50 flex items-center gap-2">
-                All rights reserved. 
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isWelcome ? 'bg-white/10 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                    v3.1.0-STABLE
-                </span>
-            </span>
+        {/* CENTRE: FONTS DE DADES */}
+        <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 text-center">
+            <div className="flex items-center gap-2 hover:text-indigo-400 transition-colors cursor-help" title="Weather Data Provider">
+                <Globe className="w-3 h-3" />
+                <span>DATA: OPEN-METEO</span>
+            </div>
+            <div className="hidden md:block w-px h-3 bg-white/10"></div>
+            <div className="flex items-center gap-2 hover:text-emerald-400 transition-colors cursor-help" title="High Resolution Model">
+                <ShieldCheck className="w-3 h-3" />
+                <span>MODEL: AROME HD</span>
+            </div>
+        </div>
+
+        {/* DRETA: BRANDING METEOTONIAI */}
+        <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+            <span>© {year} METEOTONI AI</span>
+            <Wifi className="w-3 h-3 text-blue-500" />
         </div>
     </footer>
   );
@@ -61,47 +81,27 @@ const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
 
 export default function MeteoIA() {
   const [now, setNow] = useState<Date>(new Date());
-  const { lang, setLang, unit, viewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
+  
+  const { lang, setLang, unit, viewMode, setViewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
+  
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const { weatherData, aqiData, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation } = useWeather(lang, unit);
   
-  // 1. Càlculs Numèrics i Gràfics
-  // MILLORA: Recuperem 'reliability' dels càlculs
   const { 
-      shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, 
-      currentBg, chartData24h, chartDataFull, comparisonData, weeklyExtremes, reliability 
+      shiftedNow, minutelyPreciseData, currentFreezingLevel, effectiveWeatherCode, 
+      chartData24h, chartDataFull, comparisonData, weeklyExtremes, reliability 
   } = useWeatherCalculations(weatherData, unit, now);
 
-  // 2. Intel·ligència Artificial
-  // MILLORA: Passem 'reliability' a la IA perquè l'indicador de consens funcioni
   const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, reliability);
 
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [showRadar, setShowRadar] = useState(false);
   const [showArome, setShowArome] = useState(false);
 
-  // --- INTEGRACIÓ HISTORY API ---
-  // Això permet tancar els modals amb el botó "enrere" del dispositiu sense sortir de l'app.
-  
-  // Gestió per al detall del dia
-  useModalHistory(
-    selectedDayIndex !== null, 
-    useCallback(() => setSelectedDayIndex(null), [])
-  );
-
-  // Gestió per al Radar
-  useModalHistory(
-    showRadar, 
-    useCallback(() => setShowRadar(false), [])
-  );
-
-  // Gestió per al model AROME
-  useModalHistory(
-    showArome, 
-    useCallback(() => setShowArome(false), [])
-  );
-  // -----------------------------
+  useModalHistory(selectedDayIndex !== null, useCallback(() => setSelectedDayIndex(null), []));
+  useModalHistory(showRadar, useCallback(() => setShowRadar(false), []));
+  useModalHistory(showArome, useCallback(() => setShowArome(false), []));
 
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer); }, []);
 
@@ -114,134 +114,132 @@ export default function MeteoIA() {
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
-  // --- WELCOME SCREEN ---
+  // PANTALLA DE BENVINGUDA
   if (!weatherData && !error) { 
     return (
-      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
-         <div className="fixed inset-0 opacity-30 pointer-events-none">
-            <WeatherParticles code={0} />
+      <div className="min-h-screen bg-[#05060A] flex flex-col font-sans overflow-hidden relative">
+         {/* Fons estàtic per evitar salts visuals */}
+         <div className="fixed inset-0 pointer-events-none">
+             <div className="absolute top-[-20%] left-[20%] w-[800px] h-[800px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
          </div>
+         
          <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
-            <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
+            <Header 
+                onSearch={fetchWeatherByCoords} 
+                onLocate={handleGetCurrentLocation} 
+                loading={loading}
+                viewMode={viewMode}
+                setViewMode={setViewMode} 
+            />
+            
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} loading={loading} />
             </div>
-            <Footer mode="welcome" />
+            
+            {/* Si el WelcomeScreen ja té footer intern, pots treure aquesta línia, o deixar-la per reforçar */}
+            {/* <Footer mode="welcome" /> */}
          </div>
       </div>
     );
   }
 
-  // --- DASHBOARD ---
+  // DASHBOARD PRINCIPAL
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${currentBg} text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col`}>
+    <div className="min-h-screen bg-[#05060A] text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col relative">
       <WeatherParticles code={effectiveWeatherCode} />
       
-      <div className="fixed inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
+      <div className="fixed inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-0" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
+
+      <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[50%] -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-900/10 rounded-[100%] blur-[100px] opacity-60"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[600px] bg-blue-900/5 rounded-full blur-[120px] opacity-40"></div>
+      </div>
 
       <Toast message={notification?.msg || null} type={notification?.type} onClose={() => setNotification(null)} />
 
-      <div className="w-full max-w-[1920px] mx-auto px-4 py-4 md:px-6 md:py-6 flex-1 flex flex-col relative z-10">
-        <Header onSearch={fetchWeatherByCoords} onLocate={handleGetCurrentLocation} loading={loading} />
+      <div className="w-full max-w-5xl mx-auto px-4 py-4 md:px-6 md:py-8 flex-1 flex flex-col relative z-10">
+        
+        <Header 
+            onSearch={fetchWeatherByCoords} 
+            onLocate={handleGetCurrentLocation} 
+            loading={loading}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+        />
 
         <div className="mt-6 md:mt-10 flex-1">
             {error && <ErrorBanner message={error} />}
             {loading && !weatherData && <LoadingSkeleton />}
 
             {weatherData && !loading && (
-            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col gap-8">
                 
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-                    
-                    <div className="xl:col-span-4 flex flex-col gap-6 xl:sticky xl:top-6">
-                        <CurrentWeather 
-                            data={weatherData} effectiveCode={effectiveWeatherCode} unit={unit} lang={lang} shiftedNow={shiftedNow}
-                            isFavorite={isFavorite(weatherData.location?.name || "")} onToggleFavorite={handleToggleFavorite}
-                            onShowRadar={() => setShowRadar(true)} onShowArome={() => setShowArome(true)}
-                            aqiData={aqiData} showAromeBtn={supportsArome}
-                        />
+                <CurrentWeather 
+                    data={weatherData} effectiveCode={effectiveWeatherCode} unit={unit} lang={lang} shiftedNow={shiftedNow}
+                    isFavorite={isFavorite(weatherData.location?.name || "")} onToggleFavorite={handleToggleFavorite}
+                    onShowRadar={() => setShowRadar(true)} onShowArome={() => setShowArome(true)}
+                    aqiData={aqiData} showAromeBtn={supportsArome}
+                />
 
-                        {minutelyPreciseData && (
-                            <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border-indigo-500/30 bg-indigo-950/20 shadow-lg shadow-indigo-900/20">
-                                <div className="flex items-center gap-2 mb-3 text-indigo-200">
-                                     <svg className="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                     </svg>
-                                     <span className="text-xs font-bold uppercase tracking-widest">{t.preciseRain || "Previsió 1h"}</span>
-                                </div>
-                                <MinutelyPreciseChart 
-                                    data={minutelyPreciseData} 
-                                    label="" 
-                                    currentPrecip={chartData24h?.[0]?.precip || 0} 
-                                />
-                            </div>
-                        )}
-
-                        <ErrorBoundary>
-                            <div className="bento-card p-6 min-h-[200px] flex flex-col justify-center">
-                                {/* AIInsights ara rep el badge de color correcte */}
-                                <AIInsights 
-                                    analysis={aiAnalysis} 
-                                    lang={lang}
-                                />
-                            </div>
-                        </ErrorBoundary>
+                {minutelyPreciseData && (
+                    <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border border-indigo-500/20 bg-indigo-950/10 shadow-[0_0_20px_rgba(30,27,75,0.5)] backdrop-blur-sm relative overflow-hidden">
+                         <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none"></div>
+                        <MinutelyPreciseChart data={minutelyPreciseData} label={t.preciseRain || "SCAN PRECIPITACIÓ (1H)"} currentPrecip={chartData24h?.[0]?.precip || 0} />
                     </div>
+                )}
 
-                    <div className="xl:col-span-8 flex flex-col gap-6">
-                        {viewMode === 'expert' && (
-                            <div className="animate-in fade-in duration-700">
-                                <h3 className="label-upper px-1 mb-4">Mètriques Avançades</h3>
-                                <ErrorBoundary>
-                                    <ExpertWidgets 
-                                        weatherData={weatherData} aqiData={aqiData} lang={lang} unit={unit} 
-                                        shiftedNow={shiftedNow} freezingLevel={currentFreezingLevel}
-                                    />
-                                </ErrorBoundary>
-                            </div>
-                        )}
+                <AIInsights analysis={aiAnalysis} lang={lang} />
 
-                        <ErrorBoundary>
-                            <ForecastSection 
-                                chartData={chartDataFull} 
-                                comparisonData={comparisonData} dailyData={weatherData.daily}
-                                weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
-                                comparisonEnabled={viewMode === 'expert'}
-                                showCharts={false} 
+                {viewMode === 'expert' ? (
+                    <ErrorBoundary>
+                        <div className="flex flex-col gap-8">
+                            <ExpertWidgets 
+                                weatherData={weatherData} aqiData={aqiData} lang={lang} unit={unit} 
+                                freezingLevel={currentFreezingLevel}
                             />
-                        </ErrorBoundary>
-                    </div>
-                </div>
+                            
+                            <Forecast24h data={weatherData} lang={lang} unit={unit} />
 
-                {viewMode === 'expert' && (
-                    <div className="mt-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 w-full">
-                         <div className="bento-card p-6 md:p-8">
-                            <h3 className="label-upper mb-8 flex items-center gap-2 text-lg">
-                                <TrendingUp className="w-5 h-5 text-emerald-400"/> {t.trend24h}
-                            </h3>
-                            <SmartForecastCharts 
-                                data={chartData24h} 
-                                comparisonData={comparisonData} 
-                                unit={unit === 'F' ? '°F' : '°C'} lang={lang} 
+                            <ForecastSection 
+                                chartData={chartDataFull} comparisonData={comparisonData} dailyData={weatherData.daily}
+                                weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
+                                comparisonEnabled={true} showCharts={false} 
+                            />
+
+                            <div className="bento-card p-6 md:p-8 bg-[#0B0C15] border border-white/5 shadow-2xl">
+                                <SmartForecastCharts 
+                                    data={chartData24h} comparisonData={comparisonData} 
+                                    unit={unit === 'F' ? '°F' : '°C'} lang={lang} 
+                                    showHumidity={true}
+                                />
+                            </div>
+                        </div>
+                    </ErrorBoundary>
+                ) : (
+                    <ErrorBoundary>
+                        <div className="flex flex-col gap-8">
+                            <Forecast24h data={weatherData} lang={lang} unit={unit} />
+                            <ForecastSection 
+                                chartData={chartDataFull} comparisonData={comparisonData} dailyData={weatherData.daily}
+                                weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
+                                comparisonEnabled={false} showCharts={false} 
                             />
                         </div>
-                    </div>
+                    </ErrorBoundary>
                 )}
 
             </div>
             )}
         </div>
 
+        {/* NOU FOOTER PROFESSIONAL A LA PRINCIPAL */}
         <Footer mode="dashboard" />
 
         <Suspense fallback={null}>
             {selectedDayIndex !== null && weatherData && (
                 <DayDetailModal 
-                    weatherData={weatherData} 
-                    hourlyData={chartDataFull} 
-                    selectedDayIndex={selectedDayIndex} 
-                    onClose={() => setSelectedDayIndex(null)} 
-                    unit={unit} lang={lang} shiftedNow={shiftedNow} 
+                    weatherData={weatherData} hourlyData={chartDataFull} selectedDayIndex={selectedDayIndex} 
+                    onClose={() => setSelectedDayIndex(null)} unit={unit} lang={lang} shiftedNow={shiftedNow} 
                 />
             )}
             {showRadar && weatherData && <RadarModal lat={weatherData.location?.latitude || 0} lon={weatherData.location?.longitude || 0} onClose={() => setShowRadar(false)} lang={lang} />}

@@ -1,473 +1,616 @@
+/* eslint-disable react/prop-types */
 // src/components/WeatherWidgets.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Sunrise, Sunset, Moon, Flower2, TrendingUp, TrendingDown, Minus, 
-  Thermometer, Droplets, Zap, Mountain, Cloud, Eye
+  Sunrise, Moon, Flower2, Droplets, Zap, Mountain, Clock, Wind, Layers, AlertTriangle
 } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../constants/translations';
-import { WeatherUnit } from '../utils/formatters';
 
-const WIDGET_BASE_STYLE = "bg-slate-900/60 border border-slate-800/50 p-3.5 rounded-2xl backdrop-blur-sm relative group transition-all duration-300 hover:scale-[1.02] hover:bg-white/10 hover:border-white/30 hover:shadow-2xl h-full flex flex-col justify-between overflow-hidden";
+const WIDGET_BASE_STYLE = "bg-gradient-to-br from-[#1a1d2d] to-[#11131f] border border-white/10 p-5 md:p-6 rounded-[2rem] relative group transition-all duration-500 hover:border-indigo-500/30 hover:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] h-full flex flex-col justify-between overflow-hidden ring-1 ring-white/5";
+const TITLE_STYLE = "text-[10px] font-black text-indigo-200/60 uppercase tracking-[0.25em] mb-4 flex items-center gap-2 relative z-10";
 
-const getMoonPhaseText = (phase: number, lang: Language = 'ca') => {
-  const t = TRANSLATIONS[lang] ? TRANSLATIONS[lang].moonPhases : TRANSLATIONS['ca'].moonPhases;
-  if (phase < 0.03 || phase > 0.97) return t.new;
-  if (phase < 0.22) return t.waxingCrescent;
-  if (phase < 0.28) return t.firstQuarter;
-  if (phase < 0.47) return t.waxingGibbous;
-  if (phase < 0.53) return t.full;
-  if (phase < 0.72) return t.waningGibbous;
-  if (phase < 0.78) return t.lastQuarter;
-  return t.waningCrescent;
+export interface ChartDataPoint {
+  time: string;
+  temp: number;
+  icon: React.ReactNode; 
+  precip?: number;
+  precipText?: string;
+  isNow?: boolean;
+}
+
+interface WidgetProps {
+  lang: Language;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+interface CircularGaugeProps {
+    icon: React.ReactNode;
+    label: string;
+    value: number;
+    max: number;
+    subText?: string;
+    color?: string;
+}
+
+interface HourlyWidgetProps {
+  data: ChartDataPoint[];
+  lang: Language;
+}
+
+const getTrans = (lang: Language) => TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+
+const getMoonPhaseText = (phase: number) => {
+  if (phase < 0.03 || phase > 0.97) return "Nova";
+  if (phase < 0.22) return "Creixent";
+  if (phase < 0.28) return "1r Quart";
+  if (phase < 0.47) return "Gibosa C.";
+  if (phase < 0.53) return "Plena";
+  if (phase < 0.72) return "Gibosa M.";
+  if (phase < 0.78) return "3r Quart";
+  return "Minvant";
 };
 
-interface TempRangeBarProps {
-    min: number; max: number;
-    globalMin: number; globalMax: number;
-    displayMin: number | string;
-    displayMax: number | string;
-}
-export const TempRangeBar = ({ min, max, globalMin, globalMax, displayMin, displayMax }: TempRangeBarProps) => {
-  const totalRange = globalMax - globalMin || 1;
-  const safeMin = Math.max(min, globalMin);
-  const safeMax = Math.min(max, globalMax);
-  const leftPct = ((safeMin - globalMin) / totalRange) * 100;
-  const widthPct = ((safeMax - safeMin) / totalRange) * 100;
+const timeStringToSeconds = (timeStr: string | undefined) => {
+    if (!timeStr) return 0;
+    const timePart = timeStr.includes('T') ? timeStr.split('T')[1].slice(0, 5) : timeStr.slice(0, 5);
+    const [hours, mins] = timePart.split(':').map(Number);
+    return (hours * 3600) + (mins * 60);
+};
+
+const secondsToTime = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+};
+
+const getWindDirectionText = (degrees: number) => {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const index = Math.round(degrees / 45) % 8;
+    return directions[index];
+};
+
+// --- GINYS ---
+
+export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
+  const t = getTrans(lang);
+  const directionText = getWindDirectionText(degrees);
+  const gustIntensity = (gusts || 0) > 60 ? 'text-rose-400' : (gusts || 0) > 40 ? 'text-amber-400' : 'text-slate-400';
+  const hasGusts = gusts && gusts > speed + 5; 
 
   return (
-    <div className="flex items-center gap-2 w-full max-w-[12rem] md:max-w-[16rem]">
-      <span className="text-[10px] md:text-xs text-slate-400 w-6 text-right font-medium tabular-nums">{displayMin}°</span>
-      <div className="flex-1 h-1.5 bg-slate-700/50 rounded-full relative overflow-hidden">
-        <div className="absolute h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-400 to-amber-400 opacity-90" style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '6px' }} />
+    <div className={WIDGET_BASE_STYLE}>
+      <div className="flex justify-between items-start w-full z-10">
+          <div className={TITLE_STYLE.replace('mb-4', 'mb-0')}>
+              <Wind className="w-3.5 h-3.5 text-indigo-400" /> {t.wind || "VENT"}
+          </div>
+          <div className="flex flex-col items-end">
+               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{degrees}° {directionText}</span>
+          </div>
       </div>
-      <span className="text-[10px] md:text-xs text-white w-6 text-left font-bold tabular-nums">{displayMax}°</span>
-    </div>
-  )
-};
+      
+      <div className="relative flex-1 flex flex-col items-center justify-center min-h-[140px] mt-2">
+        <div className="relative w-40 h-40 flex items-center justify-center">
+             <div className="absolute inset-0 rounded-full border border-slate-700/30 bg-[#0f111a] shadow-inner">
+                {[...Array(12)].map((_, i) => (
+                    <div key={i} 
+                        className="absolute w-0.5 h-1.5 bg-slate-600/40 left-1/2 top-0 origin-bottom"
+                        style={{ transform: `translateX(-50%) rotate(${i * 30}deg) translateY(4px)` }}
+                    />
+                ))}
+                 <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-500">N</span>
+                 <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-500">S</span>
+                 <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500">W</span>
+                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500">E</span>
+             </div>
 
-interface SunArcWidgetProps {
-    sunrise: string; 
-    sunset: string; 
-    utcOffset: number; // Offset segons API
-    lang?: Language;
-}
+             <div className="absolute w-full h-full flex items-center justify-center transition-transform duration-1000 cubic-bezier(0.34, 1.56, 0.64, 1)" style={{ transform: `rotate(${degrees}deg)` }}>
+                <div className="relative w-full h-full">
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[24px] border-b-emerald-400 filter drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-slate-700/50"></div>
+                </div>
+             </div>
 
-export const SunArcWidget = ({ sunrise, sunset, utcOffset, lang = 'ca' }: SunArcWidgetProps) => {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-  
-  // 1. CÀLCUL DEL RELLOTGE EN VIU
-  const [currentMins, setCurrentMins] = useState(0);
-
-  useEffect(() => {
-    const updateTime = () => {
-        const nowMs = Date.now();
-        const targetMs = nowMs + ((utcOffset || 0) * 1000);
-        const targetDate = new Date(targetMs);
-        // getUTCHours retorna l'hora visual correcta gràcies a l'offset manual
-        setCurrentMins(targetDate.getUTCHours() * 60 + targetDate.getUTCMinutes());
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 10000); 
-    return () => clearInterval(timer);
-  }, [utcOffset]);
-
-  // 2. PARSEIG D'HORES (Simple string split, ja que l'API envia hora local visual)
-  const getIsoMinutes = (isoString: string) => {
-    if (!isoString) return 0;
-    const timePart = isoString.split('T')[1]; 
-    if (!timePart) return 0;
-    const [h, m] = timePart.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  const sunriseMins = getIsoMinutes(sunrise);
-  const sunsetMins = getIsoMinutes(sunset);
-
-  const displaySunrise = sunrise.split('T')[1]?.substring(0, 5) || "--:--";
-  const displaySunset = sunset.split('T')[1]?.substring(0, 5) || "--:--";
-  
-  // 3. LÒGICA DE PROGRÉS
-  let progress = 0; 
-  let nextEventText = "";
-  
-  const isDayTime = currentMins >= sunriseMins && currentMins < sunsetMins;
-
-  if (isDayTime) {
-        const totalDayLength = sunsetMins - sunriseMins;
-        const elapsed = currentMins - sunriseMins;
-        progress = Math.max(0, Math.min(1, elapsed / totalDayLength));
-        
-        const diff = sunsetMins - currentMins;
-        const h = Math.floor(diff / 60);
-        const m = diff % 60;
-        nextEventText = `${t.sunSetIn} ${h}h ${m}m`;
-  } else {
-     if (currentMins < sunriseMins) {
-        progress = 0;
-        const diff = sunriseMins - currentMins;
-        const h = Math.floor(diff / 60);
-        const m = diff % 60;
-        nextEventText = `${t.sunRiseIn} ${h}h ${m}m`;
-     } else {
-        progress = 1;
-        nextEventText = t.sunSetDone;
-     }
-  }
-  
-  const r = 32; const cx = 50; const cy = 50;
-  const angle = Math.PI - (progress * Math.PI);
-  const sunX = cx + r * Math.cos(angle);
-  const sunY = cy - r * Math.sin(angle); 
-
-  return (
-    <div className={`${WIDGET_BASE_STYLE} min-h-[140px] items-center justify-center`}>
-       <div className="w-full flex justify-between items-center text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-1">
-          <span className="flex items-center gap-1"><Sunrise className="w-3 h-3 text-orange-400" strokeWidth={2.5}/> {t.sunrise}</span>
-          <span className="flex items-center gap-1">{t.sunset} <Sunset className="w-3 h-3 text-purple-400" strokeWidth={2.5}/></span>
-       </div>
-       <div className="relative w-full h-20 overflow-hidden flex items-end justify-center">
-          <svg viewBox="0 0 100 60" className="w-full h-full pb-2">
-             <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
-             <g transform={`translate(${sunX - 6}, ${sunY - 6})`}>
-                <circle cx="6" cy="6" r="4" fill="#fbbf24" className="animate-pulse shadow-lg shadow-amber-500/50" />
-                <circle cx="6" cy="6" r="8" stroke="#fbbf24" strokeWidth="1" opacity="0.5" />
-             </g>
-             <line x1="0" y1="55" x2="100" y2="55" stroke="#1e293b" strokeWidth="1" />
-          </svg>
-          <div className="absolute bottom-1 left-0 right-0 text-center">
-             <span className="text-[9px] font-bold text-amber-300 bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-500/20 backdrop-blur-sm">
-                {nextEventText}
-             </span>
-          </div>
-       </div>
-       <div className="w-full flex justify-between items-end -mt-3 z-10">
-          <span className="text-xs font-bold text-white">{displaySunrise}</span>
-          <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-            {isDayTime ? t.day : t.night}
-          </span>
-          <span className="text-xs font-bold text-white">{displaySunset}</span>
-       </div>
+             <div className="absolute flex flex-col items-center justify-center z-10 bg-[#161825]/95 backdrop-blur-md w-20 h-20 rounded-full border border-white/10 shadow-2xl ring-1 ring-white/5">
+                <span className="text-2xl font-black text-white tabular-nums tracking-tighter leading-none">{Math.round(speed)}</span>
+                <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-wide opacity-80">km/h</span>
+                
+                {hasGusts && (
+                    <div className="absolute -bottom-6 flex items-center gap-1 px-2 py-0.5 bg-black/40 rounded-full border border-white/5">
+                        <Zap className={`w-2.5 h-2.5 ${gustIntensity}`} />
+                        <span className={`text-[9px] font-mono font-bold ${gustIntensity} tabular-nums`}>
+                            {Math.round(gusts)}
+                        </span>
+                    </div>
+                )}
+             </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-interface MoonPhaseIconProps extends BaseWidgetProps { phase: number; lat?: number; className?: string; }
-export const MoonPhaseIcon = ({ phase, lat = 41, className = "w-4 h-4", lang = 'ca' }: MoonPhaseIconProps) => {
-  const uniqueId = React.useId().replace(/:/g, '');
-  const p = phase % 1;
-  const r = 9; const cx = 12; const cy = 12; const theta = p * 2 * Math.PI;
-  const rx = Math.abs(r * Math.cos(theta));
-  const isWaxing = p <= 0.5; const isCrescent = (p < 0.25) || (p > 0.75); 
-  const outerD = isWaxing ? `M ${cx},${cy-r} A ${r},${r} 0 0 1 ${cx},${cy+r}` : `M ${cx},${cy-r} A ${r},${r} 0 0 0 ${cx},${cy+r}`;
-  let sweep = 0; if (isWaxing) { sweep = isCrescent ? 0 : 1; } else { sweep = !isCrescent ? 0 : 1; }
-  const innerD = `A ${rx},${r} 0 0 ${sweep} ${cx},${cy-r}`;
-  const d = `${outerD} ${innerD} Z`;
-  const transform = lat < 0 ? "scale(-1, 1)" : "";
-
-  return (
-    <svg viewBox="0 0 24 24" className={`${className} filter drop-shadow-md`} style={{transform}} stroke="none">
-       <title>{getMoonPhaseText(phase, lang)}</title>
-       <defs>
-         <radialGradient id={`moonGradient-${uniqueId}`} cx="50%" cy="50%" r="80%" fx="30%" fy="30%"> 
-            <stop offset="0%" stopColor="#f1f5f9" /> 
-            <stop offset="90%" stopColor="#cbd5e1" /> 
-         </radialGradient>
-       </defs>
-       <circle cx={cx} cy={cy} r={r} fill="#1e293b" stroke="#334155" strokeWidth="0.5" />
-       <path d={d} fill={`url(#moonGradient-${uniqueId})`} />
-    </svg>
-  );
+export const CircularGauge = ({ icon, label, value, max, subText, color = "text-blue-400" }: CircularGaugeProps) => {
+    const radius = 38;
+    const circumference = 2 * Math.PI * radius; 
+    const offset = circumference - (Math.min(value / max, 1) * circumference);
+    return (
+        <div className={WIDGET_BASE_STYLE}>
+            <div className={TITLE_STYLE}>{icon} {label}</div>
+            <div className="relative w-full flex-1 flex items-center justify-center">
+                 <div className="relative w-32 h-32 flex items-center justify-center">
+                     <svg className="w-full h-full -rotate-90 drop-shadow-xl" viewBox="0 0 100 100">
+                         <circle cx="50" cy="50" r={radius} fill="none" stroke="#0f111a" strokeWidth="8" strokeLinecap="round" className="opacity-50" />
+                         <circle cx="50" cy="50" r={radius} fill="none" stroke="#1e293b" strokeWidth="8" strokeLinecap="round" />
+                         <circle cx="50" cy="50" r={radius} fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" 
+                            className={`${color} filter drop-shadow-[0_0_4px_rgba(255,255,255,0.3)]`}
+                            style={{ strokeDasharray: circumference, strokeDashoffset: offset, transition: "stroke-dashoffset 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)" }} />
+                     </svg>
+                     <div className="absolute flex flex-col items-center">
+                         <span className="text-3xl font-black text-white tabular-nums tracking-tighter">{value}</span>
+                         {subText && <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/5 mt-1">{subText}</span>}
+                     </div>
+                 </div>
+            </div>
+        </div>
+    );
 };
 
-interface MoonWidgetProps extends BaseWidgetProps { phase: number; lat: number; }
-export const MoonWidget = ({ phase, lat, lang = 'ca' }: MoonWidgetProps) => {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-  const phaseName = getMoonPhaseText(phase, lang);
-  const illumination = Math.round((1 - Math.abs((phase - 0.5) * 2)) * 100);
-  return (
-    <div className={`${WIDGET_BASE_STYLE} min-h-[140px] items-center justify-center`}>
-       <div className="absolute top-3 left-4 flex items-center gap-2 text-[10px] font-bold uppercase text-indigo-300 tracking-wider"><Moon className="w-3 h-3" strokeWidth={2.5} /> {t.moonPhase}</div>
-       <div className="flex flex-col items-center justify-center mt-4">
-          <div className="relative">
-             <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
-             <MoonPhaseIcon phase={phase} lat={lat} className="w-14 h-14 text-slate-200 relative z-10" lang={lang} />
-          </div>
-          <span className="text-base font-bold text-white mt-3 leading-tight text-center">{phaseName}</span>
-          <span className="text-[10px] text-slate-400 mt-1 font-medium bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700">{illumination}% {t.illumination}</span>
-       </div>
-    </div>
-  );
-};
+export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
+  const t = getTrans(lang);
+  let title = "NÚVOLS";
+  let lHigh = "Alts", lMid = "Mitjans", lLow = "Baixos";
+  if (typeof t.cloudLayers === 'object') { title = t.cloudLayers.title.toUpperCase(); lHigh = t.cloudLayers.high; lMid = t.cloudLayers.mid; lLow = t.cloudLayers.low; }
 
-interface PollenWidgetProps extends BaseWidgetProps { data: any; }
-export const PollenWidget = ({ data, lang = 'ca' }: PollenWidgetProps) => {
-  if (!data) return null;
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-  const pollenMap = [
-    { key: 'alder', val: data.alder_pollen }, { key: 'birch', val: data.birch_pollen },
-    { key: 'grass', val: data.grass_pollen }, { key: 'mugwort', val: data.mugwort_pollen },
-    { key: 'olive', val: data.olive_pollen }, { key: 'ragweed', val: data.ragweed_pollen }
+  const layers = [
+      { l: lHigh, v: high, color: 'from-blue-200 to-blue-300' },
+      { l: lMid, v: mid, color: 'from-blue-300 to-blue-500' },
+      { l: lLow, v: low, color: 'from-blue-500 to-indigo-600' },
   ];
-  const getLevelColor = (val: number) => {
-    if (!val || val < 10) return 'bg-green-500'; 
-    if (val < 50) return 'bg-yellow-500'; 
-    if (val < 200) return 'bg-orange-500'; 
-    return 'bg-red-500'; 
-  };
+
   return (
-    <div className={`${WIDGET_BASE_STYLE} min-h-[140px]`}>
-       <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-indigo-300 tracking-wider mb-2">
-         <Flower2 className="w-3 h-3" strokeWidth={2.5} /> {t.pollen}
-       </div>
-       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 flex-1 content-center">
-          {pollenMap.map((item) => (
-             <div key={item.key} className="flex items-center justify-between bg-slate-950/30 p-1.5 rounded-lg border border-white/5">
-                <span className="text-[10px] text-slate-300 font-medium truncate">{(t.pollenTypes as any)[item.key]}</span>
-                <div className={`w-2 h-2 rounded-full ${getLevelColor(item.val)} shadow-sm shrink-0`}></div>
+    <div className={WIDGET_BASE_STYLE}>
+       <div className={TITLE_STYLE}><Layers className="w-3.5 h-3.5 text-blue-400" /> {title}</div>
+       <div className="flex-1 flex items-end justify-between gap-2 px-1 relative">
+          <div className="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none opacity-20">
+              <div className="w-full border-t border-dashed border-slate-500"></div>
+              <div className="w-full border-t border-dashed border-slate-500"></div>
+              <div className="w-full border-t border-dashed border-slate-500"></div>
+              <div className="w-full border-t border-dashed border-slate-500"></div>
+          </div>
+
+          {layers.map((layer, i) => (
+             <div key={i} className="flex flex-col items-center justify-end w-full h-full relative group/beam z-10">
+                 <div className="w-full relative rounded-t-lg overflow-hidden bg-[#0f111a] border-x border-t border-white/5 h-full flex items-end shadow-inner">
+                     <div 
+                        className={`w-full transition-all duration-1000 ease-out bg-gradient-to-t ${layer.color} relative`}
+                        style={{ height: `${Math.max(5, layer.v)}%`, opacity: layer.v === 0 ? 0.1 : 0.9 }}
+                     >
+                        <div className="absolute top-0 w-full h-[2px] bg-white/50 shadow-[0_0_10px_white]"></div>
+                     </div>
+                 </div>
+                 
+                 <div className="mt-2 text-center z-20">
+                     <span className="block text-[18px] font-black text-white tabular-nums leading-none mb-0.5">{Math.round(layer.v)}<span className="text-[9px] align-top opacity-50">%</span></span>
+                     <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider">{layer.l}</span>
+                 </div>
              </div>
           ))}
-       </div>
+      </div>
     </div>
   );
 };
 
-interface CompassGaugeProps extends BaseWidgetProps { degrees: number; speed: number; label: string; subText?: string; }
-export const CompassGauge = ({ degrees, speed, label, subText, lang = 'ca' }: CompassGaugeProps) => {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-  const directions = t.directions || ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
-  const index = Math.round(((degrees %= 360) < 0 ? degrees + 360 : degrees) / 45) % 8;
-  const dirText = directions[index];
-  const N = directions[0]; const S = directions[4]; const E = directions[2]; const W = directions[6];
+export const SnowLevelWidget = ({ freezingLevel, unit, lang }: WidgetProps) => {
+    const t = getTrans(lang);
+    const snowLimit = Math.max(0, (freezingLevel || 0) - 300);
+    const isFt = unit === 'imperial' || unit === 'F';
+    const displayLevel = isFt ? Math.round(snowLimit * 3.28084) : Math.round(snowLimit);
+    
+    return (
+        <div className={WIDGET_BASE_STYLE}>
+            <div className={TITLE_STYLE}><Mountain className="w-3.5 h-3.5 text-indigo-300" /> {t.snowLevel || "COTA NEU"}</div>
+            <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden rounded-xl">
+                <div className="absolute inset-0 flex items-end justify-center opacity-20">
+                    <svg viewBox="0 0 100 60" className="w-full h-full text-indigo-500 fill-current" preserveAspectRatio="none">
+                        <path d="M50 10 L100 60 L0 60 Z" />
+                    </svg>
+                </div>
+                <div className="absolute top-[40%] w-full border-t border-dashed border-indigo-300/30"></div>
+                <div className="z-10 text-center flex flex-col items-center">
+                    <span className="text-5xl font-black text-white tracking-tighter tabular-nums drop-shadow-xl">{displayLevel}</span>
+                    <div className="flex items-center gap-1 mt-1 bg-[#0f111a]/80 px-2 py-0.5 rounded border border-white/10 backdrop-blur-sm">
+                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></span>
+                        <span className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">{isFt ? 'FT' : 'METRES'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
-  return (
-    <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
-      <div className="relative w-20 h-20 flex items-center justify-center mb-1">
-         <div className="absolute inset-0 rounded-full border-2 border-slate-800 flex items-center justify-center">
-            <span className="absolute top-0.5 text-[7px] text-slate-500 font-bold">{N}</span>
-            <span className="absolute bottom-0.5 text-[7px] text-slate-500 font-bold">{S}</span>
-            <span className="absolute left-0.5 text-[7px] text-slate-500 font-bold">{W}</span>
-            <span className="absolute right-0.5 text-[7px] text-slate-500 font-bold">{E}</span>
-         </div>
-         <div className="w-full h-full flex items-center justify-center transition-transform duration-1000 ease-out" style={{ transform: `rotate(${degrees}deg)` }}>
-             <div className="w-0.5 h-10 bg-gradient-to-b from-red-500 to-transparent rounded-full relative -top-2">
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -mt-1 w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[6px] border-b-red-500"></div>
+export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
+    const t = getTrans(lang);
+    return (
+      <div className={WIDGET_BASE_STYLE}>
+          <div className={TITLE_STYLE}><Droplets className="w-3.5 h-3.5 text-cyan-400" /> {t.dewPoint || "ROSADA"}</div>
+          <div className="flex items-center justify-between px-2 flex-1 pb-4">
+              <div className="flex flex-col items-start">
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter drop-shadow-lg">{Math.round(value)}°</span>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide mt-1">Punt Rosada</span>
+              </div>
+              <div className="h-10 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent mx-2"></div>
+              <div className="flex flex-col items-end">
+                  <span className="text-2xl font-bold text-cyan-400 tabular-nums">{humidity}%</span>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide mt-1 text-right">Humitat Rel.</span>
+              </div>
+          </div>
+          <div className="w-full h-1.5 bg-[#0f111a] rounded-full overflow-hidden border border-white/5">
+              <div className={`h-full rounded-full ${value > 20 ? 'bg-rose-500' : value > 15 ? 'bg-amber-400' : 'bg-emerald-400'} shadow-[0_0_8px_currentColor]`} style={{width: `${Math.min(((value + 10) / 40) * 100, 100)}%`}}></div>
+          </div>
+      </div>
+    );
+};
+
+export const CapeWidget = ({ cape, lang }: WidgetProps) => {
+    const t = getTrans(lang);
+    
+    // Nivells d'alerta
+    let severity = 'Estable';
+    let color = 'text-emerald-400';
+    let barColor = 'bg-gradient-to-t from-emerald-500 via-emerald-400 to-transparent';
+    const heightPct = Math.min((cape / 3000) * 100, 100); // CORREGIT: 'const' en lloc de 'let'
+
+    if (cape > 2500) { severity = 'Severa'; color = 'text-rose-500'; barColor = 'bg-gradient-to-t from-rose-600 via-rose-500 to-orange-500'; }
+    else if (cape > 1000) { severity = 'Alta'; color = 'text-amber-400'; barColor = 'bg-gradient-to-t from-amber-500 via-yellow-400 to-transparent'; }
+    else if (cape > 500) { severity = 'Moderada'; color = 'text-yellow-300'; barColor = 'bg-gradient-to-t from-yellow-400 to-transparent'; }
+
+    return (
+      <div className={WIDGET_BASE_STYLE}>
+          <div className={TITLE_STYLE}><Zap className="w-3.5 h-3.5 text-amber-400" /> {t.instability || "CAPE"}</div>
+          <div className="flex-1 flex items-stretch gap-4 relative">
+              <div className="w-3 bg-[#0f111a] rounded-full border border-white/10 relative overflow-hidden flex flex-col justify-end shadow-inner">
+                  <div className="absolute inset-0 flex flex-col justify-between py-1 px-0.5 opacity-30 z-10 pointer-events-none">
+                      {[...Array(10)].map((_, i) => <div key={i} className="w-full h-px bg-white"></div>)}
+                  </div>
+                  <div className={`w-full ${barColor} transition-all duration-1000 ease-out relative`} style={{ height: `${Math.max(5, heightPct)}%` }}>
+                      <div className="absolute top-0 w-full h-[2px] bg-white shadow-[0_0_8px_white]"></div>
+                  </div>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center">
+                  <span className={`text-4xl font-black tracking-tighter tabular-nums ${color} drop-shadow-lg leading-none`}>
+                      {Math.round(cape)}
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-3">J/kg</span>
+                  
+                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border bg-black/20 w-fit ${cape > 1000 ? 'border-amber-500/30' : 'border-white/5'}`}>
+                      {cape > 1000 && <AlertTriangle className={`w-3 h-3 ${color}`} />}
+                      <span className={`text-[9px] font-black uppercase tracking-wider ${color}`}>
+                          {severity}
+                      </span>
+                  </div>
+              </div>
+          </div>
+      </div>
+    );
+};
+
+export const PollenWidget = ({ data, lang }: WidgetProps) => {
+    const t = getTrans(lang);
+    const aqi = data?.us_aqi ?? 0;
+    
+    const getAQIColor = (val: number) => {
+        if (val > 150) return 'text-rose-500';
+        if (val > 100) return 'text-orange-400';
+        if (val > 50) return 'text-yellow-400';
+        return 'text-emerald-400';
+    };
+    
+    const colorClass = getAQIColor(aqi);
+    const label = aqi > 150 ? "MALA" : aqi > 100 ? "SENSIBLE" : aqi > 50 ? "MODERADA" : "B O N A";
+
+    return (
+        <div className={`${WIDGET_BASE_STYLE} !flex-row items-center gap-6`}>
+            <div className="relative w-16 h-16 flex items-center justify-center bg-[#0f111a] rounded-xl border border-white/5 shadow-inner group">
+                <Flower2 className={`w-8 h-8 ${colorClass} transition-colors duration-500`} />
+                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${aqi > 50 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'} border-2 border-[#151725]`}></div>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.airQuality || "QUALITAT AIRE"}</span>
+                    <span className={`text-xs font-mono font-bold ${colorClass} tabular-nums`}>AQI {aqi}</span>
+                </div>
+                
+                <div className="flex gap-0.5 h-3 w-full mb-2">
+                    {[...Array(20)].map((_, i) => {
+                        const threshold = i * (300/20);
+                        const isActive = aqi >= threshold;
+                        const segmentColor = threshold > 150 ? 'bg-rose-500' : threshold > 100 ? 'bg-orange-400' : threshold > 50 ? 'bg-yellow-400' : 'bg-emerald-500';
+                        return (
+                            <div 
+                                key={i} 
+                                className={`flex-1 rounded-sm transition-all duration-500 ${isActive ? segmentColor : 'bg-[#0f111a] border border-white/5'}`}
+                                style={{ opacity: isActive ? 1 : 0.2 }}
+                            ></div>
+                        );
+                    })}
+                </div>
+
+                <span className={`text-xl font-black ${colorClass} tracking-tighter uppercase drop-shadow-md`}>
+                    {label}
+                </span>
+            </div>
+        </div>
+    );
+};
+
+// CORREGIT: Ús d'inicialització mandrosa per evitar l'error "impure function"
+export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) => {
+    const t = getTrans(lang);
+    // FIX: () => Math.floor... evita que s'executi a cada render
+    const [currentTimeSeconds, setCurrentTimeSeconds] = useState<number>(() => Math.floor(Date.now() / 1000));
+
+    // Timer pur: actualitza l'estat cada minut
+    useEffect(() => {
+        const timer = setInterval(() => {
+             setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
+        }, 60000); 
+        return () => clearInterval(timer);
+    }, []);
+
+    const { sunPosition, progressPercent, statusText, countdown, isDaytime, displaySunrise, displaySunset } = useMemo(() => {
+        if (!sunrise || !sunset) return { 
+            sunPosition: { x: 0, y: 100 }, progressPercent: 0, statusText: '--', countdown: '', isDaytime: true, displaySunrise: '--:--', displaySunset: '--:--'
+        };
+
+        const localNowTotalSeconds = currentTimeSeconds + (utcOffset || 0);
+        const currentSecondsOfDay = localNowTotalSeconds % 86400;
+
+        const sunriseSeconds = timeStringToSeconds(sunrise);
+        const sunsetSeconds = timeStringToSeconds(sunset);
+
+        let diffSeconds = 0;
+        let nextEventLabel = "";
+        let isDay = false;
+        let pct = 0;
+
+        if (currentSecondsOfDay >= sunriseSeconds && currentSecondsOfDay < sunsetSeconds) {
+            isDay = true;
+            nextEventLabel = lang === 'ca' ? "Posta de sol" : "Sunset in";
+            diffSeconds = sunsetSeconds - currentSecondsOfDay;
+            const dayDuration = sunsetSeconds - sunriseSeconds;
+            pct = (currentSecondsOfDay - sunriseSeconds) / dayDuration;
+        } else {
+            isDay = false;
+            nextEventLabel = lang === 'ca' ? "Sortida" : "Sunrise in";
+            if (currentSecondsOfDay < sunriseSeconds) {
+                diffSeconds = sunriseSeconds - currentSecondsOfDay;
+                pct = 0; 
+            } else {
+                diffSeconds = (86400 - currentSecondsOfDay) + sunriseSeconds;
+                pct = 1; 
+            }
+        }
+
+        const hoursLeft = Math.floor(diffSeconds / 3600);
+        const minsLeft = Math.floor((diffSeconds % 3600) / 60);
+        const countdownStr = `${hoursLeft}h ${minsLeft}m`;
+
+        const tVal = Math.max(0, Math.min(1, pct));
+        const p0 = { x: 10, y: 90 };
+        const p1 = { x: 50, y: 10 };
+        const p2 = { x: 90, y: 90 };
+
+        const x = Math.pow(1-tVal, 2) * p0.x + 2 * (1-tVal) * tVal * p1.x + Math.pow(tVal, 2) * p2.x;
+        const y = Math.pow(1-tVal, 2) * p0.y + 2 * (1-tVal) * tVal * p1.y + Math.pow(tVal, 2) * p2.y;
+
+        return {
+            sunPosition: { x, y },
+            progressPercent: tVal * 100,
+            statusText: nextEventLabel,
+            countdown: countdownStr,
+            isDaytime: isDay,
+            displaySunrise: secondsToTime(sunriseSeconds),
+            displaySunset: secondsToTime(sunsetSeconds)
+        };
+    }, [currentTimeSeconds, sunrise, sunset, lang, utcOffset]);
+
+    return (
+        <div className={WIDGET_BASE_STYLE}>
+             <div className="flex justify-between items-start w-full z-10">
+                <div className={TITLE_STYLE.replace('mb-4', 'mb-0')}>
+                    <Sunrise className="w-3.5 h-3.5 text-amber-400" />
+                    {t.sunCycle || "CICLE SOLAR"}
+                </div>
+                <div className="flex flex-col items-end">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{statusText}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDaytime ? 'bg-amber-400' : 'bg-indigo-400'}`}></span>
+                        <span className={`text-xs font-mono font-medium tabular-nums tracking-wide ${isDaytime ? 'text-amber-100' : 'text-indigo-100'}`}>
+                            {countdown}
+                        </span>
+                    </div>
+                </div>
              </div>
-         </div>
-         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 m-5 rounded-full border border-slate-700 backdrop-blur-sm">
-            <span className="text-sm font-bold text-white leading-none">{Math.round(speed)}</span>
-            <span className="text-[8px] text-slate-400 leading-none mt-0.5">km/h</span>
-         </div>
-      </div>
-      <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{label}</div>
-      <div className="text-xs font-bold text-teal-400 mt-0.5">{dirText} ({degrees}°)</div>
-    </div>
-  );
+
+             <div className="relative flex-1 w-full flex items-center justify-center mt-2">
+                 <svg className="w-full h-28 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                     <defs>
+                        <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                            <stop offset="50%" stopColor="#fbbf24" stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.4" />
+                        </linearGradient>
+                        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                     </defs>
+
+                     <path d="M 10,90 Q 50,10 90,90" fill="none" stroke="#1e293b" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
+                     
+                     <path 
+                        d="M 10,90 Q 50,10 90,90" 
+                        fill="none" 
+                        stroke="url(#arcGradient)" 
+                        strokeWidth="3" 
+                        strokeLinecap="round"
+                        strokeDasharray="135" 
+                        strokeDashoffset={135 - (135 * (isDaytime ? progressPercent / 100 : 0))} 
+                        className="transition-all duration-1000 ease-out opacity-80"
+                     />
+
+                     <g style={{ transform: `translate(${sunPosition.x}px, ${sunPosition.y}px)`, transition: 'transform 1s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                        <circle r="8" fill={isDaytime ? "#fbbf24" : "#6366f1"} className="opacity-20 animate-pulse" />
+                        <circle r="3.5" fill={isDaytime ? "#fff" : "#a5b4fc"} filter="url(#glow)" className="drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                     </g>
+                 </svg>
+
+                 <div className="absolute bottom-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+             </div>
+             
+             <div className="flex justify-between items-end w-full mt-2 px-2">
+                 <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.sunrise || "SORTIDA"}</span>
+                    <span className="text-sm font-mono font-medium text-white tabular-nums bg-[#151725] px-2 py-0.5 rounded border border-white/5">
+                        {displaySunrise}
+                    </span>
+                 </div>
+                 
+                 <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.sunset || "POSTA"}</span>
+                    <span className="text-sm font-mono font-medium text-white tabular-nums bg-[#151725] px-2 py-0.5 rounded border border-white/5">
+                        {displaySunset}
+                    </span>
+                 </div>
+             </div>
+        </div>
+    );
 };
 
-interface CircularGaugeProps extends BaseWidgetProps { value: number; max?: number; label: string; icon: React.ReactNode; color?: string; subText?: string; trend?: string | null; trendLabel?: string | null; }
-export const CircularGauge = ({ value, max = 100, label, icon, color = "text-indigo-500", subText, trend = null, trendLabel = null }: CircularGaugeProps) => {
-  const radius = 26;
-  const circumference = 2 * Math.PI * radius;
-  const normalizedValue = label.includes("Pressió") || label.includes("Pressure") || label.includes("Presión") 
-      ? Math.max(0, Math.min((value - 950) / 100, 1)) 
-      : Math.min(value, max) / max;
-  const strokeDashoffset = circumference - normalizedValue * circumference;
+export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
+    const t = getTrans(lang);
+    const pct = Math.round(phase * 100);
+    const moonText = getMoonPhaseText(phase);
+    const moonAge = Math.round(phase * 29.53);
+    const isSouth = (lat ?? 0) < 0;
 
+    return (
+        <div className={WIDGET_BASE_STYLE}>
+             <div className="flex items-center justify-between w-full mb-2">
+                 <span className={TITLE_STYLE.replace('mb-4', 'mb-0')}><Moon className="w-3.5 h-3.5 text-indigo-300" /> {t.moonPhase || "LLUNA"}</span>
+                 <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dia {moonAge}</span>
+                 </div>
+             </div>
+             
+             <div className="flex items-center justify-center flex-1 gap-6">
+                 <div className="w-20 h-20 rounded-full bg-[#0f111a] border border-slate-700/50 relative overflow-hidden shadow-2xl ring-1 ring-black">
+                    {/* AQUI ESTÀ LA CORRECCIÓ: invertit per Hemisferi Nord */}
+                    <div className="absolute inset-0 w-full h-full" style={{ transform: isSouth ? 'none' : 'scaleX(-1)' }}>
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+                        <div className="absolute inset-0 rounded-full bg-slate-800 shadow-inner"></div>
+                        
+                        <div 
+                            className="absolute inset-0 rounded-full transition-all duration-1000 bg-slate-200"
+                            style={{ 
+                                clipPath: `inset(0 ${100 - pct}% 0 0)`, 
+                                filter: 'blur(2px)', 
+                                mixBlendMode: 'screen' 
+                            }}
+                        ></div>
+                        
+                        <div className="absolute top-4 left-5 w-4 h-4 bg-black/10 rounded-full blur-[1px]"></div>
+                        <div className="absolute bottom-5 right-4 w-6 h-6 bg-black/10 rounded-full blur-[1px]"></div>
+                        <div className="absolute top-8 right-2 w-3 h-3 bg-black/10 rounded-full blur-[0.5px]"></div>
+                    </div>
+                 </div>
+                 
+                 <div className="flex flex-col justify-center">
+                    <span className="text-2xl font-black text-white tracking-tight">{pct}%</span>
+                    <span className="text-sm text-indigo-200 font-bold mb-1">{moonText}</span>
+                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest border-t border-white/5 pt-1 mt-1">
+                        Il·luminació
+                    </span>
+                 </div>
+             </div>
+        </div>
+    );
+};
+
+export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
+  const t = getTrans(lang);
   return (
-    <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
-      <div className="relative w-20 h-20 flex items-center justify-center">
-         <svg className="w-full h-full transform -rotate-90">
-            <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="5" fill="transparent" className="text-slate-800" />
-            <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="5" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className={`${color} transition-all duration-1000 ease-out`} />
-         </svg>
-         <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className={`mb-0.5 ${color} scale-75`}>{icon}</div>
-            <span className="text-sm font-bold text-white">{value}</span>
-         </div>
-      </div>
-      <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">{label}</div>
-      {subText && <div className="text-[9px] text-slate-500 mt-0.5">{subText}</div>}
+    <div className="w-full h-full flex flex-col bg-[#0b0c15] rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl relative">
+      <style>{`
+        .custom-scroll::-webkit-scrollbar { height: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; margin: 0 20px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+      `}</style>
       
-      {trend && (
-         <div className={`absolute top-1.5 right-1.5 flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-slate-950/50 ${
-             trend === 'rising' ? 'text-teal-400 border-teal-500/30' : 
-             trend === 'falling' ? 'text-rose-400 border-rose-500/30' : 
-             'text-slate-400 border-slate-500/30'
-         }`}>
-             {trend === 'rising' && <TrendingUp className="w-2.5 h-2.5" />}
-             {trend === 'falling' && <TrendingDown className="w-2.5 h-2.5" />}
-             {trend === 'steady' && <Minus className="w-2.5 h-2.5" />}
-             {trendLabel}
+      <div className="px-6 py-4 flex items-center justify-between border-b border-white/5 bg-[#11131f]/80 backdrop-blur-md sticky top-0 z-20">
+         <div className="flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">{t.hourlyForecast || "EVOLUCIÓ 24H"}</span>
          </div>
-      )}
-    </div>
-  );
-};
+      </div>
+      
+      <div className="flex overflow-x-auto px-4 py-5 gap-3 custom-scroll snap-x bg-gradient-to-b from-[#0b0c15] to-[#11131f]">
+        {data.map((hour, idx) => {
+            const hasPrecip = (hour.precip || 0) > 0;
+            const cardClass = hour.isNow 
+                ? 'bg-indigo-600/10 border-indigo-500/40 ring-1 ring-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]' 
+                : 'bg-[#151725] border-white/5 hover:border-white/20 hover:bg-[#1e2130]';
 
-interface DewPointWidgetProps extends BaseWidgetProps { value: number; humidity: number; unit: WeatherUnit; }
-export const DewPointWidget = ({ value, humidity, lang = 'ca', unit }: DewPointWidgetProps) => { 
-    const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-    let status = t.dpComfortable; let color = "text-teal-400"; let bgColor = "bg-teal-500"; let bgOpacity = "bg-teal-500/10";
-    const percentage = Math.min(Math.max((value / 28) * 100, 0), 100);
-    if (value < 10) { status = t.dpDry; color = "text-blue-400"; bgColor = "bg-blue-500"; bgOpacity = "bg-blue-500/10"; }
-    else if (value >= 10 && value <= 15) { status = t.dpComfortable; color = "text-green-400"; bgColor = "bg-green-500"; bgOpacity = "bg-green-500/10"; }
-    else if (value > 15 && value <= 20) { status = t.dpHumid; color = "text-yellow-400"; bgColor = "bg-yellow-500"; bgOpacity = "bg-yellow-500/10"; }
-    else if (value > 20 && value <= 24) { status = t.dpOppressive; color = "text-orange-500"; bgColor = "bg-orange-500"; bgOpacity = "bg-orange-500/10"; }
-    else if (value > 24) { status = t.dpExtreme; color = "text-red-500 animate-pulse"; bgColor = "bg-red-500"; bgOpacity = "bg-red-500/10"; }
-
-    const displayValue = unit === 'F' ? Math.round((value * 9/5) + 32) : Math.round(value);
-
-    return (
-        <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
-            <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                <Thermometer className={`w-3 h-3 ${color}`} strokeWidth={2.5} />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t.dewPoint}</span>
-            </div>
-            <div className="flex flex-col items-center mt-3 w-full">
-                 <div className="relative mb-1 flex items-baseline gap-2">
-                    <div className={`text-3xl font-bold ${color}`}>{displayValue}°</div>
-                    <div className="flex items-center gap-0.5 text-slate-400 text-[10px] font-medium bg-slate-800/50 px-1.5 py-0.5 rounded-md border border-white/5" title={t.humidity}>
-                        <Droplets className="w-2.5 h-2.5" /> <span>{humidity}%</span>
-                    </div>
-                 </div>
-                 <div className="w-full max-w-[85%] h-1.5 bg-slate-800 rounded-full overflow-hidden relative">
-                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
-                 </div>
-                 <div className={`mt-2 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${color} ${bgOpacity} border border-current border-opacity-20`}>
-                    {status}
-                 </div>
-            </div>
-        </div>
-    )
-};
-
-interface CapeWidgetProps extends BaseWidgetProps { cape: number; }
-export const CapeWidget = ({ cape, lang = 'ca' }: CapeWidgetProps) => {
-    const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-    let status = t.capeStable; let color = "text-green-400"; let bgColor = "bg-green-500";
-    const percentage = Math.min((cape / 3000) * 100, 100);
-    if (cape > 1000 && cape <= 2500) { status = t.capeModerate; color = "text-orange-400"; bgColor = "bg-orange-500"; }
-    else if (cape > 2500) { status = t.capeExtreme; color = "text-red-500 animate-pulse"; bgColor = "bg-red-500"; }
-
-    return (
-        <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
-            <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                <Zap className={`w-3 h-3 ${color}`} strokeWidth={2.5} />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t.stormPotential}</span>
-            </div>
-            <div className="flex flex-col items-center mt-4">
-                <span className={`text-2xl font-bold ${color}`}>{Math.round(cape)}</span>
-                <span className="text-[8px] text-slate-500 mb-2">J/kg (CAPE)</span>
-                <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${bgColor} transition-all duration-1000`} style={{width: `${percentage}%`}}></div>
+            return (
+              <div key={idx} className={`flex-shrink-0 flex flex-col items-center justify-between w-[72px] h-[145px] py-3 rounded-[1.25rem] border ${cardClass} transition-all duration-300 snap-start group`}>
+                <span className={`text-[10px] font-bold ${hour.isNow ? 'text-indigo-300' : 'text-slate-500 group-hover:text-slate-300'}`}>{hour.time}</span>
+                
+                <div className="my-1 scale-90 group-hover:scale-110 transition-transform duration-300 filter drop-shadow-lg">
+                    {hour.icon}
                 </div>
-                <span className={`text-[9px] font-bold mt-2 px-2 py-0.5 rounded border border-white/5 bg-white/5 ${color}`}>{status}</span>
-            </div>
-        </div>
-    )
-};
-
-interface SnowLevelWidgetProps extends BaseWidgetProps { freezingLevel?: number | null; unit: WeatherUnit; }
-export const SnowLevelWidget = ({ freezingLevel, unit, lang = 'ca' }: SnowLevelWidgetProps) => {
-  if (freezingLevel === null || freezingLevel === undefined) return null;
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-  const snowLevel = Math.max(0, freezingLevel - 300);
-  const formatH = (val: number) => `${Math.round(val)}m`;
-  const maxVisualHeight = 3500;
-  const percentage = Math.max(5, Math.min(100, 100 - (snowLevel / maxVisualHeight * 100)));
-  let barColor = 'bg-indigo-500'; 
-  if (snowLevel < 1000) barColor = 'bg-cyan-300'; else if (snowLevel < 2000) barColor = 'bg-blue-400'; 
-
-  return (
-    <div className={`${WIDGET_BASE_STYLE} overflow-hidden`}>
-      <div className="flex items-center gap-2 text-indigo-300 mb-1 z-10">
-        <Mountain className="w-3.5 h-3.5" strokeWidth={2.5} />
-        <span className="text-[10px] font-bold uppercase tracking-wider">{t.snowLevel}</span>
-      </div>
-      <div className="flex flex-col gap-0.5 z-10 mt-0.5">
-        <span className="text-2xl font-bold text-white leading-none">{snowLevel > 4000 ? "> 4000m" : formatH(snowLevel)}</span>
-        <span className="text-[9px] text-slate-400 font-medium flex items-center gap-1">
-           {t.freezingLevelAt} <span className="text-slate-200 font-mono bg-white/5 px-1 rounded">{formatH(freezingLevel)}</span>
-        </span>
-      </div>
-      <div className="absolute bottom-0 right-0 w-20 h-20 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none">
-         <svg viewBox="0 0 100 100" className="fill-current text-white">
-            <path d="M50 10 L90 90 L10 90 Z" />
-            <path d="M50 10 L65 40 L35 40 Z" fill="white" className="opacity-80" />
-         </svg>
-      </div>
-      <div className="mt-auto w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex z-10 relative mb-1">
-          <div className={`h-full transition-all duration-1000 ${barColor}`} style={{ width: `${percentage}%` }}></div>
-      </div>
-      <div className="text-[8px] text-slate-500 text-right z-10 leading-none">
-         {snowLevel < 1000 ? (lang === 'ca' ? "Cota baixa" : "Low level") : snowLevel > 2500 ? (lang === 'ca' ? "Alta muntanya" : "High mountain") : "Muntanya mitjana"}
+                
+                <div className="flex flex-col items-center w-full gap-1.5">
+                    <span className="text-lg font-black text-white tabular-nums tracking-tight">{Math.round(hour.temp)}°</span>
+                    <div className="w-full px-2.5">
+                        <div className="w-full h-1 bg-[#0f111a] rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full transition-all" style={{width: `${hasPrecip ? Math.max(hour.precip || 0, 30) : 0}%`, opacity: hasPrecip ? 1 : 0}}></div>
+                        </div>
+                    </div>
+                    <span className="text-[8px] font-bold text-blue-400 tabular-nums h-2 leading-none opacity-80">{hour.precipText || ''}</span>
+                </div>
+              </div>
+            );
+        })}
       </div>
     </div>
   );
 };
 
-interface CloudLayersWidgetProps extends BaseWidgetProps { low: number; mid: number; high: number; }
-export const CloudLayersWidget = ({ low, mid, high, lang = 'ca' }: CloudLayersWidgetProps) => {
-    const l = Math.round(low || 0); const m = Math.round(mid || 0); const h = Math.round(high || 0);
-    const tr = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-    const t = (tr as any).cloudLayers || (TRANSLATIONS['ca'] as any).cloudLayers;
+export const TempRangeBar = ({ min, max, globalMin, globalMax }: { min: number, max: number, globalMin: number, globalMax: number }) => {
+    const totalRange = (globalMax - globalMin) || 1;
+    const leftPercent = ((min - globalMin) / totalRange) * 100;
+    const widthPercent = ((max - min) / totalRange) * 100;
 
     return (
-        <div className={`${WIDGET_BASE_STYLE}`}>
-            <div className="flex items-center gap-2 mb-2">
-                <Cloud className="w-4 h-4 text-indigo-300" strokeWidth={2.5} />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t?.title || "Núvols"}</span>
-            </div>
-            <div className="flex flex-col gap-2 flex-grow justify-center">
-                <div className="space-y-0.5">
-                    <div className="flex justify-between text-[9px] text-indigo-200"><span>{t?.high || "Alts"}</span><span>{h}%</span></div>
-                    <div className="h-1.5 w-full bg-slate-950/50 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-300/80 rounded-full transition-all duration-1000" style={{ width: `${h}%` }}></div>
-                    </div>
-                </div>
-                <div className="space-y-0.5">
-                    <div className="flex justify-between text-[9px] text-indigo-200"><span>{t?.mid || "Mitjans"}</span><span>{m}%</span></div>
-                    <div className="h-1.5 w-full bg-slate-950/50 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-400/80 rounded-full transition-all duration-1000" style={{ width: `${m}%` }}></div>
-                    </div>
-                </div>
-                <div className="space-y-0.5">
-                    <div className="flex justify-between text-[9px] text-indigo-200"><span>{t?.low || "Baixos"}</span><span>{l}%</span></div>
-                    <div className="h-1.5 w-full bg-slate-950/50 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${l}%` }}></div>
-                    </div>
-                </div>
-            </div>
+        <div className="w-full h-2.5 bg-[#0f111a] rounded-full relative overflow-hidden border border-white/10 shadow-inner">
+            <div className="absolute inset-0 opacity-20 bg-slate-800"></div>
+            <div 
+                className="absolute h-full rounded-full bg-gradient-to-r from-sky-400 via-yellow-400 to-rose-500 shadow-[0_0_10px_rgba(251,191,36,0.4)]"
+                style={{ 
+                    left: `${Math.max(0, Math.min(100, leftPercent))}%`, 
+                    width: `${Math.max(5, Math.min(100, widthPercent))}%`,
+                    transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+            ></div>
         </div>
     );
 };
 
-interface VisibilityWidgetProps extends BaseWidgetProps { visibility: number; unit?: string; }
-export const VisibilityWidget = ({ visibility, lang = 'ca', unit = 'km' }: VisibilityWidgetProps) => {
-    const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-    const visKm = visibility / 1000;
-    const percentage = Math.min((visibility / 24000) * 100, 100);
-    let status = '';
-    if (visibility < 1000) status = (t as any).fog || "Boira";
-    else if (visibility < 5000) status = (t as any).haze || "Bruma";
-    else if (visibility < 10000) status = (t as any).clear || "Visible";
-    else status = (t as any).excellent || "Excel·lent";
-
-    return (
-        <div className={`${WIDGET_BASE_STYLE} items-center justify-center`}>
-            <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                <Eye className="w-3 h-3 text-indigo-400" strokeWidth={2.5} />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{(t as any).visibility || "Visibilitat"}</span>
-            </div>
-            <div className="flex flex-col items-center mt-3 w-full">
-                 <span className="text-2xl font-bold text-white">{visKm.toFixed(1)} <span className="text-sm font-medium text-slate-500">km</span></span>
-                 <div className="w-20 h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-indigo-400 transition-all duration-1000" style={{width: `${percentage}%`}}></div>
-                 </div>
-                 <span className="text-[9px] font-bold mt-2 px-2 py-0.5 rounded border border-white/5 bg-white/5 text-indigo-300">
-                    {status}
-                 </span>
-            </div>
-        </div>
-    );
-};
+export const VisibilityWidget = () => <div className="hidden" />;

@@ -3,9 +3,17 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain, Umbrella, Droplets } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../constants/translations';
 
-interface ChartDataPoint {
+// Tipus estricte per a punts de dades genèrics
+export interface ChartDataPoint {
     time: string;
-    [key: string]: any;
+    [key: string]: string | number | null | undefined | unknown; 
+}
+
+interface GraphPoint {
+    x: number;
+    y: number;
+    value: number | null;
+    time: string;
 }
 
 interface SingleHourlyChartProps {
@@ -17,6 +25,14 @@ interface SingleHourlyChartProps {
     setHoveredIndex: (idx: number | null) => void;
     height?: number;
     lang?: Language;
+}
+
+// Interfície per a la configuració de capes
+interface LayerConfig {
+    key: string;
+    color: string;
+    gradientStart: string;
+    title: string;
 }
 
 const getRawHour = (isoString: string): number => {
@@ -38,7 +54,6 @@ const formatRawTime = (isoString: string): string => {
 };
 
 export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca' }: SingleHourlyChartProps) => {
-  // 1. HOOKS AL PRINCIPI (CRUCIAL PER A REACT)
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1000); 
 
@@ -57,7 +72,8 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  const layersConfig: any = useMemo(() => ({
+  // Tipat estricte del mapa de configuració
+  const layersConfig = useMemo<Record<string, LayerConfig>>(() => ({
     temp: { key: 'temp', color: '#818cf8', gradientStart: '#818cf8', title: t.temp },
     rain: { key: 'rain', color: '#3b82f6', gradientStart: '#3b82f6', title: t.rainProb },
     precip: { key: 'precip', color: '#60a5fa', gradientStart: '#2563eb', title: "Volum (mm)" },
@@ -72,7 +88,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const paddingX = width < 500 ? 10 : 20;
   const paddingY = 30;
 
-  // Càlculs segurs dins useMemo
   const chartPoints = useMemo(() => {
     if (!data || data.length === 0) return { points: [], gfsPoints: [], iconPoints: [] };
 
@@ -105,7 +120,7 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
     const rng = max - min || 1;
     const calcY = (val: number | null) => (val === null) ? height + 10 : height - paddingY - ((val - min) / rng) * (height - 2 * paddingY);
 
-    const createPoints = (dataset: ChartDataPoint[]) => dataset.map((d, i) => ({
+    const createPoints = (dataset: ChartDataPoint[]): GraphPoint[] => dataset.map((d, i) => ({
         x: paddingX + (i / (dataset.length - 1)) * (width - 2 * paddingX),
         y: calcY(getSafeValue(d)),
         value: getSafeValue(d),
@@ -122,7 +137,8 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const { points, gfsPoints, iconPoints } = chartPoints;
 
   const paths = useMemo(() => {
-      const buildSmoothPath = (pts: any[]) => {
+      // Tipat explícit per als punts del gràfic
+      const buildSmoothPath = (pts: GraphPoint[]) => {
         const validPts = pts.filter(p => p.value !== null && p.y <= height + 50);
         if (validPts.length < 2) return "";
         let d = `M ${validPts[0].x},${validPts[0].y}`;
@@ -141,7 +157,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
       return { linePath, areaPath, gfsPath: comparisonData?.gfs ? buildSmoothPath(gfsPoints) : "", iconPath: comparisonData?.icon ? buildSmoothPath(iconPoints) : "" };
   }, [points, gfsPoints, iconPoints, height, comparisonData, width, paddingX]);
 
-  // 2. CONDICIONAL DE RETORN (ARA SÍ, AL FINAL)
   if (!data || data.length === 0) return null;
 
   const hoverData = hoveredIndex !== null ? points[hoveredIndex] : null;
@@ -210,10 +225,17 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   );
 };
 
-export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }: any) => {
+interface SmartForecastChartsProps {
+    data: ChartDataPoint[];
+    comparisonData: { gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
+    unit: string;
+    lang?: Language;
+}
+
+export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }: SmartForecastChartsProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'temp' | 'rain' | 'precip' | 'wind' | 'snow'>('temp');
-  const t = TRANSLATIONS[lang as Language] || TRANSLATIONS['ca'];
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   if (!data || data.length === 0) return null;
 
@@ -241,7 +263,7 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
           {tabs.map((tab) => (
               <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'temp' | 'rain' | 'precip' | 'wind' | 'snow')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-1 justify-center ${
                       activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                   }`}
@@ -281,7 +303,7 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
   );
 };
 
-export const MinutelyPreciseChart = ({ data, label, currentPrecip = 0 }: { data: number[], label: string, currentPrecip: number }) => {
+export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPrecip = 0 }: { data: number[], label: string, currentPrecip: number }) => {
     let chartData = data ? [...data] : [];
     if(chartData.length === 0) return null; 
     while(chartData.length < 4) chartData.push(0);

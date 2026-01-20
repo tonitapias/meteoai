@@ -5,28 +5,164 @@ import { WeatherData } from '../services/weatherApi';
 
 const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
-export interface ExtendedWeatherData extends WeatherData {
-  hourlyComparison?: {
-    ecmwf: any[];
-    gfs: any[];
-    icon: any[];
-  };
-  dailyComparison?: {
-    ecmwf: any;
-    gfs: any;
-    icon: any;
-  };
-  [key: string]: any;
+// --- DEFINICIÓ DE TIPUS ESTRICTES ---
+
+export interface TranslationMap {
+  wmo: Record<number, string>;
+  aiRainHeavy: string;
+  aiRainMod: string;
+  aiRainLight: string;
+  aiRainStopping: string;
+  aiRainMore: string;
+  aiIntroMorning: string;
+  aiIntroAfternoon: string;
+  aiIntroNight: string;
+  aiSummaryClear: string;
+  aiSummaryVariable: string;
+  aiSummaryVariableNight: string;
+  aiSummaryOvercast: string;
+  aiSummaryFog: string;
+  alertVisibility: string;
+  aiSummarySnow: string;
+  aiSummaryCloudy: string;
+  aiRainChance: string;
+  aiRainNone: string;
+  aiTempFreezing: string;
+  aiTempCold: string;
+  aiTempCool: string;
+  aiTempMild: string;
+  aiTempWarm: string;
+  aiTempHot: string;
+  aiHeatIndex?: string;
+  storm: string;
+  alertStorm: string;
+  snow: string;
+  alertSnow: string;
+  rain: string;
+  alertRain: string;
+  wind: string;
+  tipWindbreaker: string;
+  alertWindHigh: string;
+  alertWindExtreme: string;
+  heat: string;
+  alertHeatExtreme: string;
+  tipHydration: string;
+  tipSunscreen: string;
+  alertHeatHigh: string;
+  sun: string;
+  alertUV: string;
+  aqi: string;
+  alertAir: string;
+  cold: string;
+  alertColdExtreme: string;
+  tipCoat: string;
+  tipThermal: string;
+  tipLayers: string;
+  tipUmbrella: string;
+  tipCalm: string;
+  aiWindStrong: string;
+  aiWindMod: string;
+  aiConfidence: string;
+  aiConfidenceLow: string;
+  aiConfidenceMod: string;
+  [key: string]: unknown;
 }
 
-const safeNum = (val: any, fallback: number = 0): number => {
-    if (val === null || val === undefined || Number.isNaN(val)) return fallback;
-    return Number(val);
-};
+export interface Alert {
+  type: string;
+  msg: string;
+  level: 'high' | 'warning' | 'info';
+}
+
+export interface StrictCurrentWeather {
+  time: string;
+  weather_code: number;
+  temperature_2m: number;
+  apparent_temperature: number;
+  relative_humidity_2m: number;
+  wind_speed_10m: number;
+  wind_gusts_10m?: number;
+  visibility?: number;
+  cloud_cover?: number;
+  is_day: number;
+  precipitation?: number;
+  rain?: number;
+  showers?: number;
+  cloud_cover_low?: number;
+  cloud_cover_mid?: number;
+  cloud_cover_high?: number;
+  source?: string;
+  minutely15?: number[];
+  [key: string]: unknown;
+}
+
+export interface StrictHourlyWeather {
+  time: string[];
+  precipitation_probability?: (number | null)[];
+  precipitation: (number | null)[];
+  temperature_2m: (number | null)[];
+  cape?: (number | null)[];
+  wind_speed_10m: (number | null)[];
+  wind_gusts_10m?: (number | null)[];
+  snow_depth?: (number | null)[];
+  relative_humidity_2m: (number | null)[];
+  freezing_level_height?: (number | null)[];
+  [key: string]: unknown;
+}
+
+export interface StrictDailyWeather {
+  time: string[];
+  precipitation_probability_max?: (number | null)[];
+  temperature_2m_max: (number | null)[];
+  temperature_2m_min: (number | null)[];
+  precipitation_sum?: (number | null)[];
+  uv_index_max?: (number | null)[];
+  wind_speed_10m_max?: (number | null)[];
+  sunrise?: string[];
+  sunset?: string[];
+  elevation?: number;
+  [key: string]: unknown;
+}
+
+export interface ExtendedWeatherData extends Omit<WeatherData, 'current' | 'hourly' | 'daily'> {
+  current: StrictCurrentWeather;
+  hourly: StrictHourlyWeather;
+  daily: StrictDailyWeather;
+  hourlyComparison?: {
+    ecmwf: Record<string, unknown>[];
+    gfs: Record<string, unknown>[];
+    icon: Record<string, unknown>[];
+  };
+  dailyComparison?: {
+    ecmwf: Record<string, unknown>;
+    gfs: Record<string, unknown>;
+    icon: Record<string, unknown>;
+  };
+  [key: string]: unknown;
+}
+
+export interface AIPredictionResult {
+  text: string;
+  tips: string[];
+  confidence: string;
+  confidenceLevel: string;
+  alerts: Alert[];
+}
+
+export interface ReliabilityResult {
+    level: 'low' | 'medium' | 'high';
+    type: 'general' | 'temp' | 'precip' | 'divergent' | 'ok';
+    value: number | string;
+}
 
 // ==========================================
 // 1. FUNCIONS AUXILIARS BÀSIQUES
 // ==========================================
+
+const safeNum = (val: unknown, fallback: number = 0): number => {
+    if (val === null || val === undefined || Number.isNaN(Number(val))) return fallback;
+    return Number(val);
+};
 
 export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string): Date => {
   if (typeof timezoneOrOffset === 'number') {
@@ -36,7 +172,7 @@ export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string
   if (!timezoneOrOffset) return baseDate;
   try {
       return new Date(baseDate.toLocaleString("en-US", { timeZone: timezoneOrOffset as string }));
-  } catch (e) {
+  } catch {
       return baseDate;
   }
 };
@@ -62,19 +198,19 @@ export const getMoonPhase = (date: Date): number => {
   return phase; 
 };
 
-export const getWeatherLabel = (current: any, language: Language): string => {
-  const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
+export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
+  const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
   if (!tr || !current) return "";
   const code = safeNum(current.weather_code, 0);
-  return (tr.wmo as any)[code] || "---";
+  return tr.wmo[code] || "---";
 };
 
 // ==========================================
 // 2. LÒGICA IA I PREDICCIONS
 // ==========================================
 
-const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: any) => {
-    const parts = []; 
+const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, code: number, precipNext15: number, tr: TranslationMap) => {
+    const parts: string[] = []; 
     if (isRaining) {
         if (precipInstantanea > PRECIPITATION.HEAVY || code === 65 || code === 67 || code === 82) parts.push(tr.aiRainHeavy); 
         else if (precipInstantanea >= 0.7 || code === 63 || code === 81 || code === 53 || code === 55) parts.push(tr.aiRainMod); 
@@ -88,8 +224,8 @@ const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, cod
     return parts.filter(Boolean);
 };
 
-const analyzeSky = (code: number, isDay: number, currentHour: number, visibility: number, rainProb: number, cloudCover: number, tr: any, alerts: any[]) => {
-    const parts = []; 
+const analyzeSky = (code: number, isDay: number, currentHour: number, visibility: number, rainProb: number, cloudCover: number, tr: TranslationMap, alerts: Alert[]) => {
+    const parts: string[] = []; 
     if (isDay) parts.push(currentHour < 12 ? tr.aiIntroMorning : tr.aiIntroAfternoon);
     else parts.push(tr.aiIntroNight);
 
@@ -108,8 +244,8 @@ const analyzeSky = (code: number, isDay: number, currentHour: number, visibility
     return parts.filter(Boolean);
 };
 
-const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, dailyMin: number, currentHour: number, unit: string, tr: any) => {
-    const parts = []; 
+const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, dailyMin: number, currentHour: number, unit: string, tr: TranslationMap) => {
+    const parts: string[] = []; 
     if (feelsLike <= TEMP.FREEZING) parts.push(tr.aiTempFreezing);
     else if (feelsLike > TEMP.FREEZING && feelsLike < TEMP.COLD) parts.push(tr.aiTempCold);
     else if (feelsLike >= TEMP.COLD && feelsLike < TEMP.MILD) {
@@ -123,16 +259,30 @@ const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, d
     if (temp > TEMP.WARM && humidity > HUMIDITY.HIGH) {
        let displayFeelsLike = feelsLike;
        if (unit === 'F' || unit === 'imperial') displayFeelsLike = (feelsLike * 9/5) + 32;
-       const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', Math.round(displayFeelsLike)) : "";
+       const heatText = tr.aiHeatIndex ? tr.aiHeatIndex.replace('{temp}', String(Math.round(displayFeelsLike))) : "";
        parts.push(heatText);
     }
     return parts.filter(Boolean);
 };
 
-const generateAlertsAndTips = (params: any, tr: any) => {
+interface AlertParams {
+    code: number;
+    windSpeed: number;
+    windGusts: number;
+    temp: number;
+    rainProb: number;
+    isRaining: boolean;
+    uvMax: number;
+    isDay: number;
+    aqiValue: number;
+    currentCape: number;
+    precipSum: number;
+}
+
+const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
     const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum } = params;
-    const alerts = []; 
-    const tips = [];   
+    const alerts: Alert[] = []; 
+    const tips: string[] = [];   
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
 
     if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
@@ -168,17 +318,17 @@ const generateAlertsAndTips = (params: any, tr: any) => {
     return { alerts, tips: [...new Set(tips)].slice(0, 4) };
 };
 
-const getFutureRainProbability = (hourly: any, daily: any, currentHour: number): number => {
+const getFutureRainProbability = (hourly: StrictHourlyWeather, daily: StrictDailyWeather, currentHour: number): number => {
     if (hourly && hourly.precipitation_probability) {
         const safeProbs = (hourly.precipitation_probability || [])
             .slice(currentHour, currentHour + 12)
-            .map((v: any) => safeNum(v));
+            .map((v) => safeNum(v));
         return Math.max(...safeProbs, 0);
     }
     return safeNum(daily.precipitation_probability_max?.[0], 0);
 };
 
-const analyzeWind = (windSpeed: number, tr: any) => {
+const analyzeWind = (windSpeed: number, tr: TranslationMap) => {
     if (windSpeed > WIND.MODERATE) {
         return windSpeed > WIND.STRONG ? tr.aiWindStrong : tr.aiWindMod;
     }
@@ -186,16 +336,16 @@ const analyzeWind = (windSpeed: number, tr: any) => {
 };
 
 export const generateAIPrediction = (
-    current: any, 
-    daily: any, 
-    hourly: any, 
+    current: StrictCurrentWeather, 
+    daily: StrictDailyWeather, 
+    hourly: StrictHourlyWeather, 
     aqiValue: number, 
     language: Language = 'ca', 
     effectiveCode: number | null = null, 
-    reliability: any = null, 
+    reliability: ReliabilityResult | null = null, 
     unit: string = 'C'
-) => {
-    const tr = TRANSLATIONS[language] || TRANSLATIONS['ca'];
+): AIPredictionResult => {
+    const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
     if (!tr || !current || !daily || !hourly) {
         return { text: "...", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
     }
@@ -204,8 +354,9 @@ export const generateAIPrediction = (
         const currentHour = new Date().getHours();
         const code = safeNum(effectiveCode !== null ? effectiveCode : current.weather_code, 0);
         
-        const precipInstantanea = (current as any).minutely15 ? safeNum((current as any).minutely15[0]) : 0;
-        const precipNext15 = (current as any).minutely15 ? safeNum((current as any).minutely15[1]) : 0;
+        const minutely15 = current.minutely15 || [];
+        const precipInstantanea = safeNum(minutely15[0]);
+        const precipNext15 = safeNum(minutely15[1]);
         
         const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
         const futureRainProb = getFutureRainProbability(hourly, daily, currentHour);
@@ -217,7 +368,7 @@ export const generateAIPrediction = (
         const isDay = safeNum(current.is_day, 1);
 
         let summaryParts: string[] = [];
-        const alertsList: any[] = []; 
+        const alertsList: Alert[] = []; 
 
         if (isRaining) {
             summaryParts = analyzePrecipitation(isRaining, precipInstantanea, code, precipNext15, tr);
@@ -281,9 +432,9 @@ export const generateAIPrediction = (
 };
 
 export const getRealTimeWeatherCode = (
-    current: any, 
+    current: StrictCurrentWeather, 
     minutelyPrecipData: number[], 
-    prob: number = 0, 
+    _prob: number = 0, // Argument prefixat per indicar que no s'utilitza
     freezingLevel: number = 2500, 
     elevation: number = 0,
     cape: number = 0 
@@ -328,6 +479,7 @@ export const getRealTimeWeatherCode = (
     }
 
     if (cape > 1200) { 
+         
         const isPrecipitating = precipInstantanea >= PRECIPITATION.TRACE || (code >= 51 && code <= 82);
         
         if (effectiveCloudCover > 60) {
@@ -372,7 +524,7 @@ export const isAromeSupported = (lat: number, lon: number): boolean => {
     return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
 };
 
-export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
+export const prepareContextForAI = (current: StrictCurrentWeather, daily: StrictDailyWeather, hourly: StrictHourlyWeather) => {
     if (!current || !daily || !hourly || !hourly.time) return null;
 
     const currentIsoTime = current.time; 
@@ -385,10 +537,10 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
     
     startIndex = startIndex === -1 ? 0 : startIndex;
 
-    const getNext4h = (key: string) => {
+    const getNext4h = (key: keyof StrictHourlyWeather) => {
         const data = hourly[key];
         if (!Array.isArray(data)) return [];
-        return data.slice(startIndex, startIndex + 4).map((v:any) => safeNum(v));
+        return data.slice(startIndex, startIndex + 4).map((v) => safeNum(v));
     };
 
     return {
@@ -423,16 +575,16 @@ export const prepareContextForAI = (current: any, daily: any, hourly: any) => {
     };
 };
 
-export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: any): ExtendedWeatherData => {
+export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null): ExtendedWeatherData => {
     if (!baseData) return baseData;
-    const target = typeof structuredClone === 'function' ? structuredClone(baseData) : JSON.parse(JSON.stringify(baseData)); 
+    const target = typeof structuredClone === 'function' ? structuredClone(baseData) : JSON.parse(JSON.stringify(baseData)) as ExtendedWeatherData; 
     const source = highResData;
     const masterTimeLength = target.hourly?.time?.length || 0;
 
     if (target.hourly && masterTimeLength > 0) {
         Object.keys(target.hourly).forEach(key => {
             if (key === 'time') return;
-            const arr = target.hourly[key];
+            const arr = target.hourly[key as keyof StrictHourlyWeather];
             if (Array.isArray(arr)) {
                 while (arr.length < masterTimeLength) arr.push(null);
             }
@@ -441,37 +593,37 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
 
     if (!source) return target;
 
-    const CURRENT_FIELDS_TO_OVERWRITE = [
-        'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'dew_point_2m',
-        'is_day', 'precipitation', 'rain', 'showers', 'snowfall', 'weather_code',
-        'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
-        'pressure_msl', 'surface_pressure',
-        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
-        'visibility', 'uv_index'
+    const CURRENT_FIELDS_TO_OVERWRITE: (keyof StrictCurrentWeather)[] = [
+        'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 
+        'is_day', 'precipitation', 'rain', 'showers', 
+        'weather_code', 'cloud_cover', 'cloud_cover_low', 
+        'cloud_cover_mid', 'cloud_cover_high', 
+        'wind_speed_10m', 'wind_gusts_10m', 'visibility'
     ];
 
     if (source.current && target.current) {
         CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
-             if (source.current[k] != null && !isNaN(Number(source.current[k]))) {
-                 target.current[k] = source.current[k];
+             const val = source.current[k];
+             if (val != null && !isNaN(Number(val))) {
+                 (target.current as Record<string, unknown>)[k] = val;
              }
         });
         target.current.source = 'AROME HD'; 
     }
 
-    const HOURLY_FIELDS = [
-        'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
-        'precipitation', 'weather_code', 'pressure_msl', 'surface_pressure',
+    const HOURLY_FIELDS: (keyof StrictHourlyWeather)[] = [
+        'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
+        'precipitation', 'weather_code',
         'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
-        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
-        'cape', 'freezing_level_height', 'visibility', 'is_day', 'uv_index'
+        'wind_speed_10m', 'wind_gusts_10m',
+        'cape', 'freezing_level_height', 'visibility'
     ];
 
     if (source.hourly && target.hourly && target.hourly.time) {
-        const globalTimeIndexMap = new Map();
-        target.hourly.time.forEach((t: string, i: number) => globalTimeIndexMap.set(t, i));
+        const globalTimeIndexMap = new Map<string, number>();
+        target.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
 
-        (source.hourly.time || []).forEach((timeValue: string, sourceIndex: number) => {
+        (source.hourly.time || []).forEach((timeValue, sourceIndex) => {
             const globalIndex = globalTimeIndexMap.get(timeValue);
             
             if (globalIndex !== undefined) {
@@ -479,19 +631,31 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                 const tH = target.hourly;
                 
                 HOURLY_FIELDS.forEach(field => {
-                    const val = sH[field]?.[sourceIndex];
-                    if (val != null && !isNaN(val)) {
-                         if (!tH[field]) tH[field] = new Array(masterTimeLength).fill(null);
-                         tH[field][globalIndex] = val;
+                    const srcArr = sH[field];
+                    
+                    if (Array.isArray(srcArr)) {
+                         const val = srcArr[sourceIndex];
+                         if (val != null && !isNaN(Number(val))) {
+                             // RESTORED BEHAVIOR: Initialize if missing in target
+                             if (!tH[field]) {
+                                 (tH as Record<string, unknown>)[field] = new Array(masterTimeLength).fill(null);
+                             }
+
+                             // Safe access and assignment
+                             const tgtArr = tH[field] as (number | null)[];
+                             if (Array.isArray(tgtArr)) {
+                                 tgtArr[globalIndex] = val;
+                             }
+                         }
                     }
                 });
 
-                const aromePrecip = sH['precipitation']?.[sourceIndex];
-                if (aromePrecip >= 0.1) {
-                    if (!tH['precipitation_probability']) tH['precipitation_probability'] = new Array(masterTimeLength).fill(0);
-                    const currentProb = tH['precipitation_probability'][globalIndex] || 0;
+                const aromePrecip = sH.precipitation?.[sourceIndex];
+                if (aromePrecip != null && aromePrecip >= 0.1) {
+                    if (!tH.precipitation_probability) tH.precipitation_probability = new Array(masterTimeLength).fill(0);
+                    const currentProb = tH.precipitation_probability[globalIndex] || 0;
                     if (currentProb < 50) {
-                        tH['precipitation_probability'][globalIndex] = Math.max(currentProb, 70);
+                        tH.precipitation_probability[globalIndex] = Math.max(currentProb, 70);
                     }
                 }
             }
@@ -501,71 +665,87 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     return target;
 };
 
-export const normalizeModelData = (data: any): ExtendedWeatherData => {
-    if (!data || !data.current) return data;
+// Replaces unknown types with structured generic objects
+type GenericModelData = Record<string, unknown>;
+
+export const normalizeModelData = (data: WeatherData): ExtendedWeatherData => {
+    // Cast inicial per transformar l'objecte lax en l'estructura estricta
+    // Assumim que les dades de l'API compleixen mínimament
+    if (!data || !data.current) return data as unknown as ExtendedWeatherData;
     
-    const result: any = { 
+    // Creem la base copiant dades. Utilitzem "unknown" intermedi per fer el casting segur.
+    const result: ExtendedWeatherData = { 
         ...data, 
         current: { ...data.current }, 
         hourly: { ...data.hourly }, 
         daily: { ...data.daily }, 
         hourlyComparison: { ecmwf: [], gfs: [], icon: [] }, 
         dailyComparison: { ecmwf: {}, gfs: {}, icon: {} } 
-    };
+    } as unknown as ExtendedWeatherData;
     
-    Object.keys(data.daily || {}).forEach(key => {
+    const rawDaily = data.daily as GenericModelData;
+    Object.keys(rawDaily || {}).forEach(key => {
         if (key.includes('_best_match')) {
             const cleanKey = key.split('_best_match')[0];
-            result.daily[cleanKey] = data.daily[key]; 
+            (result.daily as GenericModelData)[cleanKey] = rawDaily[key]; 
         } else {
-            let model = null;
+            let model: 'ecmwf' | 'gfs' | 'icon' | null = null;
             if (key.includes('_ecmwf_')) model = 'ecmwf';
             else if (key.includes('_gfs_')) model = 'gfs';
             else if (key.includes('_icon_')) model = 'icon';
 
-            if (model) {
+            if (model && result.dailyComparison) {
                 const cleanKey = key.split(`_${model}_`)[0];
-                result.dailyComparison[model][cleanKey] = data.daily[key];
+                result.dailyComparison[model][cleanKey] = rawDaily[key];
             }
         }
     });
 
-    const timeLength = data.hourly?.time?.length || 0;
-    ['ecmwf', 'gfs', 'icon'].forEach(m => {
-        result.hourlyComparison[m] = Array.from({ length: timeLength }, () => ({}));
-    });
+    const timeLength = result.hourly?.time?.length || 0;
+    if (result.hourlyComparison) {
+        ['ecmwf', 'gfs', 'icon'].forEach(m => {
+            // as keyof... cast
+            const modelKey = m as keyof typeof result.hourlyComparison; 
+            if(result.hourlyComparison) {
+                 result.hourlyComparison[modelKey] = Array.from({ length: timeLength }, () => ({}));
+            }
+        });
+    }
 
-    Object.keys(data.hourly || {}).forEach(key => {
+    const rawHourly = data.hourly as Record<string, unknown[]>;
+    Object.keys(rawHourly || {}).forEach(key => {
         if (key.includes('_best_match')) {
             const cleanKey = key.split('_best_match')[0];
-            result.hourly[cleanKey] = data.hourly[key];
+            (result.hourly as GenericModelData)[cleanKey] = rawHourly[key];
         } else {
-            let model = null;
+            let model: 'ecmwf' | 'gfs' | 'icon' | null = null;
             if (key.includes('_ecmwf_')) model = 'ecmwf';
             else if (key.includes('_gfs_')) model = 'gfs';
             else if (key.includes('_icon_')) model = 'icon';
             
-            if (model) {
+            if (model && result.hourlyComparison) {
                 const cleanKey = key.split(`_${model}_`)[0];
-                const values = data.hourly[key];
+                const values = rawHourly[key];
+                const targetArray = result.hourlyComparison[model];
                 for (let i = 0; i < Math.min(values.length, timeLength); i++) {
-                    result.hourlyComparison[model][i][cleanKey] = values[i];
+                    targetArray[i][cleanKey] = values[i];
                 }
             }
         }
     });
 
-    Object.keys(data.current || {}).forEach(key => {
+    const rawCurrent = data.current as GenericModelData;
+    Object.keys(rawCurrent || {}).forEach(key => {
         if (key.includes('_best_match')) {
             const cleanKey = key.split('_best_match')[0];
-            result.current[cleanKey] = data.current[key];
+            (result.current as GenericModelData)[cleanKey] = rawCurrent[key];
         }
     });
 
     return result;
 };
 
-export const calculateReliability = (dailyBest: any, dailyGFS: any, dailyICON: any, dayIndex: number = 0) => {
+export const calculateReliability = (dailyBest: StrictDailyWeather, dailyGFS: StrictDailyWeather, dailyICON: StrictDailyWeather, dayIndex: number = 0): ReliabilityResult => {
   if (!dailyGFS || !dailyICON || !dailyBest) {
       return { level: 'medium', type: 'general', value: 0 }; 
   }
