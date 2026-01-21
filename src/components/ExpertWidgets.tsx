@@ -1,7 +1,8 @@
 // src/components/ExpertWidgets.tsx
 import React, { useMemo } from 'react';
 import { AlertOctagon } from 'lucide-react';
-import { getMoonPhase, ExtendedWeatherData } from '../utils/weatherLogic'; 
+// MODIFICAT: Afegim 'calculateDewPoint' a l'import
+import { getMoonPhase, calculateDewPoint, ExtendedWeatherData } from '../utils/weatherLogic'; 
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
 import { 
@@ -29,6 +30,12 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const showSnowWidget = freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
   if (!current) return null;
+
+  // CÀLCUL DEL PUNT DE ROSADA (CORRECCIÓ)
+  // Si l'API no porta el valor, el calculem nosaltres amb Temp i Humitat
+  const dewPointValue = (typeof current.dew_point_2m === 'number')
+    ? current.dew_point_2m
+    : calculateDewPoint(current.temperature_2m || 0, current.relative_humidity_2m || 0);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -65,7 +72,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
         <WidgetCard>
             <DewPointWidget 
-                value={current?.dew_point_2m ?? current.temperature_2m ?? 0} 
+                value={dewPointValue} // Ara passem el valor calculat
                 humidity={current.relative_humidity_2m ?? 0} 
                 lang={lang} 
             />

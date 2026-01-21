@@ -434,7 +434,7 @@ export const generateAIPrediction = (
 export const getRealTimeWeatherCode = (
     current: StrictCurrentWeather, 
     minutelyPrecipData: number[], 
-    _prob: number = 0, // Argument prefixat per indicar que no s'utilitza
+    _prob: number = 0, 
     freezingLevel: number = 2500, 
     elevation: number = 0,
     cape: number = 0 
@@ -575,12 +575,45 @@ export const prepareContextForAI = (current: StrictCurrentWeather, daily: Strict
     };
 };
 
+// --- NOVA IMPLEMENTACIÓ ROBUSTA DE L'INJECCIÓ HÍBRIDA (CORREGIDA LINT) ---
+
+// Funció helper per netejar els sufixes molestos de l'API (AROME, ECMWF, etc.)
+const cleanKeys = (obj: Record<string, unknown>): Record<string, unknown> => {
+    if (!obj) return {};
+    const clean: Record<string, unknown> = {};
+    Object.keys(obj).forEach(key => {
+        // Elimina qualsevol sufix de model conegut
+        const cleanKey = key.replace(/_meteofrance_arome_france_hd|_best_match|_ecmwf|_gfs|_icon/g, '');
+        clean[cleanKey] = obj[key];
+    });
+    return clean;
+};
+
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null): ExtendedWeatherData => {
     if (!baseData) return baseData;
     const target = typeof structuredClone === 'function' ? structuredClone(baseData) : JSON.parse(JSON.stringify(baseData)) as ExtendedWeatherData; 
-    const source = highResData;
+    
+    // 1. NETEJA PREVIA: Si highResData ve "brut" (amb sufixes), el netegem primer
+    if (!highResData) return target;
+    
+    // CORRECCIÓ LINT: Evitem 'any' usant casting segur a Record<string, unknown>
+    const rawHighRes = highResData as unknown as Record<string, unknown>;
+    
+    // Creem un objecte font netejat per facilitar l'accés
+    const source = {
+        current: cleanKeys(rawHighRes.current as Record<string, unknown>),
+        hourly: {
+            ...cleanKeys(rawHighRes.hourly as Record<string, unknown>),
+            time: highResData.hourly?.time 
+        },
+        minutely_15: rawHighRes.minutely_15 
+            ? cleanKeys(rawHighRes.minutely_15 as Record<string, unknown>) 
+            : undefined
+    };
+
     const masterTimeLength = target.hourly?.time?.length || 0;
 
+    // Assegurem estructura del target
     if (target.hourly && masterTimeLength > 0) {
         Object.keys(target.hourly).forEach(key => {
             if (key === 'time') return;
@@ -591,8 +624,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         });
     }
 
-    if (!source) return target;
-
+    // 2. INJECCIÓ CURRENT (Dades actuals)
     const CURRENT_FIELDS_TO_OVERWRITE: (keyof StrictCurrentWeather)[] = [
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 
         'is_day', 'precipitation', 'rain', 'showers', 
@@ -603,7 +635,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
 
     if (source.current && target.current) {
         CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
-             const val = source.current[k];
+             // TypeScript sap que source.current és un Record, així que l'accés és segur
+             const val = (source.current as Record<string, unknown>)[k];
              if (val != null && !isNaN(Number(val))) {
                  (target.current as Record<string, unknown>)[k] = val;
              }
@@ -611,6 +644,15 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         target.current.source = 'AROME HD'; 
     }
 
+    // 3. INJECCIÓ MINUTELY_15 (Amb seguretat anti-penjades)
+    // Utilitzem un casting local segur
+    const srcMin = source.minutely_15 as Record<string, unknown> | undefined;
+    if (srcMin && Array.isArray(srcMin.time) && Array.isArray(srcMin.precipitation)) {
+        // Casting segur a la interfície esperada
+        target.minutely_15 = srcMin as unknown as { time: string[]; precipitation: number[]; [key: string]: unknown };
+    }
+
+    // 4. INJECCIÓ HOURLY (Previsió per hores)
     const HOURLY_FIELDS: (keyof StrictHourlyWeather)[] = [
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
         'precipitation', 'weather_code',
@@ -623,11 +665,15 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         const globalTimeIndexMap = new Map<string, number>();
         target.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
 
-        (source.hourly.time || []).forEach((timeValue, sourceIndex) => {
+        // CORRECCIÓ LINT FINAL: Ja no fem servir (source.hourly as any).time
+        // Perquè 'source' s'ha definit adalt amb la propietat 'time' explícita.
+        const sourceTimes = source.hourly.time || highResData.hourly?.time || [];
+
+        (sourceTimes as string[]).forEach((timeValue: string, sourceIndex: number) => {
             const globalIndex = globalTimeIndexMap.get(timeValue);
             
             if (globalIndex !== undefined) {
-                const sH = source.hourly;
+                const sH = source.hourly as Record<string, unknown>; // Casting segur
                 const tH = target.hourly;
                 
                 HOURLY_FIELDS.forEach(field => {
@@ -636,12 +682,10 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                     if (Array.isArray(srcArr)) {
                          const val = srcArr[sourceIndex];
                          if (val != null && !isNaN(Number(val))) {
-                             // RESTORED BEHAVIOR: Initialize if missing in target
                              if (!tH[field]) {
                                  (tH as Record<string, unknown>)[field] = new Array(masterTimeLength).fill(null);
                              }
 
-                             // Safe access and assignment
                              const tgtArr = tH[field] as (number | null)[];
                              if (Array.isArray(tgtArr)) {
                                  tgtArr[globalIndex] = val;
@@ -650,7 +694,10 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                     }
                 });
 
-                const aromePrecip = sH.precipitation?.[sourceIndex];
+                // Reforç de probabilitat de pluja si AROME detecta precipitació
+                const precipArr = sH.precipitation as number[] | undefined;
+                const aromePrecip = precipArr?.[sourceIndex];
+                
                 if (aromePrecip != null && aromePrecip >= 0.1) {
                     if (!tH.precipitation_probability) tH.precipitation_probability = new Array(masterTimeLength).fill(0);
                     const currentProb = tH.precipitation_probability[globalIndex] || 0;

@@ -28,6 +28,13 @@ interface CacheEntry {
     timestamp: number;
 }
 
+// Tipus auxiliar per evitar l'ús de 'any'
+type LocatableData = {
+    latitude?: number;
+    longitude?: number;
+    location?: { latitude?: number; longitude?: number };
+};
+
 // --- GESTIÓ DE CACHÉ LOCAL (PERSISTÈNCIA) ---
 const loadCacheFromStorage = (): Map<string, CacheEntry> => {
   try {
@@ -63,8 +70,6 @@ const saveCacheToStorage = (key: string, data: AICacheData) => {
 
 const getModelName = () => {
     if (cachedModelName) return cachedModelName;
-    // FIX: Utilitzem el model Gemini 2.0 Flash Experimental segons el suggeriment
-    // Aquest model és molt ràpid i gratuït actualment en la capa experimental.
     cachedModelName = "gemini-2.0-flash-exp"; 
     return cachedModelName;
 };
@@ -76,12 +81,18 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         // 1. Validació de dades
         if (!weatherData?.current || !weatherData.hourly || !weatherData.daily) return null;
 
-        // 2. Preparació del context reduït (per estalviar tokens)
+        // 2. Preparació del context reduït
         const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
         if (!context) return null;
 
         // 3. Generació de clau única per caché
-        const cacheKey = `${context.location.elevation}-${context.timestamp}-${language}`;
+        // CORRECCIÓ LINT: Ús de tipatge segur en lloc de 'any'
+        const safeData = weatherData as unknown as LocatableData;
+        const lat = safeData.latitude ?? safeData.location?.latitude ?? 0;
+        const lon = safeData.longitude ?? safeData.location?.longitude ?? 0;
+
+        // Clau composta: Lat-Lon-Elevació-Timestamp-Idioma
+        const cacheKey = `${lat}-${lon}-${context.location.elevation}-${context.timestamp}-${language}`;
         
         // 4. Verificació de Caché
         const cached = aiResponseCache.get(cacheKey);
