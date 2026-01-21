@@ -1,27 +1,17 @@
-// src/utils/weatherLogic.ts
+// src/utils/weatherInterpreter.ts
 import { TRANSLATIONS, Language } from '../constants/translations';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { safeNum, calculateDewPoint } from './weatherMath';
 import { 
-    TranslationMap, 
     StrictCurrentWeather, 
     StrictDailyWeather, 
-    ReliabilityResult 
-} from '../types/weatherLogicTypes';
-import { safeNum, calculateDewPoint } from './physics';
-
-// --- RE-EXPORTACIONS MÀGIQUES ---
-// Això fa que la resta de l'app trobi les funcions on sempre han estat
-export * from '../types/weatherLogicTypes';
-export * from './physics';
-export * from './aromeEngine';
-export * from './normData';
-export * from './aiContext';
+    StrictHourlyWeather,
+    TranslationMap 
+} from '../types/weatherModels';
 
 const { PRECIPITATION } = WEATHER_THRESHOLDS;
 
-// ==========================================
-// FUNCIONS DE NEGOCI RESTANTS
-// ==========================================
+// --- INTERPRETACIÓ D'ETIQUETES I TEXTOS ---
 
 export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
   const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
@@ -30,6 +20,13 @@ export const getWeatherLabel = (current: StrictCurrentWeather | undefined, langu
   return tr.wmo[code] || "---";
 };
 
+// --- LÒGICA DE NEGOCI CORE (SMART WEATHER) ---
+
+/**
+ * Funció crítica que "recuina" el weather_code.
+ * Si l'API diu "Sol" (0) però la humitat és 99% i hi ha núvols baixos, 
+ * aquesta funció corregeix i retorna "Boira" (45).
+ */
 export const getRealTimeWeatherCode = (
     current: StrictCurrentWeather, 
     minutelyPrecipData: number[], 
@@ -51,8 +48,10 @@ export const getRealTimeWeatherCode = (
     const midClouds = safeNum(current.cloud_cover_mid, 0);
     const highClouds = safeNum(current.cloud_cover_high, 0);
     
+    // Càlcul de cobertura efectiva ponderada
     const effectiveCloudCover = Math.min(100, (lowClouds * 1.0) + (midClouds * 0.6) + (highClouds * 0.3));
 
+    // 1. Correcció de Cel Serè vs Ennuvolat
     if (code <= 3) {
         if (effectiveCloudCover > 85) code = 3;      
         else if (effectiveCloudCover > 45) code = 2; 
@@ -60,14 +59,17 @@ export const getRealTimeWeatherCode = (
         else code = 0;                      
     }
 
+    // 2. Correcció per Precipitació Minut a Minut (Radar)
     const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
         ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
         : safeNum(current.precipitation, 0);
 
+    // Si AROME diu que plou, forcem codi de pluja encara que l'API general digui sol
     if (isArome && precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
         code = 61; 
     }
 
+    // 3. Correcció per Boira (basada en Punt de Rosada)
     const dewPoint = calculateDewPoint(temp, humidity);
     const dewPointSpread = temp - dewPoint;
 
@@ -77,6 +79,7 @@ export const getRealTimeWeatherCode = (
         code = 1; 
     }
 
+    // 4. Correcció per Tempesta (CAPE)
     if (cape > 1200) { 
         const isPrecipitating = precipInstantanea >= PRECIPITATION.TRACE || (code >= 51 && code <= 82);
         
@@ -84,11 +87,12 @@ export const getRealTimeWeatherCode = (
             if (isPrecipitating) {
                  if (code < 95) code = 95;
             } else if (cape > 2000) {
-                code = 2; 
+                code = 2; // Molta energia però sense pluja = Nius de tempesta (variable)
             }
         }
     }
 
+    // 5. Correcció per Neu (Cota de neu dinàmica)
     const freezingDist = freezingLevel - elevation;
     const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
 
@@ -102,10 +106,12 @@ export const getRealTimeWeatherCode = (
         if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
     }
     
+    // 6. Correcció final per visibilitat
     if ((code === 45 || code === 48 || visibility < 1000) && precipInstantanea < 0.1) {
         return 45;
     }
 
+    // 7. Ajust d'intensitat de pluja si no hi ha codi específic
     if (precipInstantanea >= PRECIPITATION.TRACE) { 
         if (code >= 95) return code; 
         if (precipInstantanea > 4.0) code = 65; 
@@ -116,31 +122,62 @@ export const getRealTimeWeatherCode = (
     return code;
 };
 
-export const calculateReliability = (dailyBest: StrictDailyWeather, dailyGFS: StrictDailyWeather, dailyICON: StrictDailyWeather, dayIndex: number = 0): ReliabilityResult => {
-  if (!dailyGFS || !dailyICON || !dailyBest) {
-      return { level: 'medium', type: 'general', value: 0 }; 
-  }
-  
-  const t1 = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
-  const t2 = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
-  const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
-  const diffTemp = Math.max(t1, t2, t3) - Math.min(t1, t2, t3);
-  
-  const p1 = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
-  const p2 = safeNum(dailyGFS.precipitation_sum?.[dayIndex]);
-  const p3 = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
-  const diffPrecip = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);
+// --- UTILS DE GEOLOCALITZACIÓ I CONTEXT ---
 
-  if (diffTemp > 5) {
-      return { level: 'low', type: 'temp', value: diffTemp.toFixed(1) };
-  }
-  if (diffPrecip > 10) {
-      return { level: 'low', type: 'precip', value: diffPrecip.toFixed(1) };
-  }
-  
-  if (diffTemp > 2 || diffPrecip > 3) {
-      return { level: 'medium', type: 'divergent', value: 0 };
-  }
-  
-  return { level: 'high', type: 'ok', value: 0 };
+export const isAromeSupported = (lat: number, lon: number): boolean => {
+    if (!lat || !lon) return false;
+    // Bounding box aproximat per al model AROME HD (França + voltants)
+    const MIN_LAT = 38.0, MAX_LAT = 53.0, MIN_LON = -8.0, MAX_LON = 12.0; 
+    return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
+};
+
+export const prepareContextForAI = (current: StrictCurrentWeather, daily: StrictDailyWeather, hourly: StrictHourlyWeather) => {
+    if (!current || !daily || !hourly || !hourly.time) return null;
+
+    const currentIsoTime = current.time; 
+    let startIndex = hourly.time.findIndex((t: string) => t === currentIsoTime);
+
+    if (startIndex === -1 && currentIsoTime) {
+         const currentHourStr = currentIsoTime.slice(0, 13); 
+         startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentHourStr));
+    }
+    
+    startIndex = startIndex === -1 ? 0 : startIndex;
+
+    const getNext4h = (key: keyof StrictHourlyWeather) => {
+        const data = hourly[key];
+        if (!Array.isArray(data)) return [];
+        return data.slice(startIndex, startIndex + 4).map((v) => safeNum(v));
+    };
+
+    return {
+        timestamp: current.time,
+        location: { 
+            elevation: safeNum(current.elevation || daily.elevation, 0)
+        },
+        current: {
+            temp: safeNum(current.temperature_2m),
+            feels_like: safeNum(current.apparent_temperature),
+            is_raining: safeNum(current.precipitation) > 0 || safeNum(current.rain) > 0 || safeNum(current.showers) > 0,
+            wind_speed: safeNum(current.wind_speed_10m),
+            weather_code: safeNum(current.weather_code),
+            humidity: safeNum(current.relative_humidity_2m)
+        },
+        daily_summary: {
+            max: safeNum(daily.temperature_2m_max?.[0]),
+            min: safeNum(daily.temperature_2m_min?.[0]),
+            uv_max: safeNum(daily.uv_index_max?.[0]),
+            rain_sum: safeNum(daily.precipitation_sum?.[0]),
+            sunrise: daily.sunrise?.[0],
+            sunset: daily.sunset?.[0]
+        },
+        short_term_trend: {
+            temps: getNext4h('temperature_2m'),
+            rain_prob: getNext4h('precipitation_probability'),
+            precip_vol: getNext4h('precipitation'), 
+            wind: getNext4h('wind_speed_10m'),
+            gusts: getNext4h('wind_gusts_10m'),
+            snow_depth: getNext4h('snow_depth') 
+        }
+    };
 };

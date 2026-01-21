@@ -15,8 +15,16 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time)) return [];
         
+        // CORRECCIÓ: Construïm l'ISO manualment amb l'hora local, no UTC
         const now = new Date();
-        const nowIso = now.toISOString().slice(0, 13);
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hour = String(now.getHours()).padStart(2, '0');
+        
+        // Ara tenim "2024-02-14T15" basat en l'hora real del rellotge local
+        const nowIso = `${year}-${month}-${day}T${hour}`;
+
         let startIdx = hourly.time.findIndex((t: string) => t && t.startsWith(nowIso));
         if (startIdx === -1) startIdx = 0; 
         

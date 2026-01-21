@@ -162,7 +162,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
               </div>
               <div className="hidden md:flex items-center gap-2">
                   <Cpu className="w-3 h-3 text-indigo-500" />
-                  <span>CORE: V.3.1.0</span>
+                  <span>CORE: V.3.1.2</span>
               </div>
           </div>
 
