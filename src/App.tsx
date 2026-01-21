@@ -52,7 +52,7 @@ const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
             {!isWelcome && (
                 <div className="hidden md:flex items-center gap-2 text-indigo-500/60">
                     <Cpu className="w-3 h-3" />
-                    <span>CORE: V.3.1.0</span>
+                    <span>CORE: V.3.1.1</span>
                 </div>
             )}
         </div>
