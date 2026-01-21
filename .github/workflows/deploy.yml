@@ -33,11 +33,7 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          # AQUÍ ÉS ON S'INJECTA LA MÀGIA ✨
-          # GitHub agafa el secret que has configurat i el posa a la build
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
-
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
