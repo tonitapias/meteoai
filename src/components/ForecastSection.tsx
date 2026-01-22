@@ -5,7 +5,6 @@ import { SmartForecastCharts } from './WeatherCharts';
 import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../constants/translations';
-// MODIFICAT: Importem formatPrecipitation
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { StrictDailyWeather } from '../utils/weatherLogic';
 
@@ -50,12 +49,14 @@ const ForecastSection = memo(function ForecastSection({
                 </h3>
 
                 <div className="grid grid-cols-1 gap-3 relative z-10">
-                    {dailyData.time.map((dateStr, i) => {
+                    {/* .slice(1) per saltar el dia d'avui */}
+                    {dailyData.time.slice(1).map((dateStr, index) => {
+                        const i = index + 1; // Ajustem l'índex per accedir a les dades originals correctes
+                        
                         const date = new Date(dateStr);
-                        const isToday = i === 0;
-                        const dayName = isToday 
-                            ? (t.today || "AVUI") 
-                            : date.toLocaleDateString(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long' });
+                        // ELIMINAT: const isToday = false; (Ja no cal)
+                        
+                        const dayName = date.toLocaleDateString(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long' });
                         
                         const dateNum = date.getDate();
                         const maxTemp = dailyData.temperature_2m_max?.[i] ?? 0;
@@ -63,7 +64,6 @@ const ForecastSection = memo(function ForecastSection({
                         const code = dailyData.weather_code?.[i] ?? 0;
                         const precipProb = dailyData.precipitation_probability_max?.[i] ?? 0;
                         const precipSum = dailyData.precipitation_sum?.[i] ?? 0;
-                        // MODIFICAT: Obtenim la neu acumulada
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const snowSum = (dailyData as any).snowfall_sum?.[i] ?? 0;
 
@@ -74,11 +74,13 @@ const ForecastSection = memo(function ForecastSection({
                                 className="group flex items-center justify-between p-3 md:p-4 rounded-2xl bg-[#0B0C15] border border-white/5 hover:bg-[#1a1d2d] hover:border-indigo-500/30 transition-all duration-300 w-full"
                             >
                                 <div className="flex items-center gap-4 w-[140px] md:w-[180px]">
-                                    <div className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl ${isToday ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30' : 'bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white'} transition-colors`}>
+                                    {/* Simplificat: Eliminat condicional isToday als estils */}
+                                    <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-colors">
                                         <span className="text-lg font-black tracking-tighter">{dateNum}</span>
                                     </div>
                                     <div className="flex flex-col items-start">
-                                        <span className={`text-sm font-bold uppercase tracking-wide ${isToday ? 'text-indigo-300' : 'text-slate-300 group-hover:text-white'}`}>
+                                        {/* Simplificat: Eliminat condicional isToday als estils */}
+                                        <span className="text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white">
                                             {dayName}
                                         </span>
                                         {precipProb > 0 && (
@@ -112,7 +114,6 @@ const ForecastSection = memo(function ForecastSection({
                                 <div className="flex items-center justify-end gap-3 w-[100px] md:w-[140px]">
                                     {precipSum > 0 ? (
                                         <span className="text-[10px] text-slate-500 font-mono font-bold bg-blue-500/10 px-2 py-1 rounded-md border border-blue-500/20 group-hover:border-blue-500/40 group-hover:text-blue-300 transition-colors">
-                                            {/* MODIFICAT: Usem la funció formatPrecipitation */}
                                             {formatPrecipitation(precipSum, snowSum)}
                                         </span>
                                     ) : (
