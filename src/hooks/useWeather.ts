@@ -9,7 +9,7 @@ import {
 import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
 import { reverseGeocode } from '../services/geocodingService';
 import { WeatherUnit } from '../utils/formatters';
-import { Language } from '../constants/translations';
+import { Language, TRANSLATIONS } from '../constants/translations'; // IMPORTAT TRANSLATIONS
 
 // Definim un tipus genèric per a les dades de qualitat de l'aire
 type AQIData = Record<string, unknown>;
@@ -30,6 +30,9 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
+
+  // ACCÉS A LES TRADUCCIONS DEL HOOK
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
@@ -110,16 +113,16 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("❌ Error en fetchWeather:", errorMessage);
-      setError('No s\'ha pogut carregar el temps.');
+      setError(t.fetchError); // MODIFICAT: Ús de traducció
       return false;
     } finally {
       setLoading(false);
     }
-  }, [unit, lang]); 
+  }, [unit, lang, t]); // Afegit 't' a dependències per si de cas, tot i que ve de 'lang'
 
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setNotification({ type: 'error', msg: 'Geolocalització no suportada.' });
+      setNotification({ type: 'error', msg: t.geoNotSupported }); // MODIFICAT: Ús de traducció
       return;
     }
     
@@ -135,18 +138,18 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       async (pos) => {
         const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
         if (success) {
-          setNotification({ type: 'success', msg: 'Ubicació actualitzada amb èxit' });
+          setNotification({ type: 'success', msg: t.notifLocationSuccess }); // MODIFICAT: Consistència
           setTimeout(() => setNotification(null), 3000);
         }
       },
       (err) => {
         console.warn("Error GPS:", err.message);
-        setNotification({ type: 'error', msg: 'GPS no trobat. Revisa els permisos.' });
+        setNotification({ type: 'error', msg: t.notifLocationError }); // MODIFICAT: Consistència
         setLoading(false);
       },
       geoOptions
     );
-  }, [fetchWeatherByCoords]);
+  }, [fetchWeatherByCoords, t]);
 
   return { 
     weatherData, aqiData, loading, error, notification, 

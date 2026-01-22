@@ -1,11 +1,12 @@
 // src/components/ForecastSection.tsx
 import React, { memo } from 'react';
-import { Calendar, TrendingUp, Umbrella, ArrowRight } from 'lucide-react'; // ChevronRight eliminat
+import { Calendar, TrendingUp, Umbrella, ArrowRight } from 'lucide-react'; 
 import { SmartForecastCharts } from './WeatherCharts';
 import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../constants/translations';
-import { WeatherUnit } from '../utils/formatters';
+// MODIFICAT: Importem formatPrecipitation
+import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { StrictDailyWeather } from '../utils/weatherLogic';
 
 export interface ChartDataPoint {
@@ -35,113 +36,86 @@ const ForecastSection = memo(function ForecastSection({
     chartData, comparisonData, dailyData, weeklyExtremes, unit, lang, onDayClick, comparisonEnabled, showCharts = true 
 }: ForecastSectionProps) {
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-
-    if (!dailyData || !dailyData.time || !Array.isArray(dailyData.temperature_2m_min) || !Array.isArray(dailyData.temperature_2m_max)) {
-        return null;
-    }
-
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        const dayName = new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'ca-ES', { weekday: 'short' }).format(date).toUpperCase().replace('.', '');
-        const dayNum = date.getDate().toString().padStart(2, '0');
-        return { dayName, dayNum };
-    };
+    
+    // Si no hi ha dades, no renderitzem res
+    if (!dailyData || !dailyData.time) return null;
 
     return (
-        <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-8 duration-700">
-            
-            <div className="bento-card p-0 overflow-hidden bg-[#0b0c15] border border-white/5 rounded-[2.5rem] shadow-2xl relative">
-                <div className="px-6 py-4 border-b border-white/5 bg-[#11131f] flex items-center justify-between sticky top-0 z-20">
-                    <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-                        <Calendar className="w-3.5 h-3.5 text-indigo-400" /> {t.weeklyForecast || "PREVISIÓ 7 DIES"}
-                    </h3>
-                    
-                    <div className="hidden md:flex gap-12 text-[9px] font-mono text-slate-600 uppercase tracking-widest mr-16">
-                        <span>ESTAT</span>
-                        <span>RANG TÈRMIC</span>
-                        <span>PRECIPITACIÓ</span>
-                    </div>
+        <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
+            <div className="bento-card p-6 md:p-8 bg-[#151725] border border-white/5 rounded-[2.5rem] relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none"></div>
+                
+                <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 z-10 relative">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400"/> {t.forecast7days || "PREVISIÓ 7 DIES"}
+                </h3>
 
-                    <span className="text-[10px] text-slate-500 font-bold bg-slate-900/50 px-3 py-1 rounded-full border border-white/5 font-mono">
-                        {Math.max(0, dailyData.time.length - 1)} DIES
-                    </span>
-                </div>
-
-                <div className="divide-y divide-white/5">
-                    {dailyData.time.map((dateStr: string, index: number) => {
-                        if (index === 0) return null; 
-
-                        const minVal = dailyData.temperature_2m_min[index];
-                        const maxVal = dailyData.temperature_2m_max[index];
+                <div className="grid grid-cols-1 gap-3 relative z-10">
+                    {dailyData.time.map((dateStr, i) => {
+                        const date = new Date(dateStr);
+                        const isToday = i === 0;
+                        const dayName = isToday 
+                            ? (t.today || "AVUI") 
+                            : date.toLocaleDateString(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long' });
                         
-                        if (minVal === undefined || maxVal === undefined) return null;
-
-                        let code = dailyData.weathercode?.[index] ?? dailyData.weather_code?.[index] ?? 0;
-                        const precipSum = dailyData.precipitation_sum?.[index] ?? 0;
-                        const precipProb = dailyData.precipitation_probability_max?.[index] ?? 0;
-
-                        if (code === 0 && precipSum > 5) code = 61;
-
-                        const min = Math.round(minVal);
-                        const max = Math.round(maxVal);
-                        const { dayName, dayNum } = formatDate(dateStr);
-
-                        const isHighRisk = precipProb > 50;
-                        const hasPrecip = precipProb > 0;
+                        const dateNum = date.getDate();
+                        const maxTemp = dailyData.temperature_2m_max?.[i] ?? 0;
+                        const minTemp = dailyData.temperature_2m_min?.[i] ?? 0;
+                        const code = dailyData.weather_code?.[i] ?? 0;
+                        const precipProb = dailyData.precipitation_probability_max?.[i] ?? 0;
+                        const precipSum = dailyData.precipitation_sum?.[i] ?? 0;
+                        // MODIFICAT: Obtenim la neu acumulada
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const snowSum = (dailyData as any).snowfall_sum?.[i] ?? 0;
 
                         return (
                             <button 
-                                key={dateStr} 
-                                onClick={() => onDayClick(index)}
-                                className="w-full px-4 py-3 md:px-6 md:py-4 grid grid-cols-12 items-center gap-2 hover:bg-[#1a1d2d] transition-colors group relative overflow-hidden"
+                                key={dateStr}
+                                onClick={() => onDayClick(i)}
+                                className="group flex items-center justify-between p-3 md:p-4 rounded-2xl bg-[#0B0C15] border border-white/5 hover:bg-[#1a1d2d] hover:border-indigo-500/30 transition-all duration-300 w-full"
                             >
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-
-                                <div className="col-span-4 md:col-span-3 flex items-center gap-3 md:gap-6">
-                                    <div className="flex flex-col items-center justify-center w-10 md:w-12 bg-white/5 rounded-lg py-1 border border-white/5">
-                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{dayName}</span>
-                                        <span className="text-sm font-mono font-bold text-white tabular-nums">{dayNum}</span>
+                                <div className="flex items-center gap-4 w-[140px] md:w-[180px]">
+                                    <div className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl ${isToday ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30' : 'bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white'} transition-colors`}>
+                                        <span className="text-lg font-black tracking-tighter">{dateNum}</span>
                                     </div>
-                                    <div className="scale-90 group-hover:scale-110 transition-transform duration-300 filter drop-shadow-lg opacity-80 group-hover:opacity-100">
-                                        {getWeatherIcon(code, "w-8 h-8", true)}
-                                    </div>
-                                </div>
-
-                                <div className="col-span-5 md:col-span-6 flex items-center justify-center gap-3 px-2">
-                                    <span className="text-xs font-mono font-bold text-cyan-300 tabular-nums w-8 text-right">{min}°</span>
-                                    <div className="flex-1 h-full flex flex-col justify-center">
-                                        <TempRangeBar 
-                                            min={min} 
-                                            max={max} 
-                                            globalMin={weeklyExtremes.min} 
-                                            globalMax={weeklyExtremes.max} 
-                                        />
-                                    </div>
-                                    <span className="text-xs font-mono font-bold text-rose-300 tabular-nums w-8 text-left">{max}°</span>
-                                </div>
-
-                                <div className="col-span-3 flex items-center justify-end gap-2 md:gap-4">
-                                    {hasPrecip ? (
-                                        <div className={`
-                                            flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all duration-300
-                                            ${isHighRisk 
-                                                ? 'bg-blue-500/10 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
-                                                : 'bg-transparent border-transparent opacity-60'}
-                                        `}>
-                                            <Umbrella className={`w-3 h-3 ${isHighRisk ? 'text-blue-400 animate-pulse' : 'text-slate-500'}`} />
-                                            <div className="flex flex-col items-end leading-none">
-                                                <span className={`text-[10px] font-mono font-bold tabular-nums ${isHighRisk ? 'text-blue-200' : 'text-slate-400'}`}>
-                                                    {precipProb}%
-                                                </span>
-                                                {precipSum > 0 && isHighRisk && (
-                                                    <span className="text-[8px] font-mono text-blue-400/80 tabular-nums">
-                                                        {precipSum >= 1 ? Math.round(precipSum) : precipSum.toFixed(1)}mm
-                                                    </span>
-                                                )}
+                                    <div className="flex flex-col items-start">
+                                        <span className={`text-sm font-bold uppercase tracking-wide ${isToday ? 'text-indigo-300' : 'text-slate-300 group-hover:text-white'}`}>
+                                            {dayName}
+                                        </span>
+                                        {precipProb > 0 && (
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                                <Umbrella className="w-3 h-3 text-blue-400" />
+                                                <span className="text-[10px] font-mono font-bold text-blue-400">{precipProb}%</span>
                                             </div>
-                                        </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-center flex-1 px-4">
+                                     <div className="scale-90 md:scale-100 drop-shadow-lg transition-transform group-hover:scale-110 duration-300">
+                                        {getWeatherIcon(code, "w-10 h-10", true)}
+                                     </div>
+                                </div>
+
+                                <div className="hidden md:flex flex-col items-center justify-center w-[120px] px-2">
+                                    <div className="w-full flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                                        <span>{Math.round(minTemp)}°</span>
+                                        <span>{Math.round(maxTemp)}°</span>
+                                    </div>
+                                    <TempRangeBar 
+                                        min={minTemp} 
+                                        max={maxTemp} 
+                                        globalMin={weeklyExtremes.min} 
+                                        globalMax={weeklyExtremes.max} 
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-end gap-3 w-[100px] md:w-[140px]">
+                                    {precipSum > 0 ? (
+                                        <span className="text-[10px] text-slate-500 font-mono font-bold bg-blue-500/10 px-2 py-1 rounded-md border border-blue-500/20 group-hover:border-blue-500/40 group-hover:text-blue-300 transition-colors">
+                                            {/* MODIFICAT: Usem la funció formatPrecipitation */}
+                                            {formatPrecipitation(precipSum, snowSum)}
+                                        </span>
                                     ) : (
-                                        // MODIFICACIÓ: Text 'CAP' en lloc de 'NIL'
                                         <span className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-widest hidden md:block">CAP</span>
                                     )}
                                     

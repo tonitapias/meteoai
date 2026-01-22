@@ -3,7 +3,8 @@ import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, A
 import { SmartForecastCharts } from './WeatherCharts'; 
 import { TRANSLATIONS, Language } from '../constants/translations';
 import { ExtendedWeatherData } from '../utils/weatherLogic';
-import { WeatherUnit } from '../utils/formatters';
+// MODIFICAT: Importem la nova funció formatPrecipitation
+import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
 
@@ -48,16 +49,29 @@ export default function DayDetailModal({
   
   const { dayData, hourlyData, comparisonData, snowLevelText } = useDayDetailData(weatherData, selectedDayIndex);
 
+  // MODIFICAT: Càlcul de la precipitació total formatada (Neu o Pluja)
+  const formattedPrecipitation = useMemo(() => {
+    if (!dayData || !weatherData || selectedDayIndex === null) return { val: "0", unit: "mm" };
+    
+    // Obtenim la neu acumulada (cm) del dia
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const daily = weatherData.daily as any;
+    const snowSum = daily.snowfall_sum?.[selectedDayIndex] ?? 0;
+    
+    // Usem la nova funció que decideix si mostrar mm o cm
+    const rawString = formatPrecipitation(dayData.precipSum || 0, snowSum);
+    const [val, u] = rawString.split(' '); // Separem valor i unitat
+    return { val, unit: u };
+  }, [dayData, weatherData, selectedDayIndex]);
+
   const tableRows = useMemo(() => {
     if (!weatherData || selectedDayIndex === null || !weatherData.hourly) return [];
     
-    // Obtenim la data base del dia seleccionat
     const dateStr = weatherData.daily.time[selectedDayIndex];
     const startIndex = weatherData.hourly.time.findIndex((t: string) => t.startsWith(dateStr));
     
     if (startIndex === -1) return [];
 
-    // Obtenim hores de sortida i posta de sol REALS per a aquest dia
     let sunriseHour = 7;
     let sunsetHour = 20;
     
@@ -79,9 +93,11 @@ export default function DayDetailModal({
         
         const precipProb = weatherData.hourly.precipitation_probability?.[idx] ?? 0;
         const precipSum = weatherData.hourly.precipitation?.[idx] ?? 0;
+        // MODIFICAT: Obtenim la neu per hora també
+        const snowfall = h.snowfall?.[idx] ?? 0;
+
         const windSpeed = weatherData.hourly.wind_speed_10m?.[idx] ?? 0;
         
-        // Lògica de dia/nit dinàmica
         const currentHour = parseInt(time.split('T')[1].slice(0, 2), 10);
         const isDay = currentHour >= sunriseHour && currentHour < sunsetHour;
 
@@ -91,6 +107,7 @@ export default function DayDetailModal({
             code,
             precipProb,
             precipSum,
+            snowfall, // Passem la neu a la fila
             windSpeed,
             isDay
         };
@@ -154,7 +171,14 @@ export default function DayDetailModal({
 
           <div className="p-6 md:p-8 space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard icon={Droplets} label={t.precip || "PRECIPITACIÓ"} value={`${(dayData.precipSum || 0).toFixed(1)}`} sub="mm" color="text-blue-400" />
+                {/* MODIFICAT: Usem els valors calculats (mm o cm) */}
+                <StatCard 
+                    icon={Droplets} 
+                    label={t.precip || "PRECIPITACIÓ"} 
+                    value={formattedPrecipitation.val} 
+                    sub={formattedPrecipitation.unit} 
+                    color="text-blue-400" 
+                />
                 <StatCard icon={Wind} label={t.wind || "VENT MÀX"} value={`${Math.round(dayData.windMax || 0)}`} sub="km/h" color="text-emerald-400" />
                 <StatCard icon={Sun} label="INDEX UV" value={`${(dayData.uvMax || 0).toFixed(1)}`} sub="" color="text-amber-400" />
                 <StatCard icon={Mountain} label={t.snowLevel || "COTA NEU"} value={typeof snowLevelText === 'number' ? Math.round(snowLevelText) : snowLevelText} sub={typeof snowLevelText === 'number' ? (unit === 'F' ? 'ft' : 'm') : ''} color="text-indigo-300" />
@@ -229,7 +253,12 @@ export default function DayDetailModal({
                                     {row.precipProb > 0 ? (
                                         <>
                                             <span className="text-[10px] font-bold text-blue-400">{row.precipProb}%</span>
-                                            {row.precipSum > 0 && <span className="text-[9px] text-slate-600 font-mono hidden md:inline">{row.precipSum}mm</span>}
+                                            {/* MODIFICAT: Usem formatPrecipitation per mostrar mm o cm si és neu */}
+                                            {row.precipSum > 0 && (
+                                                <span className="text-[9px] text-slate-600 font-mono hidden md:inline">
+                                                    {formatPrecipitation(row.precipSum, row.snowfall)}
+                                                </span>
+                                            )}
                                         </>
                                     ) : <span className="text-slate-700">-</span>}
                                 </div>

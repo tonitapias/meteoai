@@ -28,7 +28,7 @@ export const TRANSLATIONS = {
     snowLevel: "Cota de neu",
     forecast7days: "Previsió 7 Dies",
     today: "Avui",
-    tomorrow: "Demà", // AFEGIT
+    tomorrow: "Demà",
     detailedForecast: "Previsió detallada",
     hourlyEvolution: "Evolució Horària",
     snowAccumulated: "Neu Acumulada",
@@ -120,7 +120,7 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambient tancat. Pluja persistent i visibilitat reduïda per boira. ",
     aiSummaryStorm: "Situació inestable. Risc de tempestes actives. ",
 
-    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
+    // --- PANTALLA DE BENVINGUDA ---
     aiAnalysisDescription: "Previsió meteorològica d'alta precisió impulsada per intel·ligència artificial.",
     searchCity: "Cerca Ciutat",
     useLocation: "Utilitzar Ubicació",
@@ -128,7 +128,6 @@ export const TRANSLATIONS = {
     autoGPS: "GPS Automàtic",
     manualSearch: "Busca manualment",
     
-    // --- NOVES SECCIONS (AUDITORIA) ---
     welcome: {
       tagline: "Next Gen Weather",
       desc: "Sistema d'intel·ligència atmosfèrica d'alta precisió.",
@@ -169,14 +168,15 @@ export const TRANSLATIONS = {
       loading: "Carregant...",
       error: "Error"
     },
-    // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES (Boira i Notificacions) ---
+    // --- NOVES CLAUS (Boira i Notificacions) ---
     aiSummaryFog: "Hi ha boira o bancs de boira baixos.", 
     alertVisibility: "Visibilitat molt reduïda",
     notifWait: "Espera uns segons abans de tornar a actualitzar.",
     notifLocationSuccess: "Ubicació actualitzada correctament.",
     notifLocationError: "No s'ha pogut obtenir la ubicació. Revisa els permisos.",
+    fetchError: "No s'ha pogut carregar el temps.", // NOU
+    geoNotSupported: "Geolocalització no suportada.", // NOU
     radarShort: "Radar",
     
     // --- GINY NÚVOLS ---
@@ -194,7 +194,7 @@ export const TRANSLATIONS = {
     
     aiThreatening: "Cel amenaçador. Risc de precipitació en qualsevol moment. ",
     
-    aiSummarySnow: "Configuració hivernal amb nevades previstes. ", // CORREGIT (nevadas -> nevades)
+    aiSummarySnow: "Configuració hivernal amb nevades previstes. ", 
     
     aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé. ",
     aiTempCold: "Fa força fred. Caldrà roba d'abric. ",
@@ -286,7 +286,9 @@ export const TRANSLATIONS = {
     openExternal: "Obrir fora",
     openBrowser: "Obrir en navegador extern",
     radarData: "Dades: RainViewer",
-    radarFail: "Si falla, prem \"Obrir fora\" ↗"
+    radarFail: "Si falla, prem \"Obrir fora\" ↗",
+    favAdded: "Afegit als favorits", // NOU: Potser útil per a App.tsx també
+    favRemoved: "Eliminat dels favorits" // NOU
   },
 
   es: {
@@ -312,7 +314,7 @@ export const TRANSLATIONS = {
     snowLevel: "Cota de nieve",
     forecast7days: "Previsión 7 Días",
     today: "Hoy",
-    tomorrow: "Mañana", // AFEGIT
+    tomorrow: "Mañana",
     detailedForecast: "Previsión detallada",
     hourlyEvolution: "Evolución Horaria",
     snowAccumulated: "Nieve Acumulada",
@@ -388,11 +390,11 @@ export const TRANSLATIONS = {
     dpComfortable: "Confortable",
     dpHumid: "Bochornoso",
     dpOppressive: "Opresivo",
-    dpExtreme: "Insuportable", // CORREGIT
+    dpExtreme: "Insuportable", 
     
     aiIntroMorning: "Buenos días. Situación actualizada: ",
     aiIntroAfternoon: "Buenas tardes. Evolución atmosférica: ",
-    aiIntroEvening: "Buenas tardes-noche. Previsión inmediata: ", // CORREGIT (To MeteoToni)
+    aiIntroEvening: "Buenas tardes-noche. Previsión inmediata: ", 
     aiIntroNight: "Buenas noches. Situación nocturna: ",
     
     aiSummaryClear: "Cielo despejado y ambiente tranquilo. ", 
@@ -404,7 +406,7 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambiente muy húmedo. Lluvia persistente y niebla. ",
     aiSummaryStorm: "Situación inestable. Riesgo de tormentas activas. ",
 
-    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
+    // --- PANTALLA DE BENVINGUDA ---
     aiAnalysisDescription: "Previsión meteorológica de alta precisión impulsada por inteligencia artificial.",
     searchCity: "Buscar Ciudad",
     useLocation: "Usar Ubicación",
@@ -412,7 +414,6 @@ export const TRANSLATIONS = {
     autoGPS: "GPS Automático",
     manualSearch: "Búsqueda manual",
     
-    // --- NOVES SECCIONS (AUDITORIA) ---
     welcome: {
       tagline: "Next Gen Weather",
       desc: "Sistema de inteligencia atmosférica de alta precisión.",
@@ -453,14 +454,15 @@ export const TRANSLATIONS = {
       loading: "Cargando...",
       error: "Error"
     },
-    // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES ---
+    // --- NOVES CLAUS ---
     aiSummaryFog: "Hay niebla o bancos de niebla bajos.", 
     alertVisibility: "Visibilidad muy reducida",
     notifWait: "Espera unos segundos antes de volver a actualizar.",
     notifLocationSuccess: "Ubicación actualizada correctamente.",
     notifLocationError: "No se pudo obtener la ubicación. Revisa los permisos.",
+    fetchError: "No se pudo cargar el tiempo.", // NOU
+    geoNotSupported: "Geolocalización no soportada.", // NOU
     radarShort: "Radar",
     
     // --- GINY NÚVOLS ---
@@ -570,7 +572,9 @@ export const TRANSLATIONS = {
     openExternal: "Abrir fuera",
     openBrowser: "Abrir en navegador externo",
     radarData: "Datos: RainViewer",
-    radarFail: "Si falla, pulsa \"Abrir fuera\" ↗"
+    radarFail: "Si falla, pulsa \"Abrir fuera\" ↗",
+    favAdded: "Añadido a favoritos", // NOU
+    favRemoved: "Eliminado de favoritos" // NOU
   },
 
   en: {
@@ -596,7 +600,7 @@ export const TRANSLATIONS = {
     snowLevel: "Snow Level",
     forecast7days: "7-Day Forecast",
     today: "Today",
-    tomorrow: "Tomorrow", // AFEGIT
+    tomorrow: "Tomorrow",
     detailedForecast: "Detailed Forecast",
     hourlyEvolution: "Hourly Evolution",
     snowAccumulated: "Accumulated Snow",
@@ -633,7 +637,7 @@ export const TRANSLATIONS = {
     sun: "Sun",
     clear: "Clear",
     partlyCloudy: "Partly Cloudy",
-    partlyCloudyNight: "Passing clouds", // MILLORAT
+    partlyCloudyNight: "Passing clouds", 
     cloudy: "Cloudy",
     snow: "Snow",
     rainy: "Rain",
@@ -688,7 +692,7 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Humid and foggy. Persistent rain with reduced visibility. ",
     aiSummaryStorm: "Unstable situation. Risk of active storms. ",
 
-    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
+    // --- PANTALLA DE BENVINGUDA ---
     aiAnalysisDescription: "High-precision weather forecast powered by artificial intelligence.",
     searchCity: "Search City",
     useLocation: "Use Location",
@@ -696,7 +700,6 @@ export const TRANSLATIONS = {
     autoGPS: "Automatic GPS",
     manualSearch: "Manual search",
     
-    // --- NOVES SECCIONS (AUDITORIA) ---
     welcome: {
       tagline: "Next Gen Weather",
       desc: "High-precision atmospheric intelligence system.",
@@ -737,14 +740,15 @@ export const TRANSLATIONS = {
       loading: "Loading...",
       error: "Error"
     },
-    // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES ---
+    // --- NOVES CLAUS ---
     aiSummaryFog: "It is foggy or low mist banks present.", 
     alertVisibility: "Low visibility",
     notifWait: "Please wait a few seconds before updating again.",
     notifLocationSuccess: "Location updated successfully.",
     notifLocationError: "Could not get location. Check permissions.",
+    fetchError: "Could not load weather data.", // NOU
+    geoNotSupported: "Geolocation not supported.", // NOU
     radarShort: "Radar",
     
     // --- GINY NÚVOLS ---
@@ -854,7 +858,9 @@ export const TRANSLATIONS = {
     openExternal: "Open external",
     openBrowser: "Open in external browser",
     radarData: "Data: RainViewer",
-    radarFail: "If it fails, press \"Open external\" ↗"
+    radarFail: "If it fails, press \"Open external\" ↗",
+    favAdded: "Added to favorites", // NOU
+    favRemoved: "Removed from favorites" // NOU
   },
 
   fr: {
@@ -880,7 +886,7 @@ export const TRANSLATIONS = {
     snowLevel: "Limite neige",
     forecast7days: "Prévisions 7 Jours",
     today: "Aujourd'hui",
-    tomorrow: "Demain", // AFEGIT
+    tomorrow: "Demain",
     detailedForecast: "Prévisions détaillées",
     hourlyEvolution: "Évolution horaire",
     snowAccumulated: "Neige accumulée",
@@ -972,7 +978,7 @@ export const TRANSLATIONS = {
     aiSummaryRainFog: "Ambiance bouchée. Pluie persistante et brouillard. ",    
     aiSummaryStorm: "Situation instable. Risque d'orages actifs. ",
 
-    // --- PANTALLA DE BENVINGUDA (ACTUALITZAT) ---
+    // --- PANTALLA DE BENVINGUDA ---
     aiAnalysisDescription: "Prévisions météorologiques de haute précision alimentées par l'intelligence artificielle.",
     searchCity: "Chercher Ville",
     useLocation: "Ma Position",
@@ -980,7 +986,6 @@ export const TRANSLATIONS = {
     autoGPS: "GPS Automatique",
     manualSearch: "Recherche manuelle",
     
-    // --- NOVES SECCIONS (AUDITORIA) ---
     welcome: {
       tagline: "Next Gen Weather",
       desc: "Système d'intelligence atmosphérique de haute précision.",
@@ -1021,14 +1026,15 @@ export const TRANSLATIONS = {
       loading: "Chargement...",
       error: "Erreur"
     },
-    // ------------------------------------
 
-    // --- NOVES CLAUS AFEGIDES ---
+    // --- NOVES CLAUS ---
     aiSummaryFog: "Il y a du brouillard ou des bancs de brume.", 
     alertVisibility: "Visibilité très réduite",
     notifWait: "Veuillez patienter quelques secondes avant de mettre à jour.",
     notifLocationSuccess: "Localisation mise à jour avec succès.",
     notifLocationError: "Impossible d'obtenir la localisation. Vérifiez les permissions.",
+    fetchError: "Impossible de charger la météo.", // NOU
+    geoNotSupported: "Géolocalisation non prise en charge.", // NOU
     radarShort: "Radar",
     
     // --- GINY NÚVOLS ---
@@ -1104,7 +1110,7 @@ export const TRANSLATIONS = {
     tipHydration: "Hydratation",
     tipThermal: "Vêtements thermiques",
     tipWindbreaker: "Coupe-vent",
-    tipMugginess: "Vêtements légers", // CORREGIT
+    tipMugginess: "Vêtements légers", 
     tipUmbrella: "Prenez un parapluie",
     tipSunscreen: "Écran solaire",
     tipCalm: "Profitez",
@@ -1138,6 +1144,8 @@ export const TRANSLATIONS = {
     openExternal: "Ouvrir",
     openBrowser: "Ouvrir dans le navigateur",
     radarData: "Données: RainViewer",
-    radarFail: "Si ça échoue, appuyez sur \"Ouvrir\" ↗"
+    radarFail: "Si ça échoue, appuyez sur \"Ouvrir\" ↗",
+    favAdded: "Ajouté aux favoris", // NOU
+    favRemoved: "Supprimé des favoris" // NOU
   }
 } as const;

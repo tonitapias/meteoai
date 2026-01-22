@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Language } from '../constants/translations';
 
-// Modificat per acceptar className
 export const TypewriterText = ({ text, className }: { text: string; className?: string }) => {
   const [displayedText, setDisplayedText] = useState('');
   

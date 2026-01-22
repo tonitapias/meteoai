@@ -1,5 +1,6 @@
 // src/utils/weatherLogic.ts
 import { TRANSLATIONS, Language } from '../constants/translations';
+// IMPORT CRÍTIC: Ara importem tot l'objecte de configuració
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { 
     TranslationMap, 
@@ -9,18 +10,126 @@ import {
 } from '../types/weatherLogicTypes';
 import { safeNum, calculateDewPoint } from './physics';
 
-// --- RE-EXPORTACIONS MÀGIQUES ---
-// Això fa que la resta de l'app trobi les funcions on sempre han estat
+// --- RE-EXPORTACIONS ---
 export * from '../types/weatherLogicTypes';
 export * from './physics';
 export * from './aromeEngine';
 export * from './normData';
 export * from './aiContext';
 
-const { PRECIPITATION } = WEATHER_THRESHOLDS;
+// Desestructurem per comoditat
+const { 
+  PRECIPITATION, 
+  CLOUDS, 
+  HUMIDITY, 
+  CAPE, 
+  SNOW, 
+  VISIBILITY 
+} = WEATHER_THRESHOLDS;
 
 // ==========================================
-// FUNCIONS DE NEGOCI RESTANTS
+// HELPERS PRIVATS (Ara usant Constants)
+// ==========================================
+
+/** Calcula el % de núvols efectiu ponderant els baixos, mitjans i alts */
+const calculateEffectiveCloudCover = (low: number, mid: number, high: number): number => {
+    return Math.min(100, (low * 1.0) + (mid * 0.6) + (high * 0.3));
+};
+
+/** Obté la precipitació màxima actual */
+const getInstantaneousPrecipitation = (minutelyData: number[], currentPrecip: number): number => {
+    if (minutelyData && minutelyData.length > 0) {
+        return Math.max(...minutelyData.map(v => safeNum(v, 0)));
+    }
+    return safeNum(currentPrecip, 0);
+};
+
+/** Ajusta el codi de cel (serè/ennuvolat) basant-se en el % de cobertura */
+const adjustBaseSkyCode = (code: number, cloudCover: number): number => {
+    if (code > 3) return code;
+
+    if (cloudCover > CLOUDS.OVERCAST) return 3; 
+    if (cloudCover > CLOUDS.SCATTERED) return 2; 
+    if (cloudCover > CLOUDS.FEW) return 1; 
+    return 0; 
+};
+
+/** Detecta condicions de boira o humitat extrema */
+const checkForFog = (code: number, temp: number, humidity: number, cloudCover: number): number => {
+    if (code >= 48) return code;
+
+    const dewPoint = calculateDewPoint(temp, humidity);
+    const spread = temp - dewPoint;
+
+    // Ús de constants HUMIDITY
+    if (code < 45 && spread < HUMIDITY.DEW_SPREAD && humidity > HUMIDITY.FOG_BASE && cloudCover > 50) {
+        return 45;
+    }
+    if (code === 0 && humidity > HUMIDITY.HIGH) {
+        return 1;
+    }
+    return code;
+};
+
+/** Ajusta per tempestes si hi ha molta energia (CAPE) */
+const adjustForStorms = (code: number, cape: number, cloudCover: number, precipAmount: number): number => {
+    if (cape <= CAPE.MIN_STORM) return code; 
+
+    const isPrecipitating = precipAmount >= PRECIPITATION.TRACE || (code >= 51 && code <= 82);
+
+    if (cloudCover > CLOUDS.STORM_BASE) {
+        if (isPrecipitating) {
+            if (code < 95) return 95;
+        } else if (cape > CAPE.HIGH_STORM) {
+            return 2; 
+        }
+    }
+    return code;
+};
+
+/** Determina si la pluja s'ha de convertir en neu per temperatura */
+const determineSnowCode = (
+    code: number, 
+    temp: number, 
+    freezingLevel: number, 
+    elevation: number, 
+    precipAmount: number
+): number => {
+    const freezingDist = freezingLevel - elevation;
+    
+    // Ús de constants SNOW
+    const isColdEnough = temp <= SNOW.TEMP_SNOW || (temp <= SNOW.TEMP_MIX && freezingDist < SNOW.FREEZING_BUFFER);
+
+    if (!isColdEnough) return code;
+
+    const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
+
+    if (isRainCode || precipAmount > 0) {
+        if (code === 65 || code === 82 || code === 67 || code >= 95 || precipAmount > PRECIPITATION.MODERATE) return 75; 
+        if (code === 63 || code === 81 || code === 55 || code === 57 || precipAmount >= PRECIPITATION.LIGHT) return 73; 
+        return 71; 
+    }
+    
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
+    
+    return code;
+};
+
+/** Ajusta la intensitat de la pluja (feble/moderada/forta) segons mm/h */
+const adjustRainIntensity = (code: number, precipAmount: number): number => {
+    if (code >= 95) return code;
+
+    // Ús de constants PRECIPITATION
+    if (precipAmount >= PRECIPITATION.TRACE) { 
+        if (precipAmount > PRECIPITATION.HEAVY) return 65; 
+        if (precipAmount >= 1.0) return 63; // Nota: Open-Meteo usa 1.0 com estàndard, podem mantenir-lo o usar PRECIPITATION.MODERATE
+        return 61; 
+    } 
+    return code;
+};
+
+// ==========================================
+// FUNCIONS EXPORTADES
 // ==========================================
 
 export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
@@ -42,76 +151,38 @@ export const getRealTimeWeatherCode = (
     
     let code = safeNum(current.weather_code, 0);
     const isArome = current.source === 'AROME HD'; 
-
     const temp = safeNum(current.temperature_2m, 15);
     const visibility = safeNum(current.visibility, 10000);
     const humidity = safeNum(current.relative_humidity_2m, 50);
 
-    const lowClouds = safeNum(current.cloud_cover_low, 0);
-    const midClouds = safeNum(current.cloud_cover_mid, 0);
-    const highClouds = safeNum(current.cloud_cover_high, 0);
-    
-    const effectiveCloudCover = Math.min(100, (lowClouds * 1.0) + (midClouds * 0.6) + (highClouds * 0.3));
+    const cloudCover = calculateEffectiveCloudCover(
+        safeNum(current.cloud_cover_low, 0),
+        safeNum(current.cloud_cover_mid, 0),
+        safeNum(current.cloud_cover_high, 0)
+    );
 
-    if (code <= 3) {
-        if (effectiveCloudCover > 85) code = 3;      
-        else if (effectiveCloudCover > 45) code = 2; 
-        else if (effectiveCloudCover > 15) code = 1; 
-        else code = 0;                      
-    }
+    const precipInstantanea = getInstantaneousPrecipitation(minutelyPrecipData, safeNum(current.precipitation, 0));
 
-    const precipInstantanea = minutelyPrecipData && minutelyPrecipData.length > 0 
-        ? Math.max(...minutelyPrecipData.map(v => safeNum(v, 0))) 
-        : safeNum(current.precipitation, 0);
+    // --- PIPELINE DE DECISIÓ ---
+    code = adjustBaseSkyCode(code, cloudCover);
 
     if (isArome && precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
         code = 61; 
     }
 
-    const dewPoint = calculateDewPoint(temp, humidity);
-    const dewPointSpread = temp - dewPoint;
-
-    if (code < 45 && dewPointSpread < 1.2 && humidity > 96 && effectiveCloudCover > 50) {
-        code = 45; 
-    } else if (code === 0 && humidity > 92) {
-        code = 1; 
-    }
-
-    if (cape > 1200) { 
-        const isPrecipitating = precipInstantanea >= PRECIPITATION.TRACE || (code >= 51 && code <= 82);
-        
-        if (effectiveCloudCover > 60) {
-            if (isPrecipitating) {
-                 if (code < 95) code = 95;
-            } else if (cape > 2000) {
-                code = 2; 
-            }
-        }
-    }
-
-    const freezingDist = freezingLevel - elevation;
-    const isColdEnoughForSnow = temp <= 1 || (temp <= 4 && freezingDist < 300);
-
-    if (isColdEnoughForSnow) {
-        const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
-        if (isRainCode || precipInstantanea > 0) {
-            if (code === 65 || code === 82 || code === 67 || code >= 95 || precipInstantanea > 1.5) return 75; 
-            if (code === 63 || code === 81 || code === 55 || code === 57 || precipInstantanea >= 0.5) return 73; 
-            return 71; 
-        }
-        if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
-    }
+    code = checkForFog(code, temp, humidity, cloudCover);
+    code = adjustForStorms(code, cape, cloudCover, precipInstantanea);
+    code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
     
-    if ((code === 45 || code === 48 || visibility < 1000) && precipInstantanea < 0.1) {
+    // VISIBILITY.POOR en lloc de 1000
+    if ((code === 45 || code === 48 || visibility < VISIBILITY.POOR) && precipInstantanea < PRECIPITATION.TRACE) {
         return 45;
     }
 
-    if (precipInstantanea >= PRECIPITATION.TRACE) { 
-        if (code >= 95) return code; 
-        if (precipInstantanea > 4.0) code = 65; 
-        else if (precipInstantanea >= 1.0) code = 63; 
-        else code = 61; 
-    } 
+    const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
+    if (!isSnow) {
+        code = adjustRainIntensity(code, precipInstantanea);
+    }
 
     return code;
 };

@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
-import { getRealTimeWeatherCode, StrictCurrentWeather, ExtendedWeatherData } from '../utils/weatherLogic';
+import { ExtendedWeatherData } from '../utils/weatherLogic';
 import { Language } from '../constants/translations';
 import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
-import { WeatherUnit } from '../utils/formatters';
+import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
-    const { hourly, current, daily } = data;
+    // ELIMINAT 'daily' del destructuring perquè no s'usava
+    const { hourly, current } = data;
     
     const isArome = current.source === 'AROME HD';
     const sourceLabel = isArome ? 'AROME HD' : 'GFS / GLOBAL';
@@ -15,59 +16,61 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time)) return [];
         
-        // CORRECCIÓ: Construïm l'ISO manualment amb l'hora local, no UTC
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         const hour = String(now.getHours()).padStart(2, '0');
         
-        // Ara tenim "2024-02-14T15" basat en l'hora real del rellotge local
-        const nowIso = `${year}-${month}-${day}T${hour}`;
-
-        let startIdx = hourly.time.findIndex((t: string) => t && t.startsWith(nowIso));
-        if (startIdx === -1) startIdx = 0; 
+        // Busquem l'índex de l'hora actual
+        const currentIsoHourPrefix = `${year}-${month}-${day}T${hour}`;
+        const startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentIsoHourPrefix));
         
-        return hourly.time.slice(startIdx, startIdx + 24).map((t: string, i: number) => {
-            const idx = startIdx + i;
-            const dateObj = new Date(t);
-            const hours = dateObj.getHours(); 
+        if (startIndex === -1) return [];
+
+        return Array.from({ length: 25 }).map((_, i) => {
+            const targetIndex = startIndex + i;
             
-            let isDay = hours >= 7 && hours <= 20;
-            const dayIso = t.split('T')[0];
-            const dailyIndex = daily?.time?.findIndex((d: string) => d === dayIso);
-            
-            if (dailyIndex !== -1 && daily?.sunrise?.[dailyIndex] && daily?.sunset?.[dailyIndex]) {
-                const sunriseDate = new Date(daily.sunrise[dailyIndex]);
-                const sunsetDate = new Date(daily.sunset[dailyIndex]);
-                const sunriseHour = sunriseDate.getHours();
-                const sunsetHour = sunsetDate.getHours();
-                isDay = hours >= sunriseHour && hours < sunsetHour;
+            // Si sortim del rang, retornem dades buides
+            if (targetIndex >= hourly.time.length) {
+                return { time: '', temp: 0, icon: null, precip: 0, precipText: '', isNow: false };
             }
-    
-            const temp = hourly.temperature_2m?.[idx] ?? 0;
-            const weatherCode = hourly.weathercode?.[idx] ?? hourly.weather_code?.[idx] ?? 0;
-            const pProb = hourly.precipitation_probability?.[idx] ?? 0;
-            const pAmt = hourly.precipitation?.[idx] ?? 0;
-            const windSpeed = hourly.wind_speed_10m?.[idx] ?? 0;
-            const cape = hourly.cape?.[idx] ?? 0;
+
+            const timeStr = hourly.time[targetIndex];
+            const dateObj = new Date(timeStr);
+            const hours = String(dateObj.getHours()).padStart(2, '0');
             
-            const simCurrent: StrictCurrentWeather = { 
-                ...current, weather_code: weatherCode, temperature_2m: temp, is_day: isDay ? 1 : 0, 
-                precipitation: pAmt, relative_humidity_2m: 0, apparent_temperature: temp, wind_speed_10m: windSpeed, time: t
-            };
-            const code = getRealTimeWeatherCode(simCurrent, [pAmt], pProb, 2500, 0, cape);
-    
+            const temp = hourly.temperature_2m[targetIndex] || 0;
+            const code = hourly.weather_code[targetIndex] || 0;
+            const pProb = hourly.precipitation_probability?.[targetIndex] || 0;
+            const pAmt = hourly.precipitation?.[targetIndex] || 0;
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sAmt = (hourly as any).snowfall?.[targetIndex] || 0;
+            
+            const windSpeed = hourly.wind_speed_10m?.[targetIndex] || 0;
+            const isDay = hourly.is_day?.[targetIndex] === 1;
+
+            // ELIMINAT: 'cape' i 'simCurrent' que no s'utilitzaven
+            
+            // Lògica de text de precipitació
+            let precipString = '';
+            if (pAmt > 0) {
+                precipString = formatPrecipitation(pAmt, sAmt);
+            } else if (pProb > 0) {
+                precipString = `${pProb}%`;
+            }
+
             return {
                 time: i === 0 ? (lang === 'ca' ? 'ARA' : 'NOW') : `${hours}H`,
                 temp: temp,
                 icon: getWeatherIcon(code, "w-8 h-8", isDay, pProb, windSpeed),
                 precip: pProb || (pAmt > 0 ? 100 : 0),
-                precipText: pAmt > 0 ? `${pAmt}mm` : (pProb > 0 ? `${pProb}%` : ''),
+                precipText: precipString,
                 isNow: i === 0
             };
         });
-      }, [hourly, current, lang, daily]);
+      }, [hourly, lang]); // ELIMINAT 'current' de dependències perquè ja no s'usa dins del useMemo
 
     return (
         <div className="relative group w-full">
@@ -80,11 +83,11 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 ) : (
                     <>
                         <ShieldCheck className="w-3 h-3 text-indigo-400" />
-                        <span className="text-[9px] font-mono font-bold text-indigo-300 tracking-widest">{sourceLabel}</span>
+                        <span className="text-[9px] font-mono font-bold text-indigo-400 tracking-widest">{sourceLabel}</span>
                     </>
                 )}
             </div>
-
+            
             <HourlyForecastWidget data={hourlyChartData} lang={lang} />
         </div>
     );

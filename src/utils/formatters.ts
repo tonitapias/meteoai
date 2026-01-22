@@ -45,3 +45,25 @@ export const formatTime = (dateString: string, lang: Language): string => {
     minute: '2-digit'
   });
 };
+
+/**
+ * Formata la precipitació triant intel·ligentment entre mm (pluja) o cm (neu).
+ * @param precipitationTotal - Total de precipitació (equivalent aigua mm)
+ * @param snowfall - Total de neu (cm)
+ * @returns String formatat (ex: "15 mm" o "5 cm")
+ */
+export const formatPrecipitation = (precipitationTotal: number, snowfall: number): string => {
+  // Si hi ha neu acumulada significativa (> 0.2 cm), mostrem la neu
+  if (snowfall && snowfall >= 0.2) {
+    // Si és menys d'1 cm, mostrem decimals, sinó enter arrodonit
+    return snowfall < 1 
+      ? `${snowfall.toFixed(1)} cm` 
+      : `${Math.round(snowfall)} cm`;
+  }
+  
+  // Si no és neu, és pluja (mm)
+  if (precipitationTotal < 1 && precipitationTotal > 0) {
+    return `${precipitationTotal.toFixed(1)} mm`;
+  }
+  return `${Math.round(precipitationTotal)} mm`;
+};

@@ -171,7 +171,9 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
   return (
     <div className={WIDGET_BASE_STYLE}>
        <div className={TITLE_STYLE}><Layers className="w-3.5 h-3.5 text-blue-400" /> {title}</div>
-       <div className="flex-1 flex items-end justify-between gap-2 px-1 relative">
+       
+       {/* CORRECCIÓ: Afegim 'min-h-[140px]' per assegurar que es veu al mòbil */}
+       <div className="flex-1 flex items-end justify-between gap-2 px-1 relative min-h-[140px]">
           <div className="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none opacity-20">
               <div className="w-full border-t border-dashed border-slate-500"></div>
               <div className="w-full border-t border-dashed border-slate-500"></div>
