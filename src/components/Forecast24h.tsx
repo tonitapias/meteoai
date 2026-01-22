@@ -7,8 +7,8 @@ import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
-    // ELIMINAT 'daily' del destructuring perquè no s'usava
-    const { hourly, current } = data;
+    // AFEGIT: Destructurem utc_offset_seconds per calcular l'hora local real
+    const { hourly, current, utc_offset_seconds } = data;
     
     const isArome = current.source === 'AROME HD';
     const sourceLabel = isArome ? 'AROME HD' : 'GFS / GLOBAL';
@@ -16,14 +16,26 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time)) return [];
         
+        // CORRECCIÓ ZONA HORÀRIA:
+        // 1. Obtenim el moment actual en UTC (sense biaix del navegador)
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hour = String(now.getHours()).padStart(2, '0');
+        const utcMs = now.getTime(); // Temps Unix actual (UTC)
         
-        // Busquem l'índex de l'hora actual
+        // 2. Afegim l'offset de la ciutat (en segons * 1000)
+        // Això ens dona una data que, si llegim en mètodes UTC, equival a l'hora local de la ciutat
+        const locationMs = utcMs + (utc_offset_seconds * 1000); 
+        const locationDate = new Date(locationMs);
+
+        // 3. Extraiem components usant mètodes UTC per obtenir l'hora local de destí
+        const year = locationDate.getUTCFullYear();
+        const month = String(locationDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(locationDate.getUTCDate()).padStart(2, '0');
+        const hour = String(locationDate.getUTCHours()).padStart(2, '0');
+        
+        // 4. Construïm la cadena ISO que buscarem a l'API (ex: "2024-05-20T09")
         const currentIsoHourPrefix = `${year}-${month}-${day}T${hour}`;
+        
+        // Ara busquem aquest prefix a la llista d'hores (que està en hora local de la ciutat)
         const startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentIsoHourPrefix));
         
         if (startIndex === -1) return [];
@@ -51,8 +63,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const windSpeed = hourly.wind_speed_10m?.[targetIndex] || 0;
             const isDay = hourly.is_day?.[targetIndex] === 1;
 
-            // ELIMINAT: 'cape' i 'simCurrent' que no s'utilitzaven
-            
             // Lògica de text de precipitació
             let precipString = '';
             if (pAmt > 0) {
@@ -70,7 +80,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 isNow: i === 0
             };
         });
-      }, [hourly, lang]); // ELIMINAT 'current' de dependències perquè ja no s'usa dins del useMemo
+      }, [hourly, lang, utc_offset_seconds]); // AFEGIT utc_offset_seconds a dependències
 
     return (
         <div className="relative group w-full">
