@@ -15,6 +15,26 @@ import { safeNum } from './physics';
 const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
 // ==========================================
+// HELPERS
+// ==========================================
+
+// 1. CORRECCIÓ PLUJA: Lògica centralitzada i llindar a 0.2mm
+const calculateIsRaining = (code: number, precipAmount: number) => {
+    const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95 && precipAmount > 0);
+    return isRainCode || precipAmount >= 0.2;
+};
+
+// 2. CORRECCIÓ HORÀRIA: Obtenir l'hora real de la ubicació (no del sistema)
+const getLocationHour = (timeIso: string): number => {
+    if (!timeIso) return new Date().getHours();
+    try {
+        return new Date(timeIso).getHours();
+    } catch {
+        return new Date().getHours();
+    }
+};
+
+// ==========================================
 // LOGICA IA I PREDICCIONS
 // ==========================================
 
@@ -160,14 +180,17 @@ export const generateAIPrediction = (
     }
     
     try {
-        const currentHour = new Date().getHours();
+        // CORRECCIÓ: Usem l'hora de la ubicació, no la del sistema
+        const currentHour = getLocationHour(current.time);
         const code = safeNum(effectiveCode !== null ? effectiveCode : current.weather_code, 0);
         
         const minutely15 = current.minutely15 || [];
         const precipInstantanea = safeNum(minutely15[0]);
         const precipNext15 = safeNum(minutely15[1]);
         
-        const isRaining = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || precipInstantanea >= 0.1;
+        // CORRECCIÓ: Usem la funció centralitzada (amb llindar 0.2mm)
+        const isRaining = calculateIsRaining(code, precipInstantanea);
+
         const futureRainProb = getFutureRainProbability(hourly, daily, currentHour);
         
         const windSpeed = safeNum(current.wind_speed_10m);
@@ -259,6 +282,11 @@ export const prepareContextForAI = (current: StrictCurrentWeather, daily: Strict
         return data.slice(startIndex, startIndex + 4).map((v) => safeNum(v));
     };
 
+    // CORRECCIÓ: Usem la lògica UNIFICADA també per a Gemini (0.2mm)
+    const code = safeNum(current.weather_code);
+    const precipAmount = safeNum(current.precipitation) + safeNum(current.rain) + safeNum(current.showers);
+    const isActuallyRaining = calculateIsRaining(code, precipAmount);
+
     return {
         timestamp: current.time,
         location: { 
@@ -267,10 +295,14 @@ export const prepareContextForAI = (current: StrictCurrentWeather, daily: Strict
         current: {
             temp: safeNum(current.temperature_2m),
             feels_like: safeNum(current.apparent_temperature),
-            is_raining: safeNum(current.precipitation) > 0 || safeNum(current.rain) > 0 || safeNum(current.showers) > 0,
+            is_raining: isActuallyRaining, 
             wind_speed: safeNum(current.wind_speed_10m),
+            // CORRECCIÓ: Afegim ràfegues de vent
+            wind_gusts: safeNum(current.wind_gusts_10m),
             weather_code: safeNum(current.weather_code),
-            humidity: safeNum(current.relative_humidity_2m)
+            humidity: safeNum(current.relative_humidity_2m),
+            // CORRECCIÓ: Afegim is_day
+            is_day: safeNum(current.is_day, 1) === 1
         },
         daily_summary: {
             max: safeNum(daily.temperature_2m_max?.[0]),
