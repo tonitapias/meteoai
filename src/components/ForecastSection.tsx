@@ -41,23 +41,19 @@ const ForecastSection = memo(function ForecastSection({
 
     return (
         <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-            <div className="bento-card p-6 md:p-8 bg-[#151725] border border-white/5 rounded-[2.5rem] relative overflow-hidden shadow-2xl">
+            <div className="bento-card p-4 md:p-8 bg-[#151725] border border-white/5 rounded-[2.5rem] relative overflow-hidden shadow-2xl">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none"></div>
                 
-                <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 z-10 relative">
+                <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 z-10 relative px-2">
                     <Calendar className="w-3.5 h-3.5 text-indigo-400"/> {t.forecast7days || "PREVISIÓ 7 DIES"}
                 </h3>
 
                 <div className="grid grid-cols-1 gap-3 relative z-10">
-                    {/* .slice(1) per saltar el dia d'avui */}
                     {dailyData.time.slice(1).map((dateStr, index) => {
-                        const i = index + 1; // Ajustem l'índex per accedir a les dades originals correctes
+                        const i = index + 1;
                         
                         const date = new Date(dateStr);
-                        // ELIMINAT: const isToday = false; (Ja no cal)
-                        
                         const dayName = date.toLocaleDateString(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long' });
-                        
                         const dateNum = date.getDate();
                         const maxTemp = dailyData.temperature_2m_max?.[i] ?? 0;
                         const minTemp = dailyData.temperature_2m_min?.[i] ?? 0;
@@ -73,31 +69,32 @@ const ForecastSection = memo(function ForecastSection({
                                 onClick={() => onDayClick(i)}
                                 className="group flex items-center justify-between p-3 md:p-4 rounded-2xl bg-[#0B0C15] border border-white/5 hover:bg-[#1a1d2d] hover:border-indigo-500/30 transition-all duration-300 w-full"
                             >
-                                <div className="flex items-center gap-4 w-[140px] md:w-[180px]">
-                                    {/* Simplificat: Eliminat condicional isToday als estils */}
-                                    <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-colors">
+                                {/* DATA I NOM (Ajustat per a mòbil: w-auto min-w-[100px]) */}
+                                <div className="flex items-center gap-3 md:gap-4 w-auto min-w-[100px] md:w-[180px]">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-colors shrink-0">
                                         <span className="text-lg font-black tracking-tighter">{dateNum}</span>
                                     </div>
-                                    <div className="flex flex-col items-start">
-                                        {/* Simplificat: Eliminat condicional isToday als estils */}
-                                        <span className="text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white">
+                                    <div className="flex flex-col items-start truncate">
+                                        <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[70px] md:max-w-none">
                                             {dayName}
                                         </span>
                                         {precipProb > 0 && (
                                             <div className="flex items-center gap-1 mt-0.5">
-                                                <Umbrella className="w-3 h-3 text-blue-400" />
-                                                <span className="text-[10px] font-mono font-bold text-blue-400">{precipProb}%</span>
+                                                <Umbrella className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-400" />
+                                                <span className="text-[9px] md:text-[10px] font-mono font-bold text-blue-400">{precipProb}%</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-center flex-1 px-4">
-                                     <div className="scale-90 md:scale-100 drop-shadow-lg transition-transform group-hover:scale-110 duration-300">
+                                {/* ICONA (Centrada) */}
+                                <div className="flex items-center justify-center flex-1 px-2 md:px-4">
+                                     <div className="scale-75 md:scale-100 drop-shadow-lg transition-transform group-hover:scale-110 duration-300">
                                         {getWeatherIcon(code, "w-10 h-10", true)}
                                      </div>
                                 </div>
 
+                                {/* TEMPERATURES (VERSIÓ DESKTOP: BARRA DE RANG) */}
                                 <div className="hidden md:flex flex-col items-center justify-center w-[120px] px-2">
                                     <div className="w-full flex justify-between text-[10px] font-bold text-slate-500 mb-1">
                                         <span>{Math.round(minTemp)}°</span>
@@ -111,16 +108,23 @@ const ForecastSection = memo(function ForecastSection({
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-3 w-[100px] md:w-[140px]">
+                                {/* TEMPERATURES (VERSIÓ MÒBIL: TEXT VERTICAL) - NOU! */}
+                                <div className="md:hidden flex flex-col items-end justify-center mr-3">
+                                    <span className="text-sm font-bold text-white tabular-nums leading-none mb-1">{Math.round(maxTemp)}°</span>
+                                    <span className="text-xs font-bold text-slate-500 tabular-nums leading-none">{Math.round(minTemp)}°</span>
+                                </div>
+
+                                {/* PLUJA I FLETXA */}
+                                <div className="flex items-center justify-end gap-2 md:gap-3 w-[70px] md:w-[140px]">
                                     {precipSum > 0 ? (
-                                        <span className="text-[10px] text-slate-500 font-mono font-bold bg-blue-500/10 px-2 py-1 rounded-md border border-blue-500/20 group-hover:border-blue-500/40 group-hover:text-blue-300 transition-colors">
+                                        <span className="text-[9px] md:text-[10px] text-slate-500 font-mono font-bold bg-blue-500/10 px-1.5 py-1 md:px-2 rounded-md border border-blue-500/20 group-hover:border-blue-500/40 group-hover:text-blue-300 transition-colors">
                                             {formatPrecipitation(precipSum, snowSum)}
                                         </span>
                                     ) : (
                                         <span className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-widest hidden md:block">CAP</span>
                                     )}
                                     
-                                    <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all border border-white/5 group-hover:border-indigo-400">
+                                    <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all border border-white/5 group-hover:border-indigo-400 shrink-0">
                                         <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-white transition-colors" />
                                     </div>
                                 </div>
