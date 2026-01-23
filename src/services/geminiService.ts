@@ -2,12 +2,12 @@
 import { prepareContextForAI, ExtendedWeatherData } from '../utils/weatherLogic'; 
 import * as Sentry from "@sentry/react";
 import { get, set } from 'idb-keyval';
+import { TRANSLATIONS } from '../translations'; 
 
 // --- CONFIGURACIÓ ---
 const PROXY_URL = "https://meteoai-proxy.tonitapias.workers.dev"; 
 
 const CACHE_TTL = 60 * 60 * 1000; 
-// [CORRECCIÓ LINT] Eliminat DB_STORE_KEY ja que no s'usava
 
 const LANG_MAP: Record<string, string> = {
     'ca': 'Catalan',
@@ -68,24 +68,29 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             Sentry.captureException(dbError, { tags: { service: 'IndexedDB' } });
         }
 
-        // 5. Construcció del Prompt
+        // 5. Construcció del Prompt (DINÀMIC I SEGUR)
+        // Recuperem les traduccions o fem fallback a 'ca'
+        const t = TRANSLATIONS[language as keyof typeof TRANSLATIONS] || TRANSLATIONS['ca'];
+        
+        // Valors per defecte "hardcoded" per seguretat (circuit breaker)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const role = (t as any).ai_system_role || "Actua com un Meteoròleg Expert.";
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tone = (t as any).ai_tone_instruction || "Fes servir un to professional però proper.";
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const task = (t as any).ai_task_instruction || "Analitza les dades i fes un resum breu.";
+
         const targetLanguage = LANG_MAP[language] || 'Catalan';
-        const toneInstruction = language === 'ca' 
-            ? "Fes servir un to proper i meteopàtic, com un home del temps local experimentat." 
-            : "Use a professional yet friendly meteorologist tone.";
 
         const prompt = `
-          ACT COM: Expert Meteorologist.
+          ACT COM: ${role}
           CONTEXT: ${JSON.stringify(context)}
-          TASK: Analyze this weather data and generate a short, helpful summary.
+          TASK: ${task}
           
           RULES:
-          1. NO expliquis els números (ja els veig al gràfic). INTERPRETA'LS.
-          2. Destaca fenòmens perillosos (vent fort, pluja intensa, fred extrem) SI N'HI HA.
-          3. Sigues honest amb la incertesa.
-          4. SENSE CLIXÉS.
-          5. IDIOMA DE SORTIDA: ${targetLanguage}.
-          6. ${toneInstruction}
+          1. ${tone}
+          2. SENSE CLIXÉS.
+          3. IDIOMA DE SORTIDA: ${targetLanguage}.
 
           OBJECTIUS DE LA RESPOSTA (JSON):
           - "text": Un paràgraf fluid (màxim 4 frases).

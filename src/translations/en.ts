@@ -283,5 +283,62 @@ export const en = {
   radarData: "Data: RainViewer",
   radarFail: "If it fails, press \"Open external\" ↗",
   favAdded: "Added to favorites",
-  favRemoved: "Removed from favorites"
+  favRemoved: "Removed from favorites",
+
+  // --- CONFIGURACIÓ IA (NOU) ---
+  ai_system_role: "Act as a local Expert Meteorologist.",
+  ai_tone_instruction: "Use a friendly and knowledgeable tone, like an experienced local weather forecaster who knows the area well.",
+  ai_task_instruction: "Analyze this data and generate a useful and short summary. DO NOT explain the numbers (they are visible in the chart), INTERPRET THEM. Highlight dangerous phenomena if any. Be honest about uncertainty.",
+
+  // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
+  
+  weekdays: {
+    long: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  },
+
+  visibility: "Visibility",
+  visibilityDesc: "Clear visible distance",
+  pressureSea: "Pressure (Sea)",
+  pressureSurface: "Pressure (Surface)",
+  
+  airQuality: {
+    co: "Carbon Monoxide (CO)",
+    no2: "Nitrogen Dioxide (NO₂)",
+    o3: "Ozone (O₃)",
+    so2: "Sulfur Dioxide (SO₂)",
+    pm2_5: "Fine Particles (PM2.5)",
+    pm10: "Particles (PM10)",
+    us_aqi: "US AQI Index",
+    eu_aqi: "EU AQI Index"
+  },
+
+  radar: {
+    play: "Play",
+    pause: "Pause",
+    now: "NOW",
+    past: "Past",
+    future: "Future (+2h)",
+    speed: "Animation speed",
+    opacity: "Layer opacity",
+    color: "Color scheme",
+    satellite: "Satellite (Infra)",
+    precip: "Precipitation"
+  },
+
+  arome_details: {
+    title: "High Resolution Mode",
+    resolution: "Spatial resolution: 1.3km (HD)",
+    update: "Last model update:",
+    source: "Source: Météo-France (AROME)",
+    zoom_hint: "Zoom in for max local detail",
+    legend: "Precipitation intensity (mm/h)"
+  },
+  
+  units: {
+    km: "km",
+    hPa: "hPa",
+    mm: "mm",
+    kmh: "km/h"
+  }
 };

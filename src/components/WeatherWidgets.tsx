@@ -321,7 +321,10 @@ export const PollenWidget = ({ data, lang }: WidgetProps) => {
 
             <div className="flex-1 flex flex-col justify-center">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.airQuality || "QUALITAT AIRE"}</span>
+                    {/* --- CORRECCIÓ AQUÍ: t.aqi en lloc de t.airQuality --- */}
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                        {t.aqi || "QUALITAT AIRE"}
+                    </span>
                     <span className={`text-xs font-mono font-bold ${colorClass} tabular-nums`}>AQI {aqi}</span>
                 </div>
                 

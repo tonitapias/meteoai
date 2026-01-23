@@ -283,5 +283,62 @@ export const es = {
   radarData: "Datos: RainViewer",
   radarFail: "Si falla, pulsa \"Abrir fuera\" ↗",
   favAdded: "Añadido a favoritos",
-  favRemoved: "Eliminado de favoritos"
+  favRemoved: "Eliminado de favoritos",
+
+  // --- CONFIGURACIÓ IA (NOU) ---
+  ai_system_role: "Actúa como un Meteorólogo Experto local.",
+  ai_tone_instruction: "Usa un tono cercano y profesional, como un hombre del tiempo local experimentado que conoce bien la zona.",
+  ai_task_instruction: "Analiza estos datos y genera un resumen útil y breve. NO expliques los números (ya se ven en el gráfico), INTERPRÉTALOS. Destaca fenómenos peligrosos si los hay. Sé honesto con la incertidumbre.",
+
+  // --- NUEVAS CLAVES: WIDGETS, RADAR Y 7 DÍAS ---
+  
+  weekdays: {
+    long: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
+    short: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+  },
+
+  visibility: "Visibilidad",
+  visibilityDesc: "Distancia clara visible",
+  pressureSea: "Presión (Mar)",
+  pressureSurface: "Presión (Suelo)",
+  
+  airQuality: {
+    co: "Monóxido de Carbono (CO)",
+    no2: "Dióxido de Nitrógeno (NO₂)",
+    o3: "Ozono (O₃)",
+    so2: "Dióxido de Azufre (SO₂)",
+    pm2_5: "Partículas Finas (PM2.5)",
+    pm10: "Partículas (PM10)",
+    us_aqi: "Índice calidad EEUU",
+    eu_aqi: "Índice calidad UE"
+  },
+
+  radar: {
+    play: "Reproducir",
+    pause: "Pausa",
+    now: "AHORA",
+    past: "Pasado",
+    future: "Futuro (+2h)",
+    speed: "Velocidad animación",
+    opacity: "Opacidad capa",
+    color: "Esquema de colores",
+    satellite: "Satélite (Infra)",
+    precip: "Precipitación"
+  },
+
+  arome_details: {
+    title: "Modo Alta Resolución",
+    resolution: "Resolución espacial: 1.3km (HD)",
+    update: "Última actualización modelo:",
+    source: "Fuente: Météo-France (AROME)",
+    zoom_hint: "Haz zoom para ver detalle local máximo",
+    legend: "Intensidad de precipitación (mm/h)"
+  },
+  
+  units: {
+    km: "km",
+    hPa: "hPa",
+    mm: "mm",
+    kmh: "km/h"
+  }
 };

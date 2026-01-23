@@ -283,5 +283,62 @@ export const fr = {
   radarData: "Données: RainViewer",
   radarFail: "Si ça échoue, appuyez sur \"Ouvrir\" ↗",
   favAdded: "Ajouté aux favoris",
-  favRemoved: "Supprimé des favoris"
+  favRemoved: "Supprimé des favoris",
+
+  // --- CONFIGURACIÓ IA (NOU) ---
+  ai_system_role: "Agissez comme un expert météorologue local.",
+  ai_tone_instruction: "Utilisez un ton amical et expert, comme un présentateur météo local expérimenté qui connaît bien la région.",
+  ai_task_instruction: "Analysez ces données et générez un résumé utile et court. N'expliquez PAS les chiffres (ils sont visibles sur le graphique), INTERPRÉTEZ-LES. Mettez en évidence les phénomènes dangereux le cas échéant. Soyez honnête quant à l'incertitude.",
+
+  // --- NOUVELLES CLÉS : WIDGETS, RADAR ET 7 JOURS ---
+  
+  weekdays: {
+    long: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
+    short: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
+  },
+
+  visibility: "Visibilité",
+  visibilityDesc: "Distance visible claire",
+  pressureSea: "Pression (Mer)",
+  pressureSurface: "Pression (Sol)",
+  
+  airQuality: {
+    co: "Monoxyde de Carbone (CO)",
+    no2: "Dioxyde d'Azote (NO₂)",
+    o3: "Ozone (O₃)",
+    so2: "Dioxyde de Soufre (SO₂)",
+    pm2_5: "Particules Fines (PM2.5)",
+    pm10: "Particules (PM10)",
+    us_aqi: "Indice qualité US",
+    eu_aqi: "Indice qualité UE"
+  },
+
+  radar: {
+    play: "Lecture",
+    pause: "Pause",
+    now: "MAINTENANT",
+    past: "Passé",
+    future: "Futur (+2h)",
+    speed: "Vitesse d'animation",
+    opacity: "Opacité du calque",
+    color: "Schéma de couleurs",
+    satellite: "Satellite (Infra)",
+    precip: "Précipitations"
+  },
+
+  arome_details: {
+    title: "Mode Haute Résolution",
+    resolution: "Résolution spatiale : 1.3km (HD)",
+    update: "Dernière mise à jour modèle :",
+    source: "Source : Météo-France (AROME)",
+    zoom_hint: "Zoomez pour voir le détail local max",
+    legend: "Intensité des précipitations (mm/h)"
+  },
+  
+  units: {
+    km: "km",
+    hPa: "hPa",
+    mm: "mm",
+    kmh: "km/h"
+  }
 };

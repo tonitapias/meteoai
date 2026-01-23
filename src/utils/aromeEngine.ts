@@ -20,6 +20,15 @@ const cleanKeys = (obj: Record<string, unknown> | undefined): Record<string, unk
     return clean;
 };
 
+// --- NOVA FUNCIÓ DE SEGURETAT ---
+// Normalitza qualsevol format de data a un Timestamp numèric (ms)
+// Això ens protegeix si l'API canvia formats com "2023-10-10T12:00" vs "2023-10-10T12:00Z"
+const normalizeTime = (t: unknown): number => {
+    if (!t) return 0;
+    const date = new Date(String(t));
+    return isNaN(date.getTime()) ? 0 : date.getTime();
+};
+
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null): ExtendedWeatherData => {
     if (!baseData) return baseData;
     
@@ -88,7 +97,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         }
     }
 
-    // 4. INJECCIÓ HOURLY (Dades horàries)
+    // 4. INJECCIÓ HOURLY (Dades horàries) - MODIFICADA PER SEGURETAT
     const HOURLY_FIELDS: (keyof StrictHourlyWeather)[] = [
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
         'precipitation', 'weather_code',
@@ -98,14 +107,22 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     ];
 
     if (source.hourly && target.hourly && target.hourly.time) {
-        // Mapeig de temps per sincronitzar els dos models
-        const globalTimeIndexMap = new Map<string, number>();
-        target.hourly.time.forEach((t, i) => globalTimeIndexMap.set(t, i));
+        // Canvi clau: Map de <number, number> en lloc de <string, number>
+        const globalTimeIndexMap = new Map<number, number>();
+        
+        // Normalitzem el temps del model base
+        target.hourly.time.forEach((t, i) => {
+            globalTimeIndexMap.set(normalizeTime(t), i);
+        });
 
         const sourceTimes = (source.hourly.time || highResData.hourly?.time || []) as string[];
 
         sourceTimes.forEach((timeValue, sourceIndex) => {
-            const globalIndex = globalTimeIndexMap.get(timeValue);
+            // Normalitzem el temps del model AROME abans de buscar
+            const timeKey = normalizeTime(timeValue);
+            
+            // Ara la comparació és matemàtica (infal·lible davant canvis de format text)
+            const globalIndex = globalTimeIndexMap.get(timeKey);
             
             // Si trobem coincidència horària, injectem les dades AROME
             if (globalIndex !== undefined) {

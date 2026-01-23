@@ -283,5 +283,65 @@ export const ca = {
   radarData: "Dades: RainViewer",
   radarFail: "Si falla, prem \"Obrir fora\" ↗",
   favAdded: "Afegit als favorits",
-  favRemoved: "Eliminat dels favorits"
+  favRemoved: "Eliminat dels favorits",
+  
+  // --- CONFIGURACIÓ IA (NOU) ---
+  ai_system_role: "Actua com un Meteoròleg Expert local.",
+  ai_tone_instruction: "Fes servir un to proper i meteopàtic, com un home del temps local experimentat que coneix bé la zona.",
+  ai_task_instruction: "Analitza aquestes dades i genera un resum útil i curt. NO expliquis els números (ja es veuen al gràfic), INTERPRETA'LS. Destaca fenòmens perillosos si n'hi ha. Sigues honest amb la incertesa.",
+
+  // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
+  weekdays: {
+    long: ["Diumenge", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte"],
+    short: ["Dg", "Dl", "Dt", "Dc", "Dj", "Dv", "Ds"]
+  },
+
+  // 2. GINYS EXTRA I CONTAMINANTS
+  visibility: "Visibilitat",
+  visibilityDesc: "Distància clara visible",
+  pressureSea: "Pressió (Mar)",
+  pressureSurface: "Pressió (Sòl)",
+  
+  airQuality: {
+    co: "Monòxid de Carboni (CO)",
+    no2: "Diòxid de Nitrogen (NO₂)",
+    o3: "Ozó (O₃)",
+    so2: "Diòxid de Sofre (SO₂)",
+    pm2_5: "Partícules Fines (PM2.5)",
+    pm10: "Partícules (PM10)",
+    us_aqi: "Índex qualitat EUA",
+    eu_aqi: "Índex qualitat EU"
+  },
+
+  // 3. RADAR (Controls RainViewer)
+  radar: {
+    play: "Reproduir",
+    pause: "Pausa",
+    now: "ARA",
+    past: "Passat",
+    future: "Futur (+2h)",
+    speed: "Velocitat animació",
+    opacity: "Opacitat capa",
+    color: "Esquema de colors",
+    satellite: "Satèl·lit (Infra)",
+    precip: "Precipitació"
+  },
+
+  // 4. DETALLS MODE AROME
+  arome_details: {
+    title: "Mode Alta Resolució",
+    resolution: "Resolució espacial: 1.3km (HD)",
+    update: "Darrera actualització model:",
+    source: "Font: Météo-France (AROME)",
+    zoom_hint: "Fes zoom per veure detall local màxim",
+    legend: "Intensitat de precipitació (mm/h)"
+  },
+  
+  // 5. ALTRES ETIQUETES
+  units: {
+    km: "km",
+    hPa: "hPa",
+    mm: "mm",
+    kmh: "km/h"
+  }
 };
