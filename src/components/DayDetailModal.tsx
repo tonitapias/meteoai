@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, ArrowDown, ArrowUp } from 'lucide-react';
 import { SmartForecastCharts } from './WeatherCharts'; 
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData } from '../utils/weatherLogic';
 // MODIFICAT: Importem la nova funció formatPrecipitation
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';

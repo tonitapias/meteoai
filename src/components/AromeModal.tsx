@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useArome } from '../hooks/useArome';
 import { X, Wind, Droplets, Snowflake } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 
 interface AromeModalProps {

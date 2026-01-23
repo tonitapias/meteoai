@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
 import { useMemo } from 'react';
 import { generateAIPrediction, calculateReliability, ExtendedWeatherData } from '../utils/weatherLogic';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { AirQualityData } from '../services/weatherApi';
 
 export function useAIAnalysis(

@@ -25,7 +25,7 @@ import { usePreferences } from './hooks/usePreferences';
 import { useWeather } from './hooks/useWeather';
 import { useWeatherAI } from './hooks/useWeatherAI'; 
 import { useWeatherCalculations } from './hooks/useWeatherCalculations';
-import { TRANSLATIONS } from './constants/translations';
+import { TRANSLATIONS } from './translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 import { useModalHistory } from './hooks/useModalHistory';
 

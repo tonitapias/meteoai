@@ -1,7 +1,7 @@
 // src/components/WelcomeScreen.tsx
 import React from 'react';
 import { MapPin, Globe, CloudSun, Command, Loader2, Sparkles, Cpu, Wifi, ShieldCheck } from 'lucide-react';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { TranslationMap } from '../utils/weatherLogic';
 
 interface WelcomeScreenProps {

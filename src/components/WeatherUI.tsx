@@ -1,6 +1,6 @@
 // src/components/WeatherUI.tsx
 import React, { useState, useEffect } from 'react';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 
 export const TypewriterText = ({ text, className }: { text: string; className?: string }) => {
   const [displayedText, setDisplayedText] = useState('');

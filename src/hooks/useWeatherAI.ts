@@ -7,7 +7,7 @@ import {
     AIPredictionResult 
 } from '../utils/weatherLogic';
 import { getGeminiAnalysis } from '../services/geminiService';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
 // Ampliem el tipus base per incloure el camp 'source' opcional que afegeix el hook

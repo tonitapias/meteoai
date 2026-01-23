@@ -1,8 +1,9 @@
+
 // src/context/PreferencesContext.tsx
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { LocationData } from '../services/weatherApi';
 import { WeatherUnit } from '../utils/formatters';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 
 // Definim la forma del nostre context
 export interface PreferencesContextType {

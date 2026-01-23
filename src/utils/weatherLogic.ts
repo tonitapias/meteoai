@@ -1,5 +1,5 @@
 // src/utils/weatherLogic.ts
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 // IMPORT CRÍTIC: Ara importem tot l'objecte de configuració
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { 

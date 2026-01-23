@@ -2,7 +2,7 @@
 import React from 'react';
 import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella, ShieldAlert } from 'lucide-react';
 import { TypewriterText } from './WeatherUI';
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 
 // --- INTERFACES ---
 

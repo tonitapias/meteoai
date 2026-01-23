@@ -1,7 +1,7 @@
 // src/components/RadarModal.tsx
 import React from 'react';
 import { X, Maximize2 } from 'lucide-react';
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 import RadarMap from './RadarMap';
 
 interface RadarModalProps {

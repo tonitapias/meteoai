@@ -1,5 +1,5 @@
 // src/services/geocodingService.ts
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 
 export interface GeocodeResult {
   city: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
 export interface LocationData {

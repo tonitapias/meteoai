@@ -1,5 +1,5 @@
 // src/utils/weatherInterpreter.ts
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { safeNum, calculateDewPoint } from './weatherMath';
 import { 

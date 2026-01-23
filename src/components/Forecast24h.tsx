@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../utils/weatherLogic';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 

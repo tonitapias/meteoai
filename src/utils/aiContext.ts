@@ -1,5 +1,5 @@
 // src/utils/aiContext.ts
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { 
     TranslationMap, 

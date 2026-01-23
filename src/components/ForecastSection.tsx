@@ -4,7 +4,7 @@ import { Calendar, TrendingUp, Umbrella, ArrowRight } from 'lucide-react';
 import { SmartForecastCharts } from './WeatherCharts';
 import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { StrictDailyWeather } from '../utils/weatherLogic';
 

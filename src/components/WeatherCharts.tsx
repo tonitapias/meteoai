@@ -1,7 +1,7 @@
 // src/components/WeatherCharts.tsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain, Umbrella, Droplets } from 'lucide-react';
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 
 // Tipus estricte per a punts de dades genèrics
 export interface ChartDataPoint {

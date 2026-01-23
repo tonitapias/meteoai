@@ -10,7 +10,7 @@ import {
 import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
 import { reverseGeocode } from '../services/geocodingService';
 import { WeatherUnit } from '../utils/formatters';
-import { Language, TRANSLATIONS } from '../constants/translations';
+import { Language, TRANSLATIONS } from '../translations';
 
 type AQIData = Record<string, unknown>;
 

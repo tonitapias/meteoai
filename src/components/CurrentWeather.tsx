@@ -4,7 +4,7 @@ import { Star, Map, Zap, Wind, Droplets, Navigation, ArrowUp, ArrowDown, Activit
 import { getWeatherIcon } from './WeatherIcons';
 import { getWeatherLabel, ExtendedWeatherData } from '../utils/weatherLogic';
 import { formatTemp, WeatherUnit } from '../utils/formatters';
-import { Language } from '../constants/translations';
+import { Language } from '../translations';
 import { AirQualityData } from '../services/weatherApi';
 
 interface CurrentWeatherProps {

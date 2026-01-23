@@ -1,5 +1,5 @@
 // src/services/textGenerator.ts
-import { TRANSLATIONS, Language } from '../constants/translations';
+import { TRANSLATIONS, Language } from '../translations';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { safeNum } from '../utils/weatherMath';
 import { 
