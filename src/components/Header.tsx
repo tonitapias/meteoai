@@ -122,7 +122,7 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
   };
 
   return (
-    <header className="w-full flex flex-col md:flex-row items-center justify-between gap-4 z-50 relative">
+    <header className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 z-50 relative">
       <div className="hidden md:flex items-center gap-2 opacity-50 select-none w-[140px]">
           <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
           <span className="text-xs font-black tracking-[0.3em] text-slate-500">METEO.AI</span>
