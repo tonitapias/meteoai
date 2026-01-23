@@ -1,6 +1,6 @@
 // src/components/RadarMap.tsx
 import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, ZoomControl, LayersControl } from 'react-leaflet'; // Afegit LayersControl
 import 'leaflet/dist/leaflet.css';
 import { Play, Pause, Loader2 } from 'lucide-react';
 import L from 'leaflet';
@@ -10,8 +10,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Fix icones (Tipat segur)
-// El cast a 'unknown' intermedi és necessari per accedir a propietats privades de Leaflet sense usar 'any'
+// Fix icones
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -111,22 +110,44 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         zoomControl={false}
       >
         <ChangeView center={[lat, lon]} />
-        <ZoomControl position="topright" />
+        {/* Desactivem el control de zoom per defecte si volem més netedat, o el movem */}
+        <ZoomControl position="topleft" />
 
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
+        {/* NOU: CONTROL DE CAPES */}
+        <LayersControl position="topright">
+            
+            {/* OPCIÓ 1: MODE FOSC (Per defecte) */}
+            <LayersControl.BaseLayer checked name="Mapa Fosc">
+                <TileLayer
+                    attribution='&copy; CARTO'
+                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                />
+            </LayersControl.BaseLayer>
 
-        {currentFrame && (
-          <TileLayer
-            key={currentFrame.time} 
-            url={`https://tilecache.rainviewer.com/v2/radar/${currentFrame.time}/256/{z}/{x}/{y}/2/1_1.png`}
-            opacity={0.8}
-            zIndex={100}
-          />
-        )}
-        
+            {/* OPCIÓ 2: MODE SATÈL·LIT */}
+            <LayersControl.BaseLayer name="Satèl·lit (Real)">
+                <TileLayer
+                    attribution='&copy; Esri'
+                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                />
+            </LayersControl.BaseLayer>
+
+            {/* CAPA DE PLUJA (ANIMADA) */}
+            {/* L'emboliquem en un Overlay perquè sigui opcional, però marcat per defecte */}
+            <LayersControl.Overlay checked name="Radar de Pluja">
+                {currentFrame && (
+                  <TileLayer
+                    key={currentFrame.time} 
+                    url={`https://tilecache.rainviewer.com/v2/radar/${currentFrame.time}/256/{z}/{x}/{y}/2/1_1.png`}
+                    opacity={0.8}
+                    zIndex={100}
+                  />
+                )}
+            </LayersControl.Overlay>
+            
+        </LayersControl>
+
+        {/* Marcador de posició */}
         <div className="leaflet-marker-pane">
             <div 
                 style={{ 
@@ -144,6 +165,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         </div>
       </MapContainer>
 
+      {/* CONTROLS DEL REPRODUCTOR (Es mantenen igual) */}
       <div className="absolute bottom-6 left-6 right-6 z-[1000] bg-slate-900/90 backdrop-blur-md p-4 rounded-xl border border-white/10 flex items-center gap-4 shadow-xl">
         <button 
             onClick={() => setIsPlaying(!isPlaying)}

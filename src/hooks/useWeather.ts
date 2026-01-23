@@ -1,5 +1,6 @@
 // src/hooks/useWeather.ts
 import { useState, useCallback, useRef } from 'react';
+import * as Sentry from "@sentry/react"; 
 import { 
     normalizeModelData, 
     isAromeSupported, 
@@ -9,12 +10,10 @@ import {
 import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
 import { reverseGeocode } from '../services/geocodingService';
 import { WeatherUnit } from '../utils/formatters';
-import { Language, TRANSLATIONS } from '../constants/translations'; // IMPORTAT TRANSLATIONS
+import { Language, TRANSLATIONS } from '../constants/translations';
 
-// Definim un tipus genèric per a les dades de qualitat de l'aire
 type AQIData = Record<string, unknown>;
 
-// Interfície actualitzada amb timestamp per controlar la caducitat
 interface CacheEntry {
     weather: ExtendedWeatherData;
     aqi: AQIData | null;
@@ -22,7 +21,7 @@ interface CacheEntry {
 }
 
 const weatherCache = new Map<string, CacheEntry>();
-const CACHE_TTL = 15 * 60 * 1000; // 15 minuts de vida útil
+const CACHE_TTL = 15 * 60 * 1000; 
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
@@ -31,7 +30,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
-  // ACCÉS A LES TRADUCCIONS DEL HOOK
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
@@ -40,7 +38,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const now = Date.now();
     const cacheKey = `${lat.toFixed(3)}-${lon.toFixed(3)}-${unit}`;
 
-    // 1. ANTI-REBOTS (Protecció immediata)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -48,7 +45,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
         return true; 
     }
 
-    // 2. CACHÉ AMB TTL (Si les dades són recents (<15 min), les usem)
     const cached = weatherCache.get(cacheKey);
     if (cached && (now - cached.timestamp) < CACHE_TTL) {
         setWeatherData(cached.weather);
@@ -62,33 +58,29 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 3. PETICIONS EN PARAL·LEL
       const weatherPromise = getWeatherData(lat, lon, unit);
       const aqiPromise = getAirQualityData(lat, lon);
       
-      // Deleguem la lògica al nou servei segur
       const namePromise = (locationName === "La Meva Ubicació") 
         ? reverseGeocode(lat, lon, lang)
         : Promise.resolve({ city: locationName || "Ubicació actual", country: country || "Local" });
 
-      // Esperem totes les promeses
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const [data, geoData, airData] = await Promise.all([weatherPromise, namePromise, aqiPromise]) as [any, any, AQIData];
 
-      // 4. PROCESSAMENT DE DADES
       let processedData = normalizeModelData(data);
       
-      // 5. INJECCIÓ AROME (Es manté intacta)
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
              processedData = injectHighResModels(processedData, aromeRaw);
           } catch { 
               console.warn("Arome no disponible"); 
+              // Opcional: Podries voler loguejar errors d'Arome com a 'warning' a Sentry, 
+              // però de moment ho deixem en consola per no gastar quota.
           }
       }
 
-      // Actualitzem la ubicació amb les dades normalitzades
       processedData.location = { 
           ...processedData.location, 
           name: geoData.city,
@@ -97,7 +89,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           longitude: lon 
       };
 
-      // 6. GUARDEM A LA CACHÉ AMB TIMESTAMP
       const entry: CacheEntry = { 
           weather: processedData, 
           aqi: airData, 
@@ -113,16 +104,22 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("❌ Error en fetchWeather:", errorMessage);
-      setError(t.fetchError); // MODIFICAT: Ús de traducció
+
+      Sentry.captureException(err, { 
+          tags: { service: 'WeatherAPI' },
+          extra: { lat, lon, unit }
+      });
+
+      setError(t.fetchError);
       return false;
     } finally {
       setLoading(false);
     }
-  }, [unit, lang, t]); // Afegit 't' a dependències per si de cas, tot i que ve de 'lang'
+  }, [unit, lang, t]); 
 
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setNotification({ type: 'error', msg: t.geoNotSupported }); // MODIFICAT: Ús de traducció
+      setNotification({ type: 'error', msg: t.geoNotSupported });
       return;
     }
     
@@ -138,13 +135,15 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       async (pos) => {
         const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
         if (success) {
-          setNotification({ type: 'success', msg: t.notifLocationSuccess }); // MODIFICAT: Consistència
+          setNotification({ type: 'success', msg: t.notifLocationSuccess });
           setTimeout(() => setNotification(null), 3000);
         }
       },
       (err) => {
         console.warn("Error GPS:", err.message);
-        setNotification({ type: 'error', msg: t.notifLocationError }); // MODIFICAT: Consistència
+        Sentry.captureException(err, { tags: { service: 'Geolocation' } });
+        
+        setNotification({ type: 'error', msg: t.notifLocationError });
         setLoading(false);
       },
       geoOptions
