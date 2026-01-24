@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-// AFEGIT: Importem les icones necessàries pel nou Footer
-import { Globe, Cpu, Wifi, ShieldCheck } from 'lucide-react';
 
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
+// IMPORT CRÍTIC: Connectem el Footer real
+import Footer from './components/Footer';
 
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
@@ -28,56 +28,6 @@ import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 import { useModalHistory } from './hooks/useModalHistory';
-
-// --- NOU FOOTER PROFESSIONAL INTEGRAT ---
-const Footer = ({ mode = 'dashboard' }: { mode?: 'welcome' | 'dashboard' }) => {
-  const year = new Date().getFullYear();
-  const isWelcome = mode === 'welcome';
-
-  return (
-    <footer className={`
-        w-full flex flex-col md:flex-row items-center justify-between gap-4 py-6 px-6 z-30 
-        text-[10px] font-mono uppercase tracking-widest mt-auto
-        ${isWelcome ? 'text-slate-500 bg-transparent' : 'text-slate-500 border-t border-white/5 bg-[#0B0C15]/40 backdrop-blur-md'}
-    `}>
-        {/* ESQUERRA: ESTAT DEL SISTEMA */}
-        <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="text-emerald-500/80 font-bold">SYSTEM ONLINE</span>
-            </div>
-            {!isWelcome && (
-                <div className="hidden md:flex items-center gap-2 text-indigo-500/60">
-                    <Cpu className="w-3 h-3" />
-                    <span>CORE: V.3.1.2</span>
-                </div>
-            )}
-        </div>
-
-        {/* CENTRE: FONTS DE DADES */}
-        <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 text-center">
-            <div className="flex items-center gap-2 hover:text-indigo-400 transition-colors cursor-help" title="Weather Data Provider">
-                <Globe className="w-3 h-3" />
-                <span>DATA: OPEN-METEO</span>
-            </div>
-            <div className="hidden md:block w-px h-3 bg-white/10"></div>
-            <div className="flex items-center gap-2 hover:text-emerald-400 transition-colors cursor-help" title="High Resolution Model">
-                <ShieldCheck className="w-3 h-3" />
-                <span>MODEL: AROME HD</span>
-            </div>
-        </div>
-
-        {/* DRETA: BRANDING METEOTONIAI */}
-        <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-            <span>© {year} METEOTONI AI</span>
-            <Wifi className="w-3 h-3 text-blue-500" />
-        </div>
-    </footer>
-  );
-};
 
 export default function MeteoIA() {
   const [now, setNow] = useState<Date>(new Date());
@@ -136,8 +86,8 @@ export default function MeteoIA() {
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} loading={loading} />
             </div>
             
-            {/* Si el WelcomeScreen ja té footer intern, pots treure aquesta línia, o deixar-la per reforçar */}
-            {/* <Footer mode="welcome" /> */}
+            {/* Si vols activar el footer a la benvinguda, ara pots fer-ho així: */}
+            {/* <Footer simple transparent className="mt-auto" /> */}
          </div>
       </div>
     );
@@ -232,8 +182,9 @@ export default function MeteoIA() {
             )}
         </div>
 
-        {/* NOU FOOTER PROFESSIONAL A LA PRINCIPAL */}
-        <Footer mode="dashboard" />
+        {/* NOU FOOTER PROFESSIONAL UNIFICAT */}
+        {/* Utilitzem className mt-auto per assegurar que quedi al fons si hi ha poc contingut */}
+        <Footer className="mt-auto" />
 
         <Suspense fallback={null}>
             {selectedDayIndex !== null && weatherData && (

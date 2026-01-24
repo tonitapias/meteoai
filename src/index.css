@@ -14,11 +14,10 @@
     /* MILLORA: Blur més intens (2xl) per difuminar detalls del fons que distreguin */
     @apply relative overflow-hidden rounded-[2rem] backdrop-blur-2xl transition-all duration-500;
     
-    /* MILLORA CRÍTICA DE CONTRAST: 
-       Utilitzem una base fosca (rgba 2,6,23) en lloc de blanca.
-       Això actua com un filtre polaritzat: en fons foscos és invisible,
-       però en fons clars (cel blau) enfosqueix l'àrea per fer llegible el text blanc. */
-    background: linear-gradient(to bottom, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.15) 100%);
+    /* MILLORA CRÍTICA DE CONTRAST (Pas 2): 
+       Augmentem la base de 0.3 a 0.5 per garantir que el text blanc es llegeixi bé 
+       fins i tot sobre fons clars o en exteriors. */
+    background: linear-gradient(to bottom, rgba(2, 6, 23, 0.5) 0%, rgba(2, 6, 23, 0.3) 100%);
     
     /* Vora més nítida per separar visualment la targeta del cel */
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -28,8 +27,8 @@
   }
 
   .bento-card:hover {
-    /* En hover, enfosquim una mica més per focalitzar l'atenció */
-    @apply border-white/25 bg-slate-950/40 shadow-2xl scale-[1.002];
+    /* En hover, enfosquim una mica més (Passem de /40 a /60) */
+    @apply border-white/25 bg-slate-950/60 shadow-2xl scale-[1.002];
   }
 
   /* --- TYPOGRAPHY --- */

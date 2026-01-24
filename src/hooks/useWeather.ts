@@ -1,5 +1,5 @@
 // src/hooks/useWeather.ts
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import * as Sentry from "@sentry/react"; 
 import { 
     normalizeModelData, 
@@ -11,16 +11,15 @@ import { getWeatherData, getAirQualityData, getAromeData } from '../services/wea
 import { reverseGeocode } from '../services/geocodingService';
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
+import { cacheService } from '../services/cacheService'; 
 
 type AQIData = Record<string, unknown>;
 
-interface CacheEntry {
+interface WeatherCachePacket {
     weather: ExtendedWeatherData;
     aqi: AQIData | null;
-    timestamp: number;
 }
 
-const weatherCache = new Map<string, CacheEntry>();
 const CACHE_TTL = 15 * 60 * 1000; 
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
@@ -34,22 +33,19 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
+  useEffect(() => {
+      cacheService.clean().catch(console.error);
+  }, []);
+
   const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName?: string, country?: string) => {
     const now = Date.now();
-    const cacheKey = `${lat.toFixed(3)}-${lon.toFixed(3)}-${unit}`;
+    const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
+        lastFetchRef.current.unit === unit &&
         (now - lastFetchRef.current.time) < 3000) {
-        return true; 
-    }
-
-    const cached = weatherCache.get(cacheKey);
-    if (cached && (now - cached.timestamp) < CACHE_TTL) {
-        setWeatherData(cached.weather);
-        setAqiData(cached.aqi);
-        setLoading(false);
         return true; 
     }
 
@@ -58,6 +54,19 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
+      // Intentar recuperar de Cache
+      const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
+      
+      if (cachedPacket) {
+          // eslint-disable-next-line no-console
+          console.log("⚡ Recuperat de Cache (Offline Ready):", cacheKey);
+          setWeatherData(cachedPacket.weather);
+          setAqiData(cachedPacket.aqi);
+          setLoading(false);
+          return true;
+      }
+
+      // Fetch Xarxa
       const weatherPromise = getWeatherData(lat, lon, unit);
       const aqiPromise = getAirQualityData(lat, lon);
       
@@ -70,14 +79,18 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       let processedData = normalizeModelData(data);
       
+      // Lògica AROME amb Observabilitat (Sentry)
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
              processedData = injectHighResModels(processedData, aromeRaw);
-          } catch { 
-              console.warn("Arome no disponible"); 
-              // Opcional: Podries voler loguejar errors d'Arome com a 'warning' a Sentry, 
-              // però de moment ho deixem en consola per no gastar quota.
+          } catch (aromeErr) { 
+              // Capturem com a warning, no com a error fatal, perquè l'app segueix funcionant amb ECMWF
+              console.warn("Arome no disponible (Degradació elegant):", aromeErr); 
+              Sentry.captureException(aromeErr, { 
+                  tags: { service: 'AromeModel', type: 'SilentFail' },
+                  level: 'warning' 
+              });
           }
       }
 
@@ -89,12 +102,12 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           longitude: lon 
       };
 
-      const entry: CacheEntry = { 
-          weather: processedData, 
-          aqi: airData, 
-          timestamp: now 
+      // Guardar a Cache
+      const packet: WeatherCachePacket = {
+          weather: processedData,
+          aqi: airData
       };
-      weatherCache.set(cacheKey, entry);
+      await cacheService.set(cacheKey, packet);
       
       setAqiData(airData);
       setWeatherData(processedData);
@@ -125,11 +138,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     
     setLoading(true);
     
-    const geoOptions = {
-      enableHighAccuracy: false, 
-      timeout: 8000,             
-      maximumAge: 0 
-    };
+    const geoOptions = { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 };
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -142,7 +151,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       (err) => {
         console.warn("Error GPS:", err.message);
         Sentry.captureException(err, { tags: { service: 'Geolocation' } });
-        
         setNotification({ type: 'error', msg: t.notifLocationError });
         setLoading(false);
       },

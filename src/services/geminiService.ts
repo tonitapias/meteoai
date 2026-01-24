@@ -1,13 +1,14 @@
 // src/services/geminiService.ts
 import { prepareContextForAI, ExtendedWeatherData } from '../utils/weatherLogic'; 
 import * as Sentry from "@sentry/react";
-import { get, set } from 'idb-keyval';
 import { TRANSLATIONS } from '../translations'; 
+import { cacheService } from './cacheService'; // USAR SERVEI CENTRALITZAT
 
 // --- CONFIGURACIÓ ---
 const PROXY_URL = "https://meteoai-proxy.tonitapias.workers.dev"; 
 
-const CACHE_TTL = 60 * 60 * 1000; 
+// 1 hora de cache per a la IA (més llarg que el temps normal)
+const AI_CACHE_TTL = 60 * 60 * 1000; 
 
 const LANG_MAP: Record<string, string> = {
     'ca': 'Catalan',
@@ -21,11 +22,6 @@ const LANG_MAP: Record<string, string> = {
 interface AICacheData {
     text: string;
     tips: string[];
-}
-
-interface CacheEntry {
-    data: AICacheData;
-    timestamp: number;
 }
 
 // Tipus auxiliar per coordenades
@@ -49,38 +45,39 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
         if (!context) return null;
 
-        // 3. Generació de Clau Única
+        // 3. Generació de Clau Única (Utilitzant el generador centralitzat)
         const safeData = weatherData as unknown as LocatableData;
         const lat = safeData.latitude ?? safeData.location?.latitude ?? 0;
         const lon = safeData.longitude ?? safeData.location?.longitude ?? 0;
         
-        const cacheKey = `gemini_${lat.toFixed(3)}_${lon.toFixed(3)}_${context.location.elevation}_${language}`;
+        // Utilitzem l'elevació i l'idioma com a part de la clau
+        const timestampKey = context.location.elevation.toString(); 
+        const cacheKey = cacheService.generateAiKey(timestampKey, lat, lon, language);
         
-        // 4. Verificació de Caché (Asíncrona amb IndexedDB)
+        // 4. Verificació de Caché (Centralitzada)
         try {
-            const cached = await get<CacheEntry>(cacheKey);
-            
-            if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-                return cached.data;
+            const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
+            if (cachedData) {
+                return cachedData;
             }
         } catch (dbError) {
-            console.warn("⚠️ Error llegint IndexedDB:", dbError);
-            Sentry.captureException(dbError, { tags: { service: 'IndexedDB' } });
+            console.warn("⚠️ Error llegint Cache IA:", dbError);
         }
 
         // 5. Construcció del Prompt (DINÀMIC I SEGUR)
-        // Recuperem les traduccions o fem fallback a 'ca'
-        const t = TRANSLATIONS[language as keyof typeof TRANSLATIONS] || TRANSLATIONS['ca'];
+        // Recuperem traduccions amb fallback segur a anglès (evita hardcoding català)
+        const t = TRANSLATIONS[language as keyof typeof TRANSLATIONS];
+        const fallbackT = TRANSLATIONS['en'] || TRANSLATIONS['ca']; // Fallback d'emergència
         
-        // Valors per defecte "hardcoded" per seguretat (circuit breaker)
+        // Helper per obtenir string segur
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const role = (t as any).ai_system_role || "Actua com un Meteoròleg Expert.";
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tone = (t as any).ai_tone_instruction || "Fes servir un to professional però proper.";
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const task = (t as any).ai_task_instruction || "Analitza les dades i fes un resum breu.";
+        const getStr = (key: string, defaultText: string) => (t as any)?.[key] || (fallbackT as any)?.[key] || defaultText;
 
-        const targetLanguage = LANG_MAP[language] || 'Catalan';
+        const role = getStr('ai_system_role', "Act as an Expert Meteorologist.");
+        const tone = getStr('ai_tone_instruction', "Use a professional but approachable tone.");
+        const task = getStr('ai_task_instruction', "Analyze the data and provide a short summary.");
+
+        const targetLanguage = LANG_MAP[language] || 'English';
 
         const prompt = `
           ACT COM: ${role}
@@ -120,10 +117,9 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         
         const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
 
-        // 8. Guardar a IndexedDB (Asíncron)
+        // 8. Guardar a Cache Centralitzat
         if (parsed.text && Array.isArray(parsed.tips)) {
-            const entry: CacheEntry = { data: parsed, timestamp: Date.now() };
-            set(cacheKey, entry).catch(err => console.warn("Error guardant a DB", err));
+            await cacheService.set(cacheKey, parsed);
             return parsed;
         }
 

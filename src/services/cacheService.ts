@@ -87,8 +87,9 @@ export const cacheService = {
   },
 
   // Generadors de claus
-  generateWeatherKey: (lat: number, lon: number): string => 
-    `${WEATHER_PREFIX}${lat.toFixed(2)}_${lon.toFixed(2)}`,
+  // MODIFICAT: Ara inclou la unitat (C/F) per evitar conflictes
+  generateWeatherKey: (lat: number, lon: number, unit: string): string => 
+    `${WEATHER_PREFIX}${lat.toFixed(3)}_${lon.toFixed(3)}_${unit}`,
     
   generateAiKey: (ts: string | number, lat: number, lon: number, lang: string): string => 
     `${AI_PREFIX}${ts}_${lat}_${lon}_${lang}`
