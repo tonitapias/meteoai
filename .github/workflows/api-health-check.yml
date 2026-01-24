@@ -1,0 +1,35 @@
+name: 🏥 API Health Check
+
+on:
+  # Opció 1: Programació automàtica (Cron Job)
+  schedule:
+    # S'executa cada dia a les 07:00 AM UTC (aprox 8:00/9:00 hora local)
+    - cron: '0 7 * * *'
+  
+  # Opció 2: Permet executar-ho manualment des de la web de GitHub (botó "Run workflow")
+  workflow_dispatch:
+
+jobs:
+  check-open-meteo:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarregar el teu codi al servidor de GitHub
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Instal·lar Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Instal·lar dependències (Vitest, etc.)
+      - name: Install Dependencies
+        run: npm ci
+
+      # 4. EXECUTAR EL TEST DE CONTRACTE
+      # Si aquest pas falla, GitHub marcarà el workflow com a "Failed" i t'enviarà un correu.
+      - name: Run API Contract Test
+        run: npx vitest run src/test/api-contract.test.ts
