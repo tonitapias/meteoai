@@ -39,6 +39,7 @@ describe('Open-Meteo API Contract Check', () => {
     expect(Array.isArray(data.daily.temperature_2m_max)).toBe(true);
 
     // Opcional: Imprimir èxit
+    // eslint-disable-next-line no-console
     console.log("✅ Contract Test passat: L'estructura d'Open-Meteo és correcta.");
   }, 10000); // Timeout de 10s
 });
