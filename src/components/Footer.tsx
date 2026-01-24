@@ -1,6 +1,7 @@
 // src/components/Footer.tsx
 import React from 'react';
-import { Globe, Cpu, Wifi, ShieldCheck } from 'lucide-react';
+// CORRECCIÓ: Eliminada 'Wifi' de la importació
+import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
 
 interface FooterProps {
   simple?: boolean;
@@ -11,15 +12,11 @@ interface FooterProps {
 export default function Footer({ simple = false, transparent = false, className = "" }: FooterProps) {
   const year = new Date().getFullYear();
 
-  // --- FUNCIÓ OCULTA PER NETEJAR CACHE ---
+  // --- FUNCIÓ OCULTA PER NETEJAR CACHE (Health Check Manual) ---
   const handleSystemReset = () => {
-    // eslint-disable-next-line no-console
-    console.log("Intent de reset..."); 
-    
-    if (window.confirm("🛠️ DEBUG: Vols reiniciar la memòria cau de la IA i recarregar?")) {
+    // Confirmació de seguretat per evitar resets accidentals
+    if (window.confirm("⚠️ DIAGNÒSTIC: Vols reiniciar la memòria cau i recarregar l'aplicació?")) {
         try {
-            // eslint-disable-next-line no-console
-            console.log("Esborrant cache...");
             localStorage.removeItem('meteoai_gemini_cache');
             window.location.reload();
         } catch (e) {
@@ -36,27 +33,29 @@ export default function Footer({ simple = false, transparent = false, className 
         ${className}
     `}>
         
-        {/* ESQUERRA: ESTAT DEL SISTEMA (AMB RESET ACTIVAT) */}
+        {/* ESQUERRA: ESTAT DEL SISTEMA */}
         <div className="flex items-center gap-4 md:gap-6">
+            {/* Indicador d'Estat (Botó discret de Reset) */}
             <button 
                 type="button"
                 onClick={handleSystemReset}
-                className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-2 py-1 rounded transition-colors bg-transparent border-none outline-none focus:ring-1 focus:ring-emerald-500/50"
-                title="Fes clic per reiniciar la IA (Debug)"
+                className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-2 py-1 rounded transition-colors bg-transparent border-none outline-none focus:ring-1 focus:ring-emerald-500/50 group"
+                title="Sistema Operatiu - Clic per Diagnòstic"
+                aria-label="Estat del sistema, clic per reiniciar"
             >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 duration-1000"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span className="text-emerald-500/80 font-bold hover:text-emerald-400 transition-colors">
+                <span className="text-emerald-500/80 font-bold group-hover:text-emerald-400 transition-colors">
                     SYSTEM ONLINE
                 </span>
             </button>
 
             {!simple && (
-                <div className="hidden md:flex items-center gap-2 text-indigo-500/60">
-                    <Cpu className="w-3 h-3" />
-                    <span>CORE: V.3.1.2</span>
+                <div className="hidden lg:flex items-center gap-2 text-indigo-500/40" title="Connexió segura xifrada">
+                    <Lock className="w-3 h-3" />
+                    <span>SECURE PROXY</span>
                 </div>
             )}
         </div>
@@ -65,19 +64,27 @@ export default function Footer({ simple = false, transparent = false, className 
         <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
             <div className="flex items-center gap-2 group cursor-help transition-colors hover:text-indigo-300" title="Dades: Open-Meteo API">
                 <Globe className="w-3 h-3" />
-                <span>DATA: OPEN-METEO API</span>
+                <span>DATA: OPEN-METEO</span>
             </div>
             {!simple && <span className="hidden md:inline text-white/10">|</span>}
             <div className="flex items-center gap-2 group cursor-help transition-colors hover:text-emerald-300" title="Model: AROME HD">
                 <ShieldCheck className="w-3 h-3" />
-                <span>MODEL: AROME HD (MÉTÉO-FRANCE)</span>
+                <span>MODEL: AROME HD</span>
             </div>
         </div>
 
-        {/* DRETA: BRANDING */}
+        {/* DRETA: BRANDING & VERSION */}
         <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
             <span>© {year} METEOTONI AI</span>
-            <Wifi className="w-3 h-3 text-blue-500" />
+            {!simple && (
+                <>
+                    <span className="text-white/10">|</span>
+                    <div className="flex items-center gap-1.5" title="Versió Core">
+                        <Cpu className="w-3 h-3 text-slate-600" />
+                        <span>v3.2</span>
+                    </div>
+                </>
+            )}
         </div>
 
     </footer>

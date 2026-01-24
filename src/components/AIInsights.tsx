@@ -1,6 +1,6 @@
 // src/components/AIInsights.tsx
 import React from 'react';
-import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella, ShieldAlert } from 'lucide-react';
+import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella, ShieldAlert, WifiOff, RefreshCw } from 'lucide-react';
 import { TypewriterText } from './WeatherUI';
 import { TRANSLATIONS, Language } from '../translations';
 
@@ -21,16 +21,17 @@ interface AnalysisResult {
     source?: string;
 }
 
-// MILLORA: Eliminades props 'minutelyData' i 'currentPrecip' que no es feien servir
 interface AIInsightsProps {
     analysis: AnalysisResult | null;
     lang: Language;
+    isLoading?: boolean; 
+    hasError?: boolean;  
+    onRetry?: () => void; 
 }
 
-// Definim un subconjunt segur de traduccions per al component
 type TranslationSubset = Record<string, string>;
 
-// --- SUB-COMPONENTS D'ESTIL ---\
+// --- SUB-COMPONENTS D'ESTIL ---
 
 const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
   if (!analysis) return null;
@@ -103,16 +104,48 @@ const InsightSkeleton = () => (
   </div>
 );
 
+// --- CORRECCIÓ AQUÍ: &apos; en lloc de ' ---
+const InsightError = ({ onRetry }: { onRetry?: () => void }) => (
+  <div className="flex flex-col items-center justify-center w-full h-full p-6 text-center animate-in fade-in duration-500">
+      <div className="p-3 bg-slate-800/50 rounded-full mb-3 border border-white/5">
+        <WifiOff className="w-6 h-6 text-slate-400" />
+      </div>
+      <p className="text-slate-300 font-medium text-sm mb-1">IA Descansant</p>
+      <p className="text-slate-500 text-xs max-w-[250px] mb-4">
+          No s&apos;ha pogut connectar amb el model de llenguatge. Les dades numèriques són correctes.
+      </p>
+      {onRetry && (
+        <button 
+          onClick={onRetry}
+          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-bold rounded-lg transition-all border border-indigo-500/30"
+        >
+          <RefreshCw className="w-3 h-3" />
+          REINTENTAR
+        </button>
+      )}
+  </div>
+);
+
 // --- COMPONENT PRINCIPAL ---
 
-export default function AIInsights({ analysis, lang }: AIInsightsProps) { 
+export default function AIInsights({ analysis, lang, isLoading = false, hasError = false, onRetry }: AIInsightsProps) { 
   const t = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as TranslationSubset;
+  
+  if (hasError) {
+     return (
+        <div className="flex-1 w-full bg-slate-950/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px] flex items-center justify-center">
+            <InsightError onRetry={onRetry} />
+        </div>
+     );
+  }
 
-  if (!analysis) return (
-      <div className="flex-1 w-full bg-slate-900/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px]">
-        <InsightSkeleton />
-      </div>
-  );
+  if (isLoading || !analysis) {
+      return (
+          <div className="flex-1 w-full bg-slate-900/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px]">
+            <InsightSkeleton />
+          </div>
+      );
+  }
 
   const isGemini = analysis.source && analysis.source.includes('Gemini');
 
@@ -146,11 +179,10 @@ export default function AIInsights({ analysis, lang }: AIInsightsProps) {
         
         {/* CONTINGUT SCROLLABLE */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-3 relative z-10 flex flex-col">
-            <div className="space-y-5 animate-in fade-in duration-700">
-                
+            <div className="space-in fade-in duration-700">
                 {/* 1. Alertes Prioritàries */}
                 {analysis.alerts && analysis.alerts.length > 0 && (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 mb-4">
                         {analysis.alerts.map((alert, i) => (
                             <InsightAlert key={i} alert={alert} t={t} />
                         ))}
@@ -167,7 +199,7 @@ export default function AIInsights({ analysis, lang }: AIInsightsProps) {
                 
                 {/* 3. Consells / Tips */}
                 {analysis.tips && analysis.tips.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-4">
                         {analysis.tips.map((tip, i) => (
                             <InsightTip key={i} tip={tip} index={i} />
                         ))}

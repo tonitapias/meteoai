@@ -22,7 +22,6 @@ const cleanKeys = (obj: Record<string, unknown> | undefined): Record<string, unk
 
 // --- NOVA FUNCIÓ DE SEGURETAT ---
 // Normalitza qualsevol format de data a un Timestamp numèric (ms)
-// Això ens protegeix si l'API canvia formats com "2023-10-10T12:00" vs "2023-10-10T12:00Z"
 const normalizeTime = (t: unknown): number => {
     if (!t) return 0;
     const date = new Date(String(t));
@@ -31,16 +30,34 @@ const normalizeTime = (t: unknown): number => {
 
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null): ExtendedWeatherData => {
     if (!baseData) return baseData;
+    if (!highResData) return baseData;
+
+    // --- OPTIMITZACIÓ: Còpia Manual Superficial (Shallow Copy) ---
+    // En lloc de clonar-ho tot amb structuredClone (lent), copiem només el que mutarem.
+    // Això millora dràsticament el rendiment en dispositius mòbils.
     
-    // Deep clone segur per evitar mutacions no desitjades a l'estat original
-    const target = typeof structuredClone === 'function' 
-        ? structuredClone(baseData) 
-        : JSON.parse(JSON.stringify(baseData)) as ExtendedWeatherData; 
-    
-    if (!highResData) return target;
-    
+    const target: ExtendedWeatherData = { ...baseData };
+
+    // 1. Preparem 'current' per ser mutable
+    if (baseData.current) {
+        target.current = { ...baseData.current };
+    }
+
+    // 2. Preparem 'hourly' i els seus arrays per ser mutables
+    if (baseData.hourly) {
+        target.hourly = { ...baseData.hourly };
+        // Important: Els arrays interns també s'han de clonar si els modifiquem
+        Object.keys(target.hourly).forEach((k) => {
+            const key = k as keyof StrictHourlyWeather;
+            const val = target.hourly![key];
+            if (Array.isArray(val)) {
+                // @ts-expect-error - Sabem que és un array, fem còpia segura
+                target.hourly![key] = [...val];
+            }
+        });
+    }
+
     // 1. PREPARACIÓ DE FONTS (Sense càstings 'unknown')
-    // Tractem les dades d'entrada com a registres genèrics per poder netejar-ne les claus
     const source: CleanedSource = {
         current: cleanKeys(highResData.current as Record<string, unknown>),
         hourly: {
@@ -58,7 +75,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     if (target.hourly && masterTimeLength > 0) {
         (Object.keys(target.hourly) as Array<keyof StrictHourlyWeather>).forEach(key => {
             if (key === 'time') return;
-            const arr = target.hourly[key];
+            const arr = target.hourly![key];
             // Si l'array existeix però és curt, l'omplim amb nulls
             if (Array.isArray(arr)) {
                 while (arr.length < masterTimeLength) arr.push(null);
@@ -80,7 +97,6 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         
         CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
              const val = source.current[k];
-             // Només sobreescrivim si el valor és vàlid numèricament
              if (val != null && !isNaN(Number(val))) {
                  targetCurrent[k] = val;
              }
@@ -91,13 +107,12 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     // 3. INJECCIÓ MINUTELY_15 (Alta resolució de pluja)
     if (source.minutely_15) {
         const srcMin = source.minutely_15;
-        // Verificació estructural bàsica abans d'assignar
         if (Array.isArray(srcMin.time) && Array.isArray(srcMin.precipitation)) {
             target.minutely_15 = srcMin as unknown as { time: string[]; precipitation: number[]; [key: string]: unknown };
         }
     }
 
-    // 4. INJECCIÓ HOURLY (Dades horàries) - MODIFICADA PER SEGURETAT
+    // 4. INJECCIÓ HOURLY (Dades horàries)
     const HOURLY_FIELDS: (keyof StrictHourlyWeather)[] = [
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
         'precipitation', 'weather_code',
@@ -107,10 +122,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     ];
 
     if (source.hourly && target.hourly && target.hourly.time) {
-        // Canvi clau: Map de <number, number> en lloc de <string, number>
         const globalTimeIndexMap = new Map<number, number>();
         
-        // Normalitzem el temps del model base
         target.hourly.time.forEach((t, i) => {
             globalTimeIndexMap.set(normalizeTime(t), i);
         });
@@ -118,13 +131,9 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         const sourceTimes = (source.hourly.time || highResData.hourly?.time || []) as string[];
 
         sourceTimes.forEach((timeValue, sourceIndex) => {
-            // Normalitzem el temps del model AROME abans de buscar
             const timeKey = normalizeTime(timeValue);
-            
-            // Ara la comparació és matemàtica (infal·lible davant canvis de format text)
             const globalIndex = globalTimeIndexMap.get(timeKey);
             
-            // Si trobem coincidència horària, injectem les dades AROME
             if (globalIndex !== undefined) {
                 const tH = target.hourly as Record<string, (number | null)[]>;
                 
@@ -134,18 +143,15 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                     if (Array.isArray(srcArr)) {
                          const val = srcArr[sourceIndex];
                          if (val != null && !isNaN(Number(val))) {
-                             // Si el camp no existeix al target, el creem
                              if (!tH[field]) {
                                  tH[field] = new Array(masterTimeLength).fill(null);
                              }
-                             // Sobreescrivim la dada a l'índex correcte
                              tH[field][globalIndex] = val;
                          }
                     }
                 });
 
                 // Lògica de negoci: Reforç de probabilitat de pluja
-                // Si AROME veu pluja (>0.1mm), pugem la probabilitat mínima al 70%
                 const precipArr = source.hourly.precipitation as number[] | undefined;
                 const aromePrecip = precipArr?.[sourceIndex];
                 
