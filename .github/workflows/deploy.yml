@@ -32,6 +32,8 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_PROXY_URL: ${{ secrets.VITE_PROXY_URL }}
         run: npm run build
         
       - name: Upload artifact
