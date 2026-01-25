@@ -44,31 +44,44 @@ export default function MeteoIA() {
 
   // NOU: Lògica de Geolocalització moguda a l'App (Capa de presentació)
   const handleGetCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setNotification({ type: 'error', msg: t.geoNotSupported });
-      return;
-    }
-    
-    // Opcional: Podríem forçar un loading local si volguéssim, però fetchWeatherByCoords ja gestiona el seu loading.
-    const geoOptions = { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 };
+  if (!navigator.geolocation) {
+    setNotification({ type: 'error', msg: t.geoNotSupported });
+    return;
+  }
+  
+  // CANVI 1: Configuració més robusta
+  // - timeout: Pugem a 15000ms (15s) per donar temps a mòbils lents o sota sostre.
+  // - maximumAge: Permetem posicions de fa 5 minuts (300000ms). 
+  //   Per al temps, no cal saber on ets EXACTAMENT ara mateix, una posició recent serveix i és instantània.
+  const geoOptions = { 
+      enableHighAccuracy: false, 
+      timeout: 15000, 
+      maximumAge: 300000 
+  };
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        // La lògica de negoci es manté al hook, aquí només orquestrem
-        const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
-        if (success) {
-          setNotification({ type: 'success', msg: t.notifLocationSuccess });
-          // Autoclose logic si calgués addicional al Toast
-        }
-      },
-      (err) => {
-        console.warn("Error GPS:", err.message);
-        Sentry.captureException(err, { tags: { service: 'Geolocation' } });
-        setNotification({ type: 'error', msg: t.notifLocationError });
-      },
-      geoOptions
-    );
-  }, [fetchWeatherByCoords, t]);
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
+      if (success) {
+        setNotification({ type: 'success', msg: t.notifLocationSuccess });
+      }
+    },
+    (err) => {
+      console.warn("Error GPS:", err.message);
+      
+      // CANVI 2: Captura neta a Sentry
+      // Emboliquem l'objecte natiu en un Error de JS perquè Sentry mostri el missatge real ("Timeout expired")
+      // i no "[object GeolocationPositionError]".
+      Sentry.captureException(new Error(`Geolocation Error: ${err.message}`), { 
+          tags: { service: 'Geolocation' },
+          extra: { code: err.code } // Codi 3 = Timeout
+      });
+      
+      setNotification({ type: 'error', msg: t.notifLocationError });
+    },
+    geoOptions
+  );
+}, [fetchWeatherByCoords, t]);
 
   const { 
       shiftedNow, minutelyPreciseData, currentFreezingLevel, effectiveWeatherCode, 
