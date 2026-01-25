@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import * as Sentry from "@sentry/react"; // NOU: Necessari per reportar errors de GPS des de la UI
 
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
-// IMPORT CRÍTIC: Connectem el Footer real
 import Footer from './components/Footer';
 
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
@@ -36,8 +36,40 @@ export default function MeteoIA() {
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  const { weatherData, aqiData, loading, error, notification, setNotification, fetchWeatherByCoords, handleGetCurrentLocation } = useWeather(lang, unit);
+  // CANVI: Ja no recuperem notification/handleGetCurrentLocation del hook
+  const { weatherData, aqiData, loading, error, fetchWeatherByCoords } = useWeather(lang, unit);
   
+  // NOU: L'estat de les notificacions viu ara a la UI, on pertany
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
+
+  // NOU: Lògica de Geolocalització moguda a l'App (Capa de presentació)
+  const handleGetCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setNotification({ type: 'error', msg: t.geoNotSupported });
+      return;
+    }
+    
+    // Opcional: Podríem forçar un loading local si volguéssim, però fetchWeatherByCoords ja gestiona el seu loading.
+    const geoOptions = { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 };
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        // La lògica de negoci es manté al hook, aquí només orquestrem
+        const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
+        if (success) {
+          setNotification({ type: 'success', msg: t.notifLocationSuccess });
+          // Autoclose logic si calgués addicional al Toast
+        }
+      },
+      (err) => {
+        console.warn("Error GPS:", err.message);
+        Sentry.captureException(err, { tags: { service: 'Geolocation' } });
+        setNotification({ type: 'error', msg: t.notifLocationError });
+      },
+      geoOptions
+    );
+  }, [fetchWeatherByCoords, t]);
+
   const { 
       shiftedNow, minutelyPreciseData, currentFreezingLevel, effectiveWeatherCode, 
       chartData24h, chartDataFull, comparisonData, weeklyExtremes, reliability 
@@ -60,7 +92,7 @@ export default function MeteoIA() {
     const { name } = weatherData.location;
     if (isFavorite(name)) { removeFavorite(name); setNotification({ type: 'info', msg: t.favRemoved }); } 
     else { addFavorite(weatherData.location); setNotification({ type: 'success', msg: t.favAdded }); }
-  }, [weatherData, isFavorite, addFavorite, removeFavorite, t, setNotification]);
+  }, [weatherData, isFavorite, addFavorite, removeFavorite, t]);
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
@@ -68,11 +100,13 @@ export default function MeteoIA() {
   if (!weatherData && !error) { 
     return (
       <div className="min-h-screen bg-[#05060A] flex flex-col font-sans overflow-hidden relative">
-         {/* Fons estàtic per evitar salts visuals */}
          <div className="fixed inset-0 pointer-events-none">
              <div className="absolute top-[-20%] left-[20%] w-[800px] h-[800px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
          </div>
          
+         {/* FIX: Afegim el Toast aquí també perquè l'usuari vegi errors de GPS si ocorren a la Home */}
+         <Toast message={notification?.msg || null} type={notification?.type} onClose={() => setNotification(null)} />
+
          <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
             <Header 
                 onSearch={fetchWeatherByCoords} 
@@ -86,7 +120,6 @@ export default function MeteoIA() {
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} loading={loading} />
             </div>
             
-            {/* Si vols activar el footer a la benvinguda, ara pots fer-ho així: */}
             {/* <Footer simple transparent className="mt-auto" /> */}
          </div>
       </div>
@@ -182,8 +215,6 @@ export default function MeteoIA() {
             )}
         </div>
 
-        {/* NOU FOOTER PROFESSIONAL UNIFICAT */}
-        {/* Utilitzem className mt-auto per assegurar que quedi al fons si hi ha poc contingut */}
         <Footer className="mt-auto" />
 
         <Suspense fallback={null}>

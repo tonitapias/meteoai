@@ -68,7 +68,11 @@ export default function CurrentWeather({
                         </div>
                     </div>
 
-                    <button onClick={onToggleFavorite} className="md:hidden p-3 bg-white/5 rounded-xl text-slate-400 hover:text-amber-400">
+                    <button 
+                        onClick={onToggleFavorite} 
+                        className="md:hidden p-3 bg-white/5 rounded-xl text-slate-400 hover:text-amber-400"
+                        aria-label={isFavorite ? "Eliminar de favorits" : "Afegir a favorits"}
+                    >
                         <Star className={`w-5 h-5 ${isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                     </button>
                 </div>
@@ -114,7 +118,6 @@ export default function CurrentWeather({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 relative z-10">
-                    {/* TRADUCCIONS CATALANES APLICADES */}
                     {[ 
                         { i: Wind, v: Math.round(current.wind_speed_10m ?? 0), u: 'km/h', l: 'VENT' }, 
                         { i: Droplets, v: current.relative_humidity_2m ?? 0, u: '%', l: 'HUMITAT' }, 
@@ -139,7 +142,11 @@ export default function CurrentWeather({
                         </button>
                     )}
 
-                    <button onClick={onToggleFavorite} className="hidden md:flex p-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 text-slate-400 hover:text-amber-400 transition-colors">
+                    <button 
+                        onClick={onToggleFavorite} 
+                        className="hidden md:flex p-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 text-slate-400 hover:text-amber-400 transition-colors"
+                        aria-label={isFavorite ? "Eliminar de favorits" : "Afegir a favorits"}
+                    >
                         <Star className={`w-5 h-5 ${isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                     </button>
                 </div>

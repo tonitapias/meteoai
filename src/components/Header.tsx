@@ -3,7 +3,6 @@ import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, A
 import { usePreferences, LocationData } from '../hooks/usePreferences';
 
 interface HeaderProps {
-  // AFEGIT: country opcional
   onSearch: (lat: number, lon: number, name?: string, country?: string) => void;
   onLocate: () => void;
   loading: boolean;
@@ -20,7 +19,6 @@ interface GeoResult {
   longitude: number;
 }
 
-// Type Guard
 function isLocationData(item: GeoResult | LocationData): item is LocationData {
     return (item as LocationData).admin1 !== undefined || (item as GeoResult).id === undefined;
 }
@@ -74,7 +72,6 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
     return () => clearTimeout(timer);
   }, [query]);
 
-  // CORREGIT: Ara accepta i propaga 'country'
   const processSelection = (lat: number, lon: number, name: string, country?: string) => {
     setQuery('');
     onSearch(lat, lon, name, country);
@@ -154,8 +151,9 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onKeyDown={handleKeyDown}
+              // MILLORA ACCESS: Placeholder més clar (slate-500 vs slate-600)
               placeholder="CERCAR CIUTAT..."
-              className="flex-1 bg-transparent border-none outline-none text-sm font-mono font-medium text-white placeholder:text-slate-600 h-9 px-2 uppercase tracking-wider w-full min-w-0"
+              className="flex-1 bg-transparent border-none outline-none text-sm font-mono font-medium text-white placeholder:text-slate-500 h-9 px-2 uppercase tracking-wider w-full min-w-0"
               disabled={loading}
               autoComplete="off"
             />
@@ -165,6 +163,7 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
                     type="button"
                     onClick={() => { setQuery(''); setSuggestions([]); setSelectedIndex(-1); }}
                     className="p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-colors mr-1"
+                    aria-label="Esborrar cerca"
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>
@@ -178,6 +177,7 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
               disabled={loading}
               className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400 border border-transparent hover:border-indigo-500/30 transition-all active:scale-95 group relative overflow-hidden"
               title="La meva ubicació"
+              aria-label="Utilitzar la meva ubicació actual"
             >
                 <MapPin className="w-4 h-4 group-hover:scale-110 transition-transform" />
             </button>
@@ -243,8 +243,9 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
             onClick={() => setViewMode && setViewMode('basic')} 
             className={`
                 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
-                ${viewMode === 'basic' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}
+                ${viewMode === 'basic' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-slate-300'} 
             `}
+            // MILLORA ACCESS: Text-slate-400 enlloc de 500 per millor contrast en estat desactivat
           >
               <Layers className="w-3 h-3" /> BÀSIC
           </button>
@@ -252,7 +253,7 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
             onClick={() => setViewMode && setViewMode('expert')} 
             className={`
                 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
-                ${viewMode === 'expert' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}
+                ${viewMode === 'expert' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm border border-indigo-500/30' : 'text-slate-400 hover:text-slate-300'}
             `}
           >
               <Activity className="w-3 h-3" /> EXPERT

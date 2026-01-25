@@ -10,11 +10,9 @@ import {
 } from '../utils/weatherLogic';
 import { WeatherUnit } from '../utils/formatters';
 
-// Funció helper tipada per extreure valors de dades complexes (files o columnes)
 const getComparisonVal = (data: unknown, key: string, i: number): number | null => {
     if (!data) return null;
     
-    // Cas 1: Dades per columnes (Hourly Object: { temp: [1,2,3], ... })
     if (typeof data === 'object' && !Array.isArray(data)) {
         const col = (data as Record<string, unknown>)[key];
         if (Array.isArray(col)) {
@@ -23,7 +21,6 @@ const getComparisonVal = (data: unknown, key: string, i: number): number | null 
         }
     }
     
-    // Cas 2: Dades per files (Array d'objectes: [{temp: 1}, {temp: 2}])
     if (Array.isArray(data)) {
         const row = data[i] as Record<string, unknown> | undefined;
         if (row) {
@@ -37,7 +34,7 @@ const getComparisonVal = (data: unknown, key: string, i: number): number | null 
 
 export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, unit: WeatherUnit, now: Date) {
   
-  // 1. DATA I HORA
+  // 1. DATA I HORA SHIFTED (Hora local de la ciutat consultada)
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     return getShiftedDate(now, weatherData.timezone || 'UTC');
@@ -54,19 +51,24 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
      return partialIdx !== -1 ? partialIdx : 0;
   }, [weatherData]);
 
-  // 3. MINUT A MINUT (AMB FALLBACK AROME/HORARI)
+  // 3. MINUT A MINUT (CORREGIT: Timezone Safe)
   const minutelyPreciseData = useMemo<number[]>(() => {
     let preciseData: number[] = [];
     
     if (weatherData?.minutely_15?.precipitation) {
-        const currentMs = new Date().getTime(); 
+        // FIX: Utilitzem shiftedNow per comparar peres amb peres (hora local vs hora local)
+        const currentMs = shiftedNow.getTime(); 
         const timesRaw = weatherData.minutely_15.time as string[];
         let idx = -1;
+        
         for(let i = 0; i < timesRaw.length; i++) {
+            // new Date(string) crea una data local amb els números del string. 
+            // Com que shiftedNow també és una data local amb els números de la ciutat destí, la comparació és vàlida.
             if (new Date(timesRaw[i]).getTime() > currentMs) { idx = i; break; }
         }
         const currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
         const precipArr = weatherData.minutely_15.precipitation as number[];
+        // Agafem la finestra de l'hora següent (4 blocs de 15 min)
         preciseData = precipArr.slice(currentIdx, currentIdx + 4);
     }
 
@@ -76,6 +78,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
         return preciseData;
     }
 
+    // Fallback: Si no hi ha dades minutals, interpolació plana de l'horària
     const currentHourPrecip = weatherData?.hourly?.precipitation?.[currentHourlyIndex] || 0;
     
     if (currentHourPrecip > 0) {
@@ -85,15 +88,14 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
 
     return preciseData.length > 0 ? preciseData : [0,0,0,0];
 
-  }, [weatherData, currentHourlyIndex]);
+  }, [weatherData, currentHourlyIndex, shiftedNow]);
 
-  // 4. GENERACIÓ DE DADES MESTRA (168 Hores - 7 Dies)
+  // 4. GENERACIÓ DE DADES MESTRA
   const allHourlyData = useMemo(() => {
     if (!weatherData?.hourly?.time) return [];
     
     const startIndex = Math.max(0, currentHourlyIndex);
     const availableTime = weatherData.hourly.time;
-    // Type Guard per assegurar que el valor és numèric i vàlid
     const isValid = (val: unknown): val is number => val !== null && val !== undefined && typeof val === 'number' && !Number.isNaN(val);
 
     let lastTemp = 0, lastWind = 0, lastPressure = 1013, lastHum = 50;

@@ -8,10 +8,8 @@ import {
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 
-// CANVI 1: Netegem imports (ja no necessitem getWeatherData ni reverseGeocode aquí directament)
 import { getAromeData } from '../services/weatherApi'; 
-// import { reverseGeocode ... } -> ELIMINAT
-import { fetchAllWeatherData } from './useWeatherQuery'; // -> NOU IMPORT
+import { fetchAllWeatherData } from './useWeatherQuery'; 
 
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
@@ -31,7 +29,9 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [aqiData, setAqiData] = useState<AQIData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
+
+  // CANVI: Eliminem 'notification' i 'handleGetCurrentLocation' d'aquí.
+  // Aquest hook ara és purament de DADES.
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
@@ -44,7 +44,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const now = Date.now();
     const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
-    // Evitar re-fetching ràpid (Debounce manual)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -58,7 +57,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 1. CACHE (Es manté igual)
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
       if (cachedPacket) {
           // eslint-disable-next-line no-console
@@ -69,8 +67,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           return true;
       }
 
-      // 2. XARXA (CANVI PRINCIPAL: Ús del nou orquestrador)
-      // Tota la complexitat de Promises i geocoding està ara encapsulada aquí
       const { weatherRaw, geoData, aqiData } = await fetchAllWeatherData(
         lat, 
         lon, 
@@ -80,10 +76,8 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
         country
       );
 
-      // 3. PROCESSAMENT (Es manté la lògica de UI/Normalització)
       let processedData = normalizeModelData(weatherRaw);
       
-      // Lògica AROME (Es manté aquí perquè depèn de la lògica de negoci específica de 'injectHighResModels')
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
@@ -97,7 +91,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           }
       }
 
-      // Assignem les dades geogràfiques netes que ens ha retornat fetchAllWeatherData
       processedData.location = { 
           ...processedData.location, 
           name: geoData.city,
@@ -133,35 +126,8 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     }
   }, [unit, lang, t]); 
 
-  const handleGetCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setNotification({ type: 'error', msg: t.geoNotSupported });
-      return;
-    }
-    
-    setLoading(true);
-    const geoOptions = { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 };
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
-        if (success) {
-          setNotification({ type: 'success', msg: t.notifLocationSuccess });
-          setTimeout(() => setNotification(null), 3000);
-        }
-      },
-      (err) => {
-        console.warn("Error GPS:", err.message);
-        Sentry.captureException(err, { tags: { service: 'Geolocation' } });
-        setNotification({ type: 'error', msg: t.notifLocationError });
-        setLoading(false);
-      },
-      geoOptions
-    );
-  }, [fetchWeatherByCoords, t]);
-
   return { 
-    weatherData, aqiData, loading, error, notification, 
-    setNotification, fetchWeatherByCoords, handleGetCurrentLocation 
+    weatherData, aqiData, loading, error, 
+    fetchWeatherByCoords
   };
 }
