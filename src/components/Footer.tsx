@@ -1,5 +1,6 @@
 // src/components/Footer.tsx
 import React from 'react';
+import pkg from '../../package.json';
 import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
 
 interface FooterProps {
@@ -82,7 +83,7 @@ export default function Footer({ simple = false, transparent = false, className 
                     <span className="text-white/10" aria-hidden="true">|</span>
                     <div className="flex items-center gap-1.5" title="Versió del nucli">
                         <Cpu className="w-3 h-3 text-slate-600" aria-hidden="true" />
-                        <span>v3.2</span>
+                        <span>v{pkg.version}</span>
                     </div>
                 </>
             )}

@@ -3,6 +3,7 @@ import React from 'react';
 import { MapPin, Globe, CloudSun, Command, Loader2, Sparkles, Cpu, Wifi, ShieldCheck } from 'lucide-react';
 import { Language } from '../translations';
 import { TranslationMap } from '../utils/weatherLogic';
+import pkg from '../../package.json';
 
 interface WelcomeScreenProps {
   lang: Language;
@@ -162,7 +163,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
               </div>
               <div className="hidden md:flex items-center gap-2">
                   <Cpu className="w-3 h-3 text-indigo-500" />
-                  <span>CORE: V.3.1.2</span>
+                  <span>CORE: V.{pkg.version}</span>
               </div>
           </div>
 
