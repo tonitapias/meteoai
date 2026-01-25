@@ -2,12 +2,12 @@
 import { prepareContextForAI, ExtendedWeatherData } from '../utils/weatherLogic'; 
 import * as Sentry from "@sentry/react";
 import { TRANSLATIONS } from '../translations'; 
-import { cacheService } from './cacheService'; // USAR SERVEI CENTRALITZAT
+import { cacheService } from './cacheService'; 
 
 // --- CONFIGURACIÓ ---
-const PROXY_URL = "https://meteoai-proxy.tonitapias.workers.dev"; 
+// Utilitzem la variable d'entorn o el fallback per defecte
+const PROXY_URL = import.meta.env.VITE_PROXY_URL || "https://meteoai-proxy.tonitapias.workers.dev"; 
 
-// 1 hora de cache per a la IA (més llarg que el temps normal)
 const AI_CACHE_TTL = 60 * 60 * 1000; 
 
 const LANG_MAP: Record<string, string> = {
@@ -33,7 +33,7 @@ type LocatableData = {
 
 export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, language: string): Promise<AICacheData | null> => {
     if (!PROXY_URL || PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
-        console.error("❌ Error: Has de configurar la PROXY_URL a geminiService.ts");
+        console.error("❌ Error: Has de configurar la PROXY_URL a l'arxiu .env");
         return null;
     }
 
@@ -45,16 +45,15 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
         if (!context) return null;
 
-        // 3. Generació de Clau Única (Utilitzant el generador centralitzat)
+        // 3. Generació de Clau Única
         const safeData = weatherData as unknown as LocatableData;
         const lat = safeData.latitude ?? safeData.location?.latitude ?? 0;
         const lon = safeData.longitude ?? safeData.location?.longitude ?? 0;
         
-        // Utilitzem l'elevació i l'idioma com a part de la clau
         const timestampKey = context.location.elevation.toString(); 
         const cacheKey = cacheService.generateAiKey(timestampKey, lat, lon, language);
         
-        // 4. Verificació de Caché (Centralitzada)
+        // 4. Verificació de Caché
         try {
             const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
             if (cachedData) {
@@ -64,12 +63,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             console.warn("⚠️ Error llegint Cache IA:", dbError);
         }
 
-        // 5. Construcció del Prompt (DINÀMIC I SEGUR)
-        // Recuperem traduccions amb fallback segur a anglès (evita hardcoding català)
+        // 5. Construcció del Prompt
         const t = TRANSLATIONS[language as keyof typeof TRANSLATIONS];
-        const fallbackT = TRANSLATIONS['en'] || TRANSLATIONS['ca']; // Fallback d'emergència
+        const fallbackT = TRANSLATIONS['en'] || TRANSLATIONS['ca'];
         
-        // Helper per obtenir string segur
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const getStr = (key: string, defaultText: string) => (t as any)?.[key] || (fallbackT as any)?.[key] || defaultText;
 
@@ -117,7 +114,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         
         const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
 
-        // 8. Guardar a Cache Centralitzat
+        // 8. Guardar a Cache
         if (parsed.text && Array.isArray(parsed.tips)) {
             await cacheService.set(cacheKey, parsed);
             return parsed;

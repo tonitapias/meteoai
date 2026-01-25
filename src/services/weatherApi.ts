@@ -1,4 +1,5 @@
 // src/services/weatherApi.ts
+import * as Sentry from "@sentry/react"; // NOU: Per monitoritzar fallades de xarxa
 
 export interface WeatherData {
     current: Record<string, unknown>;
@@ -17,11 +18,13 @@ export interface WeatherData {
     [key: string]: unknown; 
 }
 
-const BASE_URL = "https://api.open-meteo.com/v1/forecast";
-const AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
-const TIMEOUT_MS = 10000; // 10 segons màxim per esperar el temps
+// CONFIGURACIÓ
+const BASE_URL = import.meta.env.VITE_API_WEATHER_BASE || "https://api.open-meteo.com/v1/forecast";
+const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-quality-api.open-meteo.com/v1/air-quality";
+const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || 10000;
+const MAX_RETRIES = 2; // Nombre de reintents (Total 3 intents)
 
-// --- Utilitat interna per evitar bloquejos infinits ---
+// --- Utilitat interna: Timeout ---
 const fetchWithTimeout = async (url: string): Promise<Response> => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -35,7 +38,48 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
     }
 };
 
-// 1. Funció Principal (ECMWF + GFS + ICON)
+// --- Utilitat interna: Retry Logic (NOU) ---
+const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Response> => {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const response = await fetchWithTimeout(url);
+            
+            // Si la resposta és un error de servidor (5xx), llancem error per reintentar
+            // Si és 4xx (Client Error), no reintentem perquè és culpa nostra (params malament)
+            if (!response.ok && response.status >= 500) {
+                throw new Error(`Server Error: ${response.status}`);
+            }
+            
+            if (!response.ok) { // 4xx Errors
+                 throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+
+            return response;
+        } catch (err) {
+            const isLastAttempt = i === retries;
+            
+            if (isLastAttempt) {
+                throw err; // Ja no queden intents, fallem definitivament
+            }
+
+            // Monitoratge "Silent": Avisem a Sentry que hi ha hagut un "hiccup" però reintentem
+            console.warn(`⚠️ Intent ${i + 1} fallit. Reintentant...`, err);
+            Sentry.addBreadcrumb({
+                category: "network-retry",
+                message: `Retry ${i + 1}/${retries} for ${url}`,
+                level: "warning",
+                data: { error: String(err) }
+            });
+
+            // Exponential Backoff: Esperem una mica més cada vegada (1s, 2s...)
+            const delay = 1000 * (i + 1);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    throw new Error("Unexpected retry loop exit");
+};
+
+// 1. Funció Principal
 export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'): Promise<WeatherData> => {
     const tempUnit = unit === 'F' ? 'fahrenheit' : 'celsius';
     const params = new URLSearchParams({
@@ -49,11 +93,11 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
         temperature_unit: tempUnit,
         wind_speed_unit: "kmh",
         precipitation_unit: "mm",
-        forecast_days: "8" // <--- ARA SÍ: 8 dies totals - 1 (avui) = 7 dies a la llista.
+        forecast_days: "8" 
     });
 
-    const response = await fetchWithTimeout(`${BASE_URL}?${params.toString()}`);
-    if (!response.ok) throw new Error("Error obtenint dades meteorològiques");
+    // ÚS DE RETRY
+    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`);
     return response.json();
 };
 
@@ -67,12 +111,11 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
         timezone: "auto"
     });
 
-    const response = await fetchWithTimeout(`${AIR_QUALITY_URL}?${params.toString()}`);
-    if (!response.ok) throw new Error("Error obtenint qualitat de l'aire");
+    const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`);
     return response.json();
 };
 
-// 3. Funció AROME (Alta Resolució)
+// 3. Funció AROME
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
     const params = new URLSearchParams({
         latitude: lat.toString(),
@@ -84,7 +127,6 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
         models: "meteofrance_arome_france_hd" 
     });
 
-    const response = await fetchWithTimeout(`${BASE_URL}?${params.toString()}`);
-    if (!response.ok) throw new Error("Error obtenint dades AROME");
+    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`);
     return response.json();
 };

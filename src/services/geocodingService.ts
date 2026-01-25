@@ -6,24 +6,29 @@ export interface GeocodeResult {
   country: string;
 }
 
+// CONFIGURACIÓ: Constants globals provinents de l'entorn
+const GEO_API_URL = import.meta.env.VITE_API_GEOCODING || "https://api.bigdatacloud.net/data/reverse-geocode-client";
+// Timeout de seguretat (si no està definit al .env, usa 2 segons)
+const GEO_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) ? 2000 : 2000; 
+// Nota: Deixo 2000ms específic per geocoding perquè ha de ser ràpid, 
+// o pots fer servir 'Number(import.meta.env.VITE_API_TIMEOUT)' si vols els 10s globals.
+
 /**
  * Servei de geocodificació inversa. 
- * Manté el timeout de 2s i la lògica de fallback de l'app original per seguretat.
  */
 export const reverseGeocode = async (
   lat: number,
   lon: number,
   lang: Language = 'ca'
 ): Promise<GeocodeResult> => {
-  const TIMEOUT_MS = 2000;
-  // Fallback per defecte en cas d'error crític
+  
   const FALLBACK: GeocodeResult = { city: "Ubicació actual", country: "Local" };
 
   try {
     const response = await Promise.race([
-      fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${lang}`),
+      fetch(`${GEO_API_URL}?latitude=${lat}&longitude=${lon}&localityLanguage=${lang}`),
       new Promise<Response>((_, reject) => 
-        setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
+        setTimeout(() => reject(new Error('timeout')), GEO_TIMEOUT_MS)
       )
     ]);
 
@@ -31,7 +36,7 @@ export const reverseGeocode = async (
 
     const data = await response.json();
     
-    // Normalització de dades per evitar 'undefined'
+    // Normalització de dades
     return {
       city: data.city || data.locality || data.principalSubdivision || "Ubicació desconeguda",
       country: data.countryName || "Local"

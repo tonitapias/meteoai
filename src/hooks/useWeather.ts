@@ -7,8 +7,12 @@ import {
     injectHighResModels,
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
-import { getWeatherData, getAirQualityData, getAromeData } from '../services/weatherApi';
-import { reverseGeocode } from '../services/geocodingService';
+
+// CANVI 1: Netegem imports (ja no necessitem getWeatherData ni reverseGeocode aquí directament)
+import { getAromeData } from '../services/weatherApi'; 
+// import { reverseGeocode ... } -> ELIMINAT
+import { fetchAllWeatherData } from './useWeatherQuery'; // -> NOU IMPORT
+
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
 import { cacheService } from '../services/cacheService'; 
@@ -30,7 +34,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
-
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
   useEffect(() => {
@@ -41,6 +44,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const now = Date.now();
     const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
+    // Evitar re-fetching ràpid (Debounce manual)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -54,9 +58,8 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // Intentar recuperar de Cache
+      // 1. CACHE (Es manté igual)
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
-      
       if (cachedPacket) {
           // eslint-disable-next-line no-console
           console.log("⚡ Recuperat de Cache (Offline Ready):", cacheKey);
@@ -66,26 +69,26 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           return true;
       }
 
-      // Fetch Xarxa
-      const weatherPromise = getWeatherData(lat, lon, unit);
-      const aqiPromise = getAirQualityData(lat, lon);
-      
-      const namePromise = (locationName === "La Meva Ubicació") 
-        ? reverseGeocode(lat, lon, lang)
-        : Promise.resolve({ city: locationName || "Ubicació actual", country: country || "Local" });
+      // 2. XARXA (CANVI PRINCIPAL: Ús del nou orquestrador)
+      // Tota la complexitat de Promises i geocoding està ara encapsulada aquí
+      const { weatherRaw, geoData, aqiData } = await fetchAllWeatherData(
+        lat, 
+        lon, 
+        unit, 
+        lang, 
+        locationName, 
+        country
+      );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [data, geoData, airData] = await Promise.all([weatherPromise, namePromise, aqiPromise]) as [any, any, AQIData];
-
-      let processedData = normalizeModelData(data);
+      // 3. PROCESSAMENT (Es manté la lògica de UI/Normalització)
+      let processedData = normalizeModelData(weatherRaw);
       
-      // Lògica AROME amb Observabilitat (Sentry)
+      // Lògica AROME (Es manté aquí perquè depèn de la lògica de negoci específica de 'injectHighResModels')
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
              processedData = injectHighResModels(processedData, aromeRaw);
           } catch (aromeErr) { 
-              // Capturem com a warning, no com a error fatal, perquè l'app segueix funcionant amb ECMWF
               console.warn("Arome no disponible (Degradació elegant):", aromeErr); 
               Sentry.captureException(aromeErr, { 
                   tags: { service: 'AromeModel', type: 'SilentFail' },
@@ -94,6 +97,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           }
       }
 
+      // Assignem les dades geogràfiques netes que ens ha retornat fetchAllWeatherData
       processedData.location = { 
           ...processedData.location, 
           name: geoData.city,
@@ -102,14 +106,13 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           longitude: lon 
       };
 
-      // Guardar a Cache
       const packet: WeatherCachePacket = {
           weather: processedData,
-          aqi: airData
+          aqi: aqiData
       };
       await cacheService.set(cacheKey, packet);
       
-      setAqiData(airData);
+      setAqiData(aqiData);
       setWeatherData(processedData);
       
       return true;
@@ -137,7 +140,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     }
     
     setLoading(true);
-    
     const geoOptions = { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 };
 
     navigator.geolocation.getCurrentPosition(

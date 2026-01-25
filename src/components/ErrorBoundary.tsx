@@ -1,5 +1,6 @@
 // src/components/ErrorBoundary.tsx
 import React, { ReactNode } from 'react';
+import * as Sentry from "@sentry/react"; // NOU IMPORT
 import ErrorBanner from './ErrorBanner';
 
 interface ErrorBoundaryProps {
@@ -21,7 +22,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // 1. Log a consola local (com abans)
     console.error("Error capturat al component:", error, errorInfo);
+    
+    // 2. NOU: Enviar informe a Sentry amb el 'stack trace' de React
+    Sentry.captureException(error, { 
+        contexts: { react: { componentStack: errorInfo.componentStack } } 
+    });
   }
 
   render() {

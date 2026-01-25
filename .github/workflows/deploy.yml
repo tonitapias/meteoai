@@ -34,6 +34,10 @@ jobs:
       - name: Build
         env:
           VITE_PROXY_URL: ${{ secrets.VITE_PROXY_URL }}
+          VITE_API_WEATHER_BASE: ${{ secrets.VITE_API_WEATHER_BASE }}
+          VITE_API_AQI_BASE: ${{ secrets.VITE_API_AQI_BASE }}
+          VITE_API_GEOCODING: ${{ secrets.VITE_API_GEOCODING }}
+          VITE_API_TIMEOUT: ${{ secrets.VITE_API_TIMEOUT }}
         run: npm run build
         
       - name: Upload artifact
