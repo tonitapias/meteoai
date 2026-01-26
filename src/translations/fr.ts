@@ -285,10 +285,10 @@ export const fr = {
   favAdded: "Ajouté aux favoris",
   favRemoved: "Supprimé des favoris",
 
-  // --- CONFIGURACIÓ IA (NOU) ---
-  ai_system_role: "Agissez comme un expert météorologue local.",
-  ai_tone_instruction: "Utilisez un ton amical et expert, comme un présentateur météo local expérimenté qui connaît bien la région.",
-  ai_task_instruction: "Analysez ces données et générez un résumé utile et court. N'expliquez PAS les chiffres (ils sont visibles sur le graphique), INTERPRÉTEZ-LES. Mettez en évidence les phénomènes dangereux le cas échéant. Soyez honnête quant à l'incertitude.",
+  // --- CONFIGURATION IA ---
+  ai_system_role: "Vous êtes un analyste météorologique technique. Votre priorité est la précision, la sécurité et la cohérence des données.",
+  ai_tone_instruction: "Utilisez un ton informatif, bref et assertif. Évitez le langage dubitatif si les données sont claires.",
+  ai_task_instruction: "Interprétez les données pour répondre : 1) Vais-je être mouillé ? 2) Aurai-je froid/chaud ? 3) Y a-t-il un danger ? Ne listez pas de chiffres, expliquez l'impact réel.",
 
   // --- NOUVELLES CLÉS : WIDGETS, RADAR ET 7 JOURS ---
   

@@ -76,21 +76,41 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
         const targetLanguage = LANG_MAP[language] || 'English';
 
+        // MODIFICACIÓ: Prompt amb lògica condicional i jerarquia
         const prompt = `
-          ACT COM: ${role}
-          CONTEXT: ${JSON.stringify(context)}
-          TASK: ${task}
+          ROL: ${role}
           
-          RULES:
-          1. ${tone}
-          2. SENSE CLIXÉS.
-          3. IDIOMA DE SORTIDA: ${targetLanguage}.
+          DADES (Context JSON):
+          ${JSON.stringify(context)}
+          
+          TASKA: ${task}
+          
+          REGLES CRÍTIQUES DE COHERÈNCIA (OBLIGATÒRIES):
+          1. JERARQUIA D'INFORMACIÓ:
+             - 1r: ALERTES o Perills (si n'hi ha).
+             - 2n: Precipitació imminent (si plou ARA o risc > 50%).
+             - 3r: Sensació tèrmica i vent (només si destaca).
+          
+          2. LLINDARS DE PLUJA (Thresholds):
+             - Probabilitat < 20%: NO esmentis la pluja. Parla de núvols o sol.
+             - Probabilitat 20% - 50%: Fes servir "possible" o "risc de".
+             - Probabilitat > 50%: Dona-ho per fet ("s'espera", "tindrem").
+             - Si "is_raining": true -> Està plovent ARA.
+
+          3. LLINDARS DE VENT:
+             - < 20 km/h: Ignora'l.
+             - > 40 km/h: Esmenta'l com a factor molest/perillós.
+
+          4. ESTIL:
+             - ${tone}
+             - DIRECTE: No comencis amb "Segons les dades...".
 
           OBJECTIUS DE LA RESPOSTA (JSON):
-          - "text": Un paràgraf fluid (màxim 4 frases).
-          - "tips": 2 recomanacions tàctiques.
+          - "text": Un paràgraf fluid (màxim 3-4 frases) centrat en l'impacte (mullar-se, fred/calor, perill).
+          - "tips": 2 consells pràctics i curts.
 
-          FORMAT REQUERIT (JSON pur, sense markdown):
+          IDIOMA DE SORTIDA: ${targetLanguage}
+          FORMAT: JSON pur (sense markdown).
           {"text": "...", "tips": ["...", "..."]}
         `;
 

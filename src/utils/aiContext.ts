@@ -314,6 +314,7 @@ export const prepareContextForAI = (current: StrictCurrentWeather, daily: Strict
         },
         short_term_trend: {
             temps: getNext4h('temperature_2m'),
+            max_rain_prob_4h: Math.max(...getNext4h('precipitation_probability')),
             rain_prob: getNext4h('precipitation_probability'),
             precip_vol: getNext4h('precipitation'), 
             wind: getNext4h('wind_speed_10m'),

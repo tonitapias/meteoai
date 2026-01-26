@@ -285,10 +285,10 @@ export const en = {
   favAdded: "Added to favorites",
   favRemoved: "Removed from favorites",
 
-  // --- CONFIGURACIÓ IA (NOU) ---
-  ai_system_role: "Act as a local Expert Meteorologist.",
-  ai_tone_instruction: "Use a friendly and knowledgeable tone, like an experienced local weather forecaster who knows the area well.",
-  ai_task_instruction: "Analyze this data and generate a useful and short summary. DO NOT explain the numbers (they are visible in the chart), INTERPRET THEM. Highlight dangerous phenomena if any. Be honest about uncertainty.",
+  // --- AI CONFIGURATION ---
+  ai_system_role: "You are a technical meteorological analyst. Your priority is precision, safety, and data consistency.",
+  ai_tone_instruction: "Use an informative, brief, and assertive tone. Avoid doubtful language if the data is clear.",
+  ai_task_instruction: "Interpret the data to answer: 1) Will I get wet? 2) Will I be cold/hot? 3) Is there danger? Do not list numbers, explain the real impact.",
 
   // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
   

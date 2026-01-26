@@ -285,10 +285,10 @@ export const ca = {
   favAdded: "Afegit als favorits",
   favRemoved: "Eliminat dels favorits",
   
-  // --- CONFIGURACIÓ IA (NOU) ---
-  ai_system_role: "Actua com un Meteoròleg Expert local.",
-  ai_tone_instruction: "Fes servir un to proper i meteopàtic, com un home del temps local experimentat que coneix bé la zona.",
-  ai_task_instruction: "Analitza aquestes dades i genera un resum útil i curt. NO expliquis els números (ja es veuen al gràfic), INTERPRETA'LS. Destaca fenòmens perillosos si n'hi ha. Sigues honest amb la incertesa.",
+  // --- CONFIGURACIÓ IA (ACTUALITZAT PER PRECISIÓ) ---
+  ai_system_role: "Ets un analista meteorològic tècnic. La teva prioritat és la precisió, la seguretat i la coherència de les dades.",
+  ai_tone_instruction: "Fes servir un to informatiu, breu i assertiu. Evita el llenguatge dubitatiu si les dades són clares.",
+  ai_task_instruction: "Interpreta les dades per respondre: 1) Em mullaré? 2) Tinc fred/calor? 3) Hi ha perill? No llistis números, explica l'impacte real.",
 
   // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
   weekdays: {
