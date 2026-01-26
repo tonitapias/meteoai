@@ -249,13 +249,13 @@ export default function DayDetailModal({
                                 <div className="col-span-3 text-center text-sm font-mono font-bold text-white tabular-nums">
                                     {Math.round(row.temp)}°
                                 </div>
-                                <div className="col-span-3 flex justify-end items-center gap-1.5">
+                                <div className="col-span-3 flex justify-end items-center gap-1 md:gap-1.5">
                                     {row.precipProb > 0 ? (
                                         <>
-                                            <span className="text-[10px] font-bold text-blue-400">{row.precipProb}%</span>
-                                            {/* MODIFICAT: Usem formatPrecipitation per mostrar mm o cm si és neu */}
+                                            <span className="text-[9px] md:text-[10px] font-bold text-blue-400">{row.precipProb}%</span>
+                                            {/* MODIFICAT: Ara es veu sempre (mòbil i PC), amb lletra adaptada */}
                                             {row.precipSum > 0 && (
-                                                <span className="text-[9px] text-slate-600 font-mono hidden md:inline">
+                                                <span className="text-[8px] md:text-[9px] text-slate-600 font-mono">
                                                     {formatPrecipitation(row.precipSum, row.snowfall)}
                                                 </span>
                                             )}

@@ -6,7 +6,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   base: '/meteoai/', 
   
-  // NOU: Habilitem sourcemaps per a Sentry
   build: {
     sourcemap: true,
   },
@@ -15,12 +14,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Això permet que funcioni en local (npm run dev)
+      devOptions: {
+        enabled: true
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-96x96.png', 'maskable-icon.png'],
       manifest: {
         name: 'MeteoToni AI',
         short_name: 'MeteoToni',
         description: 'Previsió meteorològica intel·ligent amb models ECMWF i AROME.',
-        theme_color: '#05060A', // Sincronitzat amb index.html
+        theme_color: '#05060A',
         background_color: '#05060A',
         display: 'standalone',
         orientation: 'any',

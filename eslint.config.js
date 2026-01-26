@@ -6,7 +6,8 @@ import react from 'eslint-plugin-react';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist'] },
+  // CORRECCIÓ: Afegim 'dev-dist', 'sw.js' i 'workbox-*.js' per ignorar fitxers generats
+  { ignores: ['dist', 'dev-dist', 'sw.js', 'workbox-*.js'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -27,11 +28,9 @@ export default tseslint.config(
       ],
       
       // 1. GESTIÓ DE CONSOLA INTEL·LIGENT
-      // Avisa si hi ha console.log, però permet console.warn i console.error
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       
-      // 2. REDUCCIÓ DE SOROLL (DE 'ERROR' A 'WARN')
-      // Això et permetrà arrencar l'app encara que tinguis algun 'any' o variable sense usar
+      // 2. REDUCCIÓ DE SOROLL
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { 
         argsIgnorePattern: '^_',
