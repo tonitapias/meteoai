@@ -73,6 +73,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const targetLanguage = LANG_MAP[language] || 'English';
 
         // MODIFICACIÓ: Prompt amb lògica condicional i jerarquia
+        // AFEGIT: Regla específica per a "Ratxes de vent" en català
         const prompt = `
           ROL: ${role}
           
@@ -96,10 +97,15 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           3. LLINDARS DE VENT:
              - < 20 km/h: Ignora'l.
              - > 40 km/h: Esmenta'l com a factor molest/perillós.
-
+          
           4. ESTIL:
              - ${tone}
              - DIRECTE: No comencis amb "Segons les dades...".
+
+          5. TERMINOLOGIA I TRADUCCIÓ (MOLT IMPORTANT):
+             ${language === 'ca' ? '- "Wind Gusts" o "Gusts" s\'ha de traduir SEMPRE com "Ratxes de vent" o "Ràfegues". MAI facis servir "Gusts de vent" (això és incorrecte).' : ''}
+             - Evita traduccions literals que sonin robòtiques.
+             - Fes servir un llenguatge natural i fluid.
 
           OBJECTIUS DE LA RESPOSTA (JSON):
           - "text": Un paràgraf fluid (màxim 3-4 frases) centrat en l'impacte (mullar-se, fred/calor, perill).
