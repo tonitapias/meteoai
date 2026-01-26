@@ -285,12 +285,7 @@ export const fr = {
   favAdded: "Ajouté aux favoris",
   favRemoved: "Supprimé des favoris",
 
-  // --- CONFIGURATION IA ---
-  ai_system_role: "Vous êtes un analyste météorologique technique. Votre priorité est la précision, la sécurité et la cohérence des données.",
-  ai_tone_instruction: "Utilisez un ton informatif, bref et assertif. Évitez le langage dubitatif si les données sont claires.",
-  ai_task_instruction: "Interprétez les données pour répondre : 1) Vais-je être mouillé ? 2) Aurai-je froid/chaud ? 3) Y a-t-il un danger ? Ne listez pas de chiffres, expliquez l'impact réel.",
-
-  // --- NOUVELLES CLÉS : WIDGETS, RADAR ET 7 JOURS ---
+    // --- NOUVELLES CLÉS : WIDGETS, RADAR ET 7 JOURS ---
   
   weekdays: {
     long: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],

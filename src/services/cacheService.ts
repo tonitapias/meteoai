@@ -1,5 +1,6 @@
 // src/services/cacheService.ts
 import { get, set, del, entries, delMany, IDBValidKey } from 'idb-keyval';
+import * as Sentry from "@sentry/react";
 
 const WEATHER_PREFIX = 'meteoai_v7_cache_';
 const AI_PREFIX = 'meteoai_ai_';
@@ -22,8 +23,16 @@ export const cacheService = {
         data: data
       };
       await set(key, payload);
+      
+      // TELEMETRIA: Registrem l'escriptura (nivell debug per no saturar)
+      Sentry.addBreadcrumb({
+        category: 'cache',
+        message: `Write Success: ${key}`,
+        level: 'info'
+      });
     } catch (err) {
       console.error("❌ Error guardant a DB:", err);
+      Sentry.captureException(err, { tags: { service: 'CacheService', action: 'set' } });
     }
   },
 
@@ -34,20 +43,41 @@ export const cacheService = {
     try {
       const item = await get<CacheItem<T>>(key);
       
-      if (!item) return null;
+      if (!item) {
+        // TELEMETRIA: Cache Miss (No existeix)
+        Sentry.addBreadcrumb({
+            category: 'cache',
+            message: `MISS (Not found): ${key}`,
+            level: 'info'
+        });
+        return null;
+      }
 
       const { timestamp, data } = item;
       const age = Date.now() - timestamp;
 
       if (age < maxAge) {
+        // TELEMETRIA: Cache Hit (Èxit)
+        Sentry.addBreadcrumb({
+            category: 'cache',
+            message: `HIT (${Math.round(age / 1000)}s old): ${key}`,
+            level: 'info'
+        });
         return data; // Dades fresques
       } else {
         // Caducat: Esborrem i retornem null
+        // TELEMETRIA: Cache Expired
+        Sentry.addBreadcrumb({
+            category: 'cache',
+            message: `EXPIRED (${Math.round(age / 60000)}m old): ${key}`,
+            level: 'warning'
+        });
         await del(key);
         return null;
       }
     } catch (err) {
       console.error("Error llegint DB:", err);
+      Sentry.captureException(err, { tags: { service: 'CacheService', action: 'get' } });
       return null;
     }
   },
@@ -56,7 +86,11 @@ export const cacheService = {
    * Esborra un element concret
    */
   remove: async (key: string): Promise<void> => {
-    await del(key);
+    try {
+        await del(key);
+    } catch (err) {
+        console.error("Error esborrant key:", err);
+    }
   },
 
   /**
@@ -67,27 +101,32 @@ export const cacheService = {
       const allEntries = await entries();
       const keysToDelete: IDBValidKey[] = [];
       const now = Date.now();
+      let deletedCount = 0;
 
       for (const [key, val] of allEntries) {
         // 'val' ve com 'any' des de la llibreria, fem un cast segur
         if (typeof key === 'string' && (key.startsWith(WEATHER_PREFIX) || key.startsWith(AI_PREFIX))) {
            const item = val as CacheItem<unknown>;
+           // Netegem coses de més de 24h per mantenir la DB lleugera
            if (item && item.timestamp && (now - item.timestamp > 24 * 60 * 60 * 1000)) {
                keysToDelete.push(key);
+               deletedCount++;
            }
         }
       }
 
       if (keysToDelete.length > 0) {
           await delMany(keysToDelete);
+          // eslint-disable-next-line no-console
+          console.log(`🧹 Cache Cleaned: ${deletedCount} items removed`);
       }
     } catch (err) {
       console.error("Error netejant DB:", err);
+      Sentry.captureException(err, { tags: { service: 'CacheService', action: 'clean' } });
     }
   },
 
   // Generadors de claus
-  // MODIFICAT: Ara inclou la unitat (C/F) per evitar conflictes
   generateWeatherKey: (lat: number, lon: number, unit: string): string => 
     `${WEATHER_PREFIX}${lat.toFixed(3)}_${lon.toFixed(3)}_${unit}`,
     

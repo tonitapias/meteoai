@@ -10,6 +10,43 @@ const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-qualit
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || 10000;
 const MAX_RETRIES = 2;
 
+// --- DEFINICIÓ DE VARIABLES (Sanitització) ---
+// Utilitzem Arrays per evitar errors de sintaxi en strings llargs
+const PARAMS_CURRENT = [
+    "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", 
+    "precipitation", "rain", "showers", "snowfall", "weather_code", "cloud_cover", 
+    "pressure_msl", "surface_pressure", "wind_speed_10m", "wind_direction_10m", 
+    "wind_gusts_10m", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility"
+];
+
+const PARAMS_HOURLY = [
+    "temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature", 
+    "precipitation_probability", "precipitation", "rain", "showers", "snowfall", "snow_depth", 
+    "weather_code", "pressure_msl", "surface_pressure", "cloud_cover", "cloud_cover_low", 
+    "cloud_cover_mid", "cloud_cover_high", "visibility", "evapotranspiration", 
+    "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "uv_index", "uv_index_clear_sky", 
+    "is_day", "cape", "freezing_level_height"
+];
+
+const PARAMS_DAILY = [
+    "weather_code", "temperature_2m_max", "temperature_2m_min", "apparent_temperature_max", 
+    "apparent_temperature_min", "sunrise", "sunset", "daylight_duration", "sunshine_duration", 
+    "uv_index_max", "uv_index_clear_sky_max", "precipitation_sum", "rain_sum", "showers_sum", 
+    "snowfall_sum", "precipitation_hours", "precipitation_probability_max", "wind_speed_10m_max", 
+    "wind_gusts_10m_max", "wind_direction_10m_dominant", "shortwave_radiation_sum", 
+    "et0_fao_evapotranspiration"
+];
+
+const PARAMS_AQI_CURRENT = [
+    "european_aqi", "us_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone", 
+    "sulphur_dioxide", "dust", "uv_index", "ammonia", "alder_pollen", "birch_pollen", 
+    "grass_pollen", "mugwort_pollen", "olive_pollen", "ragweed_pollen"
+];
+
+const PARAMS_AQI_HOURLY = [
+    "european_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone", "sulphur_dioxide"
+];
+
 // --- Utilitat interna: Timeout ---
 const fetchWithTimeout = async (url: string): Promise<Response> => {
     const controller = new AbortController();
@@ -100,9 +137,9 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
-        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility",
-        hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,snow_depth,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,evapotranspiration,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,uv_index_clear_sky,is_day,cape,freezing_level_height",
-        daily: "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,daylight_duration,sunshine_duration,uv_index_max,uv_index_clear_sky_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,shortwave_radiation_sum,et0_fao_evapotranspiration",
+        current: PARAMS_CURRENT.join(','),
+        hourly: PARAMS_HOURLY.join(','),
+        daily: PARAMS_DAILY.join(','),
         models: "best_match,ecmwf_ifs04,gfs_seamless,icon_seamless",
         timezone: "auto",
         temperature_unit: tempUnit,
@@ -122,8 +159,8 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
-        current: "european_aqi,us_aqi,pm10,pm2_5,nitrogen_dioxide,ozone,sulphur_dioxide,dust,uv_index,ammonia,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen",
-        hourly: "european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone,sulphur_dioxide",
+        current: PARAMS_AQI_CURRENT.join(','),
+        hourly: PARAMS_AQI_HOURLY.join(','),
         timezone: "auto"
     });
 
@@ -135,12 +172,28 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
 
 // 3. Funció AROME (CORREGIT: Sense duplicats)
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
+    // AROME té variables específiques, així que mantenim algunes llistes pròpies o reutilitzem parcialment.
+    // Per seguretat, definim aquí el que necessita AROME explícitament.
+    const AROME_CURRENT = [
+        "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", 
+        "precipitation", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure", 
+        "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "cloud_cover_low", 
+        "cloud_cover_mid", "cloud_cover_high"
+    ];
+    
+    const AROME_HOURLY = [
+        "temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature", 
+        "precipitation", "weather_code", "pressure_msl", "surface_pressure", "cloud_cover", 
+        "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility", 
+        "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "cape", 
+        "freezing_level_height", "is_day"
+    ];
+
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
-        // CORRECCIÓ: Eliminada la línia duplicada de longitude que hi havia aquí
-        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high",
-        hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,freezing_level_height,is_day",
+        current: AROME_CURRENT.join(','),
+        hourly: AROME_HOURLY.join(','),
         minutely_15: "precipitation", 
         timezone: "auto",
         models: "meteofrance_arome_france_hd" 

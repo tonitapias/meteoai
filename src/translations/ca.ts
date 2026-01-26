@@ -285,12 +285,7 @@ export const ca = {
   favAdded: "Afegit als favorits",
   favRemoved: "Eliminat dels favorits",
   
-  // --- CONFIGURACIÓ IA (ACTUALITZAT PER PRECISIÓ) ---
-  ai_system_role: "Ets un analista meteorològic tècnic. La teva prioritat és la precisió, la seguretat i la coherència de les dades.",
-  ai_tone_instruction: "Fes servir un to informatiu, breu i assertiu. Evita el llenguatge dubitatiu si les dades són clares.",
-  ai_task_instruction: "Interpreta les dades per respondre: 1) Em mullaré? 2) Tinc fred/calor? 3) Hi ha perill? No llistis números, explica l'impacte real.",
-
-  // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
+    // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
   weekdays: {
     long: ["Diumenge", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte"],
     short: ["Dg", "Dl", "Dt", "Dc", "Dj", "Dv", "Ds"]

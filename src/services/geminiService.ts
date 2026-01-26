@@ -1,11 +1,10 @@
 // src/services/geminiService.ts
 import { prepareContextForAI, ExtendedWeatherData } from '../utils/weatherLogic'; 
 import * as Sentry from "@sentry/react";
-import { TRANSLATIONS } from '../translations'; 
 import { cacheService } from './cacheService'; 
+import { AI_PROMPTS } from '../constants/aiPrompts';
 
 // --- CONFIGURACIÓ ---
-// Utilitzem la variable d'entorn o el fallback per defecte
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || "https://meteoai-proxy.tonitapias.workers.dev"; 
 
 const AI_CACHE_TTL = 60 * 60 * 1000; 
@@ -63,16 +62,13 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             console.warn("⚠️ Error llegint Cache IA:", dbError);
         }
 
-        // 5. Construcció del Prompt
-        const t = TRANSLATIONS[language as keyof typeof TRANSLATIONS];
-        const fallbackT = TRANSLATIONS['en'] || TRANSLATIONS['ca'];
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const getStr = (key: string, defaultText: string) => (t as any)?.[key] || (fallbackT as any)?.[key] || defaultText;
+        // 5. Construcció del Prompt (REFRACTORITZAT)
+        // Recuperem els prompts des de la nova constant, amb fallback a anglès o català
+        const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
 
-        const role = getStr('ai_system_role', "Act as an Expert Meteorologist.");
-        const tone = getStr('ai_tone_instruction', "Use a professional but approachable tone.");
-        const task = getStr('ai_task_instruction', "Analyze the data and provide a short summary.");
+        const role = prompts.role;
+        const tone = prompts.tone;
+        const task = prompts.task;
 
         const targetLanguage = LANG_MAP[language] || 'English';
 

@@ -285,12 +285,7 @@ export const en = {
   favAdded: "Added to favorites",
   favRemoved: "Removed from favorites",
 
-  // --- AI CONFIGURATION ---
-  ai_system_role: "You are a technical meteorological analyst. Your priority is precision, safety, and data consistency.",
-  ai_tone_instruction: "Use an informative, brief, and assertive tone. Avoid doubtful language if the data is clear.",
-  ai_task_instruction: "Interpret the data to answer: 1) Will I get wet? 2) Will I be cold/hot? 3) Is there danger? Do not list numbers, explain the real impact.",
-
-  // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
+    // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
   
   weekdays: {
     long: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
