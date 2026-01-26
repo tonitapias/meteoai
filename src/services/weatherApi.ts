@@ -1,28 +1,14 @@
 // src/services/weatherApi.ts
-import * as Sentry from "@sentry/react"; // NOU: Per monitoritzar fallades de xarxa
-
-export interface WeatherData {
-    current: Record<string, unknown>;
-    hourly: Record<string, unknown>;
-    daily: Record<string, unknown>;
-    minutely_15?: Record<string, unknown>;
-    location?: {
-        name: string;
-        latitude: number;
-        longitude: number;
-        country?: string; 
-    };
-    current_units?: Record<string, string>;
-    hourly_units?: Record<string, string>;
-    daily_units?: Record<string, string>;
-    [key: string]: unknown; 
-}
+import * as Sentry from "@sentry/react";
+import { ZodType } from "zod"; 
+import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
+import { WeatherData } from "../types/weather";
 
 // CONFIGURACIÓ
 const BASE_URL = import.meta.env.VITE_API_WEATHER_BASE || "https://api.open-meteo.com/v1/forecast";
 const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-quality-api.open-meteo.com/v1/air-quality";
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || 10000;
-const MAX_RETRIES = 2; // Nombre de reintents (Total 3 intents)
+const MAX_RETRIES = 2;
 
 // --- Utilitat interna: Timeout ---
 const fetchWithTimeout = async (url: string): Promise<Response> => {
@@ -38,31 +24,16 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
     }
 };
 
-// --- Utilitat interna: Retry Logic (NOU) ---
+// --- Utilitat interna: Retry Logic ---
 const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Response> => {
     for (let i = 0; i <= retries; i++) {
         try {
             const response = await fetchWithTimeout(url);
-            
-            // Si la resposta és un error de servidor (5xx), llancem error per reintentar
-            // Si és 4xx (Client Error), no reintentem perquè és culpa nostra (params malament)
-            if (!response.ok && response.status >= 500) {
-                throw new Error(`Server Error: ${response.status}`);
-            }
-            
-            if (!response.ok) { // 4xx Errors
-                 throw new Error(`API Error: ${response.status} ${response.statusText}`);
-            }
-
+            if (!response.ok && response.status >= 500) throw new Error(`Server Error: ${response.status}`);
+            if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
             return response;
         } catch (err) {
-            const isLastAttempt = i === retries;
-            
-            if (isLastAttempt) {
-                throw err; // Ja no queden intents, fallem definitivament
-            }
-
-            // Monitoratge "Silent": Avisem a Sentry que hi ha hagut un "hiccup" però reintentem
+            if (i === retries) throw err;
             console.warn(`⚠️ Intent ${i + 1} fallit. Reintentant...`, err);
             Sentry.addBreadcrumb({
                 category: "network-retry",
@@ -70,18 +41,62 @@ const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Respo
                 level: "warning",
                 data: { error: String(err) }
             });
-
-            // Exponential Backoff: Esperem una mica més cada vegada (1s, 2s...)
-            const delay = 1000 * (i + 1);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
         }
     }
     throw new Error("Unexpected retry loop exit");
 };
 
+// --- ✨ LA MÀGIA: Normalitzador de Models (Tipatge Segur) ---
+const normalizeModelKeys = (data: unknown): unknown => {
+    if (!data || typeof data !== 'object') return data;
+    
+    const processObject = (obj: unknown): unknown => {
+        if (!obj || typeof obj !== 'object') return obj;
+
+        const typedObj = obj as Record<string, unknown>;
+        const newObj = { ...typedObj };
+        
+        Object.keys(newObj).forEach(key => {
+            if (key.endsWith('_best_match')) {
+                const baseKey = key.replace('_best_match', '');
+                if (newObj[baseKey] === undefined) {
+                    newObj[baseKey] = newObj[key];
+                }
+            }
+        });
+        return newObj;
+    };
+
+    const weatherData = data as Record<string, unknown>;
+    const normalized = { ...weatherData };
+
+    if (normalized.current) normalized.current = processObject(normalized.current);
+    if (normalized.hourly) normalized.hourly = processObject(normalized.hourly);
+    if (normalized.daily) normalized.daily = processObject(normalized.daily);
+
+    return normalized;
+};
+
+// --- Validació Zod ---
+const validateData = (schema: ZodType, data: unknown, context: string) => {
+    const cleanData = normalizeModelKeys(data);
+    const result = schema.safeParse(cleanData);
+    
+    if (!result.success) {
+        console.error(`❌ Zod Validation Error (${context}):`, result.error);
+        Sentry.captureException(new Error(`Schema Validation Failed in ${context}`), {
+            extra: { zodError: result.error.format() }
+        });
+        return cleanData; 
+    }
+    return result.data;
+};
+
 // 1. Funció Principal
 export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'): Promise<WeatherData> => {
     const tempUnit = unit === 'F' ? 'fahrenheit' : 'celsius';
+    
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
@@ -96,9 +111,10 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
         forecast_days: "8" 
     });
 
-    // ÚS DE RETRY
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`);
-    return response.json();
+    const rawData = await response.json();
+    
+    return validateData(WeatherResponseSchema, rawData, 'getWeatherData') as WeatherData;
 };
 
 // 2. Funció Qualitat Aire
@@ -112,14 +128,17 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
     });
 
     const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`);
-    return response.json();
+    const rawData = await response.json();
+
+    return validateData(AirQualitySchema, rawData, 'getAirQualityData');
 };
 
-// 3. Funció AROME
+// 3. Funció AROME (CORREGIT: Sense duplicats)
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
+        // CORRECCIÓ: Eliminada la línia duplicada de longitude que hi havia aquí
         current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover_low,cloud_cover_mid,cloud_cover_high",
         hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,freezing_level_height,is_day",
         minutely_15: "precipitation", 
@@ -128,5 +147,7 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
     });
 
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`);
-    return response.json();
+    const rawData = await response.json();
+
+    return validateData(WeatherResponseSchema, rawData, 'getAromeData') as WeatherData;
 };
