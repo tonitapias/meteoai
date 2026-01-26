@@ -1,11 +1,12 @@
 // src/components/RadarMap.tsx
 import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, useMap, ZoomControl, LayersControl } from 'react-leaflet'; // Afegit LayersControl
+import { MapContainer, TileLayer, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Play, Pause, Loader2 } from 'lucide-react';
 import L from 'leaflet';
 
 // Importació d'imatges per fixar el bug d'icones de Leaflet
+// Això es manté igual per garantir que els marcadors es vegin bé
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -18,7 +19,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Component auxiliar
+// Component auxiliar per centrar el mapa
 function ChangeView({ center }: { center: [number, number] }) {
   const map = useMap();
   map.setView(center, map.getZoom());
@@ -49,6 +50,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
   const [loading, setLoading] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 1. Càrrega de dades del Radar (RainViewer)
   useEffect(() => {
     const fetchRadarConfig = async () => {
       try {
@@ -61,7 +63,8 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         ].sort((a, b) => a.time - b.time);
 
         setTimestamps(allFrames);
-        setCurrentIndex(allFrames.length - 6);
+        // Comencem una mica abans del final per veure moviment
+        setCurrentIndex(Math.max(0, allFrames.length - 6));
         setLoading(false);
         setIsPlaying(true); 
       } catch (e) {
@@ -73,6 +76,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
     fetchRadarConfig();
   }, []);
 
+  // 2. Control de l'animació (Play/Pause)
   useEffect(() => {
     if (isPlaying && timestamps.length > 0) {
       timerRef.current = setInterval(() => {
@@ -80,7 +84,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
           const next = prev + 1;
           return next >= timestamps.length ? 0 : next;
         });
-      }, 500);
+      }, 500); // Velocitat d'animació (500ms)
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
@@ -107,16 +111,15 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         center={[lat, lon]} 
         zoom={8} 
         style={{ height: '100%', width: '100%', background: '#0f172a' }}
-        zoomControl={false}
+        zoomControl={false} // Desactivem el control per defecte per moure'l si cal
       >
         <ChangeView center={[lat, lon]} />
-        {/* Desactivem el control de zoom per defecte si volem més netedat, o el movem */}
         <ZoomControl position="topleft" />
 
-        {/* NOU: CONTROL DE CAPES */}
+        {/* --- CONTROL DE CAPES MILLORAT --- */}
         <LayersControl position="topright">
             
-            {/* OPCIÓ 1: MODE FOSC (Per defecte) */}
+            {/* 1. Base: FOSC (Per defecte) - Ideal per veure el radar */}
             <LayersControl.BaseLayer checked name="Mapa Fosc">
                 <TileLayer
                     attribution='&copy; CARTO'
@@ -124,16 +127,42 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
                 />
             </LayersControl.BaseLayer>
 
-            {/* OPCIÓ 2: MODE SATÈL·LIT */}
-            <LayersControl.BaseLayer name="Satèl·lit (Real)">
+            {/* 2. Base: CLAR - Per a dies amb molta llum solar */}
+            <LayersControl.BaseLayer name="Mapa Clar">
+                <TileLayer
+                    attribution='&copy; CARTO'
+                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                />
+            </LayersControl.BaseLayer>
+
+            {/* 3. Base: TOPOGRÀFIC - Clau per entendre la meteo local */}
+            <LayersControl.BaseLayer name="Topogràfic">
+                <TileLayer
+                    attribution='&copy; OpenTopoMap'
+                    url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                    maxZoom={17}
+                />
+            </LayersControl.BaseLayer>
+
+            {/* 4. Base: SATÈL·LIT (Real) */}
+            <LayersControl.BaseLayer name="Satèl·lit">
                 <TileLayer
                     attribution='&copy; Esri'
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 />
             </LayersControl.BaseLayer>
 
-            {/* CAPA DE PLUJA (ANIMADA) */}
-            {/* L'emboliquem en un Overlay perquè sigui opcional, però marcat per defecte */}
+            {/* --- OVERLAYS (Superposicions) --- */}
+
+            {/* 5. Capa: ETIQUETES - Noms de ciutats (útil sobre satèl·lit) */}
+            <LayersControl.Overlay name="Etiquetes i Fronteres">
+                 <TileLayer
+                    url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
+                    zIndex={200}
+                />
+            </LayersControl.Overlay>
+
+            {/* 6. Capa: RADAR - La pluja (Animada) */}
             <LayersControl.Overlay checked name="Radar de Pluja">
                 {currentFrame && (
                   <TileLayer
@@ -147,7 +176,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
             
         </LayersControl>
 
-        {/* Marcador de posició */}
+        {/* Marcador de posició de l'usuari */}
         <div className="leaflet-marker-pane">
             <div 
                 style={{ 
@@ -165,7 +194,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         </div>
       </MapContainer>
 
-      {/* CONTROLS DEL REPRODUCTOR (Es mantenen igual) */}
+      {/* --- REPRODUCTOR (Controls inferiors) --- */}
       <div className="absolute bottom-6 left-6 right-6 z-[1000] bg-slate-900/90 backdrop-blur-md p-4 rounded-xl border border-white/10 flex items-center gap-4 shadow-xl">
         <button 
             onClick={() => setIsPlaying(!isPlaying)}

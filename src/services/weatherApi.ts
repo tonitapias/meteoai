@@ -11,7 +11,6 @@ const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || 10000;
 const MAX_RETRIES = 2;
 
 // --- DEFINICIÓ DE VARIABLES (Sanitització) ---
-// Utilitzem Arrays per evitar errors de sintaxi en strings llargs
 const PARAMS_CURRENT = [
     "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", 
     "precipitation", "rain", "showers", "snowfall", "weather_code", "cloud_cover", 
@@ -61,22 +60,44 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
     }
 };
 
-// --- Utilitat interna: Retry Logic ---
+// --- Utilitat interna: Retry Logic (MILLORADA) ---
 const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Response> => {
     for (let i = 0; i <= retries; i++) {
         try {
             const response = await fetchWithTimeout(url);
+            
+            // Si el servidor respon amb error 500+, llencem error per forçar el reintent
             if (!response.ok && response.status >= 500) throw new Error(`Server Error: ${response.status}`);
+            
+            // Si és error 4xx (client), no reintentem i tornem resposta tal qual o llencem error segons convingui
+            // Aquí assumim que volem capturar-ho com error d'API
             if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            
             return response;
         } catch (err) {
-            if (i === retries) throw err;
+            // Si és l'últim intent, registrem l'error CRÍTIC a Sentry
+            if (i === retries) {
+                console.error(`❌ Error fatal després de ${retries + 1} intents:`, err);
+                
+                Sentry.captureException(err, { 
+                    tags: { 
+                        service: 'weather_api', 
+                        type: 'network_critical',
+                        url_short: url.split('?')[0] // Només la base de l'URL per agrupar millor
+                    },
+                    extra: { full_url: url, attempts: retries + 1 }
+                });
+                
+                throw err; // Propaguem l'error perquè l'UI mostri el missatge pertinent
+            }
+
+            // Si no és l'últim, només avisem (Breadcrumb) i esperem
             console.warn(`⚠️ Intent ${i + 1} fallit. Reintentant...`, err);
             Sentry.addBreadcrumb({
                 category: "network-retry",
-                message: `Retry ${i + 1}/${retries} for ${url}`,
+                message: `Retry ${i + 1}/${retries}`,
                 level: "warning",
-                data: { error: String(err) }
+                data: { url: url, error: String(err) }
             });
             await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
         }
@@ -84,7 +105,7 @@ const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Respo
     throw new Error("Unexpected retry loop exit");
 };
 
-// --- ✨ LA MÀGIA: Normalitzador de Models (Tipatge Segur) ---
+// --- Normalitzador de Models (Tipatge Segur) ---
 const normalizeModelKeys = (data: unknown): unknown => {
     if (!data || typeof data !== 'object') return data;
     
@@ -122,7 +143,10 @@ const validateData = (schema: ZodType, data: unknown, context: string) => {
     
     if (!result.success) {
         console.error(`❌ Zod Validation Error (${context}):`, result.error);
+        // Capturem error de schema però no bloquegem l'app (retornem dades "brutes" si cal, o millor null)
+        // En aquest cas, seguim l'estratègia original de retornar cleanData però avisant fort a Sentry.
         Sentry.captureException(new Error(`Schema Validation Failed in ${context}`), {
+            tags: { type: 'schema_validation' },
             extra: { zodError: result.error.format() }
         });
         return cleanData; 
@@ -167,13 +191,11 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
     const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`);
     const rawData = await response.json();
 
-    return validateData(AirQualitySchema, rawData, 'getAirQualityData');
+    return validateData(AirQualitySchema, rawData, 'getAirQualityData') as Record<string, unknown>;
 };
 
-// 3. Funció AROME (CORREGIT: Sense duplicats)
+// 3. Funció AROME
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
-    // AROME té variables específiques, així que mantenim algunes llistes pròpies o reutilitzem parcialment.
-    // Per seguretat, definim aquí el que necessita AROME explícitament.
     const AROME_CURRENT = [
         "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", 
         "precipitation", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure", 
