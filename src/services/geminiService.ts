@@ -4,23 +4,13 @@ import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { AI_PROMPTS } from '../constants/aiPrompts';
 
-// --- CONFIGURACIÓ ---
-const PROXY_URL = import.meta.env.VITE_PROXY_URL || "https://meteoai-proxy.tonitapias.workers.dev"; 
-
-const AI_CACHE_TTL = 60 * 60 * 1000; 
-
-// MILLORA PAS 3: Timeout de seguretat (12s). 
-// Si la IA no respon en aquest temps, tallem per no fer esperar l'usuari.
-const REQUEST_TIMEOUT_MS = 12000; 
-
-const LANG_MAP: Record<string, string> = {
-    'ca': 'Catalan',
-    'es': 'Spanish',
-    'en': 'English',
-    'fr': 'French',
-    'de': 'German',
-    'it': 'Italian'
-};
+// Importem la nova configuració centralitzada (PAS 2)
+import { 
+    GEMINI_PROXY_URL, 
+    AI_CACHE_TTL, 
+    AI_REQUEST_TIMEOUT, 
+    TARGET_LANGUAGES 
+} from '../constants/aiConfig';
 
 interface AICacheData {
     text: string;
@@ -35,7 +25,8 @@ type LocatableData = {
 };
 
 export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, language: string): Promise<AICacheData | null> => {
-    if (!PROXY_URL || PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
+    // Validació de seguretat de la configuració
+    if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.error("❌ Error: Has de configurar la PROXY_URL a l'arxiu .env");
         return null;
     }
@@ -48,15 +39,16 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
         if (!context) return null;
 
-        // 3. Generació de Clau Única
+        // 3. Generació de Clau Única per a la Cache
         const safeData = weatherData as unknown as LocatableData;
         const lat = safeData.latitude ?? safeData.location?.latitude ?? 0;
         const lon = safeData.longitude ?? safeData.location?.longitude ?? 0;
         
-        const timestampKey = context.location.elevation.toString(); 
-        const cacheKey = cacheService.generateAiKey(timestampKey, lat, lon, language);
+        // Usem l'elevació com a part de la clau (context geogràfic únic)
+        const elevationKey = context.location.elevation.toString(); 
+        const cacheKey = cacheService.generateAiKey(elevationKey, lat, lon, language);
         
-        // 4. Verificació de Caché
+        // 4. Verificació de Caché (Estalvi de peticions)
         try {
             const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
             if (cachedData) {
@@ -66,14 +58,14 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             console.warn("⚠️ Error llegint Cache IA:", dbError);
         }
 
-        // 5. Construcció del Prompt
+        // 5. Construcció del Prompt (Enginyeria de Prompts)
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
 
         const role = prompts.role;
         const tone = prompts.tone;
         const task = prompts.task;
 
-        const targetLanguage = LANG_MAP[language] || 'English';
+        const targetLanguage = TARGET_LANGUAGES[language] || 'English';
 
         const prompt = `
           ROL: ${role}
@@ -119,10 +111,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
         // 6. Crida al Proxy amb TIMEOUT (IMPLEMENTACIÓ DE SEGURETAT)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT);
 
         try {
-            const response = await fetch(PROXY_URL, {
+            const response = await fetch(GEMINI_PROXY_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt }),
@@ -138,13 +130,13 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             
             if (!rawText) return null;
 
-            // 7. Parseig
+            // 7. Parseig i validació bàsica
             const jsonMatch = rawText.match(/\{[\s\S]*\}/);
             if (!jsonMatch) return null;
             
             const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
 
-            // 8. Guardar a Cache
+            // 8. Guardar a Cache si el format és correcte
             if (parsed.text && Array.isArray(parsed.tips)) {
                 await cacheService.set(cacheKey, parsed);
                 return parsed;
@@ -156,10 +148,9 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             // Assegurem que el timeout es neteja sempre
             clearTimeout(timeoutId);
             
-            // Gestió específica per timeout (AbortError)
+            // Gestió específica per timeout (AbortError) - No reportem a Sentry, és normal en xarxes lentes
             if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-                console.warn(`⚠️ Gemini Request Timed Out after ${REQUEST_TIMEOUT_MS}ms`);
-                // No reportem a Sentry perquè és un comportament esperat de xarxa lenta
+                console.warn(`⚠️ Gemini Request Timed Out after ${AI_REQUEST_TIMEOUT}ms`);
             } else {
                 // Altres errors de xarxa sí que els propaguem
                 throw fetchError;

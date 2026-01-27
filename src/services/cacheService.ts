@@ -1,10 +1,7 @@
 // src/services/cacheService.ts
 import { get, set, del, entries, delMany, IDBValidKey } from 'idb-keyval';
 import * as Sentry from "@sentry/react";
-
-const WEATHER_PREFIX = 'meteoai_v7_cache_';
-const AI_PREFIX = 'meteoai_ai_';
-const MAX_AGE_WEATHER = 15 * 60 * 1000; // 15 minuts
+import { CACHE_PREFIXES, CACHE_TTL } from '../constants/cacheConfig';
 
 // Definim la "forma" de les dades guardades
 interface CacheItem<T> {
@@ -39,7 +36,7 @@ export const cacheService = {
   /**
    * Recupera dades. Utilitza <T> per indicar què esperes rebre.
    */
-  get: async <T>(key: string, maxAge: number = MAX_AGE_WEATHER): Promise<T | null> => {
+  get: async <T>(key: string, maxAge: number = CACHE_TTL.WEATHER): Promise<T | null> => {
     try {
       const item = await get<CacheItem<T>>(key);
       
@@ -105,10 +102,10 @@ export const cacheService = {
 
       for (const [key, val] of allEntries) {
         // 'val' ve com 'any' des de la llibreria, fem un cast segur
-        if (typeof key === 'string' && (key.startsWith(WEATHER_PREFIX) || key.startsWith(AI_PREFIX))) {
+        if (typeof key === 'string' && (key.startsWith(CACHE_PREFIXES.WEATHER) || key.startsWith(CACHE_PREFIXES.AI))) {
            const item = val as CacheItem<unknown>;
            // Netegem coses de més de 24h per mantenir la DB lleugera
-           if (item && item.timestamp && (now - item.timestamp > 24 * 60 * 60 * 1000)) {
+           if (item && item.timestamp && (now - item.timestamp > CACHE_TTL.CLEANUP)) {
                keysToDelete.push(key);
                deletedCount++;
            }
@@ -128,8 +125,8 @@ export const cacheService = {
 
   // Generadors de claus
   generateWeatherKey: (lat: number, lon: number, unit: string): string => 
-    `${WEATHER_PREFIX}${lat.toFixed(3)}_${lon.toFixed(3)}_${unit}`,
+    `${CACHE_PREFIXES.WEATHER}${lat.toFixed(3)}_${lon.toFixed(3)}_${unit}`,
     
   generateAiKey: (ts: string | number, lat: number, lon: number, lang: string): string => 
-    `${AI_PREFIX}${ts}_${lat}_${lon}_${lang}`
+    `${CACHE_PREFIXES.AI}${ts}_${lat}_${lon}_${lang}`
 };
