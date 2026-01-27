@@ -9,6 +9,10 @@ const PROXY_URL = import.meta.env.VITE_PROXY_URL || "https://meteoai-proxy.tonit
 
 const AI_CACHE_TTL = 60 * 60 * 1000; 
 
+// MILLORA PAS 3: Timeout de seguretat (12s). 
+// Si la IA no respon en aquest temps, tallem per no fer esperar l'usuari.
+const REQUEST_TIMEOUT_MS = 12000; 
+
 const LANG_MAP: Record<string, string> = {
     'ca': 'Catalan',
     'es': 'Spanish',
@@ -62,8 +66,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             console.warn("⚠️ Error llegint Cache IA:", dbError);
         }
 
-        // 5. Construcció del Prompt (REFRACTORITZAT)
-        // Recuperem els prompts des de la nova constant, amb fallback a anglès o català
+        // 5. Construcció del Prompt
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
 
         const role = prompts.role;
@@ -72,8 +75,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
         const targetLanguage = LANG_MAP[language] || 'English';
 
-        // MODIFICACIÓ: Prompt amb lògica condicional i jerarquia
-        // AFEGIT: Regla específica per a "Ratxes de vent" en català
         const prompt = `
           ROL: ${role}
           
@@ -116,37 +117,63 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           {"text": "...", "tips": ["...", "..."]}
         `;
 
-        // 6. Crida al Proxy
-        const response = await fetch(PROXY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt })
-        });
+        // 6. Crida al Proxy amb TIMEOUT (IMPLEMENTACIÓ DE SEGURETAT)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-        if (!response.ok) throw new Error(`Proxy Error: ${response.status}`);
+        try {
+            const response = await fetch(PROXY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt }),
+                signal: controller.signal // Vinculem el senyal de cancel·lació
+            });
 
-        const data = await response.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!rawText) return null;
+            clearTimeout(timeoutId); // Tot ha anat bé, cancelem el compte enrere
 
-        // 7. Parseig
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return null;
-        
-        const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
+            if (!response.ok) throw new Error(`Proxy Error: ${response.status}`);
 
-        // 8. Guardar a Cache
-        if (parsed.text && Array.isArray(parsed.tips)) {
-            await cacheService.set(cacheKey, parsed);
-            return parsed;
+            const data = await response.json();
+            const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!rawText) return null;
+
+            // 7. Parseig
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) return null;
+            
+            const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
+
+            // 8. Guardar a Cache
+            if (parsed.text && Array.isArray(parsed.tips)) {
+                await cacheService.set(cacheKey, parsed);
+                return parsed;
+            }
+
+            return null;
+
+        } catch (fetchError) {
+            // Assegurem que el timeout es neteja sempre
+            clearTimeout(timeoutId);
+            
+            // Gestió específica per timeout (AbortError)
+            if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                console.warn(`⚠️ Gemini Request Timed Out after ${REQUEST_TIMEOUT_MS}ms`);
+                // No reportem a Sentry perquè és un comportament esperat de xarxa lenta
+            } else {
+                // Altres errors de xarxa sí que els propaguem
+                throw fetchError;
+            }
+            return null;
         }
 
-        return null;
-
     } catch (e) {
-        console.error("Gemini Proxy Error:", e);
-        Sentry.captureException(e, { tags: { service: 'GeminiProxy' } });
+        // Captura global d'errors
+        const isTimeout = e instanceof Error && e.name === 'AbortError';
+        if (!isTimeout) {
+            console.error("Gemini Proxy Error:", e);
+            Sentry.captureException(e, { tags: { service: 'GeminiProxy' } });
+        }
         return null;
     }
 };

@@ -20,12 +20,19 @@ const cleanKeys = (obj: Record<string, unknown> | undefined): Record<string, unk
     return clean;
 };
 
-// --- NOVA FUNCIÓ DE SEGURETAT ---
-// Normalitza qualsevol format de data a un Timestamp numèric (ms)
+// --- NOVA FUNCIÓ DE SEGURETAT (ACTUALITZADA PAS 2) ---
+// Normalitza qualsevol format de data a un Timestamp numèric (ms) alineat a l'hora.
 const normalizeTime = (t: unknown): number => {
     if (!t) return 0;
     const date = new Date(String(t));
-    return isNaN(date.getTime()) ? 0 : date.getTime();
+    if (isNaN(date.getTime())) return 0;
+
+    // MILLORA CRÍTICA: Forcem l'alineació a l'inici de l'hora (XX:00:00)
+    // Això evita que petites desviacions de segons entre models (OpenMeteo vs Arome)
+    // creïn entrades duplicades o desalineades a les gràfiques.
+    date.setMinutes(0, 0, 0); 
+    
+    return date.getTime();
 };
 
 export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null): ExtendedWeatherData => {
@@ -124,6 +131,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     if (source.hourly && target.hourly && target.hourly.time) {
         const globalTimeIndexMap = new Map<number, number>();
         
+        // Creem el mapa d'índexs base normalitzats
         target.hourly.time.forEach((t, i) => {
             globalTimeIndexMap.set(normalizeTime(t), i);
         });
@@ -131,6 +139,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
         const sourceTimes = (source.hourly.time || highResData.hourly?.time || []) as string[];
 
         sourceTimes.forEach((timeValue, sourceIndex) => {
+            // Normalitzem també l'hora d'origen per buscar la coincidència exacta
             const timeKey = normalizeTime(timeValue);
             const globalIndex = globalTimeIndexMap.get(timeKey);
             

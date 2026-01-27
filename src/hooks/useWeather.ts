@@ -1,5 +1,5 @@
 // src/hooks/useWeather.ts
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import * as Sentry from "@sentry/react"; 
 import { 
     normalizeModelData, 
@@ -30,13 +30,17 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // CANVI: Eliminem 'notification' i 'handleGetCurrentLocation' d'aquí.
-  // Aquest hook ara és purament de DADES.
+  // MILLORA DE SEGURETAT (Corregida amb useMemo):
+  // Utilitzem useMemo per evitar que l'objecte 't' es recreï en cada render,
+  // el que causaria que el useCallback de sota s'executés innecessàriament.
+  const t = useMemo(() => {
+      return { ...TRANSLATIONS['ca'], ...(TRANSLATIONS[lang] || {}) };
+  }, [lang]);
 
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
   useEffect(() => {
+      // Neteja de cache en segon pla (sense afectar el rendiment inicial)
       cacheService.clean().catch(console.error);
   }, []);
 
@@ -44,6 +48,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const now = Date.now();
     const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
+    // Evitem crides duplicades si l'usuari prem molts cops seguits (Debounce manual de 3s)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -57,6 +62,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
+      // 1. Intentem recuperar de la Cache local (Offline First)
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
       if (cachedPacket) {
           // eslint-disable-next-line no-console
@@ -67,7 +73,8 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           return true;
       }
 
-      const { weatherRaw, geoData, aqiData } = await fetchAllWeatherData(
+      // 2. Si no hi ha cache, fem la petició a la xarxa
+      const { weatherRaw, geoData, aqiData: fetchedAqi } = await fetchAllWeatherData(
         lat, 
         lon, 
         unit, 
@@ -78,11 +85,14 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       let processedData = normalizeModelData(weatherRaw);
       
+      // 3. Integració Model AROME (Alta resolució) si estem a zona suportada
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
+             // Injectem les dades d'alta resolució sobre les dades base
              processedData = injectHighResModels(processedData, aromeRaw);
           } catch (aromeErr) { 
+              // Si falla AROME, no bloquegem l'app. Degradem l'experiència elegantment (només model base).
               console.warn("Arome no disponible (Degradació elegant):", aromeErr); 
               Sentry.captureException(aromeErr, { 
                   tags: { service: 'AromeModel', type: 'SilentFail' },
@@ -91,6 +101,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           }
       }
 
+      // 4. Finalitzem l'estructura de dades amb la localització
       processedData.location = { 
           ...processedData.location, 
           name: geoData.city,
@@ -101,11 +112,13 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       const packet: WeatherCachePacket = {
           weather: processedData,
-          aqi: aqiData
+          aqi: fetchedAqi
       };
+      
+      // Guardem a cache per la pròxima vegada
       await cacheService.set(cacheKey, packet);
       
-      setAqiData(aqiData);
+      setAqiData(fetchedAqi);
       setWeatherData(processedData);
       
       return true;
@@ -119,12 +132,12 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           extra: { lat, lon, unit }
       });
 
-      setError(t.fetchError);
+      setError(t.fetchError); // Usem la traducció segura
       return false;
     } finally {
       setLoading(false);
     }
-  }, [unit, lang, t]); 
+  }, [unit, lang, t]); // Afegim 't' a les dependències tot i que és estable
 
   return { 
     weatherData, aqiData, loading, error, 
