@@ -8,9 +8,9 @@ import { WeatherData } from "../types/weather";
 import { 
     API_TIMEOUT_DEFAULT, 
     API_MAX_RETRIES,
-    API_FORECAST_DAYS, // Nou
-    API_MODELS_LIST,   // Nou
-    AROME_MODELS_LIST, // Nou
+    API_FORECAST_DAYS, 
+    API_MODELS_LIST,   
+    AROME_MODELS_LIST, 
     PARAMS_CURRENT,
     PARAMS_HOURLY,
     PARAMS_DAILY,
@@ -40,7 +40,7 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
     }
 };
 
-// --- Utilitat interna: Retry Logic ---
+// --- Utilitat interna: Retry Logic (MILLORADA: Classificació d'Errors) ---
 const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Response> => {
     for (let i = 0; i <= retries; i++) {
         try {
@@ -52,16 +52,33 @@ const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Respo
             return response;
         } catch (err) {
             if (i === retries) {
-                console.error(`❌ Error fatal després de ${retries + 1} intents:`, err);
+                // MILLORA DE SEGURETAT: Distingim entre Timeout (usuari) i Crash (servidor)
+                const isTimeout = err instanceof Error && err.name === 'AbortError';
+                const errorType = isTimeout ? 'network_timeout' : 'network_critical';
+                const logMessage = isTimeout ? `⏳ Timeout després de ${retries + 1} intents` : `❌ Error fatal després de ${retries + 1} intents`;
+
+                console.error(logMessage, err);
+                
                 Sentry.captureException(err, { 
-                    tags: { service: 'weather_api', type: 'network_critical', url_short: url.split('?')[0] },
-                    extra: { full_url: url, attempts: retries + 1 }
+                    tags: { 
+                        service: 'weather_api', 
+                        type: errorType, 
+                        url_short: url.split('?')[0] 
+                    },
+                    extra: { 
+                        full_url: url, 
+                        attempts: retries + 1,
+                        is_timeout: isTimeout
+                    }
                 });
                 throw err; 
             }
+            // Warning lleu per a reintents intermedis
             console.warn(`⚠️ Intent ${i + 1} fallit. Reintentant...`, err);
             Sentry.addBreadcrumb({
-                category: "network-retry", message: `Retry ${i + 1}/${retries}`, level: "warning",
+                category: "network-retry", 
+                message: `Retry ${i + 1}/${retries}`, 
+                level: "warning",
                 data: { url: url, error: String(err) }
             });
             await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));

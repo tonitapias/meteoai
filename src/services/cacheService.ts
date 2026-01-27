@@ -124,9 +124,13 @@ export const cacheService = {
   },
 
   // Generadors de claus
+  
+  // Mantenim precisió alta (3 decimals = ~100m) per dades meteo
   generateWeatherKey: (lat: number, lon: number, unit: string): string => 
     `${CACHE_PREFIXES.WEATHER}${lat.toFixed(3)}_${lon.toFixed(3)}_${unit}`,
     
+  // OPTIMITZACIÓ: Arrodonim a 2 decimals (~1.1km) per a la IA.
+  // Això augmenta dràsticament el "Cache Hit Rate" en moviments locals.
   generateAiKey: (ts: string | number, lat: number, lon: number, lang: string): string => 
-    `${CACHE_PREFIXES.AI}${ts}_${lat}_${lon}_${lang}`
+    `${CACHE_PREFIXES.AI}${ts}_${lat.toFixed(2)}_${lon.toFixed(2)}_${lang}`
 };

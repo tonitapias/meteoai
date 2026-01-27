@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/react";
 import { 
     normalizeModelData, 
     isAromeSupported, 
-    injectHighResModels,
+    // injectHighResModels, // ELIMINAT: Ara ho fem via Worker
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 
@@ -30,9 +30,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // MILLORA DE SEGURETAT (Corregida amb useMemo):
-  // Utilitzem useMemo per evitar que l'objecte 't' es recreï en cada render,
-  // el que causaria que el useCallback de sota s'executés innecessàriament.
+  // MILLORA DE SEGURETAT (Mantinguda): Evita re-renders innecessaris
   const t = useMemo(() => {
       return { ...TRANSLATIONS['ca'], ...(TRANSLATIONS[lang] || {}) };
   }, [lang]);
@@ -40,15 +38,39 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
   useEffect(() => {
-      // Neteja de cache en segon pla (sense afectar el rendiment inicial)
       cacheService.clean().catch(console.error);
+  }, []);
+
+  // --- NOVA UTILITAT: Wrapper per al Worker (Promesa) ---
+  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: ExtendedWeatherData) => {
+      return new Promise<ExtendedWeatherData>((resolve, reject) => {
+          // Creem el worker al vol (Vite ho optimitza automàticament)
+          const worker = new Worker(new URL('../workers/arome.worker.ts', import.meta.url), { type: 'module' });
+          
+          worker.onmessage = (e) => {
+              if (e.data.success) {
+                  resolve(e.data.data);
+              } else {
+                  reject(new Error(e.data.error));
+              }
+              worker.terminate(); // Important: Tanquem el fil per alliberar memòria
+          };
+          
+          worker.onerror = (err) => {
+              reject(err);
+              worker.terminate();
+          };
+          
+          // Enviem les dades pesades al fil secundari
+          worker.postMessage({ baseData: base, highResData: highRes });
+      });
   }, []);
 
   const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName?: string, country?: string) => {
     const now = Date.now();
     const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
-    // Evitem crides duplicades si l'usuari prem molts cops seguits (Debounce manual de 3s)
+    // Debounce de 3 segons per evitar spam de crides
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -62,7 +84,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 1. Intentem recuperar de la Cache local (Offline First)
+      // 1. Cache Local
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
       if (cachedPacket) {
           // eslint-disable-next-line no-console
@@ -73,35 +95,32 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           return true;
       }
 
-      // 2. Si no hi ha cache, fem la petició a la xarxa
+      // 2. Petició de Xarxa (Main Thread)
       const { weatherRaw, geoData, aqiData: fetchedAqi } = await fetchAllWeatherData(
-        lat, 
-        lon, 
-        unit, 
-        lang, 
-        locationName, 
-        country
+        lat, lon, unit, lang, locationName, country
       );
 
       let processedData = normalizeModelData(weatherRaw);
       
-      // 3. Integració Model AROME (Alta resolució) si estem a zona suportada
+      // 3. Integració Model AROME (Via Worker 🧵)
       if (isAromeSupported(lat, lon)) {
           try {
              const aromeRaw = await getAromeData(lat, lon);
-             // Injectem les dades d'alta resolució sobre les dades base
-             processedData = injectHighResModels(processedData, aromeRaw);
+             
+             // AQUÍ ESTÀ LA MÀGIA: No bloquegem la UI, esperem el Worker
+             processedData = await runAromeWorker(processedData, aromeRaw);
+
           } catch (aromeErr) { 
-              // Si falla AROME, no bloquegem l'app. Degradem l'experiència elegantment (només model base).
-              console.warn("Arome no disponible (Degradació elegant):", aromeErr); 
+              console.warn("⚠️ Arome Worker/Fetch Error (Degradació elegant):", aromeErr); 
               Sentry.captureException(aromeErr, { 
-                  tags: { service: 'AromeModel', type: 'SilentFail' },
+                  tags: { service: 'AromeWorker', type: 'FallbackToBase' },
                   level: 'warning' 
               });
+              // Si falla, continuem amb 'processedData' (OpenMeteo base) sense AROME.
           }
       }
 
-      // 4. Finalitzem l'estructura de dades amb la localització
+      // 4. Finalització de dades
       processedData.location = { 
           ...processedData.location, 
           name: geoData.city,
@@ -115,7 +134,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           aqi: fetchedAqi
       };
       
-      // Guardem a cache per la pròxima vegada
       await cacheService.set(cacheKey, packet);
       
       setAqiData(fetchedAqi);
@@ -132,12 +150,12 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           extra: { lat, lon, unit }
       });
 
-      setError(t.fetchError); // Usem la traducció segura
+      setError(t.fetchError); 
       return false;
     } finally {
       setLoading(false);
     }
-  }, [unit, lang, t]); // Afegim 't' a les dependències tot i que és estable
+  }, [unit, lang, t, runAromeWorker]); // Afegim runAromeWorker a dependències
 
   return { 
     weatherData, aqiData, loading, error, 
