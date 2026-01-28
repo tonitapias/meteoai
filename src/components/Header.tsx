@@ -1,10 +1,12 @@
+// src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, Activity } from 'lucide-react';
 import { usePreferences, LocationData } from '../hooks/usePreferences';
+import * as Sentry from "@sentry/react";
 
 interface HeaderProps {
   onSearch: (lat: number, lon: number, name?: string, country?: string) => void;
-  onLocate: () => void;
+  // onLocate eliminat com havíem acordat
   loading: boolean;
   viewMode: 'basic' | 'expert';
   setViewMode: (mode: 'basic' | 'expert') => void;
@@ -23,13 +25,14 @@ function isLocationData(item: GeoResult | LocationData): item is LocationData {
     return (item as LocationData).admin1 !== undefined || (item as GeoResult).id === undefined;
 }
 
-export default function Header({ onSearch, onLocate, loading, viewMode, setViewMode }: HeaderProps) {
+export default function Header({ onSearch, loading, viewMode, setViewMode }: HeaderProps) {
   const { favorites } = usePreferences();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<GeoResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isLocating, setIsLocating] = useState(false); 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const showFavorites = query.length === 0 && favorites.length > 0;
@@ -72,6 +75,98 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
     return () => clearTimeout(timer);
   }, [query]);
 
+  // --- LÒGICA DE GEOLOCALITZACIÓ AMB REVERSE GEOCODING ---
+  const handleLocationClick = () => {
+    if (isLocating || loading) return;
+    
+    setIsLocating(true);
+    
+    if (!navigator.geolocation) {
+      alert("El teu navegador no suporta la geolocalització.");
+      setIsLocating(false);
+      return;
+    }
+
+    const getPosition = (highAccuracy: boolean): Promise<GeolocationPosition> => {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                resolve, 
+                reject, 
+                {
+                    enableHighAccuracy: highAccuracy,
+                    timeout: highAccuracy ? 5000 : 10000,
+                    maximumAge: 60000 
+                }
+            );
+        });
+    };
+
+    getPosition(true)
+        .then((pos) => {
+            handleLocationFound(pos);
+        })
+        .catch(async (err: GeolocationPositionError) => {
+            if (err.code === 3) {
+                console.warn("⚠️ GPS Timeout. Reintentant amb baixa precisió...");
+                try {
+                    const fallbackPos = await getPosition(false);
+                    handleLocationFound(fallbackPos);
+                    
+                    Sentry.addBreadcrumb({
+                        category: "geolocation",
+                        message: "Recovered from GPS Timeout using Low Accuracy",
+                        level: "info"
+                    });
+                } catch (fallbackErr) {
+                    reportGeoError(fallbackErr as GeolocationPositionError);
+                }
+            } else {
+                reportGeoError(err);
+            }
+        });
+  };
+
+  // NOU: Aquesta funció ara busca el nom de la ciutat
+  const handleLocationFound = async (pos: GeolocationPosition) => {
+      const { latitude, longitude } = pos.coords;
+      let finalName = "Ubicació detectada";
+      let finalCountry = "";
+
+      try {
+          // 1. Fem "Reverse Geocoding" (Coordenades -> Nom)
+          // Utilitzem una API gratuïta que no requereix clau (BigDataCloud)
+          const resp = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ca`
+          );
+          
+          if (resp.ok) {
+              const data = await resp.json();
+              // Prioritzem: Localitat -> Ciutat -> Vila -> "Ubicació"
+              finalName = data.locality || data.city || data.town || data.village || "Ubicació actual";
+              finalCountry = data.countryName || "";
+          }
+      } catch (e) {
+          console.warn("Error obtenint nom de la ciutat:", e);
+          // Si falla, no passa res, es queda amb el nom genèric "Ubicació detectada"
+      }
+
+      // 2. Cridem a la funció principal amb el NOM REAL trobat
+      onSearch(latitude, longitude, finalName, finalCountry);
+      setIsLocating(false);
+  };
+
+  const reportGeoError = (err: GeolocationPositionError) => {
+      setIsLocating(false);
+      if (err.code !== 1) { 
+          console.error("❌ Error Geolocalització:", err.message);
+          Sentry.captureException(new Error(`Geolocation Failed: ${err.message}`), { 
+              tags: { service: 'Geolocation', strategy: 'fallback_implemented' },
+              extra: { code: err.code }
+          });
+          alert("No s'ha pogut obtenir la ubicació precisa. Comprova el GPS o la connexió.");
+      }
+  };
+
   const processSelection = (lat: number, lon: number, name: string, country?: string) => {
     setQuery('');
     onSearch(lat, lon, name, country);
@@ -91,7 +186,6 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
     e.preventDefault();
     if (selectedIndex >= 0 && activeList[selectedIndex]) {
         const item = activeList[selectedIndex];
-        
         if (isLocationData(item)) {
              handleSelectFavorite(item);
         } else {
@@ -151,7 +245,6 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onKeyDown={handleKeyDown}
-              // MILLORA ACCESS: Placeholder més clar (slate-500 vs slate-600)
               placeholder="CERCAR CIUTAT..."
               className="flex-1 bg-transparent border-none outline-none text-sm font-mono font-medium text-white placeholder:text-slate-500 h-9 px-2 uppercase tracking-wider w-full min-w-0"
               disabled={loading}
@@ -173,13 +266,22 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
 
             <button
               type="button"
-              onClick={onLocate}
-              disabled={loading}
-              className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400 border border-transparent hover:border-indigo-500/30 transition-all active:scale-95 group relative overflow-hidden"
+              onClick={handleLocationClick}
+              disabled={loading || isLocating}
+              className={`p-2 rounded-xl border border-transparent transition-all active:scale-95 group relative overflow-hidden
+                ${isLocating 
+                    ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' 
+                    : 'bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400 hover:border-indigo-500/30'
+                }
+              `}
               title="La meva ubicació"
               aria-label="Utilitzar la meva ubicació actual"
             >
-                <MapPin className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                {isLocating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                    <MapPin className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                )}
             </button>
           </form>
 
@@ -245,7 +347,6 @@ export default function Header({ onSearch, onLocate, loading, viewMode, setViewM
                 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
                 ${viewMode === 'basic' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-slate-300'} 
             `}
-            // MILLORA ACCESS: Text-slate-400 enlloc de 500 per millor contrast en estat desactivat
           >
               <Layers className="w-3 h-3" /> BÀSIC
           </button>

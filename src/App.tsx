@@ -157,7 +157,6 @@ export default function MeteoIA() {
         
         <Header 
             onSearch={fetchWeatherByCoords} 
-            onLocate={handleGetCurrentLocation} 
             loading={loading}
             viewMode={viewMode}
             setViewMode={setViewMode}
