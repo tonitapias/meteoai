@@ -1,10 +1,10 @@
 // src/schemas/weatherSchema.ts
 import { z } from 'zod';
 
-// --- DEFINICIONS BASE ---
+// --- DEFINICIONS BASE (ARA EXPORTABLES) ---
 
 // Validador per a dades horàries (arrays)
-const HourlyDataSchema = z.object({
+export const HourlyDataSchema = z.object({
   time: z.array(z.string()),
   temperature_2m: z.array(z.number().nullable()),
   relative_humidity_2m: z.array(z.number().nullable()),
@@ -28,7 +28,7 @@ const HourlyDataSchema = z.object({
 }).passthrough();
 
 // Validador per a dades diàries
-const DailyDataSchema = z.object({
+export const DailyDataSchema = z.object({
   time: z.array(z.string()),
   weather_code: z.array(z.number().nullable()),
   temperature_2m_max: z.array(z.number().nullable()),
@@ -43,7 +43,7 @@ const DailyDataSchema = z.object({
 }).passthrough();
 
 // Validador per a dades actuals
-const CurrentDataSchema = z.object({
+export const CurrentDataSchema = z.object({
   time: z.string().optional(),
   temperature_2m: z.number().nullable(),
   relative_humidity_2m: z.number().nullable(),

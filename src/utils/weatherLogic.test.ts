@@ -10,11 +10,54 @@ import {
     StrictHourlyWeather
 } from './weatherLogic';
 
+// --- HELPERS PER GENERAR DADES VÀLIDES (Zod Compliant) ---
+// Aquests helpers asseguren que els mocks tinguin tots els camps obligatoris
+const createValidCurrent = (overrides: Partial<StrictCurrentWeather> = {}): StrictCurrentWeather => ({
+    time: '2023-01-01T00:00',
+    temperature_2m: 0,
+    relative_humidity_2m: 0,
+    apparent_temperature: 0,
+    is_day: 1,
+    precipitation: 0,
+    weather_code: 0,
+    cloud_cover: 0,
+    pressure_msl: 1013,
+    wind_speed_10m: 0,
+    wind_direction_10m: 0,
+    wind_gusts_10m: 0,
+    visibility: 10000,
+    ...overrides
+});
+
+const createValidHourly = (length: number, overrides: Partial<StrictHourlyWeather> = {}): StrictHourlyWeather => ({
+    time: new Array(length).fill('2023-01-01T00:00'),
+    temperature_2m: new Array(length).fill(0),
+    relative_humidity_2m: new Array(length).fill(0),
+    apparent_temperature: new Array(length).fill(0),
+    precipitation_probability: new Array(length).fill(0),
+    precipitation: new Array(length).fill(0),
+    weather_code: new Array(length).fill(0),
+    pressure_msl: new Array(length).fill(1013),
+    surface_pressure: new Array(length).fill(1013),
+    cloud_cover: new Array(length).fill(0),
+    visibility: new Array(length).fill(10000),
+    wind_speed_10m: new Array(length).fill(0),
+    wind_direction_10m: new Array(length).fill(0),
+    wind_gusts_10m: new Array(length).fill(0),
+    uv_index: new Array(length).fill(0),
+    is_day: new Array(length).fill(1),
+    cape: new Array(length).fill(0),
+    freezing_level_height: new Array(length).fill(0),
+    dew_point_2m: new Array(length).fill(0),
+    ...overrides
+});
+
 // ==============================================
 // 1. TESTS DE CODIS DE TEMPS (CASOS BÀSICS)
 // ==============================================
 
-const mockCurrent: StrictCurrentWeather = {
+// Usem el helper per tenir un mock base sòlid
+const mockCurrent = createValidCurrent({
   weather_code: 3, 
   temperature_2m: 15,
   relative_humidity_2m: 80,
@@ -22,12 +65,8 @@ const mockCurrent: StrictCurrentWeather = {
   is_day: 1,
   cloud_cover: 50,
   cloud_cover_low: 50,
-  cloud_cover_mid: 0,
-  cloud_cover_high: 0,
-  apparent_temperature: 15,
-  wind_speed_10m: 10,
-  time: '2023-01-01T12:00'
-};
+  wind_speed_10m: 10
+});
 
 describe('getRealTimeWeatherCode - Detecció Intel·ligent', () => {
   
@@ -115,26 +154,38 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
 
 describe('injectHighResModels - Fusió AROME', () => {
   it('hauria de sobreescriure dades "Current" amb AROME', () => {
+    // 1. Dades Base vàlides
     const baseData: Partial<ExtendedWeatherData> = { 
-        current: { 
+        current: createValidCurrent({ 
             temperature_2m: 10, 
             wind_speed_10m: 20,
             weather_code: 3,
             time: '2023-01-01T12:00'
-        } as unknown as StrictCurrentWeather,
-        // CORRECCIÓ: Substituït 'as any' per 'as StrictHourlyWeather'
-        hourly: { 
+        }),
+        hourly: createValidHourly(2, { 
             time: ['2023-01-01T12:00', '2023-01-01T13:00'], 
             temperature_2m: [10, 11] 
-        } as unknown as StrictHourlyWeather
+        })
     };
 
+    // 2. Dades AROME vàlides (Això evita el bloqueig de Zod)
     const aromeData = {
-        current: { temperature_2m: 12.5, wind_speed_10m: 25, weather_code: 61, precipitation: 5.0 },
-        hourly: { time: ['2023-01-01T12:00', '2023-01-01T13:00'], temperature_2m: [12.5, 11.5], precipitation: [5.0, 5.0] }
+        current: createValidCurrent({ 
+            temperature_2m: 12.5, 
+            wind_speed_10m: 25, 
+            weather_code: 61, 
+            precipitation: 5.0 
+        }),
+        hourly: createValidHourly(2, { 
+            time: ['2023-01-01T12:00', '2023-01-01T13:00'], 
+            temperature_2m: [12.5, 11.5], 
+            precipitation: [5.0, 5.0] 
+        })
     } as unknown as ExtendedWeatherData;
 
     const result = injectHighResModels(baseData as ExtendedWeatherData, aromeData);
+    
+    // Verificacions
     expect(result.hourly.precipitation[0]).toBe(5.0); 
     expect(result.hourly.temperature_2m[0]).toBe(12.5); 
     expect(result.current.temperature_2m).toBe(12.5);

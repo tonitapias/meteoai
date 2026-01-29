@@ -1,9 +1,8 @@
 // src/services/cacheService.ts
+import { get, set, del, entries, clear } from 'idb-keyval';
 
 // DEFINIM LA VERSIÓ ACTUAL DE LA MEMÒRIA
-// Cada vegada que facis canvis importants a l'estructura de dades (schemas),
-// hauràs de canviar aquest valor (ex: 'v2', 'v3') per forçar neteja als usuaris.
-const CACHE_VERSION = 'v1_safe_release'; 
+const CACHE_VERSION = 'v2_indexeddb_fast'; 
 
 const CACHE_PREFIX = 'meteoai_cache_';
 const VERSION_KEY = 'meteoai_version_control';
@@ -11,11 +10,11 @@ const VERSION_KEY = 'meteoai_version_control';
 interface CacheItem<T> {
     data: T;
     timestamp: number;
-    version: string; // Afegim la versió a cada ítem per seguretat extra
+    version: string;
 }
 
 export const cacheService = {
-    // Generadors de claus (Mantenim igual)
+    // Generadors de claus
     generateWeatherKey: (lat: number, lon: number, unit: string): string => {
         return `${CACHE_PREFIX}weather_${lat.toFixed(4)}_${lon.toFixed(4)}_${unit}`;
     },
@@ -24,7 +23,7 @@ export const cacheService = {
         return `${CACHE_PREFIX}ai_${elevation}_${lat.toFixed(2)}_${lon.toFixed(2)}_${lang}`;
     },
 
-    // SET: Guardem amb la versió actual
+    // SET: Guardem de forma asíncrona a IndexedDB
     set: async <T>(key: string, data: T): Promise<void> => {
         try {
             const item: CacheItem<T> = {
@@ -32,93 +31,74 @@ export const cacheService = {
                 timestamp: Date.now(),
                 version: CACHE_VERSION
             };
-            localStorage.setItem(key, JSON.stringify(item));
+            await set(key, item);
         } catch (error) {
-            // Si el localStorage està ple, intentem fer espai
-            console.warn('⚠️ Cache Full. Attempting cleanup...', error);
-            try {
-                localStorage.clear(); // Mesura dràstica d'emergència
-            } catch (e) {
-                console.error('❌ Cache Write Failed:', e);
-            }
+            console.warn('⚠️ Cache Write Error (IndexedDB):', error);
         }
     },
 
-    // GET: Recuperem només si existeix i no ha caducat
+    // GET: Recuperem sense bloquejar el fil principal
     get: async <T>(key: string, ttlMs: number): Promise<T | null> => {
         try {
-            const itemStr = localStorage.getItem(key);
-            if (!itemStr) return null;
+            const item = await get<CacheItem<T>>(key);
+            
+            if (!item) return null;
 
-            const item = JSON.parse(itemStr) as CacheItem<T>;
             const now = Date.now();
 
-            // 1. Comprovació de TTL (Caducitat temporal)
+            // 1. Comprovació de TTL
             if (now - item.timestamp > ttlMs) {
-                localStorage.removeItem(key);
+                await del(key); 
                 return null;
             }
 
-            // 2. Comprovació de Versió (Seguretat estructural)
-            // Si la dada guardada és d'una versió anterior, la descartem.
+            // 2. Comprovació de Versió
             if (item.version !== CACHE_VERSION) {
                 console.warn(`♻️ Dada obsoleta detectada (${key}). Netejant...`);
-                localStorage.removeItem(key);
+                await del(key);
                 return null;
             }
 
             return item.data;
         } catch (error) {
             console.error('❌ Cache Read Error:', error);
-            // Si hi ha error de lectura (JSON corrupte), esborrem per seguretat
-            localStorage.removeItem(key);
+            // En cas de corrupció de la BD, intentem netejar la clau problemàtica
+            try { await del(key); } catch { /* ignore error */ } 
             return null;
         }
     },
 
-    // CLEAN: Neteja intel·ligent i gestió de versions global
+    // CLEAN: Neteja intel·ligent asíncrona
     clean: async (): Promise<void> => {
         try {
-            const storedVersion = localStorage.getItem(VERSION_KEY);
+            const storedVersion = await get<string>(VERSION_KEY);
 
-            // DETECCIÓ D'ACTUALITZACIÓ DE L'APP
+            // DETECCIÓ D'ACTUALITZACIÓ
             if (storedVersion !== CACHE_VERSION) {
-                console.warn(`🚀 Nova versió detectada (${CACHE_VERSION}). Purgant cache antiga...`);
+                console.warn(`🚀 Nova arquitectura de Cache (${CACHE_VERSION}). Purgant dades antigues...`);
                 
-                // Esborrem TOTES les claus que comencin pel nostre prefix
-                const keysToRemove: string[] = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith(CACHE_PREFIX)) {
-                        keysToRemove.push(key);
-                    }
+                await clear(); // IndexedDB
+                
+                try {
+                    localStorage.clear(); // Legacy LocalStorage
+                } catch (e) {
+                    console.warn('Could not clear legacy localStorage', e);
                 }
-                
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-                
-                // Actualitzem la marca de versió
-                localStorage.setItem(VERSION_KEY, CACHE_VERSION);
-                return; // Si hem purgat tot, no cal comprovar TTL
+
+                await set(VERSION_KEY, CACHE_VERSION);
+                return;
             }
 
             // MANTENIMENT RUTINARI (TTL)
-            // Si la versió és correcta, busquem ítems caducats individualment
+            const allEntries = await entries();
             const ONE_DAY = 24 * 60 * 60 * 1000;
             const now = Date.now();
 
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith(CACHE_PREFIX)) {
-                    const itemStr = localStorage.getItem(key);
-                    if (itemStr) {
-                        try {
-                            const item = JSON.parse(itemStr) as CacheItem<unknown>;
-                            if (now - item.timestamp > ONE_DAY) {
-                                localStorage.removeItem(key);
-                            }
-                        } catch {
-                            localStorage.removeItem(key);
-                        }
+            for (const [key, value] of allEntries) {
+                if (typeof key === 'string' && key.startsWith(CACHE_PREFIX)) {
+                    const item = value as CacheItem<unknown>;
+                    if (!item.timestamp || (now - item.timestamp > ONE_DAY)) {
+                        await del(key);
                     }
                 }
             }

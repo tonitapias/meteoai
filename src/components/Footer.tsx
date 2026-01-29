@@ -2,6 +2,7 @@
 import React from 'react';
 import pkg from '../../package.json';
 import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
+import { clear } from 'idb-keyval'; // NOU: Importem neteja d'IndexedDB
 
 interface FooterProps {
   simple?: boolean;
@@ -12,18 +13,26 @@ interface FooterProps {
 export default function Footer({ simple = false, transparent = false, className = "" }: FooterProps) {
   const year = new Date().getFullYear();
 
-  // --- FUNCIÓ DE MANTENIMENT ---
-  const handleSystemReset = () => {
-    // Utilitzem un confirm natiu per seguretat abans de borrar la cache
+  // --- FUNCIÓ DE MANTENIMENT (ACTUALITZADA) ---
+  const handleSystemReset = async () => {
+    // Utilitzem un confirm natiu per seguretat
     if (window.confirm("⚠️ DIAGNÒSTIC DEL SISTEMA\n\nVols reiniciar la memòria cau local i recarregar l'aplicació?\nAixò pot resoldre problemes de dades antigues.")) {
         try {
-            // CORRECCIÓ: console.log -> console.warn (linter no permet logs)
             console.warn("System Reset: Clearing Cache...");
-            localStorage.removeItem('meteoai_gemini_cache');
-            // Opcional: Netejar altres claus si fos necessari
+            
+            // 1. Neteja de la nova base de dades (IndexedDB)
+            await clear();
+            
+            // 2. Neteja del LocalStorage (Preferències i restes antigues)
+            localStorage.clear();
+            
+            // 3. Recàrrega
             window.location.reload();
         } catch (e) {
             console.error("Error esborrant cache:", e);
+            // Fallback: Si falla IndexedDB, almenys neteja LocalStorage i recarrega
+            localStorage.clear();
+            window.location.reload();
         }
     }
   };

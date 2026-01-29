@@ -4,7 +4,6 @@ import * as Sentry from "@sentry/react";
 import { 
     normalizeModelData, 
     isAromeSupported, 
-    // injectHighResModels, // ELIMINAT: Ara ho fem via Worker
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 
@@ -23,6 +22,7 @@ interface WeatherCachePacket {
 }
 
 const CACHE_TTL = 15 * 60 * 1000; 
+const AROME_TIMEOUT_MS = 4000; // 4 segons màxim per al càlcul físic
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
@@ -30,7 +30,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // MILLORA DE SEGURETAT (Mantinguda): Evita re-renders innecessaris
   const t = useMemo(() => {
       return { ...TRANSLATIONS['ca'], ...(TRANSLATIONS[lang] || {}) };
   }, [lang]);
@@ -41,27 +40,61 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       cacheService.clean().catch(console.error);
   }, []);
 
-  // --- NOVA UTILITAT: Wrapper per al Worker (Promesa) ---
+  // --- WORKER WRAPPER AMB TIMEOUT I MONITORATGE ---
   const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: ExtendedWeatherData) => {
       return new Promise<ExtendedWeatherData>((resolve, reject) => {
-          // Creem el worker al vol (Vite ho optimitza automàticament)
+          const startTime = performance.now();
+          
+          // 1. Monitoratge: Inici del Worker
+          Sentry.addBreadcrumb({
+              category: 'arome-worker',
+              message: 'Starting AROME High-Res Calculation',
+              level: 'info'
+          });
+
           const worker = new Worker(new URL('../workers/arome.worker.ts', import.meta.url), { type: 'module' });
           
+          // 2. Kill Switch: Timeout de seguretat
+          const timeoutId = setTimeout(() => {
+              worker.terminate();
+              const msg = `AROME Worker Timeout (${AROME_TIMEOUT_MS}ms) - Aborting`;
+              console.warn(`⚠️ ${msg}`);
+              
+              Sentry.addBreadcrumb({
+                  category: 'arome-worker',
+                  message: 'Worker Timed Out - Fallback to Standard Model',
+                  level: 'warning'
+              });
+              
+              // No fem reject, sinó que resolem amb les dades base per no mostrar error a l'usuari
+              // Simplement perdem l'alta resolució, però l'app funciona.
+              resolve(base); 
+          }, AROME_TIMEOUT_MS);
+
           worker.onmessage = (e) => {
+              clearTimeout(timeoutId); // Cancelem el timeout si ha acabat a temps
+              
               if (e.data.success) {
+                  const duration = Math.round(performance.now() - startTime);
+                  // Monitoratge: Èxit i rendiment
+                  Sentry.addBreadcrumb({
+                      category: 'arome-worker',
+                      message: `Calculation Success in ${duration}ms`,
+                      level: 'info'
+                  });
                   resolve(e.data.data);
               } else {
                   reject(new Error(e.data.error));
               }
-              worker.terminate(); // Important: Tanquem el fil per alliberar memòria
+              worker.terminate(); 
           };
           
           worker.onerror = (err) => {
+              clearTimeout(timeoutId);
               reject(err);
               worker.terminate();
           };
           
-          // Enviem les dades pesades al fil secundari
           worker.postMessage({ baseData: base, highResData: highRes });
       });
   }, []);
@@ -70,7 +103,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const now = Date.now();
     const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
-    // Debounce de 3 segons per evitar spam de crides
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -84,7 +116,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 1. Cache Local
+      // 1. Cache Local (IndexedDB)
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
       if (cachedPacket) {
           // eslint-disable-next-line no-console
@@ -102,12 +134,13 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       let processedData = normalizeModelData(weatherRaw);
       
-      // 3. Integració Model AROME (Via Worker 🧵)
+      // 3. Integració Model AROME (Via Worker 🧵 amb Timeout)
       if (isAromeSupported(lat, lon)) {
           try {
+             // Descarreguem dades AROME
              const aromeRaw = await getAromeData(lat, lon);
              
-             // AQUÍ ESTÀ LA MÀGIA: No bloquegem la UI, esperem el Worker
+             // Processem al fil secundari (protegit per timeout)
              processedData = await runAromeWorker(processedData, aromeRaw);
 
           } catch (aromeErr) { 
@@ -116,7 +149,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
                   tags: { service: 'AromeWorker', type: 'FallbackToBase' },
                   level: 'warning' 
               });
-              // Si falla, continuem amb 'processedData' (OpenMeteo base) sense AROME.
+              // Si falla (o timeout), continuem amb 'processedData' (OpenMeteo base)
           }
       }
 
@@ -155,7 +188,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     } finally {
       setLoading(false);
     }
-  }, [unit, lang, t, runAromeWorker]); // Afegim runAromeWorker a dependències
+  }, [unit, lang, t, runAromeWorker]); 
 
   return { 
     weatherData, aqiData, loading, error, 
