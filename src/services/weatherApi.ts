@@ -4,7 +4,7 @@ import { ZodType } from "zod";
 import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
 import { WeatherData } from "../types/weather";
 
-// IMPORTS DE LA CONFIGURACIÓ (COMPLET)
+// IMPORTS DE LA CONFIGURACIÓ
 import { 
     API_TIMEOUT_DEFAULT, 
     API_MAX_RETRIES,
@@ -40,30 +40,39 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
     }
 };
 
-// --- Utilitat interna: Retry Logic (MILLORADA: Classificació d'Errors) ---
-const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Response> => {
+// --- Utilitat interna: Retry Logic ---
+const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RETRIES): Promise<Response> => {
     for (let i = 0; i <= retries; i++) {
         try {
             const response = await fetchWithTimeout(url);
             
-            if (!response.ok && response.status >= 500) throw new Error(`Server Error: ${response.status}`);
-            if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            if (!response.ok) {
+                 // Log d'error HTTP (404, 500, etc)
+                 Sentry.addBreadcrumb({
+                    category: 'http-error',
+                    message: `HTTP Error ${response.status} en ${contextTag}`,
+                    level: 'error',
+                    data: { status: response.status, url: url }
+                 });
+
+                 if (response.status >= 500) throw new Error(`Server Error: ${response.status}`);
+                 throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
             
             return response;
         } catch (err) {
             if (i === retries) {
-                // MILLORA DE SEGURETAT: Distingim entre Timeout (usuari) i Crash (servidor)
                 const isTimeout = err instanceof Error && err.name === 'AbortError';
                 const errorType = isTimeout ? 'network_timeout' : 'network_critical';
-                const logMessage = isTimeout ? `⏳ Timeout després de ${retries + 1} intents` : `❌ Error fatal després de ${retries + 1} intents`;
-
-                console.error(logMessage, err);
+                
+                // Log final abans de llançar l'excepció
+                console.error(`❌ Error fatal (${contextTag}) després de ${retries + 1} intents`, err);
                 
                 Sentry.captureException(err, { 
                     tags: { 
                         service: 'weather_api', 
                         type: errorType, 
-                        url_short: url.split('?')[0] 
+                        context: contextTag
                     },
                     extra: { 
                         full_url: url, 
@@ -73,14 +82,16 @@ const fetchWithRetry = async (url: string, retries = MAX_RETRIES): Promise<Respo
                 });
                 throw err; 
             }
-            // Warning lleu per a reintents intermedis
-            console.warn(`⚠️ Intent ${i + 1} fallit. Reintentant...`, err);
+            
+            // Log de reintent (Warning) - Molt útil per veure si la connexió és inestable
+            console.warn(`⚠️ Intent ${i + 1} fallit (${contextTag}). Reintentant...`);
             Sentry.addBreadcrumb({
                 category: "network-retry", 
-                message: `Retry ${i + 1}/${retries}`, 
+                message: `Retry ${i + 1}/${retries} for ${contextTag}`, 
                 level: "warning",
-                data: { url: url, error: String(err) }
+                data: { error: String(err) }
             });
+            
             await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
         }
     }
@@ -135,6 +146,14 @@ const validateData = (schema: ZodType, data: unknown, context: string) => {
 
 // 1. Funció Principal
 export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'): Promise<WeatherData> => {
+    // BREADCRUMB 1: Inici de la petició principal
+    Sentry.addBreadcrumb({
+        category: 'api-call',
+        message: 'Requesting MAIN Weather Data',
+        level: 'info',
+        data: { lat, lon, unit }
+    });
+
     const tempUnit = unit === 'F' ? 'fahrenheit' : 'celsius';
     
     const params = new URLSearchParams({
@@ -143,15 +162,15 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
         current: PARAMS_CURRENT.join(','),
         hourly: PARAMS_HOURLY.join(','),
         daily: PARAMS_DAILY.join(','),
-        models: API_MODELS_LIST, // Usant constant
+        models: API_MODELS_LIST, 
         timezone: "auto",
         temperature_unit: tempUnit,
         wind_speed_unit: "kmh",
         precipitation_unit: "mm",
-        forecast_days: API_FORECAST_DAYS // Usant constant
+        forecast_days: API_FORECAST_DAYS 
     });
 
-    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`);
+    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getWeatherData');
     const rawData = await response.json();
     
     return validateData(WeatherResponseSchema, rawData, 'getWeatherData') as WeatherData;
@@ -159,6 +178,14 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
 
 // 2. Funció Qualitat Aire
 export const getAirQualityData = async (lat: number, lon: number): Promise<Record<string, unknown>> => {
+    // BREADCRUMB 2: Inici AQI
+    Sentry.addBreadcrumb({
+        category: 'api-call',
+        message: 'Requesting AIR QUALITY Data',
+        level: 'info',
+        data: { lat, lon }
+    });
+
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
@@ -167,7 +194,7 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
         timezone: "auto"
     });
 
-    const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`);
+    const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`, 'getAirQualityData');
     const rawData = await response.json();
 
     return validateData(AirQualitySchema, rawData, 'getAirQualityData') as Record<string, unknown>;
@@ -175,6 +202,14 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
 
 // 3. Funció AROME
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
+    // BREADCRUMB 3: Inici AROME
+    Sentry.addBreadcrumb({
+        category: 'api-call',
+        message: 'Requesting AROME HD Data',
+        level: 'info',
+        data: { lat, lon }
+    });
+
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
@@ -182,10 +217,10 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
         hourly: AROME_HOURLY.join(','),
         minutely_15: "precipitation", 
         timezone: "auto",
-        models: AROME_MODELS_LIST // Usant constant
+        models: AROME_MODELS_LIST 
     });
 
-    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`);
+    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getAromeData');
     const rawData = await response.json();
 
     return validateData(WeatherResponseSchema, rawData, 'getAromeData') as WeatherData;

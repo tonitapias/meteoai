@@ -6,10 +6,11 @@ import * as Sentry from "@sentry/react";
 
 interface HeaderProps {
   onSearch: (lat: number, lon: number, name?: string, country?: string) => void;
-  // onLocate eliminat com havíem acordat
   loading: boolean;
   viewMode: 'basic' | 'expert';
   setViewMode: (mode: 'basic' | 'expert') => void;
+  // Prop per activar el mode debug (Opcional per compatibilitat)
+  onDebugToggle?: () => void;
 }
 
 interface GeoResult {
@@ -25,7 +26,7 @@ function isLocationData(item: GeoResult | LocationData): item is LocationData {
     return (item as LocationData).admin1 !== undefined || (item as GeoResult).id === undefined;
 }
 
-export default function Header({ onSearch, loading, viewMode, setViewMode }: HeaderProps) {
+export default function Header({ onSearch, loading, viewMode, setViewMode, onDebugToggle }: HeaderProps) {
   const { favorites } = usePreferences();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -34,6 +35,26 @@ export default function Header({ onSearch, loading, viewMode, setViewMode }: Hea
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLocating, setIsLocating] = useState(false); 
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // --- LÒGICA DEBUG MODE (5 CLICS) ---
+  const [debugClicks, setDebugClicks] = useState(0);
+
+  useEffect(() => {
+    if (debugClicks === 0) return;
+    const timer = setTimeout(() => setDebugClicks(0), 2000);
+    return () => clearTimeout(timer);
+  }, [debugClicks]);
+
+  const handleTitleClick = () => {
+    const newCount = debugClicks + 1;
+    setDebugClicks(newCount);
+    
+    if (newCount === 5) {
+      if (onDebugToggle) onDebugToggle();
+      setDebugClicks(0);
+    }
+  };
+  // -----------------------------------
 
   const showFavorites = query.length === 0 && favorites.length > 0;
   const showSuggestionsList = query.length >= 3;
@@ -126,31 +147,25 @@ export default function Header({ onSearch, loading, viewMode, setViewMode }: Hea
         });
   };
 
-  // NOU: Aquesta funció ara busca el nom de la ciutat
   const handleLocationFound = async (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
       let finalName = "Ubicació detectada";
       let finalCountry = "";
 
       try {
-          // 1. Fem "Reverse Geocoding" (Coordenades -> Nom)
-          // Utilitzem una API gratuïta que no requereix clau (BigDataCloud)
           const resp = await fetch(
               `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ca`
           );
           
           if (resp.ok) {
               const data = await resp.json();
-              // Prioritzem: Localitat -> Ciutat -> Vila -> "Ubicació"
               finalName = data.locality || data.city || data.town || data.village || "Ubicació actual";
               finalCountry = data.countryName || "";
           }
       } catch (e) {
           console.warn("Error obtenint nom de la ciutat:", e);
-          // Si falla, no passa res, es queda amb el nom genèric "Ubicació detectada"
       }
 
-      // 2. Cridem a la funció principal amb el NOM REAL trobat
       onSearch(latitude, longitude, finalName, finalCountry);
       setIsLocating(false);
   };
@@ -214,9 +229,32 @@ export default function Header({ onSearch, loading, viewMode, setViewMode }: Hea
 
   return (
     <header className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 z-50 relative">
-      <div className="hidden md:flex items-center gap-2 opacity-50 select-none w-[140px]">
-          <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-          <span className="text-xs font-black tracking-[0.3em] text-slate-500">METEO.AI</span>
+      {/* TÍTOL INTERACTIU AMB DEBUG MODE */}
+      <div 
+        onClick={handleTitleClick}
+        // CANVI REALITZAT: 
+        // 1. Hem tret 'hidden' perquè es veigi al mòbil.
+        // 2. Hem afegit 'w-full justify-center md:w-auto md:justify-start' per centrar-lo al mòbil.
+        // 3. Hem afegit 'order-0' perquè surti a dalt de tot.
+        className="flex md:flex items-center gap-3 opacity-80 select-none cursor-pointer group transition-all w-full justify-center md:w-auto md:justify-start order-0"
+      >
+          <div className="relative">
+             <div className="absolute inset-0 bg-indigo-500 blur-lg opacity-0 group-hover:opacity-40 transition-opacity rounded-full"></div>
+             <img 
+                src={`${import.meta.env.BASE_URL}maskable-icon.png`}
+                alt="Logo MeteoAI"
+                className="w-8 h-8 relative z-10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6"
+                onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'; 
+                }}
+             />
+          </div>
+          <div className="flex flex-col items-start">
+             <span className="text-xs font-black tracking-[0.3em] text-slate-400 group-hover:text-indigo-400 transition-colors">METEOTONI.AI</span>
+             {debugClicks > 0 && debugClicks < 5 && (
+                 <span className="text-[9px] text-green-500 font-mono animate-pulse">DEV MODE: {5 - debugClicks}</span>
+             )}
+          </div>
       </div>
 
       <div ref={wrapperRef} className="flex-1 w-full max-w-2xl relative order-2 md:order-1">

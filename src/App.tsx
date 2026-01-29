@@ -1,10 +1,12 @@
+// src/App.tsx
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import * as Sentry from "@sentry/react"; // NOU: Necessari per reportar errors de GPS des de la UI
 
+// COMPONENTS
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
+// LAZY LOADING
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
 const AromeModal = lazy(() => import('./components/AromeModal'));
@@ -21,6 +23,7 @@ import ErrorBanner from './components/ErrorBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import Toast from './components/Toast'; 
 
+// HOOKS & UTILS
 import { usePreferences } from './hooks/usePreferences';
 import { useWeather } from './hooks/useWeather';
 import { useWeatherAI } from './hooks/useWeatherAI'; 
@@ -28,61 +31,80 @@ import { useWeatherCalculations } from './hooks/useWeatherCalculations';
 import { TRANSLATIONS } from './translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 import { useModalHistory } from './hooks/useModalHistory';
+import { useGeoLocation } from './context/GeoLocationContext';
+import { WeatherData } from './types/weather';
+
+// --- COMPONENT PANELL DEBUG (EXTRET FORA) ---
+interface DebugPanelProps {
+    weatherData: WeatherData | null;
+    supportsArome: boolean;
+    error: string | null;
+}
+
+const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, error }) => (
+    <div className="fixed top-24 left-4 p-4 bg-black/90 border border-green-500/30 text-green-400 font-mono text-[10px] rounded-lg shadow-2xl z-[100] max-w-[250px] pointer-events-none select-text backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-300">
+        <h4 className="font-bold border-b border-green-500/30 mb-2 pb-1 flex justify-between items-center">
+            <span>SYSTEM DIAGNOSTICS</span>
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        </h4>
+        <div className="space-y-1.5 opacity-90">
+            <div className="flex justify-between"><span>LAT:</span> <span className="text-white">{weatherData?.location?.latitude.toFixed(6) || "N/A"}</span></div>
+            <div className="flex justify-between"><span>LON:</span> <span className="text-white">{weatherData?.location?.longitude.toFixed(6) || "N/A"}</span></div>
+            <div className="flex justify-between"><span>MODEL:</span> <span className="text-white">{supportsArome ? "AROME HD" : "ECMWF STD"}</span></div>
+            <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB' : 'N/A'}</span></div>
+            <div className="flex justify-between"><span>CACHE:</span> <span className="text-white">{localStorage.getItem('weatherCache') ? 'HIT' : 'MISS'}</span></div>
+            <div className="flex justify-between"><span>ERRORS:</span> <span className={error ? "text-red-400" : "text-green-400"}>{error ? "YES" : "NO"}</span></div>
+        </div>
+    </div>
+);
 
 export default function MeteoIA() {
   const [now, setNow] = useState<Date>(new Date());
   
+  // --- ESTAT DEBUG (NOU) ---
+  const [showDebug, setShowDebug] = useState(false);
+  // -------------------------
+
   const { lang, setLang, unit, viewMode, setViewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // CANVI: Ja no recuperem notification/handleGetCurrentLocation del hook
+  // Hook del temps
   const { weatherData, aqiData, loading, error, fetchWeatherByCoords } = useWeather(lang, unit);
   
-  // NOU: L'estat de les notificacions viu ara a la UI, on pertany
+  // Hook de Geolocalització (Context)
+  const { getCoordinates } = useGeoLocation();
+
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
-  // NOU: Lògica de Geolocalització moguda a l'App (Capa de presentació)
-  const handleGetCurrentLocation = useCallback(() => {
-  if (!navigator.geolocation) {
-    setNotification({ type: 'error', msg: t.geoNotSupported });
-    return;
-  }
-  
-  // CANVI 1: Configuració més robusta
-  // - timeout: Pugem a 15000ms (15s) per donar temps a mòbils lents o sota sostre.
-  // - maximumAge: Permetem posicions de fa 5 minuts (300000ms). 
-  //   Per al temps, no cal saber on ets EXACTAMENT ara mateix, una posició recent serveix i és instantània.
-  const geoOptions = { 
-      enableHighAccuracy: false, 
-      timeout: 15000, 
-      maximumAge: 300000 
-  };
+  // Funció de Geolocalització Segura
+  const handleGetCurrentLocation = useCallback(async () => {
+      try {
+          const { lat, lon } = await getCoordinates();
+          // "La Meva Ubicació" és el nom temporal fins que l'API resolgui el nom real
+          const success = await fetchWeatherByCoords(lat, lon, "La Meva Ubicació");
+          
+          if (success) {
+            setNotification({ type: 'success', msg: t.notifLocationSuccess });
+          }
+      } catch (e: unknown) {
+          const err = e as Error; 
+          let errorMsg = t.notifLocationError;
 
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      const success = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude, "La Meva Ubicació");
-      if (success) {
-        setNotification({ type: 'success', msg: t.notifLocationSuccess });
+          if (err.message === "GEOLOCATION_NOT_SUPPORTED") {
+              errorMsg = t.geoNotSupported;
+          } else if (err.message === "PERMISSION_DENIED") {
+              errorMsg = t.notifLocationError; // O missatge específic de permisos
+          } else if (err.message === "TIMEOUT") {
+              errorMsg = t.notifLocationError;
+          }
+
+          setNotification({ type: 'error', msg: errorMsg });
       }
-    },
-    (err) => {
-      console.warn("Error GPS:", err.message);
-      
-      // CANVI 2: Captura neta a Sentry
-      // Emboliquem l'objecte natiu en un Error de JS perquè Sentry mostri el missatge real ("Timeout expired")
-      // i no "[object GeolocationPositionError]".
-      Sentry.captureException(new Error(`Geolocation Error: ${err.message}`), { 
-          tags: { service: 'Geolocation' },
-          extra: { code: err.code } // Codi 3 = Timeout
-      });
-      
-      setNotification({ type: 'error', msg: t.notifLocationError });
-    },
-    geoOptions
-  );
-}, [fetchWeatherByCoords, t]);
+  }, [getCoordinates, fetchWeatherByCoords, t]);
 
+
+  // Càlculs derivats
   const { 
       shiftedNow, minutelyPreciseData, currentFreezingLevel, effectiveWeatherCode, 
       chartData24h, chartDataFull, comparisonData, weeklyExtremes, reliability 
@@ -94,6 +116,7 @@ export default function MeteoIA() {
   const [showRadar, setShowRadar] = useState(false);
   const [showArome, setShowArome] = useState(false);
 
+  // Gestió de l'historial del navegador per tancar modals amb "Enrere"
   useModalHistory(selectedDayIndex !== null, useCallback(() => setSelectedDayIndex(null), []));
   useModalHistory(showRadar, useCallback(() => setShowRadar(false), []));
   useModalHistory(showArome, useCallback(() => setShowArome(false), []));
@@ -109,7 +132,7 @@ export default function MeteoIA() {
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
-  // PANTALLA DE BENVINGUDA
+  // --- RENDERITZACIÓ: PANTALLA DE BENVINGUDA ---
   if (!weatherData && !error) { 
     return (
       <div className="min-h-screen bg-[#05060A] flex flex-col font-sans overflow-hidden relative">
@@ -117,8 +140,16 @@ export default function MeteoIA() {
              <div className="absolute top-[-20%] left-[20%] w-[800px] h-[800px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
          </div>
          
-         {/* FIX: Afegim el Toast aquí també perquè l'usuari vegi errors de GPS si ocorren a la Home */}
          <Toast message={notification?.msg || null} type={notification?.type} onClose={() => setNotification(null)} />
+
+         {/* RENDER DEBUG PANEL (Passant props) */}
+         {showDebug && (
+            <DebugPanel 
+                weatherData={weatherData} 
+                supportsArome={supportsArome} 
+                error={error} 
+            />
+         )}
 
          <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
             <Header 
@@ -127,23 +158,34 @@ export default function MeteoIA() {
                 loading={loading}
                 viewMode={viewMode}
                 setViewMode={setViewMode} 
+                onDebugToggle={() => {
+                    setShowDebug(prev => !prev);
+                    setNotification({ type: 'info', msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" });
+                }}
             />
             
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
                 <WelcomeScreen lang={lang} setLang={setLang} t={t} onLocate={handleGetCurrentLocation} loading={loading} />
             </div>
-            
-            {/* <Footer simple transparent className="mt-auto" /> */}
          </div>
       </div>
     );
   }
 
-  // DASHBOARD PRINCIPAL
+  // --- RENDERITZACIÓ: DASHBOARD PRINCIPAL ---
   return (
     <div className="min-h-screen bg-[#05060A] text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col relative">
       <WeatherParticles code={effectiveWeatherCode} />
       
+      {/* RENDER DEBUG PANEL (Passant props) */}
+      {showDebug && (
+        <DebugPanel 
+            weatherData={weatherData} 
+            supportsArome={supportsArome} 
+            error={error} 
+        />
+      )}
+
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-0" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
 
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -156,10 +198,15 @@ export default function MeteoIA() {
       <div className="w-full max-w-5xl mx-auto px-4 py-4 md:px-6 md:py-8 flex-1 flex flex-col relative z-10">
         
         <Header 
-            onSearch={fetchWeatherByCoords} 
+            onSearch={fetchWeatherByCoords}
+            onLocate={handleGetCurrentLocation} 
             loading={loading}
             viewMode={viewMode}
             setViewMode={setViewMode}
+            onDebugToggle={() => {
+                setShowDebug(prev => !prev);
+                setNotification({ type: 'info', msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" });
+            }}
         />
 
         <div className="mt-6 md:mt-10 flex-1">
@@ -242,4 +289,13 @@ export default function MeteoIA() {
       </div>
     </div>
   );
+}
+
+// Helper per TypeScript (memòria de Chrome)
+declare global {
+    interface Performance {
+        memory?: {
+            usedJSHeapSize: number;
+        }
+    }
 }
