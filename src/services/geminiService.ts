@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { AI_PROMPTS } from '../constants/aiPrompts';
 
-// Importem la nova configuració centralitzada (PAS 2)
+// Importem la configuració centralitzada
 import { 
     GEMINI_PROXY_URL, 
     AI_CACHE_TTL, 
@@ -27,7 +27,8 @@ type LocatableData = {
 export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, language: string): Promise<AICacheData | null> => {
     // Validació de seguretat de la configuració
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
-        console.error("❌ Error: Has de configurar la PROXY_URL a l'arxiu .env");
+        // CANVI: Warn en lloc d'Error per no embrutar logs si algú fa un fork sense config
+        console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
         return null;
     }
 
@@ -118,12 +119,22 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt }),
-                signal: controller.signal // Vinculem el senyal de cancel·lació
+                signal: controller.signal 
             });
 
-            clearTimeout(timeoutId); // Tot ha anat bé, cancelem el compte enrere
+            clearTimeout(timeoutId);
 
-            if (!response.ok) throw new Error(`Proxy Error: ${response.status}`);
+            if (!response.ok) {
+                // MILLORA PAS 2: Gestió silenciosa d'errors HTTP
+                // No llancem Error, només log i retornem null
+                console.warn(`⚠️ IA Proxy Error: ${response.status} ${response.statusText}`);
+                Sentry.addBreadcrumb({
+                    category: 'ai-api',
+                    message: `Proxy Error ${response.status}`,
+                    level: 'warning'
+                });
+                return null; 
+            }
 
             const data = await response.json();
             const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -145,26 +156,31 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             return null;
 
         } catch (fetchError) {
-            // Assegurem que el timeout es neteja sempre
             clearTimeout(timeoutId);
             
-            // Gestió específica per timeout (AbortError) - No reportem a Sentry, és normal en xarxes lentes
-            if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-                console.warn(`⚠️ Gemini Request Timed Out after ${AI_REQUEST_TIMEOUT}ms`);
-            } else {
-                // Altres errors de xarxa sí que els propaguem
-                throw fetchError;
+            // MILLORA PAS 2: Gestió silenciosa de xarxa/timeout
+            if (fetchError instanceof Error) {
+                 // Diferenciem Timeout d'altres errors de xarxa
+                 const msg = fetchError.name === 'AbortError' 
+                    ? `Gemini Timeout (${AI_REQUEST_TIMEOUT}ms)` 
+                    : `Gemini Network Error: ${fetchError.message}`;
+
+                 console.warn(`⚠️ ${msg}`);
+                 
+                 // Sentry Breadcrumb (Informació de context, no ERROR)
+                 Sentry.addBreadcrumb({
+                    category: 'ai-network',
+                    message: msg,
+                    level: 'warning'
+                 });
             }
-            return null;
+            return null; // Silent failover
         }
 
     } catch (e) {
-        // Captura global d'errors
-        const isTimeout = e instanceof Error && e.name === 'AbortError';
-        if (!isTimeout) {
-            console.error("Gemini Proxy Error:", e);
-            Sentry.captureException(e, { tags: { service: 'GeminiProxy' } });
-        }
+        // Captura global d'errors de LÒGICA (Aquests sí que són bugs reals)
+        console.error("Gemini Logic Error:", e);
+        Sentry.captureException(e, { tags: { service: 'GeminiService', type: 'logic_error' } });
         return null;
     }
 };

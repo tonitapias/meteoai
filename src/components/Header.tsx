@@ -22,6 +22,10 @@ interface GeoResult {
   longitude: number;
 }
 
+// Regex de llista negra: Bloquegem caràcters que semblin codi o tags HTML
+// < > { } [ ] \ /
+const DANGEROUS_CHARS = /[<>{}[\]\\/]/;
+
 function isLocationData(item: GeoResult | LocationData): item is LocationData {
     return (item as LocationData).admin1 !== undefined || (item as GeoResult).id === undefined;
 }
@@ -76,19 +80,42 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
 
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (query.length < 3) {
+      // 1. MILLORA DE SEGURETAT: Sanitització (Trim + Regex Check)
+      const cleanQuery = query.trim();
+
+      if (cleanQuery.length < 3) {
         setSuggestions([]);
         return;
       }
+
+      // Si detectem caràcters perillosos, abortem la cerca i netegem
+      if (DANGEROUS_CHARS.test(cleanQuery)) {
+        // Opcional: Podríem fer un log a Sentry aquí si volem monitoritzar atacs
+        console.warn("Input sanitization blocked dangerous characters");
+        setSuggestions([]);
+        return;
+      }
+
       setIsSearching(true);
       try {
         const response = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=ca&format=json`
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanQuery)}&count=5&language=ca&format=json`
         );
+        
+        if (!response.ok) throw new Error(`Geocoding Error: ${response.status}`);
+        
         const data = await response.json();
         setSuggestions(data.results || []);
+
       } catch (error) {
-        console.error("Error:", error);
+        // 2. MILLORA DE MONITORATGE: Utilitzar Sentry en lloc de només console.error
+        console.error("Geocoding Search Error:", error);
+        Sentry.captureException(error, {
+            tags: { service: 'GeocodingAPI', type: 'search_failed' },
+            extra: { query: cleanQuery } // Context útil per depurar
+        });
+        // En cas d'error, netegem suggeriments per no mostrar estats inconsistents
+        setSuggestions([]); 
       } finally {
         setIsSearching(false);
       }
@@ -232,10 +259,6 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
       {/* TÍTOL INTERACTIU AMB DEBUG MODE */}
       <div 
         onClick={handleTitleClick}
-        // CANVI REALITZAT: 
-        // 1. Hem tret 'hidden' perquè es veigi al mòbil.
-        // 2. Hem afegit 'w-full justify-center md:w-auto md:justify-start' per centrar-lo al mòbil.
-        // 3. Hem afegit 'order-0' perquè surti a dalt de tot.
         className="flex md:flex items-center gap-3 opacity-80 select-none cursor-pointer group transition-all w-full justify-center md:w-auto md:justify-start order-0"
       >
           <div className="relative">
