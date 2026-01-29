@@ -1,136 +1,130 @@
 // src/services/cacheService.ts
-import { get, set, del, entries, delMany, IDBValidKey } from 'idb-keyval';
-import * as Sentry from "@sentry/react";
-import { CACHE_PREFIXES, CACHE_TTL } from '../constants/cacheConfig';
 
-// Definim la "forma" de les dades guardades
+// DEFINIM LA VERSIÓ ACTUAL DE LA MEMÒRIA
+// Cada vegada que facis canvis importants a l'estructura de dades (schemas),
+// hauràs de canviar aquest valor (ex: 'v2', 'v3') per forçar neteja als usuaris.
+const CACHE_VERSION = 'v1_safe_release'; 
+
+const CACHE_PREFIX = 'meteoai_cache_';
+const VERSION_KEY = 'meteoai_version_control';
+
 interface CacheItem<T> {
-  timestamp: number;
-  data: T;
+    data: T;
+    timestamp: number;
+    version: string; // Afegim la versió a cada ítem per seguretat extra
 }
 
 export const cacheService = {
-  /**
-   * Guarda dades amb tipat genèric
-   */
-  set: async <T>(key: string, data: T): Promise<void> => {
-    try {
-      const payload: CacheItem<T> = {
-        timestamp: Date.now(),
-        data: data
-      };
-      await set(key, payload);
-      
-      // TELEMETRIA: Registrem l'escriptura (nivell debug per no saturar)
-      Sentry.addBreadcrumb({
-        category: 'cache',
-        message: `Write Success: ${key}`,
-        level: 'info'
-      });
-    } catch (err) {
-      console.error("❌ Error guardant a DB:", err);
-      Sentry.captureException(err, { tags: { service: 'CacheService', action: 'set' } });
-    }
-  },
+    // Generadors de claus (Mantenim igual)
+    generateWeatherKey: (lat: number, lon: number, unit: string): string => {
+        return `${CACHE_PREFIX}weather_${lat.toFixed(4)}_${lon.toFixed(4)}_${unit}`;
+    },
 
-  /**
-   * Recupera dades. Utilitza <T> per indicar què esperes rebre.
-   */
-  get: async <T>(key: string, maxAge: number = CACHE_TTL.WEATHER): Promise<T | null> => {
-    try {
-      const item = await get<CacheItem<T>>(key);
-      
-      if (!item) {
-        // TELEMETRIA: Cache Miss (No existeix)
-        Sentry.addBreadcrumb({
-            category: 'cache',
-            message: `MISS (Not found): ${key}`,
-            level: 'info'
-        });
-        return null;
-      }
+    generateAiKey: (elevation: string, lat: number, lon: number, lang: string): string => {
+        return `${CACHE_PREFIX}ai_${elevation}_${lat.toFixed(2)}_${lon.toFixed(2)}_${lang}`;
+    },
 
-      const { timestamp, data } = item;
-      const age = Date.now() - timestamp;
-
-      if (age < maxAge) {
-        // TELEMETRIA: Cache Hit (Èxit)
-        Sentry.addBreadcrumb({
-            category: 'cache',
-            message: `HIT (${Math.round(age / 1000)}s old): ${key}`,
-            level: 'info'
-        });
-        return data; // Dades fresques
-      } else {
-        // Caducat: Esborrem i retornem null
-        // TELEMETRIA: Cache Expired
-        Sentry.addBreadcrumb({
-            category: 'cache',
-            message: `EXPIRED (${Math.round(age / 60000)}m old): ${key}`,
-            level: 'warning'
-        });
-        await del(key);
-        return null;
-      }
-    } catch (err) {
-      console.error("Error llegint DB:", err);
-      Sentry.captureException(err, { tags: { service: 'CacheService', action: 'get' } });
-      return null;
-    }
-  },
-
-  /**
-   * Esborra un element concret
-   */
-  remove: async (key: string): Promise<void> => {
-    try {
-        await del(key);
-    } catch (err) {
-        console.error("Error esborrant key:", err);
-    }
-  },
-
-  /**
-   * Neteja automàtica
-   */
-  clean: async (): Promise<void> => {
-    try {
-      const allEntries = await entries();
-      const keysToDelete: IDBValidKey[] = [];
-      const now = Date.now();
-      let deletedCount = 0;
-
-      for (const [key, val] of allEntries) {
-        // 'val' ve com 'any' des de la llibreria, fem un cast segur
-        if (typeof key === 'string' && (key.startsWith(CACHE_PREFIXES.WEATHER) || key.startsWith(CACHE_PREFIXES.AI))) {
-           const item = val as CacheItem<unknown>;
-           // Netegem coses de més de 24h per mantenir la DB lleugera
-           if (item && item.timestamp && (now - item.timestamp > CACHE_TTL.CLEANUP)) {
-               keysToDelete.push(key);
-               deletedCount++;
-           }
+    // SET: Guardem amb la versió actual
+    set: async <T>(key: string, data: T): Promise<void> => {
+        try {
+            const item: CacheItem<T> = {
+                data,
+                timestamp: Date.now(),
+                version: CACHE_VERSION
+            };
+            localStorage.setItem(key, JSON.stringify(item));
+        } catch (error) {
+            // Si el localStorage està ple, intentem fer espai
+            console.warn('⚠️ Cache Full. Attempting cleanup...', error);
+            try {
+                localStorage.clear(); // Mesura dràstica d'emergència
+            } catch (e) {
+                console.error('❌ Cache Write Failed:', e);
+            }
         }
-      }
+    },
 
-      if (keysToDelete.length > 0) {
-          await delMany(keysToDelete);
-          // eslint-disable-next-line no-console
-          console.log(`🧹 Cache Cleaned: ${deletedCount} items removed`);
-      }
-    } catch (err) {
-      console.error("Error netejant DB:", err);
-      Sentry.captureException(err, { tags: { service: 'CacheService', action: 'clean' } });
+    // GET: Recuperem només si existeix i no ha caducat
+    get: async <T>(key: string, ttlMs: number): Promise<T | null> => {
+        try {
+            const itemStr = localStorage.getItem(key);
+            if (!itemStr) return null;
+
+            const item = JSON.parse(itemStr) as CacheItem<T>;
+            const now = Date.now();
+
+            // 1. Comprovació de TTL (Caducitat temporal)
+            if (now - item.timestamp > ttlMs) {
+                localStorage.removeItem(key);
+                return null;
+            }
+
+            // 2. Comprovació de Versió (Seguretat estructural)
+            // Si la dada guardada és d'una versió anterior, la descartem.
+            if (item.version !== CACHE_VERSION) {
+                console.warn(`♻️ Dada obsoleta detectada (${key}). Netejant...`);
+                localStorage.removeItem(key);
+                return null;
+            }
+
+            return item.data;
+        } catch (error) {
+            console.error('❌ Cache Read Error:', error);
+            // Si hi ha error de lectura (JSON corrupte), esborrem per seguretat
+            localStorage.removeItem(key);
+            return null;
+        }
+    },
+
+    // CLEAN: Neteja intel·ligent i gestió de versions global
+    clean: async (): Promise<void> => {
+        try {
+            const storedVersion = localStorage.getItem(VERSION_KEY);
+
+            // DETECCIÓ D'ACTUALITZACIÓ DE L'APP
+            if (storedVersion !== CACHE_VERSION) {
+                console.warn(`🚀 Nova versió detectada (${CACHE_VERSION}). Purgant cache antiga...`);
+                
+                // Esborrem TOTES les claus que comencin pel nostre prefix
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(CACHE_PREFIX)) {
+                        keysToRemove.push(key);
+                    }
+                }
+                
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                
+                // Actualitzem la marca de versió
+                localStorage.setItem(VERSION_KEY, CACHE_VERSION);
+                return; // Si hem purgat tot, no cal comprovar TTL
+            }
+
+            // MANTENIMENT RUTINARI (TTL)
+            // Si la versió és correcta, busquem ítems caducats individualment
+            const ONE_DAY = 24 * 60 * 60 * 1000;
+            const now = Date.now();
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(CACHE_PREFIX)) {
+                    const itemStr = localStorage.getItem(key);
+                    if (itemStr) {
+                        try {
+                            const item = JSON.parse(itemStr) as CacheItem<unknown>;
+                            if (now - item.timestamp > ONE_DAY) {
+                                localStorage.removeItem(key);
+                            }
+                        } catch {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('⚠️ Cache Cleanup Warning:', error);
+        }
     }
-  },
-
-  // Generadors de claus
-  
-  // Mantenim precisió alta (3 decimals = ~100m) per dades meteo
-  generateWeatherKey: (lat: number, lon: number, unit: string): string => 
-    `${CACHE_PREFIXES.WEATHER}${lat.toFixed(3)}_${lon.toFixed(3)}_${unit}`,
-    
-  // OPTIMITZACIÓ: Arrodonim a 2 decimals (~1.1km) per a la IA.
-  // Això augmenta dràsticament el "Cache Hit Rate" en moviments locals.
-  generateAiKey: (ts: string | number, lat: number, lon: number, lang: string): string => 
-    `${CACHE_PREFIXES.AI}${ts}_${lat.toFixed(2)}_${lon.toFixed(2)}_${lang}`
 };

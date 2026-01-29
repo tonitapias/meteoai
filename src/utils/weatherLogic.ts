@@ -28,7 +28,7 @@ const {
 } = WEATHER_THRESHOLDS;
 
 // ==========================================
-// HELPERS PRIVATS (Ara usant Constants)
+// HELPERS PRIVATS
 // ==========================================
 
 /** Calcula el % de núvols efectiu ponderant els baixos, mitjans i alts */
@@ -52,6 +52,31 @@ const adjustBaseSkyCode = (code: number, cloudCover: number): number => {
     if (cloudCover > CLOUDS.SCATTERED) return 2; 
     if (cloudCover > CLOUDS.FEW) return 1; 
     return 0; 
+};
+
+/** * NOU FILTRE VIRGA (PAS 3): 
+ * Evita dir que plou quan l'aire és tan sec que l'aigua s'evapora abans de tocar terra.
+ */
+const checkForVirga = (code: number, humidity: number, cloudCover: number, precip: number): number => {
+    // Només apliquem el filtre a codis de pluja estàndard (51-67) o ruixats (80-82).
+    // No toquem la neu (71+) ni tempestes fortes (95+) ja que tenen dinàmiques pròpies.
+    const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+    
+    if (!isRain) return code;
+
+    // Llindars de seguretat (Hardcoded per seguretat meteorològica):
+    // - Humitat < 45%: És molt difícil que la pluja feble arribi a terra.
+    // - Precip < 1.5mm: Si la pluja és molt intensa, pot trencar la capa seca (no filtrem).
+    const VIRGA_HUMIDITY_LIMIT = 45;
+    const VIRGA_PRECIP_LIMIT = 1.5; 
+
+    if (humidity < VIRGA_HUMIDITY_LIMIT && precip < VIRGA_PRECIP_LIMIT) {
+        // Retornem a l'estat de cel base (sense pluja)
+        // Si hi ha molts núvols -> 3 (Cobert), sinó -> 2 (Intervals)
+        return cloudCover > 50 ? 3 : 2; 
+    }
+
+    return code;
 };
 
 /** Detecta condicions de boira o humitat extrema */
@@ -122,7 +147,7 @@ const adjustRainIntensity = (code: number, precipAmount: number): number => {
     // Ús de constants PRECIPITATION
     if (precipAmount >= PRECIPITATION.TRACE) { 
         if (precipAmount > PRECIPITATION.HEAVY) return 65; 
-        if (precipAmount >= 1.0) return 63; // Nota: Open-Meteo usa 1.0 com estàndard, podem mantenir-lo o usar PRECIPITATION.MODERATE
+        if (precipAmount >= 1.0) return 63; 
         return 61; 
     } 
     return code;
@@ -164,21 +189,33 @@ export const getRealTimeWeatherCode = (
     const precipInstantanea = getInstantaneousPrecipitation(minutelyPrecipData, safeNum(current.precipitation, 0));
 
     // --- PIPELINE DE DECISIÓ ---
+    
+    // 1. Estat base del cel
     code = adjustBaseSkyCode(code, cloudCover);
 
+    // 2. Correcció AROME (Forçar pluja si el model HD la veu)
     if (isArome && precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
         code = 61; 
     }
 
+    // 3. NOU: Filtre Virga (Eliminar pluja falsa si és molt sec)
+    code = checkForVirga(code, humidity, cloudCover, precipInstantanea);
+
+    // 4. Boira i Visibilitat
     code = checkForFog(code, temp, humidity, cloudCover);
+    
+    // 5. Tempestes (CAPE)
     code = adjustForStorms(code, cape, cloudCover, precipInstantanea);
+    
+    // 6. Neu (Temperatura i Cota)
     code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
     
-    // VISIBILITY.POOR en lloc de 1000
+    // 7. Visibilitat crítica (excepte si plou)
     if ((code === 45 || code === 48 || visibility < VISIBILITY.POOR) && precipInstantanea < PRECIPITATION.TRACE) {
         return 45;
     }
 
+    // 8. Ajustar intensitat final (si encara és pluja després de tot)
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     if (!isSnow) {
         code = adjustRainIntensity(code, precipInstantanea);
