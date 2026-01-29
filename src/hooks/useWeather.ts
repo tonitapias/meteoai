@@ -9,6 +9,7 @@ import {
 
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from './useWeatherQuery'; 
+import { useAromeWorker } from './useAromeWorker'; // <--- NOU IMPORT
 
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
@@ -22,13 +23,15 @@ interface WeatherCachePacket {
 }
 
 const CACHE_TTL = 15 * 60 * 1000; 
-const AROME_TIMEOUT_MS = 4000; // 4 segons màxim per al càlcul físic
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
   const [aqiData, setAqiData] = useState<AQIData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Hook personalitzat per gestionar el worker (Separation of Concerns)
+  const { runAromeWorker } = useAromeWorker();
 
   const t = useMemo(() => {
       return { ...TRANSLATIONS['ca'], ...(TRANSLATIONS[lang] || {}) };
@@ -38,65 +41,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
   useEffect(() => {
       cacheService.clean().catch(console.error);
-  }, []);
-
-  // --- WORKER WRAPPER AMB TIMEOUT I MONITORATGE ---
-  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: ExtendedWeatherData) => {
-      return new Promise<ExtendedWeatherData>((resolve, reject) => {
-          const startTime = performance.now();
-          
-          // 1. Monitoratge: Inici del Worker
-          Sentry.addBreadcrumb({
-              category: 'arome-worker',
-              message: 'Starting AROME High-Res Calculation',
-              level: 'info'
-          });
-
-          const worker = new Worker(new URL('../workers/arome.worker.ts', import.meta.url), { type: 'module' });
-          
-          // 2. Kill Switch: Timeout de seguretat
-          const timeoutId = setTimeout(() => {
-              worker.terminate();
-              const msg = `AROME Worker Timeout (${AROME_TIMEOUT_MS}ms) - Aborting`;
-              console.warn(`⚠️ ${msg}`);
-              
-              Sentry.addBreadcrumb({
-                  category: 'arome-worker',
-                  message: 'Worker Timed Out - Fallback to Standard Model',
-                  level: 'warning'
-              });
-              
-              // No fem reject, sinó que resolem amb les dades base per no mostrar error a l'usuari
-              // Simplement perdem l'alta resolució, però l'app funciona.
-              resolve(base); 
-          }, AROME_TIMEOUT_MS);
-
-          worker.onmessage = (e) => {
-              clearTimeout(timeoutId); // Cancelem el timeout si ha acabat a temps
-              
-              if (e.data.success) {
-                  const duration = Math.round(performance.now() - startTime);
-                  // Monitoratge: Èxit i rendiment
-                  Sentry.addBreadcrumb({
-                      category: 'arome-worker',
-                      message: `Calculation Success in ${duration}ms`,
-                      level: 'info'
-                  });
-                  resolve(e.data.data);
-              } else {
-                  reject(new Error(e.data.error));
-              }
-              worker.terminate(); 
-          };
-          
-          worker.onerror = (err) => {
-              clearTimeout(timeoutId);
-              reject(err);
-              worker.terminate();
-          };
-          
-          worker.postMessage({ baseData: base, highResData: highRes });
-      });
   }, []);
 
   const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName?: string, country?: string) => {
@@ -134,13 +78,13 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       let processedData = normalizeModelData(weatherRaw);
       
-      // 3. Integració Model AROME (Via Worker 🧵 amb Timeout)
+      // 3. Integració Model AROME (Via Worker 🧵 Extret al Hook useAromeWorker)
       if (isAromeSupported(lat, lon)) {
           try {
              // Descarreguem dades AROME
              const aromeRaw = await getAromeData(lat, lon);
              
-             // Processem al fil secundari (protegit per timeout)
+             // Processem al fil secundari usant el hook net
              processedData = await runAromeWorker(processedData, aromeRaw);
 
           } catch (aromeErr) { 

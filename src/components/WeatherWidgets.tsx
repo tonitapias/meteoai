@@ -6,6 +6,12 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../translations';
 
+// --- HELPER SEGURETAT VISUAL ---
+// Si el valor és null/undefined, retorna "--", sinó l'arrodonit.
+const safeVal = (val: number | null | undefined): string | number => {
+    return (val !== null && val !== undefined && !isNaN(val)) ? Math.round(val) : '--';
+};
+
 const WIDGET_BASE_STYLE = "bg-gradient-to-br from-[#1a1d2d] to-[#11131f] border border-white/10 p-5 md:p-6 rounded-[2rem] relative group transition-all duration-500 hover:border-indigo-500/30 hover:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] h-full flex flex-col justify-between overflow-hidden ring-1 ring-white/5";
 const TITLE_STYLE = "text-[10px] font-black text-indigo-200/60 uppercase tracking-[0.25em] mb-4 flex items-center gap-2 relative z-10";
 
@@ -74,9 +80,13 @@ const getWindDirectionText = (degrees: number) => {
 
 export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
   const t = getTrans(lang);
-  const directionText = getWindDirectionText(degrees);
+  const directionText = degrees != null ? getWindDirectionText(degrees) : '--';
+  const displayDeg = safeVal(degrees);
+  const displaySpeed = safeVal(speed);
+  const displayGusts = safeVal(gusts);
+
   const gustIntensity = (gusts || 0) > 60 ? 'text-rose-400' : (gusts || 0) > 40 ? 'text-amber-400' : 'text-slate-400';
-  const hasGusts = gusts && gusts > speed + 5; 
+  const hasGusts = gusts && gusts > (speed || 0) + 5; 
 
   return (
     <div className={WIDGET_BASE_STYLE}>
@@ -85,7 +95,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
               <Wind className="w-3.5 h-3.5 text-indigo-400" /> {t.wind || "VENT"}
           </div>
           <div className="flex flex-col items-end">
-               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{degrees}° {directionText}</span>
+               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{displayDeg}° {directionText}</span>
           </div>
       </div>
       
@@ -104,7 +114,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500">E</span>
              </div>
 
-             <div className="absolute w-full h-full flex items-center justify-center transition-transform duration-1000 cubic-bezier(0.34, 1.56, 0.64, 1)" style={{ transform: `rotate(${degrees}deg)` }}>
+             <div className="absolute w-full h-full flex items-center justify-center transition-transform duration-1000 cubic-bezier(0.34, 1.56, 0.64, 1)" style={{ transform: `rotate(${degrees ?? 0}deg)` }}>
                 <div className="relative w-full h-full">
                     <div className="absolute top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[24px] border-b-emerald-400 filter drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-slate-700/50"></div>
@@ -112,14 +122,14 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
              </div>
 
              <div className="absolute flex flex-col items-center justify-center z-10 bg-[#161825]/95 backdrop-blur-md w-20 h-20 rounded-full border border-white/10 shadow-2xl ring-1 ring-white/5">
-                <span className="text-2xl font-black text-white tabular-nums tracking-tighter leading-none">{Math.round(speed)}</span>
+                <span className="text-2xl font-black text-white tabular-nums tracking-tighter leading-none">{displaySpeed}</span>
                 <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-wide opacity-80">km/h</span>
                 
                 {hasGusts && (
                     <div className="absolute -bottom-6 flex items-center gap-1 px-2 py-0.5 bg-black/40 rounded-full border border-white/5">
                         <Zap className={`w-2.5 h-2.5 ${gustIntensity}`} />
                         <span className={`text-[9px] font-mono font-bold ${gustIntensity} tabular-nums`}>
-                            {Math.round(gusts)}
+                            {displayGusts}
                         </span>
                     </div>
                 )}
@@ -133,7 +143,10 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
 export const CircularGauge = ({ icon, label, value, max, subText, color = "text-blue-400" }: CircularGaugeProps) => {
     const radius = 38;
     const circumference = 2 * Math.PI * radius; 
-    const offset = circumference - (Math.min(value / max, 1) * circumference);
+    const safeValue = value ?? 0;
+    const offset = circumference - (Math.min(safeValue / max, 1) * circumference);
+    const displayValue = safeVal(value);
+
     return (
         <div className={WIDGET_BASE_STYLE}>
             <div className={TITLE_STYLE}>{icon} {label}</div>
@@ -147,7 +160,7 @@ export const CircularGauge = ({ icon, label, value, max, subText, color = "text-
                             style={{ strokeDasharray: circumference, strokeDashoffset: offset, transition: "stroke-dashoffset 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)" }} />
                      </svg>
                      <div className="absolute flex flex-col items-center">
-                         <span className="text-3xl font-black text-white tabular-nums tracking-tighter">{value}</span>
+                         <span className="text-3xl font-black text-white tabular-nums tracking-tighter">{displayValue}</span>
                          {subText && <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/5 mt-1">{subText}</span>}
                      </div>
                  </div>
@@ -172,7 +185,6 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
     <div className={WIDGET_BASE_STYLE}>
        <div className={TITLE_STYLE}><Layers className="w-3.5 h-3.5 text-blue-400" /> {title}</div>
        
-       {/* CORRECCIÓ: Afegim 'min-h-[140px]' per assegurar que es veu al mòbil */}
        <div className="flex-1 flex items-end justify-between gap-2 px-1 relative min-h-[140px]">
           <div className="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none opacity-20">
               <div className="w-full border-t border-dashed border-slate-500"></div>
@@ -186,14 +198,14 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
                  <div className="w-full relative rounded-t-lg overflow-hidden bg-[#0f111a] border-x border-t border-white/5 h-full flex items-end shadow-inner">
                      <div 
                         className={`w-full transition-all duration-1000 ease-out bg-gradient-to-t ${layer.color} relative`}
-                        style={{ height: `${Math.max(5, layer.v)}%`, opacity: layer.v === 0 ? 0.1 : 0.9 }}
+                        style={{ height: `${Math.max(5, layer.v ?? 0)}%`, opacity: layer.v === 0 ? 0.1 : 0.9 }}
                      >
                         <div className="absolute top-0 w-full h-[2px] bg-white/50 shadow-[0_0_10px_white]"></div>
                      </div>
                  </div>
                  
                  <div className="mt-2 text-center z-20">
-                     <span className="block text-[18px] font-black text-white tabular-nums leading-none mb-0.5">{Math.round(layer.v)}<span className="text-[9px] align-top opacity-50">%</span></span>
+                     <span className="block text-[18px] font-black text-white tabular-nums leading-none mb-0.5">{safeVal(layer.v)}<span className="text-[9px] align-top opacity-50">%</span></span>
                      <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider">{layer.l}</span>
                  </div>
              </div>
@@ -205,9 +217,10 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
 
 export const SnowLevelWidget = ({ freezingLevel, unit, lang }: WidgetProps) => {
     const t = getTrans(lang);
+    const hasData = freezingLevel !== null && freezingLevel !== undefined;
     const snowLimit = Math.max(0, (freezingLevel || 0) - 300);
     const isFt = unit === 'imperial' || unit === 'F';
-    const displayLevel = isFt ? Math.round(snowLimit * 3.28084) : Math.round(snowLimit);
+    const displayLevel = hasData ? (isFt ? Math.round(snowLimit * 3.28084) : Math.round(snowLimit)) : '--';
     
     return (
         <div className={WIDGET_BASE_STYLE}>
@@ -233,22 +246,26 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang }: WidgetProps) => {
 
 export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
     const t = getTrans(lang);
+    const displayVal = safeVal(value);
+    const displayHum = safeVal(humidity);
+    const safeValue = value ?? 0;
+
     return (
       <div className={WIDGET_BASE_STYLE}>
           <div className={TITLE_STYLE}><Droplets className="w-3.5 h-3.5 text-cyan-400" /> {t.dewPoint || "ROSADA"}</div>
           <div className="flex items-center justify-between px-2 flex-1 pb-4">
               <div className="flex flex-col items-start">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter drop-shadow-lg">{Math.round(value)}°</span>
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter drop-shadow-lg">{displayVal}°</span>
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide mt-1">Punt Rosada</span>
               </div>
               <div className="h-10 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent mx-2"></div>
               <div className="flex flex-col items-end">
-                  <span className="text-2xl font-bold text-cyan-400 tabular-nums">{humidity}%</span>
+                  <span className="text-2xl font-bold text-cyan-400 tabular-nums">{displayHum}%</span>
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide mt-1 text-right">Humitat Rel.</span>
               </div>
           </div>
           <div className="w-full h-1.5 bg-[#0f111a] rounded-full overflow-hidden border border-white/5">
-              <div className={`h-full rounded-full ${value > 20 ? 'bg-rose-500' : value > 15 ? 'bg-amber-400' : 'bg-emerald-400'} shadow-[0_0_8px_currentColor]`} style={{width: `${Math.min(((value + 10) / 40) * 100, 100)}%`}}></div>
+              <div className={`h-full rounded-full ${safeValue > 20 ? 'bg-rose-500' : safeValue > 15 ? 'bg-amber-400' : 'bg-emerald-400'} shadow-[0_0_8px_currentColor]`} style={{width: `${Math.min(((safeValue + 10) / 40) * 100, 100)}%`}}></div>
           </div>
       </div>
     );
@@ -256,16 +273,18 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
 
 export const CapeWidget = ({ cape, lang }: WidgetProps) => {
     const t = getTrans(lang);
+    const safeCape = cape ?? 0;
+    const displayCape = safeVal(cape);
     
     // Nivells d'alerta
     let severity = 'Estable';
     let color = 'text-emerald-400';
     let barColor = 'bg-gradient-to-t from-emerald-500 via-emerald-400 to-transparent';
-    const heightPct = Math.min((cape / 3000) * 100, 100); // CORREGIT: 'const' en lloc de 'let'
+    const heightPct = Math.min((safeCape / 3000) * 100, 100);
 
-    if (cape > 2500) { severity = 'Severa'; color = 'text-rose-500'; barColor = 'bg-gradient-to-t from-rose-600 via-rose-500 to-orange-500'; }
-    else if (cape > 1000) { severity = 'Alta'; color = 'text-amber-400'; barColor = 'bg-gradient-to-t from-amber-500 via-yellow-400 to-transparent'; }
-    else if (cape > 500) { severity = 'Moderada'; color = 'text-yellow-300'; barColor = 'bg-gradient-to-t from-yellow-400 to-transparent'; }
+    if (safeCape > 2500) { severity = 'Severa'; color = 'text-rose-500'; barColor = 'bg-gradient-to-t from-rose-600 via-rose-500 to-orange-500'; }
+    else if (safeCape > 1000) { severity = 'Alta'; color = 'text-amber-400'; barColor = 'bg-gradient-to-t from-amber-500 via-yellow-400 to-transparent'; }
+    else if (safeCape > 500) { severity = 'Moderada'; color = 'text-yellow-300'; barColor = 'bg-gradient-to-t from-yellow-400 to-transparent'; }
 
     return (
       <div className={WIDGET_BASE_STYLE}>
@@ -282,12 +301,12 @@ export const CapeWidget = ({ cape, lang }: WidgetProps) => {
 
               <div className="flex-1 flex flex-col justify-center">
                   <span className={`text-4xl font-black tracking-tighter tabular-nums ${color} drop-shadow-lg leading-none`}>
-                      {Math.round(cape)}
+                      {displayCape}
                   </span>
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-3">J/kg</span>
                   
-                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border bg-black/20 w-fit ${cape > 1000 ? 'border-amber-500/30' : 'border-white/5'}`}>
-                      {cape > 1000 && <AlertTriangle className={`w-3 h-3 ${color}`} />}
+                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border bg-black/20 w-fit ${safeCape > 1000 ? 'border-amber-500/30' : 'border-white/5'}`}>
+                      {safeCape > 1000 && <AlertTriangle className={`w-3 h-3 ${color}`} />}
                       <span className={`text-[9px] font-black uppercase tracking-wider ${color}`}>
                           {severity}
                       </span>
@@ -321,7 +340,6 @@ export const PollenWidget = ({ data, lang }: WidgetProps) => {
 
             <div className="flex-1 flex flex-col justify-center">
                 <div className="flex justify-between items-center mb-1">
-                    {/* --- CORRECCIÓ AQUÍ: t.aqi en lloc de t.airQuality --- */}
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
                         {t.aqi || "QUALITAT AIRE"}
                     </span>
@@ -351,13 +369,10 @@ export const PollenWidget = ({ data, lang }: WidgetProps) => {
     );
 };
 
-// CORREGIT: Ús d'inicialització mandrosa per evitar l'error "impure function"
 export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) => {
     const t = getTrans(lang);
-    // FIX: () => Math.floor... evita que s'executi a cada render
     const [currentTimeSeconds, setCurrentTimeSeconds] = useState<number>(() => Math.floor(Date.now() / 1000));
 
-    // Timer pur: actualitza l'estat cada minut
     useEffect(() => {
         const timer = setInterval(() => {
              setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
@@ -500,9 +515,10 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
 
 export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
     const t = getTrans(lang);
-    const pct = Math.round(phase * 100);
-    const moonText = getMoonPhaseText(phase);
-    const moonAge = Math.round(phase * 29.53);
+    const hasData = phase !== null && phase !== undefined;
+    const pct = hasData ? Math.round(phase * 100) : 0;
+    const moonText = hasData ? getMoonPhaseText(phase) : '--';
+    const moonAge = hasData ? Math.round(phase * 29.53) : 0;
     const isSouth = (lat ?? 0) < 0;
 
     return (
@@ -516,7 +532,6 @@ export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
              
              <div className="flex items-center justify-center flex-1 gap-6">
                  <div className="w-20 h-20 rounded-full bg-[#0f111a] border border-slate-700/50 relative overflow-hidden shadow-2xl ring-1 ring-black">
-                    {/* AQUI ESTÀ LA CORRECCIÓ: invertit per Hemisferi Nord */}
                     <div className="absolute inset-0 w-full h-full" style={{ transform: isSouth ? 'none' : 'scaleX(-1)' }}>
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
                         <div className="absolute inset-0 rounded-full bg-slate-800 shadow-inner"></div>
@@ -537,7 +552,7 @@ export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
                  </div>
                  
                  <div className="flex flex-col justify-center">
-                    <span className="text-2xl font-black text-white tracking-tight">{pct}%</span>
+                    <span className="text-2xl font-black text-white tracking-tight">{hasData ? pct : '--'}%</span>
                     <span className="text-sm text-indigo-200 font-bold mb-1">{moonText}</span>
                     <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest border-t border-white/5 pt-1 mt-1">
                         Il·luminació
@@ -572,6 +587,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
             const cardClass = hour.isNow 
                 ? 'bg-indigo-600/10 border-indigo-500/40 ring-1 ring-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]' 
                 : 'bg-[#151725] border-white/5 hover:border-white/20 hover:bg-[#1e2130]';
+            const displayTemp = safeVal(hour.temp);
 
             return (
               <div key={idx} className={`flex-shrink-0 flex flex-col items-center justify-between w-[72px] h-[145px] py-3 rounded-[1.25rem] border ${cardClass} transition-all duration-300 snap-start group`}>
@@ -582,7 +598,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
                 </div>
                 
                 <div className="flex flex-col items-center w-full gap-1.5">
-                    <span className="text-lg font-black text-white tabular-nums tracking-tight">{Math.round(hour.temp)}°</span>
+                    <span className="text-lg font-black text-white tabular-nums tracking-tight">{displayTemp}°</span>
                     <div className="w-full px-2.5">
                         <div className="w-full h-1 bg-[#0f111a] rounded-full overflow-hidden">
                             <div className="h-full bg-blue-500 rounded-full transition-all" style={{width: `${hasPrecip ? Math.max(hour.precip || 0, 30) : 0}%`, opacity: hasPrecip ? 1 : 0}}></div>
@@ -626,8 +642,9 @@ interface VisibilityWidgetProps {
 }
 
 export const VisibilityWidget = ({ visibility, lang }: VisibilityWidgetProps) => {
+  const hasData = visibility !== null && visibility !== undefined;
   // 1. Convertim a KM i assegurem que no hi hagi decimals innecessaris
-  const visibilityKm = (visibility / 1000).toFixed(1).replace('.0', '');
+  const visibilityKm = hasData ? (visibility / 1000).toFixed(1).replace('.0', '') : '--';
   
   // 2. Lògica d'estat visual
   let status = "";
@@ -635,18 +652,19 @@ export const VisibilityWidget = ({ visibility, lang }: VisibilityWidgetProps) =>
   let colorClass = "";
   let progress = 0;
 
-  // Lògica de negoci basada en estàndards meteorològics
-  if (visibility >= 10000) {
+  const safeVis = visibility ?? 0;
+
+  if (safeVis >= 10000) {
     status = lang === 'ca' ? "Excel·lent" : "Excellent";
     blurClass = "blur-none"; 
     colorClass = "text-emerald-400";
     progress = 100;
-  } else if (visibility >= 5000) {
+  } else if (safeVis >= 5000) {
     status = lang === 'ca' ? "Bona" : "Good";
     blurClass = "blur-[0.5px]"; 
     colorClass = "text-blue-400";
     progress = 75;
-  } else if (visibility >= 2000) {
+  } else if (safeVis >= 2000) {
     status = lang === 'ca' ? "Calitja" : "Haze";
     blurClass = "backdrop-blur-[1px]"; 
     colorClass = "text-yellow-400";
@@ -683,7 +701,6 @@ export const VisibilityWidget = ({ visibility, lang }: VisibilityWidgetProps) =>
       </div>
 
       {/* EFECTE VISUAL (MUNTANYA + ESTAT) */}
-      {/* La muntanya es desenfoca segons la dada real per simular boira */}
       <div className={`absolute -bottom-2 -right-2 opacity-10 transition-all duration-1000 group-hover:opacity-20 ${blurClass} pointer-events-none`}>
         <Mountain className="w-20 h-20 sm:w-24 sm:h-24 text-white" />
       </div>

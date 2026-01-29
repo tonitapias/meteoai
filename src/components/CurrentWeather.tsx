@@ -18,7 +18,12 @@ export default function CurrentWeather({
 }: CurrentWeatherProps) {
   const { current, location, daily } = data;
   const isUsingArome = current.source === 'AROME HD';
-  const getTemp = (t: number | null | undefined) => formatTemp(t ?? 0, unit);
+  
+  // Helper segur per mostrar temperatura o placeholder
+  const renderTemp = (t: number | null | undefined) => {
+      const val = formatTemp(t, unit);
+      return val !== null ? val : '--';
+  };
   
   const displayDate = shiftedNow || new Date(); 
   const displayTimeStr = `${String(displayDate.getHours()).padStart(2, '0')}:${String(displayDate.getMinutes()).padStart(2, '0')}`;
@@ -36,6 +41,12 @@ export default function CurrentWeather({
   };
 
   if (!current) return null;
+
+  // Càlcul segur de valors principals
+  const mainTemp = renderTemp(current.temperature_2m);
+  const windSpeed = current.wind_speed_10m != null ? Math.round(current.wind_speed_10m) : '--';
+  const humidity = current.relative_humidity_2m != null ? current.relative_humidity_2m : '--';
+  const apparentTemp = renderTemp(current.apparent_temperature);
 
   return (
     <div className="w-full relative group">
@@ -80,10 +91,10 @@ export default function CurrentWeather({
                 <div className="mt-8 md:mt-12 flex flex-col md:flex-row items-baseline md:items-end gap-6">
                      <div className="relative leading-none">
                         <h1 className="text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium text-white tracking-tighter tabular-nums drop-shadow-2xl z-10 relative">
-                            {Math.round(current.temperature_2m ?? 0)}°
+                            {mainTemp}°
                         </h1>
                         <div className="absolute inset-0 text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium text-indigo-500 blur-3xl opacity-20 select-none pointer-events-none tracking-tighter tabular-nums">
-                            {Math.round(current.temperature_2m ?? 0)}°
+                            {mainTemp}°
                         </div>
                      </div>
 
@@ -98,12 +109,12 @@ export default function CurrentWeather({
                         <div className="flex items-center gap-4 text-sm font-mono font-bold text-slate-400">
                             <div className="flex items-center gap-1">
                                 <ArrowUp className="w-3.5 h-3.5 text-rose-400" />
-                                <span className="text-white tabular-nums">{formatTemp(maxTemp ?? 0, unit)}</span>
+                                <span className="text-white tabular-nums">{renderTemp(maxTemp)}°</span>
                             </div>
                             <div className="w-px h-3 bg-white/10"></div>
                             <div className="flex items-center gap-1">
                                 <ArrowDown className="w-3.5 h-3.5 text-cyan-400" />
-                                <span className="text-white tabular-nums">{formatTemp(minTemp ?? 0, unit)}</span>
+                                <span className="text-white tabular-nums">{renderTemp(minTemp)}°</span>
                             </div>
                         </div>
                      </div>
@@ -119,13 +130,15 @@ export default function CurrentWeather({
 
                 <div className="grid grid-cols-3 gap-2 relative z-10">
                     {[ 
-                        { i: Wind, v: Math.round(current.wind_speed_10m ?? 0), u: 'km/h', l: 'VENT' }, 
-                        { i: Droplets, v: current.relative_humidity_2m ?? 0, u: '%', l: 'HUMITAT' }, 
-                        { i: Activity, v: getTemp(current.apparent_temperature), u: '', l: 'SENSACIÓ' } 
+                        { i: Wind, v: windSpeed, u: 'km/h', l: 'VENT' }, 
+                        { i: Droplets, v: humidity, u: '%', l: 'HUMITAT' }, 
+                        { i: Activity, v: apparentTemp, u: '°', l: 'SENSACIÓ' } 
                     ].map((s, idx) => (
                         <div key={idx} className="flex flex-col items-center justify-center p-3 rounded-xl bg-[#151725] border border-white/5 hover:border-white/10 transition-colors group">
                             <s.i className="w-4 h-4 text-slate-500 mb-1 group-hover:text-indigo-400 transition-colors" />
-                            <span className="text-lg font-mono font-bold text-white tabular-nums tracking-tight">{s.v}<span className="text-[9px] text-slate-500 ml-0.5">{s.u}</span></span>
+                            <span className="text-lg font-mono font-bold text-white tabular-nums tracking-tight">
+                                {s.v}<span className="text-[9px] text-slate-500 ml-0.5">{s.u}</span>
+                            </span>
                             <span className="text-[8px] text-slate-600 font-black uppercase tracking-widest">{s.l}</span>
                         </div>
                     ))}

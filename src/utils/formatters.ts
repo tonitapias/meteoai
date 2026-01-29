@@ -4,7 +4,10 @@
 export type WeatherUnit = 'C' | 'F';
 export type Language = 'ca' | 'es' | 'en' | 'fr';
 
-export const formatTemp = (tempC: number, unit: WeatherUnit): number => {
+// MILLORA DE SEGURETAT: Acceptem number | null | undefined
+export const formatTemp = (tempC: number | null | undefined, unit: WeatherUnit): number | null => {
+  if (tempC === null || tempC === undefined) return null; // Retornem null per indicar "sense dades"
+  
   if (unit === 'F') return Math.round((tempC * 9/5) + 32);
   return Math.round(tempC);
 };
@@ -14,10 +17,12 @@ export const getUnitLabel = (unit: WeatherUnit): string => {
 };
 
 export const formatDate = (
-  dateString: string, 
+  dateString: string | undefined, 
   lang: Language, 
   options?: Intl.DateTimeFormatOptions
 ): string => {
+  if (!dateString) return ""; // Protecció contra dates buides
+
   const locales: Record<Language, string> = { 
     ca: 'ca-ES', 
     es: 'es-ES', 
@@ -25,25 +30,41 @@ export const formatDate = (
     fr: 'fr-FR' 
   };
   
-  // Mantenim la lògica original de detecció de dates
-  const date = dateString.includes('T') 
-    ? new Date(dateString) 
-    : new Date(`${dateString}T00:00:00`);
-    
-  return new Intl.DateTimeFormat(locales[lang], options).format(date);
+  try {
+      // Mantenim la lògica original de detecció de dates
+      const date = dateString.includes('T') 
+        ? new Date(dateString) 
+        : new Date(`${dateString}T00:00:00`);
+        
+      if (isNaN(date.getTime())) return ""; // Protecció contra dates invàlides
+
+      return new Intl.DateTimeFormat(locales[lang], options).format(date);
+  } catch {
+      return "";
+  }
 };
 
-export const formatTime = (dateString: string, lang: Language): string => {
+export const formatTime = (dateString: string | undefined, lang: Language): string => {
+  if (!dateString) return "--:--";
+
   const locales: Record<Language, string> = { 
     ca: 'ca-ES', 
     es: 'es-ES', 
     en: 'en-US', 
     fr: 'fr-FR' 
   };
-  return new Date(dateString).toLocaleTimeString(locales[lang], {
-    hour: '2-digit', 
-    minute: '2-digit'
-  });
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "--:--";
+
+    return date.toLocaleTimeString(locales[lang], {
+        hour: '2-digit', 
+        minute: '2-digit'
+    });
+  } catch {
+    return "--:--";
+  }
 };
 
 /**
@@ -52,18 +73,22 @@ export const formatTime = (dateString: string, lang: Language): string => {
  * @param snowfall - Total de neu (cm)
  * @returns String formatat (ex: "15 mm" o "5 cm")
  */
-export const formatPrecipitation = (precipitationTotal: number, snowfall: number): string => {
+export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null): string => {
+  // Gestió de nuls: Si no hi ha dades, assumim 0 per evitar "undefined mm"
+  const safePrecip = precipitationTotal ?? 0;
+  const safeSnow = snowfall ?? 0;
+
   // Si hi ha neu acumulada significativa (> 0.2 cm), mostrem la neu
-  if (snowfall && snowfall >= 0.2) {
+  if (safeSnow >= 0.2) {
     // Si és menys d'1 cm, mostrem decimals, sinó enter arrodonit
-    return snowfall < 1 
-      ? `${snowfall.toFixed(1)} cm` 
-      : `${Math.round(snowfall)} cm`;
+    return safeSnow < 1 
+      ? `${safeSnow.toFixed(1)} cm` 
+      : `${Math.round(safeSnow)} cm`;
   }
   
   // Si no és neu, és pluja (mm)
-  if (precipitationTotal < 1 && precipitationTotal > 0) {
-    return `${precipitationTotal.toFixed(1)} mm`;
+  if (safePrecip < 1 && safePrecip > 0) {
+    return `${safePrecip.toFixed(1)} mm`;
   }
-  return `${Math.round(precipitationTotal)} mm`;
+  return `${Math.round(safePrecip)} mm`;
 };

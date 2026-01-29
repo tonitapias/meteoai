@@ -82,7 +82,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     const validation = AromeCleanedSchema.safeParse(rawCleaned);
     
     if (!validation.success) {
-        console.warn("⚠️ AROME Engine Safety: Invalid data structure detected. Skipping injection.", validation.error);
+        // MILLORA DE SEGURETAT: Logging simplificat per evitar errors de serialització en tests/producció
+        console.warn(`⚠️ AROME Engine Safety: Invalid data structure. Issues: ${validation.error.issues.length}`);
         return baseData; // Retornem baseData intacte, sense arriscar errors de runtime
     }
 

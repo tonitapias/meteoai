@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, Activity } from 'lucide-react';
 import { usePreferences, LocationData } from '../hooks/usePreferences';
+import { searchCity, GeoSearchResult } from '../services/geocodingService';
 import * as Sentry from "@sentry/react";
 
 interface HeaderProps {
@@ -9,32 +10,21 @@ interface HeaderProps {
   loading: boolean;
   viewMode: 'basic' | 'expert';
   setViewMode: (mode: 'basic' | 'expert') => void;
-  // Prop per activar el mode debug (Opcional per compatibilitat)
   onDebugToggle?: () => void;
 }
 
-interface GeoResult {
-  id: number;
-  name: string;
-  admin1?: string;
-  country?: string;
-  latitude: number;
-  longitude: number;
-}
-
 // Regex de llista negra: Bloquegem caràcters que semblin codi o tags HTML
-// < > { } [ ] \ /
 const DANGEROUS_CHARS = /[<>{}[\]\\/]/;
 
-function isLocationData(item: GeoResult | LocationData): item is LocationData {
-    return (item as LocationData).admin1 !== undefined || (item as GeoResult).id === undefined;
+function isLocationData(item: GeoSearchResult | LocationData): item is LocationData {
+    return (item as LocationData).admin1 !== undefined || (item as GeoSearchResult).id === undefined;
 }
 
 export default function Header({ onSearch, loading, viewMode, setViewMode, onDebugToggle }: HeaderProps) {
   const { favorites } = usePreferences();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const [suggestions, setSuggestions] = useState<GeoResult[]>([]);
+  const [suggestions, setSuggestions] = useState<GeoSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLocating, setIsLocating] = useState(false); 
@@ -58,15 +48,13 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
       setDebugClicks(0);
     }
   };
-  // -----------------------------------
 
   const showFavorites = query.length === 0 && favorites.length > 0;
   const showSuggestionsList = query.length >= 3;
-  const activeList: (GeoResult | LocationData)[] = showSuggestionsList ? suggestions : (showFavorites ? favorites : []);
+  const activeList: (GeoSearchResult | LocationData)[] = showSuggestionsList ? suggestions : (showFavorites ? favorites : []);
 
-  useEffect(() => {
-    setSelectedIndex(-1);
-  }, [query, suggestions, showFavorites]);
+  // --- CORRECCIÓ LINT: Eliminem el useEffect que causava renderitzats en cascada ---
+  // El reset de selectedIndex es fa ara manualment als handlers (onChange, search, etc.)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -80,7 +68,7 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
 
   useEffect(() => {
     const timer = setTimeout(async () => {
-      // 1. MILLORA DE SEGURETAT: Sanitització (Trim + Regex Check)
+      // 1. MILLORA DE SEGURETAT: Sanitització
       const cleanQuery = query.trim();
 
       if (cleanQuery.length < 3) {
@@ -88,45 +76,29 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
         return;
       }
 
-      // Si detectem caràcters perillosos, abortem la cerca i netegem
       if (DANGEROUS_CHARS.test(cleanQuery)) {
-        // Opcional: Podríem fer un log a Sentry aquí si volem monitoritzar atacs
         console.warn("Input sanitization blocked dangerous characters");
         setSuggestions([]);
         return;
       }
 
       setIsSearching(true);
-      try {
-        const response = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanQuery)}&count=5&language=ca&format=json`
-        );
-        
-        if (!response.ok) throw new Error(`Geocoding Error: ${response.status}`);
-        
-        const data = await response.json();
-        setSuggestions(data.results || []);
-
-      } catch (error) {
-        // 2. MILLORA DE MONITORATGE: Utilitzar Sentry en lloc de només console.error
-        console.error("Geocoding Search Error:", error);
-        Sentry.captureException(error, {
-            tags: { service: 'GeocodingAPI', type: 'search_failed' },
-            extra: { query: cleanQuery } // Context útil per depurar
-        });
-        // En cas d'error, netegem suggeriments per no mostrar estats inconsistents
-        setSuggestions([]); 
-      } finally {
-        setIsSearching(false);
-      }
+      
+      // 2. REFACTORITZACIÓ: Ús del servei centralitzat
+      const results = await searchCity(cleanQuery);
+      
+      setSuggestions(results);
+      // CORRECCIÓ: Resetegem l'índex aquí quan arriben nous resultats
+      setSelectedIndex(-1); 
+      
+      setIsSearching(false);
     }, 300);
     return () => clearTimeout(timer);
   }, [query]);
 
-  // --- LÒGICA DE GEOLOCALITZACIÓ AMB REVERSE GEOCODING ---
+  // --- LÒGICA DE GEOLOCALITZACIÓ ---
   const handleLocationClick = () => {
     if (isLocating || loading) return;
-    
     setIsLocating(true);
     
     if (!navigator.geolocation) {
@@ -231,7 +203,7 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
         if (isLocationData(item)) {
              handleSelectFavorite(item);
         } else {
-             const geo = item as GeoResult;
+             const geo = item as GeoSearchResult;
              processSelection(geo.latitude, geo.longitude, geo.name, geo.country);
         }
     } else if (suggestions.length > 0) {
@@ -256,7 +228,6 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
 
   return (
     <header className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 z-50 relative">
-      {/* TÍTOL INTERACTIU AMB DEBUG MODE */}
       <div 
         onClick={handleTitleClick}
         className="flex md:flex items-center gap-3 opacity-80 select-none cursor-pointer group transition-all w-full justify-center md:w-auto md:justify-start order-0"
@@ -303,7 +274,11 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                  setQuery(e.target.value);
+                  // CORRECCIÓ: Resetegem l'índex aquí, directament al handler
+                  setSelectedIndex(-1); 
+              }}
               onFocus={() => setIsFocused(true)}
               onKeyDown={handleKeyDown}
               placeholder="CERCAR CIUTAT..."

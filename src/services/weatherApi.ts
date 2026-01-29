@@ -135,11 +135,21 @@ const validateData = (schema: ZodType, data: unknown, context: string) => {
     
     if (!result.success) {
         console.error(`❌ Zod Validation Error (${context}):`, result.error);
-        Sentry.captureException(new Error(`Schema Validation Failed in ${context}`), {
-            tags: { type: 'schema_validation' },
-            extra: { zodError: result.error.format() }
+        
+        // MILLORA DE SEGURETAT (PAS 4):
+        // En lloc de retornar dades corruptes (cleanData), llancem error per activar l'ErrorBoundary.
+        // Amb el nou 'weatherSchema.ts' robust, si fallem aquí és que les dades són inservibles.
+        
+        const validationError = new Error(`Critical Schema Validation Failed in ${context}`);
+        Sentry.captureException(validationError, {
+            tags: { type: 'schema_validation_fatal' },
+            extra: { 
+                zodError: result.error.format(),
+                rawKeys: typeof data === 'object' ? Object.keys(data as object) : 'not-object'
+            }
         });
-        return cleanData; 
+        
+        throw validationError; // Atura l'execució. useWeather capturarà això i mostrarà l'estat d'error UI.
     }
     return result.data;
 };
