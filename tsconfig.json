@@ -20,11 +20,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Hybrid Migration Settings - CRITICAL */
-    "allowJs": true,          /* Permet que TS processi fitxers JS */
-    "checkJs": false,         /* No reportar errors als fitxers JS antics encara */
+    /* Hybrid Migration Settings - FINALITZAT */
+    "allowJs": false,          /* PROHIBIT: Tot el codi font ha de ser TypeScript */
+    "checkJs": false,
     "esModuleInterop": true
   },
-  "include": ["src"],
-  
+  "include": ["src"]
 }

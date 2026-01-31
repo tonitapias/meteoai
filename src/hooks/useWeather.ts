@@ -7,7 +7,6 @@ import {
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 
-// IMPORTACIÓ ACTUALITZADA: Afegim AirQualityData
 import { AirQualityData } from '../types/weather';
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from './useWeatherQuery'; 
@@ -17,11 +16,8 @@ import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
 import { cacheService } from '../services/cacheService'; 
 
-// ELIMINAT: type AQIData = Record<string, unknown>; -> Usem AirQualityData de types/weather
-
 interface WeatherCachePacket {
     weather: ExtendedWeatherData;
-    // UPDATED: Ús del tipus real
     aqi: AirQualityData | null;
 }
 
@@ -33,7 +29,6 @@ const CACHE_TTL = 15 * 60 * 1000;
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
-  // UPDATED: Ús del tipus real a l'estat
   const [aqiData, setAqiData] = useState<AirQualityData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

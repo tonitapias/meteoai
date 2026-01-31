@@ -2,11 +2,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, Loader2 } from 'lucide-react';
+import { Play, Pause, Loader2, AlertTriangle } from 'lucide-react';
 import L from 'leaflet';
+import { z } from 'zod'; // Arquitectura: Afegim Zod per seguretat
 
 // Importació d'imatges per fixar el bug d'icones de Leaflet
-// Això es manté igual per garantir que els marcadors es vegin bé
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -19,23 +19,32 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+// --- SCHEMAS DE VALIDACIÓ (ZOD) ---
+// Això blinda el component davant canvis inesperats a l'API externa
+const RadarFrameSchema = z.object({
+    time: z.number(),
+    path: z.string(),
+});
+
+const RainViewerResponseSchema = z.object({
+    version: z.string().optional(),
+    generated: z.number().optional(),
+    host: z.string().optional(),
+    radar: z.object({
+        past: z.array(RadarFrameSchema).default([]),
+        nowcast: z.array(RadarFrameSchema).default([]),
+    }).optional(), // Fem optional el radar per si l'API canvia l'estructura arrel
+});
+
+// Inferim els tipus directament dels schemas per mantenir coherència TS-Runtime
+type RadarFrame = z.infer<typeof RadarFrameSchema>;
+// ----------------------------------
+
 // Component auxiliar per centrar el mapa
 function ChangeView({ center }: { center: [number, number] }) {
   const map = useMap();
   map.setView(center, map.getZoom());
   return null;
-}
-
-interface RadarFrame {
-  time: number;
-  path: string;
-}
-
-interface RainViewerResponse {
-    radar: {
-        past: RadarFrame[];
-        nowcast: RadarFrame[];
-    }
 }
 
 interface RadarMapProps {
@@ -48,18 +57,46 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<boolean>(false); // Estat per gestionar errors de l'API
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Càrrega de dades del Radar (RainViewer)
+  // 1. Càrrega de dades del Radar (RainViewer) amb Validació
   useEffect(() => {
     const fetchRadarConfig = async () => {
       try {
         const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-        const data = await response.json() as RainViewerResponse;
         
+        if (!response.ok) {
+            throw new Error(`RainViewer API Error: ${response.status}`);
+        }
+
+        const rawData = await response.json();
+        
+        // VALIDACIÓ DE SEGURETAT:
+        // En lloc de confiar cegament (as RainViewerResponse), validem:
+        const parsedResult = RainViewerResponseSchema.safeParse(rawData);
+
+        if (!parsedResult.success) {
+            console.error("Error de validació a l'API de Radar:", parsedResult.error);
+            // En lloc de petar, marquem error controlat
+            setError(true);
+            setLoading(false);
+            return;
+        }
+
+        const data = parsedResult.data;
+        
+        // Si no hi ha dades de radar vàlides, gestionem l'error
+        if (!data.radar || (!data.radar.past.length && !data.radar.nowcast.length)) {
+             console.warn("Dades de radar buides");
+             setError(true);
+             setLoading(false);
+             return;
+        }
+
         const allFrames: RadarFrame[] = [
-           ...(data.radar?.past || []), 
-           ...(data.radar?.nowcast || [])
+           ...(data.radar.past || []), 
+           ...(data.radar.nowcast || [])
         ].sort((a, b) => a.time - b.time);
 
         setTimestamps(allFrames);
@@ -67,8 +104,10 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         setCurrentIndex(Math.max(0, allFrames.length - 6));
         setLoading(false);
         setIsPlaying(true); 
+
       } catch (e) {
         console.error("Error carregant radar:", e);
+        setError(true);
         setLoading(false);
       }
     };
@@ -97,6 +136,14 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
     if (!ts) return "--:--";
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // UI d'Error robusta (Fallback)
+  if (error) return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 bg-slate-900/50">
+          <AlertTriangle className="w-8 h-8 text-amber-500/50" />
+          <span className="text-xs">Radar no disponible temporalment</span>
+      </div>
+  );
 
   if (loading) return (
       <div className="h-full flex items-center justify-center text-slate-400 gap-2">

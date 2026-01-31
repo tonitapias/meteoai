@@ -3,12 +3,7 @@ import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain, Umbrella, Droplets } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../translations';
 import { CHART_COLORS } from '../constants/chartColors';
-
-// Tipus estricte per a punts de dades genèrics
-export interface ChartDataPoint {
-    time: string;
-    [key: string]: string | number | null | undefined | unknown; 
-}
+import { calculateYDomain, ChartDataPoint } from '../utils/chartUtils'; // Importem la nova lògica
 
 interface GraphPoint {
     x: number;
@@ -105,18 +100,14 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
     };
 
     const mapValues = (dataset: ChartDataPoint[]) => dataset.map(getSafeValue).filter(v => v !== null) as number[];
+    
+    // 1. Recollim tots els valors per calcular l'escala global
     let allValues = mapValues(data);
     if (comparisonData?.gfs) allValues = [...allValues, ...mapValues(comparisonData.gfs)];
     if (comparisonData?.icon) allValues = [...allValues, ...mapValues(comparisonData.icon)];
 
-    let min = allValues.length ? Math.min(...allValues) : 0;
-    let max = allValues.length ? Math.max(...allValues) : 100;
-
-    if (layer === 'temp') { min -= 2; max += 2; } 
-    else if (['rain', 'cloud', 'humidity'].includes(layer)) { min = 0; max = 100; } 
-    else if (layer === 'precip') { min = 0; max = Math.max(max * 1.2, 3); }
-    else if (layer === 'wind') { min = 0; max = Math.max(max, 25); } 
-    else if (layer === 'snowLevel') { min = Math.max(0, min - 500); max = max + 500; }
+    // 2. UTILITZEM LA NOVA LÒGICA CENTRALITZADA (Cleaner code)
+    const { min, max } = calculateYDomain(allValues, layer);
     
     const rng = max - min || 1;
     const calcY = (val: number | null) => (val === null) ? height + 10 : height - paddingY - ((val - min) / rng) * (height - 2 * paddingY);
@@ -234,7 +225,8 @@ interface SmartForecastChartsProps {
     lang?: Language;
 }
 
-export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }: SmartForecastChartsProps) => {
+// OPTIMITZACIÓ: Memoitzem el component pare per evitar re-renders innecessaris
+export const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca' }: SmartForecastChartsProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'temp' | 'rain' | 'precip' | 'wind' | 'snow'>('temp');
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
@@ -303,7 +295,9 @@ export const SmartForecastCharts = ({ data, comparisonData, unit, lang = 'ca' }:
       </div>
     </div>
   );
-};
+});
+
+SmartForecastCharts.displayName = 'SmartForecastCharts';
 
 export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPrecip = 0 }: { data: number[], label: string, currentPrecip: number }) => {
     let chartData = data ? [...data] : [];
