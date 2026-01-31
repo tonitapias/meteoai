@@ -19,8 +19,6 @@ export interface WeatherCurrent {
     cloud_cover_mid?: number;
     cloud_cover_high?: number;
     visibility?: number;
-    // Ús de 'unknown' per a propietats dinàmiques (més segur que 'any')
-    [key: string]: unknown; 
 }
 
 export interface WeatherHourly {
@@ -49,7 +47,6 @@ export interface WeatherHourly {
     is_day?: number[];
     freezing_level_height?: number[];
     cape?: number[];
-    [key: string]: unknown;
 }
 
 export interface WeatherDaily {
@@ -71,7 +68,6 @@ export interface WeatherDaily {
     wind_speed_10m_max: number[];
     wind_gusts_10m_max: number[];
     wind_direction_10m_dominant: number[];
-    [key: string]: unknown;
 }
 
 export interface AirQualityData {
@@ -114,5 +110,4 @@ export interface WeatherData {
         country?: string; 
     };
     source?: string;
-    [key: string]: unknown; 
 }

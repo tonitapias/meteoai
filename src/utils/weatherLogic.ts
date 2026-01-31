@@ -1,6 +1,5 @@
 // src/utils/weatherLogic.ts
 import { TRANSLATIONS, Language } from '../translations';
-// IMPORT CRÍTIC: Ara importem tot l'objecte de configuració
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { 
     TranslationMap, 
@@ -28,15 +27,31 @@ const {
 } = WEATHER_THRESHOLDS;
 
 // ==========================================
+// CONSTANTS INTERNES (NO EXPORTADES)
+// ==========================================
+
+// Virga: Pluja que s'evapora abans de tocar terra
+const VIRGA_HUMIDITY_LIMIT = 45; // % Mínim d'humitat per permetre pluja feble
+const VIRGA_PRECIP_LIMIT = 1.5;  // mm Màxims per considerar filtrar la pluja
+
+// Llindars de Fiabilitat (Diferència entre models)
+const RELIABILITY = {
+    TEMP_HIGH_DIFF: 5,   // > 5 graus de diferència és ALERTA
+    PRECIP_HIGH_DIFF: 10, // > 10mm de diferència és ALERTA
+    TEMP_MED_DIFF: 2,    // > 2 graus és DIVERGÈNCIA
+    PRECIP_MED_DIFF: 3   // > 3mm és DIVERGÈNCIA
+};
+
+// ==========================================
 // HELPERS PRIVATS
 // ==========================================
 
-/** Calcula el % de núvols efectiu ponderant els baixos, mitjans i alts */
+/** Calcula el % de núvols efectiu ponderant els baixos (més impacte), mitjans i alts */
 const calculateEffectiveCloudCover = (low: number, mid: number, high: number): number => {
     return Math.min(100, (low * 1.0) + (mid * 0.6) + (high * 0.3));
 };
 
-/** Obté la precipitació màxima actual */
+/** Obté la precipitació màxima actual (entre dada minutal i horària) */
 const getInstantaneousPrecipitation = (minutelyData: number[], currentPrecip: number): number => {
     if (minutelyData && minutelyData.length > 0) {
         return Math.max(...minutelyData.map(v => safeNum(v, 0)));
@@ -54,25 +69,15 @@ const adjustBaseSkyCode = (code: number, cloudCover: number): number => {
     return 0; 
 };
 
-/** * NOU FILTRE VIRGA (PAS 3): 
- * Evita dir que plou quan l'aire és tan sec que l'aigua s'evapora abans de tocar terra.
+/** * FILTRE VIRGA: Evita dir que plou quan l'aire és molt sec.
  */
 const checkForVirga = (code: number, humidity: number, cloudCover: number, precip: number): number => {
-    // Només apliquem el filtre a codis de pluja estàndard (51-67) o ruixats (80-82).
-    // No toquem la neu (71+) ni tempestes fortes (95+) ja que tenen dinàmiques pròpies.
     const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
     
     if (!isRain) return code;
 
-    // Llindars de seguretat (Hardcoded per seguretat meteorològica):
-    // - Humitat < 45%: És molt difícil que la pluja feble arribi a terra.
-    // - Precip < 1.5mm: Si la pluja és molt intensa, pot trencar la capa seca (no filtrem).
-    const VIRGA_HUMIDITY_LIMIT = 45;
-    const VIRGA_PRECIP_LIMIT = 1.5; 
-
     if (humidity < VIRGA_HUMIDITY_LIMIT && precip < VIRGA_PRECIP_LIMIT) {
         // Retornem a l'estat de cel base (sense pluja)
-        // Si hi ha molts núvols -> 3 (Cobert), sinó -> 2 (Intervals)
         return cloudCover > 50 ? 3 : 2; 
     }
 
@@ -86,7 +91,6 @@ const checkForFog = (code: number, temp: number, humidity: number, cloudCover: n
     const dewPoint = calculateDewPoint(temp, humidity);
     const spread = temp - dewPoint;
 
-    // Ús de constants HUMIDITY
     if (code < 45 && spread < HUMIDITY.DEW_SPREAD && humidity > HUMIDITY.FOG_BASE && cloudCover > 50) {
         return 45;
     }
@@ -121,8 +125,6 @@ const determineSnowCode = (
     precipAmount: number
 ): number => {
     const freezingDist = freezingLevel - elevation;
-    
-    // Ús de constants SNOW
     const isColdEnough = temp <= SNOW.TEMP_SNOW || (temp <= SNOW.TEMP_MIX && freezingDist < SNOW.FREEZING_BUFFER);
 
     if (!isColdEnough) return code;
@@ -144,7 +146,6 @@ const determineSnowCode = (
 const adjustRainIntensity = (code: number, precipAmount: number): number => {
     if (code >= 95) return code;
 
-    // Ús de constants PRECIPITATION
     if (precipAmount >= PRECIPITATION.TRACE) { 
         if (precipAmount > PRECIPITATION.HEAVY) return 65; 
         if (precipAmount >= 1.0) return 63; 
@@ -157,6 +158,9 @@ const adjustRainIntensity = (code: number, precipAmount: number): number => {
 // FUNCIONS EXPORTADES
 // ==========================================
 
+/**
+ * Obté l'etiqueta de text (Ex: "Pluja lleugera") per a un codi WMO
+ */
 export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
   const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
   if (!tr || !current) return "";
@@ -164,6 +168,10 @@ export const getWeatherLabel = (current: StrictCurrentWeather | undefined, langu
   return tr.wmo[code] || "---";
 };
 
+/**
+ * MOTOR PRINCIPAL: Calcula el codi WMO en temps real basant-se en múltiples variables.
+ * Aquesta funció corregeix els errors habituals dels models crus (ex: pluja fantasma, neu no detectada).
+ */
 export const getRealTimeWeatherCode = (
     current: StrictCurrentWeather, 
     minutelyPrecipData: number[], 
@@ -198,7 +206,7 @@ export const getRealTimeWeatherCode = (
         code = 61; 
     }
 
-    // 3. NOU: Filtre Virga (Eliminar pluja falsa si és molt sec)
+    // 3. Filtre Virga (Eliminar pluja falsa si és molt sec)
     code = checkForVirga(code, humidity, cloudCover, precipInstantanea);
 
     // 4. Boira i Visibilitat
@@ -215,7 +223,7 @@ export const getRealTimeWeatherCode = (
         return 45;
     }
 
-    // 8. Ajustar intensitat final (si encara és pluja després de tot)
+    // 8. Ajustar intensitat final
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     if (!isSnow) {
         code = adjustRainIntensity(code, precipInstantanea);
@@ -224,29 +232,44 @@ export const getRealTimeWeatherCode = (
     return code;
 };
 
-export const calculateReliability = (dailyBest: StrictDailyWeather, dailyGFS: StrictDailyWeather, dailyICON: StrictDailyWeather, dayIndex: number = 0): ReliabilityResult => {
+/**
+ * Calcula la fiabilitat de la predicció comparant 3 models (Best Match, GFS, ICON).
+ * Retorna 'high', 'medium' o 'low' segons la divergència.
+ */
+export const calculateReliability = (
+    dailyBest: StrictDailyWeather, 
+    dailyGFS: StrictDailyWeather, 
+    dailyICON: StrictDailyWeather, 
+    dayIndex: number = 0
+): ReliabilityResult => {
   if (!dailyGFS || !dailyICON || !dailyBest) {
       return { level: 'medium', type: 'general', value: 0 }; 
   }
   
-  const t1 = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
-  const t2 = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
-  const t3 = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
-  const diffTemp = Math.max(t1, t2, t3) - Math.min(t1, t2, t3);
+  // Extraiem temperatures i precipitacions amb noms clars
+  const tempBest = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
+  const tempGFS = safeNum(dailyGFS.temperature_2m_max?.[dayIndex]);
+  const tempICON = safeNum(dailyICON.temperature_2m_max?.[dayIndex]);
   
-  const p1 = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
-  const p2 = safeNum(dailyGFS.precipitation_sum?.[dayIndex]);
-  const p3 = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
-  const diffPrecip = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);
+  const temps = [tempBest, tempGFS, tempICON];
+  const diffTemp = Math.max(...temps) - Math.min(...temps);
+  
+  const precipBest = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
+  const precipGFS = safeNum(dailyGFS.precipitation_sum?.[dayIndex]);
+  const precipICON = safeNum(dailyICON.precipitation_sum?.[dayIndex]);
+  
+  const precips = [precipBest, precipGFS, precipICON];
+  const diffPrecip = Math.max(...precips) - Math.min(...precips);
 
-  if (diffTemp > 5) {
-      return { level: 'low', type: 'temp', value: diffTemp.toFixed(1) };
+  // Avaluació segons constants
+  if (diffTemp > RELIABILITY.TEMP_HIGH_DIFF) {
+      return { level: 'low', type: 'temp', value: Number(diffTemp.toFixed(1)) };
   }
-  if (diffPrecip > 10) {
-      return { level: 'low', type: 'precip', value: diffPrecip.toFixed(1) };
+  if (diffPrecip > RELIABILITY.PRECIP_HIGH_DIFF) {
+      return { level: 'low', type: 'precip', value: Number(diffPrecip.toFixed(1)) };
   }
   
-  if (diffTemp > 2 || diffPrecip > 3) {
+  if (diffTemp > RELIABILITY.TEMP_MED_DIFF || diffPrecip > RELIABILITY.PRECIP_MED_DIFF) {
       return { level: 'medium', type: 'divergent', value: 0 };
   }
   

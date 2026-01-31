@@ -1,27 +1,34 @@
 // src/App.tsx
-import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
-import { Move } from 'lucide-react';
-// COMPONENTS
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+
+// COMPONENTS "CORE" (Es carreguen immediatament per LCP - Largest Contentful Paint)
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
 import Footer from './components/Footer';
-
-// LAZY LOADING
-const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
-const RadarModal = lazy(() => import('./components/RadarModal'));
-const AromeModal = lazy(() => import('./components/AromeModal'));
-
 import CurrentWeather from './components/CurrentWeather';
-import Forecast24h from './components/Forecast24h';
-import AIInsights from './components/AIInsights';
-import ForecastSection from './components/ForecastSection';
-import ExpertWidgets from './components/ExpertWidgets';
-import { SmartForecastCharts, MinutelyPreciseChart } from './components/WeatherCharts'; 
 import WelcomeScreen from './components/WelcomeScreen';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import ErrorBanner from './components/ErrorBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import Toast from './components/Toast'; 
+import DebugPanel from './components/DebugPanel';
+
+// COMPONENTS GRÀFICS I SECUNDARIS (Lazy Loading per reduir Bundle inicial)
+// Això separa les llibreries pesades (com Recharts) del chunk principal.
+const Forecast24h = lazy(() => import('./components/Forecast24h'));
+const AIInsights = lazy(() => import('./components/AIInsights'));
+const ForecastSection = lazy(() => import('./components/ForecastSection'));
+const ExpertWidgets = lazy(() => import('./components/ExpertWidgets'));
+
+// Gràfics específics (Importació dinàmica per named exports)
+// Nota: Si WeatherCharts exporta per defecte, seria més net. 
+// Assumim que SmartForecastCharts ve del mòdul principal de gràfics.
+import { MinutelyPreciseChart, SmartForecastCharts } from './components/WeatherCharts'; 
+
+// MODALS (Ja eren Lazy, els mantenim igual)
+const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
+const RadarModal = lazy(() => import('./components/RadarModal'));
+const AromeModal = lazy(() => import('./components/AromeModal'));
 
 // HOOKS & UTILS
 import { usePreferences } from './hooks/usePreferences';
@@ -32,117 +39,18 @@ import { TRANSLATIONS } from './translations';
 import { isAromeSupported } from './utils/weatherLogic'; 
 import { useModalHistory } from './hooks/useModalHistory';
 import { useGeoLocation } from './context/GeoLocationContext';
-import { WeatherData } from './types/weather';
 
-// --- COMPONENT PANELL DEBUG (ARROSSEGABLE) ---
-interface DebugPanelProps {
-    weatherData: WeatherData | null;
-    supportsArome: boolean;
-    error: string | null;
-}
-
-const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, error }) => {
-    // Estat per la posició (inicialment fixat a dalt a l'esquerra)
-    const [position, setPosition] = useState({ x: 20, y: 100 });
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStartPos = useRef({ x: 0, y: 0 });
-
-    // Gestió del ratolí (Desktop)
-    const handleMouseDown = (e: React.MouseEvent) => {
-        setIsDragging(true);
-        dragStartPos.current = {
-            x: e.clientX - position.x,
-            y: e.clientY - position.y
-        };
-    };
-
-    // Gestió del dit (Mòbil)
-    const handleTouchStart = (e: React.TouchEvent) => {
-        setIsDragging(true);
-        const touch = e.touches[0];
-        dragStartPos.current = {
-            x: touch.clientX - position.x,
-            y: touch.clientY - position.y
-        };
-    };
-
-    // Efecte global per moure'l (així no perds el "focus" si mous el ratolí ràpid)
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging) return;
-            e.preventDefault(); // Evita seleccionar text mentre arrossegues
-            setPosition({
-                x: e.clientX - dragStartPos.current.x,
-                y: e.clientY - dragStartPos.current.y
-            });
-        };
-
-        const handleTouchMove = (e: TouchEvent) => {
-            if (!isDragging) return;
-            // e.preventDefault(); // Opcional: Descomentar si vols evitar l'scroll de la pàgina mentre mous el panell
-            const touch = e.touches[0];
-            setPosition({
-                x: touch.clientX - dragStartPos.current.x,
-                y: touch.clientY - dragStartPos.current.y
-            });
-        };
-
-        const handleStopDrag = () => setIsDragging(false);
-
-        if (isDragging) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleStopDrag);
-            window.addEventListener('touchmove', handleTouchMove, { passive: false });
-            window.addEventListener('touchend', handleStopDrag);
-        }
-
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleStopDrag);
-            window.removeEventListener('touchmove', handleTouchMove);
-            window.removeEventListener('touchend', handleStopDrag);
-        };
-    }, [isDragging]);
-
-    return (
-        <div 
-            // Utilitzem 'style' per la posició dinàmica en lloc de classes Tailwind fixes
-            style={{ left: `${position.x}px`, top: `${position.y}px` }}
-            className={`fixed p-4 bg-black/90 border ${isDragging ? 'border-green-400 cursor-grabbing' : 'border-green-500/30 cursor-grab'} text-green-400 font-mono text-[10px] rounded-lg shadow-2xl z-[9999] max-w-[250px] select-none backdrop-blur-md animate-in fade-in zoom-in-95 duration-200`}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-        >
-            <h4 className="font-bold border-b border-green-500/30 mb-2 pb-1 flex justify-between items-center pointer-events-none">
-                <span className="flex items-center gap-2">
-                    <Move className="w-3 h-3" /> DIAGNOSTICS
-                </span>
-                <span className={`w-2 h-2 rounded-full ${isDragging ? 'bg-green-400 shadow-[0_0_10px_#4ade80]' : 'bg-green-600'} transition-all`}></span>
-            </h4>
-            
-            {/* El contingut no captura events per permetre arrossegar des de qualsevol lloc de la caixa */}
-            <div className="space-y-1.5 opacity-90 pointer-events-none">
-                <div className="flex justify-between"><span>LAT:</span> <span className="text-white">{weatherData?.location?.latitude.toFixed(6) || "N/A"}</span></div>
-                <div className="flex justify-between"><span>LON:</span> <span className="text-white">{weatherData?.location?.longitude.toFixed(6) || "N/A"}</span></div>
-                <div className="flex justify-between"><span>MODEL:</span> <span className="text-white">{supportsArome ? "AROME HD" : "ECMWF STD"}</span></div>
-                <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB' : 'N/A'}</span></div>
-                <div className="flex justify-between"><span>CACHE:</span> <span className="text-white">{localStorage.getItem('weatherCache') ? 'HIT' : 'MISS'}</span></div>
-                <div className="flex justify-between"><span>ERRORS:</span> <span className={error ? "text-red-400" : "text-green-400"}>{error ? "YES" : "NO"}</span></div>
-            </div>
-            
-            <div className="mt-2 text-[9px] text-green-500/50 text-center italic">
-                {isDragging ? "Deixa anar per fixar" : "Arrossega per moure"}
-            </div>
-        </div>
-    );
-};
+// Fallback visual lleuger per a seccions
+const SectionSkeleton = () => (
+    <div className="w-full h-48 bg-white/5 animate-pulse rounded-[2rem] border border-white/5 my-4" />
+);
 
 export default function MeteoIA() {
   const [now, setNow] = useState<Date>(new Date());
   
-  // --- ESTAT DEBUG (NOU) ---
+  // --- ESTAT DEBUG ---
   const [showDebug, setShowDebug] = useState(false);
-  // -------------------------
-
+  
   const { lang, setLang, unit, viewMode, setViewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
@@ -150,7 +58,7 @@ export default function MeteoIA() {
   // Hook del temps
   const { weatherData, aqiData, loading, error, fetchWeatherByCoords } = useWeather(lang, unit);
   
-  // Hook de Geolocalització (Context)
+  // Hook de Geolocalització
   const { getCoordinates } = useGeoLocation();
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
@@ -159,10 +67,9 @@ export default function MeteoIA() {
   const handleGetCurrentLocation = useCallback(async () => {
       try {
           const { lat, lon } = await getCoordinates();
-          // "La Meva Ubicació" és el nom temporal fins que l'API resolgui el nom real
-          const success = await fetchWeatherByCoords(lat, lon, "La Meva Ubicació");
+          const result = await fetchWeatherByCoords(lat, lon, "La Meva Ubicació");
           
-          if (success) {
+          if (result.success) {
             setNotification({ type: 'success', msg: t.notifLocationSuccess });
           }
       } catch (e: unknown) {
@@ -172,7 +79,7 @@ export default function MeteoIA() {
           if (err.message === "GEOLOCATION_NOT_SUPPORTED") {
               errorMsg = t.geoNotSupported;
           } else if (err.message === "PERMISSION_DENIED") {
-              errorMsg = t.notifLocationError; // O missatge específic de permisos
+              errorMsg = t.notifLocationError; 
           } else if (err.message === "TIMEOUT") {
               errorMsg = t.notifLocationError;
           }
@@ -194,7 +101,7 @@ export default function MeteoIA() {
   const [showRadar, setShowRadar] = useState(false);
   const [showArome, setShowArome] = useState(false);
 
-  // Gestió de l'historial del navegador per tancar modals amb "Enrere"
+  // Gestió de l'historial del navegador
   useModalHistory(selectedDayIndex !== null, useCallback(() => setSelectedDayIndex(null), []));
   useModalHistory(showRadar, useCallback(() => setShowRadar(false), []));
   useModalHistory(showArome, useCallback(() => setShowArome(false), []));
@@ -220,7 +127,6 @@ export default function MeteoIA() {
          
          <Toast message={notification?.msg || null} type={notification?.type} onClose={() => setNotification(null)} />
 
-         {/* RENDER DEBUG PANEL (Passant props) */}
          {showDebug && (
             <DebugPanel 
                 weatherData={weatherData} 
@@ -255,7 +161,6 @@ export default function MeteoIA() {
     <div className="min-h-screen bg-[#05060A] text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden selection:bg-indigo-500/30 flex flex-col relative">
       <WeatherParticles code={effectiveWeatherCode} />
       
-      {/* RENDER DEBUG PANEL (Passant props) */}
       {showDebug && (
         <DebugPanel 
             weatherData={weatherData} 
@@ -294,6 +199,7 @@ export default function MeteoIA() {
             {weatherData && !loading && (
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col gap-8">
                 
+                {/* CurrentWeather és crític, no el fem lazy */}
                 <CurrentWeather 
                     data={weatherData} effectiveCode={effectiveWeatherCode} unit={unit} lang={lang} shiftedNow={shiftedNow}
                     isFavorite={isFavorite(weatherData.location?.name || "")} onToggleFavorite={handleToggleFavorite}
@@ -308,23 +214,31 @@ export default function MeteoIA() {
                     </div>
                 )}
 
-                <AIInsights analysis={aiAnalysis} lang={lang} />
+                <Suspense fallback={<SectionSkeleton />}>
+                    <AIInsights analysis={aiAnalysis} lang={lang} />
+                </Suspense>
 
                 {viewMode === 'expert' ? (
                     <ErrorBoundary>
                         <div className="flex flex-col gap-8">
-                            <ExpertWidgets 
-                                weatherData={weatherData} aqiData={aqiData} lang={lang} unit={unit} 
-                                freezingLevel={currentFreezingLevel}
-                            />
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <ExpertWidgets 
+                                    weatherData={weatherData} aqiData={aqiData} lang={lang} unit={unit} 
+                                    freezingLevel={currentFreezingLevel}
+                                />
+                            </Suspense>
                             
-                            <Forecast24h data={weatherData} lang={lang} unit={unit} />
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <Forecast24h data={weatherData} lang={lang} unit={unit} />
+                            </Suspense>
 
-                            <ForecastSection 
-                                chartData={chartDataFull} comparisonData={comparisonData} dailyData={weatherData.daily}
-                                weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
-                                comparisonEnabled={true} showCharts={false} 
-                            />
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <ForecastSection 
+                                    chartData={chartDataFull} comparisonData={comparisonData} dailyData={weatherData.daily}
+                                    weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
+                                    comparisonEnabled={true} showCharts={false} 
+                                />
+                            </Suspense>
 
                             <div className="bento-card p-6 md:p-8 bg-[#0B0C15] border border-white/5 shadow-2xl">
                                 <SmartForecastCharts 
@@ -338,12 +252,17 @@ export default function MeteoIA() {
                 ) : (
                     <ErrorBoundary>
                         <div className="flex flex-col gap-8">
-                            <Forecast24h data={weatherData} lang={lang} unit={unit} />
-                            <ForecastSection 
-                                chartData={chartDataFull} comparisonData={comparisonData} dailyData={weatherData.daily}
-                                weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
-                                comparisonEnabled={false} showCharts={false} 
-                            />
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <Forecast24h data={weatherData} lang={lang} unit={unit} />
+                            </Suspense>
+                            
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <ForecastSection 
+                                    chartData={chartDataFull} comparisonData={comparisonData} dailyData={weatherData.daily}
+                                    weeklyExtremes={weeklyExtremes} unit={unit} lang={lang} onDayClick={setSelectedDayIndex}
+                                    comparisonEnabled={false} showCharts={false} 
+                                />
+                            </Suspense>
                         </div>
                     </ErrorBoundary>
                 )}
@@ -367,13 +286,4 @@ export default function MeteoIA() {
       </div>
     </div>
   );
-}
-
-// Helper per TypeScript (memòria de Chrome)
-declare global {
-    interface Performance {
-        memory?: {
-            usedJSHeapSize: number;
-        }
-    }
 }

@@ -9,7 +9,7 @@ import {
 
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from './useWeatherQuery'; 
-import { useAromeWorker } from './useAromeWorker'; // <--- NOU IMPORT
+import { useAromeWorker } from './useAromeWorker'; 
 
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
@@ -22,6 +22,10 @@ interface WeatherCachePacket {
     aqi: AQIData | null;
 }
 
+export type WeatherFetchResult = 
+    | { success: true }
+    | { success: false; error: string; type: 'network' | 'validation' | 'unknown' };
+
 const CACHE_TTL = 15 * 60 * 1000; 
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
@@ -30,7 +34,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Hook personalitzat per gestionar el worker (Separation of Concerns)
   const { runAromeWorker } = useAromeWorker();
 
   const t = useMemo(() => {
@@ -43,7 +46,13 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       cacheService.clean().catch(console.error);
   }, []);
 
-  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName?: string, country?: string) => {
+  const fetchWeatherByCoords = useCallback(async (
+      lat: number, 
+      lon: number, 
+      locationName?: string, 
+      country?: string
+  ): Promise<WeatherFetchResult> => {
+    
     const now = Date.now();
     const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
@@ -52,7 +61,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
         lastFetchRef.current.lon === lon &&
         lastFetchRef.current.unit === unit &&
         (now - lastFetchRef.current.time) < 3000) {
-        return true; 
+        return { success: true }; 
     }
 
     setLoading(true);
@@ -60,44 +69,38 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 1. Cache Local (IndexedDB)
+      // 1. Cache Local
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
       if (cachedPacket) {
-          // eslint-disable-next-line no-console
-          console.log("⚡ Recuperat de Cache (Offline Ready):", cacheKey);
+          // Eliminat el console.log per producció
           setWeatherData(cachedPacket.weather);
           setAqiData(cachedPacket.aqi);
           setLoading(false);
-          return true;
+          return { success: true };
       }
 
-      // 2. Petició de Xarxa (Main Thread)
+      // 2. Petició de Xarxa
       const { weatherRaw, geoData, aqiData: fetchedAqi } = await fetchAllWeatherData(
         lat, lon, unit, lang, locationName, country
       );
 
       let processedData = normalizeModelData(weatherRaw);
       
-      // 3. Integració Model AROME (Via Worker 🧵 Extret al Hook useAromeWorker)
+      // 3. Integració AROME
       if (isAromeSupported(lat, lon)) {
           try {
-             // Descarreguem dades AROME
              const aromeRaw = await getAromeData(lat, lon);
-             
-             // Processem al fil secundari usant el hook net
              processedData = await runAromeWorker(processedData, aromeRaw);
-
           } catch (aromeErr) { 
-              console.warn("⚠️ Arome Worker/Fetch Error (Degradació elegant):", aromeErr); 
+              // Només Sentry, sense warn a consola
               Sentry.captureException(aromeErr, { 
                   tags: { service: 'AromeWorker', type: 'FallbackToBase' },
                   level: 'warning' 
               });
-              // Si falla (o timeout), continuem amb 'processedData' (OpenMeteo base)
           }
       }
 
-      // 4. Finalització de dades
+      // 4. Finalització
       processedData.location = { 
           ...processedData.location, 
           name: geoData.city,
@@ -116,19 +119,23 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       setAqiData(fetchedAqi);
       setWeatherData(processedData);
       
-      return true;
+      return { success: true };
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("❌ Error en fetchWeather:", errorMessage);
-
+      
       Sentry.captureException(err, { 
           tags: { service: 'WeatherAPI' },
           extra: { lat, lon, unit }
       });
 
       setError(t.fetchError); 
-      return false;
+      
+      return { 
+          success: false, 
+          error: errorMessage, 
+          type: 'unknown' 
+      };
     } finally {
       setLoading(false);
     }
