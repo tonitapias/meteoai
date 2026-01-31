@@ -7,6 +7,8 @@ import {
     ExtendedWeatherData 
 } from '../utils/weatherLogic';
 
+// IMPORTACIÓ ACTUALITZADA: Afegim AirQualityData
+import { AirQualityData } from '../types/weather';
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from './useWeatherQuery'; 
 import { useAromeWorker } from './useAromeWorker'; 
@@ -15,11 +17,12 @@ import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
 import { cacheService } from '../services/cacheService'; 
 
-type AQIData = Record<string, unknown>;
+// ELIMINAT: type AQIData = Record<string, unknown>; -> Usem AirQualityData de types/weather
 
 interface WeatherCachePacket {
     weather: ExtendedWeatherData;
-    aqi: AQIData | null;
+    // UPDATED: Ús del tipus real
+    aqi: AirQualityData | null;
 }
 
 export type WeatherFetchResult = 
@@ -30,7 +33,8 @@ const CACHE_TTL = 15 * 60 * 1000;
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
-  const [aqiData, setAqiData] = useState<AQIData | null>(null);
+  // UPDATED: Ús del tipus real a l'estat
+  const [aqiData, setAqiData] = useState<AirQualityData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +76,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       // 1. Cache Local
       const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
       if (cachedPacket) {
-          // Eliminat el console.log per producció
           setWeatherData(cachedPacket.weather);
           setAqiData(cachedPacket.aqi);
           setLoading(false);

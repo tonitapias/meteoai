@@ -1,7 +1,8 @@
 // src/components/WeatherCharts.tsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain, Umbrella, Droplets } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../translations';
+import { CHART_COLORS } from '../constants/chartColors';
 
 // Tipus estricte per a punts de dades genèrics
 export interface ChartDataPoint {
@@ -53,7 +54,7 @@ const formatRawTime = (isoString: string): string => {
      } catch { return "--:--"; }
 };
 
-export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca' }: SingleHourlyChartProps) => {
+export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca' }: SingleHourlyChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1000); 
 
@@ -72,15 +73,15 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // Tipat estricte del mapa de configuració
+  // Ús centralitzat de CHART_COLORS
   const layersConfig = useMemo<Record<string, LayerConfig>>(() => ({
-    temp: { key: 'temp', color: '#818cf8', gradientStart: '#818cf8', title: t.temp },
-    rain: { key: 'rain', color: '#3b82f6', gradientStart: '#3b82f6', title: t.rainProb },
-    precip: { key: 'precip', color: '#60a5fa', gradientStart: '#2563eb', title: "Volum (mm)" },
-    wind: { key: 'wind', color: '#2dd4bf', gradientStart: '#2dd4bf', title: t.wind },
-    cloud: { key: 'cloud', color: '#94a3b8', gradientStart: '#94a3b8', title: t.cloud },
-    humidity: { key: 'humidity', color: '#22d3ee', gradientStart: '#22d3ee', title: t.humidity },
-    snowLevel: { key: 'snowLevel', color: '#cbd5e1', gradientStart: '#f1f5f9', title: t.snowLevel }
+    temp: { key: 'temp', title: t.temp, ...CHART_COLORS.temp },
+    rain: { key: 'rain', title: t.rainProb, ...CHART_COLORS.rain },
+    precip: { key: 'precip', title: "Volum (mm)", ...CHART_COLORS.precip },
+    wind: { key: 'wind', title: t.wind, ...CHART_COLORS.wind },
+    cloud: { key: 'cloud', title: t.cloud, ...CHART_COLORS.cloud },
+    humidity: { key: 'humidity', title: t.humidity, ...CHART_COLORS.humidity },
+    snowLevel: { key: 'snowLevel', title: t.snowLevel, ...CHART_COLORS.snowLevel }
   }), [t]);
 
   const currentConfig = layersConfig[layer] || layersConfig['temp'];
@@ -137,7 +138,6 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
   const { points, gfsPoints, iconPoints } = chartPoints;
 
   const paths = useMemo(() => {
-      // Tipat explícit per als punts del gràfic
       const buildSmoothPath = (pts: GraphPoint[]) => {
         const validPts = pts.filter(p => p.value !== null && p.y <= height + 50);
         if (validPts.length < 2) return "";
@@ -184,8 +184,8 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
         <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" />
 
         {paths.areaPath && <path d={paths.areaPath} fill={`url(#gradient-${layer})`} />}
-        {paths.gfsPath && <path d={paths.gfsPath} fill="none" stroke="#4ade80" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="4 4"/>}
-        {paths.iconPath && <path d={paths.iconPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="2 2"/>}
+        {paths.gfsPath && <path d={paths.gfsPath} fill="none" stroke={CHART_COLORS.models.gfs} strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="4 4"/>}
+        {paths.iconPath && <path d={paths.iconPath} fill="none" stroke={CHART_COLORS.models.icon} strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="2 2"/>}
         {paths.linePath && <path d={paths.linePath} fill="none" stroke={currentConfig.color} strokeWidth="2.5" strokeLinecap="round" />}
         
         {points.map((p, i) => (
@@ -201,8 +201,8 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
           <g>
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke="white" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
             <circle cx={hoverData.x} cy={hoverData.y} r="4" fill={currentConfig.color} stroke="white" strokeWidth="2" />
-            {hoverGfs?.value != null && <circle cx={hoverGfs.x} cy={hoverGfs.y} r="3" fill="#4ade80" stroke="none" opacity="0.8" />}
-            {hoverIcon?.value != null && <circle cx={hoverIcon.x} cy={hoverIcon.y} r="3" fill="#fbbf24" stroke="none" opacity="0.8" />}
+            {hoverGfs?.value != null && <circle cx={hoverGfs.x} cy={hoverGfs.y} r="3" fill={CHART_COLORS.models.gfs} stroke="none" opacity="0.8" />}
+            {hoverIcon?.value != null && <circle cx={hoverIcon.x} cy={hoverIcon.y} r="3" fill={CHART_COLORS.models.icon} stroke="none" opacity="0.8" />}
             
             <g transform={`translate(${Math.min(width - 120, Math.max(70, hoverData.x))}, 20)`}>
                <rect x="-70" y="-15" width="140" height={showComparison ? 95 : 70} rx="8" fill="#0f172a" stroke={currentConfig.color} strokeWidth="1" opacity="0.95" />
@@ -213,8 +213,8 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
                </text>
                {showComparison && (
                  <>
-                    {hoverGfs?.value != null && <text x="0" y="46" textAnchor="middle" fill="#4ade80" fontSize="12" fontWeight="bold"><tspan fill="#94a3b8" fontSize="10" fontWeight="normal">GFS: </tspan>{fmtVal(hoverGfs.value)}{unit}</text>}
-                    {hoverIcon?.value != null && <text x="0" y="64" textAnchor="middle" fill="#fbbf24" fontSize="12" fontWeight="bold"><tspan fill="#94a3b8" fontSize="10" fontWeight="normal">ICON: </tspan>{fmtVal(hoverIcon.value)}{unit}</text>}
+                    {hoverGfs?.value != null && <text x="0" y="46" textAnchor="middle" fill={CHART_COLORS.models.gfs} fontSize="12" fontWeight="bold"><tspan fill="#94a3b8" fontSize="10" fontWeight="normal">GFS: </tspan>{fmtVal(hoverGfs.value)}{unit}</text>}
+                    {hoverIcon?.value != null && <text x="0" y="64" textAnchor="middle" fill={CHART_COLORS.models.icon} fontSize="12" fontWeight="bold"><tspan fill="#94a3b8" fontSize="10" fontWeight="normal">ICON: </tspan>{fmtVal(hoverIcon.value)}{unit}</text>}
                  </>
                )}
             </g>
@@ -223,7 +223,9 @@ export const SingleHourlyChart = ({ data, comparisonData, layer, unit, hoveredIn
       </svg>
     </div>
   );
-};
+});
+
+SingleHourlyChart.displayName = 'SingleHourlyChart';
 
 interface SmartForecastChartsProps {
     data: ChartDataPoint[];

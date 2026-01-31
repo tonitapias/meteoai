@@ -5,7 +5,7 @@ import { getWeatherIcon } from './WeatherIcons';
 import { getWeatherLabel, ExtendedWeatherData } from '../utils/weatherLogic';
 import { formatTemp, WeatherUnit } from '../utils/formatters';
 import { Language } from '../translations';
-import { AirQualityData } from '../services/weatherApi';
+import { AirQualityData } from '../types/weather';
 
 interface CurrentWeatherProps {
   data: ExtendedWeatherData; effectiveCode: number; unit: WeatherUnit; lang: Language; 

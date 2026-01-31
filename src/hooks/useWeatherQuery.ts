@@ -3,12 +3,15 @@ import { getWeatherData, getAirQualityData, WeatherData } from '../services/weat
 import { reverseGeocode, GeocodeResult } from '../services/geocodingService';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
+// IMPORTACIÓ ACTUALITZADA: Importem el tipus estricte
+import { AirQualityData } from '../types/weather';
 
 // Definim què retornarà aquesta funció exactament
 export interface FetchResult {
   weatherRaw: WeatherData;
   geoData: GeocodeResult;
-  aqiData: Record<string, unknown>;
+  // UPDATED: Tipat estricte aquí també
+  aqiData: AirQualityData;
 }
 
 /**
@@ -38,7 +41,8 @@ export const fetchAllWeatherData = async (
   const [weatherRaw, geoData, aqiData] = await Promise.all<[
     Promise<WeatherData>,
     Promise<GeocodeResult>,
-    Promise<Record<string, unknown>>
+    // UPDATED: Promesa tipada correctament
+    Promise<AirQualityData>
   ]>([weatherPromise, namePromise, aqiPromise]);
 
   return { weatherRaw, geoData, aqiData };

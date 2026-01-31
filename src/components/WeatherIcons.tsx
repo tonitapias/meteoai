@@ -1,5 +1,6 @@
 // src/components/WeatherIcons.tsx
-import React, { useState, useEffect } from 'react';
+// UPDATED: Importem 'memo'
+import React, { useState, useEffect, memo } from 'react';
 import { 
   Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon, 
   Cloud, CloudFog, Snowflake, CloudSnow 
@@ -48,7 +49,8 @@ const VariableRainIcon = ({ isDay, className, ...props }: CommonIconProps) => {
   );
 };
 
-export const WeatherParticles = ({ code }: { code: number }) => {
+// UPDATED: Embolcallem el component amb memo()
+export const WeatherParticles = memo(({ code }: { code: number }) => {
   const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
   
@@ -56,7 +58,6 @@ export const WeatherParticles = ({ code }: { code: number }) => {
 
   useEffect(() => {
       // FIX DEFINITIU: setTimeout treu l'actualització del cicle síncron
-      // Això elimina l'error "setState within effect" i és segur.
       const timer = setTimeout(() => {
           if (!isSnow && !isRain) {
               setParticles([]);
@@ -96,7 +97,10 @@ export const WeatherParticles = ({ code }: { code: number }) => {
       <style>{`@keyframes fall { to { transform: translateY(110vh); } }`}</style>
     </div>
   );
-};
+});
+
+// Assignem display name per debugging (bona pràctica amb memo)
+WeatherParticles.displayName = 'WeatherParticles';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const getWeatherIcon = (

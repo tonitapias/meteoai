@@ -2,7 +2,8 @@
 import * as Sentry from "@sentry/react";
 import { ZodType } from "zod"; 
 import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
-import { WeatherData } from "../types/weather";
+// IMPORTACIÓ ACTUALITZADA: Afegim AirQualityData
+import { WeatherData, AirQualityData } from "../types/weather";
 
 // IMPORTS DE LA CONFIGURACIÓ
 import { 
@@ -187,7 +188,8 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
 };
 
 // 2. Funció Qualitat Aire
-export const getAirQualityData = async (lat: number, lon: number): Promise<Record<string, unknown>> => {
+// UPDATED: Retorna AirQualityData estrictament tipat
+export const getAirQualityData = async (lat: number, lon: number): Promise<AirQualityData> => {
     // BREADCRUMB 2: Inici AQI
     Sentry.addBreadcrumb({
         category: 'api-call',
@@ -207,7 +209,7 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<Recor
     const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`, 'getAirQualityData');
     const rawData = await response.json();
 
-    return validateData(AirQualitySchema, rawData, 'getAirQualityData') as Record<string, unknown>;
+    return validateData(AirQualitySchema, rawData, 'getAirQualityData') as AirQualityData;
 };
 
 // 3. Funció AROME
