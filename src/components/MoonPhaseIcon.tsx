@@ -2,40 +2,46 @@
 import React from 'react';
 
 interface MoonPhaseIconProps {
-  phase: number;
+  phase: number; // 0..1
   className?: string;
 }
 
 export const MoonPhaseIcon = ({ phase, className = "w-16 h-16" }: MoonPhaseIconProps) => {
-  // Nota: Mantenim la lògica original intacta, només afegim tipatge
-  // phase ve de 0 (Nova) a 1 (Nova següent). 0.5 és Plena.
-
   const illumination = (1 - Math.cos(phase * 2 * Math.PI)) / 2;
   
+  // Lògica de visualització SVG (Hemisferi Nord)
+  const r = 45;
+  const cx = 50;
+  const cy = 50;
+  
+  let d = "";
+  
+  // Corregim errors de precisió als extrems
+  const isFull = phase > 0.48 && phase < 0.52;
+  const isNew = phase < 0.02 || phase > 0.98;
+
+  if (isNew) {
+      d = ""; 
+  } else if (isFull) {
+      d = `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r}`;
+  } else if (phase <= 0.5) {
+      // WAXING (Creixent)
+      const w = r * Math.cos(phase * 2 * Math.PI);
+      d = `M ${cx} ${cy - r} A ${r} ${r} 0 0 1 ${cx} ${cy + r}`;
+      d += ` A ${Math.abs(w)} ${r} 0 0 ${phase < 0.25 ? 1 : 0} ${cx} ${cy - r}`;
+  } else {
+      // WANING (Minvant)
+      const w = r * Math.cos(phase * 2 * Math.PI);
+      d = `M ${cx} ${cy - r} A ${r} ${r} 0 0 0 ${cx} ${cy + r}`;
+      d += ` A ${Math.abs(w)} ${r} 0 0 ${phase > 0.75 ? 0 : 1} ${cx} ${cy - r}`;
+  }
+
   return (
     <div className={`relative ${className} flex items-center justify-center`} title={`Il·luminació: ${(illumination * 100).toFixed(0)}%`}>
-       <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg">
-          <circle cx="50" cy="50" r="45" fill="#1e293b" stroke="#475569" strokeWidth="1" />
-          <defs>
-            <mask id={`moon-mask-${phase}`}>
-               <rect x="0" y="0" width="100" height="100" fill="white" />
-               <ellipse 
-                 cx="50" 
-                 cy="50" 
-                 rx={45 * Math.abs(Math.cos(phase * Math.PI * 2))} 
-                 ry="45" 
-                 fill="black" 
-               />
-               {phase < 0.25 && <rect x="50" y="0" width="50" height="100" fill="black" />}
-               {phase > 0.75 && <rect x="0" y="0" width="50" height="100" fill="black" />}
-            </mask>
-          </defs>
-          <circle cx="50" cy="50" r="45" fill="#f1f5f9" mask={`url(#moon-mask-${phase})`} />
+       <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md filter">
+          <circle cx="50" cy="50" r="45" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <path d={d} fill="#f8fafc" stroke="none" />
        </svg>
-       
-       <div className="absolute inset-0 flex items-center justify-center opacity-0">
-            {/* Visualització simplificada només per debug/accessibilitat si calgués */}
-       </div>
     </div>
   );
 };

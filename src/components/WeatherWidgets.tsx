@@ -5,9 +5,9 @@ import {
   Sunrise, Moon, Flower2, Droplets, Zap, Eye, Mountain, Clock, Wind, Layers, AlertTriangle
 } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../translations';
+import { MoonPhaseIcon } from './MoonPhaseIcon'; // <--- NOU IMPORT
 
 // --- HELPER SEGURETAT VISUAL ---
-// Si el valor és null/undefined, retorna "--", sinó l'arrodonit.
 const safeVal = (val: number | null | undefined): string | number => {
     return (val !== null && val !== undefined && !isNaN(val)) ? Math.round(val) : '--';
 };
@@ -513,12 +513,19 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
     );
 };
 
+// --- GINY DE LA LLUNA ACTUALITZAT ---
 export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
     const t = getTrans(lang);
     const hasData = phase !== null && phase !== undefined;
-    const pct = hasData ? Math.round(phase * 100) : 0;
+    
+    // Càlcul de la il·luminació real (0-100%)
+    const illumination = hasData ? Math.round(((1 - Math.cos(phase * 2 * Math.PI)) / 2) * 100) : 0;
+    
     const moonText = hasData ? getMoonPhaseText(phase) : '--';
     const moonAge = hasData ? Math.round(phase * 29.53) : 0;
+    
+    // SOLUCIÓ WARNING: Utilitzem 'lat' per detectar l'hemisferi
+    // Si estem al sud (lat < 0), invertim la visualització horitzontalment
     const isSouth = (lat ?? 0) < 0;
 
     return (
@@ -531,28 +538,13 @@ export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
              </div>
              
              <div className="flex items-center justify-center flex-1 gap-6">
-                 <div className="w-20 h-20 rounded-full bg-[#0f111a] border border-slate-700/50 relative overflow-hidden shadow-2xl ring-1 ring-black">
-                    <div className="absolute inset-0 w-full h-full" style={{ transform: isSouth ? 'none' : 'scaleX(-1)' }}>
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
-                        <div className="absolute inset-0 rounded-full bg-slate-800 shadow-inner"></div>
-                        
-                        <div 
-                            className="absolute inset-0 rounded-full transition-all duration-1000 bg-slate-200"
-                            style={{ 
-                                clipPath: `inset(0 ${100 - pct}% 0 0)`, 
-                                filter: 'blur(2px)', 
-                                mixBlendMode: 'screen' 
-                            }}
-                        ></div>
-                        
-                        <div className="absolute top-4 left-5 w-4 h-4 bg-black/10 rounded-full blur-[1px]"></div>
-                        <div className="absolute bottom-5 right-4 w-6 h-6 bg-black/10 rounded-full blur-[1px]"></div>
-                        <div className="absolute top-8 right-2 w-3 h-3 bg-black/10 rounded-full blur-[0.5px]"></div>
-                    </div>
+                 {/* Apliquem transformació mirall si és hemisferi sud */}
+                 <div className="w-20 h-20" style={{ transform: isSouth ? 'scaleX(-1)' : 'none' }}>
+                    <MoonPhaseIcon phase={phase} className="w-full h-full text-slate-200" />
                  </div>
                  
                  <div className="flex flex-col justify-center">
-                    <span className="text-2xl font-black text-white tracking-tight">{hasData ? pct : '--'}%</span>
+                    <span className="text-2xl font-black text-white tracking-tight">{hasData ? illumination : '--'}%</span>
                     <span className="text-sm text-indigo-200 font-bold mb-1">{moonText}</span>
                     <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest border-t border-white/5 pt-1 mt-1">
                         Il·luminació

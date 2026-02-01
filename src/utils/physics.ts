@@ -36,19 +36,29 @@ export const calculateDewPoint = (T: number, RH: number): number => {
 };
 
 /**
- * Calcula la fase lunar (0.0 a 1.0) per a una data donada
+ * Calcula la fase lunar (0.0 a 1.0) amb precisió astronòmica.
+ * Algoritme basat en Julian Date (JD) i cicle sinòdic mitjà.
+ * * 0.00 = Lluna Nova
+ * 0.25 = Quart Creixent
+ * 0.50 = Lluna Plena
+ * 0.75 = Quart Minvant
  */
 export const getMoonPhase = (date: Date): number => {
-  let year = date.getFullYear();
-  let month = date.getMonth() + 1;
-  // eslint-disable-next-line prefer-const
-  let day = date.getDate(); 
+  // 1. Convertim a Julian Date (Dies des de l'època Julian: 1 de gener 4713 aC a les 12:00)
+  // getTime() ens dona ms des de 1970-01-01. 1 dia = 86400000 ms.
+  // JD a 1970-01-01 00:00 UTC = 2440587.5
+  const jd = (date.getTime() / 86400000) + 2440587.5;
   
-  if (month < 3) { year--; month += 12; }
-  const c = 365.25 * year, e = 30.6 * month;
-  const jd = c + e + day - 694039.09; 
-  let phase = jd / 29.5305882; 
-  phase -= Math.floor(phase); 
+  // 2. Referència: Lluna Nova coneguda (6 de Gener de 2000 a les 18:14 UTC) -> JD = 2451550.1
+  // Cicle Sinòdic Mitjà (Mes Lunar): 29.530588853 dies
+  const cycles = (jd - 2451550.1) / 29.530588853;
+  
+  // 3. Extraiem la part decimal (la fase actual dins del cicle)
+  let phase = cycles - Math.floor(cycles);
+  
+  // Normalització (assegurar 0..1)
+  if (phase < 0) phase += 1;
+  
   return phase; 
 };
 
