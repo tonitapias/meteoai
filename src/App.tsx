@@ -1,7 +1,7 @@
 // src/App.tsx
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 
-// COMPONENTS "CORE" (Es carreguen immediatament per LCP - Largest Contentful Paint)
+// COMPONENTS "CORE"
 import { WeatherParticles } from './components/WeatherIcons';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -13,19 +13,16 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Toast from './components/Toast'; 
 import DebugPanel from './components/DebugPanel';
 
-// COMPONENTS GRÀFICS I SECUNDARIS (Lazy Loading per reduir Bundle inicial)
-// Això separa les llibreries pesades (com Recharts) del chunk principal.
+// COMPONENTS LAZY
 const Forecast24h = lazy(() => import('./components/Forecast24h'));
 const AIInsights = lazy(() => import('./components/AIInsights'));
 const ForecastSection = lazy(() => import('./components/ForecastSection'));
 const ExpertWidgets = lazy(() => import('./components/ExpertWidgets'));
 
-// Gràfics específics (Importació dinàmica per named exports)
-// Nota: Si WeatherCharts exporta per defecte, seria més net. 
-// Assumim que SmartForecastCharts ve del mòdul principal de gràfics.
+// Gràfics
 import { MinutelyPreciseChart, SmartForecastCharts } from './components/WeatherCharts'; 
 
-// MODALS (Ja eren Lazy, els mantenim igual)
+// MODALS
 const DayDetailModal = lazy(() => import('./components/DayDetailModal'));
 const RadarModal = lazy(() => import('./components/RadarModal'));
 const AromeModal = lazy(() => import('./components/AromeModal'));
@@ -40,7 +37,10 @@ import { isAromeSupported } from './utils/weatherLogic';
 import { useModalHistory } from './hooks/useModalHistory';
 import { useGeoLocation } from './context/GeoLocationContext';
 
-// Fallback visual lleuger per a seccions
+// --- NOVES IMPORTACIONS DE CONSTANTS (NETEJA) ---
+import { GEO_ERRORS, NOTIFICATION_TYPES } from './constants/errorConstants';
+
+// Fallback visual
 const SectionSkeleton = () => (
     <div className="w-full h-48 bg-white/5 animate-pulse rounded-[2rem] border border-white/5 my-4" />
 );
@@ -61,7 +61,11 @@ export default function MeteoIA() {
   // Hook de Geolocalització
   const { getCoordinates } = useGeoLocation();
 
-  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
+  // MILLORA: Tipatge estricte utilitzant els valors de les constants
+  const [notification, setNotification] = useState<{ 
+      type: typeof NOTIFICATION_TYPES[keyof typeof NOTIFICATION_TYPES], 
+      msg: string 
+  } | null>(null);
 
   // Funció de Geolocalització Segura
   const handleGetCurrentLocation = useCallback(async () => {
@@ -70,21 +74,23 @@ export default function MeteoIA() {
           const result = await fetchWeatherByCoords(lat, lon, "La Meva Ubicació");
           
           if (result.success) {
-            setNotification({ type: 'success', msg: t.notifLocationSuccess });
+            // ÚS DE CONSTANT
+            setNotification({ type: NOTIFICATION_TYPES.SUCCESS, msg: t.notifLocationSuccess });
           }
       } catch (e: unknown) {
           const err = e as Error; 
           let errorMsg = t.notifLocationError;
 
-          if (err.message === "GEOLOCATION_NOT_SUPPORTED") {
+          // ÚS DE CONSTANTS: Adéu als "Magic Strings"
+          if (err.message === GEO_ERRORS.NOT_SUPPORTED) {
               errorMsg = t.geoNotSupported;
-          } else if (err.message === "PERMISSION_DENIED") {
+          } else if (err.message === GEO_ERRORS.PERMISSION_DENIED) {
               errorMsg = t.notifLocationError; 
-          } else if (err.message === "TIMEOUT") {
+          } else if (err.message === GEO_ERRORS.TIMEOUT) {
               errorMsg = t.notifLocationError;
           }
 
-          setNotification({ type: 'error', msg: errorMsg });
+          setNotification({ type: NOTIFICATION_TYPES.ERROR, msg: errorMsg });
       }
   }, [getCoordinates, fetchWeatherByCoords, t]);
 
@@ -111,8 +117,13 @@ export default function MeteoIA() {
   const handleToggleFavorite = useCallback(() => {
     if (!weatherData?.location) return;
     const { name } = weatherData.location;
-    if (isFavorite(name)) { removeFavorite(name); setNotification({ type: 'info', msg: t.favRemoved }); } 
-    else { addFavorite(weatherData.location); setNotification({ type: 'success', msg: t.favAdded }); }
+    if (isFavorite(name)) { 
+        removeFavorite(name); 
+        setNotification({ type: NOTIFICATION_TYPES.INFO, msg: t.favRemoved }); 
+    } else { 
+        addFavorite(weatherData.location); 
+        setNotification({ type: NOTIFICATION_TYPES.SUCCESS, msg: t.favAdded }); 
+    }
   }, [weatherData, isFavorite, addFavorite, removeFavorite, t]);
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
@@ -144,7 +155,10 @@ export default function MeteoIA() {
                 setViewMode={setViewMode} 
                 onDebugToggle={() => {
                     setShowDebug(prev => !prev);
-                    setNotification({ type: 'info', msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" });
+                    setNotification({ 
+                        type: NOTIFICATION_TYPES.INFO, 
+                        msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" 
+                    });
                 }}
             />
             
@@ -188,7 +202,10 @@ export default function MeteoIA() {
             setViewMode={setViewMode}
             onDebugToggle={() => {
                 setShowDebug(prev => !prev);
-                setNotification({ type: 'info', msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" });
+                setNotification({ 
+                    type: NOTIFICATION_TYPES.INFO, 
+                    msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" 
+                });
             }}
         />
 
@@ -199,7 +216,6 @@ export default function MeteoIA() {
             {weatherData && !loading && (
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col gap-8">
                 
-                {/* CurrentWeather és crític, no el fem lazy */}
                 <CurrentWeather 
                     data={weatherData} effectiveCode={effectiveWeatherCode} unit={unit} lang={lang} shiftedNow={shiftedNow}
                     isFavorite={isFavorite(weatherData.location?.name || "")} onToggleFavorite={handleToggleFavorite}

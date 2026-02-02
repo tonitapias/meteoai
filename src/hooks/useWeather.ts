@@ -16,6 +16,9 @@ import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
 import { cacheService } from '../services/cacheService'; 
 
+// IMPORTACIÓ NOVA: Constants d'error
+import { SENTRY_TAGS, FETCH_ERROR_TYPES } from '../constants/errorConstants';
+
 interface WeatherCachePacket {
     weather: ExtendedWeatherData;
     aqi: AirQualityData | null;
@@ -23,7 +26,12 @@ interface WeatherCachePacket {
 
 export type WeatherFetchResult = 
     | { success: true }
-    | { success: false; error: string; type: 'network' | 'validation' | 'unknown' };
+    | { 
+        success: false; 
+        error: string; 
+        // Ús de constants per als tipus d'error (Més segur)
+        type: typeof FETCH_ERROR_TYPES[keyof typeof FETCH_ERROR_TYPES] 
+      };
 
 const CACHE_TTL = 15 * 60 * 1000; 
 
@@ -92,7 +100,10 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           } catch (aromeErr) { 
               // Només Sentry, sense warn a consola
               Sentry.captureException(aromeErr, { 
-                  tags: { service: 'AromeWorker', type: 'FallbackToBase' },
+                  tags: { 
+                      service: SENTRY_TAGS.SERVICE_AROME_WORKER, // Constant
+                      type: SENTRY_TAGS.TYPE_FALLBACK        // Constant
+                  },
                   level: 'warning' 
               });
           }
@@ -123,7 +134,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       
       Sentry.captureException(err, { 
-          tags: { service: 'WeatherAPI' },
+          tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API }, // Constant
           extra: { lat, lon, unit }
       });
 
@@ -132,7 +143,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       return { 
           success: false, 
           error: errorMessage, 
-          type: 'unknown' 
+          type: FETCH_ERROR_TYPES.UNKNOWN // Constant
       };
     } finally {
       setLoading(false);

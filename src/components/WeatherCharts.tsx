@@ -3,14 +3,13 @@ import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain, Umbrella, Droplets } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../translations';
 import { CHART_COLORS } from '../constants/chartColors';
-import { calculateYDomain, ChartDataPoint } from '../utils/chartUtils'; // Importem la nova lògica
-
-interface GraphPoint {
-    x: number;
-    y: number;
-    value: number | null;
-    time: string;
-}
+// IMPORTACIÓ CORREGIDA: Eliminem 'GraphPoint' que no es feia servir explícitament
+import { 
+    calculateYDomain, 
+    generateGraphPoints, 
+    generateSmoothPath, 
+    ChartDataPoint
+} from '../utils/chartUtils';
 
 interface SingleHourlyChartProps {
     data: ChartDataPoint[];
@@ -32,7 +31,7 @@ interface LayerConfig {
 }
 
 const getRawHour = (isoString: string): number => {
-    if (!isoString || typeof isoString !== 'string') return 0;
+    if (!isoString) return 0;
     try {
         if (isoString.includes('T')) {
             const timePart = isoString.split('T')[1];
@@ -68,7 +67,6 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // Ús centralitzat de CHART_COLORS
   const layersConfig = useMemo<Record<string, LayerConfig>>(() => ({
     temp: { key: 'temp', title: t.temp, ...CHART_COLORS.temp },
     rain: { key: 'rain', title: t.rainProb, ...CHART_COLORS.rain },
@@ -84,68 +82,51 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
   const paddingX = width < 500 ? 10 : 20;
   const paddingY = 30;
 
+  // --- REFACTORITZACIÓ: Ús de les funcions pures ---
   const chartPoints = useMemo(() => {
     if (!data || data.length === 0) return { points: [], gfsPoints: [], iconPoints: [] };
-
-    const getSafeValue = (d: ChartDataPoint) => {
-        if (!d) return null;
-        let val = d[dataKey];
-        if (val === undefined || val === null) {
-            if (dataKey === 'rain') val = d['pop'] ?? d['precipitation_probability'];
-            else if (dataKey === 'precip') val = d['precipitation'] ?? d['qpf'];
-            else if (dataKey === 'wind') val = d['wind_speed_10m'];
-            else if (dataKey === 'humidity') val = d['relative_humidity_2m'];
-        }
-        return (val === null || val === undefined) ? null : Number(val);
+    
+    // 1. Calcular Domini Global (tots els datasets)
+    let allValues: number[] = [];
+    
+    const extractRaw = (d: ChartDataPoint) => {
+        if (d[dataKey] !== undefined) return Number(d[dataKey]);
+        if (dataKey === 'rain') return Number(d.pop ?? d.precipitation_probability);
+        if (dataKey === 'precip') return Number(d.precipitation ?? d.qpf);
+        if (dataKey === 'wind') return Number(d.wind_speed_10m);
+        if (dataKey === 'humidity') return Number(d.relative_humidity_2m);
+        return 0;
     };
 
-    const mapValues = (dataset: ChartDataPoint[]) => dataset.map(getSafeValue).filter(v => v !== null) as number[];
-    
-    // 1. Recollim tots els valors per calcular l'escala global
-    let allValues = mapValues(data);
-    if (comparisonData?.gfs) allValues = [...allValues, ...mapValues(comparisonData.gfs)];
-    if (comparisonData?.icon) allValues = [...allValues, ...mapValues(comparisonData.icon)];
+    allValues = data.map(extractRaw);
+    if (comparisonData?.gfs) allValues = [...allValues, ...comparisonData.gfs.map(extractRaw)];
+    if (comparisonData?.icon) allValues = [...allValues, ...comparisonData.icon.map(extractRaw)];
 
-    // 2. UTILITZEM LA NOVA LÒGICA CENTRALITZADA (Cleaner code)
-    const { min, max } = calculateYDomain(allValues, layer);
-    
-    const rng = max - min || 1;
-    const calcY = (val: number | null) => (val === null) ? height + 10 : height - paddingY - ((val - min) / rng) * (height - 2 * paddingY);
+    const domain = calculateYDomain(allValues, layer);
+    const dims = { width, height, paddingX, paddingY };
 
-    const createPoints = (dataset: ChartDataPoint[]): GraphPoint[] => dataset.map((d, i) => ({
-        x: paddingX + (i / (dataset.length - 1)) * (width - 2 * paddingX),
-        y: calcY(getSafeValue(d)),
-        value: getSafeValue(d),
-        time: d.time
-    }));
-
+    // 2. Generar Punts (Delegat a chartUtils)
     return {
-        points: createPoints(data),
-        gfsPoints: comparisonData?.gfs ? createPoints(comparisonData.gfs) : [],
-        iconPoints: comparisonData?.icon ? createPoints(comparisonData.icon) : [],
+        points: generateGraphPoints(data, dims, domain, dataKey),
+        gfsPoints: comparisonData?.gfs ? generateGraphPoints(comparisonData.gfs, dims, domain, dataKey) : [],
+        iconPoints: comparisonData?.icon ? generateGraphPoints(comparisonData.icon, dims, domain, dataKey) : [],
     };
-  }, [data, comparisonData, layer, height, dataKey, width, paddingX]);
+  }, [data, comparisonData, layer, height, dataKey, width, paddingX, paddingY]);
 
   const { points, gfsPoints, iconPoints } = chartPoints;
 
+  // --- REFACTORITZACIÓ: Path Generator ---
   const paths = useMemo(() => {
-      const buildSmoothPath = (pts: GraphPoint[]) => {
-        const validPts = pts.filter(p => p.value !== null && p.y <= height + 50);
-        if (validPts.length < 2) return "";
-        let d = `M ${validPts[0].x},${validPts[0].y}`;
-        for (let i = 0; i < validPts.length - 1; i++) {
-          const p0 = validPts[i];
-          const p1 = validPts[i + 1];
-          const cx = (p0.x + p1.x) / 2;
-          d += ` C ${cx},${p0.y} ${cx},${p1.y} ${p1.x},${p1.y}`;
-        }
-        return d;
-      };
-
-      const linePath = buildSmoothPath(points);
+      const linePath = generateSmoothPath(points, height);
+      // Area tancada per sota
       const areaPath = linePath ? `${linePath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z` : "";
       
-      return { linePath, areaPath, gfsPath: comparisonData?.gfs ? buildSmoothPath(gfsPoints) : "", iconPath: comparisonData?.icon ? buildSmoothPath(iconPoints) : "" };
+      return { 
+          linePath, 
+          areaPath, 
+          gfsPath: comparisonData?.gfs ? generateSmoothPath(gfsPoints, height) : "", 
+          iconPath: comparisonData?.icon ? generateSmoothPath(iconPoints, height) : "" 
+      };
   }, [points, gfsPoints, iconPoints, height, comparisonData, width, paddingX]);
 
   if (!data || data.length === 0) return null;
@@ -225,7 +206,6 @@ interface SmartForecastChartsProps {
     lang?: Language;
 }
 
-// OPTIMITZACIÓ: Memoitzem el component pare per evitar re-renders innecessaris
 export const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca' }: SmartForecastChartsProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'temp' | 'rain' | 'precip' | 'wind' | 'snow'>('temp');

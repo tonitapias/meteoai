@@ -2,7 +2,6 @@
 import * as Sentry from "@sentry/react";
 import { ZodType } from "zod"; 
 import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
-// IMPORTACIÓ ACTUALITZADA: Afegim AirQualityData
 import { WeatherData, AirQualityData } from "../types/weather";
 
 // IMPORTS DE LA CONFIGURACIÓ
@@ -100,8 +99,9 @@ const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RET
 };
 
 // --- Normalitzador de Models ---
-const normalizeModelKeys = (data: unknown): unknown => {
-    if (!data || typeof data !== 'object') return data;
+// MILLORA QA: Ús de Generics <T> per evitar 'unknown' indiscriminat al return
+const normalizeModelKeys = <T = unknown>(data: unknown): T => {
+    if (!data || typeof data !== 'object') return data as T;
     
     const processObject = (obj: unknown): unknown => {
         if (!obj || typeof obj !== 'object') return obj;
@@ -126,20 +126,20 @@ const normalizeModelKeys = (data: unknown): unknown => {
     if (normalized.hourly) normalized.hourly = processObject(normalized.hourly);
     if (normalized.daily) normalized.daily = processObject(normalized.daily);
 
-    return normalized;
+    return normalized as T;
 };
 
-// --- Validació Zod ---
-const validateData = (schema: ZodType, data: unknown, context: string) => {
-    const cleanData = normalizeModelKeys(data);
+// --- Validació Zod Genèrica ---
+// MILLORA ARQUITECTURA: Aquesta funció ara garanteix que la sortida T coincideix amb l'Schema
+const validateData = <T>(schema: ZodType<T>, data: unknown, context: string): T => {
+    // Normalitzem primer
+    const cleanData = normalizeModelKeys<unknown>(data);
+    
+    // Validem contra l'esquema
     const result = schema.safeParse(cleanData);
     
     if (!result.success) {
         console.error(`❌ Zod Validation Error (${context}):`, result.error);
-        
-        // MILLORA DE SEGURETAT (PAS 4):
-        // En lloc de retornar dades corruptes (cleanData), llancem error per activar l'ErrorBoundary.
-        // Amb el nou 'weatherSchema.ts' robust, si fallem aquí és que les dades són inservibles.
         
         const validationError = new Error(`Critical Schema Validation Failed in ${context}`);
         Sentry.captureException(validationError, {
@@ -150,14 +150,15 @@ const validateData = (schema: ZodType, data: unknown, context: string) => {
             }
         });
         
-        throw validationError; // Atura l'execució. useWeather capturarà això i mostrarà l'estat d'error UI.
+        throw validationError;
     }
+    
+    // Retornem les dades ja tipades estrictament com a T
     return result.data;
 };
 
 // 1. Funció Principal
 export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'): Promise<WeatherData> => {
-    // BREADCRUMB 1: Inici de la petició principal
     Sentry.addBreadcrumb({
         category: 'api-call',
         message: 'Requesting MAIN Weather Data',
@@ -184,13 +185,12 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getWeatherData');
     const rawData = await response.json();
     
-    return validateData(WeatherResponseSchema, rawData, 'getWeatherData') as WeatherData;
+    // MILLORA: Ja no cal fer "as WeatherData" perquè validateData<WeatherData> ho garanteix
+    return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getWeatherData');
 };
 
 // 2. Funció Qualitat Aire
-// UPDATED: Retorna AirQualityData estrictament tipat
 export const getAirQualityData = async (lat: number, lon: number): Promise<AirQualityData> => {
-    // BREADCRUMB 2: Inici AQI
     Sentry.addBreadcrumb({
         category: 'api-call',
         message: 'Requesting AIR QUALITY Data',
@@ -209,12 +209,11 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<AirQu
     const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`, 'getAirQualityData');
     const rawData = await response.json();
 
-    return validateData(AirQualitySchema, rawData, 'getAirQualityData') as AirQualityData;
+    return validateData<AirQualityData>(AirQualitySchema, rawData, 'getAirQualityData');
 };
 
 // 3. Funció AROME
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
-    // BREADCRUMB 3: Inici AROME
     Sentry.addBreadcrumb({
         category: 'api-call',
         message: 'Requesting AROME HD Data',
@@ -235,5 +234,5 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getAromeData');
     const rawData = await response.json();
 
-    return validateData(WeatherResponseSchema, rawData, 'getAromeData') as WeatherData;
+    return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getAromeData');
 };
