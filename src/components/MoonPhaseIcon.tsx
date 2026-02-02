@@ -28,12 +28,14 @@ export const MoonPhaseIcon = ({ phase, className = "w-16 h-16" }: MoonPhaseIconP
       // WAXING (Creixent)
       const w = r * Math.cos(phase * 2 * Math.PI);
       d = `M ${cx} ${cy - r} A ${r} ${r} 0 0 1 ${cx} ${cy + r}`;
-      d += ` A ${Math.abs(w)} ${r} 0 0 ${phase < 0.25 ? 1 : 0} ${cx} ${cy - r}`;
+      // CORRECCIÓ: Invertits els flags 1 i 0
+      d += ` A ${Math.abs(w)} ${r} 0 0 ${phase < 0.25 ? 0 : 1} ${cx} ${cy - r}`;
   } else {
       // WANING (Minvant)
       const w = r * Math.cos(phase * 2 * Math.PI);
       d = `M ${cx} ${cy - r} A ${r} ${r} 0 0 0 ${cx} ${cy + r}`;
-      d += ` A ${Math.abs(w)} ${r} 0 0 ${phase > 0.75 ? 0 : 1} ${cx} ${cy - r}`;
+      // CORRECCIÓ: Invertits els flags 0 i 1
+      d += ` A ${Math.abs(w)} ${r} 0 0 ${phase > 0.75 ? 1 : 0} ${cx} ${cy - r}`;
   }
 
   return (

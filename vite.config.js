@@ -8,13 +8,23 @@ export default defineConfig({
   
   build: {
     sourcemap: true,
+    chunkSizeWarningLimit: 1000, // Puja el límit a 1MB per evitar l'avís
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separem les llibreries grans per optimitzar la càrrega
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-leaflet': ['leaflet', 'react-leaflet'],
+          'vendor-utils': ['lucide-react', 'zod']
+        }
+      }
+    }
   },
 
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Això permet que funcioni en local (npm run dev)
       devOptions: {
         enabled: true
       },
