@@ -2,61 +2,44 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useWeather } from './useWeather';
-import { cacheService } from '../services/cacheService';
-import { fetchAllWeatherData } from './useWeatherQuery';
-import * as weatherApi from '../services/weatherApi';
-import { WeatherData, AirQualityData } from '../types/weather';
+// [CORRECCIÓ] Eliminat import de cacheService que no s'usava explícitament
+import { WeatherRepository } from '../repositories/WeatherRepository';
+import { AirQualityData } from '../types/weather';
 import { ExtendedWeatherData } from '../utils/weatherLogic';
 
-// --- DEFINICIONS DE TIPUS PER A TESTS ---
-// Repliquem la interfície privada per satisfer el linter
-interface WeatherCachePacket {
-    weather: ExtendedWeatherData;
-    aqi: AirQualityData | null;
-}
+// --- MOCKS ---
 
-// --- 1. MOCKS (Simuladors) ---
+// 1. CacheService (Encara s'usa al useEffect per fer clean, així que el mockegem per path)
 vi.mock('../services/cacheService', () => ({
     cacheService: {
-        get: vi.fn(),
-        set: vi.fn(),
-        generateWeatherKey: vi.fn(() => 'test-key'),
-        clean: vi.fn().mockResolvedValue(undefined)
+        clean: vi.fn().mockResolvedValue(undefined),
+        generateWeatherKey: vi.fn() 
     }
 }));
 
-vi.mock('./useWeatherQuery', () => ({
-    fetchAllWeatherData: vi.fn()
-}));
-
+// 2. AromeWorker (S'injecta des del hook)
 vi.mock('./useAromeWorker', () => ({
     useAromeWorker: () => ({
         runAromeWorker: vi.fn((data) => Promise.resolve(data)) 
     })
 }));
 
-vi.mock('../services/weatherApi', async (importOriginal) => {
-    const actual = await importOriginal<typeof weatherApi>();
-    return {
-        ...actual,
-        getAromeData: vi.fn()
-    };
-});
+// 3. WeatherRepository (NOVA DEPENDÈNCIA PRINCIPAL)
+vi.mock('../repositories/WeatherRepository', () => ({
+    WeatherRepository: {
+        get: vi.fn()
+    }
+}));
 
-// --- 2. DADES DE PROVA (Fixtures) ---
-// Utilitzem 'unknown' com a pas intermedi per evitar el warning 'no-explicit-any'
-// quan fem servir objectes parcials (Partial Mocks).
-const MOCK_WEATHER_RAW = {
-    current: { temperature_2m: 20, time: '2023-01-01T12:00' },
-    hourly: { time: [], temperature_2m: [] },
-    daily: { time: [], temperature_2m_max: [] },
-    location: { name: 'Original', latitude: 0, longitude: 0 }
-};
+// --- DADES DE PROVA ---
+const MOCK_WEATHER_DATA = {
+    current: { temperature_2m: 20 },
+    location: { name: 'Barcelona', latitude: 41.38, longitude: 2.17 }
+} as unknown as ExtendedWeatherData;
 
-const MOCK_GEO = { city: 'Barcelona', country: 'ES' };
-const MOCK_AQI = { current: { us_aqi: 50 } };
+const MOCK_AQI = { current: { us_aqi: 50 } } as unknown as AirQualityData;
 
-describe('useWeather Hook (Core Logic)', () => {
+describe('useWeather Hook (Integration with Repository)', () => {
     
     beforeEach(() => {
         vi.clearAllMocks();
@@ -70,69 +53,47 @@ describe('useWeather Hook (Core Logic)', () => {
         expect(result.current.error).toBeNull();
     });
 
-    it('hauria de fer una petició de xarxa si no hi ha cache (Cold Start)', async () => {
-        // CONFIGURACIÓ: Cache buida, Xarxa respon OK
-        vi.mocked(cacheService.get).mockResolvedValue(null);
-        vi.mocked(fetchAllWeatherData).mockResolvedValue({
-            weatherRaw: MOCK_WEATHER_RAW as unknown as WeatherData,
-            geoData: MOCK_GEO,
-            aqiData: MOCK_AQI as unknown as AirQualityData
+    it('hauria de gestionar una resposta EXITOSA del Repositori', async () => {
+        // CONFIGURACIÓ: Simulem que el Repositori respon dades
+        vi.mocked(WeatherRepository.get).mockResolvedValue({
+            success: true,
+            data: MOCK_WEATHER_DATA,
+            aqi: MOCK_AQI
         });
 
         const { result } = renderHook(() => useWeather('ca', 'C'));
 
-        // ACCIÓ: Cridem a fetch
+        // ACCIÓ
         await act(async () => {
             await result.current.fetchWeatherByCoords(41.38, 2.17);
         });
 
         // VERIFICACIÓ
         expect(result.current.loading).toBe(false);
-        expect(result.current.weatherData).not.toBeNull();
-        expect(result.current.weatherData?.location?.name).toBe('Barcelona');
+        expect(result.current.weatherData).toEqual(MOCK_WEATHER_DATA);
         expect(result.current.aqiData).toEqual(MOCK_AQI);
+        expect(result.current.error).toBeNull();
         
-        // Verifiquem que ha intentat guardar a la cache
-        expect(cacheService.set).toHaveBeenCalledTimes(1);
+        // Verifiquem que ha cridat al Repositori amb els paràmetres correctes
+        expect(WeatherRepository.get).toHaveBeenCalledWith(
+            41.38, 2.17, 'C', 'ca', undefined, undefined, expect.any(Function)
+        );
     });
 
-    it('hauria de recuperar dades de la CACHE si existeixen (Hot Start)', async () => {
-        // CONFIGURACIÓ: Cache plena
-        const cachedPayload: WeatherCachePacket = {
-            weather: { 
-                ...(MOCK_WEATHER_RAW as unknown as ExtendedWeatherData), 
-                location: { name: 'Cached City', latitude: 0, longitude: 0 } 
-            },
-            aqi: MOCK_AQI as unknown as AirQualityData
-        };
-        
-        // Cast a 'unknown' i després al tipus esperat pel mock per evitar errors de linter
-        vi.mocked(cacheService.get).mockResolvedValue(cachedPayload as unknown as undefined);
+    it('hauria de gestionar un ERROR del Repositori', async () => {
+        // CONFIGURACIÓ: Simulem que el Repositori falla
+        vi.mocked(WeatherRepository.get).mockRejectedValue(new Error('Network Error'));
 
         const { result } = renderHook(() => useWeather('ca', 'C'));
 
-        await act(async () => {
-            await result.current.fetchWeatherByCoords(41.38, 2.17);
-        });
-
-        // VERIFICACIÓ
-        expect(result.current.weatherData?.location?.name).toBe('Cached City');
-        // IMPORTANT: No hauria d'haver cridat a la xarxa
-        expect(fetchAllWeatherData).not.toHaveBeenCalled();
-    });
-
-    it('hauria de gestionar errors de xarxa elegantment', async () => {
-        // CONFIGURACIÓ: Cache buida, Xarxa falla
-        vi.mocked(cacheService.get).mockResolvedValue(null);
-        vi.mocked(fetchAllWeatherData).mockRejectedValue(new Error('Network Error'));
-
-        const { result } = renderHook(() => useWeather('ca', 'C'));
-
+        // ACCIÓ
         await act(async () => {
             const res = await result.current.fetchWeatherByCoords(41.38, 2.17);
             expect(res.success).toBe(false);
         });
 
+        // VERIFICACIÓ
+        expect(result.current.loading).toBe(false);
         expect(result.current.weatherData).toBeNull();
         expect(result.current.error).toBeTruthy();
     });

@@ -1,39 +1,22 @@
 // src/hooks/useWeather.ts
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import * as Sentry from "@sentry/react"; 
-import { 
-    normalizeModelData, 
-    isAromeSupported, 
-    ExtendedWeatherData 
-} from '../utils/weatherLogic';
-
+import { ExtendedWeatherData } from '../utils/weatherLogic';
 import { AirQualityData } from '../types/weather';
-import { getAromeData } from '../services/weatherApi'; 
-import { fetchAllWeatherData } from './useWeatherQuery'; 
 import { useAromeWorker } from './useAromeWorker'; 
-
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
 import { cacheService } from '../services/cacheService'; 
-
-// IMPORTACIÓ NOVA: Constants d'error
+import { WeatherRepository } from '../repositories/WeatherRepository';
 import { SENTRY_TAGS, FETCH_ERROR_TYPES } from '../constants/errorConstants';
-
-interface WeatherCachePacket {
-    weather: ExtendedWeatherData;
-    aqi: AirQualityData | null;
-}
 
 export type WeatherFetchResult = 
     | { success: true }
     | { 
         success: false; 
         error: string; 
-        // Ús de constants per als tipus d'error (Més segur)
         type: typeof FETCH_ERROR_TYPES[keyof typeof FETCH_ERROR_TYPES] 
       };
-
-const CACHE_TTL = 15 * 60 * 1000; 
 
 export function useWeather(lang: Language, unit: WeatherUnit) {
   const [weatherData, setWeatherData] = useState<ExtendedWeatherData | null>(null);
@@ -41,6 +24,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Mantenim el hook del worker aquí per respectar el cicle de vida de React
   const { runAromeWorker } = useAromeWorker();
 
   const t = useMemo(() => {
@@ -49,6 +33,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
   const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
 
+  // Neteja de cache inicial
   useEffect(() => {
       cacheService.clean().catch(console.error);
   }, []);
@@ -61,8 +46,8 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   ): Promise<WeatherFetchResult> => {
     
     const now = Date.now();
-    const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
 
+    // Evitem re-fetching si la petició és idèntica i molt recent (< 3s)
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -76,65 +61,29 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // 1. Cache Local
-      const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL);
-      if (cachedPacket) {
-          setWeatherData(cachedPacket.weather);
-          setAqiData(cachedPacket.aqi);
-          setLoading(false);
-          return { success: true };
-      }
-
-      // 2. Petició de Xarxa
-      const { weatherRaw, geoData, aqiData: fetchedAqi } = await fetchAllWeatherData(
-        lat, lon, unit, lang, locationName, country
+      // Deleguem tota la feina al Repositori
+      // Passem 'runAromeWorker' perquè el Repositori pugui usar el worker sense tenir-lo hardcoded
+      const response = await WeatherRepository.get(
+          lat, 
+          lon, 
+          unit, 
+          lang, 
+          locationName, 
+          country,
+          runAromeWorker
       );
 
-      let processedData = normalizeModelData(weatherRaw);
-      
-      // 3. Integració AROME
-      if (isAromeSupported(lat, lon)) {
-          try {
-             const aromeRaw = await getAromeData(lat, lon);
-             processedData = await runAromeWorker(processedData, aromeRaw);
-          } catch (aromeErr) { 
-              // Només Sentry, sense warn a consola
-              Sentry.captureException(aromeErr, { 
-                  tags: { 
-                      service: SENTRY_TAGS.SERVICE_AROME_WORKER, // Constant
-                      type: SENTRY_TAGS.TYPE_FALLBACK        // Constant
-                  },
-                  level: 'warning' 
-              });
-          }
-      }
-
-      // 4. Finalització
-      processedData.location = { 
-          ...processedData.location, 
-          name: geoData.city,
-          country: geoData.country,
-          latitude: lat,
-          longitude: lon 
-      };
-
-      const packet: WeatherCachePacket = {
-          weather: processedData,
-          aqi: fetchedAqi
-      };
-      
-      await cacheService.set(cacheKey, packet);
-      
-      setAqiData(fetchedAqi);
-      setWeatherData(processedData);
+      setWeatherData(response.data);
+      setAqiData(response.aqi);
       
       return { success: true };
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       
+      // Log d'error centralitzat
       Sentry.captureException(err, { 
-          tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API }, // Constant
+          tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API },
           extra: { lat, lon, unit }
       });
 
@@ -143,7 +92,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
       return { 
           success: false, 
           error: errorMessage, 
-          type: FETCH_ERROR_TYPES.UNKNOWN // Constant
+          type: FETCH_ERROR_TYPES.UNKNOWN 
       };
     } finally {
       setLoading(false);
