@@ -1,62 +1,40 @@
 // src/hooks/useAppController.ts
-import { useState, useEffect, useCallback } from 'react'; // [CORRECCIÓ] Eliminat useMemo
+import { useCallback } from 'react';
 import { usePreferences } from './usePreferences';
 import { useWeather } from './useWeather';
 import { useWeatherAI } from './useWeatherAI';
 import { useWeatherCalculations } from './useWeatherCalculations';
-import { useModalHistory } from './useModalHistory';
 import { useGeoLocation } from '../context/GeoLocationContext';
 import { isAromeSupported } from '../utils/weatherLogic';
 import { GEO_ERRORS, NOTIFICATION_TYPES } from '../constants/errorConstants';
 import { TRANSLATIONS } from '../translations';
+// NOU IMPORT
+import { useViewState } from './useViewState';
 
 export function useAppController() {
-  // 1. Estat Global
-  const [now, setNow] = useState<Date>(new Date());
-  const [showDebug, setShowDebug] = useState(false);
-  const [notification, setNotification] = useState<{ 
-      type: typeof NOTIFICATION_TYPES[keyof typeof NOTIFICATION_TYPES], 
-      msg: string 
-  } | null>(null);
+  // 1. Deleguem l'estat visual al nou hook
+  const view = useViewState();
+  const { now, modals } = view.state; // Desestructurem el que necessitem per càlculs
 
-  // 2. Modals State
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
-  const [showRadar, setShowRadar] = useState(false);
-  const [showArome, setShowArome] = useState(false);
-
-  // 3. Hooks Principals
+  // 2. Hooks de Dades (Negoci)
   const { lang, setLang, unit, viewMode, setViewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
   const { weatherData, aqiData, loading, error, fetchWeatherByCoords } = useWeather(lang, unit);
   const { getCoordinates } = useGeoLocation();
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // 4. Temporitzador (Rellotge)
-  useEffect(() => { 
-      const timer = setInterval(() => setNow(new Date()), 60000); 
-      return () => clearInterval(timer); 
-  }, []);
-
-  // 5. Historial de Navegació (Back button tanca modals)
-  useModalHistory(selectedDayIndex !== null, useCallback(() => setSelectedDayIndex(null), []));
-  useModalHistory(showRadar, useCallback(() => setShowRadar(false), []));
-  useModalHistory(showArome, useCallback(() => setShowArome(false), []));
-
-  // 6. Càlculs Derivats
+  // 3. Càlculs i IA (Pura Lògica)
   const calculations = useWeatherCalculations(weatherData, unit, now);
-  
-  // 7. IA
   const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability);
 
-  // 8. Lògica d'Accions (Handlers)
-  
+  // 4. Accions de Negoci (Handlers)
   const handleGetCurrentLocation = useCallback(async () => {
       try {
           const { lat, lon } = await getCoordinates();
           const result = await fetchWeatherByCoords(lat, lon, "La Meva Ubicació");
           
           if (result.success) {
-            setNotification({ type: NOTIFICATION_TYPES.SUCCESS, msg: t.notifLocationSuccess });
+            view.actions.setNotification({ type: NOTIFICATION_TYPES.SUCCESS, msg: t.notifLocationSuccess });
           }
       } catch (e: unknown) {
           const err = e as Error; 
@@ -70,40 +48,32 @@ export function useAppController() {
               errorMsg = t.notifLocationError;
           }
 
-          setNotification({ type: NOTIFICATION_TYPES.ERROR, msg: errorMsg });
+          view.actions.setNotification({ type: NOTIFICATION_TYPES.ERROR, msg: errorMsg });
       }
-  }, [getCoordinates, fetchWeatherByCoords, t]);
+  }, [getCoordinates, fetchWeatherByCoords, t, view.actions]);
 
   const handleToggleFavorite = useCallback(() => {
     if (!weatherData?.location) return;
     const { name } = weatherData.location;
     if (isFavorite(name)) { 
         removeFavorite(name); 
-        setNotification({ type: NOTIFICATION_TYPES.INFO, msg: t.favRemoved }); 
+        view.actions.setNotification({ type: NOTIFICATION_TYPES.INFO, msg: t.favRemoved }); 
     } else { 
         addFavorite(weatherData.location); 
-        setNotification({ type: NOTIFICATION_TYPES.SUCCESS, msg: t.favAdded }); 
+        view.actions.setNotification({ type: NOTIFICATION_TYPES.SUCCESS, msg: t.favAdded }); 
     }
-  }, [weatherData, isFavorite, addFavorite, removeFavorite, t]);
-
-  const toggleDebug = useCallback(() => {
-      setShowDebug(prev => !prev);
-      setNotification({ 
-          type: NOTIFICATION_TYPES.INFO, 
-          msg: !showDebug ? "Debug Mode: ACTIVAT" : "Debug Mode: DESACTIVAT" 
-      });
-  }, [showDebug]);
+  }, [weatherData, isFavorite, addFavorite, removeFavorite, t, view.actions]);
 
   const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
 
-  // 9. Retorn Organitzat
+  // 5. Retorn Unificat (Manté la interfície antiga per no trencar la Vista)
   return {
       state: {
           weatherData,
           aqiData,
           loading,
           error,
-          notification,
+          notification: view.state.notification, // Connectem amb viewState
           aiAnalysis,
           calculations, 
           now
@@ -112,17 +82,17 @@ export function useAppController() {
           fetchWeatherByCoords,
           handleGetCurrentLocation,
           handleToggleFavorite,
-          toggleDebug,
-          dismissNotification: () => setNotification(null),
+          toggleDebug: view.actions.toggleDebug, // Connectem amb viewState
+          dismissNotification: view.actions.dismissNotification, // Connectem amb viewState
           setLang,
           setViewMode,
-          // Modals setters
-          setSelectedDayIndex,
-          setShowRadar,
-          setShowArome
+          // Modals setters (Delegats)
+          setSelectedDayIndex: view.actions.setSelectedDayIndex,
+          setShowRadar: view.actions.setShowRadar,
+          setShowArome: view.actions.setShowArome
       },
       flags: {
-          showDebug,
+          showDebug: view.state.showDebug,
           supportsArome,
           isFavorite: (name: string) => isFavorite(name),
           unit,
@@ -130,10 +100,10 @@ export function useAppController() {
           viewMode
       },
       modals: {
-          selectedDayIndex,
-          showRadar,
-          showArome
+          selectedDayIndex: modals.selectedDayIndex,
+          showRadar: modals.showRadar,
+          showArome: modals.showArome
       },
-      t // Traduccions
+      t
   };
 }
