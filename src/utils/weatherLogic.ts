@@ -1,8 +1,6 @@
 // src/utils/weatherLogic.ts
-import { TRANSLATIONS, Language } from '../translations';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { 
-    TranslationMap, 
     StrictCurrentWeather, 
     StrictDailyWeather, 
     ReliabilityResult 
@@ -34,16 +32,6 @@ const RELIABILITY = {
 // ==========================================
 // FUNCIONS EXPORTADES
 // ==========================================
-
-/**
- * Obté l'etiqueta de text (Ex: "Pluja lleugera") per a un codi WMO
- */
-export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
-  const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
-  if (!tr || !current) return "";
-  const code = safeNum(current.weather_code, 0);
-  return tr.wmo[code] || "---";
-};
 
 /**
  * MOTOR PRINCIPAL: Orquestra els diferents mòduls de regles per determinar el codi de temps real.

@@ -1,12 +1,28 @@
 // src/utils/formatters.ts
+import { TRANSLATIONS, Language } from '../translations';
+import { TranslationMap, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { safeNum } from './physics';
 
-// Definim tipus per a major seguretat (Constants/Utils)
+// Re-exportem tipus si cal, però preferim usar els importats
 export type WeatherUnit = 'C' | 'F';
-export type Language = 'ca' | 'es' | 'en' | 'fr';
 
-// MILLORA DE SEGURETAT: Acceptem number | null | undefined
+// --- FUNCIONS DE TEXT (Nova llar per getWeatherLabel) ---
+
+/**
+ * Obté l'etiqueta de text (Ex: "Pluja lleugera") per a un codi WMO
+ * Mogut des de weatherLogic.ts per desacoblar física de traducció
+ */
+export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
+  const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
+  if (!tr || !current) return "";
+  const code = safeNum(current.weather_code, 0);
+  return tr.wmo[code] || "---";
+};
+
+// --- FORMATADORS NUMÈRICS I DE DATA ---
+
 export const formatTemp = (tempC: number | null | undefined, unit: WeatherUnit): number | null => {
-  if (tempC === null || tempC === undefined) return null; // Retornem null per indicar "sense dades"
+  if (tempC === null || tempC === undefined) return null; 
   
   if (unit === 'F') return Math.round((tempC * 9/5) + 32);
   return Math.round(tempC);
@@ -21,7 +37,7 @@ export const formatDate = (
   lang: Language, 
   options?: Intl.DateTimeFormatOptions
 ): string => {
-  if (!dateString) return ""; // Protecció contra dates buides
+  if (!dateString) return ""; 
 
   const locales: Record<Language, string> = { 
     ca: 'ca-ES', 
@@ -31,12 +47,11 @@ export const formatDate = (
   };
   
   try {
-      // Mantenim la lògica original de detecció de dates
       const date = dateString.includes('T') 
         ? new Date(dateString) 
         : new Date(`${dateString}T00:00:00`);
         
-      if (isNaN(date.getTime())) return ""; // Protecció contra dates invàlides
+      if (isNaN(date.getTime())) return ""; 
 
       return new Intl.DateTimeFormat(locales[lang], options).format(date);
   } catch {
@@ -67,26 +82,16 @@ export const formatTime = (dateString: string | undefined, lang: Language): stri
   }
 };
 
-/**
- * Formata la precipitació triant intel·ligentment entre mm (pluja) o cm (neu).
- * @param precipitationTotal - Total de precipitació (equivalent aigua mm)
- * @param snowfall - Total de neu (cm)
- * @returns String formatat (ex: "15 mm" o "5 cm")
- */
 export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null): string => {
-  // Gestió de nuls: Si no hi ha dades, assumim 0 per evitar "undefined mm"
   const safePrecip = precipitationTotal ?? 0;
   const safeSnow = snowfall ?? 0;
 
-  // Si hi ha neu acumulada significativa (> 0.2 cm), mostrem la neu
   if (safeSnow >= 0.2) {
-    // Si és menys d'1 cm, mostrem decimals, sinó enter arrodonit
     return safeSnow < 1 
       ? `${safeSnow.toFixed(1)} cm` 
       : `${Math.round(safeSnow)} cm`;
   }
   
-  // Si no és neu, és pluja (mm)
   if (safePrecip < 1 && safePrecip > 0) {
     return `${safePrecip.toFixed(1)} mm`;
   }
