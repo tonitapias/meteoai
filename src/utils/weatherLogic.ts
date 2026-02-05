@@ -9,9 +9,6 @@ import { getInstantaneousPrecipitation, checkForVirga } from './rules/precipitat
 import { checkForFog } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
 import { determineSnowCode } from './rules/winterRules';
-import { checkInversionRisk } from './rules/inversionRules'; // <--- NOU IMPORT
-
-// NOTA: Hem eliminat els re-exports (export *) per evitar dependències circulars i millorar el tree-shaking.
 
 // ==========================================
 // MOTOR PRINCIPAL (Orquestrador)
@@ -69,34 +66,9 @@ export const getRealTimeWeatherCode = (
     // F. Transformació a Neu (Cota de neu vs Elevació real)
     code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
 
-    // --- G. NOVA FÍSICA (ACTIVADA: Inversió Tèrmica) ---
-    try {
-        const currentMonth = new Date().getMonth();
-        const isInversionLikely = checkInversionRisk(
-            current.is_day,
-            safeNum(current.wind_speed_10m, 0),
-            cloudCover,
-            currentMonth
-        );
-
-        // Usem un flag intern per evitar aplicar la correcció dos cops (React Strict Mode)
-        // Castegem a 'any' per poder escriure una propietat temporal de control
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const safeCurrent = current as any;
-
-        if (isInversionLikely && !safeCurrent._inversionApplied) {
-            // APLICACIÓ REAL: L'aire fred s'acumula a baix.
-            // Restem 2.5°C a la temperatura visualitzada per simular l'efecte de la vall.
-            safeCurrent.temperature_2m = safeNum(safeCurrent.temperature_2m) - 2.5;
-            
-            // Marquem com a aplicat perquè no es torni a restar si l'app es repinta
-            safeCurrent._inversionApplied = true;
-        }
-    } catch {
-        // CORRECCIÓ: Hem tret '(e)' perquè no el fèiem servir.
-        // Silent fail en producció (no volem que un error de física trenqui la UI)
-    }
-    // -----------------------------------------------------
+    // --- G. NOVA FÍSICA (NETEJA FINALITZADA) ---
+    // Aquí hem eliminat definitivament el bloc try/catch amb el hack de temperatura.
+    // L'app ara és "Type Safe" i no té warnings.
 
     return code;
 };

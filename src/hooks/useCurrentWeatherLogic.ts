@@ -1,8 +1,11 @@
+// src/hooks/useCurrentWeatherLogic.ts
 import { useMemo } from 'react';
 import { ExtendedWeatherData } from '../utils/weatherLogic';
-// CANVI: Importem getWeatherLabel de formatters
 import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
 import { Language } from '../translations';
+// 1. NOU IMPORT: La nostra lògica segura
+import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 
 const getStatusColor = (code: number) => {
     if (code <= 1) return 'bg-emerald-500 shadow-[0_0_10px_#10b981]';
@@ -29,6 +32,11 @@ export const useCurrentWeatherLogic = ({
     const formattedData = useMemo(() => {
         if (!current) return null;
 
+        // 2. NOVA IMPLEMENTACIÓ: Calculem la temperatura corregida aquí, a la vista.
+        // Convertim 'current' a StrictCurrentWeather per satisfer el tipatge.
+        // (Això és segur perquè getInversionCorrectedTemp fa servir safeNum internament)
+        const realTemp = getInversionCorrectedTemp(current as unknown as StrictCurrentWeather);
+
         const renderTemp = (t: number | null | undefined) => {
             const val = formatTemp(t, unit);
             return val !== null ? val : '--';
@@ -46,7 +54,8 @@ export const useCurrentWeatherLogic = ({
 
         return {
             temps: {
-                main: renderTemp(current.temperature_2m),
+                // 3. ACTUALITZACIÓ: Usem 'realTemp' en lloc de 'current.temperature_2m'
+                main: renderTemp(realTemp), 
                 max: renderTemp(maxTemp),
                 min: renderTemp(minTemp),
                 apparent: renderTemp(current.apparent_temperature)

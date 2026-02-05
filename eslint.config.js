@@ -6,7 +6,7 @@ import react from 'eslint-plugin-react';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  // CORRECCIÓ: Afegim 'dev-dist', 'sw.js' i 'workbox-*.js' per ignorar fitxers generats
+  // Ignorem carpetes de build i fitxers generats pel Service Worker
   { ignores: ['dist', 'dev-dist', 'sw.js', 'workbox-*.js'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -27,11 +27,14 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       
-      // 1. GESTIÓ DE CONSOLA INTEL·LIGENT
+      // 1. GESTIÓ DE CONSOLA (Permetem errors i warnings, bloquegem logs bruts)
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       
-      // 2. REDUCCIÓ DE SOROLL
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // 2. TYPESCRIPT STRICTE (RISC ZERO)
+      // Canviem a 'error' per prohibir nous 'any'
+      '@typescript-eslint/no-explicit-any': 'error',
+      
+      // Ignorem variables que comencin per _
       '@typescript-eslint/no-unused-vars': ['warn', { 
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_' 
@@ -42,7 +45,10 @@ export default tseslint.config(
       ...react.configs['jsx-runtime'].rules,
     },
     settings: {
-      react: { version: '18.3' },
+      react: { 
+        // CANVI CRÍTIC: Autodetectar versió per suportar React 19 correctament
+        version: 'detect' 
+      },
     },
   },
 );
