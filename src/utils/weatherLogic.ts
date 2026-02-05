@@ -9,10 +9,9 @@ import { getInstantaneousPrecipitation, checkForVirga } from './rules/precipitat
 import { checkForFog } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
 import { determineSnowCode } from './rules/winterRules';
+import { checkInversionRisk } from './rules/inversionRules'; // <--- NOU IMPORT
 
 // NOTA: Hem eliminat els re-exports (export *) per evitar dependències circulars i millorar el tree-shaking.
-// Si necessites tipus, importa'ls de 'types/weatherLogicTypes'.
-// Si necessites física, importa'ls de 'utils/physics'.
 
 // ==========================================
 // MOTOR PRINCIPAL (Orquestrador)
@@ -34,7 +33,7 @@ export const getRealTimeWeatherCode = (
     let code = safeNum(current.weather_code, 0);
     const temp = safeNum(current.temperature_2m, 0);
     const humidity = safeNum(current.relative_humidity_2m, 50);
-    const cape = safeNum(current.cape, 0); // Si no tenim CAPE, assumim 0
+    const cape = safeNum(current.cape, 0); 
     
     // Constants
     const { PRECIPITATION } = WEATHER_THRESHOLDS;
@@ -54,9 +53,7 @@ export const getRealTimeWeatherCode = (
     code = adjustBaseSkyCode(code, cloudCover);
 
     // B. Correcció AROME (Si detectem pluja intensa que el model general no veu)
-    // Nota: El flag isArome no el passem explícitament, però si precipInstantanea ve de minutely_15 (AROME), ja té la info.
     if (precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
-        // Forcem codi de pluja si hi ha precipitació física real, encara que el model digui núvol.
         code = 61; 
     }
 
@@ -71,6 +68,35 @@ export const getRealTimeWeatherCode = (
     
     // F. Transformació a Neu (Cota de neu vs Elevació real)
     code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
+
+    // --- G. NOVA FÍSICA (ACTIVADA: Inversió Tèrmica) ---
+    try {
+        const currentMonth = new Date().getMonth();
+        const isInversionLikely = checkInversionRisk(
+            current.is_day,
+            safeNum(current.wind_speed_10m, 0),
+            cloudCover,
+            currentMonth
+        );
+
+        // Usem un flag intern per evitar aplicar la correcció dos cops (React Strict Mode)
+        // Castegem a 'any' per poder escriure una propietat temporal de control
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const safeCurrent = current as any;
+
+        if (isInversionLikely && !safeCurrent._inversionApplied) {
+            // APLICACIÓ REAL: L'aire fred s'acumula a baix.
+            // Restem 2.5°C a la temperatura visualitzada per simular l'efecte de la vall.
+            safeCurrent.temperature_2m = safeNum(safeCurrent.temperature_2m) - 2.5;
+            
+            // Marquem com a aplicat perquè no es torni a restar si l'app es repinta
+            safeCurrent._inversionApplied = true;
+        }
+    } catch {
+        // CORRECCIÓ: Hem tret '(e)' perquè no el fèiem servir.
+        // Silent fail en producció (no volem que un error de física trenqui la UI)
+    }
+    // -----------------------------------------------------
 
     return code;
 };
