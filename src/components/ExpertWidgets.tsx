@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { AlertOctagon } from 'lucide-react';
-import { getMoonPhase, calculateDewPoint, ExtendedWeatherData } from '../utils/weatherLogic'; 
+import { getMoonPhase, calculateDewPoint } from '../utils/physics';
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
 // Importem tots els ginys, inclòs el nou VisibilityWidget

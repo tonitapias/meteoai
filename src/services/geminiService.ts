@@ -1,5 +1,7 @@
 // src/services/geminiService.ts
-import { prepareContextForAI, ExtendedWeatherData } from '../utils/weatherLogic'; 
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { prepareContextForAI } from '../utils/aiContext';
+
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { AI_PROMPTS } from '../constants/aiPrompts';

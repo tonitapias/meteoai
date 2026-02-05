@@ -5,25 +5,14 @@ import { safeNum } from './physics';
 
 // --- IMPORTS DE REGLES (Mòduls especialitzats) ---
 import { adjustBaseSkyCode, calculateEffectiveCloudCover } from './rules/cloudRules';
-import { getInstantaneousPrecipitation, checkForVirga, adjustRainIntensity } from './rules/precipitationRules';
-import { checkForFog, checkCriticalVisibility } from './rules/visibilityRules';
+import { getInstantaneousPrecipitation, checkForVirga } from './rules/precipitationRules';
+import { checkForFog } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
 import { determineSnowCode } from './rules/winterRules';
-// NOU IMPORT
-import { calculateReliability } from './rules/reliabilityRules';
 
-// --- RE-EXPORTACIONS ---
-// Exportem la funció de fiabilitat perquè la resta de l'app la pugui fer servir
-// sense haver de canviar els imports als fitxers existents.
-export { calculateReliability }; 
-
-// Mantenim la resta d'exports per compatibilitat
-export * from '../types/weatherLogicTypes';
-export * from './physics';
-export * from './aromeEngine';
-export * from './normData';
-export * from './aiContext';
-
+// NOTA: Hem eliminat els re-exports (export *) per evitar dependències circulars i millorar el tree-shaking.
+// Si necessites tipus, importa'ls de 'types/weatherLogicTypes'.
+// Si necessites física, importa'ls de 'utils/physics'.
 
 // ==========================================
 // MOTOR PRINCIPAL (Orquestrador)
@@ -31,22 +20,23 @@ export * from './aiContext';
 
 /**
  * Orquestra els diferents mòduls de regles per determinar el codi de temps real.
+ * Aquesta funció és l'única responsabilitat real d'aquest fitxer.
  */
 export const getRealTimeWeatherCode = (
     current: StrictCurrentWeather, 
     minutelyPrecipData: number[], 
-    _prob: number = 0, 
-    freezingLevel: number = 2500, 
-    elevation: number = 0,
-    cape: number = 0 
+    rainProb: number,
+    freezingLevel: number,
+    elevation: number
 ): number => {
-    if (!current) return 0;
     
+    // 0. Estat Inicial
     let code = safeNum(current.weather_code, 0);
-    const isArome = current.source === 'AROME HD'; 
-    const temp = safeNum(current.temperature_2m, 15);
-    const visibility = safeNum(current.visibility, 10000);
+    const temp = safeNum(current.temperature_2m, 0);
     const humidity = safeNum(current.relative_humidity_2m, 50);
+    const cape = safeNum(current.cape, 0); // Si no tenim CAPE, assumim 0
+    
+    // Constants
     const { PRECIPITATION } = WEATHER_THRESHOLDS;
 
     // 1. Dades Calculades (Núvols i Precipitació)
@@ -63,12 +53,14 @@ export const getRealTimeWeatherCode = (
     // A. Estat base del cel
     code = adjustBaseSkyCode(code, cloudCover);
 
-    // B. Correcció AROME
-    if (isArome && precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
+    // B. Correcció AROME (Si detectem pluja intensa que el model general no veu)
+    // Nota: El flag isArome no el passem explícitament, però si precipInstantanea ve de minutely_15 (AROME), ja té la info.
+    if (precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
+        // Forcem codi de pluja si hi ha precipitació física real, encara que el model digui núvol.
         code = 61; 
     }
 
-    // C. Filtre Virga
+    // C. Filtre Virga (Pluja que no arriba a terra)
     code = checkForVirga(code, humidity, cloudCover, precipInstantanea);
 
     // D. Detecció de Boira
@@ -77,17 +69,8 @@ export const getRealTimeWeatherCode = (
     // E. Ajust per Tempestes (CAPE)
     code = adjustForStorms(code, cape, cloudCover, precipInstantanea);
     
-    // F. Transformació a Neu
+    // F. Transformació a Neu (Cota de neu vs Elevació real)
     code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
-    
-    // G. Visibilitat crítica final
-    code = checkCriticalVisibility(code, visibility, precipInstantanea);
-
-    // H. Ajustar intensitat final
-    const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
-    if (!isSnow) {
-        code = adjustRainIntensity(code, precipInstantanea);
-    }
 
     return code;
 };

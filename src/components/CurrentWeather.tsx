@@ -1,7 +1,7 @@
 // src/components/CurrentWeather.tsx
 import React from 'react';
 import { getWeatherIcon } from './WeatherIcons';
-import { ExtendedWeatherData } from '../utils/weatherLogic';
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
 import { Language } from '../translations';
 import { AirQualityData } from '../types/weather';

@@ -1,11 +1,13 @@
 // src/hooks/useWeatherAI.ts
 import { useState, useEffect, useRef } from 'react';
 import { 
-    generateAIPrediction, 
     ExtendedWeatherData, 
     ReliabilityResult, 
     AIPredictionResult 
-} from '../utils/weatherLogic';
+} from '../types/weatherLogicTypes';
+
+import { generateAIPrediction } from '../utils/aiContext';
+
 import { getGeminiAnalysis } from '../services/geminiService';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';

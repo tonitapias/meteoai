@@ -1,17 +1,13 @@
 // src/repositories/WeatherRepository.ts
-import * as Sentry from "@sentry/react"; 
-import { 
-    normalizeModelData, 
-    isAromeSupported, 
-    ExtendedWeatherData 
-} from '../utils/weatherLogic';
-// [CORRECCIÓ] Afegit WeatherData per evitar l'ús de 'any'
+import * as Sentry from "@sentry/react";
+import { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
+import { normalizeModelData } from '../utils/normData'; 
+import { isAromeSupported } from '../utils/physics';
 import { AirQualityData, WeatherData } from '../types/weather';
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from '../services/weatherService'; 
 import { WeatherUnit } from '../utils/formatters';
 import { cacheService } from '../services/cacheService'; 
-// [CORRECCIÓ] Eliminat FETCH_ERROR_TYPES que no s'usava
 import { SENTRY_TAGS } from '../constants/errorConstants';
 import { Language } from '../translations';
 

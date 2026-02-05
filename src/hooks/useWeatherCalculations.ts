@@ -1,18 +1,18 @@
 // src/hooks/useWeatherCalculations.ts
 import { useMemo } from 'react';
-import { 
-  getShiftedDate, 
-  calculateDewPoint, 
-  getMoonPhase, 
-  calculateReliability,
-  getRealTimeWeatherCode,
-  ExtendedWeatherData
-} from '../utils/weatherLogic';
+// IMPORT DIRECTE: Lògica pura del motor
+import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+// IMPORT DIRECTE: Física i Matemàtiques
+import { getShiftedDate, calculateDewPoint, getMoonPhase } from '../utils/physics';
+// IMPORT DIRECTE: Regles específiques
+import { calculateReliability } from '../utils/rules/reliabilityRules';
+// IMPORT DIRECTE: Tipus
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
 
+// Helper intern
 const getComparisonVal = (data: unknown, key: string, i: number): number | null => {
     if (!data) return null;
-    
     if (typeof data === 'object' && !Array.isArray(data)) {
         const col = (data as Record<string, unknown>)[key];
         if (Array.isArray(col)) {
@@ -20,7 +20,6 @@ const getComparisonVal = (data: unknown, key: string, i: number): number | null 
              return (typeof val === 'number') ? val : null;
         }
     }
-    
     if (Array.isArray(data)) {
         const row = data[i] as Record<string, unknown> | undefined;
         if (row) {
@@ -28,13 +27,12 @@ const getComparisonVal = (data: unknown, key: string, i: number): number | null 
             return (typeof val === 'number') ? val : null;
         }
     }
-    
     return null;
 };
 
 export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, unit: WeatherUnit, now: Date) {
   
-  // 1. DATA I HORA SHIFTED (Hora local de la ciutat consultada)
+  // 1. DATA I HORA SHIFTED
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
     return getShiftedDate(now, weatherData.timezone || 'UTC');
@@ -51,43 +49,29 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
      return partialIdx !== -1 ? partialIdx : 0;
   }, [weatherData]);
 
-  // 3. MINUT A MINUT (CORREGIT: Timezone Safe)
+  // 3. MINUT A MINUT
   const minutelyPreciseData = useMemo<number[]>(() => {
     let preciseData: number[] = [];
-    
     if (weatherData?.minutely_15?.precipitation) {
-        // FIX: Utilitzem shiftedNow per comparar peres amb peres (hora local vs hora local)
         const currentMs = shiftedNow.getTime(); 
         const timesRaw = weatherData.minutely_15.time as string[];
         let idx = -1;
-        
         for(let i = 0; i < timesRaw.length; i++) {
-            // new Date(string) crea una data local amb els números del string. 
-            // Com que shiftedNow també és una data local amb els números de la ciutat destí, la comparació és vàlida.
             if (new Date(timesRaw[i]).getTime() > currentMs) { idx = i; break; }
         }
         const currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
         const precipArr = weatherData.minutely_15.precipitation as number[];
-        // Agafem la finestra de l'hora següent (4 blocs de 15 min)
         preciseData = precipArr.slice(currentIdx, currentIdx + 4);
     }
-
     const hasMinutelyRain = preciseData.some(v => v > 0);
+    if (hasMinutelyRain) return preciseData;
 
-    if (hasMinutelyRain) {
-        return preciseData;
-    }
-
-    // Fallback: Si no hi ha dades minutals, interpolació plana de l'horària
     const currentHourPrecip = weatherData?.hourly?.precipitation?.[currentHourlyIndex] || 0;
-    
     if (currentHourPrecip > 0) {
         const estimatedQuarter = Number((currentHourPrecip / 4).toFixed(2));
         return [estimatedQuarter, estimatedQuarter, estimatedQuarter, estimatedQuarter];
     }
-
     return preciseData.length > 0 ? preciseData : [0,0,0,0];
-
   }, [weatherData, currentHourlyIndex, shiftedNow]);
 
   // 4. GENERACIÓ DE DADES MESTRA
@@ -103,17 +87,14 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     const getSmartVal = (key: string, idx: number, fallback: number, lastKnown: number) => {
         let val: unknown = weatherData.hourly[key]?.[idx];
         if (isValid(val)) return val;
-
         if (weatherData.hourlyComparison?.gfs) {
             val = getComparisonVal(weatherData.hourlyComparison.gfs, key, idx);
             if (isValid(val)) return val;
         }
-        
         if (weatherData.hourlyComparison?.icon) {
             val = getComparisonVal(weatherData.hourlyComparison.icon, key, idx);
             if (isValid(val)) return val;
         }
-
         return lastKnown ?? fallback;
     };
 
@@ -129,14 +110,12 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
       
       const windVal = getSmartVal('wind_speed_10m', realIndex, 0, lastWind);
       if (isValid(windVal)) lastWind = windVal;
-
       const gustsVal = getSmartVal('wind_gusts_10m', realIndex, windVal, windVal);
       const windDirVal = getSmartVal('wind_direction_10m', realIndex, 0, 0);
       const cloudVal = getSmartVal('cloud_cover', realIndex, 0, 0);
       
       const humidityVal = getSmartVal('relative_humidity_2m', realIndex, 50, lastHum);
       if (isValid(humidityVal)) lastHum = humidityVal;
-
       const uvVal = getSmartVal('uv_index', realIndex, 0, 0);
       const pressureVal = getSmartVal('surface_pressure', realIndex, 1013, lastPressure);
       if (isValid(pressureVal)) lastPressure = pressureVal;
@@ -223,27 +202,14 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
   const currentFreezingLevel = useMemo(() => (chartData24h.length > 0 && chartData24h[0].snowLevel !== null) ? chartData24h[0].snowLevel + 300 : 2500, [chartData24h]);
   const effectiveWeatherCode = useMemo(() => (!weatherData?.current ? 0 : getRealTimeWeatherCode(weatherData.current, minutelyPreciseData, currentRainProbability, currentFreezingLevel, weatherData.elevation || 0)), [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
   
-  const currentBg = useMemo(() => {
-    if(!weatherData) return "from-slate-900 via-slate-900 to-indigo-950";
-    const { is_day } = weatherData.current;
-    const isDay = is_day !== undefined ? is_day : 1; 
-    const code = effectiveWeatherCode;
-    if (code >= 95) return "from-slate-900 via-slate-950 to-purple-950"; 
-    if (code === 0 && isDay) return "from-blue-500 via-blue-400 to-orange-300"; 
-    if (code === 0 && !isDay) return "from-slate-950 via-indigo-950 to-purple-950"; 
-    return "from-slate-900 to-indigo-950";
-  }, [weatherData, effectiveWeatherCode]);
-
   const currentCape = useMemo(() => getComparisonVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
 
   const weeklyExtremes = useMemo(() => {
     const minTemps = weatherData?.daily?.temperature_2m_min;
     const maxTemps = weatherData?.daily?.temperature_2m_max;
-
     if (!Array.isArray(minTemps) || !Array.isArray(maxTemps) || minTemps.length === 0) {
         return { min: 0, max: 40 }; 
     }
-
     return { 
         min: Math.min(...(minTemps as number[])), 
         max: Math.max(...(maxTemps as number[]))
@@ -256,7 +222,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
   const barometricTrend = useMemo(() => ({ trend: 'steady', val: 0 }), []); 
 
   return { 
-    shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, currentBg, 
+    shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, 
     barometricTrend, currentCape, currentDewPoint, reliability, moonPhaseVal, 
     chartData24h, 
     chartDataFull, 
