@@ -1,12 +1,11 @@
 // src/hooks/useWeather.ts
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef } from 'react'; // <-- FIX: Eliminat useEffect
 import * as Sentry from "@sentry/react"; 
 import { ExtendedWeatherData } from '../utils/weatherLogic';
 import { AirQualityData } from '../types/weather';
 import { useAromeWorker } from './useAromeWorker'; 
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
-import { cacheService } from '../services/cacheService'; 
 import { WeatherRepository } from '../repositories/WeatherRepository';
 import { SENTRY_TAGS, FETCH_ERROR_TYPES } from '../constants/errorConstants';
 
@@ -27,27 +26,15 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   // Mantenim el hook del worker aquí per respectar el cicle de vida de React
   const { runAromeWorker } = useAromeWorker();
 
-  const t = useMemo(() => {
-      return { ...TRANSLATIONS['ca'], ...(TRANSLATIONS[lang] || {}) };
-  }, [lang]);
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  const lastFetchRef = useRef<{lat: number, lon: number, unit: string, time: number} | null>(null);
+  // Ref per evitar duplicitat de crides (Debounce/Throttle manual)
+  const lastFetchRef = useRef<{ lat: number; lon: number; unit: WeatherUnit; time: number } | null>(null);
 
-  // Neteja de cache inicial
-  useEffect(() => {
-      cacheService.clean().catch(console.error);
-  }, []);
-
-  const fetchWeatherByCoords = useCallback(async (
-      lat: number, 
-      lon: number, 
-      locationName?: string, 
-      country?: string
-  ): Promise<WeatherFetchResult> => {
-    
+  const fetchWeatherByCoords = async (lat: number, lon: number, locationName: string, country?: string): Promise<WeatherFetchResult> => {
     const now = Date.now();
 
-    // Evitem re-fetching si la petició és idèntica i molt recent (< 3s)
+    // Evitem crides repetides en menys de 3 segons
     if (lastFetchRef.current && 
         lastFetchRef.current.lat === lat && 
         lastFetchRef.current.lon === lon &&
@@ -61,8 +48,6 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
-      // Deleguem tota la feina al Repositori
-      // Passem 'runAromeWorker' perquè el Repositori pugui usar el worker sense tenir-lo hardcoded
       const response = await WeatherRepository.get(
           lat, 
           lon, 
@@ -81,26 +66,28 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       
-      // Log d'error centralitzat
       Sentry.captureException(err, { 
           tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API },
           extra: { lat, lon, unit }
       });
 
-      setError(t.fetchError); 
+      setError(t.fetchError || "Error obtenint dades"); 
       
       return { 
           success: false, 
           error: errorMessage, 
-          type: FETCH_ERROR_TYPES.UNKNOWN 
+          type: FETCH_ERROR_TYPES.NETWORK 
       };
     } finally {
       setLoading(false);
     }
-  }, [unit, lang, t, runAromeWorker]); 
+  };
 
-  return { 
-    weatherData, aqiData, loading, error, 
+  return {
+    weatherData,
+    aqiData,
+    loading,
+    error,
     fetchWeatherByCoords
   };
 }

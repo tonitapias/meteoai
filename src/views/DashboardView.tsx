@@ -7,40 +7,30 @@ import Footer from '../components/Footer';
 import Toast from '../components/Toast'; 
 import DebugPanel from '../components/DebugPanel';
 
-// Nous components organitzats
+// Components organitzats
 import { DashboardContent } from '../components/dashboard/DashboardContent';
 import { DashboardModals } from '../components/dashboard/DashboardModals';
 
-// Hook controlador
-import { useAppController } from '../hooks/useAppController';
+// Hook del context
+import { useAppContext } from '../context/AppContext';
 
-type AppController = ReturnType<typeof useAppController>;
-
-interface DashboardViewProps {
-  controller: AppController;
-}
-
-export default function DashboardView({ controller }: DashboardViewProps) {
-  const { state, actions, flags, modals } = controller;
+export default function DashboardView() {
+  // 1. RECUPEREM EL CONTROLADOR DEL CONTEXT
+  // 🟢 FIX: Eliminem 'modals' d'aquí perquè ja no el necessitem
+  const { state, actions, flags } = useAppContext();
   const { weatherData, calculations } = state;
 
   return (
     <DashboardLayout
       weatherCode={calculations.effectiveWeatherCode}
-      // Header: Controls de navegació i cerca
-      header={
-        <Header 
-            onSearch={actions.fetchWeatherByCoords}
-            onLocate={actions.handleGetCurrentLocation} 
-            loading={state.loading}
-            viewMode={flags.viewMode}
-            setViewMode={actions.setViewMode}
-            onDebugToggle={actions.toggleDebug}
-        />
-      }
-      // Footer: Crèdits
+      
+      // Header Net
+      header={<Header />}
+      
+      // Footer
       footer={<Footer className="mt-auto" />}
-      // Toast: Notificacions flotants
+      
+      // Toast
       toast={
         <Toast 
             message={state.notification?.msg || null} 
@@ -48,7 +38,8 @@ export default function DashboardView({ controller }: DashboardViewProps) {
             onClose={actions.dismissNotification} 
         />
       }
-      // Debug: Panell tècnic
+      
+      // Debug
       debugPanel={
         flags.showDebug && weatherData && (
             <DebugPanel 
@@ -58,26 +49,13 @@ export default function DashboardView({ controller }: DashboardViewProps) {
             />
         )
       }
-      // Modals: Finestres emergents (Lazy loaded)
-      modals={
-        <DashboardModals 
-            modals={modals}
-            actions={actions}
-            flags={flags}
-            weatherData={weatherData}
-            hourlyData={calculations.chartDataFull}
-            shiftedNow={calculations.shiftedNow}
-        />
-      }
+      
+      // Modals Nets (Sense props!)
+      modals={<DashboardModals />} 
     >
-        {/* Contingut principal (Widgets) */}
+        {/* Contingut Net */}
         <div className="mt-6 md:mt-10 flex-1">
-            <DashboardContent 
-                state={state} 
-                actions={actions} 
-                flags={flags} 
-                t={controller.t} 
-            />
+            <DashboardContent />
         </div>
     </DashboardLayout>
   );

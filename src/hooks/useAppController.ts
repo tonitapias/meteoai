@@ -1,84 +1,89 @@
 // src/hooks/useAppController.ts
 import { usePreferences } from './usePreferences';
-import { useWeather } from './useWeather';
-import { useWeatherAI } from './useWeatherAI';
-import { useWeatherCalculations } from './useWeatherCalculations';
-import { useWeatherTheme } from './useWeatherTheme';
-import { useGeoLocation } from '../context/GeoLocationContext';
-// IMPORT DIRECTE: Física
-import { isAromeSupported } from '../utils/physics';
 import { TRANSLATIONS } from '../translations';
-import { useViewState } from './useViewState';
 import { useAppActions } from './useAppActions';
 
+// Importem els nous controladors especialitzats
+import { useDataController } from './controllers/useDataController';
+import { useUIController } from './controllers/useUIController';
+
 export function useAppController() {
-  const view = useViewState();
-  const { now, modals } = view.state; 
-  const { lang, setLang, unit, viewMode, setViewMode, addFavorite, removeFavorite, isFavorite } = usePreferences();
+  // 1. CAPA DE PREFERÈNCIES (Settings)
+  // Aquestes són les úniques dades que necessitem abans d'arrencar res més
+  const { 
+    lang, setLang, unit, viewMode, setViewMode, 
+    addFavorite, removeFavorite, isFavorite 
+  } = usePreferences();
+  
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  const { weatherData, aqiData, loading, error, fetchWeatherByCoords } = useWeather(lang, unit);
-  const { getCoordinates } = useGeoLocation();
+  // 2. CAPA VISUAL (UI)
+  // Necessitem instanciar-la aviat perquè conté el rellotge ('now')
+  const ui = useUIController();
 
-  const calculations = useWeatherCalculations(weatherData, unit, now);
-  const theme = useWeatherTheme(weatherData, calculations.effectiveWeatherCode);
+  // 3. CAPA DE DADES (Logic)
+  // Injectem 'now' (UI) i preferències (Settings) a la lògica
+  const data = useDataController({ 
+    lang, 
+    unit, 
+    now: ui.state.now 
+  });
 
-  const calculationsWithTheme = {
-      ...calculations,
-      currentBg: theme.currentBg
-  };
-
-  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability);
-
+  // 4. CAPA D'ACCIONS (Bridge)
+  // Connectem les peces. Les accions necessiten accés creuat (ex: UI necessita saber errors de Dades)
   const appActions = useAppActions({
     t,
-    getCoordinates,
-    fetchWeatherByCoords,
-    setNotification: view.actions.setNotification,
-    weatherData,
+    getCoordinates: data.actions.getCoordinates,
+    fetchWeatherByCoords: data.actions.fetchWeatherByCoords,
+    setNotification: ui.actions.setNotification,
+    weatherData: data.state.weatherData,
     isFavorite,
     addFavorite,
     removeFavorite
   });
 
-  const supportsArome = weatherData?.location ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) : false;
-
+  // 5. RETORN RETRO-COMPATIBLE
+  // Reconstruïm l'objecte gegant original perquè les Vistes no es trenquin.
   return {
       state: {
-          weatherData,
-          aqiData,
-          loading,
-          error,
-          notification: view.state.notification,
-          aiAnalysis,
-          calculations: calculationsWithTheme,
-          now
+          // Fusionem estats de Dades i UI
+          weatherData: data.state.weatherData,
+          aqiData: data.state.aqiData,
+          loading: data.state.loading,
+          error: data.state.error,
+          aiAnalysis: data.state.aiAnalysis,
+          calculations: data.state.calculations,
+          
+          notification: ui.state.notification,
+          now: ui.state.now
       },
       actions: {
-          fetchWeatherByCoords,
+          // Accions de Dades
+          fetchWeatherByCoords: data.actions.fetchWeatherByCoords,
           handleGetCurrentLocation: appActions.handleGetCurrentLocation,
+          
+          // Accions de Preferències
           handleToggleFavorite: appActions.handleToggleFavorite,
-          toggleDebug: view.actions.toggleDebug,
-          dismissNotification: view.actions.dismissNotification,
           setLang,
           setViewMode,
-          setSelectedDayIndex: view.actions.setSelectedDayIndex,
-          setShowRadar: view.actions.setShowRadar,
-          setShowArome: view.actions.setShowArome
+          
+          // Accions d'UI
+          toggleDebug: ui.actions.toggleDebug,
+          dismissNotification: ui.actions.dismissNotification,
+          setSelectedDayIndex: ui.actions.setSelectedDayIndex,
+          setShowRadar: ui.actions.setShowRadar,
+          setShowArome: ui.actions.setShowArome
       },
       flags: {
-          showDebug: view.state.showDebug,
-          supportsArome,
+          // Fusionem flags
+          supportsArome: data.flags.supportsArome,
+          showDebug: ui.state.showDebug,
           isFavorite: (name: string) => isFavorite(name),
           unit,
           lang,
           viewMode
       },
-      modals: {
-          selectedDayIndex: modals.selectedDayIndex,
-          showRadar: modals.showRadar,
-          showArome: modals.showArome
-      },
+      modals: ui.modals, // Pas directe
       t
   };
 }

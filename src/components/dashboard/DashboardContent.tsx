@@ -1,5 +1,8 @@
+// src/components/dashboard/DashboardContent.tsx
 import React, { lazy, Suspense } from 'react';
-import { useAppController } from '../../hooks/useAppController';
+// ELIMINEM useAppController vell
+// NOU IMPORT:
+import { useAppContext } from '../../context/AppContext';
 
 // Components estàtics
 import CurrentWeather from '../CurrentWeather';
@@ -8,27 +11,21 @@ import ErrorBanner from '../ErrorBanner';
 import ErrorBoundary from '../ErrorBoundary';
 import { MinutelyPreciseChart, SmartForecastCharts } from '../WeatherCharts';
 
-// Lazy loading dels ginys pesants
+// Lazy loading
 const Forecast24h = lazy(() => import('../Forecast24h'));
 const AIInsights = lazy(() => import('../AIInsights'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 
-// Skeleton local per a les seccions lazy
 const SectionSkeleton = () => (
     <div className="w-full h-48 bg-white/5 animate-pulse rounded-[2rem] border border-white/5 my-4" />
 );
 
-type AppController = ReturnType<typeof useAppController>;
+// JA NO NECESSITEM INTERFACE PROPS NI TIPUS
 
-interface DashboardContentProps {
-    state: AppController['state'];
-    actions: AppController['actions'];
-    flags: AppController['flags'];
-    t: AppController['t'];
-}
-
-export const DashboardContent = ({ state, actions, flags, t }: DashboardContentProps) => {
+export const DashboardContent = () => {
+    // 1. OBTENIM TOT DIRECTAMENT DEL CONTEXT
+    const { state, actions, flags, t } = useAppContext();
     const { weatherData, calculations } = state;
 
     // Gestió d'estats de càrrega i error

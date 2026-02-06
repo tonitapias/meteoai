@@ -4,23 +4,30 @@ import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, A
 import { usePreferences, LocationData } from '../hooks/usePreferences';
 import { searchCity, GeoSearchResult } from '../services/geocodingService';
 import * as Sentry from "@sentry/react";
+import { useAppContext } from '../context/AppContext';
 
-interface HeaderProps {
-  onSearch: (lat: number, lon: number, name?: string, country?: string) => void;
-  loading: boolean;
-  viewMode: 'basic' | 'expert';
-  setViewMode: (mode: 'basic' | 'expert') => void;
-  onDebugToggle?: () => void;
-}
-
-// Regex de llista negra: Bloquegem caràcters que semblin codi o tags HTML
+// Regex de llista negra
 const DANGEROUS_CHARS = /[<>{}[\]\\/]/;
 
 function isLocationData(item: GeoSearchResult | LocationData): item is LocationData {
     return (item as LocationData).admin1 !== undefined || (item as GeoSearchResult).id === undefined;
 }
 
-export default function Header({ onSearch, loading, viewMode, setViewMode, onDebugToggle }: HeaderProps) {
+// JA NO NECESSITEM INTERFACE HeaderProps NI PROPS
+
+export default function Header() {
+  // 1. CONNEXIÓ AL CONTEXT (Substitueix les props)
+  const { actions, state, flags } = useAppContext();
+  
+  // Mapegem les variables del context als noms que feies servir abans
+  // per no haver de canviar tot el codi de sota
+  const onSearch = actions.fetchWeatherByCoords;
+  const loading = state.loading;
+  const viewMode = flags.viewMode;
+  const setViewMode = actions.setViewMode;
+  const onDebugToggle = actions.toggleDebug;
+
+  // --- A PARTIR D'AQUÍ, TOT EL CODI ÉS IDÈNTIC AL QUE TENIES ---
   const { favorites } = usePreferences();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -53,9 +60,6 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
   const showSuggestionsList = query.length >= 3;
   const activeList: (GeoSearchResult | LocationData)[] = showSuggestionsList ? suggestions : (showFavorites ? favorites : []);
 
-  // --- CORRECCIÓ LINT: Eliminem el useEffect que causava renderitzats en cascada ---
-  // El reset de selectedIndex es fa ara manualment als handlers (onChange, search, etc.)
-
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -68,7 +72,6 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
 
   useEffect(() => {
     const timer = setTimeout(async () => {
-      // 1. MILLORA DE SEGURETAT: Sanitització
       const cleanQuery = query.trim();
 
       if (cleanQuery.length < 3) {
@@ -83,14 +86,9 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
       }
 
       setIsSearching(true);
-      
-      // 2. REFACTORITZACIÓ: Ús del servei centralitzat
       const results = await searchCity(cleanQuery);
-      
       setSuggestions(results);
-      // CORRECCIÓ: Resetegem l'índex aquí quan arriben nous resultats
       setSelectedIndex(-1); 
-      
       setIsSearching(false);
     }, 300);
     return () => clearTimeout(timer);
@@ -276,7 +274,6 @@ export default function Header({ onSearch, loading, viewMode, setViewMode, onDeb
               value={query}
               onChange={(e) => {
                   setQuery(e.target.value);
-                  // CORRECCIÓ: Resetegem l'índex aquí, directament al handler
                   setSelectedIndex(-1); 
               }}
               onFocus={() => setIsFocused(true)}

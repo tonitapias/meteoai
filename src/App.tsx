@@ -1,22 +1,25 @@
 // src/App.tsx
 import React from 'react';
 import { useAppController } from './hooks/useAppController';
+import { AppProvider } from './context/AppContext'; // Importem el nou Provider
 
-// Noves Vistes Modulars
+// Vistes
 import WelcomeView from './views/WelcomeView';
 import DashboardView from './views/DashboardView';
 
 export default function MeteoIA() {
-  // 1. INICIALITZACIÓ: Tot l'estat en una sola línia
+  // 1. INICIALITZACIÓ
   const controller = useAppController();
   const { state } = controller;
 
-  // 2. DECISIÓ DE VISTA
-  // Si no tenim dades i no hi ha error crític, mostrem Benvinguda
-  if (!state.weatherData && !state.error) { 
-    return <WelcomeView controller={controller} />;
-  }
-
-  // 3. DASHBOARD PRINCIPAL (quan hi ha dades o error de càrrega)
-  return <DashboardView controller={controller} />;
+  return (
+    <AppProvider controller={controller}>
+      {/* LOGICA DE ROUTING SIMPLE */}
+      {!state.weatherData && !state.error ? (
+         <WelcomeView controller={controller} />
+      ) : (
+         <DashboardView />
+      )}
+    </AppProvider>
+  );
 }

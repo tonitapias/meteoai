@@ -1,32 +1,20 @@
 import React, { lazy, Suspense } from 'react';
-import { useAppController } from '../../hooks/useAppController';
+// 1. IMPORTEM EL CONTEXT
+import { useAppContext } from '../../context/AppContext';
 
-// Lazy loading dels modals
+// Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
 const RadarModal = lazy(() => import('../RadarModal'));
 const AromeModal = lazy(() => import('../AromeModal'));
 
-// Tipus per a les props (extret del controlador)
-type AppController = ReturnType<typeof useAppController>;
+// JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
-interface DashboardModalsProps {
-    modals: AppController['modals'];
-    actions: AppController['actions'];
-    flags: AppController['flags'];
-    weatherData: AppController['state']['weatherData'];
-    hourlyData: AppController['state']['calculations']['chartDataFull'];
-    shiftedNow: Date;
-}
+export const DashboardModals = () => {
+    // 2. RECUPEREM DADES DEL CONTEXT
+    const { state, actions, flags, modals } = useAppContext();
+    const { weatherData, calculations } = state;
 
-export const DashboardModals = ({ 
-    modals, 
-    actions, 
-    flags, 
-    weatherData, 
-    hourlyData, 
-    shiftedNow 
-}: DashboardModalsProps) => {
-
+    // Protecció: Si no hi ha dades, no podem mostrar modals de detall
     if (!weatherData) return null;
 
     return (
@@ -34,12 +22,12 @@ export const DashboardModals = ({
             {modals.selectedDayIndex !== null && (
                 <DayDetailModal 
                     weatherData={weatherData} 
-                    hourlyData={hourlyData} 
+                    hourlyData={calculations.chartDataFull} // Recuperat de calculations
                     selectedDayIndex={modals.selectedDayIndex} 
                     onClose={() => actions.setSelectedDayIndex(null)} 
                     unit={flags.unit} 
                     lang={flags.lang} 
-                    shiftedNow={shiftedNow} 
+                    shiftedNow={calculations.shiftedNow} 
                 />
             )}
             {modals.showRadar && (
