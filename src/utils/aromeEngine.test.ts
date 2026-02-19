@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { injectHighResModels } from './aromeEngine';
-import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 // --- MOCK DATA HELPER ---
 // Creem dades falses COMPLETES per satisfer l'esquema estricte Zod
@@ -35,7 +35,7 @@ const createBaseData = (): ExtendedWeatherData => ({
         wind_speed_10m: [10, 10],
         wind_direction_10m: [180, 180]
     }
-});
+} as unknown as ExtendedWeatherData);
 
 const createHighResData = (): ExtendedWeatherData => ({
     current: {
@@ -63,7 +63,7 @@ const createHighResData = (): ExtendedWeatherData => ({
         wind_speed_10m: [12, 12],
         wind_direction_10m: [185, 185]
     }
-});
+} as unknown as ExtendedWeatherData);
 
 describe('AROME Engine Logic', () => {
     

@@ -9,6 +9,13 @@ const AromeModal = lazy(() => import('../AromeModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
+// Definim el tipus exacte de location per evitar el fallback a {} de TS (Risc Zero)
+interface LocationMeta {
+    latitude: number;
+    longitude: number;
+    [key: string]: unknown;
+}
+
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
     const { state, actions, flags, modals } = useAppContext();
@@ -16,6 +23,9 @@ export const DashboardModals = () => {
 
     // Protecció: Si no hi ha dades, no podem mostrar modals de detall
     if (!weatherData) return null;
+
+    // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
+    const loc = weatherData.location as LocationMeta | undefined;
 
     return (
         <Suspense fallback={null}>
@@ -31,16 +41,16 @@ export const DashboardModals = () => {
             )}
             {modals.showRadar && (
                 <RadarModal 
-                    lat={weatherData.location?.latitude || 0} 
-                    lon={weatherData.location?.longitude || 0} 
+                    lat={loc?.latitude || 0} 
+                    lon={loc?.longitude || 0} 
                     onClose={() => actions.setShowRadar(false)} 
                     lang={flags.lang} 
                 />
             )}
             {modals.showArome && (
                 <AromeModal 
-                    lat={weatherData.location?.latitude || 0} 
-                    lon={weatherData.location?.longitude || 0} 
+                    lat={loc?.latitude || 0} 
+                    lon={loc?.longitude || 0} 
                     onClose={() => actions.setShowArome(false)} 
                     lang={flags.lang} 
                 />

@@ -1,15 +1,15 @@
 // src/repositories/WeatherRepository.ts
 import * as Sentry from "@sentry/react";
-import { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
 import { normalizeModelData } from '../utils/normData'; 
 import { isAromeSupported } from '../utils/physics';
-import { AirQualityData, WeatherData } from '../types/weather';
+import type { AirQualityData, WeatherData } from '../types/weather';
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from '../services/weatherService'; 
-import { WeatherUnit } from '../utils/formatters';
+import type { WeatherUnit } from '../utils/formatters';
 import { cacheService } from '../services/cacheService'; 
 import { SENTRY_TAGS } from '../constants/errorConstants';
-import { Language } from '../translations';
+import type { Language } from '../translations';
 
 // Tipus de retorn
 interface WeatherRepositoryResponse {
@@ -79,8 +79,9 @@ export const WeatherRepository = {
         }
 
         // 4. Finalització i Normalització de lloc
+        // [FIX] Càsting segur al spread per satisfer TS sense alterar el runtime JS
         processedData.location = { 
-            ...processedData.location, 
+            ...(processedData.location as Record<string, unknown>), 
             name: geoData.city,
             country: geoData.country,
             latitude: lat,

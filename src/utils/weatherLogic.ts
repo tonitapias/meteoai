@@ -1,6 +1,6 @@
 // src/utils/weatherLogic.ts
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
-import { StrictCurrentWeather } from '../types/weatherLogicTypes';
+import type { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { safeNum } from './physics';
 
 // --- IMPORTS DE REGLES (Mòduls especialitzats) ---
@@ -21,7 +21,7 @@ import { determineSnowCode } from './rules/winterRules';
 export const getRealTimeWeatherCode = (
     current: StrictCurrentWeather, 
     minutelyPrecipData: number[], 
-    rainProb: number,
+    _rainProb: number, // [FIX] Guió baix per ometre l'error de variable no utilitzada mantenint la signatura
     freezingLevel: number,
     elevation: number
 ): number => {

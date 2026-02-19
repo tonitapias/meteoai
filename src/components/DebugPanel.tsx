@@ -1,12 +1,19 @@
 // src/components/DebugPanel.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Move } from 'lucide-react';
-import { WeatherData } from '../types/weather';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 interface DebugPanelProps {
-    weatherData: WeatherData | null;
+    weatherData: ExtendedWeatherData | null;
     supportsArome: boolean;
     error: string | null;
+}
+
+// Definim el tipus exacte de location per evitar el fallback a {} de TS
+interface LocationMeta {
+    latitude?: number;
+    longitude?: number;
+    [key: string]: unknown;
 }
 
 const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, error }) => {
@@ -71,6 +78,13 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, err
         };
     }, [isDragging]);
 
+    // Forcem el tipatge de location per corregir la pèrdua d'inferència (Risc Zero)
+    const loc = weatherData?.location as LocationMeta | undefined;
+
+    // Emmotllament controlat per accedir a l'API no estàndard de Chrome V8
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const memory = (performance as any).memory;
+
     return (
         <div 
             style={{ left: `${position.x}px`, top: `${position.y}px` }}
@@ -86,10 +100,10 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, err
             </h4>
             
             <div className="space-y-1.5 opacity-90 pointer-events-none">
-                <div className="flex justify-between"><span>LAT:</span> <span className="text-white">{weatherData?.location?.latitude.toFixed(6) || "N/A"}</span></div>
-                <div className="flex justify-between"><span>LON:</span> <span className="text-white">{weatherData?.location?.longitude.toFixed(6) || "N/A"}</span></div>
+                <div className="flex justify-between"><span>LAT:</span> <span className="text-white">{loc?.latitude?.toFixed(6) || "N/A"}</span></div>
+                <div className="flex justify-between"><span>LON:</span> <span className="text-white">{loc?.longitude?.toFixed(6) || "N/A"}</span></div>
                 <div className="flex justify-between"><span>MODEL:</span> <span className="text-white">{supportsArome ? "AROME HD" : "ECMWF STD"}</span></div>
-                <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB' : 'N/A'}</span></div>
+                <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{memory ? (memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB' : 'N/A'}</span></div>
                 <div className="flex justify-between"><span>CACHE:</span> <span className="text-white">{localStorage.getItem('weatherCache') ? 'HIT' : 'MISS'}</span></div>
                 <div className="flex justify-between"><span>ERRORS:</span> <span className={error ? "text-red-400" : "text-green-400"}>{error ? "YES" : "NO"}</span></div>
             </div>

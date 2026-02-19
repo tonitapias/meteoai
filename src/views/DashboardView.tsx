@@ -1,5 +1,3 @@
-import React from 'react';
-
 // Layout & UI Shell
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import Header from '../components/Header';

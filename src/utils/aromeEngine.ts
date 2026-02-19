@@ -1,6 +1,6 @@
 // src/utils/aromeEngine.ts
 import { z } from 'zod';
-import { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { HourlyDataSchema, CurrentDataSchema } from '../schemas/weatherSchema';
 
 // --- VALIDACIÓ INTERNA (NOU) ---
@@ -58,8 +58,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
             const key = k as keyof StrictHourlyWeather;
             const val = target.hourly![key];
             if (Array.isArray(val)) {
-                // @ts-expect-error - Sabem que és un array, fem còpia segura
-                target.hourly![key] = [...val];
+                // Fent cast segur a Record per reconstruir l'array sense que TS es queixi de tipus creuats
+                (target.hourly as Record<string, unknown[]>)[key] = [...val];
             }
         });
     }
@@ -163,7 +163,8 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                 const tH = target.hourly as Record<string, (number | null)[]>;
                 
                 HOURLY_FIELDS.forEach(field => {
-                    const srcArr = (source.hourly as Record<string, number[]>)[field];
+                    // Accés segur
+                    const srcArr = (source.hourly as Record<string, number[] | undefined>)[field];
                     
                     if (Array.isArray(srcArr)) {
                          const val = srcArr[sourceIndex];
@@ -177,7 +178,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
                 });
 
                 // Reforç de probabilitat de pluja
-                const precipArr = source.hourly.precipitation; // Ja validat com number[]
+                const precipArr = source.hourly?.precipitation as number[] | undefined; 
                 const aromePrecip = precipArr?.[sourceIndex];
                 
                 if (aromePrecip != null && aromePrecip >= 0.1) {

@@ -1,10 +1,10 @@
 // src/utils/weatherNormalizers.ts
-import { WeatherData } from '../services/weatherApi';
-import { 
+import type { WeatherData } from '../types/weather';
+import type { 
     ExtendedWeatherData, 
     StrictCurrentWeather, 
     StrictHourlyWeather 
-} from '../types/weatherModels';
+} from '../types/weatherLogicTypes';
 
 // Tipus helper intern per manipular objectes genèrics
 type GenericModelData = Record<string, unknown>;

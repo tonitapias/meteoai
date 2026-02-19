@@ -23,6 +23,12 @@ const SectionSkeleton = () => (
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS
 
+// Definim el tipus exacte de location per evitar el fallback a {} de TS (Risc Zero)
+interface LocationMeta {
+    name: string;
+    [key: string]: unknown;
+}
+
 export const DashboardContent = () => {
     // 1. OBTENIM TOT DIRECTAMENT DEL CONTEXT
     const { state, actions, flags, t } = useAppContext();
@@ -32,6 +38,9 @@ export const DashboardContent = () => {
     if (state.error) return <ErrorBanner message={state.error} />;
     if (state.loading && !weatherData) return <LoadingSkeleton />;
     if (!weatherData) return null;
+
+    // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
+    const loc = weatherData.location as LocationMeta | undefined;
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col gap-8">
@@ -43,7 +52,7 @@ export const DashboardContent = () => {
                 unit={flags.unit} 
                 lang={flags.lang} 
                 shiftedNow={calculations.shiftedNow}
-                isFavorite={flags.isFavorite(weatherData.location?.name || "")} 
+                isFavorite={flags.isFavorite(loc?.name || "")} 
                 onToggleFavorite={actions.handleToggleFavorite}
                 onShowRadar={() => actions.setShowRadar(true)} 
                 onShowArome={() => actions.setShowArome(true)}

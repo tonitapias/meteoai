@@ -1,9 +1,10 @@
+// src/services/weatherService.ts
 import * as Sentry from "@sentry/react";
-import { getWeatherData, getAirQualityData, WeatherData } from './weatherApi';
-import { reverseGeocode, GeocodeResult } from './geocodingService';
-import { Language } from '../translations';
-import { WeatherUnit } from '../utils/formatters';
-import { AirQualityData } from '../types/weather';
+import { getWeatherData, getAirQualityData } from './weatherApi';
+import { reverseGeocode, type GeocodeResult } from './geocodingService';
+import type { Language } from '../translations';
+import type { WeatherUnit } from '../utils/formatters';
+import type { AirQualityData, WeatherData } from '../types/weather';
 import { SENTRY_TAGS } from '../constants/errorConstants';
 
 // Definim la interfície de resposta (Idèntica a l'anterior)

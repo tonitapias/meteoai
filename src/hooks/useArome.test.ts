@@ -1,15 +1,16 @@
 // src/hooks/useArome.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, MockedFunction } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useArome } from './useArome';
 import * as weatherApi from '../services/weatherApi';
+import type { WeatherData } from '../types/weather';
 
 // 1. MOCK DE L'API (Simulació)
 vi.mock('../services/weatherApi', () => ({
   getAromeData: vi.fn()
 }));
 
-const mockedGetAromeData = weatherApi.getAromeData as unknown as vi.MockedFunction<typeof weatherApi.getAromeData>;
+const mockedGetAromeData = weatherApi.getAromeData as unknown as MockedFunction<typeof weatherApi.getAromeData>;
 
 // Interfície auxiliar per al test
 interface MockAromeData {
@@ -54,7 +55,7 @@ describe('useArome Hook', () => {
     };
 
     // Configurem el mock perquè retorni això quan es cridi
-    mockedGetAromeData.mockResolvedValue(mockRawData as unknown as weatherApi.WeatherData);
+    mockedGetAromeData.mockResolvedValue(mockRawData as unknown as WeatherData);
 
     // EXECUCIÓ
     const { result } = renderHook(() => useArome());
@@ -68,8 +69,10 @@ describe('useArome Hook', () => {
 
     expect(result.current.error).toBeNull();
 
-    expect(result.current.aromeData?.hourly.temperature_2m).toBeDefined();
-    expect(result.current.aromeData?.hourly.temperature_2m[0]).toBe(15.5);
+    // Assertion estricte utilitzant Record<string, unknown> en lloc d'any
+    const hourlyData = result.current.aromeData?.hourly as Record<string, number[]> | undefined;
+    expect(hourlyData?.temperature_2m).toBeDefined();
+    expect(hourlyData?.temperature_2m[0]).toBe(15.5);
     
     // Casting segur per verificar l'estructura interna
     const data = result.current.aromeData as unknown as MockAromeData; 
@@ -103,7 +106,7 @@ describe('useArome Hook', () => {
         elevation: 0, 
         current: {}, 
         daily: {} 
-    } as unknown as weatherApi.WeatherData);
+    } as unknown as WeatherData);
     
     const { result } = renderHook(() => useArome());
     

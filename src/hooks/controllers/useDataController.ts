@@ -1,16 +1,24 @@
+// src/hooks/controllers/useDataController.ts
 import { useWeather } from '../useWeather';
 import { useWeatherCalculations } from '../useWeatherCalculations';
 import { useWeatherTheme } from '../useWeatherTheme';
 import { useWeatherAI } from '../useWeatherAI';
 import { useGeoLocation } from '../../context/GeoLocationContext';
 import { isAromeSupported } from '../../utils/physics';
-import { Language } from '../../translations';
-import { WeatherUnit } from '../../utils/formatters';
+import type { Language } from '../../translations';
+import type { WeatherUnit } from '../../utils/formatters';
 
 interface DataControllerProps {
   lang: Language;
   unit: WeatherUnit;
   now: Date;
+}
+
+// Definim el tipus exacte de location per evitar el fallback a {} de TS (Risc Zero)
+interface LocationMeta {
+    latitude: number;
+    longitude: number;
+    [key: string]: unknown;
 }
 
 export function useDataController({ lang, unit, now }: DataControllerProps) {
@@ -34,8 +42,11 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
     currentBg: theme.currentBg
   };
 
-  const supportsArome = weatherData?.location 
-    ? isAromeSupported(weatherData.location.latitude, weatherData.location.longitude) 
+  // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
+  const loc = weatherData?.location as LocationMeta | undefined;
+
+  const supportsArome = loc 
+    ? isAromeSupported(loc.latitude, loc.longitude) 
     : false;
 
   return {

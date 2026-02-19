@@ -2,10 +2,10 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useWeatherCalculations } from './useWeatherCalculations';
-import { ExtendedWeatherData } from '../utils/weatherLogic';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 // Mock simple de dades per a proves
-const mockWeatherData: ExtendedWeatherData = {
+const mockWeatherData = {
     latitude: 41.38,
     longitude: 2.17,
     generationtime_ms: 0,
@@ -59,7 +59,7 @@ const mockWeatherData: ExtendedWeatherData = {
         wind_gusts_10m_max: [20],
         wind_direction_10m_dominant: [180]
     }
-};
+} as unknown as ExtendedWeatherData;
 
 describe('useWeatherCalculations', () => {
     // Cas 1: Robustesa bàsica - No ha de petar amb dades nul·les

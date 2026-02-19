@@ -66,7 +66,7 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
              precipitation: 0.15, 
              cloud_cover_low: 100,
              source: 'arome' 
-         } as StrictCurrentWeather;
+         } as unknown as StrictCurrentWeather;
          
          const minutelyPrecip = [0.15];
          const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
@@ -80,7 +80,7 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
              cloud_cover_mid: 0,
              cloud_cover_high: 100, // Només núvols alts
              is_day: 1
-         } as StrictCurrentWeather;
+         } as unknown as StrictCurrentWeather;
 
          const minutelyPrecip = [0];
          const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
@@ -98,7 +98,7 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
              cloud_cover_mid: 100,
              cloud_cover_high: 100,
              cape: 1600 // Energia alta
-         } as StrictCurrentWeather;
+         } as unknown as StrictCurrentWeather;
 
          const minutelyPrecip = [1.0];
          const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);

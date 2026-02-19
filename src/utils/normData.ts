@@ -1,6 +1,6 @@
 // src/utils/normData.ts
-import { WeatherData } from '../services/weatherApi';
-import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { WeatherData } from '../types/weather';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 type GenericModelData = Record<string, unknown>;
 

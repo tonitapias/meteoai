@@ -4,8 +4,8 @@ import { renderHook, act } from '@testing-library/react';
 import { useWeather } from './useWeather';
 // [CORRECCIÓ] Eliminat import de cacheService que no s'usava explícitament
 import { WeatherRepository } from '../repositories/WeatherRepository';
-import { AirQualityData } from '../types/weather';
-import { ExtendedWeatherData } from '../utils/weatherLogic';
+import type { AirQualityData } from '../types/weather';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; // [FIX] Import correcte
 
 // --- MOCKS ---
 
@@ -65,7 +65,8 @@ describe('useWeather Hook (Integration with Repository)', () => {
 
         // ACCIÓ
         await act(async () => {
-            await result.current.fetchWeatherByCoords(41.38, 2.17);
+            // [FIX] Afegim 'Barcelona' com a 3r argument
+            await result.current.fetchWeatherByCoords(41.38, 2.17, 'Barcelona');
         });
 
         // VERIFICACIÓ
@@ -74,9 +75,9 @@ describe('useWeather Hook (Integration with Repository)', () => {
         expect(result.current.aqiData).toEqual(MOCK_AQI);
         expect(result.current.error).toBeNull();
         
-        // Verifiquem que ha cridat al Repositori amb els paràmetres correctes
+        // [FIX] Verifiquem que ha cridat al Repositori amb 'Barcelona'
         expect(WeatherRepository.get).toHaveBeenCalledWith(
-            41.38, 2.17, 'C', 'ca', undefined, undefined, expect.any(Function)
+            41.38, 2.17, 'C', 'ca', 'Barcelona', undefined, expect.any(Function)
         );
     });
 
@@ -88,7 +89,8 @@ describe('useWeather Hook (Integration with Repository)', () => {
 
         // ACCIÓ
         await act(async () => {
-            const res = await result.current.fetchWeatherByCoords(41.38, 2.17);
+            // [FIX] Afegim 'Barcelona' com a 3r argument
+            const res = await result.current.fetchWeatherByCoords(41.38, 2.17, 'Barcelona');
             expect(res.success).toBe(false);
         });
 

@@ -1,7 +1,7 @@
 import { Navigation, Zap, Star } from 'lucide-react';
 
 interface CurrentWeatherHeaderProps {
-  locationName: string;
+  locationName?: string; // Solució: Acceptem undefined de forma segura
   country: string;
   time: string;
   date: string;

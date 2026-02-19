@@ -1,8 +1,8 @@
 // src/hooks/useWeather.ts
 import { useState, useRef } from 'react'; // <-- FIX: Eliminat useEffect
 import * as Sentry from "@sentry/react"; 
-import { ExtendedWeatherData } from '../utils/weatherLogic';
-import { AirQualityData } from '../types/weather';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; // [FIX] Import correcte
+import type { AirQualityData } from '../types/weather';
 import { useAromeWorker } from './useAromeWorker'; 
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';

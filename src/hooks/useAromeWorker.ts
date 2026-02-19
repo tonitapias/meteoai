@@ -1,12 +1,14 @@
 // src/hooks/useAromeWorker.ts
 import { useCallback } from 'react';
 import * as Sentry from "@sentry/react";
-import { ExtendedWeatherData } from '../utils/weatherLogic';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { WeatherData } from '../types/weather'; // 1. NOU IMPORT
 
 const AROME_TIMEOUT_MS = 4000; // 4 segons màxim per al càlcul físic
 
 export function useAromeWorker() {
-  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: ExtendedWeatherData) => {
+  // 2. CORRECCIÓ: 'highRes' ara accepta 'WeatherData' brut de l'API
+  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: WeatherData) => {
       return new Promise<ExtendedWeatherData>((resolve, reject) => {
           const startTime = performance.now();
           

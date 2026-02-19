@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 // Importem l'original (V1) i el nou (V2)
 import { injectHighResModels } from './aromeEngine';
 import { injectHighResModelsV2 } from './aromeEngineV2';
-import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 // --- MOCK DATA FACTORIES ---
 
@@ -47,7 +47,7 @@ const createBaseData = (): ExtendedWeatherData => ({
         freezing_level_height: [2000, 2100, 2000],
         visibility: [10000, 10000, 9000]
     }
-});
+} as unknown as ExtendedWeatherData);
 
 const createHighResData = (): ExtendedWeatherData => ({
     current: {
@@ -94,7 +94,7 @@ const createHighResData = (): ExtendedWeatherData => ({
         time: ["2024-01-29T12:00", "2024-01-29T12:15"],
         precipitation: [0.5, 1.2]
     }
-});
+} as unknown as ExtendedWeatherData);
 
 describe('AROME Engine V1 vs V2 Parity Check', () => {
     

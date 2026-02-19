@@ -8,9 +8,9 @@ interface StatProps {
 }
 
 interface WeatherStatsGridProps {
-  windSpeed: number;
-  humidity: number;
-  apparentTemp: number;
+  windSpeed: number | string;    // Solució: Pot rebre valors fallback com '--'
+  humidity: number | string;     // Solució: Pot rebre valors fallback com '--'
+  apparentTemp: number | string; // Solució: Pot rebre valors fallback com '--'
 }
 
 export const WeatherStatsGrid = ({ windSpeed, humidity, apparentTemp }: WeatherStatsGridProps) => {

@@ -1,5 +1,5 @@
 // src/types/weatherModels.ts
-import { WeatherData } from '../services/weatherApi';
+import type { WeatherData } from './weather';
 
 // --- DEFINICIÓ DE TIPUS ESTRICTES ---
 

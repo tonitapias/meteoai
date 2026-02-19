@@ -241,7 +241,8 @@ export const generateAIPrediction = (
         }, tr);
 
         let confidenceText = tr.aiConfidence; 
-        let confidenceLevel = 'high';
+        // [FIX] Especifiquem el tipus estrictament per complir amb l'AIPredictionResult
+        let confidenceLevel: 'low' | 'medium' | 'high' = 'high';
         if (reliability) {
             if (reliability.level === 'low') { confidenceLevel = 'low'; confidenceText = tr.aiConfidenceLow; } 
             else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod; }

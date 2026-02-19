@@ -1,5 +1,6 @@
+// src/utils/aromeEngineV2.ts
 import { z } from 'zod';
-import { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { HourlyDataSchema, CurrentDataSchema } from '../schemas/weatherSchema';
 
 // --- 1. SCHEMAS & TIPUS INTERNS (Idèntic a l'original per seguretat) ---
@@ -89,7 +90,8 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
             const tH = target.hourly as Record<string, (number | null)[]>;
             
             HOURLY_FIELDS.forEach(field => {
-                const srcArr = (source.hourly as Record<string, number[]>)[field];
+                // Accés segur
+                const srcArr = (source.hourly as Record<string, number[] | undefined>)[field];
                 if (Array.isArray(srcArr)) {
                         const val = srcArr[sourceIndex];
                         if (val != null && !isNaN(Number(val))) {
@@ -100,7 +102,7 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
             });
 
             // Reforç de probabilitat de pluja
-            const precipArr = source.hourly.precipitation; 
+            const precipArr = source.hourly?.precipitation as number[] | undefined; 
             const aromePrecip = precipArr?.[sourceIndex];
             
             if (aromePrecip != null && aromePrecip >= 0.1) {
@@ -128,7 +130,9 @@ export const injectHighResModelsV2 = (baseData: ExtendedWeatherData, highResData
         Object.keys(target.hourly).forEach((k) => {
             const key = k as keyof StrictHourlyWeather;
             const val = target.hourly![key];
-            if (Array.isArray(val)) target.hourly![key] = [...val];
+            if (Array.isArray(val)) {
+                (target.hourly as Record<string, unknown[]>)[key] = [...val];
+            }
         });
     }
 

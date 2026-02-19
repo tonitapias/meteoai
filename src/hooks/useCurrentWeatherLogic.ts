@@ -1,11 +1,10 @@
 // src/hooks/useCurrentWeatherLogic.ts
 import { useMemo } from 'react';
-import { ExtendedWeatherData } from '../utils/weatherLogic';
+import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
-import { Language } from '../translations';
+import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 
 const getStatusColor = (code: number) => {
     if (code <= 1) return 'bg-emerald-500 shadow-[0_0_10px_#10b981]';
@@ -21,6 +20,13 @@ interface UseCurrentWeatherLogicProps {
     lang: Language;
     shiftedNow?: Date;
     effectiveCode: number;
+}
+
+// Definim el tipus exacte de location per evitar el fallback a {} de TypeScript
+interface LocationMeta {
+    name: string;
+    country?: string;
+    [key: string]: unknown;
 }
 
 export const useCurrentWeatherLogic = ({ 
@@ -52,24 +58,27 @@ export const useCurrentWeatherLogic = ({
         const maxTemp = daily?.temperature_2m_max?.[0];
         const minTemp = daily?.temperature_2m_min?.[0];
 
+        // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador (Risc Zero)
+        const loc = location as LocationMeta | undefined;
+
         return {
             temps: {
                 // 3. ACTUALITZACIÓ: Usem 'realTemp' en lloc de 'current.temperature_2m'
                 main: renderTemp(realTemp), 
                 max: renderTemp(maxTemp),
                 min: renderTemp(minTemp),
-                apparent: renderTemp(current.apparent_temperature)
+                apparent: renderTemp(current.apparent_temperature as number | undefined)
             },
             meta: {
-                locationName: location?.name,
-                country: location?.country || "LOCAL",
+                locationName: loc?.name,
+                country: loc?.country || "LOCAL",
                 isUsingArome: current.source === 'AROME HD',
                 time: displayTimeStr,
                 date: dateStr,
                 isDay: current.is_day
             },
             stats: {
-                windSpeed: current.wind_speed_10m != null ? Math.round(current.wind_speed_10m) : '--',
+                windSpeed: current.wind_speed_10m != null ? Math.round(current.wind_speed_10m as number) : '--',
                 humidity: current.relative_humidity_2m != null ? current.relative_humidity_2m : '--',
             },
             visuals: {
