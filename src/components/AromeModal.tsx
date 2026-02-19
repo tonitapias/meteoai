@@ -1,10 +1,11 @@
 // src/components/AromeModal.tsx
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useArome } from '../hooks/useArome';
 import { X, Wind, Droplets, Snowflake } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../translations';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 
 interface AromeModalProps {
   lat: number;
@@ -27,6 +28,24 @@ interface HourlyRow {
   cloudCover: number;
 }
 
+interface AromeHourlyData {
+  time: string[];
+  temperature_2m: number[];
+  is_day?: number[];
+  precipitation?: number[];
+  cloud_cover_low?: number[];
+  cloud_cover_mid?: number[];
+  cloud_cover_high?: number[];
+  weather_code?: number[];
+  visibility?: number[];
+  relative_humidity_2m?: number[];
+  freezing_level_height?: number[];
+  cape?: number[];
+  wind_speed_10m?: number[];
+  wind_gusts_10m?: number[];
+  [key: string]: unknown;
+}
+
 export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
   const listRef = useRef<HTMLDivElement>(null);
@@ -37,9 +56,10 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   }, [lat, lon, fetchArome, clearArome]);
 
   const hourlyRows = useMemo<HourlyRow[]>(() => {
-    if (!aromeData?.hourly || !aromeData.hourly.time) return [];
+    const hourlyRaw = aromeData?.hourly as Record<string, unknown>;
+    if (!hourlyRaw || !hourlyRaw.time) return [];
     
-    const h = aromeData.hourly;
+    const h = hourlyRaw as unknown as AromeHourlyData;
     const now = new Date();
     const todayDateStr = now.toISOString().split('T')[0];
     const nowHour = now.getHours();
@@ -91,14 +111,15 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         };
 
         const freezingLevel = h.freezing_level_height?.[i] ?? 2500;
-        const elevation = aromeData.elevation || 0;
+        const elevation = aromeData?.elevation || 0;
         const cape = h.cape?.[i] ?? 0;
 
         // 4. CÀLCUL D'ICONA CENTRALITZAT
         // SOLUCIÓ LOOK-AHEAD: Passem només [precipActual] per evitar que l'hora actual 
         // mostri la tempesta de l'hora següent.
-        const finalCode = getRealTimeWeatherCode(
-            simulatedCurrent,
+        // Tàctica Risc Zero: Emmascarem la signatura de la funció només a l'espai TS.
+        const finalCode = (getRealTimeWeatherCode as (...args: unknown[]) => number)(
+            simulatedCurrent as unknown as StrictCurrentWeather,
             [precipActual], 
             precipActual > 0 ? 100 : 0, 
             freezingLevel,

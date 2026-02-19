@@ -1,5 +1,5 @@
 // src/components/dashboard/DashboardContent.tsx
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 // ELIMINEM useAppController vell
 // NOU IMPORT:
 import { useAppContext } from '../../context/AppContext';
@@ -111,7 +111,6 @@ export const DashboardContent = () => {
                                 comparisonData={calculations.comparisonData} 
                                 unit={flags.unit === 'F' ? '°F' : '°C'} 
                                 lang={flags.lang} 
-                                showHumidity={true}
                             />
                         </div>
                     )}

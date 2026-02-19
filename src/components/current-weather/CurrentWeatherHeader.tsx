@@ -1,4 +1,3 @@
-import React from 'react';
 import { Navigation, Zap, Star } from 'lucide-react';
 
 interface CurrentWeatherHeaderProps {

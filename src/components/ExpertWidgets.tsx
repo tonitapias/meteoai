@@ -2,10 +2,12 @@ import React, { useMemo } from 'react';
 import { AlertOctagon } from 'lucide-react';
 import { getMoonPhase, calculateDewPoint } from '../utils/physics';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
-
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
-// Importem tots els ginys, inclòs el nou VisibilityWidget
+// NOUS IMPORTS: Portem els tipus estrictes de domini
+import { Language } from '../translations';
+import { WeatherUnit } from '../utils/formatters';
+
 import { 
   CompassGauge, 
   SnowLevelWidget, 
@@ -21,18 +23,18 @@ import {
 
 interface WidgetCardProps { children: React.ReactNode; cols?: number; }
 
-// Wrapper per a les animacions d'entrada
 const WidgetCard = ({ children, cols = 1 }: WidgetCardProps) => (
   <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full animate-in fade-in zoom-in-95 duration-700 fill-mode-both`}>
     {children}
   </div>
 );
 
+// MODIFICAT: Apliquem els tipus estrictes en lloc de "string"
 interface ExpertWidgetsProps {
   weatherData: ExtendedWeatherData; 
   aqiData: Record<string, unknown> | null; 
-  lang: string; 
-  unit: string; 
+  lang: Language; 
+  unit: WeatherUnit; 
   freezingLevel: number | null;
 }
 
@@ -40,13 +42,10 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const { current, hourly, daily, utc_offset_seconds, location } = weatherData;
   const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []);
   
-  // ALERTA DE NEU: Visible si la cota és < 1500m (configurable)
   const showSnowWidget = freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
-  // Protecció contra renders sense dades
   if (!current) return null;
 
-  // CÀLCUL DEL PUNT DE ROSADA (Fallback intel·ligent)
   const dewPointValue = (typeof current.dew_point_2m === 'number')
     ? current.dew_point_2m
     : calculateDewPoint(
@@ -54,10 +53,11 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
         (current.relative_humidity_2m as number) || 0
       );
 
+  // MODIFICAT: Creem un àlies segur i tipat per a la ubicació que evita l'error de "{}"
+  const safeLocation = location as { latitude?: number; longitude?: number } | undefined;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
-        
-        {/* --- FILA 1: DINÀMICA ATMOSFÈRICA --- */}
         
         <WidgetCard>
             <CompassGauge 
@@ -69,7 +69,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
             />
         </WidgetCard>
 
-        {/* NOU GINY DE VISIBILITAT: Inserit aquí per rellevància visual */}
         <WidgetCard>
             <VisibilityWidget 
                 visibility={(current.visibility as number) ?? 10000} 
@@ -97,8 +96,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
             />
         </WidgetCard>
 
-        {/* --- FILA 2: ESTAT TÈRMIC I BIOLÒGIC --- */}
-
         <WidgetCard>
             <DewPointWidget 
                 value={dewPointValue} 
@@ -115,10 +112,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
             <PollenWidget data={aqiData?.current as Record<string, unknown>} lang={lang} />
         </WidgetCard>
 
-        {/* --- FILA 3: ASTRONOMIA I COTA DE NEU --- */}
-
         <WidgetCard>
-            <MoonWidget phase={moonPhaseVal} lat={location?.latitude || 41} lang={lang} />
+            {/* MODIFICAT: Utilitzem el safeLocation aquí */}
+            <MoonWidget phase={moonPhaseVal} lat={safeLocation?.latitude || 41} lang={lang} />
         </WidgetCard>
 
         <WidgetCard cols={2}>

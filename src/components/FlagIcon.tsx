@@ -1,5 +1,4 @@
 // src/components/FlagIcon.tsx
-import React from 'react';
 import { Language } from '../translations';
 
 interface FlagIconProps {

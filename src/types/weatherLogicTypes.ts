@@ -1,5 +1,5 @@
 // src/types/weatherLogicTypes.ts
-import { WeatherData } from '../services/weatherApi';
+import { WeatherData } from './weather';
 
 // Definim el mapa de traduccions necessari per la IA i la UI
 export interface TranslationMap {
@@ -107,10 +107,12 @@ export interface StrictHourlyWeather {
 
 export interface StrictDailyWeather {
   time: string[];
+  weather_code?: (number | null)[]; // AFEGIT: Tipatge estricte
   precipitation_probability_max?: (number | null)[];
   temperature_2m_max: (number | null)[];
   temperature_2m_min: (number | null)[];
   precipitation_sum?: (number | null)[];
+  snowfall_sum?: (number | null)[]; // AFEGIT: Tipatge estricte per neu
   uv_index_max?: (number | null)[];
   wind_speed_10m_max?: (number | null)[];
   sunrise?: string[];
@@ -140,7 +142,7 @@ export interface AIPredictionResult {
   text: string;
   tips: string[];
   confidence: string;
-  confidenceLevel: string;
+  confidenceLevel: 'high' | 'medium' | 'low';
   alerts: Alert[];
 }
 

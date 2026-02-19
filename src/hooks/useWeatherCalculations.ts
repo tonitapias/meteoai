@@ -1,13 +1,9 @@
 // src/hooks/useWeatherCalculations.ts
 import { useMemo } from 'react';
-// IMPORT DIRECTE: Lògica pura del motor
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
-// IMPORT DIRECTE: Física i Matemàtiques
 import { getShiftedDate, calculateDewPoint, getMoonPhase } from '../utils/physics';
-// IMPORT DIRECTE: Regles específiques
 import { calculateReliability } from '../utils/rules/reliabilityRules';
-// IMPORT DIRECTE: Tipus
-import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictDailyWeather } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
 
 // Helper intern
@@ -32,16 +28,14 @@ const getComparisonVal = (data: unknown, key: string, i: number): number | null 
 
 export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, unit: WeatherUnit, now: Date) {
   
-  // 1. DATA I HORA SHIFTED
   const shiftedNow = useMemo(() => {
     if (!weatherData) return now;
-    return getShiftedDate(now, weatherData.timezone || 'UTC');
+    return getShiftedDate(now, weatherData.timezone as string || 'UTC');
   }, [weatherData, now]);
 
-  // 2. ÍNDEX ACTUAL
   const currentHourlyIndex = useMemo(() => {
      if (!weatherData?.hourly?.time || !weatherData?.current?.time) return 0;
-     const apiCurrentTimeStr = weatherData.current.time; 
+     const apiCurrentTimeStr = weatherData.current.time as string; 
      const exactIdx = weatherData.hourly.time.findIndex((t: string) => t === apiCurrentTimeStr);
      if (exactIdx !== -1) return exactIdx;
      const currentHourStr = apiCurrentTimeStr.slice(0, 13);
@@ -49,24 +43,26 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
      return partialIdx !== -1 ? partialIdx : 0;
   }, [weatherData]);
 
-  // 3. MINUT A MINUT
   const minutelyPreciseData = useMemo<number[]>(() => {
     let preciseData: number[] = [];
-    if (weatherData?.minutely_15?.precipitation) {
+    const minutely = weatherData?.minutely_15 as Record<string, unknown> | undefined;
+
+    if (minutely && Array.isArray(minutely.precipitation) && Array.isArray(minutely.time)) {
         const currentMs = shiftedNow.getTime(); 
-        const timesRaw = weatherData.minutely_15.time as string[];
+        const timesRaw = minutely.time as string[];
         let idx = -1;
         for(let i = 0; i < timesRaw.length; i++) {
             if (new Date(timesRaw[i]).getTime() > currentMs) { idx = i; break; }
         }
         const currentIdx = (idx === -1) ? timesRaw.length - 1 : Math.max(0, idx - 1);
-        const precipArr = weatherData.minutely_15.precipitation as number[];
+        const precipArr = minutely.precipitation as number[];
         preciseData = precipArr.slice(currentIdx, currentIdx + 4);
     }
     const hasMinutelyRain = preciseData.some(v => v > 0);
     if (hasMinutelyRain) return preciseData;
 
-    const currentHourPrecip = weatherData?.hourly?.precipitation?.[currentHourlyIndex] || 0;
+    const hourlyPrec = weatherData?.hourly?.precipitation as number[] | undefined;
+    const currentHourPrecip = hourlyPrec?.[currentHourlyIndex] || 0;
     if (currentHourPrecip > 0) {
         const estimatedQuarter = Number((currentHourPrecip / 4).toFixed(2));
         return [estimatedQuarter, estimatedQuarter, estimatedQuarter, estimatedQuarter];
@@ -74,7 +70,6 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     return preciseData.length > 0 ? preciseData : [0,0,0,0];
   }, [weatherData, currentHourlyIndex, shiftedNow]);
 
-  // 4. GENERACIÓ DE DADES MESTRA
   const allHourlyData = useMemo(() => {
     if (!weatherData?.hourly?.time) return [];
     
@@ -83,9 +78,10 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     const isValid = (val: unknown): val is number => val !== null && val !== undefined && typeof val === 'number' && !Number.isNaN(val);
 
     let lastTemp = 0, lastWind = 0, lastPressure = 1013, lastHum = 50;
+    const hourlyDataSafe = weatherData.hourly as Record<string, unknown[]>;
 
     const getSmartVal = (key: string, idx: number, fallback: number, lastKnown: number) => {
-        let val: unknown = weatherData.hourly[key]?.[idx];
+        let val: unknown = hourlyDataSafe[key]?.[idx];
         if (isValid(val)) return val;
         if (weatherData.hourlyComparison?.gfs) {
             val = getComparisonVal(weatherData.hourlyComparison.gfs, key, idx);
@@ -123,7 +119,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
       const isDayVal = getSmartVal('is_day', realIndex, 1, 1);
       const codeVal = getSmartVal('weather_code', realIndex, 0, 0);
 
-      let flVal: unknown = weatherData.hourly.freezing_level_height?.[realIndex];
+      let flVal: unknown = hourlyDataSafe.freezing_level_height?.[realIndex];
       if (!isValid(flVal)) {
          if (weatherData.hourlyComparison?.gfs) flVal = getComparisonVal(weatherData.hourlyComparison.gfs, 'freezing_level_height', realIndex);
          if (!isValid(flVal) && weatherData.hourlyComparison?.icon) flVal = getComparisonVal(weatherData.hourlyComparison.icon, 'freezing_level_height', realIndex);
@@ -155,11 +151,9 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     });
   }, [weatherData, unit, currentHourlyIndex]);
 
-  // 5. DIVISIÓ DE DADES
   const chartData24h = useMemo(() => allHourlyData.slice(0, 24), [allHourlyData]);
   const chartDataFull = useMemo(() => allHourlyData, [allHourlyData]);
 
-  // 6. COMPARATIVES
   const comparisonData = useMemo(() => {
       if (!weatherData?.hourlyComparison) return null;
       const startIndex = Math.max(0, currentHourlyIndex);
@@ -175,6 +169,8 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
              if (typeof temp !== 'number' || isNaN(temp)) return null; 
 
              const rainP = (typeof d.precipitation_probability === 'number') ? d.precipitation_probability : 0;
+             // AFEGIT: Extraiem el volum de precipitació del model (o null si no el té)
+             const precipVal = (typeof d.precipitation === 'number') ? d.precipitation : null;
              const fl = d.freezing_level_height;
 
              return {
@@ -182,12 +178,13 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
                  temp: unit === 'F' ? Math.round((temp * 9/5) + 32) : temp,
                  rain: rainP,
                  pop: rainP,
+                 precip: precipVal, // AFEGIT: Complim estrictament amb ChartDataPoint
                  wind: d.wind_speed_10m,
                  cloud: d.cloud_cover,
                  humidity: d.relative_humidity_2m,
                  snowLevel: (typeof fl === 'number') ? Math.max(0, fl - 300) : null
              };
-         }).filter(Boolean);
+         }).filter((item): item is NonNullable<typeof item> => item !== null);
       };
 
       return {
@@ -200,7 +197,12 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
 
   const currentRainProbability = useMemo(() => chartData24h[0]?.rain || 0, [chartData24h]);
   const currentFreezingLevel = useMemo(() => (chartData24h.length > 0 && chartData24h[0].snowLevel !== null) ? chartData24h[0].snowLevel + 300 : 2500, [chartData24h]);
-  const effectiveWeatherCode = useMemo(() => (!weatherData?.current ? 0 : getRealTimeWeatherCode(weatherData.current, minutelyPreciseData, currentRainProbability, currentFreezingLevel, weatherData.elevation || 0)), [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
+  
+  const effectiveWeatherCode = useMemo(() => {
+     if (!weatherData?.current) return 0;
+     const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+     return getRealTimeWeatherCode(weatherData.current, minutelyPreciseData, currentRainProbability, currentFreezingLevel, elevation);
+  }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
   
   const currentCape = useMemo(() => getComparisonVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
 
@@ -217,7 +219,12 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
   }, [weatherData]);
 
   const currentDewPoint = useMemo(() => calculateDewPoint(weatherData?.current?.temperature_2m || 0, weatherData?.current?.relative_humidity_2m || 0), [weatherData]);
-  const reliability = useMemo(() => calculateReliability(weatherData?.daily, weatherData?.dailyComparison?.gfs, weatherData?.dailyComparison?.icon, 0), [weatherData]);
+  
+  const reliability = useMemo(() => {
+      if (!weatherData?.daily) return { level: 'high', type: 'ok', value: 0 } as const;
+      return calculateReliability(weatherData.daily as StrictDailyWeather, weatherData.dailyComparison?.gfs, weatherData.dailyComparison?.icon, 0);
+  }, [weatherData]);
+  
   const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); 
   const barometricTrend = useMemo(() => ({ trend: 'steady', val: 0 }), []); 
 

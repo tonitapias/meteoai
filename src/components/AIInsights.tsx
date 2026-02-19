@@ -1,15 +1,14 @@
 // src/components/AIInsights.tsx
-import React from 'react';
 import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella, ShieldAlert, WifiOff, RefreshCw } from 'lucide-react';
 import { TypewriterText } from './WeatherUI';
-import { TRANSLATIONS, Language } from '../translations';
+import { TRANSLATIONS, Language, TranslationType } from '../translations';
 
 // --- INTERFACES ---
 
 interface AlertItem {
     type: string;
     msg: string;
-    level: 'high' | 'warning';
+    level: 'high' | 'warning' | 'info';
 }
 
 interface AnalysisResult {
@@ -28,8 +27,6 @@ interface AIInsightsProps {
     hasError?: boolean;  
     onRetry?: () => void; 
 }
-
-type TranslationSubset = Record<string, string>;
 
 // --- SUB-COMPONENTS D'ESTIL ---
 
@@ -50,7 +47,7 @@ const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
   );
 };
 
-const InsightAlert = ({ alert, t }: { alert: AlertItem, t: TranslationSubset }) => {
+const InsightAlert = ({ alert, t }: { alert: AlertItem, t: TranslationType }) => {
   const isHigh = alert.level === 'high';
   return (
     <div className={`flex items-start gap-3 p-3 rounded-lg border shadow-sm ${
@@ -129,7 +126,7 @@ const InsightError = ({ onRetry }: { onRetry?: () => void }) => (
 // --- COMPONENT PRINCIPAL ---
 
 export default function AIInsights({ analysis, lang, isLoading = false, hasError = false, onRetry }: AIInsightsProps) { 
-  const t = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as TranslationSubset;
+  const t = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) 
   
   if (hasError) {
      return (

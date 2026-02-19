@@ -1,5 +1,4 @@
 // src/components/CurrentWeather.tsx
-import React from 'react';
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
@@ -57,9 +56,9 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
           />
 
           <MainTemperatureDisplay
-            temp={weather.temps.main}
-            max={weather.temps.max}
-            min={weather.temps.min}
+            temp={weather.temps.main as number}
+            max={weather.temps.max as number}
+            min={weather.temps.min as number}
             weatherLabel={weather.visuals.weatherLabel}
             statusColor={weather.visuals.statusColor}
           />
@@ -80,9 +79,9 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
           </div>
 
           <WeatherStatsGrid
-            windSpeed={weather.stats.windSpeed}
+            windSpeed={weather.stats.windSpeed as number}
             humidity={weather.stats.humidity}
-            apparentTemp={weather.temps.apparent}
+            apparentTemp={weather.temps.apparent as number}
           />
 
           <WeatherActionButtons

@@ -43,7 +43,7 @@ export default function DayDetailModal({
   onClose, 
   unit, 
   lang,
-  shiftedNow 
+ 
 }: DayDetailModalProps) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   
@@ -144,7 +144,7 @@ export default function DayDetailModal({
               
               <div className="flex flex-col items-center justify-center text-center relative z-10">
                   <div className="flex items-center gap-2 text-indigo-400 font-black uppercase tracking-[0.3em] text-[10px] mb-3 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
-                      <Calendar className="w-3.5 h-3.5" /> {t.forecast || "DETALL DEL DIA"}
+                      <Calendar className="w-3.5 h-3.5" /> {t.dayDetail.forecast || "DETALL DEL DIA"}
                   </div>
                   
                   <h2 className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2">
@@ -155,14 +155,14 @@ export default function DayDetailModal({
                       <div className="flex items-center gap-2">
                           <ArrowUp className="w-5 h-5 text-rose-400" />
                           <span className="text-4xl font-mono font-medium text-white tracking-tighter tabular-nums">
-                              {Math.round(dayData.maxTemp)}°
+                              {Math.round(dayData.maxTemp || 0)}°
                           </span>
                       </div>
                       <div className="w-px h-8 bg-white/10"></div>
                       <div className="flex items-center gap-2">
                           <ArrowDown className="w-5 h-5 text-cyan-400" />
                           <span className="text-4xl font-mono font-medium text-slate-400 tracking-tighter tabular-nums">
-                              {Math.round(dayData.minTemp)}°
+                              {Math.round(dayData.minTemp || 0)}°
                           </span>
                       </div>
                   </div>
@@ -174,7 +174,7 @@ export default function DayDetailModal({
                 {/* MODIFICAT: Usem els valors calculats (mm o cm) */}
                 <StatCard 
                     icon={Droplets} 
-                    label={t.precip || "PRECIPITACIÓ"} 
+                    label={t.dayDetail.precip || "PRECIPITACIÓ"} 
                     value={formattedPrecipitation.val} 
                     sub={formattedPrecipitation.unit} 
                     color="text-blue-400" 
@@ -216,8 +216,6 @@ export default function DayDetailModal({
                   comparisonData={comparisonData} 
                   unit={unit === 'F' ? '°F' : '°C'} 
                   lang={lang} 
-                  activeDayDate={dayData.date}
-                  shiftedNow={shiftedNow}
                />
             </div>
 

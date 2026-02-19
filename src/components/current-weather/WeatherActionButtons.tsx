@@ -1,4 +1,3 @@
-import React from 'react';
 import { Map, Zap, Star } from 'lucide-react';
 
 interface WeatherActionButtonsProps {

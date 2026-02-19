@@ -1,5 +1,4 @@
 // src/components/Footer.tsx
-import React from 'react';
 import pkg from '../../package.json';
 import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
 import { clear } from 'idb-keyval'; // NOU: Importem neteja d'IndexedDB

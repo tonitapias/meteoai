@@ -4,7 +4,9 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import CurrentWeather from './CurrentWeather';
 import * as usePreferencesHook from '../hooks/usePreferences';
-import { ExtendedWeatherData } from '../utils/weatherLogic';
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { Language } from '../translations';
+import { WeatherUnit } from '../utils/formatters';
 
 // Mocks
 vi.mock('./WeatherIcons', () => ({
@@ -22,20 +24,15 @@ vi.mock('../hooks/usePreferences', () => ({
 
 const mockedUsePreferences = vi.mocked(usePreferencesHook.usePreferences);
 
-// Helper per crear el mock del retorn
-interface MockPreferencesReturn {
-  preferences: {
-    unit: 'C' | 'F';
-    language: 'ca' | 'es' | 'en';
-  };
-  addFavorite: (loc: Record<string, unknown>) => void;
-  removeFavorite: (name: string) => void;
-  isFavorite: (name: string) => boolean;
-  [key: string]: unknown; 
-}
-
-const createMockPrefs = (unit: 'C' | 'F', lang: 'ca' | 'es' | 'en'): MockPreferencesReturn => ({
-  preferences: { unit, language: lang },
+// Helper per crear el mock del retorn d'acord amb la interfície real actualitzada
+const createMockPrefs = (unit: WeatherUnit, lang: Language): ReturnType<typeof usePreferencesHook.usePreferences> => ({
+  lang,
+  setLang: vi.fn(),
+  unit,
+  setUnit: vi.fn(),
+  viewMode: 'basic',
+  setViewMode: vi.fn(),
+  favorites: [],
   addFavorite: vi.fn(),
   removeFavorite: vi.fn(),
   isFavorite: vi.fn().mockReturnValue(false)
@@ -111,7 +108,7 @@ describe('CurrentWeather Component', () => {
     expect(tempHeading).toHaveTextContent(/20/);
     
     // CORRECCIÓ 2: Usem getAllByText per si la sensació tèrmica apareix més d'un cop (o per seguretat)
-    const apparentTemp = screen.getAllByText((content) => content.includes('22'));
+    const apparentTemp = screen.getAllByText((content: string) => content.includes('22'));
     expect(apparentTemp.length).toBeGreaterThan(0);
   });
 
@@ -168,7 +165,7 @@ describe('CurrentWeather Component', () => {
     // Aquí ens assegurem que el BADGE específic (que indica font activa) no hi és.
     // El botó potser sí que hi és per activar-lo, però l'indicador d'estat no.
     // Filtrem per buscar el span del badge específicament.
-    const activeBadge = screen.queryAllByText((content, element) => {
+    const activeBadge = screen.queryAllByText((content: string, element: Element | null) => {
       return element?.tagName.toLowerCase() === 'span' && 
              content.includes('AROME HD') && 
              element.className.includes('bg-emerald-950');

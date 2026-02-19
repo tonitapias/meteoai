@@ -1,4 +1,3 @@
-import React from 'react';
 import { Wind, Droplets, Activity, LucideIcon } from 'lucide-react';
 
 interface StatProps {

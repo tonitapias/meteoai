@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 // 1. IMPORTEM EL CONTEXT
 import { useAppContext } from '../../context/AppContext';
 
@@ -22,7 +22,6 @@ export const DashboardModals = () => {
             {modals.selectedDayIndex !== null && (
                 <DayDetailModal 
                     weatherData={weatherData} 
-                    hourlyData={calculations.chartDataFull} // Recuperat de calculations
                     selectedDayIndex={modals.selectedDayIndex} 
                     onClose={() => actions.setSelectedDayIndex(null)} 
                     unit={flags.unit} 

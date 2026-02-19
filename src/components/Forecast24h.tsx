@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
@@ -7,7 +7,6 @@ import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
-    // AFEGIT: Destructurem utc_offset_seconds per calcular l'hora local real
     const { hourly, current, utc_offset_seconds } = data;
     
     const isArome = current.source === 'AROME HD';
@@ -17,25 +16,21 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         if (!hourly || !hourly.time || !Array.isArray(hourly.time)) return [];
         
         // CORRECCIÓ ZONA HORÀRIA:
-        // 1. Obtenim el moment actual en UTC (sense biaix del navegador)
         const now = new Date();
-        const utcMs = now.getTime(); // Temps Unix actual (UTC)
+        const utcMs = now.getTime(); 
         
-        // 2. Afegim l'offset de la ciutat (en segons * 1000)
-        // Això ens dona una data que, si llegim en mètodes UTC, equival a l'hora local de la ciutat
-        const locationMs = utcMs + (utc_offset_seconds * 1000); 
+        // MODIFICAT: Càsting segur per l'offset (unknown -> number)
+        const offsetSeconds = (utc_offset_seconds as number) || 0;
+        const locationMs = utcMs + (offsetSeconds * 1000); 
         const locationDate = new Date(locationMs);
 
-        // 3. Extraiem components usant mètodes UTC per obtenir l'hora local de destí
         const year = locationDate.getUTCFullYear();
         const month = String(locationDate.getUTCMonth() + 1).padStart(2, '0');
         const day = String(locationDate.getUTCDate()).padStart(2, '0');
         const hour = String(locationDate.getUTCHours()).padStart(2, '0');
         
-        // 4. Construïm la cadena ISO que buscarem a l'API (ex: "2024-05-20T09")
         const currentIsoHourPrefix = `${year}-${month}-${day}T${hour}`;
         
-        // Ara busquem aquest prefix a la llista d'hores (que està en hora local de la ciutat)
         const startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentIsoHourPrefix));
         
         if (startIndex === -1) return [];
@@ -43,7 +38,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         return Array.from({ length: 25 }).map((_, i) => {
             const targetIndex = startIndex + i;
             
-            // Si sortim del rang, retornem dades buides
             if (targetIndex >= hourly.time.length) {
                 return { time: '', temp: 0, icon: null, precip: 0, precipText: '', isNow: false };
             }
@@ -52,18 +46,22 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const dateObj = new Date(timeStr);
             const hours = String(dateObj.getHours()).padStart(2, '0');
             
+            // Llegim dades segures directament
             const temp = hourly.temperature_2m[targetIndex] || 0;
-            const code = hourly.weather_code[targetIndex] || 0;
             const pProb = hourly.precipitation_probability?.[targetIndex] || 0;
             const pAmt = hourly.precipitation?.[targetIndex] || 0;
+            const windSpeed = hourly.wind_speed_10m?.[targetIndex] || 0;
             
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const sAmt = (hourly as any).snowfall?.[targetIndex] || 0;
             
-            const windSpeed = hourly.wind_speed_10m?.[targetIndex] || 0;
-            const isDay = hourly.is_day?.[targetIndex] === 1;
+            // MODIFICAT: Càsting segur per propietats dinàmiques "unknown"
+            const weatherCodes = hourly.weather_code as number[] | undefined;
+            const code = weatherCodes?.[targetIndex] || 0;
 
-            // Lògica de text de precipitació
+            const isDays = hourly.is_day as number[] | undefined;
+            const isDay = isDays?.[targetIndex] === 1;
+
             let precipString = '';
             if (pAmt > 0) {
                 precipString = formatPrecipitation(pAmt, sAmt);
@@ -80,7 +78,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 isNow: i === 0
             };
         });
-      }, [hourly, lang, utc_offset_seconds]); // AFEGIT utc_offset_seconds a dependències
+      }, [hourly, lang, utc_offset_seconds]);
 
     return (
         <div className="relative group w-full">

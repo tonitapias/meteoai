@@ -1,5 +1,5 @@
 // src/components/ErrorBanner.tsx
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { AlertCircle, WifiOff, ServerCrash, FileWarning } from 'lucide-react';
 
 interface ErrorBannerProps {

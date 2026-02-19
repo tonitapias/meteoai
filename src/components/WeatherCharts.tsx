@@ -1,5 +1,5 @@
 // src/components/WeatherCharts.tsx
-import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { CloudRain, Wind, Thermometer, Mountain, Umbrella, Droplets } from 'lucide-react';
 import { TRANSLATIONS, Language } from '../translations';
 import { CHART_COLORS } from '../constants/chartColors';
