@@ -1,4 +1,3 @@
-import React from 'react';
 import { Flower2 } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE } from './widgetStyles';

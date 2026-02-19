@@ -1,6 +1,4 @@
 // src/components/LoadingSkeleton.tsx
-import React from 'react';
-
 export default function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-6">

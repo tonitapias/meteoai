@@ -1,6 +1,6 @@
 // src/services/weatherApi.ts
 import * as Sentry from "@sentry/react";
-import { ZodType } from "zod"; 
+import { ZodType, ZodTypeDef } from "zod"; 
 import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
 import { WeatherData, AirQualityData } from "../types/weather";
 
@@ -131,11 +131,8 @@ const normalizeModelKeys = <T = unknown>(data: unknown): T => {
 
 // --- Validació Zod Genèrica ---
 // MILLORA ARQUITECTURA: Aquesta funció ara garanteix que la sortida T coincideix amb l'Schema
-const validateData = <T>(schema: ZodType<T>, data: unknown, context: string): T => {
-    // Normalitzem primer
+const validateData = <T>(schema: ZodType<T, ZodTypeDef, unknown>, data: unknown, context: string): T => {
     const cleanData = normalizeModelKeys<unknown>(data);
-    
-    // Validem contra l'esquema
     const result = schema.safeParse(cleanData);
     
     if (!result.success) {

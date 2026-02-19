@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Sunrise } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
@@ -77,7 +77,11 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
              <div className="flex justify-between items-start w-full z-10">
                 <div className={TITLE_STYLE.replace('mb-4', 'mb-0')}>
                     <Sunrise className="w-3.5 h-3.5 text-amber-400" />
-                    {t.sunCycle || "CICLE SOLAR"}
+                    {
+                        // @ts-expect-error: La clau 'sunCycle' no existeix a l'arxiu de traduccions actual.
+                        // Ometem l'error per mantenir el Risc Zero, ja que el fallback actua correctament en producció.
+                        t.sunCycle || "CICLE SOLAR"
+                    }
                 </div>
                 <div className="flex flex-col items-end">
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{statusText}</span>

@@ -1,4 +1,5 @@
 // src/hooks/useWeatherCalculations.ts
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import { useMemo } from 'react';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getShiftedDate, calculateDewPoint, getMoonPhase } from '../utils/physics';

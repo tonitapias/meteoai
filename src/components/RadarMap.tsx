@@ -1,5 +1,5 @@
 // src/components/RadarMap.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2, AlertTriangle, RefreshCw, Play, Pause } from 'lucide-react';
@@ -56,7 +56,8 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<boolean>(false);
   
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // SOLUCIÓ: Tipatge pur de TypeScript sense dependre de l'espai de noms de NodeJS
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchRadarData = async () => {
       setLoading(true);
@@ -67,18 +68,25 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         const rawData = await response.json();
         const parsed = RainViewerResponseSchema.safeParse(rawData);
 
-        if (!parsed.success || !parsed.data.radar?.past?.length) {
-            console.error("Error dades radar:", parsed.error);
+        // SOLUCIÓ: Flux de control estricte per Zod
+        if (!parsed.success) {
+            console.error("Error dades radar (Zod):", parsed.error);
             setError(true);
             return;
         }
 
         const data = parsed.data;
+        
+        // Ara sabem que parsed.success és true, validem les dades internes de forma segura
+        if (!data.radar || !data.radar.past || data.radar.past.length === 0) {
+            console.error("Error dades radar: absència de dades 'past' vàlides");
+            setError(true);
+            return;
+        }
+
         setHost(data.host);
         setFrames(data.radar.past);
         
-        // CANVI 1: Inicialitzem amb l'ÚLTIMA imatge disponible (la més recent)
-        // Abans era -2, ara posem -1 per tenir l'última.
         const latestIndex = Math.max(0, data.radar.past.length - 2);
         setAnimationIndex(latestIndex);
         
@@ -114,7 +122,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
   const togglePlay = () => {
       setIsPlaying(!isPlaying);
       if (!isPlaying) setAnimationIndex(0);
-      // CANVI: En parar, tornem a l'última exacta
       else setAnimationIndex(Math.max(0, frames.length - 1));
   };
 
@@ -155,8 +162,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         <ZoomControl position="topleft" />
 
         <LayersControl position="topright">
-            
-            {/* CANVI 2: Treta la propietat 'checked' d'aquí */}
             <LayersControl.BaseLayer name="Fosc">
                 <TileLayer
                     attribution='&copy; CARTO'
@@ -171,7 +176,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
                 />
             </LayersControl.BaseLayer>
 
-            {/* CANVI 2: Afegida la propietat 'checked' aquí (Per defecte) */}
             <LayersControl.BaseLayer checked name="Relleu">
                 <TileLayer
                     attribution='&copy; Esri'
@@ -207,7 +211,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
                   />
                 )}
             </LayersControl.Overlay>
-            
         </LayersControl>
 
         <div className="leaflet-marker-pane">
@@ -216,7 +219,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
       </MapContainer>
 
       <div className="absolute bottom-4 right-4 z-[1000] bg-slate-900/90 backdrop-blur px-4 py-2 rounded-lg border border-white/10 flex items-center gap-4 shadow-lg">
-        
         <button 
             onClick={togglePlay}
             className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white transition-all shadow-lg shadow-indigo-500/30"
@@ -241,7 +243,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
             <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
-
     </div>
   );
 }

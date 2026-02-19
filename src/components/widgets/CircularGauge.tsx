@@ -1,4 +1,3 @@
-import React from 'react';
 import { CircularGaugeProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { safeVal } from './widgetHelpers';

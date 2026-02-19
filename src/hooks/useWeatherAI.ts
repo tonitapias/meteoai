@@ -17,10 +17,10 @@ interface AIAnalysisState extends AIPredictionResult {
     source?: string;
 }
 
-// Tipus simple per a AQI
+// SOLUCIÓ 1: Tipus simple per a AQI amb tolerància a null per l'API Zod
 interface AQIData {
     current?: {
-        european_aqi?: number;
+        european_aqi?: number | null;
         [key: string]: unknown;
     };
     [key: string]: unknown;
@@ -44,15 +44,19 @@ export function useWeatherAI(
     if (current.weather_code === undefined) return;
 
     // 2. Construcció de la clau única (incloent fiabilitat)
-    // Accés segur a coordenades (fallback si no existeixen a location)
-    const currentProps = current as Record<string, unknown>;
-    const latVal = weatherData.location?.latitude ?? (typeof currentProps.latitude === 'number' ? currentProps.latitude : 0);
-    const lonVal = weatherData.location?.longitude ?? (typeof currentProps.longitude === 'number' ? currentProps.longitude : 0);
+    // SOLUCIÓ 100% PURA TS: Tractem les dades com un diccionari genèric sense fer servir 'any'
+    const wd = weatherData as Record<string, unknown> | null;
+    const loc = wd?.['location'] as Record<string, unknown> | undefined;
+
+    const latVal = loc?.['latitude'] ?? wd?.['latitude'] ?? 0;
+    const lonVal = loc?.['longitude'] ?? wd?.['longitude'] ?? 0;
 
     const lat = Number(latVal).toFixed(3);
     const lon = Number(lonVal).toFixed(3);
     const weatherCode = current.weather_code;
-    const aqiVal = aqiData?.current?.european_aqi || 0;
+    
+    // Utilitzem ?? per capturar bé els nulls de Zod
+    const aqiVal = aqiData?.current?.european_aqi ?? 0;
     
     // Si reliability canvia, la clau també canviarà i forçarà el recàlcul
     const relLevel = reliability?.level || 'high';
@@ -64,7 +68,7 @@ export function useWeatherAI(
 
     const fetchAI = async () => {
       try {
-        // MILLORA: Passem reliability a la funció generadora
+        // Passem reliability a la funció generadora
         const local = generateAIPrediction(
           current, weatherData.daily, weatherData.hourly, 
           aqiVal, lang, null, reliability, unit

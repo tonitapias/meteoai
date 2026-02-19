@@ -1,9 +1,17 @@
-
 // src/context/PreferencesContext.tsx
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { LocationData } from '../services/weatherApi';
 import { WeatherUnit } from '../utils/formatters';
 import { Language } from '../translations';
+
+// SOLUCIÓ: Definim la interfície que defineix l'estructura d'un Favorit (antigament a weatherApi).
+// Això manté la puresa de TypeScript i desacobla el Context dels serveis d'API.
+export interface LocationData {
+  name: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  admin1?: string;
+}
 
 // Definim la forma del nostre context
 export interface PreferencesContextType {

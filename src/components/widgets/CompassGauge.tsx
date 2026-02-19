@@ -1,4 +1,3 @@
-import React from 'react';
 import { Wind, Zap } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';

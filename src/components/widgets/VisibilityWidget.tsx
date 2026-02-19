@@ -1,4 +1,3 @@
-import React from 'react';
 import { Eye, Mountain } from 'lucide-react';
 import { VisibilityWidgetProps } from './widgetTypes';
 

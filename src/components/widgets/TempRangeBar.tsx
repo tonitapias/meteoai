@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const TempRangeBar = ({ min, max, globalMin, globalMax }: { min: number, max: number, globalMin: number, globalMax: number }) => {
     const totalRange = (globalMax - globalMin) || 1;
     const leftPercent = ((min - globalMin) / totalRange) * 100;

@@ -1,6 +1,4 @@
 // src/components/MoonPhaseIcon.tsx
-import React from 'react';
-
 interface MoonPhaseIconProps {
   phase: number; // 0..1
   className?: string;

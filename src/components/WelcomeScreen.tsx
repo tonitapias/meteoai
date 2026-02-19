@@ -1,14 +1,13 @@
 // src/components/WelcomeScreen.tsx
-import React from 'react';
 import { MapPin, Globe, CloudSun, Command, Loader2, Sparkles, Cpu, Wifi, ShieldCheck } from 'lucide-react';
-import { Language } from '../translations';
-import { TranslationMap } from '../utils/weatherLogic';
+// CANVI ARQUITECTÒNIC: Importem el tipus mestre de traduccions directament d'on toca.
+import { Language, TranslationType } from '../translations';
 import pkg from '../../package.json';
 
 interface WelcomeScreenProps {
   lang: Language;
   setLang: (lang: Language) => void;
-  t: TranslationMap; 
+  t: TranslationType; // SOLUCIÓ: Ara TypeScript coneix exactament tota l'estructura de traducció
   onLocate: () => void;
   loading: boolean;
 }
