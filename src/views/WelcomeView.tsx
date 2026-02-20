@@ -1,5 +1,4 @@
 // src/views/WelcomeView.tsx
-import React from 'react';
 import Header from '../components/Header';
 import WelcomeScreen from '../components/WelcomeScreen';
 import Toast from '../components/Toast';
@@ -37,14 +36,7 @@ export default function WelcomeView({ controller }: WelcomeViewProps) {
        )}
 
        <div className="w-full max-w-[1920px] mx-auto p-4 md:p-6 flex-1 flex flex-col z-10 min-h-screen">
-          <Header 
-              onSearch={actions.fetchWeatherByCoords} 
-              onLocate={actions.handleGetCurrentLocation} 
-              loading={state.loading}
-              viewMode={flags.viewMode}
-              setViewMode={actions.setViewMode} 
-              onDebugToggle={actions.toggleDebug}
-          />
+          <Header />
           
           <div className="flex-1 flex flex-col items-center justify-center w-full mt-8 md:mt-0">
               <WelcomeScreen 
