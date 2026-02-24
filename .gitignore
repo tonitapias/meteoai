@@ -9,6 +9,8 @@ coverage
 # Production
 build
 dist
+dev-list/
+.vite/
 
 # Misc
 .DS_Store
