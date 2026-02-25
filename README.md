@@ -68,7 +68,7 @@ Una mirada ràpida a com està construïda l'aplicació per dins, basada en l'au
 | **Estils** | Tailwind CSS | Sistema de disseny utilitari amb animacions CSS natives i Lucide Icons. |
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent d'alt rendiment (`idb-keyval`) amb *bucketing* geoespacial i TTL diferenciat (dades vs IA). |
 | **Dades Externes** | Open-Meteo API | Fusió intel·ligent de múltiples models (AROME, ECMWF, GFS, ICON). |
-| **Intel·ligència** | Google Gemini API | Integració via SDK amb *prompt engineering* dinàmic basat en la severitat del clima. |
+| **Intel·ligència** | Google Gemini API | Integració segura via Proxy amb *prompt engineering* dinàmic. |
 | **CI/CD** | GitHub Actions | Flux de treball automatitzat per a build, validació de tipus i desplegament segur a GitHub Pages. |
 
 ---
@@ -89,9 +89,14 @@ Si vols explorar el codi font:
     ```
 
 3.  **Configura l'entorn:**
-    Crea un fitxer `.env` a l'arrel i afegeix la teva clau d'API de Google Gemini:
+    Crea un fitxer `.env` a l'arrel de l'aplicació. Aquesta aplicació utilitza un servidor intermediari (Proxy) per amagar la clau de l'API de Gemini per raons de seguretat. Has de configurar-lo de la següent manera:
+
     ```env
-    VITE_GEMINI_API_KEY=la_teva_clau_aquí
+    # URL del teu Proxy per a l'API de Gemini (OBLIGATORI)
+    VITE_PROXY_URL=[https://la-teva-url-del-proxy.com/api/chat](https://la-teva-url-del-proxy.com/api/chat)
+    
+    # Temps d'espera per a les peticions a l'API (OPCIONAL, per defecte 10000ms)
+    VITE_API_TIMEOUT=10000
     ```
 
 4.  **Arranca el servidor de desenvolupament:**
