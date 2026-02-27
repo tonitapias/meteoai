@@ -62,10 +62,38 @@ const ForecastSection = memo(function ForecastSection({
                         const dateNum = date.getDate();
                         const maxTemp = dailyData.temperature_2m_max?.[i] ?? 0;
                         const minTemp = dailyData.temperature_2m_min?.[i] ?? 0;
-                        const code = dailyData.weather_code?.[i] ?? 0;
+                        const rawCode = dailyData.weather_code?.[i] ?? 0; // MODIFICAT: Guardem com rawCode
                         const precipProb = dailyData.precipitation_probability_max?.[i] ?? 0;
                         const precipSum = dailyData.precipitation_sum?.[i] ?? 0;
-                        const snowSum = dailyData.snowfall_sum?.[i] ?? 0; // Sense 'as any'!
+                        const snowSum = dailyData.snowfall_sum?.[i] ?? 0; 
+                        const maxWind = dailyData.wind_speed_10m_max?.[i] ?? 0;
+
+                        // --- INICI MÀGIA VISUAL 7 DIES ---
+                        let code = rawCode;
+                        
+                        // Si el codi original diu que no plou/nega (0, 1, 2, 3), recalculem els núvols amb les hores d'aquell dia
+                        if (rawCode <= 3 && chartData && chartData.length > 0) {
+                            const dateOnly = dateStr.slice(0, 10); // Extraiem només la data, ex: "2024-03-15"
+                            
+                            // Busquem a chartData totes les hores que coincideixen amb aquest dia i que són de dia
+                            const dayHours = chartData.filter(d => 
+                                typeof d.time === 'string' && 
+                                d.time.startsWith(dateOnly) && 
+                                d.isDay === 1
+                            );
+
+                            if (dayHours.length > 0) {
+                                // Calculem la mitjana de núvols reals durant les hores de sol (fent càsting segur a Number)
+                                const avgClouds = dayHours.reduce((acc, curr) => acc + (Number(curr.cloud) || 0), 0) / dayHours.length;
+
+                                // Apliquem la mateixa escala lògica que a la resta de l'app
+                                if (avgClouds > 85) code = 3;
+                                else if (avgClouds > 45) code = 2;
+                                else if (avgClouds > 15) code = 1;
+                                else code = 0;
+                            }
+                        }
+                        // --- FI MÀGIA VISUAL ---
 
                         return (
                             <button 
@@ -94,7 +122,8 @@ const ForecastSection = memo(function ForecastSection({
                                 {/* ICONA */}
                                 <div className="flex items-center justify-center flex-1 px-2 md:px-4">
                                      <div className="scale-75 md:scale-100 drop-shadow-lg transition-transform group-hover:scale-110 duration-300">
-                                        {getWeatherIcon(code, "w-10 h-10", true)}
+                                        {/* isDay=true, _rainProb=0, windSpeed=maxWind */}
+                                        {getWeatherIcon(code, "w-10 h-10", true, 0, maxWind)}
                                      </div>
                                 </div>
 

@@ -119,7 +119,14 @@ export const getWeatherIcon = (
       ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
     
-    if (code === 1 || code === 2) {
+    if (code === 1) {
+       const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
+       return isDay 
+         ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/10 ${windClass}`} />
+         : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/10 ${windClass}`} />;
+    }
+
+    if (code === 2) {
        const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
        return isDay 
          ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300 ${windClass}`} />
@@ -132,7 +139,8 @@ export const getWeatherIcon = (
     if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
 
     if (code >= 61 && code <= 65) {
-        if (!isDay && code <= 61) return <VariableRainIcon isDay={false} {...commonProps} />;
+        // Correcció: Ara la pluja feble mostrarà el sol o la lluna al darrere sempre
+        if (code <= 62) return <VariableRainIcon isDay={isDay} {...commonProps} />;
         return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-pulse`} />;
     }
 

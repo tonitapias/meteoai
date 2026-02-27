@@ -52,12 +52,38 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const pAmt = hourly.precipitation?.[targetIndex] || 0;
             const windSpeed = hourly.wind_speed_10m?.[targetIndex] || 0;
             
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const sAmt = (hourly as any).snowfall?.[targetIndex] || 0;
+            // CORRECCIÓ: Substituït el 'as any' per un càsting segur
+            const snowfallData = hourly.snowfall as number[] | undefined;
+            const sAmt = snowfallData?.[targetIndex] || 0;
             
             // MODIFICAT: Càsting segur per propietats dinàmiques "unknown"
             const weatherCodes = hourly.weather_code as number[] | undefined;
-            const code = weatherCodes?.[targetIndex] || 0;
+            const rawCode = weatherCodes?.[targetIndex] || 0;
+            
+            // --- INICI MÀGIA VISUAL (MOTOR INTEL·LIGENT) ---
+            // Extreure els núvols per capes i totals de l'hora de forma segura
+            const cloudTotal = (hourly.cloud_cover as number[] | undefined)?.[targetIndex] || 0;
+            const cloudLow = (hourly.cloud_cover_low as number[] | undefined)?.[targetIndex] || 0;
+            const cloudMid = (hourly.cloud_cover_mid as number[] | undefined)?.[targetIndex] || 0;
+            const cloudHigh = (hourly.cloud_cover_high as number[] | undefined)?.[targetIndex] || 0;
+
+            let code = rawCode;
+            
+            // Si l'API diu que no plou (codis 0, 1, 2, 3), apliquem el mateix motor intel·ligent que al temps actual
+            if (rawCode <= 3) {
+                const hasLayers = hourly.cloud_cover_low !== undefined;
+                
+                // Calculem la "cobertura efectiva" restant pes als núvols alts inofensius
+                const effectiveClouds = hasLayers 
+                    ? Math.min(100, (cloudLow * 1.0) + (cloudMid * 0.6) + (cloudHigh * 0.3))
+                    : cloudTotal;
+
+                if (effectiveClouds > 85) code = 3;      // Només núvols
+                else if (effectiveClouds > 45) code = 2; // Sol i núvols evidents
+                else if (effectiveClouds > 15) code = 1; // Sol gairebé net
+                else code = 0;                           // Sol net
+            }
+            // --- FI MÀGIA VISUAL ---
 
             const isDays = hourly.is_day as number[] | undefined;
             const isDay = isDays?.[targetIndex] === 1;
