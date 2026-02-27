@@ -13,8 +13,8 @@ type NotificationLevel = 'error' | 'success' | 'info';
 type NotificationAction = (payload: { type: NotificationLevel; msg: string }) => void;
 
 interface UseAppActionsProps {
-  t: TranslationType; // <- Tipus exacte en lloc de Record<string, string>
-  getCoordinates: () => Promise<{ lat: number; lon: number }>;
+  t: TranslationType; 
+  getCoordinates: () => Promise<{ lat: number; lon: number; name: string }>; // <-- Afegit el 'name: string'
   fetchWeatherByCoords: (lat: number, lon: number, name: string) => Promise<WeatherFetchResult>;
   setNotification: NotificationAction; // <- Tipus estricte
   weatherData: ExtendedWeatherData | null;
@@ -36,8 +36,8 @@ export function useAppActions({
 
   const handleGetCurrentLocation = useCallback(async () => {
     try {
-      const { lat, lon } = await getCoordinates();
-      const result = await fetchWeatherByCoords(lat, lon, "La Meva Ubicació");
+      const { lat, lon, name } = await getCoordinates();
+      const result = await fetchWeatherByCoords(lat, lon, name);
 
       if (result.success) {
         setNotification({ 
