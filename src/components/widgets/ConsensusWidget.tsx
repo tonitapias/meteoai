@@ -1,6 +1,6 @@
 import React from 'react';
-// 1. NOU: Importem les fletxes de tendència
-import { CheckCircle2, AlertTriangle, Thermometer, CloudRain, GitCompare, Wind, Clock, TrendingUp, TrendingDown, MoveRight } from 'lucide-react';
+// 1. Canviem AlertTriangle per Info
+import { CheckCircle2, Info, Thermometer, CloudRain, GitCompare, Wind, Clock, TrendingUp, TrendingDown, MoveRight } from 'lucide-react';
 import { ConsensusMetrics } from '../../utils/consensusMath';
 
 interface ConsensusWidgetProps {
@@ -16,7 +16,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
 }) => {
   if (!metrics.isConsensusActive) return null;
 
-  // Extraiem les noves variables de tendència
   const { 
     modelsAgree, tempDiff, precipDiff, windDiff, 
     wrfTemp, wrfPrecip, wrfWind, score, futureDivergence,
@@ -25,44 +24,47 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   
   const isCa = lang === 'ca';
 
+  // 2. Canvi de colors: Ambre per Indigo (Anàlisi/Incertesa en lloc de Perill)
   const bgGradient = modelsAgree 
     ? 'from-emerald-900/40 to-teal-900/20 border-emerald-500/30' 
-    : 'from-amber-900/40 to-orange-900/20 border-amber-500/30';
+    : 'from-indigo-900/40 to-blue-900/20 border-indigo-500/30';
   
-  const iconColor = modelsAgree ? 'text-emerald-400' : 'text-amber-400';
-  const glowColor = modelsAgree ? 'bg-emerald-500' : 'bg-amber-500';
-  const deltaBadgeBg = modelsAgree ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300';
-  const StatusIcon = modelsAgree ? CheckCircle2 : AlertTriangle;
+  const iconColor = modelsAgree ? 'text-emerald-400' : 'text-indigo-400';
+  const glowColor = modelsAgree ? 'bg-emerald-500' : 'bg-indigo-500';
+  const deltaBadgeBg = modelsAgree ? 'bg-emerald-500/20 text-emerald-300' : 'bg-indigo-500/20 text-indigo-300';
+  const StatusIcon = modelsAgree ? CheckCircle2 : Info; // Nova icona neutral
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border ${bgGradient} p-3 sm:p-5 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-lg flex flex-col gap-3 sm:gap-4`}>
       <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-20 ${glowColor} pointer-events-none`}></div>
 
-      {/* CAPÇALERA I SCORE (Sense canvis) */}
+      {/* CAPÇALERA I SCORE */}
       <div className="flex items-start sm:items-center justify-between relative z-10 gap-2">
         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
           <div className={`p-1.5 sm:p-2 rounded-full bg-black/40 shadow-inner border border-white/5 flex-shrink-0 ${iconColor}`}>
             <StatusIcon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
+            {/* 3. Textos informatius en lloc d'alarmistes */}
             <h3 className="text-sm sm:text-lg font-bold text-slate-100 tracking-wide leading-tight truncate sm:whitespace-normal">
               {modelsAgree 
-                ? (isCa ? 'Consens (Temps Real)' : 'Consensus (Real-Time)') 
-                : (isCa ? 'Divergència (Temps Real)' : 'Divergence (Real-Time)')}
+                ? (isCa ? 'Models Sincronitzats' : 'Models Synced') 
+                : (isCa ? 'Models en Desacord' : 'Models Disagree')}
             </h3>
             <p className="text-[9px] sm:text-xs text-slate-400 line-clamp-1 sm:line-clamp-none mt-0.5">
               {modelsAgree
-                ? (isCa ? 'Models sincronitzats ara' : 'Weather models synced now')
-                : (isCa ? 'Alta incertesa.' : 'High uncertainty.')}
+                ? (isCa ? 'Alta fiabilitat de la previsió actual.' : 'High reliability of current forecast.')
+                : (isCa ? 'Incertesa local. La previsió pot variar.' : 'Local uncertainty. Forecast may vary.')}
             </p>
           </div>
         </div>
         
         <div className="flex flex-col items-end flex-shrink-0 pl-1 sm:pl-2">
            <span className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">
-             {isCa ? 'Fiabilitat' : 'Score'}
+             {isCa ? 'Consens' : 'Consensus'}
            </span>
-           <div className={`text-xl sm:text-2xl font-black leading-none ${score >= 75 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+           {/* L'score baixa, però ja no és vermell/ambre d'emergència, sinó colors freds/neutres */}
+           <div className={`text-xl sm:text-2xl font-black leading-none ${score >= 75 ? 'text-emerald-400' : score >= 50 ? 'text-indigo-400' : 'text-slate-400'}`}>
              {score}%
            </div>
         </div>
