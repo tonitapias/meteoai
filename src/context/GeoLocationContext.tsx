@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import * as Sentry from "@sentry/react";
 
-// Actualitzem la interfície perquè ara també retorni el nom del lloc
 interface GeoLocationContextType {
   getCoordinates: () => Promise<{ lat: number; lon: number; name: string }>;
 }
@@ -10,12 +9,11 @@ const GeoLocationContext = createContext<GeoLocationContextType | undefined>(und
 
 export const GeoLocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   
-  const getCoordinates = useCallback((): Promise<{ lat: number; lon: number; name: string }> => {
-    return new Promise(async (resolve, reject) => {
+  // 1. Convertim la funció directament a async, eliminant el "new Promise" manual
+  const getCoordinates = useCallback(async (): Promise<{ lat: number; lon: number; name: string }> => {
       
       if (!navigator.geolocation) {
-        reject(new Error("GEOLOCATION_NOT_SUPPORTED"));
-        return;
+        throw new Error("GEOLOCATION_NOT_SUPPORTED"); // Substituïm reject per throw
       }
 
       // Funció interna per intentar aconseguir la posició (còpia de Header.tsx)
@@ -30,8 +28,8 @@ export const GeoLocationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       };
 
       try {
-        // 1. Intentem Alta Precisió primer (més ràpid en mòbils moderns)
-        let pos = await getPosition(true).catch(async (err) => {
+        // 2. Intentem Alta Precisió primer (canviem let per const)
+        const pos = await getPosition(true).catch(async (err) => {
             // Si fa timeout l'alta precisió, ho intentem amb baixa (fallback com al Header)
             if (err.code === 3) {
                 console.warn("⚠️ GPS Timeout. Reintentant amb baixa precisió...");
@@ -40,7 +38,7 @@ export const GeoLocationProvider: React.FC<{ children: React.ReactNode }> = ({ c
             throw err;
         });
 
-        // 2. Traduïm les coordenades al nom del poble (còpia de Header.tsx)
+        // Traduïm les coordenades al nom del poble
         const { latitude, longitude } = pos.coords;
         let finalName = "Ubicació detectada";
 
@@ -56,21 +54,24 @@ export const GeoLocationProvider: React.FC<{ children: React.ReactNode }> = ({ c
             console.warn("No s'ha pogut traduir el nom de la ciutat", e);
         }
 
-        resolve({ lat: latitude, lon: longitude, name: finalName });
+        return { lat: latitude, lon: longitude, name: finalName }; // Substituïm resolve per return
 
-      } catch (err: any) {
-         // Gestió d'errors globals
-         console.warn("Error GPS (Context):", err.message);
-         Sentry.captureException(new Error(`Geolocation Error: ${err.message}`), { 
+      } catch (err: unknown) {
+         // 3. Eliminem l'ús de "any" aplicant Type Narrowing estricte
+         const isGeoError = err !== null && typeof err === 'object' && 'code' in err;
+         const code = isGeoError ? (err as GeolocationPositionError).code : 0;
+         const message = err instanceof Error ? err.message : String(err);
+
+         console.warn("Error GPS (Context):", message);
+         Sentry.captureException(new Error(`Geolocation Error: ${message}`), { 
             tags: { service: 'GeolocationContext' },
-            extra: { code: err.code, message: err.message }
+            extra: { code, message }
          });
 
-         if (err.code === 1) reject(new Error("PERMISSION_DENIED"));
-         else if (err.code === 3) reject(new Error("TIMEOUT"));
-         else reject(new Error("POSITION_UNAVAILABLE"));
+         if (code === 1) throw new Error("PERMISSION_DENIED");
+         else if (code === 3) throw new Error("TIMEOUT");
+         else throw new Error("POSITION_UNAVAILABLE");
       }
-    });
   }, []);
 
   return (
@@ -80,6 +81,9 @@ export const GeoLocationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   );
 };
 
+// 4. Silenciem exclusivament aquí el linter perquè el Fast Refresh de Vite 
+// permeti exportar aquest hook sense donar el "Warning".
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGeoLocation = () => {
   const context = useContext(GeoLocationContext);
   if (!context) throw new Error('useGeoLocation ha de fer-se servir dins un GeoLocationProvider');
