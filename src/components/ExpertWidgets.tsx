@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
 import { getMoonPhase, calculateDewPoint } from '../utils/physics';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
@@ -8,6 +8,10 @@ import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
+// IMPORTACIONS DEL MÒDUL DE CONSENS (Risc Zero)
+import { useWRF } from '../hooks/useWRF';
+import { calculateModelConsensus } from '../utils/consensusMath';
+import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { 
   CompassGauge, 
   SnowLevelWidget, 
@@ -44,6 +48,31 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   
   const showSnowWidget = freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
+  // --- MÒDUL DE CONSENS (CALAIX INDEPENDENT) ---
+  const { wrfData, fetchWRFByCoords } = useWRF();
+  
+  // MODIFICAT: Creem un àlies segur i tipat per a la ubicació que evita l'error de "{}"
+  const safeLocation = location as { latitude?: number; longitude?: number } | undefined;
+
+  // Dispari'm la petició al WRF només quan tenim coordenades i no hem cridat ja.
+  useEffect(() => {
+    if (safeLocation?.latitude && safeLocation?.longitude) {
+      fetchWRFByCoords(safeLocation.latitude, safeLocation.longitude);
+    }
+  }, [safeLocation?.latitude, safeLocation?.longitude, fetchWRFByCoords]);
+
+  // Calculem les mètriques de consens (Funció pura, si falla, retorna inactiu i no trenca res)
+  const consensusMetrics = useMemo(() => {
+    return calculateModelConsensus(
+        current?.temperature_2m as number | undefined, 
+        current?.precipitation as number | undefined,
+        current?.wind_speed_10m as number | undefined, 
+        wrfData
+    );
+  }, [current?.temperature_2m, current?.precipitation, current?.wind_speed_10m, wrfData]);
+  // ---------------------------------------------
+
+
   if (!current) return null;
 
   const dewPointValue = (typeof current.dew_point_2m === 'number')
@@ -53,84 +82,98 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
         (current.relative_humidity_2m as number) || 0
       );
 
-  // MODIFICAT: Creem un àlies segur i tipat per a la ubicació que evita l'error de "{}"
-  const safeLocation = location as { latitude?: number; longitude?: number } | undefined;
-
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
-        
-        <WidgetCard>
-            <CompassGauge 
-                degrees={(current.wind_direction_10m as number) ?? 0} 
-                speed={(current.wind_speed_10m as number) ?? 0} 
-                gusts={(current.wind_gusts_10m as number) ?? 0}
-                label={lang === 'ca' ? "Vent" : "Wind"} 
-                lang={lang} 
-            />
-        </WidgetCard>
+    <>
+      {/* 
+        AQUÍ POSEM EL WIDGET DE CONSENS. 
+        Si 'isConsensusActive' és fals (error WRF, etc), el component s'ocultarà.
+        Col·locat fora del grid principal perquè ocupi tota l'amplada i destaqués
+      */}
+      <div className="w-full mb-6">
+         <ConsensusWidget 
+            metrics={consensusMetrics} 
+            aromeTemp={current.temperature_2m as number | undefined} 
+            aromePrecip={current.precipitation as number | undefined}
+            aromeWind={current.wind_speed_10m as number | undefined} 
+            lang={lang}
+         />
+      </div>
 
-        <WidgetCard>
-            <VisibilityWidget 
-                visibility={(current.visibility as number) ?? 10000} 
-                lang={lang} 
-            />
-        </WidgetCard>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
+          
+          <WidgetCard>
+              <CompassGauge 
+                  degrees={(current.wind_direction_10m as number) ?? 0} 
+                  speed={(current.wind_speed_10m as number) ?? 0} 
+                  gusts={(current.wind_gusts_10m as number) ?? 0}
+                  label={lang === 'ca' ? "Vent" : "Wind"} 
+                  lang={lang} 
+              />
+          </WidgetCard>
 
-        <WidgetCard>
-            <CloudLayersWidget 
-                low={(current.cloud_cover_low as number) ?? 0} 
-                mid={(current.cloud_cover_mid as number) ?? 0} 
-                high={(current.cloud_cover_high as number) ?? 0} 
-                lang={lang} 
-            />
-        </WidgetCard>
+          <WidgetCard>
+              <VisibilityWidget 
+                  visibility={(current.visibility as number) ?? 10000} 
+                  lang={lang} 
+              />
+          </WidgetCard>
 
-        <WidgetCard>
-            <CircularGauge 
-                icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>} 
-                label={lang === 'ca' ? "Pressió" : "Pressure"} 
-                value={Math.round((current.pressure_msl ?? 1013) as number)} 
-                max={1050} 
-                subText="hPa" 
-                color="text-indigo-400" 
-            />
-        </WidgetCard>
+          <WidgetCard>
+              <CloudLayersWidget 
+                  low={(current.cloud_cover_low as number) ?? 0} 
+                  mid={(current.cloud_cover_mid as number) ?? 0} 
+                  high={(current.cloud_cover_high as number) ?? 0} 
+                  lang={lang} 
+              />
+          </WidgetCard>
 
-        <WidgetCard>
-            <DewPointWidget 
-                value={dewPointValue} 
-                humidity={(current.relative_humidity_2m as number) ?? 0} 
-                lang={lang} 
-            />
-        </WidgetCard>
+          <WidgetCard>
+              <CircularGauge 
+                  icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>} 
+                  label={lang === 'ca' ? "Pressió" : "Pressure"} 
+                  value={Math.round((current.pressure_msl ?? 1013) as number)} 
+                  max={1050} 
+                  subText="hPa" 
+                  color="text-indigo-400" 
+              />
+          </WidgetCard>
 
-        <WidgetCard>
-            <CapeWidget cape={(hourly?.cape?.[0] as number) ?? 0} lang={lang} />
-        </WidgetCard>
+          <WidgetCard>
+              <DewPointWidget 
+                  value={dewPointValue} 
+                  humidity={(current.relative_humidity_2m as number) ?? 0} 
+                  lang={lang} 
+              />
+          </WidgetCard>
 
-        <WidgetCard cols={2}>
-            <PollenWidget data={aqiData?.current as Record<string, unknown>} lang={lang} />
-        </WidgetCard>
+          <WidgetCard>
+              <CapeWidget cape={(hourly?.cape?.[0] as number) ?? 0} lang={lang} />
+          </WidgetCard>
 
-        <WidgetCard>
-            {/* MODIFICAT: Utilitzem el safeLocation aquí */}
-            <MoonWidget phase={moonPhaseVal} lat={safeLocation?.latitude || 41} lang={lang} />
-        </WidgetCard>
+          <WidgetCard cols={2}>
+              <PollenWidget data={aqiData?.current as Record<string, unknown>} lang={lang} />
+          </WidgetCard>
 
-        <WidgetCard cols={2}>
-            <SunArcWidget 
-                sunrise={(daily?.sunrise?.[0] as string) || ''} 
-                sunset={(daily?.sunset?.[0] as string) || ''} 
-                lang={lang} 
-                utcOffset={utc_offset_seconds as number} 
-            />
-        </WidgetCard>
+          <WidgetCard>
+              {/* MODIFICAT: Utilitzem el safeLocation aquí */}
+              <MoonWidget phase={moonPhaseVal} lat={safeLocation?.latitude || 41} lang={lang} />
+          </WidgetCard>
 
-        {showSnowWidget && (
-            <WidgetCard>
-                <SnowLevelWidget freezingLevel={freezingLevel} unit={unit} lang={lang} />
-            </WidgetCard>
-        )}
-    </div>
+          <WidgetCard cols={2}>
+              <SunArcWidget 
+                  sunrise={(daily?.sunrise?.[0] as string) || ''} 
+                  sunset={(daily?.sunset?.[0] as string) || ''} 
+                  lang={lang} 
+                  utcOffset={utc_offset_seconds as number} 
+              />
+          </WidgetCard>
+
+          {showSnowWidget && (
+              <WidgetCard>
+                  <SnowLevelWidget freezingLevel={freezingLevel} unit={unit} lang={lang} />
+              </WidgetCard>
+          )}
+      </div>
+    </>
   );
 }
