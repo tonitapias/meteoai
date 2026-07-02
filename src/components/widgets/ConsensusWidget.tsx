@@ -1,6 +1,6 @@
 import React from 'react';
-// 1. Canviem AlertTriangle per Info
-import { CheckCircle2, Info, Thermometer, CloudRain, GitCompare, Wind, Clock, TrendingUp, TrendingDown, MoveRight } from 'lucide-react';
+// Hem canviat les icones d'alerta per 'Mountain' i 'Activity' per donar un toc científic
+import { Thermometer, CloudRain, GitCompare, Wind, Clock, TrendingUp, TrendingDown, MoveRight, Mountain, Activity } from 'lucide-react';
 import { ConsensusMetrics } from '../../utils/consensusMath';
 
 interface ConsensusWidgetProps {
@@ -17,61 +17,68 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   if (!metrics.isConsensusActive) return null;
 
   const { 
-    modelsAgree, tempDiff, precipDiff, windDiff, 
+    tempDiff, precipDiff, windDiff, 
     wrfTemp, wrfPrecip, wrfWind, score, futureDivergence,
     tempTrend, precipTrend, windTrend 
   } = metrics;
   
   const isCa = lang === 'ca';
 
-  // 2. Canvi de colors: Ambre per Indigo (Anàlisi/Incertesa en lloc de Perill)
-  const bgGradient = modelsAgree 
-    ? 'from-emerald-900/40 to-teal-900/20 border-emerald-500/30' 
-    : 'from-indigo-900/40 to-blue-900/20 border-indigo-500/30';
+  // 1. GRAUS D'AFINITAT (Sense alarmismes)
+  const isHighConsensus = score >= 75;
+  const isMidConsensus = score >= 50 && score < 75;
   
-  const iconColor = modelsAgree ? 'text-emerald-400' : 'text-indigo-400';
-  const glowColor = modelsAgree ? 'bg-emerald-500' : 'bg-indigo-500';
-  const deltaBadgeBg = modelsAgree ? 'bg-emerald-500/20 text-emerald-300' : 'bg-indigo-500/20 text-indigo-300';
-  const StatusIcon = modelsAgree ? CheckCircle2 : Info; // Nova icona neutral
+  // 2. PALETA DE COLORS ANALÍTICA
+  // Maragda (Sincronitzat) -> Cian (Lleugera variació) -> Indi (Complexitat orogràfica)
+  const accentText = isHighConsensus ? 'text-emerald-400' : (isMidConsensus ? 'text-cyan-400' : 'text-indigo-400');
+  const accentBg = isHighConsensus ? 'bg-emerald-500' : (isMidConsensus ? 'bg-cyan-500' : 'bg-indigo-500');
+  const badgeClass = isHighConsensus ? 'bg-emerald-500/10 text-emerald-300' : (isMidConsensus ? 'bg-cyan-500/10 text-cyan-300' : 'bg-indigo-500/10 text-indigo-300');
+  
+  // 3. ICONOGRAFIA CONTEXTUAL
+  const StatusIcon = isHighConsensus ? Activity : Mountain;
+
+  // 4. LÈXIC PROFESSIONAL I GEOGRÀFIC
+  const title = isCa 
+    ? (isHighConsensus ? 'Models Alineats' : 'Efecte Orogràfic')
+    : (isHighConsensus ? 'Models Aligned' : 'Orographic Effect');
+
+  const subtitle = isCa
+    ? (isHighConsensus ? 'Alta estabilitat atmosfèrica a la zona' : 'El relleu genera discrepàncies locals')
+    : (isHighConsensus ? 'High atmospheric stability' : 'Terrain causes local discrepancies');
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border ${bgGradient} p-3 sm:p-5 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-lg flex flex-col gap-3 sm:gap-4`}>
-      <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-20 ${glowColor} pointer-events-none`}></div>
+    // Fons elegant de 'dashboard' científic. Mai es torna vermell.
+    <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-950/90 p-3 sm:p-5 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-xl flex flex-col gap-3 sm:gap-4">
+      <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full blur-[60px] opacity-15 pointer-events-none ${accentBg}`}></div>
 
       {/* CAPÇALERA I SCORE */}
       <div className="flex items-start sm:items-center justify-between relative z-10 gap-2">
         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-          <div className={`p-1.5 sm:p-2 rounded-full bg-black/40 shadow-inner border border-white/5 flex-shrink-0 ${iconColor}`}>
-            <StatusIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className={`p-1.5 sm:p-2 rounded-full bg-white/5 border border-white/5 flex-shrink-0 ${accentText}`}>
+            <StatusIcon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
           </div>
           <div className="min-w-0">
-            {/* 3. Textos informatius en lloc d'alarmistes */}
             <h3 className="text-sm sm:text-lg font-bold text-slate-100 tracking-wide leading-tight truncate sm:whitespace-normal">
-              {modelsAgree 
-                ? (isCa ? 'Models Sincronitzats' : 'Models Synced') 
-                : (isCa ? 'Models en Desacord' : 'Models Disagree')}
+              {title}
             </h3>
             <p className="text-[9px] sm:text-xs text-slate-400 line-clamp-1 sm:line-clamp-none mt-0.5">
-              {modelsAgree
-                ? (isCa ? 'Alta fiabilitat de la previsió actual.' : 'High reliability of current forecast.')
-                : (isCa ? 'Incertesa local. La previsió pot variar.' : 'Local uncertainty. Forecast may vary.')}
+              {subtitle}
             </p>
           </div>
         </div>
         
         <div className="flex flex-col items-end flex-shrink-0 pl-1 sm:pl-2">
-           <span className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">
-             {isCa ? 'Consens' : 'Consensus'}
+           <span className="text-[8px] sm:text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">
+             {isCa ? 'Afinitat' : 'Affinity'}
            </span>
-           {/* L'score baixa, però ja no és vermell/ambre d'emergència, sinó colors freds/neutres */}
-           <div className={`text-xl sm:text-2xl font-black leading-none ${score >= 75 ? 'text-emerald-400' : score >= 50 ? 'text-indigo-400' : 'text-slate-400'}`}>
+           <div className={`text-xl sm:text-2xl font-black leading-none ${accentText}`}>
              {score}%
            </div>
         </div>
       </div>
 
-      {/* TAULA DE DADES */}
-      <div className="grid grid-cols-3 gap-1 sm:gap-2 relative z-10 bg-black/20 rounded-xl p-1.5 sm:p-3 border border-white/5">
+      {/* TAULA DE DADES (Amb les fletxes de tendència intactes) */}
+      <div className="grid grid-cols-3 gap-1 sm:gap-2 relative z-10 bg-black/40 rounded-xl p-1.5 sm:p-3 border border-white/5 shadow-inner">
         
         {/* LOCAL */}
         <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg bg-white/5 overflow-hidden">
@@ -88,8 +95,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           <span className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold text-center border-b border-white/10 pb-1 truncate">
             {isCa ? 'Global' : 'Global'} <span className="hidden sm:inline">Model</span>
           </span>
-          
-          {/* Temperatura */}
           <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
             <Thermometer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 flex-shrink-0"/> 
             <span className="flex items-center gap-1">
@@ -99,8 +104,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
               {wrfTemp ?? '--'}°
             </span>
           </div>
-          
-          {/* Pluja */}
           <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
             <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0"/> 
             <span className="flex items-center gap-1">
@@ -110,8 +113,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
               {wrfPrecip ?? 0} mm
             </span>
           </div>
-          
-          {/* Vent */}
           <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
             <Wind className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0"/> 
             <span className="flex items-center gap-1">
@@ -123,23 +124,25 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           </div>
         </div>
 
-        {/* DESVIACIÓ (Sense canvis) */}
+        {/* DESVIACIÓ */}
         <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg border-l border-white/10 pl-1.5 sm:pl-3">
           <div className="flex items-center gap-1 text-slate-400 justify-center border-b border-white/10 pb-1">
             <GitCompare className="w-3 h-3 hidden sm:block" />
             <span className="text-[8px] sm:text-[10px] uppercase tracking-wider font-semibold">Delta</span>
           </div>
-          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${deltaBadgeBg}`}>Δ {tempDiff}°</div>
-          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${deltaBadgeBg}`}>Δ {precipDiff}</div>
-          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${deltaBadgeBg}`}>Δ {windDiff}</div>
+          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${badgeClass}`}>Δ {tempDiff}°</div>
+          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${badgeClass}`}>Δ {precipDiff}</div>
+          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${badgeClass}`}>Δ {windDiff}</div>
         </div>
       </div>
 
-      {/* RADAR 3H */}
+      {/* RADAR 3H - Ara és una nota informativa, no una alerta taronja */}
       {futureDivergence && (
-        <div className="flex items-start sm:items-center gap-2 mt-1 sm:mt-2 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px] sm:text-xs py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg relative z-10">
-          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5 sm:mt-0" />
-          <span className="leading-tight">{isCa ? 'Alerta: El model preveu un canvi sobtat (vent/pluja) en les properes 3 hores.' : 'Alert: Sudden change (wind/rain) predicted in the next 3 hours.'}</span>
+        <div className="flex items-start sm:items-center gap-2 mt-1 sm:mt-2 bg-white/5 border border-white/10 text-slate-300 text-[10px] sm:text-xs py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg relative z-10">
+          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-cyan-400 mt-0.5 sm:mt-0" />
+          <span className="leading-tight">
+            {isCa ? 'Nota: El radar detecta inèrcia de canvi (vent/pluja) a 3 hores vista.' : 'Note: Change inertia (wind/rain) detected in the next 3 hours.'}
+          </span>
         </div>
       )}
     </div>
