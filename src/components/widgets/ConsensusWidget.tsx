@@ -1,150 +1,238 @@
+// src/components/widgets/ConsensusWidget.tsx
 import React from 'react';
-// Hem canviat les icones d'alerta per 'Mountain' i 'Activity' per donar un toc científic
-import { Thermometer, CloudRain, GitCompare, Wind, Clock, TrendingUp, TrendingDown, MoveRight, Mountain, Activity } from 'lucide-react';
 import { ConsensusMetrics } from '../../utils/consensusMath';
+import { Language } from '../../translations';
+import { 
+  CheckCircle2, 
+  Activity, 
+  GitBranch, 
+  Thermometer, 
+  CloudRain, 
+  CloudSnow, 
+  Wind,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoveRight
+} from 'lucide-react';
 
 interface ConsensusWidgetProps {
   metrics: ConsensusMetrics;
-  aromeTemp?: number;
-  aromePrecip?: number;
-  aromeWind?: number;
-  lang?: 'ca' | 'en' | 'es' | 'fr' | string;
+  aromeTemp: number | undefined;
+  aromePrecip: number | undefined;
+  aromeWind: number | undefined;
+  lang: Language;
 }
 
-export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({ 
-  metrics, aromeTemp, aromePrecip = 0, aromeWind = 0, lang = 'ca' 
+export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
+  metrics,
+  aromeTemp,
+  aromePrecip,
+  aromeWind,
+  lang
 }) => {
-  if (!metrics.isConsensusActive) return null;
-
-  const { 
-    tempDiff, precipDiff, windDiff, 
-    wrfTemp, wrfPrecip, wrfWind, score, futureDivergence,
-    tempTrend, precipTrend, windTrend 
-  } = metrics;
-  
+  // 1. DICCIONARI D'IDIOMES
   const isCa = lang === 'ca';
+  const t = {
+    title: isCa ? 'Consens de Models' : 'Models Consensus',
+    affinity: isCa ? 'Afinitat' : 'Affinity',
+    temp: isCa ? 'Temp' : 'Temp',
+    rain: isCa ? 'Pluja' : 'Rain',
+    snow: isCa ? 'Neu' : 'Snow',
+    wind: isCa ? 'Vent' : 'Wind',
+    diff: isCa ? 'Dif.' : 'Diff.',
+    status: {
+      sync: isCa ? 'Sincronitzat' : 'Synchronized',
+      discrepancy: isCa ? 'Discrepància' : 'Discrepancy',
+      alert: isCa ? 'Alerta Models' : 'Models Alert',
+    }
+  };
 
-  // 1. GRAUS D'AFINITAT (Sense alarmismes)
-  const isHighConsensus = score >= 75;
-  const isMidConsensus = score >= 50 && score < 75;
-  
-  // 2. PALETA DE COLORS ANALÍTICA
-  // Maragda (Sincronitzat) -> Cian (Lleugera variació) -> Indi (Complexitat orogràfica)
-  const accentText = isHighConsensus ? 'text-emerald-400' : (isMidConsensus ? 'text-cyan-400' : 'text-indigo-400');
-  const accentBg = isHighConsensus ? 'bg-emerald-500' : (isMidConsensus ? 'bg-cyan-500' : 'bg-indigo-500');
-  const badgeClass = isHighConsensus ? 'bg-emerald-500/10 text-emerald-300' : (isMidConsensus ? 'bg-cyan-500/10 text-cyan-300' : 'bg-indigo-500/10 text-indigo-300');
-  
-  // 3. ICONOGRAFIA CONTEXTUAL
-  const StatusIcon = isHighConsensus ? Activity : Mountain;
+  // 2. ACTIVADOR TÈRMIC DE NEU
+  const isSnowRisk = (aromeTemp !== undefined && aromeTemp <= 2) || 
+                     (metrics.wrfTemp !== null && metrics.wrfTemp <= 2);
 
-  // 4. LÈXIC PROFESSIONAL I GEOGRÀFIC
-  const title = isCa 
-    ? (isHighConsensus ? 'Models Alineats' : 'Efecte Orogràfic')
-    : (isHighConsensus ? 'Models Aligned' : 'Orographic Effect');
+  // 3. PALETA NEON-GLASS
+  const getTheme = (score: number) => {
+    if (score >= 75) return { 
+      text: 'text-emerald-400', stroke: 'stroke-emerald-400', 
+      glow: 'bg-emerald-500/20'
+    };
+    if (score >= 55) return { 
+      text: 'text-sky-400', stroke: 'stroke-sky-400', 
+      glow: 'bg-sky-500/20'
+    };
+    return { 
+      text: 'text-rose-400', stroke: 'stroke-rose-400', 
+      glow: 'bg-rose-500/20'
+    };
+  };
 
-  const subtitle = isCa
-    ? (isHighConsensus ? 'Alta estabilitat atmosfèrica a la zona' : 'El relleu genera discrepàncies locals')
-    : (isHighConsensus ? 'High atmospheric stability' : 'Terrain causes local discrepancies');
+  const theme = getTheme(metrics.score);
+
+  // 4. MATEMÀTICA DE L'ANELL
+  const radius = 50; 
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (metrics.score / 100) * circumference;
+
+  // 5. RENDER DE TENDÈNCIES
+  const renderTrend = (trend: 'up' | 'down' | 'flat') => {
+    if (trend === 'flat') return <MoveRight className="w-4 h-4 text-slate-500" />;
+    return trend === 'up' 
+      ? <ArrowUpRight className="w-4 h-4 text-rose-400" />
+      : <ArrowDownRight className="w-4 h-4 text-sky-400" />;
+  };
+
+  const getStatus = (score: number) => {
+    if (score >= 75) return { label: t.status.sync, icon: <CheckCircle2 className="w-4 h-4" /> };
+    if (score >= 55) return { label: t.status.discrepancy, icon: <Activity className="w-4 h-4" /> };
+    return { label: t.status.alert, icon: <GitBranch className="w-4 h-4" /> };
+  };
+
+  const status = getStatus(metrics.score);
+
+  const formatVal = (val: number | null | undefined) => val !== null && val !== undefined ? val : '--';
+  const formatDelta = (val: number | null | undefined) => val !== null && val !== undefined ? val.toFixed(1) : '--';
 
   return (
-    // Fons elegant de 'dashboard' científic. Mai es torna vermell.
-    <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-950/90 p-3 sm:p-5 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-xl flex flex-col gap-3 sm:gap-4">
-      <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full blur-[60px] opacity-15 pointer-events-none ${accentBg}`}></div>
+    // CONTENIDOR PRINCIPAL (Glassmorphism Pur)
+    <div className="w-full relative overflow-hidden bg-slate-950/40 backdrop-blur-2xl border border-white/10 rounded-[28px] p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+       
+       {/* LLUM LÍQUIDA SURREALISTA (Fons animat) */}
+       <style>
+         {`
+           @keyframes blob {
+             0% { transform: translate(0px, 0px) scale(1); }
+             33% { transform: translate(30px, -50px) scale(1.1); }
+             66% { transform: translate(-20px, 20px) scale(0.9); }
+             100% { transform: translate(0px, 0px) scale(1); }
+           }
+           .animate-blob { animation: blob 10s infinite alternate; }
+         `}
+       </style>
+       <div className={`absolute -top-10 -left-10 w-64 h-64 rounded-full mix-blend-screen filter blur-[80px] opacity-60 animate-blob pointer-events-none z-0 ${theme.glow}`}></div>
+       <div className={`absolute -bottom-10 -right-10 w-64 h-64 rounded-full mix-blend-screen filter blur-[80px] opacity-40 animate-blob pointer-events-none z-0 ${theme.glow}`} style={{ animationDelay: '2s' }}></div>
 
-      {/* CAPÇALERA I SCORE */}
-      <div className="flex items-start sm:items-center justify-between relative z-10 gap-2">
-        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-          <div className={`p-1.5 sm:p-2 rounded-full bg-white/5 border border-white/5 flex-shrink-0 ${accentText}`}>
-            <StatusIcon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-sm sm:text-lg font-bold text-slate-100 tracking-wide leading-tight truncate sm:whitespace-normal">
-              {title}
-            </h3>
-            <p className="text-[9px] sm:text-xs text-slate-400 line-clamp-1 sm:line-clamp-none mt-0.5">
-              {subtitle}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex flex-col items-end flex-shrink-0 pl-1 sm:pl-2">
-           <span className="text-[8px] sm:text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">
-             {isCa ? 'Afinitat' : 'Affinity'}
-           </span>
-           <div className={`text-xl sm:text-2xl font-black leading-none ${accentText}`}>
-             {score}%
-           </div>
-        </div>
-      </div>
+       {/* CAPÇALERA (Flotant) */}
+       <div className="flex justify-between items-center w-full mb-6 relative z-10">
+         <h2 className="text-xs sm:text-sm font-black text-white/90 uppercase tracking-[0.2em] drop-shadow-md">
+           {t.title}
+         </h2>
+         <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full border border-white/10 bg-black/20 text-white/90 tracking-widest backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+           {React.cloneElement(status.icon as React.ReactElement<{ className: string }>, { className: `w-3.5 h-3.5 ${theme.text}` })}
+           {status.label}
+         </div>
+       </div>
 
-      {/* TAULA DE DADES (Amb les fletxes de tendència intactes) */}
-      <div className="grid grid-cols-3 gap-1 sm:gap-2 relative z-10 bg-black/40 rounded-xl p-1.5 sm:p-3 border border-white/5 shadow-inner">
-        
-        {/* LOCAL */}
-        <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg bg-white/5 overflow-hidden">
-          <span className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold text-center border-b border-white/10 pb-1 truncate">
-            {isCa ? 'Local' : 'Local'} <span className="hidden sm:inline">Model</span>
-          </span>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white"><Thermometer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 flex-shrink-0"/> <span>{aromeTemp ?? '--'}°</span></div>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white"><CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0"/> <span>{aromePrecip ?? 0} mm</span></div>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white"><Wind className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0"/> <span>{aromeWind ?? 0}</span></div>
-        </div>
+       {/* GRAELLA PRINCIPAL (Bento Layout) */}
+       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 w-full relative z-10">
 
-        {/* GLOBAL AMB TENDÈNCIA */}
-        <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg bg-white/5 overflow-hidden">
-          <span className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold text-center border-b border-white/10 pb-1 truncate">
-            {isCa ? 'Global' : 'Global'} <span className="hidden sm:inline">Model</span>
-          </span>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
-            <Thermometer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 flex-shrink-0"/> 
-            <span className="flex items-center gap-1">
-              {tempTrend === 'up' && <TrendingUp className="w-3 h-3 text-red-400/80"/>}
-              {tempTrend === 'down' && <TrendingDown className="w-3 h-3 text-blue-400/80"/>}
-              {tempTrend === 'flat' && <MoveRight className="w-3 h-3 text-slate-500/50"/>}
-              {wrfTemp ?? '--'}°
-            </span>
+          {/* L'ANELL NEON (Alta definició) */}
+          <div className="relative flex items-center justify-center shrink-0 w-32 h-32 drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+             <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                <circle cx="64" cy="64" r={radius} className="stroke-black/40" strokeWidth="6" fill="transparent" />
+                <circle cx="64" cy="64" r={radius} className="stroke-white/5" strokeWidth="6" fill="transparent" />
+                <circle
+                   cx="64" cy="64" r={radius}
+                   className={`${theme.stroke} transition-all duration-1000 ease-out`}
+                   strokeWidth="6" fill="transparent"
+                   strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+                   style={{ filter: 'drop-shadow(0 0 4px currentColor)' }}
+                />
+             </svg>
+             <div className="flex flex-col items-center justify-center">
+                <div className="flex items-start">
+                   <span className="text-4xl font-black leading-none tracking-tighter text-white drop-shadow-lg">
+                      {metrics.score}
+                   </span>
+                   <span className={`text-lg font-bold leading-none ml-0.5 ${theme.text}`}>%</span>
+                </div>
+                <span className="text-[9px] text-white/50 uppercase tracking-[0.2em] font-bold mt-1.5">
+                   {t.affinity}
+                </span>
+             </div>
           </div>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
-            <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0"/> 
-            <span className="flex items-center gap-1">
-              {precipTrend === 'up' && <TrendingUp className="w-3 h-3 text-cyan-400/80"/>}
-              {precipTrend === 'down' && <TrendingDown className="w-3 h-3 text-slate-400/80"/>}
-              {precipTrend === 'flat' && <MoveRight className="w-3 h-3 text-slate-500/50"/>}
-              {wrfPrecip ?? 0} mm
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white">
-            <Wind className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0"/> 
-            <span className="flex items-center gap-1">
-              {windTrend === 'up' && <TrendingUp className="w-3 h-3 text-amber-400/80"/>}
-              {windTrend === 'down' && <TrendingDown className="w-3 h-3 text-emerald-400/80"/>}
-              {windTrend === 'flat' && <MoveRight className="w-3 h-3 text-slate-500/50"/>}
-              {wrfWind ?? 0}
-            </span>
-          </div>
-        </div>
 
-        {/* DESVIACIÓ */}
-        <div className="flex flex-col gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg border-l border-white/10 pl-1.5 sm:pl-3">
-          <div className="flex items-center gap-1 text-slate-400 justify-center border-b border-white/10 pb-1">
-            <GitCompare className="w-3 h-3 hidden sm:block" />
-            <span className="text-[8px] sm:text-[10px] uppercase tracking-wider font-semibold">Delta</span>
-          </div>
-          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${badgeClass}`}>Δ {tempDiff}°</div>
-          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${badgeClass}`}>Δ {precipDiff}</div>
-          <div className={`text-center py-0.5 px-0.5 sm:px-0 rounded text-[9px] sm:text-xs font-bold ${badgeClass}`}>Δ {windDiff}</div>
-        </div>
-      </div>
+          {/* TARGETES DE DADES (Cristall Bento) */}
+          <div className="flex-1 grid grid-cols-3 gap-3 w-full">
 
-      {/* RADAR 3H - Ara és una nota informativa, no una alerta taronja */}
-      {futureDivergence && (
-        <div className="flex items-start sm:items-center gap-2 mt-1 sm:mt-2 bg-white/5 border border-white/10 text-slate-300 text-[10px] sm:text-xs py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg relative z-10">
-          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-cyan-400 mt-0.5 sm:mt-0" />
-          <span className="leading-tight">
-            {isCa ? 'Nota: El radar detecta inèrcia de canvi (vent/pluja) a 3 hores vista.' : 'Note: Change inertia (wind/rain) detected in the next 3 hours.'}
-          </span>
-        </div>
-      )}
+             {/* TARGETA TEMPERATURA */}
+             <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-3 border border-white/10 flex flex-col shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-transform hover:-translate-y-1 hover:bg-white/[0.05] duration-300">
+                <div className="flex justify-center items-center gap-1.5 text-white/70 text-xs font-bold mb-3">
+                   <Thermometer className="w-3.5 h-3.5" /> {t.temp}
+                </div>
+                
+                <div className="flex flex-col gap-1 mb-3">
+                   <div className="flex justify-between items-baseline">
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Local</span>
+                      <span className="text-sm font-black text-white">{formatVal(aromeTemp)}°</span>
+                   </div>
+                   <div className="flex justify-between items-baseline">
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Global</span>
+                      <span className="text-sm font-bold text-white/60">{formatVal(metrics.wrfTemp)}°</span>
+                   </div>
+                </div>
+
+                <div className="mt-auto bg-black/30 rounded-xl p-2 flex justify-between items-center border border-white/5">
+                   <span className="text-[9px] font-bold text-white/40">{t.diff}</span>
+                   <div className="flex items-center gap-1 text-xs font-black text-white">
+                      {formatDelta(metrics.tempDiff)}° {renderTrend(metrics.tempTrend)}
+                   </div>
+                </div>
+             </div>
+
+             {/* TARGETA PLUJA / NEU */}
+             <div className={`bg-white/[0.03] backdrop-blur-xl rounded-2xl p-3 border flex flex-col shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-transform hover:-translate-y-1 duration-300 ${isSnowRisk ? 'border-sky-400/30 bg-sky-950/20' : 'border-white/10 hover:bg-white/[0.05]'}`}>
+                <div className={`flex justify-center items-center gap-1.5 text-xs font-bold mb-3 ${isSnowRisk ? 'text-sky-300' : 'text-white/70'}`}>
+                   {isSnowRisk ? <CloudSnow className="w-3.5 h-3.5 animate-pulse" /> : <CloudRain className="w-3.5 h-3.5" />}
+                   {isSnowRisk ? t.snow : t.rain}
+                </div>
+                
+                <div className="flex flex-col gap-1 mb-3">
+                   <div className="flex justify-between items-baseline">
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Local</span>
+                      <span className="text-sm font-black text-white">{formatVal(aromePrecip)}<span className="text-[9px] font-normal ml-0.5 text-white/50">mm</span></span>
+                   </div>
+                   <div className="flex justify-between items-baseline">
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Global</span>
+                      <span className="text-sm font-bold text-white/60">{formatVal(metrics.wrfPrecip)}<span className="text-[9px] font-normal ml-0.5 text-white/40">mm</span></span>
+                   </div>
+                </div>
+
+                <div className="mt-auto bg-black/30 rounded-xl p-2 flex justify-between items-center border border-white/5">
+                   <span className="text-[9px] font-bold text-white/40">{t.diff}</span>
+                   <div className="flex items-center gap-1 text-xs font-black text-white">
+                      {formatDelta(metrics.precipDiff)} {renderTrend(metrics.precipTrend)}
+                   </div>
+                </div>
+             </div>
+
+             {/* TARGETA VENT */}
+             <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-3 border border-white/10 flex flex-col shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-transform hover:-translate-y-1 hover:bg-white/[0.05] duration-300">
+                <div className="flex justify-center items-center gap-1.5 text-white/70 text-xs font-bold mb-3">
+                   <Wind className="w-3.5 h-3.5" /> {t.wind}
+                </div>
+                
+                <div className="flex flex-col gap-1 mb-3">
+                   <div className="flex justify-between items-baseline">
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Local</span>
+                      <span className="text-sm font-black text-white">{formatVal(aromeWind)}<span className="text-[9px] font-normal ml-0.5 text-white/50">km/h</span></span>
+                   </div>
+                   <div className="flex justify-between items-baseline">
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Global</span>
+                      <span className="text-sm font-bold text-white/60">{formatVal(metrics.wrfWind)}<span className="text-[9px] font-normal ml-0.5 text-white/40">km/h</span></span>
+                   </div>
+                </div>
+
+                <div className="mt-auto bg-black/30 rounded-xl p-2 flex justify-between items-center border border-white/5">
+                   <span className="text-[9px] font-bold text-white/40">{t.diff}</span>
+                   <div className="flex items-center gap-1 text-xs font-black text-white">
+                      {formatDelta(metrics.windDiff)} {renderTrend(metrics.windTrend)}
+                   </div>
+                </div>
+             </div>
+
+          </div>
+       </div>
     </div>
   );
 };
