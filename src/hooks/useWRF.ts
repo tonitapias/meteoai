@@ -32,7 +32,7 @@ export function useWRF() {
       // Ajusta la URL i els paràmetres segons l'endpoint exacte del WRF que facis servir a Open-Meteo
       // Nota: Si WRF no està al root default, potser necessites el domini regional d'Open-Meteo.
       // Exemple de com hauria de ser la teva URL dins de useWRF.ts
-const WRF_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&models=best_match`;
+const WRF_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&models=best_match&timezone=auto`;
 
 const response = await fetch(WRF_URL);
       

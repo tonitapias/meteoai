@@ -12,7 +12,6 @@ export interface ConsensusMetrics {
   wrfTemp: number | null;
   wrfPrecip: number | null;
   wrfWind: number | null;
-  // NOU: Afegim les tres fletxes de tendència
   tempTrend: 'up' | 'down' | 'flat';
   precipTrend: 'up' | 'down' | 'flat';
   windTrend: 'up' | 'down' | 'flat';
@@ -36,20 +35,41 @@ export function calculateModelConsensus(
   }
 
   try {
-    const currentHourIndex = new Date().getHours();
-    const safeHourly = wrfData.hourly as Record<string, (number | null)[]>;
+    const safeHourly = wrfData.hourly as Record<string, (string | number | null)[]>;
+    
+    // 1. SINCRONITZACIÓ HORÀRIA PRECISA
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    
+    // Creem l'etiqueta d'hora exacta local (ex: "2026-07-03T12:00")
+    const currentIsoString = `${year}-${month}-${day}T${hours}:00`;
+    
+    // Busquem l'índex exacte on l'array 'time' coincideix amb la nostra etiqueta
+    let currentHourIndex = -1;
+    if (safeHourly.time && Array.isArray(safeHourly.time)) {
+       currentHourIndex = safeHourly.time.findIndex(timeStr => String(timeStr).startsWith(currentIsoString));
+    }
 
-    // 1. EXTRACCIÓ ACTUAL
+    // Fallback de seguretat si la cerca falla (tornem al sistema clàssic per evitar que l'app caigui)
+    if (currentHourIndex === -1) {
+       console.warn(`No s'ha trobat l'hora exacta ${currentIsoString} a les dades WRF. Usant fallback.`);
+       currentHourIndex = now.getHours();
+    }
+
+    // 2. EXTRACCIÓ ACTUAL SINCRONITZADA
     const wrfTemp = safeHourly.temperature_2m?.[currentHourIndex];
     const wrfPrecip = safeHourly.precipitation?.[currentHourIndex];
-    const wrfWind = safeHourly.wind_speed_10m?.[currentHourIndex] ?? 0;
+    const wrfWind = Number(safeHourly.wind_speed_10m?.[currentHourIndex] ?? 0);
     const safeAromeWind = aromeWind ?? 0;
 
     if (typeof wrfTemp !== 'number' || typeof wrfPrecip !== 'number') {
         throw new Error("Dades principals incompletes al model global");
     }
 
-    // 2. CÀLCUL DE DESVIACIONS
+    // 3. CÀLCUL DE DESVIACIONS
     const tempDiff = Number(Math.abs(aromeTemp - wrfTemp).toFixed(1));
     const precipDiff = Number(Math.abs((aromePrecip || 0) - wrfPrecip).toFixed(1));
     const windDiff = Number(Math.abs(safeAromeWind - wrfWind).toFixed(1));
@@ -58,8 +78,7 @@ export function calculateModelConsensus(
     const score = Math.round(Math.max(0, Math.min(100, rawScore)));
     const modelsAgree = score >= 75;
 
-    // 2.5 NOU: CÀLCUL DE TENDÈNCIA (MOMENTUM)
-    // Comparem l'hora actual amb la següent per veure la inèrcia de l'atmosfera
+    // 4. CÀLCUL DE TENDÈNCIA (MOMENTUM)
     let tempTrend: 'up' | 'down' | 'flat' = 'flat';
     let precipTrend: 'up' | 'down' | 'flat' = 'flat';
     let windTrend: 'up' | 'down' | 'flat' = 'flat';
@@ -70,7 +89,6 @@ export function calculateModelConsensus(
         const nextPrecip = safeHourly.precipitation?.[nextHourIndex];
         const nextWind = safeHourly.wind_speed_10m?.[nextHourIndex];
 
-        // Llindars de sensibilitat: quan considerem que puja o baixa de debò?
         if (typeof nextTemp === 'number') {
             if (nextTemp > wrfTemp + 0.5) tempTrend = 'up';
             else if (nextTemp < wrfTemp - 0.5) tempTrend = 'down';
@@ -85,7 +103,7 @@ export function calculateModelConsensus(
         }
     }
 
-    // 3. RADAR A 3 HORES
+    // 5. RADAR A 3 HORES
     let futureDivergence = false;
     for (let i = 1; i <= 3; i++) {
       const futureIndex = currentHourIndex + i;
