@@ -176,11 +176,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                 
                 <div className="flex flex-col gap-1 mb-3">
                    <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Local</span>
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">L</span>
                       <span className="text-sm font-black text-white">{formatVal(aromeTemp)}°</span>
                    </div>
                    <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Global</span>
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">G</span>
                       <span className="text-sm font-bold text-white/60">{formatVal(metrics.wrfTemp)}°</span>
                    </div>
                 </div>
@@ -202,11 +202,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                 
                 <div className="flex flex-col gap-1 mb-3">
                    <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Local</span>
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">L</span>
                       <span className="text-sm font-black text-white">{formatVal(aromePrecip)}<span className="text-[9px] font-normal ml-0.5 text-white/50">mm</span></span>
                    </div>
                    <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Global</span>
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">G</span>
                       <span className="text-sm font-bold text-white/60">{formatVal(metrics.wrfPrecip)}<span className="text-[9px] font-normal ml-0.5 text-white/40">mm</span></span>
                    </div>
                 </div>
@@ -227,11 +227,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                 
                 <div className="flex flex-col gap-1 mb-3">
                    <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Local</span>
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">L</span>
                       <span className="text-sm font-black text-white">{formatVal(aromeWind)}<span className="text-[9px] font-normal ml-0.5 text-white/50">km/h</span></span>
                    </div>
                    <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Global</span>
+                      <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">G</span>
                       <span className="text-sm font-bold text-white/60">{formatVal(metrics.wrfWind)}<span className="text-[9px] font-normal ml-0.5 text-white/40">km/h</span></span>
                    </div>
                 </div>
