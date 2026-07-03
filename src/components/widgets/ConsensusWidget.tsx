@@ -74,12 +74,30 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (metrics.score / 100) * circumference;
 
-  // 5. RENDER DE TENDÈNCIES
-  const renderTrend = (trend: 'up' | 'down' | 'flat') => {
-    if (trend === 'flat') return <MoveRight className="w-4 h-4 text-slate-500" />;
-    return trend === 'up' 
-      ? <ArrowUpRight className="w-4 h-4 text-rose-400" />
-      : <ArrowDownRight className="w-4 h-4 text-sky-400" />;
+  // 5. CÀLCUL DE TENDÈNCIES EN TEMPS REAL (Autònom)
+  const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
+    // Si falten dades o són exactament iguals, fletxa plana i apagada
+    if (local == null || global == null || local === global) {
+      return <MoveRight className="w-4 h-4 text-white/20" />;
+    }
+
+    const isUp = global > local;
+
+    // Colors segons la física de cada element
+    if (type === 'temp') {
+      return isUp 
+        ? <ArrowUpRight className="w-4 h-4 text-rose-400" /> 
+        : <ArrowDownRight className="w-4 h-4 text-sky-400" />;
+    }
+    if (type === 'rain') {
+      return isUp 
+        ? <ArrowUpRight className="w-4 h-4 text-sky-400" /> 
+        : <ArrowDownRight className="w-4 h-4 text-white/40" />;
+    }
+    // Si és vent
+    return isUp 
+      ? <ArrowUpRight className="w-4 h-4 text-amber-400" /> 
+      : <ArrowDownRight className="w-4 h-4 text-emerald-400" />;
   };
 
   const getStatus = (score: number) => {
@@ -94,10 +112,8 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const formatDelta = (val: number | null | undefined) => val !== null && val !== undefined ? val.toFixed(1) : '--';
 
   return (
-    // CONTENIDOR PRINCIPAL (Glassmorphism Pur)
     <div className="w-full relative overflow-hidden bg-slate-950/40 backdrop-blur-2xl border border-white/10 rounded-[28px] p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
        
-       {/* LLUM LÍQUIDA SURREALISTA (Fons animat) */}
        <style>
          {`
            @keyframes blob {
@@ -112,21 +128,19 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
        <div className={`absolute -top-10 -left-10 w-64 h-64 rounded-full mix-blend-screen filter blur-[80px] opacity-60 animate-blob pointer-events-none z-0 ${theme.glow}`}></div>
        <div className={`absolute -bottom-10 -right-10 w-64 h-64 rounded-full mix-blend-screen filter blur-[80px] opacity-40 animate-blob pointer-events-none z-0 ${theme.glow}`} style={{ animationDelay: '2s' }}></div>
 
-       {/* CAPÇALERA (Flotant) */}
        <div className="flex justify-between items-center w-full mb-6 relative z-10">
          <h2 className="text-xs sm:text-sm font-black text-white/90 uppercase tracking-[0.2em] drop-shadow-md">
            {t.title}
          </h2>
          <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full border border-white/10 bg-black/20 text-white/90 tracking-widest backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+           {/* El fix de TypeScript de l'última vegada integrat */}
            {React.cloneElement(status.icon as React.ReactElement<{ className: string }>, { className: `w-3.5 h-3.5 ${theme.text}` })}
            {status.label}
          </div>
        </div>
 
-       {/* GRAELLA PRINCIPAL (Bento Layout) */}
        <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 w-full relative z-10">
 
-          {/* L'ANELL NEON (Alta definició) */}
           <div className="relative flex items-center justify-center shrink-0 w-32 h-32 drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
                 <circle cx="64" cy="64" r={radius} className="stroke-black/40" strokeWidth="6" fill="transparent" />
@@ -152,7 +166,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
              </div>
           </div>
 
-          {/* TARGETES DE DADES (Cristall Bento) */}
           <div className="flex-1 grid grid-cols-3 gap-3 w-full">
 
              {/* TARGETA TEMPERATURA */}
@@ -175,7 +188,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                 <div className="mt-auto bg-black/30 rounded-xl p-2 flex justify-between items-center border border-white/5">
                    <span className="text-[9px] font-bold text-white/40">{t.diff}</span>
                    <div className="flex items-center gap-1 text-xs font-black text-white">
-                      {formatDelta(metrics.tempDiff)}° {renderTrend(metrics.tempTrend)}
+                      {formatDelta(metrics.tempDiff)}° {renderTrend(aromeTemp, metrics.wrfTemp, 'temp')}
                    </div>
                 </div>
              </div>
@@ -201,7 +214,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                 <div className="mt-auto bg-black/30 rounded-xl p-2 flex justify-between items-center border border-white/5">
                    <span className="text-[9px] font-bold text-white/40">{t.diff}</span>
                    <div className="flex items-center gap-1 text-xs font-black text-white">
-                      {formatDelta(metrics.precipDiff)} {renderTrend(metrics.precipTrend)}
+                      {formatDelta(metrics.precipDiff)} {renderTrend(aromePrecip, metrics.wrfPrecip, 'rain')}
                    </div>
                 </div>
              </div>
@@ -226,7 +239,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                 <div className="mt-auto bg-black/30 rounded-xl p-2 flex justify-between items-center border border-white/5">
                    <span className="text-[9px] font-bold text-white/40">{t.diff}</span>
                    <div className="flex items-center gap-1 text-xs font-black text-white">
-                      {formatDelta(metrics.windDiff)} {renderTrend(metrics.windTrend)}
+                      {formatDelta(metrics.windDiff)} {renderTrend(aromeWind, metrics.wrfWind, 'wind')}
                    </div>
                 </div>
              </div>
