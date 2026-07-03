@@ -12,6 +12,7 @@ import { WeatherUnit } from '../utils/formatters';
 import { useWRF } from '../hooks/useWRF';
 import { calculateModelConsensus } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
+import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget'; // AFEGIT: L'escut protector
 import { 
   CompassGauge, 
   SnowLevelWidget, 
@@ -33,7 +34,6 @@ const WidgetCard = ({ children, cols = 1 }: WidgetCardProps) => (
   </div>
 );
 
-// MODIFICAT: Apliquem els tipus estrictes en lloc de "string"
 interface ExpertWidgetsProps {
   weatherData: ExtendedWeatherData; 
   aqiData: Record<string, unknown> | null; 
@@ -51,17 +51,16 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   // --- MÒDUL DE CONSENS (CALAIX INDEPENDENT) ---
   const { wrfData, fetchWRFByCoords } = useWRF();
   
-  // MODIFICAT: Creem un àlies segur i tipat per a la ubicació que evita l'error de "{}"
   const safeLocation = location as { latitude?: number; longitude?: number } | undefined;
 
-  // Dispari'm la petició al WRF només quan tenim coordenades i no hem cridat ja.
+  // Petició al WRF
   useEffect(() => {
     if (safeLocation?.latitude && safeLocation?.longitude) {
       fetchWRFByCoords(safeLocation.latitude, safeLocation.longitude);
     }
   }, [safeLocation?.latitude, safeLocation?.longitude, fetchWRFByCoords]);
 
-  // Calculem les mètriques de consens (Funció pura, si falla, retorna inactiu i no trenca res)
+  // Calculem les mètriques de consens
   const consensusMetrics = useMemo(() => {
     return calculateModelConsensus(
         current?.temperature_2m as number | undefined, 
@@ -70,6 +69,14 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
         wrfData
     );
   }, [current?.temperature_2m, current?.precipitation, current?.wind_speed_10m, wrfData]);
+  
+  // AFEGIT: MUR DE CONTENCIÓ HORÀRIA (Risc Zero)
+  // Calculem l'offset local del teu mòbil/PC en segons
+  const localOffsetSeconds = new Date().getTimezoneOffset() * -60;
+  // Extraiem l'offset de la ciutat que has buscat (ve de l'API principal)
+  const targetOffsetSeconds = utc_offset_seconds as number;
+  // Condició de seguretat
+  const isSameTimezone = localOffsetSeconds === targetOffsetSeconds;
   // ---------------------------------------------
 
 
@@ -84,19 +91,21 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   return (
     <>
-      {/* 
-        AQUÍ POSEM EL WIDGET DE CONSENS. 
-        Si 'isConsensusActive' és fals (error WRF, etc), el component s'ocultarà.
-        Col·locat fora del grid principal perquè ocupi tota l'amplada i destaqués
+      {/* RENDER DEL GINY DE CONSENS AMB TALLAFOCS
+        Si busques fora del teu fus horari, salta el component inactiu.
       */}
       <div className="w-full mb-6">
-         <ConsensusWidget 
-            metrics={consensusMetrics} 
-            aromeTemp={current.temperature_2m as number | undefined} 
-            aromePrecip={current.precipitation as number | undefined}
-            aromeWind={current.wind_speed_10m as number | undefined} 
-            lang={lang}
-         />
+         {!isSameTimezone ? (
+            <ConsensusInactiveWidget />
+         ) : (
+            <ConsensusWidget 
+               metrics={consensusMetrics} 
+               aromeTemp={current.temperature_2m as number | undefined} 
+               aromePrecip={current.precipitation as number | undefined}
+               aromeWind={current.wind_speed_10m as number | undefined} 
+               lang={lang}
+            />
+         )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
@@ -155,7 +164,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard>
-              {/* MODIFICAT: Utilitzem el safeLocation aquí */}
               <MoonWidget phase={moonPhaseVal} lat={safeLocation?.latitude || 41} lang={lang} />
           </WidgetCard>
 
