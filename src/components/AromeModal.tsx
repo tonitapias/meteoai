@@ -30,7 +30,6 @@ interface HourlyRow {
   cloudCover: number;
 }
 
-// DOCTRINA RISC ZERO: Interfície estricta amb capacitat de suportar forats de dades
 interface AromeHourlyData {
   time: string[];
   temperature_2m: (number | null)[];
@@ -50,7 +49,6 @@ interface AromeHourlyData {
   [key: string]: unknown;
 }
 
-// Escut contra el desfasament UTC de la mitjanit
 const getLocalYYYYMMDD = (d: Date) => {
     const tzOffset = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
@@ -60,16 +58,14 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Funcions de tancament segur
   const handleTacticalClose = useCallback(() => {
     if (window.history.state?.modalId === 'aromeLive') {
-      window.history.back(); // Invoca popstate nativament
+      window.history.back();
     } else {
       onClose();
     }
   }, [onClose]);
 
-  // BLOQUEIG DE SCROLL DE FONS (Scroll Bleed Prevention)
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -78,29 +74,19 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     };
   }, []);
 
-  // NAVEGACIÓ TÀCTICA: Historial mòbil + Tecla ESC a PC
   useEffect(() => {
-    const handlePopState = () => {
-      onClose();
-    };
-
+    const handlePopState = () => onClose();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleTacticalClose();
-      }
+      if (e.key === 'Escape') handleTacticalClose();
     };
     
-    // Configurar History API pel botó "Enrere" del mòbil
     window.history.pushState({ modalId: 'aromeLive' }, '');
     window.addEventListener('popstate', handlePopState);
-    
-    // Configurar Keydown pel PC
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
-      // Neteja l'historial si sortim per altres vies
       if (window.history.state?.modalId === 'aromeLive') {
         window.history.back();
       }
@@ -136,7 +122,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         if (dateStr === todayDateStr && hour < nowHour) continue;
 
         const tempActual = h.temperature_2m?.[i];
-        if (tempActual === null || tempActual === undefined) break; // TALL DE SEGURETAT
+        if (tempActual === null || tempActual === undefined) break;
 
         const isDayValue = h.is_day?.[i];
         const isDay = isDayValue !== undefined && isDayValue !== null
@@ -149,10 +135,8 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         const high = h.cloud_cover_high?.[i] ?? 0;
         const effectiveCloudCover = Math.min(100, Math.max(0, (low * 1.0) + (mid * 0.6) + (high * 0.3)));
 
-        // CÀLCUL TÀCTIC D'ISO 0 (Fallback Termodinàmic)
         let freezingLevel = h.freezing_level_height?.[i];
         if (freezingLevel === null || freezingLevel === undefined) {
-            // Si l'API falla, calculem la cota de neu usant el gradient tèrmic estàndard (0.65ºC / 100m)
             freezingLevel = Math.max(elevation, elevation + (tempActual / 0.0065));
         }
 
@@ -203,15 +187,11 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     return rows;
   }, [aromeData]);
 
-  // Agregadors amb matemàtica segura
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);
   const maxCape = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.cape)), [hourlyRows]);
   const totalRain = useMemo(() => hourlyRows.reduce((acc, row) => acc + (row.precip > 0 ? row.precip : 0), 0), [hourlyRows]);
-  
-  // Càlcul d'Iso 0 (Cota de neu) mínima i màxima per als Pods
   const minIso = useMemo(() => hourlyRows.length === 0 ? 0 : Math.min(...hourlyRows.map(r => r.freezingLevel)), [hourlyRows]);
 
-  // Funcions de Color Tàctic
   const getGustColor = (gust: number) => {
     if (gust >= 90) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
     if (gust >= 50) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
@@ -231,7 +211,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-[#02040A]/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-[#02040A]/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
       
       <style>
         {`
@@ -243,14 +223,12 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         `}
       </style>
 
-      {/* Contenidor Principal Spatial UI */}
-      <div className="w-full h-[95vh] sm:h-auto sm:max-h-[88vh] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col bg-[#050810]/95 sm:rounded-[32px] rounded-t-[32px] border-t sm:border border-white/5 shadow-[0_0_80px_rgba(192,38,211,0.05),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+      {/* TÀCTICA DVH + LANDSCAPE: max-h forçat per respectar les barres del mòbil i landscape forçat 100% i sense corbes */}
+      <div className="w-full h-[96dvh] sm:h-auto sm:max-h-[88dvh] landscape:h-[100dvh] landscape:max-h-[100dvh] landscape:sm:h-auto landscape:rounded-none landscape:sm:rounded-[32px] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col bg-[#050810]/95 rounded-t-[24px] sm:rounded-[32px] border-t landscape:border-t-0 sm:border border-white/5 shadow-[0_0_80px_rgba(192,38,211,0.05),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
         
-        {/* Llum Atmosfèrica de fons */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-48 bg-gradient-to-b from-fuchsia-900/10 via-cyan-900/5 to-transparent blur-[80px] pointer-events-none"></div>
 
-        {/* CAPÇALERA TÀCTICA */}
-        <div className="bg-transparent border-b border-white/[0.04] p-4 md:p-6 flex justify-between items-center shrink-0 relative z-20">
+        <div className="bg-transparent border-b border-white/[0.04] p-4 md:p-6 landscape:py-2 landscape:px-4 landscape:sm:py-4 flex justify-between items-center shrink-0 relative z-20">
             <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-5">
                 <div className="flex items-center gap-3">
                     <div className="relative flex items-center justify-center bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 text-[10px] font-black px-2.5 py-1 rounded uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(192,38,211,0.15)]">
@@ -277,10 +255,9 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             </button>
         </div>
 
-        {/* COS DEL MODAL (Scroll amb overscroll-contain per evitar pèrdues de focus) */}
         <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar-spatial relative z-10" ref={listRef}>
             {loading && (
-                <div className="flex flex-col items-center justify-center h-[60vh] space-y-6">
+                <div className="flex flex-col items-center justify-center h-[60dvh] space-y-6">
                     <div className="relative w-16 h-16 flex items-center justify-center">
                         <div className="absolute inset-0 border-[3px] border-cyan-900/20 rounded-full"></div>
                         <div className="absolute inset-0 border-[3px] border-cyan-500 border-t-transparent border-l-transparent rounded-full animate-spin"></div>
@@ -291,7 +268,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             )}
 
             {error && (
-                <div className="p-10 text-center flex flex-col items-center justify-center h-[60vh]">
+                <div className="p-10 text-center flex flex-col items-center justify-center h-[60dvh]">
                     <div className="w-20 h-20 rounded-full bg-rose-950/30 border border-rose-900/50 flex items-center justify-center mb-5 relative">
                         <div className="absolute inset-0 rounded-full border border-rose-500/20 animate-ping"></div>
                         <AlertOctagon className="w-10 h-10 text-rose-500 drop-shadow-[0_0_12px_rgba(244,63,94,0.4)]" />
@@ -305,59 +282,56 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             {aromeData && !loading && (
                 <div className="animate-in fade-in duration-500 flex flex-col">
                     
-                    {/* DASHBOARD PODS */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 p-3 md:p-6 bg-[#050810]/80 border-b border-white/[0.02] sticky top-0 z-30 backdrop-blur-2xl">
-                         
-                         <div className="flex flex-col p-3 md:p-4 rounded-2xl bg-cyan-950/10 border border-cyan-900/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] relative overflow-hidden group">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 rounded-lg bg-cyan-900/30 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
-                                    <Droplets className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 p-3 md:p-6 landscape:p-2 landscape:px-4 landscape:sm:p-6 bg-[#050810]/80 border-b border-white/[0.02] sticky top-0 z-30 backdrop-blur-2xl">
+                         <div className="flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-cyan-950/10 border border-cyan-900/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] relative overflow-hidden group">
+                            <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                                <div className="p-1 sm:p-1.5 rounded-lg bg-cyan-900/30 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
+                                    <Droplets className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Precipitació</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Precipitació</span>
                             </div>
-                            <div className="text-2xl md:text-3xl font-black text-white tracking-tighter">
-                                {totalRain.toFixed(1)}<span className="text-[10px] md:text-xs font-bold ml-1 text-cyan-500/80">mm</span>
+                            <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter">
+                                {totalRain.toFixed(1)}<span className="text-[9px] md:text-xs font-bold ml-1 text-cyan-500/80">mm</span>
                             </div>
                          </div>
                          
-                         <div className="flex flex-col p-3 md:p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)] relative overflow-hidden group">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
-                                    <Wind className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                         <div className="flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white/[0.02] border border-white/[0.04] shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)] relative overflow-hidden group">
+                            <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                                <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
+                                    <Wind className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Vent Màxim</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Vent Màxim</span>
                             </div>
-                            <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getGustColor(maxGust)}`}>
-                                {Math.round(maxGust)}<span className="text-[10px] md:text-xs font-bold ml-1 opacity-50 text-white">km/h</span>
+                            <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getGustColor(maxGust)}`}>
+                                {Math.round(maxGust)}<span className="text-[9px] md:text-xs font-bold ml-1 opacity-50 text-white">km/h</span>
                             </div>
                          </div>
 
-                         <div className="flex flex-col p-3 md:p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)] relative overflow-hidden group">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
-                                    <Mountain className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                         <div className="flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white/[0.02] border border-white/[0.04] shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)] relative overflow-hidden group">
+                            <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                                <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
+                                    <Mountain className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Iso 0 Mín.</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Iso 0 Mín.</span>
                             </div>
-                            <div className="text-2xl md:text-3xl font-black text-slate-200 tracking-tighter">
-                                {Math.round(minIso)}<span className="text-[10px] md:text-xs font-bold ml-1 text-slate-500">m</span>
+                            <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-200 tracking-tighter">
+                                {Math.round(minIso)}<span className="text-[9px] md:text-xs font-bold ml-1 text-slate-500">m</span>
                             </div>
                          </div>
                          
-                         <div className="flex flex-col p-3 md:p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)] relative overflow-hidden group">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
-                                    <Zap className={`w-3.5 h-3.5 md:w-4 md:h-4 ${maxCape > 500 ? 'text-amber-400' : ''}`} />
+                         <div className="flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white/[0.02] border border-white/[0.04] shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)] relative overflow-hidden group">
+                            <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                                <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
+                                    <Zap className={`w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 ${maxCape > 500 ? 'text-amber-400' : ''}`} />
                                 </div>
-                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Instabilitat</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Instabilitat</span>
                             </div>
-                            <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getCapeColor(maxCape)}`}>
-                                {Math.round(maxCape)}<span className="text-[10px] md:text-xs font-bold ml-1 opacity-50 text-white">J/kg</span>
+                            <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getCapeColor(maxCape)}`}>
+                                {Math.round(maxCape)}<span className="text-[9px] md:text-xs font-bold ml-1 opacity-50 text-white">J/kg</span>
                             </div>
                          </div>
                     </div>
 
-                    {/* LLISTA HORÀRIA */}
                     <div className="flex flex-col pb-6 md:pb-10">
                         {hourlyRows.length === 0 ? (
                             <div className="p-20 text-center flex flex-col items-center">
@@ -377,9 +351,8 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
 
                                 return (
                                     <div key={row.time}>
-                                        {/* SEPARADOR DE DIES */}
                                         {isNewDay && (
-                                            <div className="bg-[#050810]/95 py-2 md:py-3 px-4 sm:px-6 text-[10px] md:text-xs font-black uppercase text-cyan-500/80 tracking-[0.2em] border-y border-white/[0.04] flex items-center gap-3 sticky top-[135px] md:top-[160px] z-20 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+                                            <div className="bg-[#050810]/95 py-2 md:py-3 px-4 sm:px-6 text-[10px] md:text-xs font-black uppercase text-cyan-500/80 tracking-[0.2em] border-y border-white/[0.04] flex items-center gap-3 sticky top-[95px] sm:top-[120px] md:top-[150px] z-20 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
                                                 {(() => {
                                                     const today = getLocalYYYYMMDD(new Date());
@@ -395,10 +368,8 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                             </div>
                                         )}
                                         
-                                        {/* FILA DE DADES */}
                                         <div className={`flex items-center justify-between p-3.5 sm:p-4 px-4 sm:px-6 border-b border-white/[0.02] transition-colors ${getRowDangerBg(row.gust, row.cape)} ${isRaining ? 'bg-cyan-900/[0.03]' : ''} hover:bg-white/[0.03] group`}>
                                             
-                                            {/* COLUMNA 1: Hora, Tempesta i Icona */}
                                             <div className="flex items-center gap-3 sm:gap-4 w-[25%] md:w-1/4">
                                                 <div className="flex flex-col">
                                                     <div className="text-sm sm:text-base md:text-lg font-bold text-slate-300 tabular-nums tracking-tighter">
@@ -416,14 +387,22 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                 </div>
                                             </div>
 
-                                            {/* COLUMNA 2: Temperatura, Precipitació i Iso 0 */}
+                                            {/* DOCTRINA RISC ZERO: Iso 0 integrat de forma vertical per a mòbil */}
                                             <div className="flex-1 flex flex-col sm:flex-row sm:justify-center items-end sm:items-center gap-1 sm:gap-6 pr-4 sm:pr-0">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tabular-nums tracking-tighter drop-shadow-sm w-10 sm:w-14 text-right">
-                                                        {Math.round(row.temp)}<span className="text-xs md:text-sm text-slate-500 font-bold ml-[1px]">°</span>
+                                                    <div className="flex flex-col items-end sm:items-center">
+                                                        <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tabular-nums tracking-tighter drop-shadow-sm w-12 sm:w-14 text-right sm:text-center">
+                                                            {Math.round(row.temp)}<span className="text-xs md:text-sm text-slate-500 font-bold ml-[1px]">°</span>
+                                                        </div>
+                                                        
+                                                        {/* Nou: Iso 0 apilat en mòbil verticalment sota la temp */}
+                                                        <div className="flex md:hidden items-center gap-1 mt-[-2px]">
+                                                            <span className="text-[7px] text-slate-500 font-mono uppercase tracking-widest">Iso</span>
+                                                            <span className="text-[9px] font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
+                                                        </div>
                                                     </div>
                                                     
-                                                    {/* Indicador Cota Neu (Iso 0) */}
+                                                    {/* Iso 0 en PC (lateral) */}
                                                     <div className="hidden md:flex flex-col items-center justify-center w-14">
                                                         <span className="text-[8px] text-slate-500 font-mono mb-0.5 uppercase">Iso 0</span>
                                                         <span className="text-xs font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
@@ -443,7 +422,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                 </div>
                                             </div>
 
-                                            {/* COLUMNA 3: Telemetria Vent (In-Line Bar + Fletxa Direccional) */}
                                             <div className="w-[30%] sm:w-1/4 flex flex-col items-end justify-center">
                                                 <div className="flex items-center justify-end gap-1.5 md:gap-2 text-sm md:text-base font-bold text-slate-200 tabular-nums">
                                                     <ArrowUp 
@@ -458,7 +436,6 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                     )}
                                                 </div>
                                                 
-                                                {/* BARRA DE VENT GRÀFICA */}
                                                 <div className="w-14 sm:w-24 h-1.5 bg-black/40 rounded-full mt-1.5 flex overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
                                                     <div className="h-full bg-slate-500/80 rounded-l-full transition-all" style={{ width: `${windWidth}%` }}></div>
                                                     {row.gust > row.wind && (
