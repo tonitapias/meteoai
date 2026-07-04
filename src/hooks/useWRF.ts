@@ -3,12 +3,17 @@ import { useState, useCallback } from 'react';
 import { z } from 'zod';
 
 // 1. ESQUEMES DE VALIDACIÓ ZOD (MUR DE CONTENCIÓ)
-// Definim només allò que necessitem de manera laxa (passthrough) perquè l'API pugui afegir camps sense trencar-nos l'esquema.
 const wrfHourlySchema = z.object({
-  time: z.array(z.string()),
+  // EXTREMA SEGURETAT: Demanem 'unixtime' (números). 
+  // Zod els converteix a mil·lisegons (* 1000) i en fa un string ISO absolut acabat en 'Z' (UTC).
+  // D'aquesta manera matem qualsevol desajust de fús horari sense trencar la resta de l'App.
+  time: z.array(z.number()).transform((times) => 
+    times.map((t) => new Date(t * 1000).toISOString())
+  ),
   temperature_2m: z.array(z.number().nullable()),
   precipitation: z.array(z.number().nullable()),
-  // Pots afegir més camps aquí si els necessites pel consens (ex: wind_speed_10m)
+  // Hem d'afegir el vent a l'esquema, ja que el demanes a la URL i s'utilitza al ConsensusWidget
+  wind_speed_10m: z.array(z.number().nullable()).optional(),
 }).passthrough();
 
 const wrfResponseSchema = z.object({
@@ -17,7 +22,8 @@ const wrfResponseSchema = z.object({
   hourly: wrfHourlySchema,
 }).passthrough();
 
-// Extreure el tipus inferit per a TypeScript
+// Extreure el tipus inferit per a TypeScript.
+// Gràcies al .transform(), TypeScript sap que `time` acabarà sent un string[] per la UI.
 export type WRFData = z.infer<typeof wrfResponseSchema>;
 
 // 2. HOOK INDEPENDENT FAIL-SAFE
@@ -29,12 +35,10 @@ export function useWRF() {
     setLoadingWRF(true);
     
     try {
-      // Ajusta la URL i els paràmetres segons l'endpoint exacte del WRF que facis servir a Open-Meteo
-      // Nota: Si WRF no està al root default, potser necessites el domini regional d'Open-Meteo.
-      // Exemple de com hauria de ser la teva URL dins de useWRF.ts
-const WRF_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&models=best_match&timezone=auto`;
-
-const response = await fetch(WRF_URL);
+      // SOLUCIÓ TÀCTICA: Substituïm timezone=auto per timeformat=unixtime
+      const WRF_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&models=best_match&timeformat=unixtime`;
+      
+      const response = await fetch(WRF_URL);
       
       if (!response.ok) {
         // Fallada de xarxa o HTTP
@@ -45,14 +49,12 @@ const response = await fetch(WRF_URL);
       const rawJson = await response.json();
 
       // VALIDACIÓ SEGURA: Risc Zero
-      // safeParse comprova l'esquema sense llençar errors letals (throw)
       const parsed = wrfResponseSchema.safeParse(rawJson);
 
       if (parsed.success) {
         setWrfData(parsed.data);
       } else {
-        // Dades corruptes o format inesperat. Ho ignorem silenciosament.
-        // Opcionalment podries afegir un Sentry.captureMessage aquí sense alertar l'usuari.
+        // Dades corruptes o format inesperat.
         console.warn("WRF fetch ignored due to schema validation failure:", parsed.error);
         setWrfData(null);
       }
@@ -65,7 +67,6 @@ const response = await fetch(WRF_URL);
     }
   }, []);
 
-  // Exposem un mètode per netejar l'estat si fos necessari
   const clearWRFData = useCallback(() => {
     setWrfData(null);
   }, []);

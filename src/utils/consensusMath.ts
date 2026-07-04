@@ -37,27 +37,26 @@ export function calculateModelConsensus(
   try {
     const safeHourly = wrfData.hourly as Record<string, (string | number | null)[]>;
     
-    // 1. SINCRONITZACIÓ HORÀRIA PRECISA
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    
-    // Creem l'etiqueta d'hora exacta local (ex: "2026-07-03T12:00")
-    const currentIsoString = `${year}-${month}-${day}T${hours}:00`;
-    
-    // Busquem l'índex exacte on l'array 'time' coincideix amb la nostra etiqueta
+    // 1. SINCRONITZACIÓ HORÀRIA ABSOLUTA DE PROXIMITAT (BLINDADA)
+    const nowTimestamp = Date.now();
     let currentHourIndex = -1;
+    let minTimeDiff = Infinity;
+
+    // Busquem l'índex exacte on el timestamp de l'API és més proper al mil·lisegon actual
     if (safeHourly.time && Array.isArray(safeHourly.time)) {
-       currentHourIndex = safeHourly.time.findIndex(timeStr => String(timeStr).startsWith(currentIsoString));
+        for (let i = 0; i < safeHourly.time.length; i++) {
+            const apiTime = new Date(String(safeHourly.time[i])).getTime();
+            if (!isNaN(apiTime)) {
+                const diff = Math.abs(apiTime - nowTimestamp);
+                if (diff < minTimeDiff) {
+                    minTimeDiff = diff;
+                    currentHourIndex = i;
+                }
+            }
+        }
     }
 
-    // Fallback de seguretat si la cerca falla (tornem al sistema clàssic per evitar que l'app caigui)
-    if (currentHourIndex === -1) {
-       console.warn(`No s'ha trobat l'hora exacta ${currentIsoString} a les dades WRF. Usant fallback.`);
-       currentHourIndex = now.getHours();
-    }
+    if (currentHourIndex === -1) currentHourIndex = 0; 
 
     // 2. EXTRACCIÓ ACTUAL SINCRONITZADA
     const wrfTemp = safeHourly.temperature_2m?.[currentHourIndex];
@@ -74,11 +73,31 @@ export function calculateModelConsensus(
     const precipDiff = Number(Math.abs((aromePrecip || 0) - wrfPrecip).toFixed(1));
     const windDiff = Number(Math.abs(safeAromeWind - wrfWind).toFixed(1));
 
-    const rawScore = 100 - (tempDiff * 8) - (precipDiff * 15) - (windDiff * 1.5);
+    // 4. MOTOR DE PUNTUACIÓ (CONTÍNUU I SENSE ZONES MORTES)
+    let scorePenalty = 0;
+
+    // Penalització Base (Cada dècima compta perquè el 100% sigui gairebé impossible)
+    scorePenalty += tempDiff * 3.5;  // Ex: 3.0°C de diff = 10.5 punts menys
+    scorePenalty += precipDiff * 10; // Ex: 0.5mm de diff = 5 punts menys
+    scorePenalty += windDiff * 0.8;  // Ex: 5km/h de diff = 4 punts menys
+
+    // Penalització Exponencial per divergència greu (Orografia o Microclimes)
+    if (tempDiff > 2.5) {
+        scorePenalty += (tempDiff - 2.5) * 5; 
+    }
+    if (precipDiff > 1.0) {
+        scorePenalty += (precipDiff - 1.0) * 10;
+    }
+    const maxWind = Math.max(safeAromeWind, wrfWind);
+    if (maxWind > 15 && windDiff > 5) {
+        scorePenalty += (windDiff - 5) * 1.5;
+    }
+
+    const rawScore = 100 - scorePenalty;
     const score = Math.round(Math.max(0, Math.min(100, rawScore)));
     const modelsAgree = score >= 75;
 
-    // 4. CÀLCUL DE TENDÈNCIA (MOMENTUM)
+    // 5. CÀLCUL DE TENDÈNCIA (MOMENTUM)
     let tempTrend: 'up' | 'down' | 'flat' = 'flat';
     let precipTrend: 'up' | 'down' | 'flat' = 'flat';
     let windTrend: 'up' | 'down' | 'flat' = 'flat';
@@ -103,7 +122,7 @@ export function calculateModelConsensus(
         }
     }
 
-    // 5. RADAR A 3 HORES
+    // 6. RADAR A 3 HORES
     let futureDivergence = false;
     for (let i = 1; i <= 3; i++) {
       const futureIndex = currentHourIndex + i;
