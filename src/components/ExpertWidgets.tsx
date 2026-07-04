@@ -4,15 +4,13 @@ import { getMoonPhase, calculateDewPoint } from '../utils/physics';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
-// NOUS IMPORTS: Portem els tipus estrictes de domini
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
-// IMPORTACIONS DEL MÒDUL DE CONSENS (Risc Zero)
 import { useWRF } from '../hooks/useWRF';
 import { calculateModelConsensus } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
-import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget'; // AFEGIT: L'escut protector
+import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
 import { 
   CompassGauge, 
   SnowLevelWidget, 
@@ -48,19 +46,17 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   
   const showSnowWidget = freezingLevel !== null && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
-  // --- MÒDUL DE CONSENS (CALAIX INDEPENDENT) ---
+  // --- MÒDUL DE CONSENS ---
   const { wrfData, fetchWRFByCoords } = useWRF();
   
   const safeLocation = location as { latitude?: number; longitude?: number } | undefined;
 
-  // Petició al WRF
   useEffect(() => {
     if (safeLocation?.latitude && safeLocation?.longitude) {
       fetchWRFByCoords(safeLocation.latitude, safeLocation.longitude);
     }
   }, [safeLocation?.latitude, safeLocation?.longitude, fetchWRFByCoords]);
 
-  // Calculem les mètriques de consens
   const consensusMetrics = useMemo(() => {
     return calculateModelConsensus(
         current?.temperature_2m as number | undefined, 
@@ -70,14 +66,30 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     );
   }, [current?.temperature_2m, current?.precipitation, current?.wind_speed_10m, wrfData]);
   
-  // AFEGIT: MUR DE CONTENCIÓ HORÀRIA (Risc Zero)
-  // Calculem l'offset local del teu mòbil/PC en segons
+  // MUR DE CONTENCIÓ HORÀRIA
   const localOffsetSeconds = new Date().getTimezoneOffset() * -60;
-  // Extraiem l'offset de la ciutat que has buscat (ve de l'API principal)
   const targetOffsetSeconds = utc_offset_seconds as number;
-  // Condició de seguretat
   const isSameTimezone = localOffsetSeconds === targetOffsetSeconds;
-  // ---------------------------------------------
+  
+  // DETECTOR DE FALLBACK GLOBAL (Col·lapse de model)
+  const isGlobalFallback = useMemo(() => {
+    const locTemp = hourly?.temperature_2m as (number | null)[] | undefined || [];
+    const gloTemp = wrfData?.hourly?.temperature_2m as (number | null)[] | undefined || [];
+    
+    if (locTemp.length === 0 || gloTemp.length === 0) return false;
+    
+    let exactMatches = 0;
+    let validPairs = 0;
+    
+    for(let i = 0; i < Math.min(24, locTemp.length, gloTemp.length); i++) {
+        if (locTemp[i] != null && gloTemp[i] != null) {
+            validPairs++;
+            if (locTemp[i] === gloTemp[i]) exactMatches++;
+        }
+    }
+    
+    return validPairs > 10 && (exactMatches / validPairs) > 0.85;
+  }, [hourly?.temperature_2m, wrfData?.hourly?.temperature_2m]);
 
 
   if (!current) return null;
@@ -91,12 +103,12 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   return (
     <>
-      {/* RENDER DEL GINY DE CONSENS AMB TALLAFOCS
-        Si busques fora del teu fus horari, salta el component inactiu.
-      */}
       <div className="w-full mb-6">
+         {/* SISTEMA DE REDIRECCIÓ TÀCTICA (Active vs Inactive) */}
          {!isSameTimezone ? (
-            <ConsensusInactiveWidget />
+            <ConsensusInactiveWidget reason="timezone" lang={lang} />
+         ) : isGlobalFallback ? (
+            <ConsensusInactiveWidget reason="fallback" lang={lang} />
          ) : (
             <ConsensusWidget 
                metrics={consensusMetrics} 
@@ -104,12 +116,22 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
                aromePrecip={current.precipitation as number | undefined}
                aromeWind={current.wind_speed_10m as number | undefined} 
                lang={lang}
+               hourlyTimes={(hourly?.time as string[]) || []}
+               hourlyLocal={{ 
+                 temp: hourly?.temperature_2m as (number | null)[] | undefined, 
+                 rain: hourly?.precipitation as (number | null)[] | undefined, 
+                 wind: hourly?.wind_speed_10m as (number | null)[] | undefined 
+               }}
+               hourlyGlobal={{ 
+                 temp: wrfData?.hourly?.temperature_2m as (number | null)[] | undefined, 
+                 rain: wrfData?.hourly?.precipitation as (number | null)[] | undefined, 
+                 wind: (wrfData?.hourly as Record<string, unknown>)?.wind_speed_10m as (number | null)[] | undefined 
+               }}
             />
          )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
-          
           <WidgetCard>
               <CompassGauge 
                   degrees={(current.wind_direction_10m as number) ?? 0} 
