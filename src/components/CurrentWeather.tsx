@@ -26,6 +26,17 @@ interface CurrentWeatherProps {
   shiftedNow?: Date;
 }
 
+// DOCTRINA RISC ZERO: Purificador de telemetria estricte (Zero 'any').
+const parseMetric = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return isNaN(value) ? null : value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 export default function CurrentWeather(props: CurrentWeatherProps) {
   const weather = useCurrentWeatherLogic({
     data: props.data,
@@ -36,6 +47,25 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
   });
 
   if (!weather) return null;
+
+  // Extracció profunda de dades brutes (Risc Zero: sense 'any')
+  const rawData = props.data as Record<string, unknown>;
+  const currentData = rawData.current as Record<string, unknown> | undefined;
+  const currentWeather = rawData.current_weather as Record<string, unknown> | undefined;
+  
+  // Cerquem ratxes
+  const rawWindGusts = 
+    currentData?.wind_gusts_10m ?? 
+    currentWeather?.windgusts ?? 
+    rawData.wind_gusts_10m;
+
+  // Cerquem direcció del vent
+  const rawWindDir = 
+    currentData?.winddirection_10m ?? 
+    currentData?.wind_direction_10m ??
+    currentWeather?.winddirection ?? 
+    rawData.wind_direction_10m ??
+    rawData.winddirection_10m;
 
   return (
     <div className="w-full relative group">
@@ -53,12 +83,13 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             isUsingArome={weather.meta.isUsingArome}
             isFavorite={props.isFavorite}
             onToggleFavorite={props.onToggleFavorite}
+            elevation={parseMetric(rawData.elevation) ?? parseMetric((weather.meta as Record<string, unknown>).elevation)}
           />
 
           <MainTemperatureDisplay
-            temp={weather.temps.main as number}
-            max={weather.temps.max as number}
-            min={weather.temps.min as number}
+            temp={parseMetric(weather.temps.main)}
+            max={parseMetric(weather.temps.max)}
+            min={parseMetric(weather.temps.min)}
             weatherLabel={weather.visuals.weatherLabel}
             statusColor={weather.visuals.statusColor}
           />
@@ -67,7 +98,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         {/* RIGHT COLUMN: Icon, Grid & Actions */}
         <div className="w-full md:w-[320px] flex flex-col gap-4 z-10 shrink-0 mt-0 md:mt-0 relative">
           
-          {/* Weather Icon Block (Mantingut inline perquè és senzill) */}
+          {/* Weather Icon Block */}
           <div className="flex-1 flex items-center justify-center min-h-[180px] md:min-h-[220px] relative -mt-8 md:mt-0">
             <div className="drop-shadow-[0_0_60px_rgba(99,102,241,0.6)] md:drop-shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-transform duration-700 hover:scale-105 relative z-20">
               {getWeatherIcon(
@@ -79,9 +110,11 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
           </div>
 
           <WeatherStatsGrid
-            windSpeed={weather.stats.windSpeed as number}
-            humidity={weather.stats.humidity}
-            apparentTemp={weather.temps.apparent as number}
+            windSpeed={parseMetric(weather.stats.windSpeed)}
+            windGusts={parseMetric((weather.stats as Record<string, unknown>).windGusts) ?? parseMetric(rawWindGusts)}
+            windDirection={parseMetric((weather.stats as Record<string, unknown>).windDirection) ?? parseMetric(rawWindDir)}
+            humidity={parseMetric(weather.stats.humidity)}
+            apparentTemp={parseMetric(weather.temps.apparent)}
           />
 
           <WeatherActionButtons

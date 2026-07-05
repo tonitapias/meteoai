@@ -1,4 +1,4 @@
-import { Navigation, Zap, Star } from 'lucide-react';
+import { Navigation, Zap, Star, Mountain } from 'lucide-react';
 
 interface CurrentWeatherHeaderProps {
   locationName?: string; // Solució: Acceptem undefined de forma segura
@@ -7,6 +7,7 @@ interface CurrentWeatherHeaderProps {
   date: string;
   isUsingArome: boolean;
   isFavorite: boolean;
+  elevation?: number | null; // DOCTRINA RISC ZERO: Altitud opcional per evitar trencar el render
   onToggleFavorite: () => void;
 }
 
@@ -17,8 +18,15 @@ export const CurrentWeatherHeader = ({
   date,
   isUsingArome,
   isFavorite,
+  elevation,
   onToggleFavorite,
 }: CurrentWeatherHeaderProps) => {
+  
+  // DOCTRINA RISC ZERO: Blindatge per a la mètrica d'altitud.
+  const formatElevation = (val?: number | null) => {
+    return val != null ? val : '--';
+  };
+
   return (
     <div className="flex justify-between items-start">
       <div className="flex flex-col gap-1">
@@ -40,7 +48,7 @@ export const CurrentWeatherHeader = ({
           {locationName}
         </h2>
 
-        <div className="flex items-center gap-4 mt-2">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-2">
           <span className="text-2xl font-mono font-medium text-white tracking-tight">
             {time}
           </span>
@@ -48,6 +56,11 @@ export const CurrentWeatherHeader = ({
           <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">
             {date}
           </span>
+          <div className="h-4 w-px bg-white/10"></div>
+          <div className="flex items-center gap-1.5 text-sm font-bold text-slate-400 uppercase tracking-wider" title="Altitud">
+            <Mountain className="w-4 h-4 text-slate-500" />
+            <span className="tabular-nums">{formatElevation(elevation)}m</span>
+          </div>
         </div>
       </div>
 
