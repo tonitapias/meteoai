@@ -5,49 +5,59 @@ import { getTrans } from './widgetHelpers';
 
 export const PollenWidget = ({ data, lang }: WidgetProps) => {
     const t = getTrans(lang);
-    const aqi = data?.us_aqi ?? 0;
+    // Risc Zero: Validació forta de les dades d'AQI
+    const aqi = typeof data?.us_aqi === 'number' && !isNaN(data.us_aqi) ? data.us_aqi : 0;
     
     const getAQIColor = (val: number) => {
         if (val > 150) return 'text-rose-500';
-        if (val > 100) return 'text-orange-400';
-        if (val > 50) return 'text-yellow-400';
+        if (val > 100) return 'text-amber-400';
+        if (val > 50) return 'text-yellow-300';
         return 'text-emerald-400';
     };
     
     const colorClass = getAQIColor(aqi);
-    const label = aqi > 150 ? "MALA" : aqi > 100 ? "SENSIBLE" : aqi > 50 ? "MODERADA" : "B O N A";
+    const label = aqi > 150 ? "MALA" : aqi > 100 ? "SENSIBLE" : aqi > 50 ? "MODERADA" : "BONA";
+
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} !flex-row items-center gap-6 backdrop-blur-md bg-gradient-to-br from-black/60 to-[#0f111a]/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4`;
 
     return (
-        <div className={`${WIDGET_BASE_STYLE} !flex-row items-center gap-6`}>
-            <div className="relative w-16 h-16 flex items-center justify-center bg-[#0f111a] rounded-xl border border-white/5 shadow-inner group">
-                <Flower2 className={`w-8 h-8 ${colorClass} transition-colors duration-500`} />
-                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${aqi > 50 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'} border-2 border-[#151725]`}></div>
+        <div className={SPATIAL_WIDGET_STYLE}>
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center bg-[#0f111a]/80 rounded-xl border border-white/10 shadow-inner group backdrop-blur-sm">
+                <Flower2 className={`w-8 h-8 sm:w-10 sm:h-10 ${colorClass} transition-colors duration-500 filter drop-shadow-[0_0_8px_currentColor]`} />
+                <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ${aqi > 50 ? 'bg-amber-400 animate-pulse shadow-[0_0_8px_#fbbf24]' : 'bg-emerald-500'} border-2 border-[#151725]`}></div>
             </div>
 
             <div className="flex-1 flex flex-col justify-center">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                         {t.aqi || "QUALITAT AIRE"}
                     </span>
-                    <span className={`text-xs font-mono font-bold ${colorClass} tabular-nums`}>AQI {aqi}</span>
+                    <span className={`text-xs sm:text-sm font-mono font-black ${colorClass} tabular-nums bg-black/40 px-2 py-0.5 rounded border border-white/5`}>
+                        AQI {aqi}
+                    </span>
                 </div>
                 
-                <div className="flex gap-0.5 h-3 w-full mb-2">
+                {/* Carril de partícules tàctic */}
+                <div className="flex gap-0.5 h-3.5 w-full mb-2 bg-[#0f111a] rounded-sm border border-white/5 p-px">
                     {[...Array(20)].map((_, i) => {
                         const threshold = i * (300/20);
                         const isActive = aqi >= threshold;
-                        const segmentColor = threshold > 150 ? 'bg-rose-500' : threshold > 100 ? 'bg-orange-400' : threshold > 50 ? 'bg-yellow-400' : 'bg-emerald-500';
+                        let segmentColor = 'bg-emerald-400';
+                        if (threshold > 150) segmentColor = 'bg-rose-500';
+                        else if (threshold > 100) segmentColor = 'bg-amber-400';
+                        else if (threshold > 50) segmentColor = 'bg-yellow-300';
+                        
                         return (
                             <div 
                                 key={i} 
-                                className={`flex-1 rounded-sm transition-all duration-500 ${isActive ? segmentColor : 'bg-[#0f111a] border border-white/5'}`}
-                                style={{ opacity: isActive ? 1 : 0.2 }}
+                                className={`flex-1 rounded-[1px] transition-all duration-500 ${isActive ? segmentColor : 'bg-transparent'}`}
+                                style={{ opacity: isActive ? 1 : 0 }}
                             ></div>
                         );
                     })}
                 </div>
 
-                <span className={`text-xl font-black ${colorClass} tracking-tighter uppercase drop-shadow-md`}>
+                <span className={`text-xl sm:text-2xl font-black ${colorClass} tracking-tighter uppercase drop-shadow-md leading-none`}>
                     {label}
                 </span>
             </div>

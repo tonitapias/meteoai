@@ -28,7 +28,7 @@ import {
 interface WidgetCardProps { children: React.ReactNode; cols?: number; }
 
 const WidgetCard = ({ children, cols = 1 }: WidgetCardProps) => (
-  <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full animate-in fade-in zoom-in-95 duration-700 fill-mode-both`}>
+  <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg`}>
     {children}
   </div>
 );
@@ -39,11 +39,6 @@ interface ExpertWidgetsProps {
   lang: Language; 
   unit: WeatherUnit; 
   freezingLevel: number | null;
-}
-
-interface SafeLocation {
-  latitude?: unknown;
-  longitude?: unknown;
 }
 
 export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel }: ExpertWidgetsProps) {
@@ -73,9 +68,12 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const { wrfData, fetchWRFByCoords } = useWRF();
   
-  const safeLoc = location as SafeLocation | undefined;
-  const safeLat = typeof safeLoc?.latitude === 'number' ? safeLoc.latitude : undefined;
-  const safeLon = typeof safeLoc?.longitude === 'number' ? safeLoc.longitude : undefined;
+  const safeLat = location && typeof (location as Record<string, unknown>).latitude === 'number' 
+    ? (location as Record<string, unknown>).latitude as number 
+    : undefined;
+  const safeLon = location && typeof (location as Record<string, unknown>).longitude === 'number' 
+    ? (location as Record<string, unknown>).longitude as number 
+    : undefined;
 
   useEffect(() => {
     if (safeLat !== undefined && safeLon !== undefined) {
@@ -97,7 +95,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const isSameTimezone = localOffsetSeconds === targetOffsetSeconds;
   
   const isGlobalFallback = useMemo(() => {
-    // 1. SOLUCIÓ ESLINT: Encapsulem la funció dins del useMemo perquè no depengui del scope extern
     const getAbsoluteEpoch = (timeStr: string) => {
         if (!timeStr) return NaN;
         if (timeStr.includes('Z') || timeStr.match(/[+-]\d{2}:?\d{2}$/)) {
@@ -119,9 +116,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     const globalDict = new Map<number, number | null>();
     gloTemp.forEach((val, idx) => {
         const tStr = gloTimes[idx];
-        if (tStr) {
-            const epoch = getAbsoluteEpoch(String(tStr));
-            if (!isNaN(epoch)) globalDict.set(epoch, val);
+        if (typeof tStr === 'string') {
+            const epoch = getAbsoluteEpoch(tStr);
+            if (!isNaN(epoch)) globalDict.set(epoch, typeof val === 'number' ? val : null);
         }
     });
 
@@ -131,9 +128,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     for(let i = 0; i < Math.min(24, locTemp.length); i++) {
         const l = locTemp[i];
         const tStr = locTimes[i];
-        if (!tStr) continue;
+        if (typeof tStr !== 'string') continue;
 
-        const epochKey = getAbsoluteEpoch(String(tStr));
+        const epochKey = getAbsoluteEpoch(tStr);
         const g = !isNaN(epochKey) ? (globalDict.get(epochKey) ?? null) : null;
 
         if (typeof l === 'number' && typeof g === 'number') {
@@ -147,6 +144,17 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
 
+  // EXTRACCIÓ TÀCTICA DE CAPE (Risc Zero): Mogut a dalt de l'early return.
+  // Es guarda l'array a una constant per complir amb les regles de memoització del compilador.
+  const hourlyCape = hourly?.cape;
+  const safeHourlyCape = useMemo(() => {
+    if (!Array.isArray(hourlyCape)) return 0;
+    const validCapes = hourlyCape.slice(0, 24).filter((c): c is number => typeof c === 'number');
+    if (validCapes.length === 0) return 0;
+    return Math.max(...validCapes);
+  }, [hourlyCape]);
+
+  // EARLY RETURN: Sempre després dels Hooks!
   if (!current) return null;
 
   const safeHourlyTimes = Array.isArray(hourly?.time) ? (hourly.time as string[]) : [];
@@ -162,8 +170,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const rawGloWind = (wrfData?.hourly as Record<string, unknown> | undefined)?.wind_speed_10m;
   const safeGloWind = Array.isArray(rawGloWind) ? rawGloWind : undefined;
 
-  const safeHourlyCape = Array.isArray(hourly?.cape) ? (typeof hourly.cape[0] === 'number' ? hourly.cape[0] : 0) : 0;
-  
   const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';
   const safeSunset = Array.isArray(daily?.sunset) && typeof daily.sunset[0] === 'string' ? daily.sunset[0] : '';
 
@@ -200,7 +206,13 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
           <WidgetCard>
-              <CompassGauge degrees={currentWindDir ?? 0} speed={currentWindSpeed ?? 0} gusts={currentWindGusts ?? 0} label={lang === 'ca' ? "Vent" : "Wind"} lang={lang} />
+              <CompassGauge 
+                degrees={currentWindDir ?? 0} 
+                speed={currentWindSpeed ?? 0} 
+                gusts={currentWindGusts ?? 0} 
+                label={lang === 'ca' ? "Vent" : "Wind"} 
+                lang={lang} 
+              />
           </WidgetCard>
 
           <WidgetCard>

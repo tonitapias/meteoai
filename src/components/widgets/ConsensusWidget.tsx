@@ -51,31 +51,38 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     local: 'LOC', global: 'GLO', now: isCa ? 'ARA' : 'NOW'
   };
 
-  const isSnowRisk = (aromeTemp !== undefined && aromeTemp <= 2) || (metrics.wrfTemp !== null && metrics.wrfTemp <= 2);
+  // Risc Zero: Garantir que els valors són numèrics per avaluar el risc de neu
+  const safeAromeTemp = typeof aromeTemp === 'number' && !isNaN(aromeTemp) ? aromeTemp : undefined;
+  const safeWrfTemp = typeof metrics.wrfTemp === 'number' && !isNaN(metrics.wrfTemp) ? metrics.wrfTemp : null;
+  const isSnowRisk = (safeAromeTemp !== undefined && safeAromeTemp <= 2) || (safeWrfTemp !== null && safeWrfTemp <= 2);
+
+  // Risc Zero: Lligar l'score entre 0 i 100 per protegir l'SVG i els estats visuals
+  const safeScore = Math.max(0, Math.min(100, typeof metrics.score === 'number' && !isNaN(metrics.score) ? metrics.score : 0));
 
   const getTheme = (score: number) => {
     if (score >= 75) return { accent: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10', glow: 'from-emerald-900/30', shadow: 'shadow-[0_20px_50px_rgba(16,185,129,0.3)]', status: t.status.sync, icon: <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" /> };
     if (score >= 55) return { accent: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10', glow: 'from-amber-900/30', shadow: 'shadow-[0_20px_50px_rgba(245,158,11,0.3)]', status: t.status.discrepancy, icon: <Activity className="w-5 h-5 md:w-6 md:h-6" /> };
-    return { accent: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10', glow: 'from-rose-900/30', shadow: 'shadow-[0_20px_50px_rgba(225,29,72,0.3)]', status: t.status.alert, icon: <GitBranch className="w-5 h-5 md:w-6 md:h-6" /> };
+    return { accent: 'text-rose-500', border: 'border-rose-500/40', bg: 'bg-rose-500/10', glow: 'from-rose-900/40', shadow: 'shadow-[0_20px_50px_rgba(244,63,94,0.3)]', status: t.status.alert, icon: <GitBranch className="w-5 h-5 md:w-6 md:h-6" /> };
   };
 
-  const theme = getTheme(metrics.score);
+  const theme = getTheme(safeScore);
   const radius = 42; 
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (metrics.score / 100) * circumference;
+  const strokeDashoffset = circumference - (safeScore / 100) * circumference;
 
   const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
-    if (local == null || global == null || local === global) return <MoveRight className="w-4 h-4 text-slate-600" />;
+    if (typeof local !== 'number' || typeof global !== 'number' || local === global) return <MoveRight className="w-4 h-4 text-slate-500" />;
     const isUp = global > local;
     let iconClass = "w-4 h-4 transition-transform duration-300 ";
-    if (type === 'temp') iconClass += isUp ? "text-rose-400" : "text-sky-400";
+    if (type === 'temp') iconClass += isUp ? "text-rose-500" : "text-sky-400";
     else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-500";
     else iconClass += isUp ? "text-amber-400" : "text-emerald-400";
     return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
   };
 
-  const formatVal = (val: number | null | undefined) => val !== null && val !== undefined ? val : '--';
-  const formatDelta = (val: number | null | undefined) => val !== null && val !== undefined ? val.toFixed(1) : '--';
+  // Risc Zero: Formatejadors blindats contra NaN
+  const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val : '--';
+  const formatDelta = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val.toFixed(1) : '--';
 
   const getAbsoluteEpoch = (timeStr: string) => {
     if (!timeStr) return NaN;
@@ -111,16 +118,25 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     if (window.history.state?.modalOpen === 'consensus') window.history.back();
   };
 
+  // Risc Zero: Dependències de l'ESLint netejades (sense incloure closeModal per evitar cicles)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && activeModal) closeModal(); };
+    const handleKeyDown = (e: KeyboardEvent) => { 
+        if (e.key === 'Escape' && activeModal) {
+            setActiveModal(null);
+            if (window.history.state?.modalOpen === 'consensus') window.history.back();
+        } 
+    };
     const handlePopState = () => { if (activeModal) setActiveModal(null); };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('popstate', handlePopState);
-    return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('popstate', handlePopState); };
+    return () => { 
+        window.removeEventListener('keydown', handleKeyDown); 
+        window.removeEventListener('popstate', handlePopState); 
+    };
   }, [activeModal]);
 
   const renderModalContent = () => {
-    if (!activeModal || hourlyTimes.length === 0) return <div className="text-slate-500 text-center py-10 font-mono text-xs">Sincronitzant matrius horàries...</div>;
+    if (!activeModal || hourlyTimes.length === 0) return <div className="text-slate-400 text-center py-12 font-mono text-[10px] sm:text-xs tracking-widest uppercase animate-pulse">Sincronitzant matrius horàries...</div>;
     
     const locArr = hourlyLocal[activeModal] || [];
     const rawGloArr = hourlyGlobal[activeModal] || [];
@@ -155,10 +171,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
       const l = locArr[realIndex];
       const g = !isNaN(epochKey) ? (globalDict.get(epochKey) ?? null) : null;
 
-      if (l != null) { if(l < minVal) minVal = l; if(l > maxVal) maxVal = l; hasValidData = true; }
-      if (g != null) { if(g < minVal) minVal = g; if(g > maxVal) maxVal = g; hasValidData = true; }
+      if (typeof l === 'number') { if(l < minVal) minVal = l; if(l > maxVal) maxVal = l; hasValidData = true; }
+      if (typeof g === 'number') { if(g < minVal) minVal = g; if(g > maxVal) maxVal = g; hasValidData = true; }
     }
     
+    // Protecció divisió per zero a les barres
     if (!hasValidData) {
       minVal = 0;
       maxVal = 1;
@@ -184,20 +201,22 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           const locVal = locArr[realIndex];
           const epochKey = getAbsoluteEpoch(timeKey);
           const gloVal = !isNaN(epochKey) ? (globalDict.get(epochKey) ?? null) : null;
-          const diff = locVal != null && gloVal != null ? (gloVal - locVal).toFixed(1) : '--';
+          
+          const isLocValid = typeof locVal === 'number';
+          const isGloValid = typeof gloVal === 'number';
+          const diff = isLocValid && isGloValid ? (gloVal - locVal).toFixed(1) : '--';
           const isNow = i === 0;
 
           const refVal = locVal ?? gloVal;
           let widthPct = 0;
-          if (refVal != null && maxVal > minVal) {
+          if (typeof refVal === 'number' && maxVal > minVal) {
               widthPct = ((refVal - minVal) / (maxVal - minVal)) * 100;
               widthPct = Math.max(0, Math.min(100, widthPct)); 
           }
 
-          // Component reutilitzable del distintiu diferencial
           const diffBadge = (
-            <div className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center justify-center gap-1 sm:gap-1.5 border backdrop-blur-sm ${isNow ? 'bg-black/60 border-sky-900/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]' : 'bg-[#030712]/80 border-slate-700/80 group-hover:border-slate-600'} transition-colors`}>
-              <span className="text-xs sm:text-sm font-black text-slate-200 leading-none font-mono">
+            <div className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center justify-center gap-1 sm:gap-1.5 border backdrop-blur-md shadow-sm ${isNow ? 'bg-black/80 border-sky-500/30 shadow-[inset_0_0_8px_rgba(14,165,233,0.3)]' : 'bg-black/40 border-slate-700/50 group-hover:border-slate-500/60'} transition-colors`}>
+              <span className="text-xs sm:text-sm font-black text-white leading-none font-mono drop-shadow-md">
                 {diff !== '--' && Number(diff) > 0 ? `+${diff}` : diff}
               </span>
               {renderTrend(locVal, gloVal, activeModal)}
@@ -205,54 +224,48 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           );
 
           return (
-            /* ATENCIÓ AQUI: S'ha afegit shrink-0 per evitar l'efecte "aixafat" */
-            <div key={i} className={`shrink-0 relative flex flex-col sm:flex-row sm:items-center w-full bg-[#050810]/70 border ${isNow ? 'border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.15)]' : 'border-slate-800/60 md:hover:border-slate-600/50'} rounded-2xl p-4 sm:p-4 gap-3 sm:gap-0 transition-all duration-300 overflow-hidden group`}>
+            <div key={i} className={`shrink-0 relative flex flex-col sm:flex-row sm:items-center w-full bg-[#0a0f1c]/80 border ${isNow ? 'border-sky-500/40 shadow-[0_0_20px_rgba(14,165,233,0.2)] z-10' : 'border-white/5 hover:border-white/10 hover:bg-[#0f1424]/90'} rounded-2xl p-4 sm:p-4 gap-3 sm:gap-0 transition-all duration-300 overflow-hidden group backdrop-blur-sm`}>
               
-              {/* Barra de progrés tàctica de fons */}
               <div 
-                 className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${barColor} transition-all duration-1000 ease-out z-0`}
+                 className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${barColor} transition-all duration-1000 ease-out z-0 opacity-80`}
                  style={{ width: `${widthPct}%` }}
               />
 
-              {/* 1. BLOC HORARI (Fila superior completa en mòbil, cel·la esquerra en PC) */}
+              {/* 1. BLOC HORARI */}
               <div className="relative z-10 flex w-full sm:w-24 items-center justify-between sm:justify-start shrink-0">
                 <div className="flex flex-col justify-center">
-                   {isNow && <span className="text-[10px] font-black text-sky-400 tracking-widest leading-none mb-1">{t.now}</span>}
-                   <span className={`${isNow ? 'text-sky-100 font-bold' : 'text-slate-300'} font-mono text-sm md:text-base leading-none`}>
+                   {isNow && <span className="text-[10px] font-black text-sky-400 tracking-widest leading-none mb-1 drop-shadow-[0_0_5px_currentColor]">{t.now}</span>}
+                   <span className={`${isNow ? 'text-white font-black drop-shadow-md' : 'text-slate-300 font-bold'} font-mono text-sm md:text-base leading-none`}>
                      {formatTimeSafely(timeKey)}
                    </span>
                 </div>
-                {/* Posicionament del badge a la dreta NOMÉS en mòbil per evitar col·lapses */}
                 <div className="sm:hidden">
                   {diffBadge}
                 </div>
               </div>
               
-              {/* 2. BLOC DE TELEMETRIA COMPLETA (2 columnes fixes en mòbil, horitzontal flexible en PC) */}
-              <div className="relative z-10 flex-1 grid grid-cols-2 gap-2 sm:flex sm:grid-cols-none sm:items-center sm:justify-center sm:gap-8 w-full">
+              {/* 2. BLOC DE TELEMETRIA */}
+              <div className="relative z-10 flex-1 grid grid-cols-2 gap-3 sm:flex sm:grid-cols-none sm:items-center sm:justify-center sm:gap-8 w-full">
                 
-                {/* Sub-panell Model Local (AROME) */}
-                <div className="flex flex-col items-start sm:items-end bg-black/20 sm:bg-transparent border border-slate-800/40 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none">
+                <div className="flex flex-col items-start sm:items-end bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
                   <span className="text-[10px] text-slate-500 font-black tracking-widest mb-1 sm:mb-0.5">{t.local}</span>
-                  <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none">
-                    {formatVal(locVal)}<span className="text-[10px] text-slate-500 ml-0.5 font-bold">{unit}</span>
+                  <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none tracking-tighter drop-shadow-md">
+                    {formatVal(locVal)}<span className="text-[10px] text-slate-400 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>
                 </div>
                 
-                {/* Separador vertical exclusiu per a pantalles grans */}
-                <div className="hidden sm:block w-px h-8 bg-slate-700/60 rounded-full"></div>
+                <div className="hidden sm:block w-px h-8 bg-gradient-to-b from-transparent via-slate-500/50 to-transparent"></div>
                 
-                {/* Sub-panell Model Global (WRF) */}
-                <div className="flex flex-col items-start bg-black/20 sm:bg-transparent border border-slate-800/40 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none">
+                <div className="flex flex-col items-start bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
                   <span className="text-[10px] text-slate-500 font-black tracking-widest mb-1 sm:mb-0.5">{t.global}</span>
-                  <span className="text-base sm:text-lg md:text-xl font-black text-slate-400 leading-none">
-                    {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold">{unit}</span>
+                  <span className="text-base sm:text-lg md:text-xl font-black text-slate-400 leading-none tracking-tighter">
+                    {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>
                 </div>
 
               </div>
               
-              {/* 3. BLOC DE DISTINTIU DE DIVERGÈNCIA (Exclusiu en PC a l'extrem dret) */}
+              {/* 3. BLOC DISTINTIU PC */}
               <div className="hidden sm:flex shrink-0 justify-end relative z-10 w-24">
                 {diffBadge}
               </div>
@@ -275,12 +288,12 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
             .custom-scrollbar::-webkit-scrollbar { width: 4px; }
             @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { width: 6px; } }
             .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 6px; }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 6px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
           `}
         </style>
 
-        <div className={`w-full relative bg-[#030712]/90 backdrop-blur-2xl backdrop-saturate-150 border ${theme.border} rounded-[24px] md:rounded-[32px] ${theme.shadow} preserve-3d animate-[spatial-float-active_8s_ease-in-out_infinite] md:animate-[spatial-float-pc_10s_ease-in-out_infinite] transition-transform duration-500`}>
+        <div className={`w-full relative bg-[#060913]/90 backdrop-blur-2xl backdrop-saturate-150 border ${theme.border} rounded-[24px] md:rounded-[32px] ${theme.shadow} preserve-3d animate-[spatial-float-active_8s_ease-in-out_infinite] md:animate-[spatial-float-pc_10s_ease-in-out_infinite] transition-transform duration-500`}>
            <div className="absolute inset-0 overflow-hidden rounded-[24px] md:rounded-[32px]">
               <div className={`absolute inset-0 bg-[linear-gradient(currentColor_1px,transparent_1px),linear-gradient(90deg,currentColor_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] opacity-[0.03] [transform:translateZ(-50px)] ${theme.accent}`}></div>
               <div className={`absolute inset-0 bg-gradient-to-br ${theme.glow} to-transparent opacity-60 md:opacity-40`}></div>
@@ -289,34 +302,34 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
            <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 md:gap-8 relative z-10 preserve-3d">
               <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-4 sm:gap-0 [transform:translateZ(30px)]">
                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className={`w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#050810] border ${theme.border} flex items-center justify-center shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] relative overflow-hidden`}>
-                       <Cpu className={`w-4 h-4 md:w-5 md:h-5 ${theme.accent} relative z-10`} />
+                    <div className={`w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#0a0f1c] border ${theme.border} flex items-center justify-center shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] relative overflow-hidden backdrop-blur-md`}>
+                       <Cpu className={`w-4 h-4 md:w-5 md:h-5 ${theme.accent} relative z-10 drop-shadow-[0_0_8px_currentColor]`} />
                        <div className={`absolute inset-0 opacity-20 ${theme.bg} animate-pulse`}></div>
                     </div>
                     <div>
                        <h2 className="text-[11px] sm:text-xs md:text-sm font-black text-white uppercase tracking-[0.2em] drop-shadow-md">{t.title}</h2>
                        <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1">
                           <span className="relative flex h-2 w-2 md:h-2.5 md:w-2.5">
-                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-40 bg-current ${theme.accent}`}></span>
-                            <span className={`relative inline-flex rounded-full h-full w-full bg-current ${theme.accent}`}></span>
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-50 bg-current ${theme.accent}`}></span>
+                            <span className={`relative inline-flex rounded-full h-full w-full bg-current shadow-[0_0_6px_currentColor] ${theme.accent}`}></span>
                           </span>
-                          <span className={`text-[9px] sm:text-[10px] md:text-[11px] font-bold uppercase tracking-widest ${theme.accent}`}>{theme.status}</span>
+                          <span className={`text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest ${theme.accent}`}>{theme.status}</span>
                        </div>
                     </div>
                  </div>
 
-                 <div className="flex items-center gap-3 md:gap-4 bg-[#050810]/50 px-3 md:px-5 py-1.5 md:py-2.5 rounded-2xl md:rounded-3xl border border-slate-800/60 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] self-end sm:self-auto">
+                 <div className="flex items-center gap-3 md:gap-4 bg-black/40 px-3 md:px-5 py-1.5 md:py-2.5 rounded-2xl md:rounded-3xl border border-white/5 backdrop-blur-md shadow-inner self-end sm:self-auto">
                     <div className="flex flex-col items-end">
-                       <span className="text-[9px] sm:text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest">{t.affinity}</span>
-                       <span className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{metrics.score}<span className={`text-sm md:text-base ml-0.5 md:ml-1 ${theme.accent}`}>%</span></span>
+                       <span className="text-[9px] sm:text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-widest">{t.affinity}</span>
+                       <span className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{safeScore}<span className={`text-sm md:text-base ml-0.5 md:ml-1 ${theme.accent}`}>%</span></span>
                     </div>
                     <div className="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16">
                        <div className={`absolute inset-[-4px] md:inset-[-6px] border ${theme.border} rounded-full border-dashed animate-[spin_15s_linear_infinite]`}></div>
                        <svg className="absolute inset-0 w-full h-full transform -rotate-90 drop-shadow-[0_0_10px_currentColor]" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r={radius} className="stroke-slate-900" strokeWidth="8" fill="transparent" />
+                          <circle cx="50" cy="50" r={radius} className="stroke-black/50" strokeWidth="8" fill="transparent" />
                           <circle cx="50" cy="50" r={radius} className={`${theme.accent} transition-all duration-1000 ease-out`} strokeWidth="8" fill="transparent" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ filter: 'drop-shadow(0 0 8px currentColor)' }} />
                        </svg>
-                       <div className={`z-10 bg-[#030712] rounded-full p-1.5 md:p-2 shadow-[inset_0_0_15px_rgba(0,0,0,1)] border ${theme.border}`}>
+                       <div className={`z-10 bg-[#0a0f1c] rounded-full p-1.5 md:p-2 shadow-[inset_0_0_15px_rgba(0,0,0,1)] border ${theme.border}`}>
                           {theme.icon}
                        </div>
                     </div>
@@ -324,52 +337,52 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 w-full preserve-3d [transform:translateZ(40px)]">
-                 <div onClick={() => openModal('temp')} className="cursor-pointer group relative bg-[#0B0F19]/80 backdrop-blur-lg backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-slate-800/80 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] md:hover:border-slate-500/50 md:hover:-translate-y-2 md:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 active:translate-y-0">
-                    <div className="absolute inset-0 rounded-[20px] md:rounded-[24px] bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none"></div>
+                 <div onClick={() => openModal('temp')} className="cursor-pointer group relative bg-black/30 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/5 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] md:hover:border-rose-500/30 md:hover:-translate-y-2 md:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 active:translate-y-0">
+                    <div className="absolute inset-0 rounded-[20px] md:rounded-[24px] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none"></div>
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-400 mb-2 sm:mb-3 md:mb-4">
-                        <Thermometer className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-rose-400 transition-colors duration-300" />
+                        <Thermometer className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-rose-500 transition-colors duration-300 drop-shadow-md" />
                         <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black tracking-widest">{t.temp}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="text-xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-md">{formatVal(aromeTemp)}<span className="text-[10px] sm:text-xs md:text-sm text-slate-600 font-bold ml-0.5">°</span></div>
-                        <div className="text-[9px] sm:text-[10px] md:text-[11px] font-medium text-slate-500 mt-1 md:mt-2 transition-colors group-hover:text-slate-400">WRF <span className="text-slate-300 font-bold">{formatVal(metrics.wrfTemp)}°</span></div>
+                        <div className="text-xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{formatVal(aromeTemp)}<span className="text-[10px] sm:text-xs md:text-sm text-slate-500 font-bold ml-0.5">°</span></div>
+                        <div className="text-[9px] sm:text-[10px] md:text-[11px] font-medium text-slate-500 mt-1 md:mt-2 transition-colors group-hover:text-slate-400">WRF <span className="text-slate-300 font-black">{formatVal(metrics.wrfTemp)}°</span></div>
                     </div>
-                    <div className="w-full bg-[#030712] rounded-xl md:rounded-2xl py-2 md:py-2.5 flex justify-center items-center gap-2 border border-slate-800/60 shadow-[inset_0_1px_2px_rgba(0,0,0,1)] group-hover:border-slate-600 group-hover:bg-[#050810] transition-colors duration-300">
-                        <span className="text-[9px] md:text-[10px] text-slate-600 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-0.5 md:gap-1 text-[10px] sm:text-[11px] md:text-xs font-black text-slate-200">{formatDelta(metrics.tempDiff)}° {renderTrend(aromeTemp, metrics.wrfTemp, 'temp')}</div>
+                    <div className="w-full bg-black/60 rounded-xl md:rounded-2xl py-2 md:py-2.5 flex justify-center items-center gap-2 border border-white/5 shadow-inner group-hover:border-white/10 group-hover:bg-black/80 transition-colors duration-300">
+                        <span className="text-[9px] md:text-[10px] text-slate-500 font-black">{t.diff}</span>
+                        <div className="flex items-center gap-0.5 md:gap-1 text-[10px] sm:text-[11px] md:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(aromeTemp, metrics.wrfTemp, 'temp')}</div>
                     </div>
                  </div>
 
-                 <div onClick={() => openModal('rain')} className={`cursor-pointer group relative bg-[#0B0F19]/80 backdrop-blur-lg backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] md:hover:-translate-y-2 md:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 active:translate-y-0 ${isSnowRisk ? 'border-sky-900/50 md:hover:border-sky-500/50' : 'border-slate-800/80 md:hover:border-slate-500/50'}`}>
-                    <div className="absolute inset-0 rounded-[20px] md:rounded-[24px] bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none"></div>
-                    {isSnowRisk && <div className="absolute inset-0 bg-sky-500/5 rounded-[20px] md:rounded-[24px] animate-pulse pointer-events-none"></div>}
-                    <div className={`flex items-center gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4 ${isSnowRisk ? 'text-sky-400 drop-shadow-[0_0_5px_currentColor]' : 'text-slate-400'}`}>
-                        {isSnowRisk ? <CloudSnow className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-sky-300 transition-colors duration-300" /> : <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-sky-400 transition-colors duration-300" />}
+                 <div onClick={() => openModal('rain')} className={`cursor-pointer group relative bg-black/30 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] md:hover:-translate-y-2 md:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 active:translate-y-0 ${isSnowRisk ? 'border-sky-500/30 md:hover:border-sky-400/50' : 'border-white/5 md:hover:border-sky-500/30'}`}>
+                    <div className="absolute inset-0 rounded-[20px] md:rounded-[24px] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none"></div>
+                    {isSnowRisk && <div className="absolute inset-0 bg-sky-500/10 rounded-[20px] md:rounded-[24px] animate-pulse pointer-events-none"></div>}
+                    <div className={`flex items-center gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4 ${isSnowRisk ? 'text-sky-300 drop-shadow-[0_0_8px_currentColor]' : 'text-slate-400'}`}>
+                        {isSnowRisk ? <CloudSnow className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-white transition-colors duration-300" /> : <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-sky-400 transition-colors duration-300 drop-shadow-md" />}
                         <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black tracking-widest">{isSnowRisk ? t.snow : t.rain}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-md"><span className="text-xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(aromePrecip)}</span><span className="text-[8px] sm:text-[10px] md:text-[11px] text-slate-600 font-bold ml-0.5 md:ml-1">mm</span></div>
-                        <div className="text-[9px] sm:text-[10px] md:text-[11px] font-medium text-slate-500 mt-1 md:mt-2 flex items-baseline gap-1 transition-colors group-hover:text-slate-400">WRF <span className="text-slate-300 font-bold">{formatVal(metrics.wrfPrecip)}<span className="text-[7px] md:text-[9px] font-normal text-slate-600 ml-[1px]">mm</span></span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(aromePrecip)}</span><span className="text-[8px] sm:text-[10px] md:text-[11px] text-slate-500 font-bold ml-0.5 md:ml-1">mm</span></div>
+                        <div className="text-[9px] sm:text-[10px] md:text-[11px] font-medium text-slate-500 mt-1 md:mt-2 flex items-baseline gap-1 transition-colors group-hover:text-slate-400">WRF <span className="text-slate-300 font-black">{formatVal(metrics.wrfPrecip)}<span className="text-[7px] md:text-[9px] font-normal text-slate-500 ml-[1px]">mm</span></span></div>
                     </div>
-                    <div className="w-full bg-[#030712] rounded-xl md:rounded-2xl py-2 md:py-2.5 flex justify-center items-center gap-2 border border-slate-800/60 shadow-[inset_0_1px_2px_rgba(0,0,0,1)] group-hover:border-slate-600 group-hover:bg-[#050810] transition-colors duration-300">
-                        <span className="text-[9px] md:text-[10px] text-slate-600 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-0.5 md:gap-1 text-[10px] sm:text-[11px] md:text-xs font-black text-slate-200">{formatDelta(metrics.precipDiff)} {renderTrend(aromePrecip, metrics.wrfPrecip, 'rain')}</div>
+                    <div className="w-full bg-black/60 rounded-xl md:rounded-2xl py-2 md:py-2.5 flex justify-center items-center gap-2 border border-white/5 shadow-inner group-hover:border-white/10 group-hover:bg-black/80 transition-colors duration-300">
+                        <span className="text-[9px] md:text-[10px] text-slate-500 font-black">{t.diff}</span>
+                        <div className="flex items-center gap-0.5 md:gap-1 text-[10px] sm:text-[11px] md:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(aromePrecip, metrics.wrfPrecip, 'rain')}</div>
                     </div>
                  </div>
 
-                 <div onClick={() => openModal('wind')} className="cursor-pointer group relative bg-[#0B0F19]/80 backdrop-blur-lg backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-slate-800/80 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] md:hover:border-amber-500/50 md:hover:-translate-y-2 md:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 active:translate-y-0">
-                    <div className="absolute inset-0 rounded-[20px] md:rounded-[24px] bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none"></div>
+                 <div onClick={() => openModal('wind')} className="cursor-pointer group relative bg-black/30 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/5 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] md:hover:border-amber-500/30 md:hover:-translate-y-2 md:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 active:translate-y-0">
+                    <div className="absolute inset-0 rounded-[20px] md:rounded-[24px] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none"></div>
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-400 mb-2 sm:mb-3 md:mb-4">
-                        <Wind className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-amber-400 transition-colors duration-300" />
+                        <Wind className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:text-amber-400 transition-colors duration-300 drop-shadow-md" />
                         <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black tracking-widest">{t.wind}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-md"><span className="text-xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(aromeWind)}</span><span className="text-[8px] sm:text-[10px] md:text-[11px] text-slate-600 font-bold ml-0.5 md:ml-1">kmh</span></div>
-                        <div className="text-[9px] sm:text-[10px] md:text-[11px] font-medium text-slate-500 mt-1 md:mt-2 flex items-baseline gap-1 transition-colors group-hover:text-slate-400">WRF <span className="text-slate-300 font-bold">{formatVal(metrics.wrfWind)}<span className="text-[7px] md:text-[9px] font-normal text-slate-600 ml-[1px]">km</span></span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(aromeWind)}</span><span className="text-[8px] sm:text-[10px] md:text-[11px] text-slate-500 font-bold ml-0.5 md:ml-1">kmh</span></div>
+                        <div className="text-[9px] sm:text-[10px] md:text-[11px] font-medium text-slate-500 mt-1 md:mt-2 flex items-baseline gap-1 transition-colors group-hover:text-slate-400">WRF <span className="text-slate-300 font-black">{formatVal(metrics.wrfWind)}<span className="text-[7px] md:text-[9px] font-normal text-slate-500 ml-[1px]">km</span></span></div>
                     </div>
-                    <div className="w-full bg-[#030712] rounded-xl md:rounded-2xl py-2 md:py-2.5 flex justify-center items-center gap-2 border border-slate-800/60 shadow-[inset_0_1px_2px_rgba(0,0,0,1)] group-hover:border-slate-600 group-hover:bg-[#050810] transition-colors duration-300">
-                        <span className="text-[9px] md:text-[10px] text-slate-600 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-0.5 md:gap-1 text-[10px] sm:text-[11px] md:text-xs font-black text-slate-200">{formatDelta(metrics.windDiff)} {renderTrend(aromeWind, metrics.wrfWind, 'wind')}</div>
+                    <div className="w-full bg-black/60 rounded-xl md:rounded-2xl py-2 md:py-2.5 flex justify-center items-center gap-2 border border-white/5 shadow-inner group-hover:border-white/10 group-hover:bg-black/80 transition-colors duration-300">
+                        <span className="text-[9px] md:text-[10px] text-slate-500 font-black">{t.diff}</span>
+                        <div className="flex items-center gap-0.5 md:gap-1 text-[10px] sm:text-[11px] md:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(aromeWind, metrics.wrfWind, 'wind')}</div>
                     </div>
                  </div>
               </div>
@@ -378,27 +391,27 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
       </div>
 
       {activeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#030712]/85 backdrop-blur-2xl backdrop-saturate-150 animate-in fade-in duration-300">
-          <div className="bg-[#0B0F19] border border-slate-700/60 rounded-[28px] md:rounded-[32px] w-[96%] sm:max-w-md md:max-w-2xl lg:max-w-3xl shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-            <div className="flex justify-between items-center p-4 sm:p-5 md:p-6 border-b border-slate-800/80 bg-[#050810]/90 backdrop-blur-md relative z-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-800/10 to-transparent pointer-events-none"></div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xl backdrop-saturate-150 animate-in fade-in duration-300">
+          <div className="bg-[#080b14] border border-white/10 rounded-[28px] md:rounded-[32px] w-[96%] sm:max-w-md md:max-w-2xl lg:max-w-3xl shadow-[0_0_80px_rgba(0,0,0,1)] overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="flex justify-between items-center p-4 sm:p-5 md:p-6 border-b border-white/5 bg-[#0a0f1c]/90 backdrop-blur-md relative z-10">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent pointer-events-none"></div>
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className={`p-2.5 sm:p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 shadow-inner`}>
-                    {activeModal === 'temp' && <Thermometer className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-rose-400 drop-shadow-[0_0_8px_currentColor]" />}
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-black/50 border border-white/5 shadow-inner">
+                    {activeModal === 'temp' && <Thermometer className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-rose-500 drop-shadow-[0_0_8px_currentColor]" />}
                     {activeModal === 'rain' && <CloudRain className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-sky-400 drop-shadow-[0_0_8px_currentColor]" />}
                     {activeModal === 'wind' && <Wind className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-amber-400 drop-shadow-[0_0_8px_currentColor]" />}
                 </div>
                 <div>
                   <h3 className="text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
-                  <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-500 font-mono tracking-widest mt-0.5">
+                  <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5">
                     {activeModal === 'temp' ? 'TEMPERATURA' : activeModal === 'rain' ? 'PLUJA / NEU' : 'VENT (10M)'}
                   </p>
                 </div>
               </div>
-              <button onClick={closeModal} className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-[#030712] border border-slate-700/80 flex items-center justify-center md:hover:bg-slate-800 md:hover:scale-110 active:scale-95 transition-all duration-300 text-slate-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]"><X className="w-4 h-4 sm:w-5 sm:h-5" /></button>
+              <button onClick={closeModal} className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-white/10 flex items-center justify-center md:hover:bg-white/10 md:hover:scale-105 active:scale-95 transition-all duration-300 text-white shadow-inner"><X className="w-4 h-4 sm:w-5 sm:h-5" /></button>
             </div>
-            <div className="p-3 sm:p-4 md:p-6 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] bg-[#030712] relative">
-              <div className="absolute inset-0 bg-gradient-to-b from-[#050810]/50 to-transparent pointer-events-none"></div>
+            <div className="p-3 sm:p-4 md:p-6 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] bg-[#060913] relative">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1c]/80 to-transparent pointer-events-none"></div>
               {renderModalContent()}
             </div>
           </div>
