@@ -38,7 +38,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   hourlyTimes = [], hourlyGlobalTimes = [], hourlyLocal = {}, hourlyGlobal = {}
 }) => {
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
-  // 2. SOLUCIÓ ESLINT: Estat pur per capturar l'hora sense trencar el renderitzat
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   
   const isCa = lang === 'ca';
@@ -66,9 +65,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const strokeDashoffset = circumference - (metrics.score / 100) * circumference;
 
   const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
-    if (local == null || global == null || local === global) return <MoveRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-600" />;
+    if (local == null || global == null || local === global) return <MoveRight className="w-4 h-4 text-slate-600" />;
     const isUp = global > local;
-    let iconClass = "w-3.5 h-3.5 md:w-4 md:h-4 transition-transform duration-300 ";
+    let iconClass = "w-4 h-4 transition-transform duration-300 ";
     if (type === 'temp') iconClass += isUp ? "text-rose-400" : "text-sky-400";
     else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-500";
     else iconClass += isUp ? "text-amber-400" : "text-emerald-400";
@@ -102,7 +101,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   };
 
   const openModal = (type: ModalType) => {
-    // Sincronitzem l'hora en el moment exacte del clic en lloc d'impurificar el render
     setNowTimestamp(Date.now()); 
     window.history.pushState({ modalOpen: 'consensus' }, '');
     setActiveModal(type);
@@ -126,7 +124,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     
     const locArr = hourlyLocal[activeModal] || [];
     const rawGloArr = hourlyGlobal[activeModal] || [];
-    const unit = activeModal === 'temp' ? '°' : activeModal === 'rain' ? ' mm' : ' km/h';
+    const unit = activeModal === 'temp' ? '°' : activeModal === 'rain' ? 'mm' : 'km/h';
     
     const globalDict = new Map<number, number | null>();
     rawGloArr.forEach((val, idx) => {
@@ -180,7 +178,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
         : 'from-amber-500/20 to-amber-400/5';
 
     return (
-      <div className="flex flex-col gap-2 md:gap-3 max-h-[65vh] md:max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="flex flex-col gap-3 max-h-[60vh] sm:max-h-[65vh] md:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2 pb-4 custom-scrollbar">
         {displayTimes.map((timeKey, i) => {
           const realIndex = startIndex + i;
           const locVal = locArr[realIndex];
@@ -196,35 +194,69 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
               widthPct = Math.max(0, Math.min(100, widthPct)); 
           }
 
+          // Component reutilitzable del distintiu diferencial
+          const diffBadge = (
+            <div className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center justify-center gap-1 sm:gap-1.5 border backdrop-blur-sm ${isNow ? 'bg-black/60 border-sky-900/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]' : 'bg-[#030712]/80 border-slate-700/80 group-hover:border-slate-600'} transition-colors`}>
+              <span className="text-xs sm:text-sm font-black text-slate-200 leading-none font-mono">
+                {diff !== '--' && Number(diff) > 0 ? `+${diff}` : diff}
+              </span>
+              {renderTrend(locVal, gloVal, activeModal)}
+            </div>
+          );
+
           return (
-            <div key={i} className={`relative flex items-center justify-between bg-[#050810] border ${isNow ? 'border-sky-500/40 shadow-[inset_0_0_15px_rgba(14,165,233,0.15)]' : 'border-slate-800/50 md:hover:border-slate-600/50 md:hover:bg-slate-800/40'} rounded-xl p-3 md:p-4 transition-all duration-300 overflow-hidden group`}>
+            /* ATENCIÓ AQUI: S'ha afegit shrink-0 per evitar l'efecte "aixafat" */
+            <div key={i} className={`shrink-0 relative flex flex-col sm:flex-row sm:items-center w-full bg-[#050810]/70 border ${isNow ? 'border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.15)]' : 'border-slate-800/60 md:hover:border-slate-600/50'} rounded-2xl p-4 sm:p-4 gap-3 sm:gap-0 transition-all duration-300 overflow-hidden group`}>
               
+              {/* Barra de progrés tàctica de fons */}
               <div 
                  className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${barColor} transition-all duration-1000 ease-out z-0`}
                  style={{ width: `${widthPct}%` }}
               />
 
-              <div className="flex flex-col items-center w-12 md:w-16 relative z-10">
-                 {isNow && <span className="text-[7px] md:text-[9px] font-black text-sky-400 mb-0.5 tracking-widest">{t.now}</span>}
-                 <span className={`${isNow ? 'text-sky-100 font-bold' : 'text-slate-400 group-hover:text-slate-200'} font-mono text-[10px] md:text-xs transition-colors`}>{formatTimeSafely(timeKey)}</span>
-              </div>
-              
-              <div className="flex flex-1 items-center justify-around px-4 md:px-8 relative z-10">
-                <div className="flex flex-col items-center">
-                  <span className="text-[8px] md:text-[10px] text-slate-600 group-hover:text-slate-500 font-black tracking-widest transition-colors">{t.local}</span>
-                  <span className="text-white font-bold text-sm md:text-base">{formatVal(locVal)}<span className="text-[9px] md:text-[11px] text-slate-500 ml-0.5">{unit}</span></span>
+              {/* 1. BLOC HORARI (Fila superior completa en mòbil, cel·la esquerra en PC) */}
+              <div className="relative z-10 flex w-full sm:w-24 items-center justify-between sm:justify-start shrink-0">
+                <div className="flex flex-col justify-center">
+                   {isNow && <span className="text-[10px] font-black text-sky-400 tracking-widest leading-none mb-1">{t.now}</span>}
+                   <span className={`${isNow ? 'text-sky-100 font-bold' : 'text-slate-300'} font-mono text-sm md:text-base leading-none`}>
+                     {formatTimeSafely(timeKey)}
+                   </span>
                 </div>
-                <div className="h-6 md:h-8 w-px bg-slate-800 group-hover:bg-slate-700 transition-colors"></div>
-                <div className="flex flex-col items-center">
-                  <span className="text-[8px] md:text-[10px] text-slate-600 group-hover:text-slate-500 font-black tracking-widest transition-colors">{t.global}</span>
-                  <span className="text-slate-300 font-bold text-sm md:text-base">{formatVal(gloVal)}<span className="text-[9px] md:text-[11px] text-slate-500 ml-0.5">{unit}</span></span>
+                {/* Posicionament del badge a la dreta NOMÉS en mòbil per evitar col·lapses */}
+                <div className="sm:hidden">
+                  {diffBadge}
                 </div>
               </div>
               
-              <div className={`w-14 md:w-16 rounded-lg py-1 md:py-1.5 flex justify-center items-center gap-1 border relative z-10 ${isNow ? 'bg-black/60 border-sky-900/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]' : 'bg-[#030712]/80 border-slate-800/80 backdrop-blur-sm group-hover:border-slate-700'} transition-colors`}>
-                <span className="text-[10px] md:text-[11px] font-black text-slate-200">{diff !== '--' && Number(diff) > 0 ? `+${diff}` : diff}</span>
-                {renderTrend(locVal, gloVal, activeModal)}
+              {/* 2. BLOC DE TELEMETRIA COMPLETA (2 columnes fixes en mòbil, horitzontal flexible en PC) */}
+              <div className="relative z-10 flex-1 grid grid-cols-2 gap-2 sm:flex sm:grid-cols-none sm:items-center sm:justify-center sm:gap-8 w-full">
+                
+                {/* Sub-panell Model Local (AROME) */}
+                <div className="flex flex-col items-start sm:items-end bg-black/20 sm:bg-transparent border border-slate-800/40 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none">
+                  <span className="text-[10px] text-slate-500 font-black tracking-widest mb-1 sm:mb-0.5">{t.local}</span>
+                  <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none">
+                    {formatVal(locVal)}<span className="text-[10px] text-slate-500 ml-0.5 font-bold">{unit}</span>
+                  </span>
+                </div>
+                
+                {/* Separador vertical exclusiu per a pantalles grans */}
+                <div className="hidden sm:block w-px h-8 bg-slate-700/60 rounded-full"></div>
+                
+                {/* Sub-panell Model Global (WRF) */}
+                <div className="flex flex-col items-start bg-black/20 sm:bg-transparent border border-slate-800/40 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none">
+                  <span className="text-[10px] text-slate-500 font-black tracking-widest mb-1 sm:mb-0.5">{t.global}</span>
+                  <span className="text-base sm:text-lg md:text-xl font-black text-slate-400 leading-none">
+                    {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold">{unit}</span>
+                  </span>
+                </div>
+
               </div>
+              
+              {/* 3. BLOC DE DISTINTIU DE DIVERGÈNCIA (Exclusiu en PC a l'extrem dret) */}
+              <div className="hidden sm:flex shrink-0 justify-end relative z-10 w-24">
+                {diffBadge}
+              </div>
+
             </div>
           );
         })}
@@ -346,26 +378,26 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
       </div>
 
       {activeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#030712]/85 backdrop-blur-2xl backdrop-saturate-150 animate-in fade-in duration-300">
-          <div className="bg-[#0B0F19] border border-slate-700/60 rounded-[32px] w-[95%] sm:max-w-md md:max-w-2xl lg:max-w-3xl shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-            <div className="flex justify-between items-center p-5 md:p-6 border-b border-slate-800/80 bg-[#050810]/90 backdrop-blur-md relative z-10">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#030712]/85 backdrop-blur-2xl backdrop-saturate-150 animate-in fade-in duration-300">
+          <div className="bg-[#0B0F19] border border-slate-700/60 rounded-[28px] md:rounded-[32px] w-[96%] sm:max-w-md md:max-w-2xl lg:max-w-3xl shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="flex justify-between items-center p-4 sm:p-5 md:p-6 border-b border-slate-800/80 bg-[#050810]/90 backdrop-blur-md relative z-10">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-800/10 to-transparent pointer-events-none"></div>
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 shadow-inner`}>
-                    {activeModal === 'temp' && <Thermometer className="w-6 h-6 md:w-7 md:h-7 text-rose-400 drop-shadow-[0_0_8px_currentColor]" />}
-                    {activeModal === 'rain' && <CloudRain className="w-6 h-6 md:w-7 md:h-7 text-sky-400 drop-shadow-[0_0_8px_currentColor]" />}
-                    {activeModal === 'wind' && <Wind className="w-6 h-6 md:w-7 md:h-7 text-amber-400 drop-shadow-[0_0_8px_currentColor]" />}
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className={`p-2.5 sm:p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 shadow-inner`}>
+                    {activeModal === 'temp' && <Thermometer className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-rose-400 drop-shadow-[0_0_8px_currentColor]" />}
+                    {activeModal === 'rain' && <CloudRain className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-sky-400 drop-shadow-[0_0_8px_currentColor]" />}
+                    {activeModal === 'wind' && <Wind className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-amber-400 drop-shadow-[0_0_8px_currentColor]" />}
                 </div>
                 <div>
-                  <h3 className="text-white font-black uppercase tracking-[0.2em] text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
-                  <p className="text-[10px] md:text-xs text-slate-500 font-mono tracking-widest mt-0.5">
+                  <h3 className="text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
+                  <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-500 font-mono tracking-widest mt-0.5">
                     {activeModal === 'temp' ? 'TEMPERATURA' : activeModal === 'rain' ? 'PLUJA / NEU' : 'VENT (10M)'}
                   </p>
                 </div>
               </div>
-              <button onClick={closeModal} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#030712] border border-slate-700/80 flex items-center justify-center md:hover:bg-slate-800 md:hover:scale-110 active:scale-95 transition-all duration-300 text-slate-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]"><X className="w-5 h-5" /></button>
+              <button onClick={closeModal} className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-[#030712] border border-slate-700/80 flex items-center justify-center md:hover:bg-slate-800 md:hover:scale-110 active:scale-95 transition-all duration-300 text-slate-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]"><X className="w-4 h-4 sm:w-5 sm:h-5" /></button>
             </div>
-            <div className="p-4 md:p-6 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] bg-[#030712] relative">
+            <div className="p-3 sm:p-4 md:p-6 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] bg-[#030712] relative">
               <div className="absolute inset-0 bg-gradient-to-b from-[#050810]/50 to-transparent pointer-events-none"></div>
               {renderModalContent()}
             </div>
