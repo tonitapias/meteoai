@@ -26,8 +26,8 @@ interface ConsensusWidgetProps {
   utcOffset?: number; 
   hourlyTimes?: string[];
   hourlyGlobalTimes?: string[];
-  hourlyLocal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[] };
-  hourlyGlobal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[] };
+  hourlyLocal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
+  hourlyGlobal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
 }
 
 export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
@@ -47,12 +47,10 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     status: { sync: isCa ? 'Alineat' : 'Aligned', discrepancy: isCa ? 'Discrepància' : 'Variance', alert: isCa ? 'Divergència' : 'Divergence' }
   };
 
-  // Risc Zero: Garantir que els valors són numèrics per avaluar el risc de neu
   const safeAromeTemp = typeof aromeTemp === 'number' && !isNaN(aromeTemp) ? aromeTemp : undefined;
   const safeWrfTemp = typeof metrics.wrfTemp === 'number' && !isNaN(metrics.wrfTemp) ? metrics.wrfTemp : null;
   const isSnowRisk = (safeAromeTemp !== undefined && safeAromeTemp <= 2) || (safeWrfTemp !== null && safeWrfTemp <= 2);
 
-  // Risc Zero: Lligar l'score entre 0 i 100 per protegir l'SVG i els estats visuals
   const safeScore = Math.max(0, Math.min(100, typeof metrics.score === 'number' && !isNaN(metrics.score) ? metrics.score : 0));
 
   const getTheme = (score: number) => {
@@ -76,7 +74,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
   };
 
-  // Risc Zero: Formatejadors blindats contra NaN
   const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val : '--';
   const formatDelta = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val.toFixed(1) : '--';
 
@@ -91,7 +88,6 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     if (window.history.state?.modalOpen === 'consensus') window.history.back();
   };
 
-  // Risc Zero: Dependències de l'ESLint netejades per a la History API
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { 
         if (e.key === 'Escape' && activeModal) {

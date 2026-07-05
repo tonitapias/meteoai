@@ -21,8 +21,8 @@ interface ConsensusModalProps {
   nowTimestamp: number;
   hourlyTimes: string[];
   hourlyGlobalTimes: string[];
-  hourlyLocal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[] };
-  hourlyGlobal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[] };
+  hourlyLocal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
+  hourlyGlobal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
 }
 
 export const ConsensusModal: React.FC<ConsensusModalProps> = ({
@@ -45,7 +45,6 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
     now: isCa ? 'ARA' : 'NOW'
   };
 
-  // Funcions auxiliars de protecció (Risc Zero)
   const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val : '--';
   
   const getAbsoluteEpoch = (timeStr: string) => {
@@ -86,6 +85,8 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
     
     const locArr = hourlyLocal[activeModal] || [];
     const rawGloArr = hourlyGlobal[activeModal] || [];
+    const locGustsArr = hourlyLocal.gusts || [];
+    const gloGustsArr = hourlyGlobal.gusts || [];
     const unit = activeModal === 'temp' ? '°' : activeModal === 'rain' ? 'mm' : 'km/h';
     
     const globalDict = new Map<number, number | null>();
@@ -94,6 +95,15 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
        const epoch = getAbsoluteEpoch(timeStr);
        if (!isNaN(epoch)) {
            globalDict.set(epoch, val);
+       }
+    });
+
+    const globalGustsDict = new Map<number, number | null>();
+    gloGustsArr.forEach((val, idx) => {
+       const timeStr = hourlyGlobalTimes[idx];
+       const epoch = getAbsoluteEpoch(timeStr);
+       if (!isNaN(epoch)) {
+           globalGustsDict.set(epoch, val);
        }
     });
     
@@ -121,7 +131,6 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
       if (typeof g === 'number') { if(g < minVal) minVal = g; if(g > maxVal) maxVal = g; hasValidData = true; }
     }
     
-    // Protecció divisió per zero a les barres
     if (!hasValidData) {
       minVal = 0;
       maxVal = 1;
@@ -145,8 +154,10 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
         {displayTimes.map((timeKey, i) => {
           const realIndex = startIndex + i;
           const locVal = locArr[realIndex];
+          const locGustVal = locGustsArr[realIndex];
           const epochKey = getAbsoluteEpoch(timeKey);
           const gloVal = !isNaN(epochKey) ? (globalDict.get(epochKey) ?? null) : null;
+          const gloGustVal = !isNaN(epochKey) ? (globalGustsDict.get(epochKey) ?? null) : null;
           
           const isLocValid = typeof locVal === 'number';
           const isGloValid = typeof gloVal === 'number';
@@ -198,6 +209,11 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                   <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none tracking-tighter drop-shadow-md">
                     {formatVal(locVal)}<span className="text-[10px] text-slate-400 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>
+                  {activeModal === 'wind' && (
+                    <span className="text-[10px] text-amber-400 font-mono mt-1 font-black flex items-center gap-0.5 drop-shadow-[0_0_4px_rgba(245,158,11,0.4)] animate-pulse">
+                      ⚡ {formatVal(locGustVal)}<span className="text-[8px] text-amber-500/70 font-bold uppercase">kmh</span>
+                    </span>
+                  )}
                 </div>
                 
                 <div className="hidden sm:block w-px h-8 bg-gradient-to-b from-transparent via-slate-500/50 to-transparent"></div>
@@ -207,6 +223,11 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                   <span className="text-base sm:text-lg md:text-xl font-black text-slate-400 leading-none tracking-tighter">
                     {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>
+                  {activeModal === 'wind' && (
+                    <span className="text-[10px] text-slate-500 font-mono mt-1 font-bold flex items-center gap-0.5">
+                      ⚡ {formatVal(gloGustVal)}<span className="text-[8px] text-slate-600/70 font-bold uppercase">kmh</span>
+                    </span>
+                  )}
                 </div>
 
               </div>

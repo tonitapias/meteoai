@@ -144,8 +144,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
 
-  // EXTRACCIÓ TÀCTICA DE CAPE (Risc Zero): Mogut a dalt de l'early return.
-  // Es guarda l'array a una constant per complir amb les regles de memoització del compilador.
   const hourlyCape = hourly?.cape;
   const safeHourlyCape = useMemo(() => {
     if (!Array.isArray(hourlyCape)) return 0;
@@ -154,7 +152,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     return Math.max(...validCapes);
   }, [hourlyCape]);
 
-  // EARLY RETURN: Sempre després dels Hooks!
   if (!current) return null;
 
   const safeHourlyTimes = Array.isArray(hourly?.time) ? (hourly.time as string[]) : [];
@@ -163,12 +160,16 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const safeHourlyTemp = Array.isArray(hourly?.temperature_2m) ? hourly.temperature_2m : undefined;
   const safeHourlyRain = Array.isArray(hourly?.precipitation) ? hourly.precipitation : undefined;
   const safeHourlyWind = Array.isArray(hourly?.wind_speed_10m) ? hourly.wind_speed_10m : undefined;
+  const safeHourlyGusts = Array.isArray(hourly?.wind_gusts_10m) ? hourly.wind_gusts_10m : undefined;
   
   const safeGloTemp = Array.isArray(wrfData?.hourly?.temperature_2m) ? wrfData.hourly.temperature_2m : undefined;
   const safeGloRain = Array.isArray(wrfData?.hourly?.precipitation) ? wrfData.hourly.precipitation : undefined;
   
   const rawGloWind = (wrfData?.hourly as Record<string, unknown> | undefined)?.wind_speed_10m;
   const safeGloWind = Array.isArray(rawGloWind) ? rawGloWind : undefined;
+
+  const rawGloGusts = (wrfData?.hourly as Record<string, unknown> | undefined)?.wind_gusts_10m;
+  const safeGloGusts = Array.isArray(rawGloGusts) ? rawGloGusts : undefined;
 
   const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';
   const safeSunset = Array.isArray(daily?.sunset) && typeof daily.sunset[0] === 'string' ? daily.sunset[0] : '';
@@ -193,12 +194,14 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
                hourlyLocal={{ 
                  temp: safeHourlyTemp as (number | null)[] | undefined, 
                  rain: safeHourlyRain as (number | null)[] | undefined, 
-                 wind: safeHourlyWind as (number | null)[] | undefined 
+                 wind: safeHourlyWind as (number | null)[] | undefined,
+                 gusts: safeHourlyGusts as (number | null)[] | undefined
                }}
                hourlyGlobal={{ 
                  temp: safeGloTemp as (number | null)[] | undefined, 
                  rain: safeGloRain as (number | null)[] | undefined, 
-                 wind: safeGloWind as (number | null)[] | undefined 
+                 wind: safeGloWind as (number | null)[] | undefined,
+                 gusts: safeGloGusts as (number | null)[] | undefined
                }}
             />
          )}

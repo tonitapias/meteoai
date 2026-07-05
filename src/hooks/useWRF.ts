@@ -12,8 +12,9 @@ const wrfHourlySchema = z.object({
   ),
   temperature_2m: z.array(z.number().nullable()),
   precipitation: z.array(z.number().nullable()),
-  // Hem d'afegir el vent a l'esquema, ja que el demanes a la URL i s'utilitza al ConsensusWidget
   wind_speed_10m: z.array(z.number().nullable()).optional(),
+  // Afegim la matriu de ratxes de vent (Gusts) com a array de números o nuls per suportar forats de dades
+  wind_gusts_10m: z.array(z.number().nullable()).optional(),
 }).passthrough();
 
 const wrfResponseSchema = z.object({
@@ -35,8 +36,8 @@ export function useWRF() {
     setLoadingWRF(true);
     
     try {
-      // SOLUCIÓ TÀCTICA: Substituïm timezone=auto per timeformat=unixtime
-      const WRF_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&models=best_match&timeformat=unixtime`;
+      // SOLUCIÓ TÀCTICA: Hem afegit 'wind_gusts_10m' a la query de l'API
+      const WRF_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m&models=best_match&timeformat=unixtime`;
       
       const response = await fetch(WRF_URL);
       
