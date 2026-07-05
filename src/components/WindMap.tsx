@@ -8,16 +8,15 @@ interface WindMapProps {
 }
 
 export default function WindMap({ lat, lon }: WindMapProps) {
-  // Estat de protecció per saber si l'iframe extern ha carregat
   const [isLoading, setIsLoading] = useState(true);
 
   // Integrem el widget oficial de Windy configurat per vent (wind) i model ECMWF.
   const windyUrl = `https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=default&metricWind=km%2Fh&zoom=9&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}`;
 
   return (
-    <div className="w-full h-full bg-[#020308] relative overflow-hidden flex items-center justify-center">
+    <div className="w-full h-full min-h-0 bg-[#020308] relative overflow-hidden flex items-center justify-center">
       
-      {/* PANTALLA DE CÀRREGA TÀCTICA (Es mostra mentre l'iframe està treballant) */}
+      {/* PANTALLA DE CÀRREGA TÀCTICA */}
       {isLoading && (
          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#020308] backdrop-blur-md">
              <div className="relative w-16 h-16 flex items-center justify-center mb-4">

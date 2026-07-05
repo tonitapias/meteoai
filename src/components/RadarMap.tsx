@@ -56,7 +56,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<boolean>(false);
   
-  // SOLUCIÓ: Tipatge pur de TypeScript sense dependre de l'espai de noms de NodeJS
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchRadarData = async () => {
@@ -68,7 +67,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         const rawData = await response.json();
         const parsed = RainViewerResponseSchema.safeParse(rawData);
 
-        // LÒGICA RISC ZERO: Flux de control estricte per Zod
         if (!parsed.success) {
             console.error("Error dades radar (Zod):", parsed.error);
             setError(true);
@@ -77,7 +75,6 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
 
         const data = parsed.data;
         
-        // Ara sabem que parsed.success és true, validem les dades internes de forma segura
         if (!data.radar || !data.radar.past || data.radar.past.length === 0) {
             console.error("Error dades radar: absència de dades 'past' vàlides");
             setError(true);
@@ -136,7 +133,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
       : null;
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#020308]">
+    <div className="relative w-full h-full min-h-0 overflow-hidden bg-[#020308]">
       
       {/* ESCUT D'ERROR */}
       {error && (

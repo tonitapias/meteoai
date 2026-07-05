@@ -57,14 +57,20 @@ const getLocalYYYYMMDD = (d: Date) => {
 export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
   const listRef = useRef<HTMLDivElement>(null);
+  
+  // DOCTRINA RISC ZERO: Blindem la referència del tancament per evitar el parany del useEffect
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const handleTacticalClose = useCallback(() => {
     if (window.history.state?.modalId === 'aromeLive') {
       window.history.back();
     } else {
-      onClose();
+      onCloseRef.current();
     }
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -75,15 +81,21 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   }, []);
 
   useEffect(() => {
-    const handlePopState = () => onClose();
+    // Es registra l'entrada al modal de forma immutables
+    window.history.pushState({ modalId: 'aromeLive' }, '');
+    
+    const handlePopState = () => {
+      onCloseRef.current();
+    };
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleTacticalClose();
     };
     
-    window.history.pushState({ modalId: 'aromeLive' }, '');
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
 
+    // Array de dependències BUIT per evitar que un redibuixat del pare expulsi a l'usuari
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
@@ -91,7 +103,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         window.history.back();
       }
     };
-  }, [onClose, handleTacticalClose]);
+  }, [handleTacticalClose]);
 
   useEffect(() => {
     if (lat && lon) fetchArome(lat, lon);
@@ -223,8 +235,8 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         `}
       </style>
 
-      {/* TÀCTICA DVH + LANDSCAPE: max-h forçat per respectar les barres del mòbil i landscape forçat 100% i sense corbes */}
-      <div className="w-full h-[96dvh] sm:h-auto sm:max-h-[88dvh] landscape:h-[100dvh] landscape:max-h-[100dvh] landscape:sm:h-auto landscape:rounded-none landscape:sm:rounded-[32px] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col bg-[#050810]/95 rounded-t-[24px] sm:rounded-[32px] border-t landscape:border-t-0 sm:border border-white/5 shadow-[0_0_80px_rgba(192,38,211,0.05),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+      {/* TÀCTICA DVH + LANDSCAPE + PROTECCIÓ MIN-H-0 per evitar overflow a iOS/Safari */}
+      <div className="w-full h-[96dvh] sm:h-auto sm:max-h-[88dvh] landscape:h-[100dvh] landscape:max-h-[100dvh] landscape:sm:h-auto landscape:rounded-none landscape:sm:rounded-[32px] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-[#050810]/95 rounded-t-[24px] sm:rounded-[32px] border-t landscape:border-t-0 sm:border border-white/5 shadow-[0_0_80px_rgba(192,38,211,0.05),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
         
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-48 bg-gradient-to-b from-fuchsia-900/10 via-cyan-900/5 to-transparent blur-[80px] pointer-events-none"></div>
 
@@ -255,7 +267,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
             </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar-spatial relative z-10" ref={listRef}>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar-spatial relative z-10" ref={listRef}>
             {loading && (
                 <div className="flex flex-col items-center justify-center h-[60dvh] space-y-6">
                     <div className="relative w-16 h-16 flex items-center justify-center">
@@ -300,7 +312,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                 <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
                                     <Wind className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Vent Màxim</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Ratxa Màxima</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getGustColor(maxGust)}`}>
                                 {Math.round(maxGust)}<span className="text-[9px] md:text-xs font-bold ml-1 opacity-50 text-white">km/h</span>
@@ -395,14 +407,12 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                             {Math.round(row.temp)}<span className="text-xs md:text-sm text-slate-500 font-bold ml-[1px]">°</span>
                                                         </div>
                                                         
-                                                        {/* Nou: Iso 0 apilat en mòbil verticalment sota la temp */}
                                                         <div className="flex md:hidden items-center gap-1 mt-[-2px]">
                                                             <span className="text-[7px] text-slate-500 font-mono uppercase tracking-widest">Iso</span>
                                                             <span className="text-[9px] font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* Iso 0 en PC (lateral) */}
                                                     <div className="hidden md:flex flex-col items-center justify-center w-14">
                                                         <span className="text-[8px] text-slate-500 font-mono mb-0.5 uppercase">Iso 0</span>
                                                         <span className="text-xs font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
