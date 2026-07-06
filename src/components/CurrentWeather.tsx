@@ -115,6 +115,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             windDirection={parseMetric((weather.stats as Record<string, unknown>).windDirection) ?? parseMetric(rawWindDir)}
             humidity={parseMetric(weather.stats.humidity)}
             apparentTemp={parseMetric(weather.temps.apparent)}
+            lang={props.lang} // DOCTRINA RISC ZERO: Correcció de 'lang' a 'props.lang'
           />
 
           <WeatherActionButtons

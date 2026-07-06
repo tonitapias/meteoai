@@ -54,9 +54,97 @@ const getLocalYYYYMMDD = (d: Date) => {
     return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
 };
 
-export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
+// DOCTRINA RISC ZERO: Diccionari tàctic intern segur
+const aromeTranslations: Record<string, Record<string, string>> = {
+  ca: {
+    highRes: "Alta Resolució",
+    grid: "Malla 1.3km",
+    elev: "ELEV",
+    decoding: "Descodificant Model...",
+    signalLost: "Senyal Perduda",
+    closeConsole: "Tancar Consola",
+    precip: "Precipitació",
+    maxGust: "Ratxa Màxima",
+    minIso: "Iso 0 Mín.",
+    cape: "Inestabilitat",
+    noData: "Matriu Sense Dades",
+    today: "Avui",
+    tomorrow: "Demà",
+    storm: "Tempesta",
+    iso0: "Iso 0",
+    isoShort: "Iso"
+  },
+  es: {
+    highRes: "Alta Resolución",
+    grid: "Malla 1.3km",
+    elev: "ELEV",
+    decoding: "Decodificando Modelo...",
+    signalLost: "Señal Perdida",
+    closeConsole: "Cerrar Consola",
+    precip: "Precipitación",
+    maxGust: "Racha Máxima",
+    minIso: "Iso 0 Mín.",
+    cape: "Inestabilidad",
+    noData: "Matriz Sin Datos",
+    today: "Hoy",
+    tomorrow: "Mañana",
+    storm: "Tormenta",
+    iso0: "Iso 0",
+    isoShort: "Iso"
+  },
+  en: {
+    highRes: "High Resolution",
+    grid: "1.3km Grid",
+    elev: "ELEV",
+    decoding: "Decoding Model...",
+    signalLost: "Signal Lost",
+    closeConsole: "Close Console",
+    precip: "Precipitation",
+    maxGust: "Max Gust",
+    minIso: "Min Frz Lvl",
+    cape: "Instability",
+    noData: "No Data Matrix",
+    today: "Today",
+    tomorrow: "Tomorrow",
+    storm: "Storm",
+    iso0: "Frz Lvl",
+    isoShort: "Frz"
+  },
+  fr: {
+    highRes: "Haute Résolution",
+    grid: "Grille 1.3km",
+    elev: "ELEV",
+    decoding: "Décodage Modèle...",
+    signalLost: "Signal Perdu",
+    closeConsole: "Fermer Console",
+    precip: "Précipitations",
+    maxGust: "Rafale Max",
+    minIso: "Iso 0 Min",
+    cape: "Instabilité",
+    noData: "Matrice Sans Données",
+    today: "Aujourd'hui",
+    tomorrow: "Demain",
+    storm: "Orage",
+    iso0: "Iso 0",
+    isoShort: "Iso"
+  }
+};
+
+const localeMap: Record<string, string> = { 
+  ca: 'ca-ES', 
+  es: 'es-ES', 
+  en: 'en-US', 
+  fr: 'fr-FR' 
+};
+
+export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
   const listRef = useRef<HTMLDivElement>(null);
+  
+  // Garantim un fallback segur si s'introdueix un idioma no mapejat (Risc Zero)
+  const safeLang = aromeTranslations[lang] ? lang : 'ca';
+  const t = aromeTranslations[safeLang];
+  const dateLocale = localeMap[safeLang] || 'ca-ES';
   
   // DOCTRINA RISC ZERO: Blindem la referència del tancament per evitar el parany del useEffect
   const onCloseRef = useRef(onClose);
@@ -81,7 +169,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
   }, []);
 
   useEffect(() => {
-    // Es registra l'entrada al modal de forma immutables
+    // Es registra l'entrada al modal de forma immutable
     window.history.pushState({ modalId: 'aromeLive' }, '');
     
     const handlePopState = () => {
@@ -124,11 +212,11 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     const elevation = aromeData?.elevation || 0;
 
     for (let i = 0; i < timeLength; i++) {
-        const t = h.time[i];
-        if (!t) continue; 
+        const timeStr = h.time[i];
+        if (!timeStr) continue; 
 
-        const dateStr = t.slice(0, 10);
-        const hour = parseInt(t.slice(11, 13), 10);
+        const dateStr = timeStr.slice(0, 10);
+        const hour = parseInt(timeStr.slice(11, 13), 10);
 
         if (dateStr < todayDateStr) continue;
         if (dateStr === todayDateStr && hour < nowHour) continue;
@@ -180,7 +268,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
         );
 
         rows.push({
-            time: t,
+            time: timeStr,
             hour: hour,
             date: dateStr,
             temp: tempActual,
@@ -210,15 +298,15 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
     return 'text-emerald-400';
   };
 
-  const getCapeColor = (cape: number) => {
-    if (cape >= 1500) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
-    if (cape >= 500) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
+  const getCapeColor = (capeValor: number) => {
+    if (capeValor >= 1500) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
+    if (capeValor >= 500) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
     return 'text-fuchsia-400';
   };
 
-  const getRowDangerBg = (gust: number, cape: number) => {
-    if (gust >= 90 || cape >= 1500) return 'bg-rose-950/10';
-    if (gust >= 60 || cape >= 800) return 'bg-amber-950/10';
+  const getRowDangerBg = (gust: number, capeValor: number) => {
+    if (gust >= 90 || capeValor >= 1500) return 'bg-rose-950/10';
+    if (gust >= 60 || capeValor >= 800) return 'bg-amber-950/10';
     return 'bg-transparent';
   };
 
@@ -252,10 +340,10 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                     </div>
                     <div className="flex flex-col">
                         <h2 className="text-xl md:text-2xl font-black text-white tracking-tighter drop-shadow-sm flex items-center gap-2 leading-none">
-                            Alta Resolució
+                            {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-500 font-medium tracking-widest uppercase mt-0.5">
-                            Malla 1.3km <span className="text-cyan-500/50 mx-1">•</span> ELEV: {Math.round(aromeData?.elevation || 0)}m
+                            {t.grid} <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(aromeData?.elevation || 0)}m
                         </span>
                     </div>
                 </div>
@@ -275,7 +363,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                         <div className="absolute inset-0 border-[3px] border-cyan-500 border-t-transparent border-l-transparent rounded-full animate-spin"></div>
                         <Activity className="w-6 h-6 text-cyan-400 animate-pulse" />
                     </div>
-                    <p className="text-cyan-400/80 text-[10px] md:text-xs font-mono tracking-widest uppercase animate-pulse">Descodificant Model...</p>
+                    <p className="text-cyan-400/80 text-[10px] md:text-xs font-mono tracking-widest uppercase animate-pulse">{t.decoding}</p>
                 </div>
             )}
 
@@ -285,9 +373,9 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                         <div className="absolute inset-0 rounded-full border border-rose-500/20 animate-ping"></div>
                         <AlertOctagon className="w-10 h-10 text-rose-500 drop-shadow-[0_0_12px_rgba(244,63,94,0.4)]" />
                     </div>
-                    <p className="text-white text-xl font-black mb-2 tracking-tight">Senyal Perduda</p>
+                    <p className="text-white text-xl font-black mb-2 tracking-tight">{t.signalLost}</p>
                     <p className="text-slate-400 text-xs sm:text-sm font-mono mb-8 max-w-md">{error}</p>
-                    <button onClick={handleTacticalClose} className="px-8 py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm">Tancar Consola</button>
+                    <button onClick={handleTacticalClose} className="px-8 py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm">{t.closeConsole}</button>
                 </div>
             )}
 
@@ -300,7 +388,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                 <div className="p-1 sm:p-1.5 rounded-lg bg-cyan-900/30 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
                                     <Droplets className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Precipitació</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">{t.precip}</span>
                             </div>
                             <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter">
                                 {totalRain.toFixed(1)}<span className="text-[9px] md:text-xs font-bold ml-1 text-cyan-500/80">mm</span>
@@ -312,7 +400,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                 <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
                                     <Wind className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Ratxa Màxima</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">{t.maxGust}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getGustColor(maxGust)}`}>
                                 {Math.round(maxGust)}<span className="text-[9px] md:text-xs font-bold ml-1 opacity-50 text-white">km/h</span>
@@ -324,7 +412,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                 <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
                                     <Mountain className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Iso 0 Mín.</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">{t.minIso}</span>
                             </div>
                             <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-200 tracking-tighter">
                                 {Math.round(minIso)}<span className="text-[9px] md:text-xs font-bold ml-1 text-slate-500">m</span>
@@ -336,7 +424,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                 <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
                                     <Zap className={`w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 ${maxCape > 500 ? 'text-amber-400' : ''}`} />
                                 </div>
-                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">Inestabilitat</span>
+                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">{t.cape}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getCapeColor(maxCape)}`}>
                                 {Math.round(maxCape)}<span className="text-[9px] md:text-xs font-bold ml-1 opacity-50 text-white">J/kg</span>
@@ -348,7 +436,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                         {hourlyRows.length === 0 ? (
                             <div className="p-20 text-center flex flex-col items-center">
                                 <ShieldCheck className="w-10 h-10 text-slate-700/50 mb-4" />
-                                <span className="text-slate-500 text-xs md:text-sm font-mono uppercase tracking-widest">Matriu Sense Dades</span>
+                                <span className="text-slate-500 text-xs md:text-sm font-mono uppercase tracking-widest">{t.noData}</span>
                             </div>
                         ) : (
                             hourlyRows.map((row, index) => {
@@ -372,10 +460,11 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
                                                     const tomorrowStr = getLocalYYYYMMDD(tomorrowDate);
                                                     
-                                                    if (row.date === today) return "Avui";
-                                                    if (row.date === tomorrowStr) return "Demà";
+                                                    if (row.date === today) return t.today;
+                                                    if (row.date === tomorrowStr) return t.tomorrow;
                                                     
-                                                    return new Intl.DateTimeFormat('ca-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(row.date + 'T12:00:00'));
+                                                    // Es defineix l'idioma correctament segons el `safeLang`
+                                                    return new Intl.DateTimeFormat(dateLocale, { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(row.date + 'T12:00:00'));
                                                 })()}
                                             </div>
                                         )}
@@ -390,7 +479,7 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                     {stormRisk && (
                                                         <div className="flex items-center gap-1 mt-0.5 text-rose-400">
                                                             <Zap className="w-2.5 h-2.5 fill-current" />
-                                                            <span className="text-[8px] font-black uppercase tracking-wider hidden sm:inline">Tempesta</span>
+                                                            <span className="text-[8px] font-black uppercase tracking-wider hidden sm:inline">{t.storm}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -408,13 +497,13 @@ export default function AromeModal({ lat, lon, onClose }: AromeModalProps) {
                                                         </div>
                                                         
                                                         <div className="flex md:hidden items-center gap-1 mt-[-2px]">
-                                                            <span className="text-[7px] text-slate-500 font-mono uppercase tracking-widest">Iso</span>
+                                                            <span className="text-[7px] text-slate-500 font-mono uppercase tracking-widest">{t.isoShort}</span>
                                                             <span className="text-[9px] font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
                                                         </div>
                                                     </div>
                                                     
                                                     <div className="hidden md:flex flex-col items-center justify-center w-14">
-                                                        <span className="text-[8px] text-slate-500 font-mono mb-0.5 uppercase">Iso 0</span>
+                                                        <span className="text-[8px] text-slate-500 font-mono mb-0.5 uppercase">{t.iso0}</span>
                                                         <span className="text-xs font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
                                                     </div>
                                                 </div>

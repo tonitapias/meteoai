@@ -120,7 +120,11 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             const response = await fetch(GEMINI_PROXY_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
+                // DOCTRINA RISC ZERO: Injecció tàctica de l'idioma per anul·lar el biaix del model
+                body: JSON.stringify({ 
+                    prompt: prompt,
+                    lang: language 
+                }),
                 signal: controller.signal 
             });
 

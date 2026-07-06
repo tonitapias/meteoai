@@ -14,14 +14,17 @@ export function useAIAnalysis(
   lang: Language
 ) {
   const analysis = useMemo(() => {
-    if (!weatherData) return null;
+    // DOCTRINA RISC ZERO 1: Bloqueig estricte si falta l'objecte current
+    if (!weatherData || !weatherData.current) return null;
 
-    // SOLUCIÓ PURA TS: Tractem minutely_15 com a Record per extreure 'precipitation' evitant el {}
     const minutely = weatherData.minutely_15 as Record<string, unknown> | undefined;
+    const precipData = minutely?.['precipitation'];
     
+    // DOCTRINA RISC ZERO 2: Protecció de matrius. No podem fer un simple "as number[]". 
+    // Si l'API retorna { precipitation: null }, l'aplicació caurà en els map/reduce posteriors.
     const currentWithMinutely = { 
       ...weatherData.current, 
-      minutely15: minutely?.['precipitation'] as number[] | undefined
+      minutely15: Array.isArray(precipData) ? precipData as number[] : undefined
     };
     
     const reliability = calculateReliability(
@@ -32,11 +35,12 @@ export function useAIAnalysis(
     );
 
     return generateAIPrediction(
-      // Fem el cast de tornada a StrictCurrentWeather per acontentar la funció destí
       currentWithMinutely as ExtendedWeatherData['current'], 
       weatherData.daily, 
       weatherData.hourly, 
-      aqiData?.current?.european_aqi || 0, 
+      // DOCTRINA RISC ZERO 3: Ús de ?? (Nullish Coalescing) en comptes de || 
+      // Si la qualitat de l'aire és literalment 0 (perfecte), || ho tractaria com a falsy i l'ignoraria.
+      aqiData?.current?.european_aqi ?? 0, 
       lang, 
       effectiveWeatherCode,
       reliability

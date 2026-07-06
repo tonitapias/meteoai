@@ -7,17 +7,14 @@ import {
 } from '../types/weatherLogicTypes';
 
 import { generateAIPrediction } from '../utils/aiContext';
-
 import { getGeminiAnalysis } from '../services/geminiService';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
-// Ampliem el tipus base per incloure el camp 'source' opcional que afegeix el hook
 interface AIAnalysisState extends AIPredictionResult {
     source?: string;
 }
 
-// SOLUCIÓ 1: Tipus simple per a AQI amb tolerància a null per l'API Zod
 interface AQIData {
     current?: {
         european_aqi?: number | null;
@@ -37,15 +34,14 @@ export function useWeatherAI(
   const lastProcessedKey = useRef<string>("");
 
   useEffect(() => {
-    // 1. Validació inicial
+    // 1. Validació inicial (Risc Zero)
     if (!weatherData?.current) return;
     const current = weatherData.current;
     
-    if (current.weather_code === undefined) return;
+    if (current.weather_code === undefined || current.weather_code === null) return;
 
-    // 2. Construcció de la clau única (incloent fiabilitat)
-    // SOLUCIÓ 100% PURA TS: Tractem les dades com un diccionari genèric sense fer servir 'any'
-    const wd = weatherData as Record<string, unknown> | null;
+    // 2. Construcció de la clau única
+    const wd = weatherData as Record<string, unknown>;
     const loc = wd?.['location'] as Record<string, unknown> | undefined;
 
     const latVal = loc?.['latitude'] ?? wd?.['latitude'] ?? 0;
@@ -55,38 +51,34 @@ export function useWeatherAI(
     const lon = Number(lonVal).toFixed(3);
     const weatherCode = current.weather_code;
     
-    // Utilitzem ?? per capturar bé els nulls de Zod
     const aqiVal = aqiData?.current?.european_aqi ?? 0;
-    
-    // Si reliability canvia, la clau també canviarà i forçarà el recàlcul
     const relLevel = reliability?.level || 'high';
     const currentKey = `${lat}-${lon}-${weatherCode}-${lang}-${unit}-${aqiVal}-${relLevel}`;
 
-    // 3. Circuit Breaker (Evitar bucles)
+    // 3. Circuit Breaker
     if (lastProcessedKey.current === currentKey) return;
     lastProcessedKey.current = currentKey;
 
     const fetchAI = async () => {
       try {
-        // Passem reliability a la funció generadora
         const local = generateAIPrediction(
           current, weatherData.daily, weatherData.hourly, 
           aqiVal, lang, null, reliability, unit
         );
         setAiAnalysis(local);
 
-        // Crida externa a Gemini
+        // Crida externa (Aquí estem passant 'lang' correctament)
         const gemini = await getGeminiAnalysis(weatherData, lang);
         
-        // Només actualitzem si la clau no ha canviat mentre esperàvem
         if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
           setAiAnalysis((prev) => {
-              if (!prev) return prev; // Protecció si el component s'ha desmuntat o estat és null
+              if (!prev) return prev;
               return {
                 ...prev,
                 text: gemini.text,
-                tips: gemini.tips?.length ? gemini.tips : prev.tips,
-                source: 'Gemini AI'
+                // Risc Zero: Assegurem que 'tips' sigui realment un Array abans de sobreescriure
+                tips: Array.isArray(gemini.tips) && gemini.tips.length > 0 ? gemini.tips : prev.tips,
+                source: 'MeteoToni AI Network'
               };
           });
         }
@@ -98,7 +90,7 @@ export function useWeatherAI(
     const timer = setTimeout(fetchAI, 500);
     return () => clearTimeout(timer);
 
-  }, [weatherData, aqiData, lang, unit, reliability]); // Important: reliability a les dependències
+  }, [weatherData, aqiData, lang, unit, reliability]);
 
   return { aiAnalysis };
 }

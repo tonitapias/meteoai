@@ -3,7 +3,7 @@ import { Shirt, AlertTriangle, AlertOctagon, Info, Sparkles, Zap, Car, Umbrella,
 import { TypewriterText } from './WeatherUI';
 import { TRANSLATIONS, Language, TranslationType } from '../translations';
 
-// --- INTERFACES ---
+// --- INTERFACES ESTRICTES ---
 
 interface AlertItem {
     type: string;
@@ -28,7 +28,7 @@ interface AIInsightsProps {
     onRetry?: () => void; 
 }
 
-// --- SUB-COMPONENTS D'ESTIL ---
+// --- SUB-COMPONENTS D'ESTIL BLINDATS ---
 
 const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
   if (!analysis) return null;
@@ -37,17 +37,24 @@ const ConfidenceBadge = ({ analysis }: { analysis: AnalysisResult }) => {
     medium: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
     low: 'text-rose-400 border-rose-500/30 bg-rose-500/10'
   };
-  const level = analysis.confidenceLevel || 'medium';
-  const currentStyle = styles[level] || styles.medium;
+  
+  // Risc Zero: Protecció contra valors inesperats de l'IA
+  const level = (analysis.confidenceLevel && styles[analysis.confidenceLevel]) 
+      ? analysis.confidenceLevel 
+      : 'medium';
+      
+  const currentStyle = styles[level];
   
   return (
     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentStyle} flex items-center gap-1 shrink-0 uppercase tracking-wider`}>
-      {analysis.confidence}
+      {analysis.confidence || 'Analitzant'}
     </span>
   );
 };
 
 const InsightAlert = ({ alert, t }: { alert: AlertItem, t: TranslationType }) => {
+  if (!alert || typeof alert !== 'object') return null; // Risc zero
+
   const isHigh = alert.level === 'high';
   return (
     <div className={`flex items-start gap-3 p-3 rounded-lg border shadow-sm ${
@@ -58,19 +65,24 @@ const InsightAlert = ({ alert, t }: { alert: AlertItem, t: TranslationType }) =>
         </div>
         <div>
             <h4 className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${isHigh ? 'text-rose-400' : 'text-amber-400'}`}>
-                {isHigh ? t.alertDanger : t.alertWarning}
+                {isHigh ? (t.alertDanger || 'PERILL') : (t.alertWarning || 'AVÍS')}
             </h4>
             <p className="text-sm font-medium leading-relaxed opacity-90 text-left">
-                <span className="font-bold opacity-70 mr-1">{alert.type}:</span>{alert.msg}
+                {alert.type && <span className="font-bold opacity-70 mr-1">{alert.type}:</span>}
+                {alert.msg}
             </p>
         </div>
     </div>
   );
 };
 
-const InsightTip = ({ tip, index }: { tip: string, index: number }) => {
+const InsightTip = ({ tip, index }: { tip: unknown, index: number }) => {
+  // Risc Zero: Assegurar-nos que 'tip' és un string abans de fer toLowerCase
+  if (!tip || typeof tip !== 'string') return null;
+
   const lowerTip = tip.toLowerCase();
   let Icon = Info;
+  
   if (['jaqueta', 'coat', 'tèrmica', 'abric', 'màniga', 'manteau', 'roba'].some(k => lowerTip.includes(k))) Icon = Shirt;
   else if (['cotxe', 'conducció', 'carretera', 'drive', 'traffic', 'trànsit'].some(k => lowerTip.includes(k))) Icon = Car;
   else if (['paraigua', 'umbrella', 'parapluie', 'mullar'].some(k => lowerTip.includes(k))) Icon = Umbrella;
@@ -101,7 +113,6 @@ const InsightSkeleton = () => (
   </div>
 );
 
-// --- CORRECCIÓ AQUÍ: &apos; en lloc de ' ---
 const InsightError = ({ onRetry }: { onRetry?: () => void }) => (
   <div className="flex flex-col items-center justify-center w-full h-full p-6 text-center animate-in fade-in duration-500">
       <div className="p-3 bg-slate-800/50 rounded-full mb-3 border border-white/5">
@@ -114,7 +125,7 @@ const InsightError = ({ onRetry }: { onRetry?: () => void }) => (
       {onRetry && (
         <button 
           onClick={onRetry}
-          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-bold rounded-lg transition-all border border-indigo-500/30"
+          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-bold rounded-lg transition-all border border-indigo-500/30 active:scale-95"
         >
           <RefreshCw className="w-3 h-3" />
           REINTENTAR
@@ -126,11 +137,12 @@ const InsightError = ({ onRetry }: { onRetry?: () => void }) => (
 // --- COMPONENT PRINCIPAL ---
 
 export default function AIInsights({ analysis, lang, isLoading = false, hasError = false, onRetry }: AIInsightsProps) { 
-  const t = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) 
+  // Risc Zero: Fallback de seguretat per la càrrega de l'idioma
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
   
   if (hasError) {
      return (
-        <div className="flex-1 w-full bg-slate-950/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px] flex items-center justify-center">
+        <div className="flex-1 w-full bg-slate-950/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px] flex items-center justify-center transform-gpu translate-z-0">
             <InsightError onRetry={onRetry} />
         </div>
      );
@@ -138,29 +150,29 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
 
   if (isLoading || !analysis) {
       return (
-          <div className="flex-1 w-full bg-slate-900/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px]">
+          <div className="flex-1 w-full bg-slate-900/40 border border-white/5 rounded-3xl backdrop-blur-md min-h-[200px] transform-gpu translate-z-0">
             <InsightSkeleton />
           </div>
       );
   }
 
-  const isGemini = analysis.source && analysis.source.includes('Gemini');
+  const isGemini = analysis.source?.includes('Gemini') ?? false;
 
   return (
-    <div className={`flex flex-col w-full h-full min-h-[200px] border rounded-3xl backdrop-blur-md shadow-2xl relative overflow-hidden transition-all duration-1000 ${
+    <div className={`flex flex-col w-full h-full min-h-[200px] border rounded-3xl backdrop-blur-md shadow-2xl relative overflow-hidden transition-all duration-1000 transform-gpu translate-z-0 ${
         isGemini 
             ? 'bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-purple-950/50 border-indigo-400/30 shadow-indigo-900/20' 
             : 'bg-slate-950/40 border-white/5'
     }`}>
         
         {isGemini && (
-    <div 
-        className="absolute inset-0 opacity-20 mix-blend-soft-light pointer-events-none"
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}
-    ></div>
-)}
+            <div 
+                className="absolute inset-0 opacity-20 mix-blend-soft-light pointer-events-none"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}
+            ></div>
+        )}
 
-        {/* CAPÇALERA */}
+        {/* CAPÇALERA TÀCTICA */}
         <div className="flex items-center justify-between p-6 pb-2 shrink-0 z-10">
             <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors duration-500 ${isGemini ? 'text-indigo-200' : 'text-slate-400'}`}>
                 {isGemini ? (
@@ -170,7 +182,7 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                     </>
                 ) : (
                     <>
-                        <Zap className="w-4 h-4" /> <span>{t.aiAnalysis}</span>
+                        <Zap className="w-4 h-4" /> <span>{t.aiAnalysis || 'ANÀLISI IA'}</span>
                     </>
                 )}
             </div>
@@ -179,9 +191,9 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
         
         {/* CONTINGUT SCROLLABLE */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-3 relative z-10 flex flex-col">
-            <div className="space-in fade-in duration-700">
-                {/* 1. Alertes Prioritàries */}
-                {analysis.alerts && analysis.alerts.length > 0 && (
+            <div className="animate-in fade-in duration-700">
+                {/* 1. Alertes Prioritàries Segures */}
+                {Array.isArray(analysis.alerts) && analysis.alerts.length > 0 && (
                     <div className="flex flex-col gap-2 mb-4">
                         {analysis.alerts.map((alert, i) => (
                             <InsightAlert key={i} alert={alert} t={t} />
@@ -190,15 +202,15 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                 )}
 
                 {/* 2. Text Principal (Typewriter) */}
-                <div key={analysis.source} className="min-h-[3rem]"> 
+                <div key={analysis.source || 'default'} className="min-h-[3rem]"> 
                     <TypewriterText 
-                        text={analysis.text} 
+                        text={analysis.text || ''} 
                         className="text-lg md:text-xl text-slate-100 font-medium leading-relaxed drop-shadow-sm whitespace-pre-wrap"
                     />
                 </div>
                 
-                {/* 3. Consells / Tips */}
-                {analysis.tips && analysis.tips.length > 0 && (
+                {/* 3. Consells / Tips Segurs */}
+                {Array.isArray(analysis.tips) && analysis.tips.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-4">
                         {analysis.tips.map((tip, i) => (
                             <InsightTip key={i} tip={tip} index={i} />
