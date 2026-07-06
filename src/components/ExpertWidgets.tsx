@@ -61,28 +61,40 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : undefined;
   const currentHumidity = typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : undefined;
   
-  // DOCTRINA RISC ZERO: Cerca tàctica de l'Índex UV per 3 vies diferents per evitar el giny buit
+  // DOCTRINA RISC ZERO: Motor d'extracció UV Intel·ligent
   const currentUV = useMemo(() => {
-    // 1. Intent prioritari: buscar-lo com a variable actual directa
+    // 1. ESCUT NOCTURN (Nivell API): Si l'API diu clarament que és fosc, UV a 0.
+    if (current?.is_day === 0) return 0;
+    
+    // 2. Intent prioritari (Dada directa actual)
     if (typeof current?.uv_index === 'number') return current.uv_index;
     
-    // 2. Fallback: buscar a la matriu horària fent match amb la línia de temps de "current"
-    if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time)) {
-      const currTimeStr = current?.time;
-      if (typeof currTimeStr === 'string') {
-        const idx = hourly.time.indexOf(currTimeStr);
-        if (idx !== -1 && typeof hourly.uv_index[idx] === 'number') {
-          return hourly.uv_index[idx];
-        }
+    // 3. Fallback horari avançat (Ignora minuts per quadrar current time i hourly time)
+    if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time) && typeof current?.time === 'string') {
+      // Tallem l'string "YYYY-MM-DDTHH:MM" a "YYYY-MM-DDTHH"
+      const hourPrefix = current.time.substring(0, 13);
+      const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
+      
+      if (idx !== -1 && typeof hourly.uv_index[idx] === 'number') {
+        return hourly.uv_index[idx];
       }
     }
     
-    // 3. Fallback final extrem: buscar el pic màxim d'avui a la matriu diària (per garantir lectura de perill)
-    if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
-      return daily.uv_index_max[0];
+    // 4. Fallback diari controlat (Escut Nocturn Nivell Deducció)
+    // Si l'API no retorna "is_day", deduïm la nit per no injectar màxims solars a les fosques.
+    const currentHour = new Date().getHours();
+    const isLikelyNight = currentHour < 6 || currentHour > 21;
+
+    // Només busquem el màxim diari si NO estem segurs que és de nit.
+    if (!isLikelyNight && current?.is_day !== 0) {
+      if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
+        return daily.uv_index_max[0];
+      }
+    } else if (isLikelyNight) {
+      return 0; // Si estem a la franja nocturna i no tenim dades, retornem radiació nul·la
     }
     
-    return undefined;
+    return undefined; // Si res d'això funciona, salta a NO DATA
   }, [current, hourly, daily]);
 
   const dewPointValue = typeof current?.dew_point_2m === 'number'
