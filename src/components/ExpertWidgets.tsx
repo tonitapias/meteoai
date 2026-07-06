@@ -29,7 +29,9 @@ import {
 interface WidgetCardProps { children: React.ReactNode; cols?: number; }
 
 const WidgetCard = ({ children, cols = 1 }: WidgetCardProps) => (
-  <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg`}>
+  // SPATIAL UI: Afegim 'flex flex-col' perquè el fons de la targeta s'estiri completament 
+  // i elimini els espais verticals estranys quan ginys adjacents són més alts.
+  <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg`}>
     {children}
   </div>
 );
@@ -71,7 +73,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     
     // 3. Fallback horari avançat (Ignora minuts per quadrar current time i hourly time)
     if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time) && typeof current?.time === 'string') {
-      // Tallem l'string "YYYY-MM-DDTHH:MM" a "YYYY-MM-DDTHH"
       const hourPrefix = current.time.substring(0, 13);
       const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
       
@@ -81,20 +82,18 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     }
     
     // 4. Fallback diari controlat (Escut Nocturn Nivell Deducció)
-    // Si l'API no retorna "is_day", deduïm la nit per no injectar màxims solars a les fosques.
     const currentHour = new Date().getHours();
     const isLikelyNight = currentHour < 6 || currentHour > 21;
 
-    // Només busquem el màxim diari si NO estem segurs que és de nit.
     if (!isLikelyNight && current?.is_day !== 0) {
       if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
         return daily.uv_index_max[0];
       }
     } else if (isLikelyNight) {
-      return 0; // Si estem a la franja nocturna i no tenim dades, retornem radiació nul·la
+      return 0; 
     }
     
-    return undefined; // Si res d'això funciona, salta a NO DATA
+    return undefined; 
   }, [current, hourly, daily]);
 
   const dewPointValue = typeof current?.dew_point_2m === 'number'
@@ -244,7 +243,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
          )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20">
+      {/* ARQUITECTURA TÀCTICA: Afegit 'grid-flow-dense' perquè l'algoritme de CSS ompli els forats al PC sense alterar el mòbil */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20 grid-flow-dense">
           <WidgetCard>
               <CompassGauge 
                 degrees={currentWindDir ?? 0} 
