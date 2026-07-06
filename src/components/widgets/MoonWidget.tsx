@@ -2,10 +2,15 @@ import { Moon } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { getTrans, getMoonPhaseText } from './widgetHelpers';
-import { MoonPhaseIcon } from '../MoonPhaseIcon'; // <--- Import corregit (un nivell amunt)
+import { MoonPhaseIcon } from '../MoonPhaseIcon'; 
 
 export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
     const t = getTrans(lang);
+    
+    // DOCTRINA RISC ZERO: Validació estricta d'objecte i extracció tipada de text
+    const tRecord = (typeof t === 'object' && t !== null) ? (t as Record<string, unknown>) : {};
+    const titleMoon = typeof tRecord.moonPhase === 'string' ? tRecord.moonPhase : "LLUNA";
+    
     const hasData = phase !== null && phase !== undefined && !isNaN(phase);
     
     // Càlcul de la il·luminació real (0-100%) protegit contra divisions o nuls
@@ -26,7 +31,7 @@ export const MoonWidget = ({ phase, lat, lang }: WidgetProps) => {
              <div className="flex items-center justify-between w-full mb-3">
                  <span className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-1.5`}>
                      <Moon className="w-4 h-4 text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)]" /> 
-                     <span className="tracking-wider">{t.moonPhase || "LLUNA"}</span>
+                     <span className="tracking-wider">{titleMoon}</span>
                  </span>
                  <div className="flex flex-col items-end bg-black/30 px-2 py-0.5 rounded border border-white/5 backdrop-blur-sm">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dia {moonAge}</span>

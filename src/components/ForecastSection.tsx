@@ -6,7 +6,6 @@ import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
-// MODIFICAT: Importem la interfície des del lloc correcte
 import { StrictDailyWeather } from '../types/weatherLogicTypes';
 
 export interface ChartDataPoint {
@@ -16,7 +15,6 @@ export interface ChartDataPoint {
   [key: string]: unknown;
 }
 
-// MODIFICAT: Alignem la interfície amb l'estructura que demana el component SmartForecastCharts
 export interface ComparisonData {
   gfs: ChartDataPoint[];
   icon: ChartDataPoint[];
@@ -35,47 +33,58 @@ interface ForecastSectionProps {
     showCharts?: boolean;
 }
 
+// HELPER RISC ZERO: Extracció matemàticament segura de valors per a llistes de dades
+const getSafeArrayNum = (arr: unknown, index: number, fallback: number = 0): number => {
+    if (!Array.isArray(arr)) return fallback;
+    const val = arr[index];
+    return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
+};
+
 const ForecastSection = memo(function ForecastSection({ 
     chartData, comparisonData, dailyData, weeklyExtremes, unit, lang, onDayClick, comparisonEnabled, showCharts = true 
 }: ForecastSectionProps) {
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
     
-    // Si no hi ha dades, no renderitzem res
-    if (!dailyData || !dailyData.time) return null;
+    // Risc Zero: Evitem fallades en el renderitzat si la dada principal està malformada
+    if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length === 0) return null;
 
     return (
         <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-            <div className="bento-card p-4 md:p-8 bg-[#151725] border border-white/5 rounded-[2.5rem] relative overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none"></div>
+            {/* SPATIAL UI: Caixa Tàctica */}
+            <div className="p-4 md:p-8 bg-slate-900/40 border border-slate-700/50 rounded-[2rem] relative overflow-hidden shadow-2xl backdrop-blur-md transform-gpu" style={{ transform: 'translateZ(0)' }}>
+                {/* Resplendor Direccional (Glow Tàctic) */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none mix-blend-screen"></div>
                 
-                <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 z-10 relative px-2">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-400"/> {t.forecast7days || "PREVISIÓ 7 DIES"}
+                <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 z-10 relative px-2">
+                    <Calendar className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_3px_rgba(129,140,248,0.8)]"/> 
+                    {t.forecast7days || "PREVISIÓ 7 DIES"}
                 </h3>
 
-                <div className="grid grid-cols-1 gap-3 relative z-10">
-                    {/* MODIFICAT: Tipem explícitament els paràmetres del map (string i number) */}
-                    {dailyData.time.slice(1).map((dateStr: string, index: number) => {
-                        const i = index + 1;
+                <div className="grid grid-cols-1 gap-2.5 relative z-10">
+                    {dailyData.time.slice(1).map((rawDate: unknown, index: number) => {
+                        // Extracció de data blindada
+                        if (typeof rawDate !== 'string') return null;
                         
-                        const date = new Date(dateStr);
+                        const i = index + 1; // Índex real desplaçat (obviem "avui" índex 0)
+                        
+                        const date = new Date(rawDate);
                         const dayName = date.toLocaleDateString(lang === 'ca' ? 'ca-ES' : 'en-US', { weekday: 'long' });
                         const dateNum = date.getDate();
-                        const maxTemp = dailyData.temperature_2m_max?.[i] ?? 0;
-                        const minTemp = dailyData.temperature_2m_min?.[i] ?? 0;
-                        const rawCode = dailyData.weather_code?.[i] ?? 0; // MODIFICAT: Guardem com rawCode
-                        const precipProb = dailyData.precipitation_probability_max?.[i] ?? 0;
-                        const precipSum = dailyData.precipitation_sum?.[i] ?? 0;
-                        const snowSum = dailyData.snowfall_sum?.[i] ?? 0; 
-                        const maxWind = dailyData.wind_speed_10m_max?.[i] ?? 0;
-
-                        // --- INICI MÀGIA VISUAL 7 DIES ---
-                        let code = rawCode;
                         
-                        // Si el codi original diu que no plou/nega (0, 1, 2, 3), recalculem els núvols amb les hores d'aquell dia
-                        if (rawCode <= 3 && chartData && chartData.length > 0) {
-                            const dateOnly = dateStr.slice(0, 10); // Extraiem només la data, ex: "2024-03-15"
+                        // Lectura robusta Risc Zero
+                        const maxTemp = getSafeArrayNum(dailyData.temperature_2m_max, i);
+                        const minTemp = getSafeArrayNum(dailyData.temperature_2m_min, i);
+                        const rawCode = getSafeArrayNum(dailyData.weather_code, i);
+                        const precipProb = getSafeArrayNum(dailyData.precipitation_probability_max, i);
+                        const precipSum = getSafeArrayNum(dailyData.precipitation_sum, i);
+                        const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i); 
+                        const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
+
+                        // MOTOR VISUAL INTEL·LIGENT (Amb protecció contra el tipus unknown del ChartDataPoint)
+                        let code = rawCode;
+                        if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
+                            const dateOnly = rawDate.slice(0, 10); 
                             
-                            // Busquem a chartData totes les hores que coincideixen amb aquest dia i que són de dia
                             const dayHours = chartData.filter(d => 
                                 typeof d.time === 'string' && 
                                 d.time.startsWith(dateOnly) && 
@@ -83,53 +92,55 @@ const ForecastSection = memo(function ForecastSection({
                             );
 
                             if (dayHours.length > 0) {
-                                // Calculem la mitjana de núvols reals durant les hores de sol (fent càsting segur a Number)
-                                const avgClouds = dayHours.reduce((acc, curr) => acc + (Number(curr.cloud) || 0), 0) / dayHours.length;
+                                // Càsting segur del camp genèric `cloud`
+                                const totalClouds = dayHours.reduce((acc, curr) => {
+                                    const c = Number(curr.cloud);
+                                    return acc + (isNaN(c) ? 0 : c);
+                                }, 0);
+                                
+                                const avgClouds = totalClouds / dayHours.length;
 
-                                // Apliquem la mateixa escala lògica que a la resta de l'app
                                 if (avgClouds > 85) code = 3;
                                 else if (avgClouds > 45) code = 2;
                                 else if (avgClouds > 15) code = 1;
                                 else code = 0;
                             }
                         }
-                        // --- FI MÀGIA VISUAL ---
 
                         return (
                             <button 
-                                key={dateStr}
+                                key={`daily-row-${rawDate}`}
                                 onClick={() => onDayClick(i)}
-                                className="group flex items-center justify-between p-3 md:p-4 rounded-2xl bg-[#0B0C15] border border-white/5 hover:bg-[#1a1d2d] hover:border-indigo-500/30 transition-all duration-300 w-full"
+                                className="group flex items-center justify-between p-3 md:p-4 rounded-[1.25rem] bg-slate-950/60 border border-white/5 hover:bg-slate-900 hover:border-indigo-500/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.1)] transition-all duration-300 w-full"
                             >
-                                {/* DATA I NOM */}
-                                <div className="flex items-center gap-3 md:gap-4 w-auto min-w-[100px] md:w-[180px]">
-                                    <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-colors shrink-0">
-                                        <span className="text-lg font-black tracking-tighter">{dateNum}</span>
+                                {/* PANELL DATA */}
+                                <div className="flex items-center gap-3 w-auto min-w-[100px] md:w-[180px]">
+                                    <div className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl bg-slate-900 border border-white/5 text-slate-400 group-hover:bg-indigo-950 group-hover:border-indigo-500/30 group-hover:text-indigo-300 transition-colors shrink-0 shadow-inner">
+                                        <span className="text-lg md:text-xl font-black tracking-tighter">{dateNum}</span>
                                     </div>
                                     <div className="flex flex-col items-start truncate">
-                                        <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[70px] md:max-w-none">
+                                        <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[70px] md:max-w-none transition-colors">
                                             {dayName}
                                         </span>
                                         {precipProb > 0 && (
                                             <div className="flex items-center gap-1 mt-0.5">
-                                                <Umbrella className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-400" />
-                                                <span className="text-[9px] md:text-[10px] font-mono font-bold text-blue-400">{precipProb}%</span>
+                                                <Umbrella className="w-2.5 h-2.5 text-blue-400 drop-shadow-sm" />
+                                                <span className="text-[9px] md:text-[10px] font-black text-blue-400">{precipProb}%</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* ICONA */}
+                                {/* ICONA CENTRAL */}
                                 <div className="flex items-center justify-center flex-1 px-2 md:px-4">
-                                     <div className="scale-75 md:scale-100 drop-shadow-lg transition-transform group-hover:scale-110 duration-300">
-                                        {/* isDay=true, _rainProb=0, windSpeed=maxWind */}
+                                     <div className="scale-[0.8] md:scale-[1.1] drop-shadow-lg transition-transform group-hover:scale-[1.2] duration-300">
                                         {getWeatherIcon(code, "w-10 h-10", true, 0, maxWind)}
                                      </div>
                                 </div>
 
-                                {/* TEMPERATURES (VERSIÓ DESKTOP) */}
-                                <div className="hidden md:flex flex-col items-center justify-center w-[120px] px-2">
-                                    <div className="w-full flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                                {/* GRÀFIC TÈRMIC ESCRIPTORI */}
+                                <div className="hidden md:flex flex-col items-center justify-center w-[130px] px-2">
+                                    <div className="w-full flex justify-between text-[11px] font-bold text-slate-400 mb-1.5">
                                         <span>{Math.round(minTemp)}°</span>
                                         <span>{Math.round(maxTemp)}°</span>
                                     </div>
@@ -141,23 +152,29 @@ const ForecastSection = memo(function ForecastSection({
                                     />
                                 </div>
 
-                                {/* TEMPERATURES (VERSIÓ MÒBIL) */}
+                                {/* RESUM TÈRMIC MÒBIL */}
                                 <div className="md:hidden flex flex-col items-end justify-center mr-3">
-                                    <span className="text-sm font-bold text-white tabular-nums leading-none mb-1">{Math.round(maxTemp)}°</span>
-                                    <span className="text-xs font-bold text-slate-500 tabular-nums leading-none">{Math.round(minTemp)}°</span>
+                                    <span className="text-[15px] font-black text-slate-200 tabular-nums leading-none mb-1">
+                                        {Math.round(maxTemp)}°
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-500 tabular-nums leading-none">
+                                        {Math.round(minTemp)}°
+                                    </span>
                                 </div>
 
-                                {/* PLUJA I FLETXA */}
-                                <div className="flex items-center justify-end gap-2 md:gap-3 w-[70px] md:w-[140px]">
+                                {/* DADES DE PLUJA I ACCIÓ */}
+                                <div className="flex items-center justify-end gap-2 md:gap-3 w-[80px] md:w-[130px]">
                                     {precipSum > 0 ? (
-                                        <span className="text-[9px] md:text-[10px] text-slate-500 font-mono font-bold bg-blue-500/10 px-1.5 py-1 md:px-2 rounded-md border border-blue-500/20 group-hover:border-blue-500/40 group-hover:text-blue-300 transition-colors">
+                                        <span className="text-[9px] md:text-[10px] text-slate-400 font-mono font-bold bg-blue-950/40 px-1.5 py-1 md:px-2 rounded-md border border-blue-900/50 group-hover:border-blue-500/40 group-hover:text-blue-300 transition-colors">
                                             {formatPrecipitation(precipSum, snowSum)}
                                         </span>
                                     ) : (
-                                        <span className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-widest hidden md:block">CAP</span>
+                                        <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest hidden md:block group-hover:text-slate-600 transition-colors">
+                                            CAP
+                                        </span>
                                     )}
                                     
-                                    <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all border border-white/5 group-hover:border-indigo-400 shrink-0">
+                                    <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-900 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 border border-slate-700 group-hover:border-indigo-400 shrink-0 shadow-sm group-hover:shadow-[0_0_10px_rgba(99,102,241,0.5)]">
                                         <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-white transition-colors" />
                                     </div>
                                 </div>
@@ -167,12 +184,19 @@ const ForecastSection = memo(function ForecastSection({
                 </div>
             </div>
 
+            {/* SECCIÓ DE GRÀFICA COMPACTA */}
             {showCharts && comparisonEnabled && (
-                 <div className="bento-card p-6 bg-[#151725] border border-white/5 rounded-[2.5rem]">
-                    <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-400"/> {t.trend24h || "TENDÈNCIA"}
+                 <div className="p-5 md:p-8 bg-slate-900/40 border border-slate-700/50 rounded-[2rem] backdrop-blur-md shadow-2xl">
+                    <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                        <TrendingUp className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_3px_rgba(52,211,153,0.8)]"/> 
+                        {t.trend24h || "TENDÈNCIA"}
                     </h3>
-                    <SmartForecastCharts data={chartData} comparisonData={comparisonData} unit={unit === 'F' ? '°F' : '°C'} lang={lang} />
+                    <SmartForecastCharts 
+                        data={chartData} 
+                        comparisonData={comparisonData} 
+                        unit={unit === 'F' ? '°F' : '°C'} 
+                        lang={lang} 
+                    />
                 </div>
             )}
         </div>

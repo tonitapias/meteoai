@@ -5,8 +5,15 @@ import { getTrans } from './widgetHelpers';
 
 export const PollenWidget = ({ data, lang }: WidgetProps) => {
     const t = getTrans(lang);
-    // Risc Zero: Validació forta de les dades d'AQI
-    const aqi = typeof data?.us_aqi === 'number' && !isNaN(data.us_aqi) ? data.us_aqi : 0;
+    
+    // DOCTRINA RISC ZERO: Validació estricta del diccionari de traduccions
+    const tRecord = (typeof t === 'object' && t !== null) ? (t as Record<string, unknown>) : {};
+    const titleAqi = typeof tRecord.aqi === 'string' ? tRecord.aqi : "QUALITAT AIRE";
+
+    // DOCTRINA RISC ZERO: Aïllament segur de l'objecte 'data' abans d'accedir a les seves propietats
+    // Evitem errors TS si 'WidgetProps.data' ve definit com a 'unknown'
+    const safeData = (typeof data === 'object' && data !== null) ? (data as Record<string, unknown>) : {};
+    const aqi = typeof safeData.us_aqi === 'number' && !isNaN(safeData.us_aqi) ? safeData.us_aqi : 0;
     
     const getAQIColor = (val: number) => {
         if (val > 150) return 'text-rose-500';
@@ -30,16 +37,16 @@ export const PollenWidget = ({ data, lang }: WidgetProps) => {
             <div className="flex-1 flex flex-col justify-center">
                 <div className="flex justify-between items-center mb-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        {t.aqi || "QUALITAT AIRE"}
+                        {titleAqi}
                     </span>
                     <span className={`text-xs sm:text-sm font-mono font-black ${colorClass} tabular-nums bg-black/40 px-2 py-0.5 rounded border border-white/5`}>
                         AQI {aqi}
                     </span>
                 </div>
                 
-                {/* Carril de partícules tàctic */}
+                {/* Carril de partícules tàctic amb array de longitud protegida */}
                 <div className="flex gap-0.5 h-3.5 w-full mb-2 bg-[#0f111a] rounded-sm border border-white/5 p-px">
-                    {[...Array(20)].map((_, i) => {
+                    {Array.from({ length: 20 }).map((_, i) => {
                         const threshold = i * (300/20);
                         const isActive = aqi >= threshold;
                         let segmentColor = 'bg-emerald-400';
@@ -49,7 +56,7 @@ export const PollenWidget = ({ data, lang }: WidgetProps) => {
                         
                         return (
                             <div 
-                                key={i} 
+                                key={`aqi-segment-${i}`} 
                                 className={`flex-1 rounded-[1px] transition-all duration-500 ${isActive ? segmentColor : 'bg-transparent'}`}
                                 style={{ opacity: isActive ? 1 : 0 }}
                             ></div>

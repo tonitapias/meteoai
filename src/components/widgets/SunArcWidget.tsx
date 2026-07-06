@@ -8,6 +8,12 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
     const t = getTrans(lang);
     const [currentTimeSeconds, setCurrentTimeSeconds] = useState<number>(() => Math.floor(Date.now() / 1000));
 
+    // DOCTRINA RISC ZERO: Erradicació del "@ts-expect-error" i blindatge de textos
+    const tRecord = (typeof t === 'object' && t !== null) ? (t as Record<string, unknown>) : {};
+    const titleSunCycle = typeof tRecord.sunCycle === 'string' ? tRecord.sunCycle : "CICLE SOLAR";
+    const labelSunrise = typeof tRecord.sunrise === 'string' ? tRecord.sunrise : "SORTIDA";
+    const labelSunset = typeof tRecord.sunset === 'string' ? tRecord.sunset : "POSTA";
+
     useEffect(() => {
         const timer = setInterval(() => {
              setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
@@ -83,10 +89,7 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
                 <div className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-1.5`}>
                     <Sunrise className="w-4 h-4 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
                     <span className="tracking-wider">
-                    {
-                        // @ts-expect-error: Fallback asssumit i segur
-                        t.sunCycle || "CICLE SOLAR"
-                    }
+                        {titleSunCycle}
                     </span>
                 </div>
                 <div className="flex flex-col items-end bg-black/40 px-2.5 py-1 rounded-md border border-white/5 backdrop-blur-sm">
@@ -145,14 +148,14 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
              
              <div className="flex justify-between items-end w-full mt-3 px-2">
                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.sunrise || "SORTIDA"}</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{labelSunrise}</span>
                     <span className="text-[13px] font-mono font-black text-white tabular-nums bg-[#0f111a] px-2.5 py-1 rounded border border-white/10 shadow-inner">
                         {displaySunrise}
                     </span>
                  </div>
                  
                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.sunset || "POSTA"}</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{labelSunset}</span>
                     <span className="text-[13px] font-mono font-black text-white tabular-nums bg-[#0f111a] px-2.5 py-1 rounded border border-white/10 shadow-inner">
                         {displaySunset}
                     </span>
