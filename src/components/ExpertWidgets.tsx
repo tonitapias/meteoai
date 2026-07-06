@@ -12,6 +12,7 @@ import { useWRF } from '../hooks/useWRF';
 import { calculateModelConsensus } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
+import { UVIndexWidget } from './widgets/UVIndexWidget';
 import { 
   CompassGauge, 
   SnowLevelWidget, 
@@ -59,6 +60,30 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const currentCloudHigh = typeof current?.cloud_cover_high === 'number' ? current.cloud_cover_high : undefined;
   const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : undefined;
   const currentHumidity = typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : undefined;
+  
+  // DOCTRINA RISC ZERO: Cerca tàctica de l'Índex UV per 3 vies diferents per evitar el giny buit
+  const currentUV = useMemo(() => {
+    // 1. Intent prioritari: buscar-lo com a variable actual directa
+    if (typeof current?.uv_index === 'number') return current.uv_index;
+    
+    // 2. Fallback: buscar a la matriu horària fent match amb la línia de temps de "current"
+    if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time)) {
+      const currTimeStr = current?.time;
+      if (typeof currTimeStr === 'string') {
+        const idx = hourly.time.indexOf(currTimeStr);
+        if (idx !== -1 && typeof hourly.uv_index[idx] === 'number') {
+          return hourly.uv_index[idx];
+        }
+      }
+    }
+    
+    // 3. Fallback final extrem: buscar el pic màxim d'avui a la matriu diària (per garantir lectura de perill)
+    if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
+      return daily.uv_index_max[0];
+    }
+    
+    return undefined;
+  }, [current, hourly, daily]);
 
   const dewPointValue = typeof current?.dew_point_2m === 'number'
     ? current.dew_point_2m
@@ -216,6 +241,10 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
                 label={lang === 'ca' ? "Vent" : "Wind"} 
                 lang={lang} 
               />
+          </WidgetCard>
+
+          <WidgetCard>
+              <UVIndexWidget uvIndex={currentUV} lang={lang} />
           </WidgetCard>
 
           <WidgetCard>
