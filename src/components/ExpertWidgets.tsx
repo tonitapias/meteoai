@@ -180,13 +180,22 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
 
-  const hourlyCape = hourly?.cape;
-  const safeHourlyCape = useMemo(() => {
-    if (!Array.isArray(hourlyCape)) return 0;
-    const validCapes = hourlyCape.slice(0, 24).filter((c): c is number => typeof c === 'number');
-    if (validCapes.length === 0) return 0;
-    return Math.max(...validCapes);
-  }, [hourlyCape]);
+  // DOCTRINA RISC ZERO: React Compiler Fix. 
+  // Eliminat l'optional chaining de les dependències per garantir estabilitat de memoització.
+  const currentHourIndex = useMemo(() => {
+    if (!hourly || !current || !Array.isArray(hourly.time) || typeof current.time !== 'string') return 0;
+    
+    const hourPrefix = current.time.substring(0, 13); // Extraiem 'YYYY-MM-DDTHH'
+    const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
+    return Math.max(0, idx); // Si l'índex és -1, ens blindem amb 0 per evitar caigudes
+  }, [hourly, current]);
+
+  // DOCTRINA RISC ZERO: React Compiler Fix. 
+  // Eliminat l'optional chaining i protegit l'interior de la funció.
+  const safeCapeData = useMemo(() => {
+    if (!hourly || !Array.isArray(hourly.cape)) return [];
+    return hourly.cape.map(c => typeof c === 'number' ? c : null);
+  }, [hourly]);
 
   if (!current) return null;
 
@@ -276,7 +285,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard>
-              <CapeWidget cape={safeHourlyCape} lang={lang} />
+              <CapeWidget capeData={safeCapeData} currentHourIndex={currentHourIndex} lang={lang} />
           </WidgetCard>
 
           <WidgetCard cols={2}>
