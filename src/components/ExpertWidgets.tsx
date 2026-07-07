@@ -22,7 +22,7 @@ import {
   CapeWidget, 
   SunArcWidget, 
   MoonWidget, 
-  PollenWidget,
+  AqiWidget,
   VisibilityWidget 
 } from './WeatherWidgets';
 
@@ -289,7 +289,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard cols={2}>
-              <PollenWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
+              <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
           </WidgetCard>
 
           <WidgetCard>

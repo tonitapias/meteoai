@@ -5,7 +5,7 @@ export * from './CloudLayersWidget';
 export * from './SnowLevelWidget';
 export * from './DewPointWidget';
 export * from './CapeWidget';
-export * from './PollenWidget';
+export * from './AqiWidget';
 export * from './SunArcWidget';
 export * from './MoonWidget';
 export * from './HourlyForecastWidget';
