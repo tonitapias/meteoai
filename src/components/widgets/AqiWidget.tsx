@@ -10,6 +10,70 @@ type AqiResult = {
     pm10: number | null;
 };
 
+// Diccionari Tàctic Local per a Risc Zero (Garanteix els 4 idiomes encara que falli l'i18n global)
+type SupportedLang = 'ca' | 'es' | 'en' | 'fr';
+
+const AQI_TRANSLATIONS: Record<SupportedLang, Record<string, string>> = {
+    ca: {
+        title: "QUALITAT AIRE",
+        nd: "N/D",
+        good: "BONA",
+        fair: "RAONABLE",
+        moderate: "MODERADA",
+        sensitive: "SENSIBLE",
+        poor: "DOLENTA",
+        very_poor: "MOLT DOLENTA",
+        extreme: "EXTREMA",
+        hazardous: "PERILLOSA"
+    },
+    es: {
+        title: "CALIDAD AIRE",
+        nd: "N/D",
+        good: "BUENA",
+        fair: "RAZONABLE",
+        moderate: "MODERADA",
+        sensitive: "SENSIBLE",
+        poor: "MALA",
+        very_poor: "MUY MALA",
+        extreme: "EXTREMA",
+        hazardous: "PELIGROSA"
+    },
+    en: {
+        title: "AIR QUALITY",
+        nd: "N/A",
+        good: "GOOD",
+        fair: "FAIR",
+        moderate: "MODERATE",
+        sensitive: "SENSITIVE",
+        poor: "POOR",
+        very_poor: "VERY POOR",
+        extreme: "EXTREME",
+        hazardous: "HAZARDOUS"
+    },
+    fr: {
+        title: "QUALITÉ AIR",
+        nd: "N/D",
+        good: "BONNE",
+        fair: "PASSABLE",
+        moderate: "MODÉRÉE",
+        sensitive: "SENSIBLE",
+        poor: "MAUVAISE",
+        very_poor: "TRÈS MAUVAISE",
+        extreme: "EXTRÊME",
+        hazardous: "DANGEREUSE"
+    }
+};
+
+// Resolució segura d'idioma (Fallback sempre a Català)
+const getSafeLang = (langParam?: string): SupportedLang => {
+    if (!langParam) return 'ca';
+    const l = langParam.toLowerCase().substring(0, 2);
+    if (l === 'es') return 'es';
+    if (l === 'en') return 'en';
+    if (l === 'fr') return 'fr';
+    return 'ca';
+};
+
 // Extracció profunda blindada amb suport per micro-telemetria de partícules
 const extractAqiData = (dataObj: unknown): AqiResult | null => {
     if (!dataObj || typeof dataObj !== 'object') return null;
@@ -19,12 +83,12 @@ const extractAqiData = (dataObj: unknown): AqiResult | null => {
     const pm25 = typeof record.pm2_5 === 'number' && !isNaN(record.pm2_5) ? record.pm2_5 : null;
     const pm10 = typeof record.pm10 === 'number' && !isNaN(record.pm10) ? record.pm10 : null;
 
-    // 1. PRIORITAT ABSOLUTA: Escala Europea
+    // 1. PRIORITAT ABSOLUTA: Escala Europea Oficial (AEMA)
     if (typeof record.european_aqi === 'number' && !isNaN(record.european_aqi)) {
         return { value: record.european_aqi, type: 'EAQI', pm25, pm10 };
     }
     
-    // 2. FALLBACK: Escala Americana
+    // 2. FALLBACK: Escala Americana (EPA)
     if (typeof record.us_aqi === 'number' && !isNaN(record.us_aqi)) {
         return { value: record.us_aqi, type: 'USAQI', pm25, pm10 };
     }
@@ -53,34 +117,50 @@ const extractAqiData = (dataObj: unknown): AqiResult | null => {
 
 export const AqiWidget = ({ data, lang }: WidgetProps) => {
     const t = getTrans(lang);
+    const safeLang = getSafeLang(lang);
+    const tLocal = AQI_TRANSLATIONS[safeLang];
     
+    // Prioritzem el diccionari global pel títol si existeix, si no, usem el local
     const tRecord = (typeof t === 'object' && t !== null) ? (t as Record<string, unknown>) : {};
-    const titleAqi = typeof tRecord.aqi === 'string' ? tRecord.aqi : "QUALITAT AIRE";
+    const titleAqi = typeof tRecord.aqi === 'string' ? tRecord.aqi : tLocal.title;
 
     const aqiData = extractAqiData(data);
 
     const getAqiState = (result: AqiResult | null) => {
-        if (!result) return { color: 'text-cyan-500', bg: 'bg-cyan-500/20', shadow: 'shadow-none', label: "N/D", barMax: 100 };
+        if (!result) return { color: 'text-slate-500', bg: 'bg-slate-500/20', shadow: 'shadow-none', label: tLocal.nd, barMax: 100 };
         
         const { value, type } = result;
 
+        // ESTÀNDARD EAQI (Agència Europea de Medi Ambient): 6 Nivells Oficials
         if (type === 'EAQI') {
-            if (value >= 100) return { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]', label: "MALA", barMax: 100 };
-            if (value >= 50) return { color: 'text-amber-400', bg: 'bg-amber-400', shadow: 'shadow-[0_0_12px_#fbbf24]', label: "DEFICIENT", barMax: 100 };
-            if (value >= 20) return { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]', label: "MODERADA", barMax: 100 };
-            return { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]', label: "BONA", barMax: 100 };
-        } else {
-            if (value > 150) return { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]', label: "MALA", barMax: 200 };
-            if (value > 100) return { color: 'text-amber-400', bg: 'bg-amber-400', shadow: 'shadow-[0_0_12px_#fbbf24]', label: "DEFICIENT", barMax: 200 };
-            if (value > 50) return { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]', label: "MODERADA", barMax: 200 };
-            return { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]', label: "BONA", barMax: 200 };
+            if (value > 150) return { color: 'text-purple-500', bg: 'bg-purple-500', shadow: 'shadow-[0_0_12px_#a855f7]', label: tLocal.extreme, barMax: 200 };
+            if (value > 100) return { color: 'text-fuchsia-500', bg: 'bg-fuchsia-500', shadow: 'shadow-[0_0_12px_#d946ef]', label: tLocal.very_poor, barMax: 200 };
+            if (value > 50)  return { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]', label: tLocal.poor, barMax: 200 };
+            if (value > 40)  return { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]', label: tLocal.moderate, barMax: 200 };
+            if (value > 20)  return { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]', label: tLocal.fair, barMax: 200 };
+            return { color: 'text-cyan-400', bg: 'bg-cyan-500', shadow: 'shadow-[0_0_8px_#22d3ee]', label: tLocal.good, barMax: 200 };
+        } 
+        
+        // ESTÀNDARD USAQI (EPA): 6 Nivells Oficials (Arriba fins a 500)
+        else {
+            if (value > 300) return { color: 'text-red-800', bg: 'bg-red-800', shadow: 'shadow-[0_0_16px_#991b1b]', label: tLocal.hazardous, barMax: 500 };
+            if (value > 200) return { color: 'text-fuchsia-500', bg: 'bg-fuchsia-500', shadow: 'shadow-[0_0_12px_#d946ef]', label: tLocal.very_poor, barMax: 500 };
+            if (value > 150) return { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]', label: tLocal.poor, barMax: 500 };
+            if (value > 100) return { color: 'text-amber-400', bg: 'bg-amber-400', shadow: 'shadow-[0_0_12px_#fbbf24]', label: tLocal.sensitive, barMax: 500 };
+            if (value > 50)  return { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]', label: tLocal.moderate, barMax: 500 };
+            return { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]', label: tLocal.good, barMax: 500 };
         }
     };
 
     const { color, bg, shadow, label, barMax } = getAqiState(aqiData);
     const displayValue = aqiData ? Math.round(aqiData.value) : null;
     
-    const isAlert = label === "DEFICIENT" || label === "MALA";
+    // Alerta tàctica dinàmica matemàticament segura basada en els llindars oficials de risc
+    // Ja no depèn de textos traduïts, funciona 100% per matemàtica.
+    const isAlert = displayValue !== null && (
+        (aqiData?.type === 'EAQI' && displayValue > 50) || 
+        (aqiData?.type === 'USAQI' && displayValue > 100)
+    );
 
     // DOCTRINA RISC ZERO: Destructuració garantida per a TypeScript abans del renderitzat
     const pm25 = aqiData?.pm25 ?? null;
@@ -112,21 +192,27 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
                     </span>
                 </div>
                 
-                {/* Carril Tàctic AQI */}
+                {/* Carril Tàctic AQI: Resolució de 20 segments matemàticament adaptable al barMax */}
                 <div className="flex gap-0.5 h-3.5 w-full mb-1.5 bg-[#0f111a] rounded-sm border border-white/5 p-px">
                     {Array.from({ length: 20 }).map((_, i) => {
                         const threshold = i * (barMax / 20); 
                         const isActive = displayValue !== null && displayValue >= threshold;
                         
-                        let segmentColor = 'bg-emerald-400';
+                        let segmentColor = 'bg-emerald-500'; // Default tàctic
+                        
                         if (aqiData?.type === 'EAQI') {
-                            if (threshold >= 100) segmentColor = 'bg-rose-500';
-                            else if (threshold >= 50) segmentColor = 'bg-amber-400';
-                            else if (threshold >= 20) segmentColor = 'bg-yellow-300';
+                            if (threshold > 150) segmentColor = 'bg-purple-500';
+                            else if (threshold > 100) segmentColor = 'bg-fuchsia-500';
+                            else if (threshold > 50)  segmentColor = 'bg-rose-500';
+                            else if (threshold > 40)  segmentColor = 'bg-yellow-300';
+                            else if (threshold > 20)  segmentColor = 'bg-emerald-400';
+                            else segmentColor = 'bg-cyan-500';
                         } else {
-                            if (threshold > 150) segmentColor = 'bg-rose-500';
+                            if (threshold > 300) segmentColor = 'bg-red-800';
+                            else if (threshold > 200) segmentColor = 'bg-fuchsia-500';
+                            else if (threshold > 150) segmentColor = 'bg-rose-500';
                             else if (threshold > 100) segmentColor = 'bg-amber-400';
-                            else if (threshold > 50) segmentColor = 'bg-yellow-300';
+                            else if (threshold > 50)  segmentColor = 'bg-yellow-300';
                         }
                         
                         return (
@@ -140,12 +226,12 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
                 </div>
 
                 {/* Zona Inferior: Etiqueta Principal i Micro-Telemetria */}
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between mt-0.5">
                     <span className={`text-xl sm:text-2xl font-black ${color} tracking-tighter uppercase drop-shadow-md leading-none`}>
                         {label}
                     </span>
                     
-                    {/* Renderitzat impecable a nivell de tipatge */}
+                    {/* Renderitzat impecable a nivell de tipatge per als contaminants principals */}
                     {hasMicroTelemetry && (
                         <div className="flex gap-2 text-[9px] sm:text-[10px] font-mono text-slate-500 bg-black/30 px-1.5 py-0.5 rounded border border-white/5">
                             {pm25 !== null && <span>PM2.5 <span className="text-slate-300">{pm25.toFixed(1)}</span></span>}
