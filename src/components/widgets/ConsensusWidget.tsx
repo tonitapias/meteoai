@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { ConsensusMetrics } from '../../utils/consensusMath';
 import { Language } from '../../translations';
-import { ConsensusModal, ModalType } from './ConsensusModal';
+import { ConsensusModal } from './ConsensusModal';
+import { ConsensusChartsModal } from './ConsensusChartsModal';
 import { 
   CheckCircle2, 
   Activity, 
@@ -14,8 +15,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MoveRight,
-  Cpu
+  Cpu,
+  LineChart
 } from 'lucide-react';
+
+// EXPORTEM EL TIPUS DES D'AQUÍ
+export type ModalType = 'temp' | 'rain' | 'wind' | 'charts';
 
 interface ConsensusWidgetProps {
   metrics: ConsensusMetrics;
@@ -44,6 +49,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     title: isCa ? 'Motor de Consens' : 'Consensus Engine',
     affinity: isCa ? 'Precisió' : 'Accuracy',
     temp: 'TEMP', rain: isCa ? 'PLUJA' : 'RAIN', snow: 'NEU', wind: 'VENT', diff: 'Δ',
+    chartsBtn: isCa ? 'Telemetria Gràfica Completa' : 'Full Graphical Telemetry',
     status: { sync: isCa ? 'Alineat' : 'Aligned', discrepancy: isCa ? 'Discrepància' : 'Variance', alert: isCa ? 'Divergència' : 'Divergence' }
   };
 
@@ -112,8 +118,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
             @keyframes spatial-float-active { 0%, 100% { transform: rotateX(2deg) rotateY(-1deg) translateY(0px); } 50% { transform: rotateX(-1deg) rotateY(1deg) translateY(-4px); } }
             @keyframes spatial-float-pc { 0%, 100% { transform: rotateX(1deg) rotateY(-0.5deg) translateY(0px); } 50% { transform: rotateX(-0.5deg) rotateY(0.5deg) translateY(-2px); } }
             .preserve-3d { transform-style: preserve-3d; }
-            .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-            @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { width: 6px; } }
+            .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
             .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
             .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 6px; }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
@@ -213,13 +218,41 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
               </div>
+
+              <div className="w-full [transform:translateZ(20px)] mt-[-10px] md:mt-[-15px]">
+                  <button 
+                     onClick={() => openModal('charts')}
+                     className="w-full relative group overflow-hidden bg-black/40 backdrop-blur-md border border-white/10 hover:border-cyan-500/40 rounded-xl md:rounded-2xl py-3 md:py-4 flex items-center justify-center gap-3 transition-all duration-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] active:scale-[0.98]"
+                  >
+                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] group-hover:via-cyan-400/[0.1] to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                     <LineChart className="w-4 h-4 md:w-5 md:h-5 text-cyan-400 group-hover:text-cyan-300 drop-shadow-[0_0_8px_currentColor] transition-colors relative z-10" />
+                     <span className="text-[10px] sm:text-xs md:text-sm font-black text-cyan-100 group-hover:text-white uppercase tracking-[0.2em] relative z-10 transition-colors">
+                        {t.chartsBtn}
+                     </span>
+                  </button>
+              </div>
+
            </div>
         </div>
       </div>
 
-      {activeModal && (
+      {/* RENDERITZAT CONDICIONAL DELS MODALS */}
+      {activeModal && activeModal !== 'charts' && (
         <ConsensusModal
           activeModal={activeModal}
+          closeModal={closeModal}
+          lang={lang}
+          utcOffset={utcOffset}
+          nowTimestamp={nowTimestamp}
+          hourlyTimes={hourlyTimes}
+          hourlyGlobalTimes={hourlyGlobalTimes}
+          hourlyLocal={hourlyLocal}
+          hourlyGlobal={hourlyGlobal}
+        />
+      )}
+      
+      {activeModal === 'charts' && (
+        <ConsensusChartsModal
           closeModal={closeModal}
           lang={lang}
           utcOffset={utcOffset}
