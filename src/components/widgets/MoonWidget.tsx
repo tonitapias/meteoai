@@ -6,13 +6,14 @@ import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { getTrans, getMoonPhaseText } from './widgetHelpers';
 import { MoonPhaseIcon } from '../MoonPhaseIcon'; 
 
-// Ampliem la interfície localment. Necessitem 'lon' per a la precisió astronòmica.
+// Ampliem la interfície localment. Afegim el timezone per a la telemetria global.
 type TacticalMoonWidgetProps = WidgetProps & {
     lon?: number; 
     date?: Date | string | number; 
+    timezone?: string;
 };
 
-export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetProps) => {
+export const MoonWidget = ({ phase, lat, lon, lang, date, timezone }: TacticalMoonWidgetProps) => {
     const t = getTrans(lang);
     
     // Validació estricta d'objecte i extracció tipada de text
@@ -30,7 +31,7 @@ export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetPr
     // Utilitzem 'lat' per detectar l'hemisferi
     const isSouth = typeof lat === 'number' && lat < 0;
 
-    // --- MOTOR MATEMÀTIC TÀCTIC (Risc Zero + Escombratge de 3 Dies) ---
+    // --- MOTOR MATEMÀTIC TÀCTIC (Risc Zero Global + Escombratge de 3 Dies) ---
     let safeMoonrise: string | null = null;
     let safeMoonset: string | null = null;
     let isNextDayRise = false;
@@ -38,55 +39,59 @@ export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetPr
 
     if (typeof lat === 'number' && typeof lon === 'number') {
         try {
+            // Definim el fus horari. Si no en rebem, utilitzem el del dispositiu com a xarxa de seguretat.
+            const tz = typeof timezone === 'string' && timezone.trim() !== '' 
+                ? timezone 
+                : Intl.DateTimeFormat().resolvedOptions().timeZone;
+                
             const targetDate = date ? new Date(date) : new Date();
             
-            // 1. Definim les fronteres exactes del nostre dia LOCAL a nivell de mil·lisegon
-            const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0).getTime();
-            const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999).getTime();
+            // Formatadors estrictes acoblats al fus horari destí
+            const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+            const timeFormatter = new Intl.DateTimeFormat('ca-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+            
+            // L'"avui" absolut de la localitat consultada
+            const targetDateStr = dateFormatter.format(targetDate);
 
-            // 2. Preparem els dies adjacents per esquivar el decalatge de l'UTC
+            // Preparem els dies adjacents
             const yesterday = new Date(targetDate.getTime() - 86400000);
             const tomorrow = new Date(targetDate.getTime() + 86400000);
 
             const getTimes = (d: Date) => SunCalc.getMoonTimes(d, lat, lon);
             
-            // 3. Recopilem tots els esdeveniments de la finestra de 3 dies
+            // Recopilem tots els esdeveniments de la finestra
             const allRises = [getTimes(yesterday).rise, getTimes(targetDate).rise, getTimes(tomorrow).rise].filter(Boolean) as Date[];
             const allSets = [getTimes(yesterday).set, getTimes(targetDate).set, getTimes(tomorrow).set].filter(Boolean) as Date[];
 
-            // 4. Filtrem estrictament pel nostre dia local
-            let localRise = allRises.find(d => d.getTime() >= startOfDay && d.getTime() <= endOfDay);
-            let localSet = allSets.find(d => d.getTime() >= startOfDay && d.getTime() <= endOfDay);
+            // TÀCTICA DE FUS HORARI: Seleccionem l'esdeveniment que, a l'avaluar-se sota
+            // el fus horari destí, coincideix amb l'estríng YYYY-MM-DD del lloc.
+            let localRise = allRises.find(d => dateFormatter.format(d) === targetDateStr);
+            let localSet = allSets.find(d => dateFormatter.format(d) === targetDateStr);
 
-            // 5. TÀCTICA DE PREVISIÓ (+1d): Si realment no hi ha esdeveniment avui, busquem el següent
+            // TÀCTICA DE PREVISIÓ (+1d)
             if (!localRise) {
-                localRise = allRises.find(d => d.getTime() > endOfDay);
+                localRise = allRises.find(d => dateFormatter.format(d) > targetDateStr);
                 if (localRise) isNextDayRise = true;
             }
             if (!localSet) {
-                localSet = allSets.find(d => d.getTime() > endOfDay);
+                localSet = allSets.find(d => dateFormatter.format(d) > targetDateStr);
                 if (localSet) isNextDaySet = true;
             }
 
             const formatTime = (timeData?: Date): string | null => {
                 if (!timeData || isNaN(timeData.getTime())) return null;
-                return timeData.toLocaleTimeString('ca-ES', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    hour12: false 
-                });
+                return timeFormatter.format(timeData); // Ara escriu l'hora del país destí
             };
 
             safeMoonrise = formatTime(localRise);
             safeMoonset = formatTime(localSet);
 
         } catch (error) {
-            console.error("Error al calcular el cicle lunar local:", error);
+            console.error("Error al calcular el cicle lunar global:", error);
         }
     }
 
-    // SPATIAL UI: Bucle Continu per a l'animació orbital 
-    // Inserit directament per no haver de modificar l'arxiu tailwind.config.js de producció
+    // SPATIAL UI: Bucle Continu Cinemàtic
     const cinematicAnimations = `
         @keyframes lunar-levitation {
             0%, 100% { transform: ${isSouth ? 'scaleX(-1)' : ''} translateY(0px) translateZ(10px); }
@@ -102,15 +107,12 @@ export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetPr
         }
     `;
 
-    // Aplicació del Dark Dashboard Spatial UI
     const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} backdrop-blur-md bg-gradient-to-br from-indigo-950/40 to-black/60 border border-indigo-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 flex flex-col justify-between h-full`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>
-             {/* Injecció segura de l'animació a l'arbre DOM */}
              <style>{cinematicAnimations}</style>
 
-             {/* CAPÇALERA */}
              <div className="flex items-center justify-between w-full mb-3">
                  <span className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-1.5`}>
                      <Moon className="w-4 h-4 text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)]" /> 
@@ -121,9 +123,7 @@ export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetPr
                  </div>
              </div>
              
-             {/* INDICADOR PRINCIPAL */}
              <div className="flex items-center justify-center flex-1 gap-6 sm:gap-8 mb-4 mt-2">
-                 {/* La classe animate-lunar-loop dota de vida pròpia a la icona */}
                  <div className="w-20 h-20 sm:w-24 sm:h-24 animate-lunar-loop">
                     <MoonPhaseIcon phase={hasData ? phase : 0} className="w-full h-full text-slate-200" />
                  </div>
@@ -141,9 +141,7 @@ export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetPr
                  </div>
              </div>
 
-             {/* TELEMETRIA ASTRONÒMICA AUTÒNOMA (SPATIAL UI) */}
              <div className="flex items-center justify-between w-full pt-3 border-t border-indigo-500/20 mt-auto bg-black/20 rounded-b px-2 pb-1">
-                {/* Dades de Sortida */}
                 <div className="flex flex-col items-start">
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Sortida</span>
                     <span className={`flex items-baseline gap-1 text-xs sm:text-sm font-mono font-bold tracking-tight ${safeMoonrise ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.4)]' : 'text-slate-600'}`}>
@@ -152,10 +150,8 @@ export const MoonWidget = ({ phase, lat, lon, lang, date }: TacticalMoonWidgetPr
                     </span>
                 </div>
                 
-                {/* Separador de profunditat */}
                 <div className="w-[1px] h-6 bg-gradient-to-b from-transparent via-indigo-500/30 to-transparent"></div>
                 
-                {/* Dades de Posta */}
                 <div className="flex flex-col items-end">
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Posta</span>
                     <span className={`flex items-baseline gap-1 text-xs sm:text-sm font-mono font-bold tracking-tight ${safeMoonset ? 'text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.4)]' : 'text-slate-600'}`}>

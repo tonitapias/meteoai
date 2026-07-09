@@ -43,7 +43,7 @@ interface ExpertWidgetsProps {
 }
 
 export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel }: ExpertWidgetsProps) {
-  const { current, hourly, daily, utc_offset_seconds, location } = weatherData;
+  const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []);
   
   const showSnowWidget = typeof freezingLevel === 'number' && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
@@ -96,7 +96,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const { wrfData, fetchWRFByCoords } = useWRF();
   
-  // Aquestes constants ja estaven preparades. Ara les reaprofitarem pel MoonWidget.
   const safeLat = location && typeof (location as Record<string, unknown>).latitude === 'number' 
     ? (location as Record<string, unknown>).latitude as number 
     : undefined;
@@ -280,9 +279,15 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
           </WidgetCard>
 
-          {/* DOCTRINA RISC ZERO: Passem explícitament el 'safeLon' al giny per desblocar el motor de 'suncalc' */}
+          {/* DOCTRINA RISC ZERO GLOBAL: Injectem el timezone de destí */}
           <WidgetCard>
-              <MoonWidget phase={moonPhaseVal} lat={safeLat || 41.728} lon={safeLon || 1.824} lang={lang} />
+              <MoonWidget 
+                  phase={moonPhaseVal} 
+                  lat={safeLat || 41.728} 
+                  lon={safeLon || 1.824} 
+                  timezone={typeof timezone === 'string' ? timezone : undefined}
+                  lang={lang} 
+              />
           </WidgetCard>
 
           <WidgetCard cols={2}>
