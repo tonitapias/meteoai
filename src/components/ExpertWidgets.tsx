@@ -29,8 +29,6 @@ import {
 interface WidgetCardProps { children: React.ReactNode; cols?: number; }
 
 const WidgetCard = ({ children, cols = 1 }: WidgetCardProps) => (
-  // SPATIAL UI: Afegim 'flex flex-col' perquè el fons de la targeta s'estiri completament 
-  // i elimini els espais verticals estranys quan ginys adjacents són més alts.
   <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg`}>
     {children}
   </div>
@@ -63,15 +61,10 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : undefined;
   const currentHumidity = typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : undefined;
   
-  // DOCTRINA RISC ZERO: Motor d'extracció UV Intel·ligent
   const currentUV = useMemo(() => {
-    // 1. ESCUT NOCTURN (Nivell API): Si l'API diu clarament que és fosc, UV a 0.
     if (current?.is_day === 0) return 0;
-    
-    // 2. Intent prioritari (Dada directa actual)
     if (typeof current?.uv_index === 'number') return current.uv_index;
     
-    // 3. Fallback horari avançat (Ignora minuts per quadrar current time i hourly time)
     if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time) && typeof current?.time === 'string') {
       const hourPrefix = current.time.substring(0, 13);
       const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
@@ -81,7 +74,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
       }
     }
     
-    // 4. Fallback diari controlat (Escut Nocturn Nivell Deducció)
     const currentHour = new Date().getHours();
     const isLikelyNight = currentHour < 6 || currentHour > 21;
 
@@ -104,6 +96,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const { wrfData, fetchWRFByCoords } = useWRF();
   
+  // Aquestes constants ja estaven preparades. Ara les reaprofitarem pel MoonWidget.
   const safeLat = location && typeof (location as Record<string, unknown>).latitude === 'number' 
     ? (location as Record<string, unknown>).latitude as number 
     : undefined;
@@ -180,18 +173,14 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
 
-  // DOCTRINA RISC ZERO: React Compiler Fix. 
-  // Eliminat l'optional chaining de les dependències per garantir estabilitat de memoització.
   const currentHourIndex = useMemo(() => {
     if (!hourly || !current || !Array.isArray(hourly.time) || typeof current.time !== 'string') return 0;
     
-    const hourPrefix = current.time.substring(0, 13); // Extraiem 'YYYY-MM-DDTHH'
+    const hourPrefix = current.time.substring(0, 13); 
     const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
-    return Math.max(0, idx); // Si l'índex és -1, ens blindem amb 0 per evitar caigudes
+    return Math.max(0, idx); 
   }, [hourly, current]);
 
-  // DOCTRINA RISC ZERO: React Compiler Fix. 
-  // Eliminat l'optional chaining i protegit l'interior de la funció.
   const safeCapeData = useMemo(() => {
     if (!hourly || !Array.isArray(hourly.cape)) return [];
     return hourly.cape.map(c => typeof c === 'number' ? c : null);
@@ -252,7 +241,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
          )}
       </div>
 
-      {/* ARQUITECTURA TÀCTICA: Afegit 'grid-flow-dense' perquè l'algoritme de CSS ompli els forats al PC sense alterar el mòbil */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20 grid-flow-dense">
           <WidgetCard>
               <CompassGauge 
@@ -292,8 +280,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
           </WidgetCard>
 
+          {/* DOCTRINA RISC ZERO: Passem explícitament el 'safeLon' al giny per desblocar el motor de 'suncalc' */}
           <WidgetCard>
-              <MoonWidget phase={moonPhaseVal} lat={safeLat || 41} lang={lang} />
+              <MoonWidget phase={moonPhaseVal} lat={safeLat || 41.728} lon={safeLon || 1.824} lang={lang} />
           </WidgetCard>
 
           <WidgetCard cols={2}>
