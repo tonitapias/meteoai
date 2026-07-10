@@ -180,6 +180,21 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     return Math.max(0, idx); 
   }, [hourly, current]);
 
+  // DOCTRINA RISC ZERO: Extracció del ΔP (Tendència Baromètrica de les últimes 3h)
+  const pressureTrend = useMemo(() => {
+    if (!hourly || !Array.isArray(hourly.pressure_msl)) return undefined;
+    
+    if (currentHourIndex >= 3) {
+        const currentP = hourly.pressure_msl[currentHourIndex];
+        const pastP = hourly.pressure_msl[currentHourIndex - 3];
+        
+        if (typeof currentP === 'number' && typeof pastP === 'number') {
+            return Number((currentP - pastP).toFixed(1)); 
+        }
+    }
+    return undefined;
+  }, [hourly, currentHourIndex]);
+
   const safeCapeData = useMemo(() => {
     if (!hourly || !Array.isArray(hourly.cape)) return [];
     return hourly.cape.map(c => typeof c === 'number' ? c : null);
@@ -264,7 +279,16 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard>
-              <CircularGauge icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>} label={lang === 'ca' ? "Pressió" : "Pressure"} value={Math.round(currentPressure ?? 1013)} max={1050} subText="hPa" color="text-indigo-400" />
+              <CircularGauge 
+                  icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>} 
+                  label={lang === 'ca' ? "Pressió" : "Pressure"} 
+                  value={Math.round(currentPressure ?? 1013)} 
+                  max={1050} 
+                  subText="hPa" 
+                  color="text-indigo-400" 
+                  trendValue={pressureTrend}
+                  lang={lang}
+              />
           </WidgetCard>
 
           <WidgetCard>
@@ -279,7 +303,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
           </WidgetCard>
 
-          {/* DOCTRINA RISC ZERO GLOBAL: Injectem el timezone de destí */}
           <WidgetCard>
               <MoonWidget 
                   phase={moonPhaseVal} 
