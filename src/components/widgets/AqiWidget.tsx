@@ -1,4 +1,4 @@
-import { Wind, AlertTriangle } from 'lucide-react';
+import { Wind, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
@@ -74,12 +74,13 @@ const getSafeLang = (langParam?: string): SupportedLang => {
     return 'ca';
 };
 
-// Extracció profunda blindada amb suport per micro-telemetria de partícules
-const extractAqiData = (dataObj: unknown): AqiResult | null => {
-    if (!dataObj || typeof dataObj !== 'object') return null;
+// DOCTRINA RISC ZERO: Extracció profunda blindada amb limitador de recursivitat (Stack Overflow Protection)
+const extractAqiData = (dataObj: unknown, depth = 0): AqiResult | null => {
+    // Tallem en sec si passem de 4 nivells de profunditat per evitar bucles infinits
+    if (!dataObj || typeof dataObj !== 'object' || depth > 4) return null;
     const record = dataObj as Record<string, unknown>;
 
-    // Doctrina Risc Zero: Extracció segura de PM2.5 i PM10
+    // Extracció segura de PM2.5 i PM10
     const pm25 = typeof record.pm2_5 === 'number' && !isNaN(record.pm2_5) ? record.pm2_5 : null;
     const pm10 = typeof record.pm10 === 'number' && !isNaN(record.pm10) ? record.pm10 : null;
 
@@ -96,11 +97,11 @@ const extractAqiData = (dataObj: unknown): AqiResult | null => {
         return { value: record.aqi, type: 'USAQI', pm25, pm10 };
     }
 
-    // 3. Cerca recursiva
+    // 3. Cerca recursiva controlada
     const wrapperKeys = ['current', 'current_weather', 'hourly', 'daily', 'air_quality'];
     for (const wrapper of wrapperKeys) {
         if (record[wrapper] && typeof record[wrapper] === 'object') {
-            const nestedAqi = extractAqiData(record[wrapper]);
+            const nestedAqi = extractAqiData(record[wrapper], depth + 1);
             if (nestedAqi !== null) {
                 return {
                     ...nestedAqi,
@@ -154,65 +155,73 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
 
     const { color, bg, shadow, label, barMax } = getAqiState(aqiData);
     const displayValue = aqiData ? Math.round(aqiData.value) : null;
+    const hasValidData = displayValue !== null;
     
-    // Alerta tàctica dinàmica matemàticament segura basada en els llindars oficials de risc
-    // Ja no depèn de textos traduïts, funciona 100% per matemàtica.
-    const isAlert = displayValue !== null && (
+    // Alerta tàctica dinàmica basada en els llindars oficials
+    const isAlert = hasValidData && (
         (aqiData?.type === 'EAQI' && displayValue > 50) || 
         (aqiData?.type === 'USAQI' && displayValue > 100)
     );
 
-    // DOCTRINA RISC ZERO: Destructuració garantida per a TypeScript abans del renderitzat
     const pm25 = aqiData?.pm25 ?? null;
     const pm10 = aqiData?.pm10 ?? null;
     const hasMicroTelemetry = pm25 !== null || pm10 !== null;
 
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} !flex-row items-center gap-6 backdrop-blur-md bg-gradient-to-br from-black/60 to-[#0f111a]/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4`;
+    // SPATIAL UI BASE AMB MATRIU DE FONS
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} !flex-row items-center gap-6 backdrop-blur-md transition-colors duration-700 relative overflow-hidden border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 ${hasValidData ? 'bg-gradient-to-br from-[#0f111a]/90 to-black/80 border-white/10' : 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50'}`;
+    const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>
+            {/* Matriu Tàctica */}
+            <div className={MATRIX_BG}></div>
+
             {/* Contenidor Icona */}
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center bg-[#0f111a]/80 rounded-xl border border-white/10 shadow-inner group backdrop-blur-sm">
-                {aqiData === null ? (
-                    <AlertTriangle className={`w-8 h-8 sm:w-10 sm:h-10 ${color} opacity-50`} />
+            <div className={`relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-xl border shadow-inner group backdrop-blur-sm z-10 transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a]/80 border-white/10' : 'bg-slate-800/40 border-slate-700/50'}`}>
+                {!hasValidData ? (
+                    <CloudOff className="w-8 h-8 sm:w-10 sm:h-10 text-slate-500 opacity-80" />
                 ) : (
                     <Wind className={`w-8 h-8 sm:w-10 sm:h-10 ${color} transition-colors duration-500 filter drop-shadow-[0_0_8px_currentColor]`} />
                 )}
-                <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ${bg} ${isAlert ? 'animate-pulse' : ''} ${shadow} border-2 border-[#151725]`}></div>
+                {/* Llum de telemetria (Només brilla si hi ha dades) */}
+                <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ${hasValidData ? bg : 'bg-slate-600'} ${isAlert ? 'animate-pulse' : ''} ${hasValidData ? shadow : 'shadow-none'} border-2 border-[#151725] transition-colors duration-500`}></div>
             </div>
 
             {/* Panell de Dades i Telemetria */}
-            <div className="flex-1 flex flex-col justify-center">
+            <div className="flex-1 flex flex-col justify-center z-10">
                 <div className="flex justify-between items-center mb-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        {titleAqi} {aqiData?.type === 'EAQI' ? '(EU)' : ''}
+                        {titleAqi} {hasValidData && aqiData?.type === 'EAQI' ? '(EU)' : ''}
                     </span>
-                    <span className={`text-xs sm:text-sm font-mono font-black ${color} tabular-nums bg-black/40 px-2 py-0.5 rounded border border-white/5`}>
-                        {displayValue !== null ? `AQI ${displayValue}` : 'AQI --'}
+                    <span className={`text-xs sm:text-sm font-mono font-black ${hasValidData ? color : 'text-slate-500'} tabular-nums px-2 py-0.5 rounded border transition-colors duration-500 ${hasValidData ? 'bg-black/40 border-white/5' : 'bg-transparent border-slate-700/50'}`}>
+                        {hasValidData ? `AQI ${displayValue}` : 'AQI --'}
                     </span>
                 </div>
                 
-                {/* Carril Tàctic AQI: Resolució de 20 segments matemàticament adaptable al barMax */}
-                <div className="flex gap-0.5 h-3.5 w-full mb-1.5 bg-[#0f111a] rounded-sm border border-white/5 p-px">
+                {/* Carril Tàctic AQI: Desactivació completa si no hi ha dades */}
+                <div className={`flex gap-0.5 h-3.5 w-full mb-1.5 rounded-sm border p-px transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a] border-white/5' : 'bg-slate-900/50 border-slate-800'}`}>
                     {Array.from({ length: 20 }).map((_, i) => {
                         const threshold = i * (barMax / 20); 
-                        const isActive = displayValue !== null && displayValue >= threshold;
+                        const isActive = hasValidData && displayValue >= threshold;
                         
-                        let segmentColor = 'bg-emerald-500'; // Default tàctic
+                        let segmentColor = 'bg-slate-700'; // Default per pèrdua de dades
                         
-                        if (aqiData?.type === 'EAQI') {
-                            if (threshold > 150) segmentColor = 'bg-purple-500';
-                            else if (threshold > 100) segmentColor = 'bg-fuchsia-500';
-                            else if (threshold > 50)  segmentColor = 'bg-rose-500';
-                            else if (threshold > 40)  segmentColor = 'bg-yellow-300';
-                            else if (threshold > 20)  segmentColor = 'bg-emerald-400';
-                            else segmentColor = 'bg-cyan-500';
-                        } else {
-                            if (threshold > 300) segmentColor = 'bg-red-800';
-                            else if (threshold > 200) segmentColor = 'bg-fuchsia-500';
-                            else if (threshold > 150) segmentColor = 'bg-rose-500';
-                            else if (threshold > 100) segmentColor = 'bg-amber-400';
-                            else if (threshold > 50)  segmentColor = 'bg-yellow-300';
+                        if (hasValidData) {
+                            segmentColor = 'bg-emerald-500'; // Default tàctic
+                            if (aqiData?.type === 'EAQI') {
+                                if (threshold > 150) segmentColor = 'bg-purple-500';
+                                else if (threshold > 100) segmentColor = 'bg-fuchsia-500';
+                                else if (threshold > 50)  segmentColor = 'bg-rose-500';
+                                else if (threshold > 40)  segmentColor = 'bg-yellow-300';
+                                else if (threshold > 20)  segmentColor = 'bg-emerald-400';
+                                else segmentColor = 'bg-cyan-500';
+                            } else {
+                                if (threshold > 300) segmentColor = 'bg-red-800';
+                                else if (threshold > 200) segmentColor = 'bg-fuchsia-500';
+                                else if (threshold > 150) segmentColor = 'bg-rose-500';
+                                else if (threshold > 100) segmentColor = 'bg-amber-400';
+                                else if (threshold > 50)  segmentColor = 'bg-yellow-300';
+                            }
                         }
                         
                         return (
@@ -227,12 +236,12 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
 
                 {/* Zona Inferior: Etiqueta Principal i Micro-Telemetria */}
                 <div className="flex items-end justify-between mt-0.5">
-                    <span className={`text-xl sm:text-2xl font-black ${color} tracking-tighter uppercase drop-shadow-md leading-none`}>
+                    <span className={`text-xl sm:text-2xl font-black ${color} tracking-tighter uppercase drop-shadow-md leading-none transition-colors duration-500`}>
                         {label}
                     </span>
                     
                     {/* Renderitzat impecable a nivell de tipatge per als contaminants principals */}
-                    {hasMicroTelemetry && (
+                    {hasValidData && hasMicroTelemetry && (
                         <div className="flex gap-2 text-[9px] sm:text-[10px] font-mono text-slate-500 bg-black/30 px-1.5 py-0.5 rounded border border-white/5">
                             {pm25 !== null && <span>PM2.5 <span className="text-slate-300">{pm25.toFixed(1)}</span></span>}
                             {pm10 !== null && <span>PM10 <span className="text-slate-300">{pm10.toFixed(1)}</span></span>}

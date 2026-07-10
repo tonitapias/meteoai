@@ -15,7 +15,7 @@ interface UVCategory {
   glow: string;
 }
 
-// DOCTRINA RISC ZERO: Diccionari tàctic purificat (sense estils innecessaris de stroke, fem servir currentColor)
+// DOCTRINA RISC ZERO: Diccionari tàctic purificat 
 const getUVCategory = (uv: number): UVCategory => {
   if (uv < 3) return { 
     label: { ca: 'BAIX', es: 'BAJO', en: 'LOW', fr: 'FAIBLE' }, 
@@ -46,40 +46,50 @@ const getUVCategory = (uv: number): UVCategory => {
 
 export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'ca' }) => {
   // Risc Zero: Protecció matemàtica contra nuls
-  const isDataMissing = uvIndex === null || uvIndex === undefined;
+  const isDataMissing = uvIndex === null || uvIndex === undefined || isNaN(uvIndex);
   const safeUV = isDataMissing ? 0 : uvIndex;
   
   const category = getUVCategory(safeUV);
-  const displayLabel = category.label[lang] || category.label['ca'];
-  const actionLabel = category.action[lang] || category.action['ca'];
+  
+  // Garantim el tipatge en l'accés al diccionari i la caiguda a Català si falta la key
+  const safeLang = lang as Language;
+  const displayLabel = category.label[safeLang] || category.label['ca'];
+  const actionLabel = category.action[safeLang] || category.action['ca'];
+  
   const requiresShield = safeUV >= 6;
   
   // SPATIAL UI - GEOMETRIA RADAR 270 GRAUS
-  // En lloc d'un arc aplanat, fem servir un cercle complet amb un tall (gap) a la part inferior.
-  const clampedUV = Math.max(0, Math.min(safeUV, 12));
   const RADIUS = 42; 
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // Aprox 263.89
   
-  // Volem un indicador que cobreixi el 75% del cercle (270 graus). El 25% restant és el buit inferior.
+  // 75% cercle, 25% buit inferior
   const GAUGE_LENGTH = CIRCUMFERENCE * 0.75;
   const GAP_LENGTH = CIRCUMFERENCE * 0.25;
   
-  // El percentatge d'ompliment es calcula sobre els 12 punts UV màxims.
-  const fillPercentage = isDataMissing ? 0 : (clampedUV / 12);
+  // DOCTRINA RISC ZERO (Muntanya): L'escala base de l'OMS és 11+, però a l'estiu a les cotes altes pot arribar a 13-14.
+  // Escalem dinàmicament l'anell base si el valor supera 12 perquè mai superi el 100% de la longitud.
+  const maxGaugeUV = Math.max(12, safeUV); 
+  const clampedUV = Math.max(0, safeUV); 
+  
+  const fillPercentage = isDataMissing ? 0 : (clampedUV / maxGaugeUV);
   const strokeDashoffset = GAUGE_LENGTH - (fillPercentage * GAUGE_LENGTH);
 
+  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
+
   return (
-    <div className="flex flex-col h-full p-4 md:p-5 relative group overflow-hidden bg-gradient-to-br from-black/60 to-[#0f111a]/80 backdrop-blur-md rounded-2xl border border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+    <div className={`flex flex-col h-full p-4 md:p-5 relative group overflow-hidden backdrop-blur-md rounded-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700 ${isDataMissing ? 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50' : 'bg-gradient-to-br from-black/60 to-[#0f111a]/80 border-white/5'}`}>
       
-      {/* Resplendor Atmosfèric: Reacciona a l'índex UV */}
+      <div className={MATRIX_BG}></div>
+
+      {/* Resplendor Atmosfèric: Reacciona a l'índex UV, apagat si no hi ha dades */}
       {!isDataMissing && safeUV > 3 && (
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-[60px] opacity-10 ${category.color.replace('text-', 'bg-')} transition-all duration-1000 pointer-events-none transform-gpu`} />
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-[60px] opacity-15 ${category.color.replace('text-', 'bg-')} transition-all duration-1000 pointer-events-none transform-gpu z-0`} />
       )}
 
       {/* Capçalera */}
       <div className="flex items-center justify-between mb-2 relative z-10">
         <div className="flex items-center gap-2">
-          <Sun className={`w-4 h-4 ${isDataMissing ? 'text-slate-500' : category.color} transition-colors duration-500 ${!isDataMissing && requiresShield ? 'animate-pulse ' + category.glow : ''}`} />
+          <Sun className={`w-4 h-4 transition-colors duration-500 ${isDataMissing ? 'text-slate-500' : category.color} ${!isDataMissing && requiresShield ? 'animate-pulse ' + category.glow : ''}`} />
           <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
             {lang === 'ca' ? "Índex UV" : lang === 'es' ? "Índice UV" : lang === 'en' ? "UV Index" : "Indice UV"}
           </span>
@@ -88,14 +98,13 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
 
       {/* Contenidor Principal del Radar */}
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full mt-2">
-        {/* Un quadrat perfecte assegura que l'SVG mai es deformarà */}
         <div className="relative w-full max-w-[160px] aspect-square flex justify-center items-center mx-auto">
           
           {/* Llenç SVG 270 Graus */}
           <svg 
             viewBox="0 0 100 100" 
             className="absolute inset-0 w-full h-full overflow-visible transform-gpu drop-shadow-lg"
-            // Rotem 135 graus per posar l'inici del traçat a sota a l'esquerra i el final a sota a la dreta
+            // Rotem 135 graus per posar l'inici del traçat a sota a l'esquerra
             style={{ transform: 'rotate(135deg)' }}
           >
             {/* Carril de Fons (Track) */}
@@ -123,26 +132,25 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
             />
           </svg>
 
-          {/* Dades Centrals Flotants (Holograma) */}
+          {/* Dades Centrals Flotants */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             {/* Sol Hologràfic Giratori al Fons */}
-            {!isDataMissing && (
+            {!isDataMissing && safeUV > 0 && (
                <Sun 
-                 className={`absolute w-20 h-20 opacity-5 ${category.color} blur-sm transition-all duration-1000`} 
+                 className={`absolute w-20 h-20 opacity-5 ${category.color} blur-sm transition-all duration-1000 z-0`} 
                  style={{ animation: 'spin 15s linear infinite' }}
                />
             )}
             
-            {/* Tipografia Neta i Centrada */}
-            <span className={`text-4xl sm:text-5xl font-mono font-black tabular-nums tracking-tighter leading-none relative z-10 ${isDataMissing ? 'text-slate-600' : 'text-white drop-shadow-md'}`}>
+            <span className={`text-4xl sm:text-5xl font-mono font-black tabular-nums tracking-tighter leading-none relative z-10 transition-colors duration-500 ${isDataMissing ? 'text-slate-600' : 'text-white drop-shadow-md'}`}>
               {isDataMissing ? '--' : safeUV.toFixed(1)}
             </span>
-            <span className={`text-[10px] sm:text-[11px] font-black tracking-widest mt-1 uppercase relative z-10 ${isDataMissing ? 'text-slate-600' : category.color}`}>
+            <span className={`text-[10px] sm:text-[11px] font-black tracking-widest mt-1 uppercase relative z-10 transition-colors duration-500 ${isDataMissing ? 'text-slate-600' : category.color}`}>
               {isDataMissing ? 'NO DATA' : displayLabel}
             </span>
           </div>
 
-          {/* Etiqueta d'Acció (Ancorada estratègicament al buit inferior del cercle) */}
+          {/* Etiqueta d'Acció (Ancorada al buit inferior) */}
           <div className="absolute -bottom-2 w-full flex justify-center z-20">
             {!isDataMissing && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0a0b10] border border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-md">
