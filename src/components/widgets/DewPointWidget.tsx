@@ -6,21 +6,23 @@ import { getTrans, safeVal } from './widgetHelpers';
 export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
     const t = getTrans(lang);
     
-    // Risc Zero: Determinem primer si tenim dades reals o si l'API ha fallat
-    const hasData = typeof value === 'number' && !isNaN(value);
+    // Risc Zero: Validació dual estricta. L'API pot lliurar un valor i fallar en l'altre.
+    const hasValue = typeof value === 'number' && !isNaN(value);
+    const hasHumidity = typeof humidity === 'number' && !isNaN(humidity);
+    const hasData = hasValue && hasHumidity;
     
-    const displayVal = safeVal(value);
-    const displayHum = safeVal(humidity);
+    // Fallback visual tàctic explícit per absència de telemetria
+    const displayVal = hasValue ? safeVal(value) : '--';
+    const displayHum = hasHumidity ? safeVal(humidity) : '--';
     
-    // Si no hi ha dades, no assumim un fals 0°C
-    const safeValue = hasData ? value : 0;
+    // Si no hi ha dades, no assumim un fals 0°C per a la barra visual
+    const safeValue = hasValue ? value : 0;
     
-    // Evitem percentatges negatius o superiors al 100% que trencarien l'HTML
-    // La barra nomes té amplada si hi ha dades.
+    // Evitem percentatges negatius o superiors al 100% que trencarien el DOM
     const barWidth = hasData ? Math.max(0, Math.min(((safeValue + 10) / 40) * 100, 100)) : 0;
 
     // Colors tàctics segons risc (Glaçada, Confort, Xafogor extrema)
-    let barColor = 'bg-slate-600'; // Estat apagat (Fallback)
+    let barColor = 'bg-slate-700/50'; // Estat desconnectat / No Data
     let shadowColor = 'shadow-none';
     
     if (hasData) {
@@ -39,32 +41,38 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
         }
     }
 
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} backdrop-blur-md bg-gradient-to-br from-black/60 to-[#0f111a]/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col justify-between p-3 sm:p-4`;
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} backdrop-blur-md bg-gradient-to-br from-black/60 to-[#0f111a]/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col justify-between p-3 sm:p-4 relative overflow-hidden`;
 
     return (
       <div className={SPATIAL_WIDGET_STYLE}>
-          <div className={`${TITLE_STYLE.replace('mb-4', 'mb-2')} flex items-center gap-1.5`}>
-              <Droplets className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" /> 
-              <span className="tracking-wider">{t.dewPoint || "PUNT DE ROSADA"}</span>
+          {/* Línies de matriu de fons per profunditat UI */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:12px_12px] opacity-20 pointer-events-none"></div>
+
+          <div className={`${TITLE_STYLE.replace('mb-4', 'mb-2')} flex items-center gap-1.5 relative z-10`}>
+              <Droplets className={`w-4 h-4 ${hasData ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' : 'text-slate-500'}`} /> 
+              <span className="tracking-wider text-slate-200">{t.dewPoint || "PUNT DE ROSADA"}</span>
           </div>
           
-          <div className="flex items-center justify-between flex-1 pb-4 pt-2">
-              <div className="flex flex-col items-start bg-black/20 p-2 rounded-lg border border-white/5 backdrop-blur-sm">
-                  <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl leading-none">{displayVal}°</span>
+          <div className="flex items-center justify-between flex-1 pb-4 pt-2 relative z-10">
+              <div className="flex flex-col items-start bg-black/40 p-2 rounded-lg border border-white/5 backdrop-blur-sm transform transition-all">
+                  <span className={`text-4xl sm:text-5xl font-black tabular-nums tracking-tighter leading-none ${hasValue ? 'text-white drop-shadow-xl' : 'text-slate-600'}`}>
+                      {displayVal}{hasValue ? '°' : ''}
+                  </span>
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2">Rosada</span>
               </div>
               
-              <div className="h-12 w-px bg-gradient-to-b from-transparent via-slate-500/50 to-transparent mx-2"></div>
+              <div className="h-12 w-px bg-gradient-to-b from-transparent via-slate-500/30 to-transparent mx-2"></div>
               
-              <div className="flex flex-col items-end bg-black/20 p-2 rounded-lg border border-white/5 backdrop-blur-sm">
-                  <span className="text-2xl sm:text-3xl font-black text-cyan-400 tabular-nums drop-shadow-md leading-none">{displayHum}%</span>
+              <div className="flex flex-col items-end bg-black/40 p-2 rounded-lg border border-white/5 backdrop-blur-sm transform transition-all">
+                  <span className={`text-2xl sm:text-3xl font-black tabular-nums leading-none ${hasHumidity ? 'text-cyan-400 drop-shadow-md' : 'text-slate-600'}`}>
+                      {displayHum}{hasHumidity ? '%' : ''}
+                  </span>
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2 text-right">Humitat Rel.</span>
               </div>
           </div>
 
-          <div className="w-full h-1.5 bg-[#0f111a] rounded-full overflow-hidden border border-white/10 shadow-inner mt-2 relative">
-              {/* Línia de base quan no hi ha dades */}
-              {!hasData && <div className="absolute inset-0 bg-slate-800 opacity-50"></div>}
+          <div className="w-full h-1.5 bg-[#0a0b10] rounded-full overflow-hidden border border-white/5 shadow-inner mt-2 relative z-10">
+              {!hasData && <div className="absolute inset-0 bg-slate-800/30"></div>}
               
               <div 
                 className={`h-full rounded-full ${barColor} ${shadowColor} transition-all duration-1000 ease-out`} 

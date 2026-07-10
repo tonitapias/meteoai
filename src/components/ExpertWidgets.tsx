@@ -292,7 +292,12 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard>
-              <DewPointWidget value={dewPointValue as number | undefined} humidity={currentHumidity ?? 0} lang={lang} />
+              {/* Risc Zero Aplicat: Evitem el "?? 0" en l'humitat i confiem en el tipatge natiu undefined */}
+              <DewPointWidget 
+                  value={dewPointValue} 
+                  humidity={currentHumidity as number | undefined} 
+                  lang={lang} 
+              />
           </WidgetCard>
 
           <WidgetCard>
