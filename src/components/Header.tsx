@@ -13,21 +13,16 @@ function isLocationData(item: GeoSearchResult | LocationData): item is LocationD
     return (item as LocationData).admin1 !== undefined || (item as GeoSearchResult).id === undefined;
 }
 
-// JA NO NECESSITEM INTERFACE HeaderProps NI PROPS
-
 export default function Header() {
-  // 1. CONNEXIÓ AL CONTEXT (Substitueix les props)
+  // 1. CONNEXIÓ AL CONTEXT
   const { actions, state, flags } = useAppContext();
   
-  // Mapegem les variables del context als noms que feies servir abans
-  // per no haver de canviar tot el codi de sota
   const onSearch = actions.fetchWeatherByCoords;
   const loading = state.loading;
   const viewMode = flags.viewMode;
   const setViewMode = actions.setViewMode;
   const onDebugToggle = actions.toggleDebug;
 
-  // --- A PARTIR D'AQUÍ, TOT EL CODI ÉS IDÈNTIC AL QUE TENIES ---
   const { favorites } = usePreferences();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -226,6 +221,8 @@ export default function Header() {
 
   return (
     <header className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 z-50 relative">
+      
+      {/* LOGO I TÍTOL */}
       <div 
         onClick={handleTitleClick}
         className="flex md:flex items-center gap-3 opacity-80 select-none cursor-pointer group transition-all w-full justify-center md:w-auto md:justify-start order-0"
@@ -249,6 +246,7 @@ export default function Header() {
           </div>
       </div>
 
+      {/* BARRA DE CERCA */}
       <div ref={wrapperRef} className="flex-1 w-full max-w-2xl relative order-2 md:order-1">
           <form 
             onSubmit={handleSubmit}
@@ -318,6 +316,7 @@ export default function Header() {
             </button>
           </form>
 
+          {/* DESPLEGABLE DE RESULTATS I FAVORITS */}
           {isFocused && (showFavorites || (showSuggestionsList && suggestions.length > 0)) && (
             <div className="absolute top-full left-0 w-full mt-2 bg-[#0B0C15]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-10 ring-1 ring-white/5">
                 {showFavorites && (
@@ -373,25 +372,42 @@ export default function Header() {
           )}
       </div>
 
-      <div className="flex items-center gap-1 p-1 bg-[#0f111a] border border-white/5 rounded-xl order-1 md:order-2 w-full md:w-auto justify-center md:justify-end">
-          <button 
-            onClick={() => setViewMode && setViewMode('basic')} 
-            className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
-                ${viewMode === 'basic' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-slate-300'} 
-            `}
-          >
-              <Layers className="w-3 h-3" /> BÀSIC
-          </button>
-          <button 
-            onClick={() => setViewMode && setViewMode('expert')} 
-            className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
-                ${viewMode === 'expert' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm border border-indigo-500/30' : 'text-slate-400 hover:text-slate-300'}
-            `}
-          >
-              <Activity className="w-3 h-3" /> EXPERT
-          </button>
+      {/* SELECTOR DE MODE (SEGMENTED CONTROL TÀCTIC ENHANCED) */}
+      <div className="flex flex-col items-center md:items-end order-1 md:order-2 w-full md:w-auto mt-2 md:mt-0 z-10 group">
+          <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 hidden md:block drop-shadow-sm">
+              Mode Visual
+          </span>
+          <div className="flex items-center p-1.5 bg-[#050608]/90 border border-white/5 rounded-xl shadow-[inset_0_4px_10px_rgba(0,0,0,0.8),0_0_15px_rgba(255,255,255,0.01)] backdrop-blur-md w-full md:w-auto relative transition-colors duration-500 hover:border-white/10">
+              <button
+                type="button"
+                onClick={() => setViewMode && setViewMode('basic')}
+                className={`
+                    flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300
+                    ${viewMode === 'basic'
+                        ? 'bg-slate-800/80 text-white shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/10'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
+                `}
+                aria-pressed={viewMode === 'basic'}
+              >
+                  <Layers className={`w-3.5 h-3.5 transition-all duration-300 ${viewMode === 'basic' ? 'text-sky-400 drop-shadow-[0_0_5px_rgba(56,189,248,0.6)]' : ''}`} /> 
+                  BÀSIC
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setViewMode && setViewMode('expert')}
+                className={`
+                    flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300
+                    ${viewMode === 'expert'
+                        ? 'bg-indigo-600/30 text-indigo-50 shadow-[0_4px_15px_rgba(99,102,241,0.4)] border border-indigo-400/40'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
+                `}
+                aria-pressed={viewMode === 'expert'}
+              >
+                  <Activity className={`w-3.5 h-3.5 transition-all duration-300 ${viewMode === 'expert' ? 'text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]' : ''}`} /> 
+                  EXPERT
+              </button>
+          </div>
       </div>
     </header>
   );

@@ -1,5 +1,4 @@
 // src/components/WeatherIcons.tsx
-// UPDATED: Importem 'memo'
 import React, { useState, useEffect, memo } from 'react';
 import { 
   Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon, 
@@ -19,37 +18,44 @@ interface Particle {
   opacity: number;
 }
 
+// DOCTRINA RISC ZERO: Funció d'avaluació estricta per evitar falsos positius amb el 0
+const checkIsDaylight = (isDay?: number | boolean) => isDay === 1 || isDay === true;
+
 const VariableWeatherIcon = ({ isDay, className, ...props }: CommonIconProps) => {
+  const isDaylight = checkIsDaylight(isDay);
+  
   return (
-    <div className={`${className} relative flex items-center justify-center`} {...props}>
-      <div className="absolute top-[-20%] right-[-20%] w-[50%] h-[50%] z-0">
-         {isDay ? (
-           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]" strokeWidth={2} />
+    <div className={`${className} relative flex items-center justify-center transform-gpu`} {...props}>
+      <div className="absolute top-[-20%] right-[-20%] w-[60%] h-[60%] z-0">
+         {isDaylight ? (
+           <Sun className="w-full h-full text-amber-400 fill-amber-400/30 animate-[pulse_4s_ease-in-out_infinite] drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]" strokeWidth={2} />
          ) : (
-           <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
+           <Moon className="w-full h-full text-slate-300 fill-slate-300/30 drop-shadow-[0_0_15px_rgba(203,213,225,0.4)]" strokeWidth={2} />
          )}
       </div>
-      <CloudLightning className="w-full h-full text-purple-400 fill-purple-400/20 animate-pulse relative z-10" strokeWidth={2} />
+      <CloudLightning className="w-full h-full text-fuchsia-400 fill-fuchsia-400/20 animate-pulse relative z-10 drop-shadow-[0_0_15px_rgba(192,38,211,0.8)]" strokeWidth={2} />
     </div>
   );
 };
 
 const VariableRainIcon = ({ isDay, className, ...props }: CommonIconProps) => {
+  const isDaylight = checkIsDaylight(isDay);
+
   return (
-    <div className={`${className} relative flex items-center justify-center`} {...props}>
-      <div className="absolute top-[-20%] right-[-20%] w-[50%] h-[50%] z-0">
-         {isDay ? (
-           <Sun className="w-full h-full text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]" strokeWidth={2} />
+    <div className={`${className} relative flex items-center justify-center transform-gpu`} {...props}>
+      <div className="absolute top-[-20%] right-[-20%] w-[60%] h-[60%] z-0">
+         {isDaylight ? (
+           <Sun className="w-full h-full text-amber-400 fill-amber-400/30 animate-[pulse_4s_ease-in-out_infinite] drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" strokeWidth={2} />
          ) : (
-           <Moon className="w-full h-full text-slate-300 fill-slate-300/30" strokeWidth={2} />
+           <Moon className="w-full h-full text-slate-300 fill-slate-300/30 drop-shadow-[0_0_10px_rgba(203,213,225,0.3)]" strokeWidth={2} />
          )}
       </div>
-      <CloudRain className="w-full h-full text-indigo-400 fill-indigo-400/20 animate-pulse relative z-10" strokeWidth={2} />
+      <CloudRain className="w-full h-full text-cyan-400 fill-cyan-400/20 animate-pulse relative z-10 drop-shadow-[0_0_12px_rgba(34,211,238,0.6)]" strokeWidth={2} />
     </div>
   );
 };
 
-// UPDATED: Embolcallem el component amb memo()
+// Embolcallem el component amb memo() per rendiment gràfic
 export const WeatherParticles = memo(({ code }: { code: number }) => {
   const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
@@ -57,7 +63,7 @@ export const WeatherParticles = memo(({ code }: { code: number }) => {
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
-      // FIX DEFINITIU: setTimeout treu l'actualització del cicle síncron
+      // setTimeout treu l'actualització del cicle síncron evitant bloquejos
       const timer = setTimeout(() => {
           if (!isSnow && !isRain) {
               setParticles([]);
@@ -81,12 +87,13 @@ export const WeatherParticles = memo(({ code }: { code: number }) => {
   if (!isSnow && !isRain) return null;
   const type = isSnow ? 'snow' : 'rain';
 
+  // SPATIAL UI: Accel·leració GPU i efectes visuals per a les partícules
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 transform-gpu" style={{ transform: 'translateZ(0)' }}>
       {particles.map((p) => (
           <div 
             key={p.id}
-            className={`absolute top-[-20px] ${type === 'rain' ? 'w-0.5 h-6 bg-blue-300/40' : 'w-1.5 h-1.5 bg-white/60 rounded-full blur-[1px]'}`}
+            className={`absolute top-[-20px] ${type === 'rain' ? 'w-[1.5px] h-6 bg-gradient-to-b from-transparent to-cyan-400/60' : 'w-1.5 h-1.5 bg-white/80 rounded-full blur-[1px] shadow-[0_0_4px_white]'}`}
             style={{ 
                 left: `${p.left}%`, 
                 animation: `fall ${p.duration}s linear ${p.delay}s infinite`, 
@@ -99,7 +106,7 @@ export const WeatherParticles = memo(({ code }: { code: number }) => {
   );
 });
 
-// Assignem display name per debugging (bona pràctica amb memo)
+// Assignem display name per debugging
 WeatherParticles.displayName = 'WeatherParticles';
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -110,45 +117,48 @@ export const getWeatherIcon = (
     _rainProb: number = 0, 
     windSpeed: number = 0
 ): React.ReactNode => {
+    const isDaylight = checkIsDaylight(isDay);
+    
+    // SPATIAL UI: Base compartida amb drop-shadow genèric per volumetria
     const commonProps = {
       strokeWidth: 2, 
-      className: `${className} drop-shadow-md transition-all duration-300` 
+      className: `${className} drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] transition-all duration-500 transform-gpu` 
     };
 
-    if (code === 0) return isDay 
-      ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/30 animate-[pulse_4s_ease-in-out_infinite]`} /> 
-      : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30`} />;
+    if (code === 0) return isDaylight 
+      ? <Sun {...commonProps} className={`${commonProps.className} text-amber-400 fill-amber-400/30 animate-[pulse_4s_ease-in-out_infinite] drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]`} /> 
+      : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30 drop-shadow-[0_0_15px_rgba(203,213,225,0.4)]`} />;
     
     if (code === 1) {
        const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
-       return isDay 
-         ? <Sun {...commonProps} className={`${commonProps.className} text-yellow-400 fill-yellow-400/10 ${windClass}`} />
-         : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/10 ${windClass}`} />;
+       return isDaylight 
+         ? <Sun {...commonProps} className={`${commonProps.className} text-amber-400 fill-amber-400/10 ${windClass} drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]`} />
+         : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/10 ${windClass} drop-shadow-[0_0_10px_rgba(203,213,225,0.2)]`} />;
     }
 
     if (code === 2) {
        const windClass = windSpeed > 40 ? "animate-[pulse_0.5s_ease-in-out_infinite]" : "";
-       return isDay 
-         ? <CloudSun {...commonProps} className={`${commonProps.className} text-orange-300 ${windClass}`} />
+       return isDaylight 
+         ? <CloudSun {...commonProps} className={`${commonProps.className} text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.3)] ${windClass}`} />
          : <CloudMoon {...commonProps} className={`${commonProps.className} text-slate-400 ${windClass}`} />;
     }
     
-    if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite]`} />;
-    if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-gray-400 fill-gray-400/30 animate-pulse`} />;
-    if (code >= 51 && code <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-300 fill-blue-300/20`} />;
-    if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20`} />;
+    if (code === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite] drop-shadow-[0_0_10px_rgba(148,163,184,0.3)]`} />;
+    if (code >= 45 && code <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/30 animate-pulse`} />;
+    if (code >= 51 && code <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-sky-300 fill-sky-300/20 drop-shadow-[0_0_8px_rgba(125,211,252,0.4)]`} />;
+    if (code >= 56 && code <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20 drop-shadow-[0_0_8px_rgba(103,232,249,0.5)]`} />;
 
     if (code >= 61 && code <= 65) {
-        // Correcció: Ara la pluja feble mostrarà el sol o la lluna al darrere sempre
-        if (code <= 62) return <VariableRainIcon isDay={isDay} {...commonProps} />;
-        return <CloudRain {...commonProps} className={`${commonProps.className} text-blue-500 fill-blue-500/20 animate-pulse`} />;
+        if (code <= 62) return <VariableRainIcon isDay={isDaylight} {...commonProps} />;
+        return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-500 fill-cyan-500/20 animate-pulse drop-shadow-[0_0_12px_rgba(6,182,212,0.6)]`} />;
     }
 
-    if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse`} />;
-    if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite]`} />; 
-    if (code >= 80 && code <= 82) return <VariableRainIcon isDay={isDay} {...commonProps} />;
-    if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse`} />;
-    if (code >= 95) return <VariableWeatherIcon isDay={isDay} {...commonProps} />;
+    if (code >= 66 && code <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse drop-shadow-[0_0_15px_rgba(34,211,238,0.7)]`} />;
+    if (code >= 71 && code <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite] drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]`} />; 
+    if (code >= 80 && code <= 82) return <VariableRainIcon isDay={isDaylight} {...commonProps} />;
+    if (code >= 85 && code <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]`} />;
+    if (code >= 95) return <VariableWeatherIcon isDay={isDaylight} {...commonProps} />;
     
-    return <Cloud {...commonProps} className={`${commonProps.className} text-gray-300 fill-gray-300/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
+    // Fallback universal tàctic
+    return <Cloud {...commonProps} className={`${commonProps.className} text-slate-500 fill-slate-500/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
 };

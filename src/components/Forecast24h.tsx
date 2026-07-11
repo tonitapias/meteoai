@@ -1,4 +1,3 @@
-// src/components/Forecast24h.tsx
 import { useMemo } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
@@ -18,7 +17,8 @@ const getSafeNum = (arr: unknown, index: number, fallback: number = 0): number =
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
     const { hourly, current, utc_offset_seconds } = data;
     
-    const isArome = current.source === 'AROME HD';
+    // DOCTRINA RISC ZERO: Validacions estrictes de dades
+    const isArome = current?.source === 'AROME HD';
     const sourceLabel = isArome ? 'AROME HD' : 'GFS / GLOBAL';
 
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
@@ -44,13 +44,15 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         
         if (startIndex === -1) return [];
 
-        return Array.from({ length: 25 }).map((_, i) => {
+        const rows: ChartDataPoint[] = [];
+        const MAX_HOURS = 25;
+
+        // DOCTRINA RISC ZERO: Bucle segur. Si l'API lliura menys hores de les esperades, 
+        // aturem la iteració en lloc d'injectar objectes buits o falsos zeros.
+        for (let i = 0; i < MAX_HOURS; i++) {
             const targetIndex = startIndex + i;
             
-            // Retorn segur fora de límits
-            if (targetIndex >= hourly.time.length) {
-                return { time: '', temp: 0, icon: null, precip: 0, precipText: '', isNow: false };
-            }
+            if (targetIndex >= hourly.time.length) break;
 
             const timeStr = String(hourly.time[targetIndex]);
             const dateObj = new Date(timeStr);
@@ -74,7 +76,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             
             // Si el codi base indica 'no precipitació', revaluem segons telemetria de capes
             if (rawCode <= 3) {
-                // Comprovem si l'API suporta dades multinivell per aquesta coordenada
                 const hasLayers = Array.isArray(hourly.cloud_cover_low) && hourly.cloud_cover_low.length > 0;
                 
                 const effectiveClouds = hasLayers 
@@ -97,7 +98,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 precipString = `${pProb}%`;
             }
 
-            return {
+            rows.push({
                 time: i === 0 ? (lang === 'ca' ? 'ARA' : 'NOW') : `${hours}H`,
                 temp: temp,
                 // Assignem iconografia tàctica tenint en compte velocitat de vent i perill
@@ -105,41 +106,42 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 precip: pProb || (pAmt > 0 ? 100 : 0),
                 precipText: precipString,
                 isNow: i === 0
-            };
-        });
+            });
+        }
+        
+        return rows;
       }, [hourly, lang, utc_offset_seconds]);
 
     // Protecció d'estat buit per no renderitzar contenidors inútils
     if (hourlyChartData.length === 0) return null;
 
     return (
-        <div className="relative group w-full transform-gpu" style={{ transform: 'translateZ(0)' }}>
+        <div className="relative w-full z-20 group transform-gpu select-none" style={{ transform: 'translateZ(0)' }}>
             
             {/* ETiqueta Tàctica de Model (Spatial UI) */}
             <div className={`
-                absolute -top-3 right-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-md backdrop-blur-md 
-                border shadow-lg transform ring-1 ring-white/5 transition-all duration-300
+                absolute -top-3.5 right-4 md:right-6 z-30 flex items-center gap-1.5 px-3 py-1 rounded-md backdrop-blur-md 
+                shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] transition-colors duration-500
                 ${isArome 
-                    ? 'bg-emerald-950/80 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.25)]' 
-                    : 'bg-indigo-950/80 border-indigo-500/30 shadow-[0_0_12px_rgba(99,102,241,0.25)]'}
+                    ? 'bg-emerald-950/90 border border-emerald-500/30' 
+                    : 'bg-indigo-950/90 border border-indigo-500/30'}
             `}>
                 {isArome ? (
                     <>
                         <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20 animate-pulse drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
-                        <span className="text-[10px] font-mono font-bold text-emerald-400 tracking-widest drop-shadow-[0_0_2px_rgba(0,0,0,1)]">AROME HD</span>
+                        <span className="text-[10px] font-mono font-black text-emerald-400 tracking-widest drop-shadow-md">AROME HD</span>
                     </>
                 ) : (
                     <>
                         <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)]" />
-                        <span className="text-[10px] font-mono font-bold text-indigo-400 tracking-widest drop-shadow-[0_0_2px_rgba(0,0,0,1)]">{sourceLabel}</span>
+                        <span className="text-[10px] font-mono font-black text-indigo-400 tracking-widest drop-shadow-md">{sourceLabel}</span>
                     </>
                 )}
             </div>
             
-            {/* Contenidor de gràfics protegit */}
-            <div className="relative w-full bg-slate-900/40 rounded-xl border border-slate-700/50 backdrop-blur-sm p-1 pt-4 shadow-inner">
-                <HourlyForecastWidget data={hourlyChartData} lang={lang} />
-            </div>
+            {/* Contenidor de gràfics purificat (S'ha eliminat el doble requadre que trencava el disseny) */}
+            <HourlyForecastWidget data={hourlyChartData} lang={lang} />
+            
         </div>
     );
 }

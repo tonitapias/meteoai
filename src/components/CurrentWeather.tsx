@@ -1,4 +1,3 @@
-// src/components/CurrentWeather.tsx
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
@@ -53,13 +52,13 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
   const currentData = rawData.current as Record<string, unknown> | undefined;
   const currentWeather = rawData.current_weather as Record<string, unknown> | undefined;
   
-  // Cerquem ratxes
+  // Cerquem ratxes (Risc Zero: Fallback en cascada)
   const rawWindGusts = 
     currentData?.wind_gusts_10m ?? 
     currentWeather?.windgusts ?? 
     rawData.wind_gusts_10m;
 
-  // Cerquem direcció del vent
+  // Cerquem direcció del vent (Risc Zero: Fallback en cascada)
   const rawWindDir = 
     currentData?.winddirection_10m ?? 
     currentData?.wind_direction_10m ??
@@ -67,22 +66,29 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
     rawData.wind_direction_10m ??
     rawData.winddirection_10m;
 
+  // SPATIAL UI BASE AMB MATRIU DE FONS
+  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
+
   return (
     <div className="w-full relative group">
-      <div className="w-full flex flex-col md:flex-row items-stretch justify-between p-6 md:p-10 bg-[#0B0C15] rounded-[3rem] border border-white/5 relative overflow-hidden shadow-2xl gap-8 ring-1 ring-white/5">
-        {/* Background Decorator */}
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[120px] -mr-20 -mt-20 pointer-events-none mix-blend-screen"></div>
+      <div className="w-full flex flex-col md:flex-row items-stretch justify-between p-6 md:p-10 bg-gradient-to-br from-[#0f111a]/95 to-black/90 backdrop-blur-xl rounded-[3rem] border border-white/5 relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] gap-8 ring-1 ring-white/5 transform-gpu transition-colors duration-700">
+        
+        {/* Matriu Tàctica de Fons */}
+        <div className={MATRIX_BG}></div>
+
+        {/* Background Decorators (Llum Atmosfèrica Spatial UI) */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/15 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none mix-blend-screen z-0 transition-opacity duration-1000"></div>
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-cyan-500/5 rounded-full blur-[80px] -ml-20 -mb-20 pointer-events-none mix-blend-screen z-0"></div>
 
         {/* LEFT COLUMN: Context & Temp */}
-        <div className="flex-1 flex flex-col justify-between z-10">
+        <div className="flex-1 flex flex-col justify-between z-10 relative">
           <CurrentWeatherHeader
             locationName={weather.meta.locationName}
             country={weather.meta.country}
             time={weather.meta.time}
             date={weather.meta.date}
             isUsingArome={weather.meta.isUsingArome}
-            isFavorite={props.isFavorite}
-            onToggleFavorite={props.onToggleFavorite}
+            // DOCTRINA RISC ZERO: Props isFavorite i onToggleFavorite eliminades per unificació tàctica a WeatherActionButtons
             elevation={parseMetric(rawData.elevation) ?? parseMetric((weather.meta as Record<string, unknown>).elevation)}
           />
 
@@ -96,7 +102,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         </div>
 
         {/* RIGHT COLUMN: Icon, Grid & Actions */}
-        <div className="w-full md:w-[320px] flex flex-col gap-4 z-10 shrink-0 mt-0 md:mt-0 relative">
+        <div className="w-full md:w-[320px] flex flex-col gap-4 z-10 shrink-0 mt-0 relative">
           
           {/* Weather Icon Block */}
           <div className="flex-1 flex items-center justify-center min-h-[180px] md:min-h-[220px] relative -mt-8 md:mt-0">
@@ -115,7 +121,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             windDirection={parseMetric((weather.stats as Record<string, unknown>).windDirection) ?? parseMetric(rawWindDir)}
             humidity={parseMetric(weather.stats.humidity)}
             apparentTemp={parseMetric(weather.temps.apparent)}
-            lang={props.lang} // DOCTRINA RISC ZERO: Correcció de 'lang' a 'props.lang'
+            lang={props.lang}
           />
 
           <WeatherActionButtons

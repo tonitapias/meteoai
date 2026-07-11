@@ -1,4 +1,3 @@
-// src/components/RadarMap.tsx
 import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -34,10 +33,12 @@ const RainViewerResponseSchema = z.object({
 
 type RadarFrame = z.infer<typeof RadarFrameSchema>;
 
-// Component auxiliar per centrar el mapa
+// DOCTRINA RISC ZERO: Component auxiliar blindat amb useEffect per evitar bucles de renderitzat infinits a React-Leaflet
 function ChangeView({ center }: { center: [number, number] }) {
   const map = useMap();
-  map.setView(center, map.getZoom());
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
   return null;
 }
 
@@ -75,6 +76,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
 
         const data = parsed.data;
         
+        // DOCTRINA RISC ZERO: Si la matriu ve corrupta de l'API, aturem la càrrega per evitar indexos negatius (-1)
         if (!data.radar || !data.radar.past || data.radar.past.length === 0) {
             console.error("Error dades radar: absència de dades 'past' vàlides");
             setError(true);
@@ -84,6 +86,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
         setHost(data.host);
         setFrames(data.radar.past);
         
+        // Calculem l'index pre-penúltim (Marge de seguretat de telemetria)
         const latestIndex = Math.max(0, data.radar.past.length - 2);
         setAnimationIndex(latestIndex);
         
@@ -117,6 +120,7 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
   }, [isPlaying, frames]);
 
   const togglePlay = () => {
+      if (frames.length === 0) return;
       setIsPlaying(!isPlaying);
       if (!isPlaying) setAnimationIndex(0);
       else setAnimationIndex(Math.max(0, frames.length - 1));
@@ -132,31 +136,38 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
       ? `${host}${currentFrame.path}/256/{z}/{x}/{y}/6/1_1.png`
       : null;
 
+  // SPATIAL UI BASE
+  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
+
+  // DOCTRINA RISC ZERO (Fail-Safe Absolut): Desmuntem el MapContainer sencer si l'API Doppler cau, no només li fiquem una capa al damunt.
+  if (error) {
+     return (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#0f111a]/95 to-black/90 backdrop-blur-md">
+            <div className={MATRIX_BG}></div>
+            <div className="w-16 h-16 rounded-full bg-rose-950/40 border border-rose-500/30 shadow-[inset_0_1px_8px_rgba(244,63,94,0.3)] flex items-center justify-center mb-4 relative backdrop-blur-sm z-10">
+                 <div className="absolute inset-0 rounded-full border border-rose-500/30 animate-ping opacity-50"></div>
+                 <AlertTriangle className="w-8 h-8 text-rose-500 drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
+            </div>
+            <span className="text-white font-black tracking-widest uppercase mb-1 drop-shadow-md z-10">Radar Doppler Caigut</span>
+            <span className="text-xs text-slate-400 font-mono font-bold mb-6 z-10">No s&apos;han pogut rebre paquets de RainViewer</span>
+            <button onClick={fetchRadarData} className="px-6 py-2.5 bg-[#0a0b10]/80 border border-white/10 hover:bg-white/10 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-[inset_0_1px_4px_rgba(255,255,255,0.05)] z-10">Forçar Sincronització</button>
+        </div>
+     );
+  }
+
   return (
     <div className="relative w-full h-full min-h-0 overflow-hidden bg-[#020308]">
       
-      {/* ESCUT D'ERROR */}
-      {error && (
-        <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-[#020308]/95 backdrop-blur-md">
-             <div className="w-16 h-16 rounded-full bg-rose-950/30 border border-rose-900/50 flex items-center justify-center mb-4 relative">
-                  <div className="absolute inset-0 rounded-full border border-rose-500/20 animate-ping"></div>
-                  <AlertTriangle className="w-8 h-8 text-rose-500" />
-             </div>
-             <span className="text-white font-bold tracking-widest uppercase mb-1">Radar Doppler Caigut</span>
-             <span className="text-xs text-slate-400 font-mono mb-4">No s&apos;han pogut rebre paquets de RainViewer</span>
-             <button onClick={fetchRadarData} className="px-6 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all">Forçar Sincronització</button>
-        </div>
-      )}
-
-      {/* PANTALLA DE CÀRREGA INICIAL */}
+      {/* PANTALLA DE CÀRREGA INICIAL (Spatial UI) */}
       {loading && !radarUrl && (
-         <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-[#020308] backdrop-blur-md">
-            <div className="relative w-16 h-16 flex items-center justify-center mb-4">
-                 <div className="absolute inset-0 border-[3px] border-cyan-900/20 rounded-full"></div>
-                 <div className="absolute inset-0 border-[3px] border-cyan-500 border-t-transparent border-l-transparent rounded-full animate-spin"></div>
-                 <Radio className="w-6 h-6 text-cyan-400 animate-pulse" />
+         <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-gradient-to-br from-[#0f111a]/95 to-black/90 backdrop-blur-md">
+            <div className={MATRIX_BG}></div>
+            <div className="relative w-16 h-16 flex items-center justify-center mb-4 z-10">
+                 <div className="absolute inset-0 border-[3px] border-cyan-900/20 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.1)]"></div>
+                 <div className="absolute inset-0 border-[3px] border-cyan-400 border-t-transparent border-l-transparent rounded-full animate-spin"></div>
+                 <Radio className="w-6 h-6 text-cyan-400 animate-pulse drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
              </div>
-             <p className="text-cyan-400/80 text-[10px] md:text-xs font-mono tracking-widest uppercase animate-pulse">
+             <p className="text-cyan-400/80 text-[10px] md:text-xs font-mono font-bold tracking-widest uppercase animate-pulse z-10">
                 Sincronitzant Doppler...
              </p>
          </div>
@@ -234,11 +245,14 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
       </MapContainer>
 
       {/* PANELL DE CONTROLS INFERIOR (HUD SPATIAL UI) */}
-      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-6 z-[1000] w-[90%] md:w-auto bg-[#050810]/80 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/10 flex items-center justify-between md:justify-start gap-4 sm:gap-6 shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)]">
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-6 z-[1000] w-[90%] md:w-auto bg-[#050810]/80 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/10 flex items-center justify-between md:justify-start gap-4 sm:gap-6 shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)] transition-colors duration-500 hover:border-cyan-500/20">
         
         <button 
+            type="button"
             onClick={togglePlay}
-            className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-300 shadow-lg ${isPlaying ? 'bg-white/10 text-cyan-400 border border-cyan-500/30 hover:bg-white/20' : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow-cyan-500/30'}`}
+            disabled={frames.length === 0}
+            className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-300 shadow-[inset_0_1px_4px_rgba(255,255,255,0.2)] active:scale-95 ${isPlaying ? 'bg-white/10 text-cyan-400 border border-cyan-500/30 hover:bg-white/20' : 'bg-cyan-500 hover:bg-cyan-400 text-white drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
+            aria-label={isPlaying ? "Pausar Animació" : "Inciar Animació"}
         >
             {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
         </button>
@@ -249,19 +263,21 @@ export default function RadarMap({ lat, lon }: RadarMapProps) {
             </span>
             <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                    {isPlaying && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>}
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500 shadow-[0_0_5px_currentColor]"></span>
                 </span>
-                <span className="text-white font-black text-lg sm:text-xl tracking-tighter drop-shadow-md">
+                <span className="text-white font-mono font-black text-lg sm:text-xl tracking-tighter drop-shadow-md tabular-nums">
                     {currentFrame ? formatTime(currentFrame.time) : '--:--'}
                 </span>
             </div>
         </div>
 
         <button 
+            type="button"
             onClick={fetchRadarData} 
-            className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-cyan-400 border border-white/5 transition-all duration-200 active:scale-95"
+            className="p-2.5 rounded-full bg-black/40 hover:bg-white/10 text-slate-400 hover:text-cyan-400 border border-white/5 transition-all duration-200 active:scale-95 shadow-inner"
             title="Sincronitzar Manualment"
+            aria-label="Forçar Sincronització del Radar"
         >
             <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
         </button>

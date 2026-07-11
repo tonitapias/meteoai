@@ -17,13 +17,17 @@ interface StatCardProps {
 }
 
 const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses }: StatCardProps) => (
-  <div className="bg-slate-900/60 border border-slate-700/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2 shadow-lg backdrop-blur-md group hover:border-slate-500/50 transition-all duration-300 transform-gpu" style={{ transform: 'translateZ(0)' }}>
-    <div className={`p-2.5 rounded-xl bg-slate-950 border border-white/5 mb-1 transition-shadow duration-300 ${glowClasses}`}>
-        <Icon className={`w-5 h-5 ${color}`} strokeWidth={2.5}/>
+  <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-md group hover:border-white/10 transition-colors duration-500 transform-gpu z-10">
+    <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]"></div>
+    
+    <div className={`relative z-10 p-2.5 rounded-xl bg-black/50 border border-white/5 mb-1 transition-shadow duration-500 ${value !== '--' ? glowClasses : 'shadow-none opacity-50'}`}>
+        <Icon className={`w-5 h-5 ${value !== '--' ? color : 'text-slate-500'}`} strokeWidth={2.5}/>
     </div>
-    <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{label}</span>
-    <span className="text-xl font-mono font-black text-slate-100 tabular-nums tracking-tight">
-      {value}<span className="text-xs ml-0.5 font-bold text-slate-500">{sub}</span>
+    
+    <span className="relative z-10 text-[10px] text-slate-400 uppercase font-black tracking-widest">{label}</span>
+    
+    <span className={`relative z-10 text-xl font-mono font-black tabular-nums tracking-tight transition-colors duration-500 ${value === '--' ? 'text-slate-600' : 'text-slate-100'}`}>
+      {value}<span className="text-xs ml-0.5 font-bold text-slate-500">{value !== '--' ? sub : ''}</span>
     </span>
   </div>
 );
@@ -31,12 +35,12 @@ const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses }: StatCar
 // DOCTRINA RISC ZERO: Interfície estricta per evitar usar 'any'
 interface TableRowData {
     hour: string;
-    temp: number;
+    temp: number | null;
     code: number;
     precipProb: number;
     precipSum: number;
     snowfall: number;
-    windSpeed: number;
+    windSpeed: number | null;
     isDay: boolean;
 }
 
@@ -56,7 +60,9 @@ export default function DayDetailModal({
   unit, 
   lang
 }: DayDetailModalProps) {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+  // DOCTRINA RISC ZERO: Extracció tipada de diccionari
+  const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
+  const tDayDetail = (typeof tRecord.dayDetail === 'object' && tRecord.dayDetail !== null) ? (tRecord.dayDetail as Record<string, string>) : {};
   
   const { dayData, hourlyData, comparisonData, snowLevelText } = useDayDetailData(weatherData, selectedDayIndex);
 
@@ -94,7 +100,7 @@ export default function DayDetailModal({
   }, [onClose, handleClose]);
 
   const formattedPrecipitation = useMemo(() => {
-    if (!dayData || !weatherData || selectedDayIndex === null) return { val: "0", unit: "mm" };
+    if (!dayData || !weatherData || selectedDayIndex === null) return { val: "--", unit: "" };
     
     const dailyRaw = weatherData.daily as unknown as Record<string, unknown>;
     const snowSumArr = dailyRaw.snowfall_sum;
@@ -102,7 +108,12 @@ export default function DayDetailModal({
         ? (snowSumArr[selectedDayIndex] as number) 
         : 0;
     
-    const rawString = formatPrecipitation(dayData.precipSum || 0, snowSum);
+    // Si no hi ha dades de precipitació vàlides, retornem fallback
+    if (typeof dayData.precipSum !== 'number' || isNaN(dayData.precipSum)) {
+        return { val: "--", unit: "" };
+    }
+
+    const rawString = formatPrecipitation(dayData.precipSum, snowSum);
     const [val, u] = rawString.split(' '); 
     return { val, unit: u };
   }, [dayData, weatherData, selectedDayIndex]);
@@ -138,7 +149,7 @@ export default function DayDetailModal({
         if (typeof time !== 'string') continue;
 
         const t2m = weatherData.hourly.temperature_2m;
-        const temp = Array.isArray(t2m) && typeof t2m[idx] === 'number' ? t2m[idx] as number : 0;
+        const temp = Array.isArray(t2m) && typeof t2m[idx] === 'number' ? t2m[idx] as number : null;
         
         const weatherCodeArr = hRaw.weather_code ?? hRaw.weathercode;
         const code = Array.isArray(weatherCodeArr) && typeof weatherCodeArr[idx] === 'number' ? weatherCodeArr[idx] as number : 0;
@@ -153,7 +164,7 @@ export default function DayDetailModal({
         const snowfall = Array.isArray(sFallArr) && typeof sFallArr[idx] === 'number' ? sFallArr[idx] as number : 0;
 
         const wSpeedArr = weatherData.hourly.wind_speed_10m;
-        const windSpeed = Array.isArray(wSpeedArr) && typeof wSpeedArr[idx] === 'number' ? wSpeedArr[idx] as number : 0;
+        const windSpeed = Array.isArray(wSpeedArr) && typeof wSpeedArr[idx] === 'number' ? wSpeedArr[idx] as number : null;
         
         const currentHour = parseInt(time.split('T')[1]?.slice(0, 2) || "0", 10);
         const isDay = currentHour >= sunriseHour && currentHour < sunsetHour;
@@ -190,56 +201,73 @@ export default function DayDetailModal({
       } catch { return isoString; }
   };
 
+  // DOCTRINA RISC ZERO: Formatadors assegurats per no renderitzar falsos zeros
+  const safeMaxTemp = typeof dayData.maxTemp === 'number' && !isNaN(dayData.maxTemp) ? Math.round(dayData.maxTemp) : '--';
+  const safeMinTemp = typeof dayData.minTemp === 'number' && !isNaN(dayData.minTemp) ? Math.round(dayData.minTemp) : '--';
+  const safeWindMax = typeof dayData.windMax === 'number' && !isNaN(dayData.windMax) ? Math.round(dayData.windMax) : '--';
+  const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? dayData.uvMax.toFixed(1) : '--';
+  
+  // Formatador estricte per cota de neu
+  const safeSnowLevel = typeof snowLevelText === 'number' && !isNaN(snowLevelText) 
+    ? Math.round(snowLevelText) 
+    : (snowLevelText === '--' ? '--' : snowLevelText);
+  const snowLevelUnit = safeSnowLevel !== '--' && typeof snowLevelText === 'number' ? (unit === 'F' ? 'ft' : 'm') : '';
+
+  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
+
   return (
     <div 
-        className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-200"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-200"
         onClick={handleBackdropClick}
     >
-      <div className="bg-slate-950 border border-slate-800 w-full max-w-4xl max-h-[95vh] overflow-y-auto custom-scrollbar rounded-[2rem] shadow-2xl relative ring-1 ring-white/5">
+      <div className="bg-[#050608] sm:border border-white/10 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[95vh] overflow-y-auto custom-scrollbar sm:rounded-[2rem] shadow-2xl relative sm:ring-1 sm:ring-white/5">
           
           <button 
             onClick={handleClose}
-            className="absolute top-5 right-5 p-2 bg-slate-900 rounded-full text-slate-400 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500/50 transition-all z-50 hover:rotate-90 duration-300 shadow-md"
+            className="fixed sm:absolute top-4 right-4 md:top-5 md:right-5 p-3 sm:p-2 bg-black/50 sm:bg-slate-900 rounded-full text-slate-400 hover:text-cyan-400 border border-white/10 sm:border-slate-700 hover:border-cyan-500/50 backdrop-blur-md transition-all z-50 hover:rotate-90 duration-300 shadow-md active:scale-95"
             aria-label="Tancar"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="p-6 pb-8 bg-slate-900/50 border-b border-slate-800 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-60 shadow-[0_0_15px_rgba(34,211,238,0.5)]"></div>
-              
-              <div className="flex flex-col items-center justify-center text-center relative z-10 pt-2">
+          <div className="p-6 pb-8 bg-gradient-to-b from-[#0f111a] to-[#050608] border-b border-white/5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-60 shadow-[0_0_15px_rgba(34,211,238,0.5)] z-20"></div>
+              <div className={MATRIX_BG}></div>
+              <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[300px] h-[100px] bg-cyan-500/10 rounded-[100%] blur-[40px] pointer-events-none"></div>
+
+              <div className="flex flex-col items-center justify-center text-center relative z-10 pt-6 sm:pt-2">
                   <div className="flex items-center gap-2 text-cyan-400 font-black uppercase tracking-[0.3em] text-[10px] mb-3 bg-cyan-950/40 px-3 py-1.5 rounded-md border border-cyan-500/30 backdrop-blur-md shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-                      <Calendar className="w-3.5 h-3.5" /> {t.dayDetail?.forecast || "DETALL DEL DIA"}
+                      <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || "DETALL DEL DIA"}
                   </div>
                   
-                  <h2 className="text-3xl md:text-5xl font-black text-slate-100 capitalize tracking-tight mb-2">
+                  <h2 className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg">
                       {formatDate(dayData.date)}
                   </h2>
                   
-                  <div className="flex items-center justify-center gap-6 mt-4 bg-slate-950/60 px-6 py-2 rounded-2xl border border-white/5">
+                  <div className="flex items-center justify-center gap-6 mt-4 bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner backdrop-blur-md">
                       <div className="flex items-center gap-2">
-                          <ArrowUp className="w-4 h-4 text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]" />
-                          <span className="text-3xl font-mono font-bold text-slate-200 tracking-tighter tabular-nums">
-                              {Math.round(dayData.maxTemp || 0)}°
+                          <ArrowUp className={`w-4 h-4 ${safeMaxTemp !== '--' ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]' : 'text-slate-600'}`} />
+                          <span className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMaxTemp !== '--' ? 'text-slate-100' : 'text-slate-600'}`}>
+                              {safeMaxTemp}°
                           </span>
                       </div>
-                      <div className="w-px h-6 bg-slate-700"></div>
+                      <div className="w-px h-6 bg-white/10"></div>
                       <div className="flex items-center gap-2">
-                          <ArrowDown className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
-                          <span className="text-3xl font-mono font-bold text-slate-400 tracking-tighter tabular-nums">
-                              {Math.round(dayData.minTemp || 0)}°
+                          <ArrowDown className={`w-4 h-4 ${safeMinTemp !== '--' ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'text-slate-600'}`} />
+                          <span className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMinTemp !== '--' ? 'text-slate-300' : 'text-slate-600'}`}>
+                              {safeMinTemp}°
                           </span>
                       </div>
                   </div>
               </div>
           </div>
 
-          <div className="p-4 md:p-8 space-y-6">
+          <div className="p-4 md:p-8 space-y-6 relative z-10">
+            {/* GRID DE MÈTRIQUES */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <StatCard 
                     icon={Droplets} 
-                    label={t.dayDetail?.precip || "PRECIPITACIÓ"} 
+                    label={tDayDetail.precip || (typeof tRecord.precip === 'string' ? tRecord.precip : "PRECIPITACIÓ")} 
                     value={formattedPrecipitation.val} 
                     sub={formattedPrecipitation.unit} 
                     color="text-blue-400" 
@@ -247,80 +275,88 @@ export default function DayDetailModal({
                 />
                 <StatCard 
                     icon={Wind} 
-                    label={t.wind || "VENT MÀX"} 
-                    value={`${Math.round(dayData.windMax || 0)}`} 
-                    sub="km/h" 
+                    label={typeof tRecord.wind === 'string' ? tRecord.wind : "VENT MÀX"} 
+                    value={safeWindMax} 
+                    sub={safeWindMax !== '--' ? "km/h" : ""} 
                     color="text-emerald-400" 
                     glowClasses="shadow-[0_0_12px_rgba(52,211,153,0.25)] group-hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]" 
                 />
                 <StatCard 
                     icon={Sun} 
                     label="INDEX UV" 
-                    value={`${(dayData.uvMax || 0).toFixed(1)}`} 
+                    value={safeUvMax} 
                     sub="" 
                     color="text-amber-400" 
                     glowClasses="shadow-[0_0_12px_rgba(251,191,36,0.25)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.5)]" 
                 />
                 <StatCard 
                     icon={Mountain} 
-                    label={t.snowLevel || "COTA NEU"} 
-                    value={typeof snowLevelText === 'number' ? Math.round(snowLevelText) : snowLevelText} 
-                    sub={typeof snowLevelText === 'number' ? (unit === 'F' ? 'ft' : 'm') : ''} 
+                    label={typeof tRecord.snowLevel === 'string' ? tRecord.snowLevel : "COTA NEU"} 
+                    value={safeSnowLevel} 
+                    sub={snowLevelUnit} 
                     color="text-indigo-400" 
                     glowClasses="shadow-[0_0_12px_rgba(129,140,248,0.25)] group-hover:shadow-[0_0_20px_rgba(129,140,248,0.5)]" 
                 />
             </div>
 
+            {/* CICLE SOLAR */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-colors backdrop-blur-sm">
-                   <div className="flex items-center gap-4">
-                      <div className="p-3 bg-slate-950 rounded-xl text-amber-400 border border-amber-500/20 group-hover:shadow-[0_0_15px_rgba(251,191,36,0.3)] transition-all">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-5 rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-colors backdrop-blur-sm shadow-lg">
+                   <div className={MATRIX_BG}></div>
+                   <div className="flex items-center gap-4 relative z-10">
+                      <div className="p-3 bg-black/50 rounded-xl text-amber-400 border border-amber-500/20 group-hover:shadow-[0_0_15px_rgba(251,191,36,0.3)] transition-all">
                           <Sun className="w-5 h-5"/>
                       </div>
                       <div>
-                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{t.sunrise || "SORTIDA"}</span>
+                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{typeof tRecord.sunrise === 'string' ? tRecord.sunrise : "SORTIDA"}</span>
                           <div className="text-2xl font-mono font-bold text-slate-200 tabular-nums">{formatTime(dayData.sunrise)}</div>
                       </div>
                    </div>
                 </div>
 
-                <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl flex items-center justify-between group hover:border-indigo-500/30 transition-colors backdrop-blur-sm">
-                   <div className="flex items-center gap-4">
-                      <div className="p-3 bg-slate-950 rounded-xl text-indigo-400 border border-indigo-500/20 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-5 rounded-2xl flex items-center justify-between group hover:border-indigo-500/30 transition-colors backdrop-blur-sm shadow-lg">
+                   <div className={MATRIX_BG}></div>
+                   <div className="flex items-center gap-4 relative z-10">
+                      <div className="p-3 bg-black/50 rounded-xl text-indigo-400 border border-indigo-500/20 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all">
                           <Moon className="w-5 h-5"/>
                       </div>
                       <div>
-                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{t.sunset || "POSTA"}</span>
+                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{typeof tRecord.sunset === 'string' ? tRecord.sunset : "POSTA"}</span>
                           <div className="text-2xl font-mono font-bold text-slate-200 tabular-nums">{formatTime(dayData.sunset)}</div>
                       </div>
                    </div>
                 </div>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-5 md:p-8 shadow-inner">
-               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6 flex items-center gap-2">
-                  <Thermometer className="w-4 h-4 text-rose-400" /> 
-                  {t.hourlyEvolution || "EVOLUCIÓ TÈRMICA"}
-               </h3>
-               <SmartForecastCharts 
-                  data={hourlyData} 
-                  comparisonData={comparisonData} 
-                  unit={unit === 'F' ? '°F' : '°C'} 
-                  lang={lang} 
-               />
+            {/* GRÀFIC TÈRMIC */}
+            <div className="relative overflow-hidden bg-[#0a0b10] border border-white/5 rounded-3xl p-5 md:p-8 shadow-inner">
+               <div className={MATRIX_BG}></div>
+               <div className="relative z-10">
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6 flex items-center gap-2">
+                      <Thermometer className="w-4 h-4 text-rose-400" /> 
+                      {typeof tRecord.hourlyEvolution === 'string' ? tRecord.hourlyEvolution : "EVOLUCIÓ TÈRMICA"}
+                   </h3>
+                   <SmartForecastCharts 
+                      data={hourlyData} 
+                      comparisonData={comparisonData} 
+                      unit={unit === 'F' ? '°F' : '°C'} 
+                      lang={lang} 
+                   />
+               </div>
             </div>
 
+            {/* TAULA TELEMÈTRICA PER HORES */}
             {tableRows && tableRows.length > 0 && (
-                <div className="bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-inner">
-                    <div className="px-6 md:px-8 py-5 border-b border-slate-800 bg-slate-950/60">
+                <div className="bg-[#0a0b10] border border-white/5 rounded-3xl overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
+                    <div className="px-6 md:px-8 py-5 border-b border-white/5 bg-[#0f111a]/90 backdrop-blur-md">
                          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
                             <Clock className="w-4 h-4 text-cyan-400" /> 
                             PREVISIÓ PER HORES
                         </h3>
                     </div>
                     
-                    <div className="divide-y divide-slate-800/60">
-                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-950/30">
+                    <div className="divide-y divide-white/5">
+                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-black/60 shadow-inner">
                             <div className="col-span-2">HORA</div>
                             <div className="col-span-2 text-center">CEL</div>
                             <div className="col-span-3 text-center">TEMP</div>
@@ -330,22 +366,33 @@ export default function DayDetailModal({
                         
                         {tableRows.map((row: TableRowData, idx: number) => {
                             const showPrecip = row.precipProb > 0 || row.precipSum > 0;
+                            const hasTemp = row.temp !== null;
+                            const hasWind = row.windSpeed !== null;
+                            
                             return (
-                            <div key={`row-${idx}`} className="grid grid-cols-12 px-4 md:px-6 py-4 items-center hover:bg-slate-800/40 transition-colors group">
+                            <div key={`row-${idx}`} className="grid grid-cols-12 px-4 md:px-6 py-4 items-center hover:bg-white/[0.02] transition-colors group">
+                                {/* HORA */}
                                 <div className="col-span-2 text-xs md:text-sm font-mono font-bold text-slate-400 group-hover:text-cyan-300 transition-colors">
                                     {row.hour}
                                 </div>
                                 
+                                {/* ICONA CEL */}
                                 <div className="col-span-2 flex justify-center">
                                     <div className="scale-[0.6] md:scale-75 origin-center filter drop-shadow-md group-hover:scale-90 transition-transform duration-300">
-                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb, row.windSpeed)}
+                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb, row.windSpeed || 0)}
                                     </div>
                                 </div>
                                 
-                                <div className="col-span-3 text-center text-sm md:text-base font-mono font-bold text-slate-200 tabular-nums">
-                                    {Math.round(row.temp)}°
+                                {/* TEMPERATURA */}
+                                <div className="col-span-3 text-center text-sm md:text-base font-mono font-bold tabular-nums">
+                                    {hasTemp ? (
+                                        <span className="text-white">{Math.round(row.temp!)}°</span>
+                                    ) : (
+                                        <span className="text-slate-600">--°</span>
+                                    )}
                                 </div>
                                 
+                                {/* PLUJA */}
                                 <div className="col-span-3 flex flex-col md:flex-row justify-end items-end md:items-center gap-0.5 md:gap-1.5">
                                     {showPrecip ? (
                                         <>
@@ -353,17 +400,26 @@ export default function DayDetailModal({
                                                 {row.precipProb}%
                                             </span>
                                             {row.precipSum > 0 && (
-                                                <span className="text-[9px] text-slate-500 font-mono font-bold bg-blue-950/30 px-1 py-0.5 rounded border border-blue-900/50">
+                                                <span className="text-[9px] text-slate-400 font-mono font-bold bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-inner">
                                                     {formatPrecipitation(row.precipSum, row.snowfall)}
                                                 </span>
                                             )}
                                         </>
-                                    ) : <span className="text-slate-700 font-bold">-</span>}
+                                    ) : (
+                                        <span className="text-slate-700 font-bold">-</span>
+                                    )}
                                 </div>
                                 
-                                <div className="col-span-2 flex flex-col items-end text-xs font-mono font-bold text-slate-500 group-hover:text-emerald-400 tabular-nums transition-colors">
-                                    <span>{Math.round(row.windSpeed)}</span>
-                                    <span className="text-[8px] uppercase tracking-widest opacity-60">km/h</span>
+                                {/* VENT */}
+                                <div className="col-span-2 flex flex-col items-end text-xs font-mono font-bold tabular-nums transition-colors">
+                                    {hasWind ? (
+                                        <>
+                                            <span className="text-slate-400 group-hover:text-emerald-400">{Math.round(row.windSpeed!)}</span>
+                                            <span className="text-[8px] uppercase tracking-widest text-slate-600">km/h</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-slate-600 text-lg leading-none">--</span>
+                                    )}
                                 </div>
                             </div>
                             );
