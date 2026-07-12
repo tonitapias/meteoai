@@ -405,25 +405,25 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                     type="button"
                     onClick={onLocate}
                     disabled={loading}
-                    className={`group relative w-full py-3.5 sm:py-4 lg:py-5 transition-all duration-500 overflow-hidden flex items-center justify-center rounded-xl sm:rounded-2xl glass-panel border
+                    className={`group relative w-full py-3.5 sm:py-4 lg:py-5 transition-all duration-300 overflow-hidden flex items-center justify-center rounded-xl sm:rounded-2xl border
                     ${loading 
-                        ? 'cursor-wait shadow-[0_0_35px_rgba(245,158,11,0.25)] border-amber-500/40 bg-amber-950/20' 
-                        : 'hover:bg-sky-950/30 border-sky-400/40 hover:border-sky-300 hover:shadow-[0_15px_40px_rgba(56,189,248,0.35)] active:scale-[0.98] cursor-pointer'}`}
+                        ? 'cursor-wait bg-gradient-to-r from-amber-600 to-orange-700 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)]' 
+                        : 'cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-600 border-sky-400/50 shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:shadow-[0_0_40px_rgba(56,189,248,0.7)] hover:from-sky-400 hover:to-indigo-500 active:scale-[0.97]'
+                    }`}
                 >
-                    {loading && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-400/25 to-amber-500/0 w-[200%] animate-[title-shimmer_2s_linear_infinite]"></div>
-                    )}
+                    {/* Efecte de llum escanejant sobre la superfície física */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-[200%] animate-[title-shimmer_3s_linear_infinite] pointer-events-none"></div>
                     
-                    <div className="relative flex items-center gap-2.5 sm:gap-3">
+                    <div className="relative flex items-center gap-2.5 sm:gap-3 z-10">
                         {loading ? (
                             <>
-                                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 animate-spin drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-                                <span className="font-sans font-bold tracking-widest text-xs sm:text-base text-amber-200 uppercase drop-shadow-md">{systemText.loading}</span>
+                                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin drop-shadow-md" />
+                                <span className="font-sans font-bold tracking-widest text-xs sm:text-base text-white uppercase drop-shadow-md">{systemText.loading}</span>
                             </>
                         ) : (
                             <>
-                                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-sky-200 group-hover:-translate-y-1 transition-transform duration-300 drop-shadow-[0_0_10px_rgba(125,211,252,0.9)]" />
-                                <span className="font-sans font-black tracking-[0.2em] sm:tracking-[0.25em] text-sm sm:text-lg lg:text-xl text-white uppercase drop-shadow-lg">
+                                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:-translate-y-1 transition-transform duration-300 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]" />
+                                <span className="font-sans font-black tracking-[0.2em] sm:tracking-[0.25em] text-sm sm:text-lg lg:text-xl text-white uppercase drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]">
                                     {systemText.start}
                                 </span>
                             </>
