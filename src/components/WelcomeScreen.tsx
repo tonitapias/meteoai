@@ -20,6 +20,7 @@ interface WelcomeScreenProps {
 /**
  * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v6.0 i18n PRO)
  * Arquitectura: Spatial UI, Modal Desacoblat i18n, Puresa React garantida.
+ * Fusió: Holograma 3D Original d'alt impacte + Textos tàctics optimitzats (Zero Dades Falses).
  */
 export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: WelcomeScreenProps) {
   const year = new Date().getFullYear();
@@ -46,29 +47,11 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     modelWrf: lang === 'es' ? "MODELO GLOBAL (WRF)" : lang === 'en' ? "GLOBAL MODEL (WRF)" : "MODEL GLOBAL (WRF)",
     modelArome: lang === 'es' ? "ALTA RESOLUCIÓN (AROME)" : lang === 'en' ? "HIGH RES (AROME)" : "ALTA RESOLUCIÓ (AROME)",
     
-    // Ticker d'estat
+    // Estats de sistema
+    sysOffline: lang === 'es' ? "[ ESPERANDO DESPLIEGUE ]" : lang === 'en' ? "[ AWAITING DEPLOYMENT ]" : lang === 'fr' ? "[ EN ATTENTE DE DÉPLOIEMENT ]" : "[ ESPERANT DESPLEGAMENT ]",
+    sysStandby: lang === 'es' ? "[ SENSOR STANDBY ]" : lang === 'en' ? "[ SENSOR STANDBY ]" : lang === 'fr' ? "[ CAPTEUR EN VEILLE ]" : "[ SENSOR STANDBY ]",
     baroTrend: lang === 'es' ? "[ • SENSORES EN STANDBY ] ESPERANDO RUTA" : lang === 'en' ? "[ • SENSORS IN STANDBY ] AWAITING ROUTE" : "[ • SENSORS EN STANDBY ] ESPERANT RUTA",
-    standbyValue: "--- km/h"
   };
-
-  // =========================================================================
-  // MATEMÀTICA SEGURA EN ESTAT DE STANDBY REAL
-  // =========================================================================
-  const wrfWindSeries: (number | null)[] = [null, null, null, null];
-  const aromeWindSeries: (number | null)[] = [null, null, null, null];
-
-  const getSafeMax = useCallback((data: (number | null)[]): number => {
-    const validNumbers = data.filter((item): item is number => typeof item === 'number' && !isNaN(item));
-    if (validNumbers.length === 0) return 0; // Activa '--- km/h'
-    return Math.max(...validNumbers);
-  }, []);
-
-  const wrfMaxWind = getSafeMax(wrfWindSeries);
-  const aromeMaxWind = getSafeMax(aromeWindSeries);
-
-  const formatWind = useCallback((val: number): string => {
-    return val > 0 ? `${val} km/h` : systemText.standbyValue;
-  }, [systemText.standbyValue]);
 
   // ==========================================
   // NAVEGACIÓ TÀCTICA (History API)
@@ -100,7 +83,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     }
   };
 
-  // Generació de partícules atmosfèriques principal
+  // Generació de partícules atmosfèriques (Restablim les 35 originals d'alt impacte)
   const [particles] = useState(() => 
     Array.from({ length: 35 }).map(() => ({
       left: `${Math.random() * 100}%`,
@@ -127,7 +110,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
   return (
     <div className="relative w-full min-h-dvh overflow-y-auto bg-[#020617] select-none font-sans text-slate-200 antialiased flex flex-col">
       
-      {/* CSS GPU */}
+      {/* CSS ESPECÍFIC DE LA PANTALLA */}
       <style>{`
         @keyframes aurora-shift {
           0% { transform: translateX(-15%) translateY(-15%) scale(1); filter: hue-rotate(0deg); opacity: 0.45; }
@@ -265,7 +248,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
       {/* HUD CENTRAL */}
       <main className="relative z-30 flex-1 w-full max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-8 lg:py-12 flex flex-col lg:flex-row items-center justify-center gap-6 sm:gap-10 lg:gap-16 no-scrollbar">
         
-        {/* HOLOGRAMA 3D */}
+        {/* HOLOGRAMA 3D (Restablert 100% a l'original) */}
         <div className="relative w-56 h-56 sm:w-72 sm:h-72 lg:w-[580px] lg:h-[580px] shrink-0 perspective-lg mt-2 lg:mt-0 flex items-center justify-center">
             
             <div className={`absolute inset-0 rounded-full blur-[70px] sm:blur-[90px] lg:blur-[130px] transition-colors duration-1000 ${loading ? 'bg-amber-600/35' : 'bg-sky-500/25'}`}></div>
@@ -327,20 +310,20 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-sm sm:max-w-md lg:max-w-xl shrink-0 my-auto pb-4 lg:pb-0 z-30 gap-3 sm:gap-4 lg:gap-5">
             
             <div className="flex flex-wrap justify-center lg:justify-start gap-2 sm:gap-2.5">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full glass-panel text-[9px] sm:text-xs font-bold text-emerald-300 tracking-widest uppercase border-emerald-500/30 bg-emerald-950/20">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full glass-panel text-[10px] sm:text-xs font-bold text-emerald-300 tracking-widest uppercase border-emerald-500/30 bg-emerald-950/20">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,1)]"></span>
                     </span>
                     {systemText.aiEngine}
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full glass-panel text-[9px] sm:text-xs font-bold text-sky-200 tracking-widest uppercase border-sky-500/20">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full glass-panel text-[10px] sm:text-xs font-bold text-sky-200 tracking-widest uppercase border-sky-500/20">
                     <Satellite className="w-3.5 h-3.5 text-sky-400 animate-spin" style={{ animationDuration: '20s' }} />
                     {systemText.modelLink}
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-sky-950/40 border border-sky-500/30 text-[10px] sm:text-xs font-mono font-bold text-sky-200 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-sky-950/40 border border-sky-500/30 text-[11px] sm:text-xs font-mono font-bold text-sky-200 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
                 <Radio className="w-3.5 h-3.5 text-sky-400 shrink-0 animate-pulse" />
                 <span>{systemText.baroTrend}</span>
             </div>
@@ -383,16 +366,17 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
             </div>
 
             <div className="w-full flex flex-col gap-2 relative z-10">
-              <div className="inline-flex items-center justify-center lg:justify-start gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl glass-panel text-[9px] sm:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] text-sky-100 uppercase border border-sky-500/20 shadow-[0_0_10px_rgba(56,189,248,0.1)]">
+              <div className="inline-flex items-center justify-center lg:justify-start gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl glass-panel text-[10px] sm:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] text-sky-100 uppercase border border-sky-500/20 shadow-[0_0_10px_rgba(56,189,248,0.1)]">
                   <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400 animate-pulse shrink-0" />
                   <span>{systemText.tagline}</span>
               </div>
 
+              {/* TACTICAL STATUS GRID (Sense falses dades pre-desplegament, mides optimitzades) */}
               <div className="grid grid-cols-2 gap-2 p-2 rounded-xl glass-panel text-[10px] sm:text-xs font-mono border-white/10 bg-black/40">
                 <div className="flex flex-col gap-1 text-left border-r border-white/10 pr-2">
-                  <div className="flex justify-between text-slate-400 text-[9px]">
-                    <span>{systemText.modelWrf}</span>
-                    <span className="text-sky-400 font-bold">{formatWind(wrfMaxWind)}</span>
+                  <div className="flex flex-col xl:flex-row xl:justify-between text-slate-400 gap-1 xl:gap-0">
+                    <span className="text-[10px] font-bold">{systemText.modelWrf}</span>
+                    <span className="text-sky-400 font-bold animate-pulse text-[10px] whitespace-nowrap">{systemText.sysOffline}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden relative">
                     <div className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-sky-400/50 to-transparent animate-[telemetry-scan_2s_ease-in-out_infinite]"></div>
@@ -400,9 +384,9 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                 </div>
 
                 <div className="flex flex-col gap-1 text-left pl-1">
-                  <div className="flex justify-between text-slate-400 text-[9px]">
-                    <span>{systemText.modelArome}</span>
-                    <span className="text-emerald-400 font-bold">{formatWind(aromeMaxWind)}</span>
+                  <div className="flex flex-col xl:flex-row xl:justify-between text-slate-400 gap-1 xl:gap-0">
+                    <span className="text-[10px] font-bold">{systemText.modelArome}</span>
+                    <span className="text-emerald-400 font-bold animate-pulse text-[10px] whitespace-nowrap" style={{animationDelay: '1s'}}>{systemText.sysStandby}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden relative">
                     <div className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent animate-[telemetry-scan_2s_ease-in-out_infinite_0.5s]"></div>
@@ -455,7 +439,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                         className="flex items-center gap-1.5 group opacity-85 hover:opacity-100 transition-all cursor-pointer px-2.5 py-1.5 rounded-lg glass-panel glass-panel-interactive border-white/10"
                     >
                         <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[9px] sm:text-xs font-semibold text-slate-200 uppercase tracking-widest whitespace-nowrap">
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-200 uppercase tracking-widest whitespace-nowrap">
                             {systemText.manual}
                         </span>
                     </button>
@@ -468,7 +452,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                                 disabled={loading}
                                 onClick={() => setLang(l)}
                                 className={`
-                                    px-2.5 py-1 sm:px-3.5 sm:py-1.5 font-sans text-[9px] sm:text-xs font-bold uppercase transition-all duration-300 rounded-full
+                                    px-2.5 py-1 sm:px-3.5 sm:py-1.5 font-sans text-[10px] sm:text-xs font-bold uppercase transition-all duration-300 rounded-full
                                     ${lang === l 
                                         ? 'bg-sky-500 text-white shadow-[0_0_15px_rgba(56,189,248,0.6)]' 
                                         : 'text-slate-400 hover:text-white hover:bg-white/10'}
@@ -490,8 +474,8 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
           onClose={closeDiagnosticsModal}
           lang={lang}
           t={t}
-          wrfWindFormatted={formatWind(wrfMaxWind)}
-          aromeWindFormatted={formatWind(aromeMaxWind)}
+          wrfWindFormatted={systemText.sysOffline}
+          aromeWindFormatted={systemText.sysStandby}
         />
       )}
 
@@ -504,25 +488,25 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                     <div className="absolute w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-400 animate-ping opacity-60"></div>
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
                   </div>
-                  <span className="text-[9px] sm:text-xs font-bold text-emerald-200 tracking-widest whitespace-nowrap uppercase">
+                  <span className="text-[10px] sm:text-xs font-bold text-emerald-200 tracking-widest whitespace-nowrap uppercase">
                       {systemText.systemStatus}
                   </span>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-[9px] sm:text-xs font-medium text-slate-400 border-l border-white/15 pl-3 sm:pl-5">
+              <div className="hidden sm:flex items-center gap-2 text-[10px] sm:text-xs font-medium text-slate-400 border-l border-white/15 pl-3 sm:pl-5">
                   <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" /> {systemText.analysis}
               </div>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-              <div className="hidden md:flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs font-medium text-slate-400">
+              <div className="hidden md:flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
                   <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" /> SAT: METEOSAT-11
               </div>
-              <div className="hidden xs:flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs font-medium text-slate-400">
+              <div className="hidden xs:flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
                   <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400/80" /> {systemText.secure}
               </div>
-              <div className="flex items-center gap-1.5 text-[9px] sm:text-xs font-black text-sky-100 tracking-widest whitespace-nowrap bg-sky-950/60 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full border border-sky-500/20 shadow-inner">
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-black text-sky-100 tracking-widest whitespace-nowrap bg-sky-950/60 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full border border-sky-500/20 shadow-inner">
                   <span>© {year} MT-AI</span>
-                  <span className="text-[8px] sm:text-[10px] opacity-70">v{safeVersion}</span>
+                  <span className="text-[10px] opacity-70">v{safeVersion}</span>
               </div>
           </div>
       </footer>

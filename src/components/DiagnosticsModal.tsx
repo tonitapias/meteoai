@@ -14,7 +14,7 @@ interface DiagnosticsModalProps {
 /**
  * METEOTONI AI - PUBLIC WEATHER INFOGRAPHIC MODAL (v6.0 i18n FULL COMPATIBILITY)
  * Arquitectura: Smart Dictionary intern (ca, es, en, fr), Component Autònom.
- * Doctrina Risc Zero: 0 Errors TS/ESLint, resolució nativa d'apòstrofs i caràcters especials.
+ * Optimització: Tipografia escalada per llegibilitat sota llum solar.
  */
 export default function DiagnosticsModal({
   onClose,
@@ -44,7 +44,7 @@ export default function DiagnosticsModal({
   const dict = {
     diagTitle: tDiag.diagTitle || (lang === 'es' ? "CÓMO TRABAJA LA PREVISIÓN COMPARATIVA" : lang === 'en' ? "HOW COMPARATIVE FORECAST WORKS" : lang === 'fr' ? "COMMENT FONCTIONNE LA PRÉVISION COMPARATIVE" : "COM TREBALLA LA PREVISIÓ COMPARATIVA"),
     subtitle: tDiag.subtitle || (lang === 'es' ? "Motor de Inteligencia Meteorológica" : lang === 'en' ? "Meteorological Intelligence Engine" : lang === 'fr' ? "Moteur d'Intelligence Météorologique" : "Motor d'Intel·ligència Meteorològica"),
-    pedagogicIntro: tDiag.pedagogicIntro || (lang === 'es' ? "En la montaña el tiempo puede cambiar en minutos y los relieves locales crean microclimas. Por eso nunca confiamos en una sola fuente meteorológica:" : lang === 'en' ? "In the mountains, weather can change in minutes and terrain creates microclimates. That is why we never rely on a single weather source:" : lang === 'fr' ? "En montagne, le temps peut changer en quelques minutes et le relief crée des microclimats. C'est pourquoi nous ne nous fions jamais à une seule source météo :" : "A la muntanya el tiempo pot canviar en minuts i els relleus locals creen microclimes. Per això mai confiem en una sola font meteorològica:"),
+    pedagogicIntro: tDiag.pedagogicIntro || (lang === 'es' ? "En la montaña el tiempo puede cambiar en minutos y los relieves locales crean microclimas. Por eso nunca confiamos en una sola fuente meteorológica:" : lang === 'en' ? "In the mountains, weather can change in minutes and terrain creates microclimates. That is why we never rely on a single weather source:" : lang === 'fr' ? "En montagne, le temps peut changer en quelques minutes et le relief crée des microclimats. C'est pourquoi nous ne nous fions jamais à une seule source météo :" : "A la muntanya el temps pot canviar en minuts i els relleus locals creen microclimes. Per això mai confiem en una sola font meteorològica:"),
     
     step1Title: tDiag.step1Title || (lang === 'es' ? "GENERAL" : lang === 'en' ? "GENERAL" : lang === 'fr' ? "GÉNÉRAL" : "GENERAL"),
     step1Header: tDiag.step1Header || (lang === 'es' ? "MODELOS GLOBALES" : lang === 'en' ? "GLOBAL MODELS" : lang === 'fr' ? "MODÈLES GLOBAUX" : "MODELS GLOBALS"),
@@ -80,9 +80,9 @@ export default function DiagnosticsModal({
     'WRF (Global)'
   ];
 
-  // Generació pura (només a l'inici) de partícules atmosfèriques exclusives del modal
+  // Partícules reduïdes de 15 a 10
   const [modalParticles] = useState(() => 
-    Array.from({ length: 15 }).map(() => ({
+    Array.from({ length: 10 }).map(() => ({
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
       size: `${Math.random() * 2 + 1}px`,
@@ -98,6 +98,8 @@ export default function DiagnosticsModal({
           MOTOR D'EFECTES ESPECIALS INTERNS (CSS GPU)
           ========================================= */}
       <style>{`
+        .gpu-accel { will-change: transform, opacity; }
+        
         .grid-coarse {
           background-image: linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
           background-size: 20px 20px;
@@ -135,7 +137,7 @@ export default function DiagnosticsModal({
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Finestra Modal Principal (Amb resplendor esfèrica de fons) */}
+      {/* Finestra Modal Principal */}
       <div className="relative w-full max-w-2xl glass-panel rounded-t-3xl sm:rounded-3xl border-t sm:border border-sky-400/30 p-5 sm:p-7 shadow-[0_0_60px_rgba(0,0,0,0.9)] max-h-[92vh] overflow-y-auto no-scrollbar flex flex-col gap-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#030712] to-black">
         
         {/* Partícules Atmosfèriques Internes */}
@@ -143,7 +145,7 @@ export default function DiagnosticsModal({
           {modalParticles.map((p, i) => (
             <div 
               key={i}
-              className="absolute bg-sky-300 rounded-full"
+              className="absolute bg-sky-300 rounded-full gpu-accel"
               style={{
                 left: p.left,
                 top: p.top,
@@ -156,8 +158,7 @@ export default function DiagnosticsModal({
               }}
             />
           ))}
-          {/* Resplendor superior intern */}
-          <div className="absolute top-[-20%] left-[20%] w-[60%] h-[30%] bg-sky-500/10 blur-[80px] rounded-full"></div>
+          <div className="absolute top-[-20%] left-[20%] w-[60%] h-[30%] bg-sky-500/10 blur-[80px] rounded-full gpu-accel"></div>
         </div>
 
         {/* =========================================================
@@ -172,7 +173,7 @@ export default function DiagnosticsModal({
               <h3 className="text-sm sm:text-base font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-200 to-white bg-[length:200%_auto] animate-[title-shimmer_4s_linear_infinite]">
                 {dict.diagTitle}
               </h3>
-              <p className="text-[10px] text-sky-400/80 font-mono hidden xs:block uppercase tracking-wider">
+              <p className="text-[11px] text-sky-400/80 font-mono hidden xs:block uppercase tracking-wider">
                 {dict.subtitle}
               </p>
             </div>
@@ -202,20 +203,19 @@ export default function DiagnosticsModal({
             ========================================================= */}
         <div className="flex flex-col gap-3 relative z-10 mt-1">
           
-          {/* LÍNIA DATA-FLOW LÀSER: Connecta els 3 passos */}
           <div className="absolute left-6 sm:left-8 top-8 bottom-8 w-[2px] bg-slate-800/50 z-0 hidden xs:block overflow-hidden rounded-full">
-            <div className="w-full h-[25%] bg-gradient-to-b from-transparent via-sky-400 to-transparent animate-[data-flow_2.5s_ease-in-out_infinite]"></div>
+            <div className="w-full h-[25%] bg-gradient-to-b from-transparent via-sky-400 to-transparent animate-[data-flow_2.5s_ease-in-out_infinite] gpu-accel"></div>
           </div>
 
-          {/* --- PAS 1: CONSORCI GLOBAL (Amb animació de Globus) --- */}
+          {/* --- PAS 1: CONSORCI GLOBAL --- */}
           <div className="relative z-10 flex flex-col xs:flex-row items-stretch xs:items-center gap-3 sm:gap-4 p-4 rounded-2xl glass-panel border-sky-500/30 bg-sky-950/30 overflow-hidden group hover:border-sky-400/60 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(56,189,248,0.15)] transition-all duration-300">
-            <div className="absolute -right-10 -top-10 w-40 h-40 border border-sky-500/10 rounded-full grid-coarse animate-[globe-spin_30s_linear_infinite] opacity-30 pointer-events-none"></div>
+            <div className="absolute -right-10 -top-10 w-40 h-40 border border-sky-500/10 rounded-full grid-coarse animate-[globe-spin_30s_linear_infinite] opacity-30 pointer-events-none gpu-accel"></div>
             
             <div className="flex xs:flex-col items-center justify-between xs:justify-center gap-2 shrink-0 z-10 xs:w-16">
               <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-                <Globe className="w-5 h-5 text-sky-300 group-hover:rotate-12 transition-transform duration-500" />
+                <Globe className="w-5 h-5 text-sky-300 group-hover:rotate-12 transition-transform duration-500 gpu-accel" />
               </div>
-              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 uppercase shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 uppercase shadow-[0_0_10px_rgba(56,189,248,0.2)]">
                 {dict.step1Title}
               </span>
             </div>
@@ -224,19 +224,19 @@ export default function DiagnosticsModal({
               <div className="flex items-center justify-between flex-wrap gap-1">
                 <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide flex items-center gap-1.5 drop-shadow-md">
                   <span>{dict.step1Header}</span>
-                  <span className="text-[9px] sm:text-[10px] text-sky-400 font-mono bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">{dict.step1Badge}</span>
+                  <span className="text-[10px] sm:text-[11px] text-sky-400 font-mono bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">{dict.step1Badge}</span>
                 </h4>
               </div>
 
               <div className="flex flex-wrap gap-1 my-0.5">
                 {globalModels.map((m, idx) => (
-                  <span key={idx} className="text-[8px] sm:text-[9px] font-mono bg-black/60 text-slate-300 px-2 py-0.5 rounded border border-white/10 hover:border-sky-500/50 hover:text-sky-300 transition-colors cursor-default">
+                  <span key={idx} className="text-[10px] sm:text-[11px] font-mono bg-black/60 text-slate-300 px-2 py-0.5 rounded border border-white/10 hover:border-sky-500/50 hover:text-sky-300 transition-colors cursor-default">
                     {m}
                   </span>
                 ))}
               </div>
 
-              <p className="text-[11px] sm:text-xs text-slate-300 leading-normal">
+              <p className="text-xs text-slate-300 leading-normal">
                 {dict.step1Desc}
               </p>
               
@@ -253,18 +253,18 @@ export default function DiagnosticsModal({
             </div>
           </div>
 
-          {/* --- PAS 2: MODEL ALTA RESOLUCIÓ (Amb escombrat de Radar CSS) --- */}
+          {/* --- PAS 2: MODEL ALTA RESOLUCIÓ --- */}
           <div className="relative z-10 flex flex-col xs:flex-row items-stretch xs:items-center gap-3 sm:gap-4 p-4 rounded-2xl glass-panel border-emerald-500/30 bg-emerald-950/30 overflow-hidden group hover:border-emerald-400/60 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(52,211,153,0.15)] transition-all duration-300">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
-              <div className="absolute top-1/2 right-[10%] w-48 h-48 -translate-y-1/2 translate-x-1/2 rounded-full bg-[conic-gradient(from_0deg,transparent_70%,rgba(52,211,153,1)_100%)] animate-[radar-scan_4s_linear_infinite]"></div>
+              <div className="absolute top-1/2 right-[10%] w-48 h-48 -translate-y-1/2 translate-x-1/2 rounded-full bg-[conic-gradient(from_0deg,transparent_70%,rgba(52,211,153,1)_100%)] animate-[radar-scan_4s_linear_infinite] gpu-accel"></div>
               <div className="absolute top-1/2 right-[10%] w-48 h-48 -translate-y-1/2 translate-x-1/2 border border-emerald-500/30 rounded-full"></div>
             </div>
             
             <div className="flex xs:flex-col items-center justify-between xs:justify-center gap-2 shrink-0 z-10 xs:w-16">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.2)]">
-                <Radar className="w-5 h-5 text-emerald-300 group-hover:scale-110 transition-transform duration-300" />
+                <Radar className="w-5 h-5 text-emerald-300 group-hover:scale-110 transition-transform duration-300 gpu-accel" />
               </div>
-              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 uppercase shadow-[0_0_10px_rgba(52,211,153,0.2)]">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 uppercase shadow-[0_0_10px_rgba(52,211,153,0.2)]">
                 {dict.step2Title}
               </span>
             </div>
@@ -274,20 +274,20 @@ export default function DiagnosticsModal({
                 <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide drop-shadow-md">
                   {dict.step2Header}
                 </h4>
-                <span className="text-[9px] sm:text-[10px] font-mono bg-emerald-950/80 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/30">
+                <span className="text-[10px] sm:text-[11px] font-mono bg-emerald-950/80 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/30">
                   {dict.step2Badge}
                 </span>
               </div>
               
-              <p className="text-[11px] sm:text-xs text-slate-300 leading-normal">
+              <p className="text-xs text-slate-300 leading-normal">
                 {dict.step2Desc}
               </p>
 
               <div className="p-2 rounded-lg bg-black/60 border border-emerald-500/30 flex items-start gap-2 my-0.5 shadow-inner">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5 animate-bounce" />
-                <div className="text-[10px] text-slate-300 leading-tight">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5 animate-bounce gpu-accel" />
+                <div className="text-[10px] sm:text-xs text-slate-300 leading-tight">
                   <span className="text-emerald-300 font-bold">{dict.step2CoverageTitle}</span> {dict.step2CoverageText}
-                  <span className="block text-[8px] sm:text-[9px] text-slate-400 mt-0.5">
+                  <span className="block text-[10px] text-slate-400 mt-0.5">
                     {dict.step2CoverageNote}
                   </span>
                 </div>
@@ -306,16 +306,16 @@ export default function DiagnosticsModal({
             </div>
           </div>
 
-          {/* --- PAS 3: ANÀLISI IA (Nucli Quàntic Pulsant) --- */}
+          {/* --- PAS 3: ANÀLISI IA --- */}
           <div className="relative z-10 flex flex-col xs:flex-row items-stretch xs:items-center gap-3 sm:gap-4 p-4 rounded-2xl glass-panel border-indigo-500/40 bg-gradient-to-r from-indigo-950/50 via-purple-950/30 to-[#030712] overflow-hidden group hover:border-indigo-400/70 hover:-translate-y-0.5 hover:shadow-[0_15px_40px_rgba(99,102,241,0.2)] transition-all duration-300">
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/15 rounded-full blur-[40px] pointer-events-none animate-[pulse_4s_ease-in-out_infinite]"></div>
-            <div className="absolute right-10 top-1/2 -translate-y-1/2 w-24 h-24 bg-purple-500/20 rounded-full blur-[30px] pointer-events-none animate-[pulse_3s_ease-in-out_infinite_reverse]"></div>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/15 rounded-full blur-[40px] pointer-events-none animate-[pulse_4s_ease-in-out_infinite] gpu-accel"></div>
+            <div className="absolute right-10 top-1/2 -translate-y-1/2 w-24 h-24 bg-purple-500/20 rounded-full blur-[30px] pointer-events-none animate-[pulse_3s_ease-in-out_infinite_reverse] gpu-accel"></div>
 
             <div className="flex xs:flex-col items-center justify-between xs:justify-center gap-2 shrink-0 z-10 xs:w-16">
               <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center shadow-[0_0_20px_rgba(129,140,248,0.4)]">
-                <Cpu className="w-5 h-5 text-indigo-300 animate-pulse" />
+                <Cpu className="w-5 h-5 text-indigo-300 animate-pulse gpu-accel" />
               </div>
-              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-300 uppercase shadow-[0_0_10px_rgba(99,102,241,0.3)]">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-300 uppercase shadow-[0_0_10px_rgba(99,102,241,0.3)]">
                 {dict.step3Title}
               </span>
             </div>
@@ -324,10 +324,10 @@ export default function DiagnosticsModal({
               <div className="flex items-center justify-between mb-0.5">
                 <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide flex items-center gap-1.5 drop-shadow-md">
                   <span>{dict.step3Header}</span>
-                  <span className="bg-indigo-500 text-white text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded font-mono font-bold shadow-[0_0_10px_rgba(99,102,241,0.6)]">IA ENGINE</span>
+                  <span className="bg-indigo-500 text-white text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded font-mono font-bold shadow-[0_0_10px_rgba(99,102,241,0.6)]">IA ENGINE</span>
                 </h4>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-300 leading-normal">
+              <p className="text-xs text-slate-300 leading-normal">
                 {dict.aiFooter}
               </p>
             </div>
@@ -336,9 +336,9 @@ export default function DiagnosticsModal({
         </div>
 
         {/* =========================================================
-            DISCLAIMER CIENTÍFIC (Honestedat i Probabilitat)
+            DISCLAIMER CIENTÍFIC
             ========================================================= */}
-        <div className="relative z-10 p-3.5 rounded-xl bg-slate-900/80 border border-white/10 flex items-center gap-3 shrink-0 text-slate-300 text-[11px] leading-relaxed shadow-inner">
+        <div className="relative z-10 p-3.5 rounded-xl bg-slate-900/80 border border-white/10 flex items-center gap-3 shrink-0 text-slate-300 text-xs leading-relaxed shadow-inner">
           <Info className="w-5 h-5 text-sky-400 shrink-0" />
           <div>
             <span className="font-bold text-white">{dict.transparencyTitle}</span> {dict.transparencyText}
@@ -349,12 +349,12 @@ export default function DiagnosticsModal({
             ESTAT DEL RECEPTOR EN STANDBY
             ========================================================= */}
         <div className="relative z-10 flex items-center justify-between p-3 rounded-xl bg-black/80 border border-sky-500/20 font-mono shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.05)]">
-          <div className="flex items-center gap-2 text-sky-300 font-bold text-[10px] sm:text-xs">
-            <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400 shrink-0 animate-pulse" />
+          <div className="flex items-center gap-2 text-sky-300 font-bold text-[11px] sm:text-xs">
+            <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400 shrink-0 animate-pulse gpu-accel" />
             <span>{dict.aligned}</span>
           </div>
-          <span className="text-[9px] sm:text-[11px] text-sky-300 font-bold bg-sky-500/10 px-2 sm:px-2.5 py-1 rounded border border-sky-500/20 flex items-center gap-1.5">
-            <Compass className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 animate-[spin_10s_linear_infinite]" />
+          <span className="text-[10px] sm:text-[11px] text-sky-300 font-bold bg-sky-500/10 px-2 sm:px-2.5 py-1 rounded border border-sky-500/20 flex items-center gap-1.5">
+            <Compass className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 animate-[spin_10s_linear_infinite] gpu-accel" />
             <span>{dict.standbyReceiver}</span>
           </span>
         </div>
@@ -365,10 +365,10 @@ export default function DiagnosticsModal({
         <button
           type="button"
           onClick={onClose}
-          className="relative z-10 w-full py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black tracking-widest uppercase text-xs transition-all shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:shadow-[0_0_35px_rgba(56,189,248,0.6)] cursor-pointer flex items-center justify-center gap-2 shrink-0 active:scale-[0.98]"
+          className="relative z-10 w-full py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black tracking-widest uppercase text-xs sm:text-sm transition-all shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:shadow-[0_0_35px_rgba(56,189,248,0.6)] cursor-pointer flex items-center justify-center gap-2 shrink-0 active:scale-[0.98]"
         >
           <span>{dict.closeModal}</span>
-          <span className="hidden sm:inline-block text-[9px] sm:text-[10px] bg-black/30 px-2 py-0.5 rounded text-sky-100 border border-white/10">ESC</span>
+          <span className="hidden sm:inline-block text-[10px] bg-black/30 px-2 py-0.5 rounded text-sky-100 border border-white/10">ESC</span>
         </button>
 
       </div>
