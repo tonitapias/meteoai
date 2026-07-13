@@ -1,59 +1,60 @@
-# 🌦️ MeteoToni AI
+# ⚡ MeteoToni AI - Tactical Atmospheric Operating System
 
 [![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite_6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Gemini AI](https://img.shields.io/badge/Google_Gemini_2.0-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Sentry](https://img.shields.io/badge/Sentry-Telemetry-362D59?style=for-the-badge&logo=sentry&logoColor=white)]()
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-success?style=for-the-badge&logo=pwa&logoColor=white)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-> **La meteorologia de precisió es troba amb la narrativa intel·ligent.**
+> **La meteorologia de precisió es troba amb l'enginyeria tàctica de risc zero.**
 
-MeteoToni AI redefineix l'experiència de consultar el temps. No és només una altra app de dades; és un sistema híbrid que combina la física atmosfèrica d'alta resolució (models d'1.3km) amb la capacitat d'una IA generativa d'última generació per explicar-te què passarà realment al teu carrer, amb un llenguatge humà i conscient de la incertesa.
+MeteoToni AI no és una simple aplicació del temps; és un **sistema de telemetria meteorològica d'alta precisió** dissenyat per operar en condicions extremes i d'alta muntanya. Combina la potència predictiva de models globals amb la precisió topogràfica de models d'alta resolució, tot processat per una arquitectura tolerant a fallades i un motor d'Intel·ligència Artificial (Gemini) en temps real.
 
 ---
 
-## ✨ Visió General de la Interfície
+## ✨ Visió General de la Interfície (Spatial UI)
 
 *(Substitueix aquestes imatges per captures reals de la teva aplicació per un efecte "wow")*
 
 <div align="center">
-  <img src="./public/screenshot-desktop.png" alt="Tauler Principal Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-  <p><em>El tauler principal amb disseny Bento-Grid, mostrant dades actuals, gràfics i el resum de la IA.</em></p>
+  <img src="./public/screenshot-desktop.png" alt="Tauler Principal Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
+  <p><em>El HUD Tàctic (Head-Up Display) amb disseny Spatial UI i Neo-Skeuomorfisme, mostrant telemetria avançada i diagnòstics de sistema.</em></p>
 </div>
 
 <br/>
 
 <div align="center" style="display: flex; justify-content: center; gap: 20px;">
-  <img src="./public/screenshot-mobile.png" alt="Vista Mòbil AROME" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-  <img src="./public/screenshot-mobile-widgets.png" alt="Widgets Avançats" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+  <img src="./public/screenshot-mobile.png" alt="Vista Mòbil AROME" width="300" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
+  <img src="./public/screenshot-mobile-widgets.png" alt="Widgets Avançats" width="300" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
 </div>
 <div align="center">
-  <p><em>Esquerra: Previsió horària d'alta resolució AROME HD. Dreta: Widgets experts (Cota de neu, Punt de rosada).</em></p>
+  <p><em>Esquerra: Previsió horària d'alta resolució AROME HD. Dreta: Consensus Widget analitzant discrepàncies entre models.</em></p>
 </div>
 
 ---
 
-## 🚀 Característiques Clau: Més enllà de les Dades
+## 🛡️ Pilars Arquitectònics
 
-### 🧠 El Cervell: IA Híbrida i Conscient
-A diferència dels chatbots estàndard, l'IA de MeteoToni està profundament integrada en el motor de dades:
-* **Arquitectura de Doble Capa:** Generació de prediccions locals instantànies (zero latència) mentre Gemini 2.0 processa un relat enriquit en segon pla.
-* **Consciència de Fiabilitat:** La IA sap si els models matemàtics discrepen. Si la fiabilitat és baixa, el resum t'ho comunicarà en lloc de donar falses certeses.
-* **Narrativa Humana:** Entrenada per evitar tecnicismes ("gradients", "isoterma") i explicar fenòmens complexos com la xafogor o el risc de tempesta amb un to proper.
+### 1. La Doctrina "Risc Zero"
+A la muntanya, un error a l'aplicació pot costar car. Aquest projecte està construït sota una arquitectura innegociable de tolerància a fallades:
+* **Zero Falsos Positius:** Si l'API falla, es mostren estats de `[ SENSOR STANDBY ]`. Mai s'imprimeixen dades numèriques buides o nul·les (`0 km/h`) que puguin confondre l'usuari.
+* **Validació Estricta (Zod):** Tot el trànsit de xarxa que entra al sistema és validat amb esquemes geomètrics estrictes abans de tocar la interfície.
+* **Network Resilience:** Sistema natiu de re-intents (`fetchWithRetry`) i Timeouts personalitzats per combatre la pèrdua de cobertura a la muntanya.
+* **Observabilitat Total:** Integració profunda amb `@sentry/react` per capturar excepcions, timeouts GPS i fallades de validació de dades a la capa de xarxa.
 
-### 🏗️ El Motor: Física d'Alta Resolució (AROME HD)
-Hem auditat i ajustat els algorismes per reflectir la realitat física:
-* **Model AROME 1.3km:** Injecció de dades hiper-locals sobre els models globals (GFS/ECMWF) per a les primeres 48 hores.
-* **Física de Núvols Realista:** Nou càlcul de nuvolositat efectiva que pondera més els núvols alts i mitjans, evitant icones de "sol" quan el cel està emblanquinat.
-* **Tempestes Precises (CAPE):** Un sistema d'alertes que només activa la icona de tempesta si hi ha una combinació d'energia convectiva alta i precipitació activa, eliminant falsos positius.
-* **Llindar "TRACE" (0.1mm):** Filtratge de dades perquè les icones de pluja només apareguin quan la precipitació és visualment perceptible.
+### 2. Motor de Consens Multi-Model
+Per evitar les sorpreses dels microclimes, l'aplicació no confia en una sola font. Creua en temps real:
+* **Models Globals (ECMWF, GFS, ICON):** Analitzen l'atmosfera a gran escala per definir tendències i tempestes massives.
+* **Models d'Alta Resolució (WRF, AROME):** Apliquen un zoom extrem d'1.3km per entendre com els relleus orogràfics alteraran el vent i la pluja exactament on ets.
+* **Consensus Widget:** Un sistema heurístic que compara ambdós models i assigna un % de "precisió o afinitat". Si hi ha *Divergència*, l'usuari rep una alerta de risc de microclima.
 
-### 📱 L'Experiència: PWA Moderna
-* **Rendiment Extrem:** Construïda amb React 19 i Vite 6, amb *code-splitting* basat en rutes i components (Modals Lazy).
-* **Offline-First:** Estratègia de caché robusta utilitzant **IndexedDB**, permetent que l'app funcioni i mostri les últimes dades fins i tot sense connexió.
-* **Disseny Responsiu:** Interfície fluida inspirada en el disseny "Bento" que s'adapta des de mòbils fins a pantalles 4K.
+### 3. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+Dissenyada sota el concepte de *Dark Dashboard* tàctic:
+* **GPU Acceleration:** Ús intel·ligent de les capes gràfiques per crear hologrames 3D i profunditat d'interfície.
+* **Neo-Skeuomorfisme:** Botons físics virtuals (nuclis d'ignició) i estats lluminosos (LEDs) que retornen la sensació tàctil a les pantalles planes.
+* **Smart Dictionary (i18n):** Interfície totalment desacoblada amb diccionaris interns per garantir canvis d'idioma autònoms (ca, es, en, fr) en estat offline sense dependre d'APIs de traducció.
 
 ---
 
@@ -63,23 +64,23 @@ Una mirada ràpida a com està construïda l'aplicació per dins, basada en l'au
 
 | Capa | Tecnologia | Detalls d'Implementació Clau |
 | :--- | :--- | :--- |
-| **Frontend Core** | React 19 + TypeScript | Tipat estricte, Hooks personalitzats (`useWeather`, `useWeatherCalculations`) per separar lògica d'UI. |
-| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA, generació d'actius i *tree-shaking* agressiu. |
-| **Estils** | Tailwind CSS | Sistema de disseny utilitari amb animacions CSS natives i Lucide Icons. |
-| **Gestió d'Estat** | Context API + IDB | Memòria cau persistent d'alt rendiment (`idb-keyval`) amb *bucketing* geoespacial i TTL diferenciat (dades vs IA). |
-| **Dades Externes** | Open-Meteo API | Fusió intel·ligent de múltiples models (AROME, ECMWF, GFS, ICON). |
-| **Intel·ligència** | Google Gemini API | Integració segura via Proxy amb *prompt engineering* dinàmic. |
-| **CI/CD** | GitHub Actions | Flux de treball automatitzat per a build, validació de tipus i desplegament segur a GitHub Pages. |
+| **Frontend Core** | React 19 + TypeScript | Tipat estricte (sense `any`), Hooks personalitzats per separar la lògica d'UI. |
+| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA i compilació ultraràpida. |
+| **Estils** | Tailwind CSS | Sistema de disseny utilitari avançat (*Glassmorphism*, animacions CSS natives). |
+| **Protecció API** | Zod + Sentry | Interceptors tipats per evitar excepcions de xarxa no controlades a producció. |
+| **Gestió d'Estat** | Context API + IDB | Memòria cau persistent d'alt rendiment (`idb-keyval`) per a funcionament offline-first. |
+| **Dades Externes** | Open-Meteo API | Fusió intel·ligent de múltiples models orogràfics. |
+| **Intel·ligència** | Google Gemini API | Integració segura via Proxy per a narratives descriptives adaptades al relleu local. |
 
 ---
 
 ## 🛠️ Instal·lació Local
 
-Si vols explorar el codi font:
+Si vols explorar el codi font o col·laborar:
 
 1.  **Clona el repositori:**
     ```bash
-    git clone [https://github.com/tonitapias/meteoai.git](https://github.com/tonitapias/meteoai.git)
+    git clone [https://github.com/ToniTapias/meteoai.git](https://github.com/ToniTapias/meteoai.git)
     cd meteoai
     ```
 
@@ -99,26 +100,28 @@ Si vols explorar el codi font:
     VITE_API_TIMEOUT=10000
     ```
 
-4.  **Arranca el servidor de desenvolupament:**
+4.  **Auditoria de Codi (Doctrina Risc Zero):**
+    Abans de compilar, valida la integritat estructural del codi:
     ```bash
-    npm run dev
+    npm run type-check   # Executa el compilador TS per caçar errors de tipatge
+    npm run lint         # Revisa les regles d'estil
     ```
 
-5.  **Executa els tests (Validació de lògica física):**
+5.  **Arranca el servidor de desenvolupament:**
     ```bash
-    npm test
+    npm run dev
     ```
 
 ---
 
 ## 📄 Llicència i Crèdits
 
-* Desenvolupat per Toni Tapias - © 2025.
+* Desenvolupat amb passió i enginyeria de precisió per **Toni Tapias** - © 2026.
 * Llicència MIT.
 * Dades meteorològiques proporcionades per [Open-Meteo](https://open-meteo.com/) sota llicència Creative Commons.
-* IA impulsada per Google Gemini.
+* IA impulsada per Groq.
 
 ---
 <div align="center">
-  <p><em>Fet amb ❤️, ⚛️ i molts ☁️ a Barcelona.</em></p>
+  <p><em>La meteo no perdona; el codi, tampoc.</em> 🏔️⚡</p>
 </div>
