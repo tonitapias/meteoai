@@ -16,8 +16,6 @@ MeteoToni AI no és una simple aplicació del temps; és un **sistema de telemet
 
 ## ✨ Visió General de la Interfície (Spatial UI)
 
-*(Substitueix aquestes imatges per captures reals de la teva aplicació per un efecte "wow")*
-
 <div align="center">
   <img src="./public/screenshot-desktop.png" alt="Tauler Principal Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
   <p><em>El HUD Tàctic (Head-Up Display) amb disseny Spatial UI i Neo-Skeuomorfisme, mostrant telemetria avançada i diagnòstics de sistema.</em></p>
@@ -70,7 +68,7 @@ Una mirada ràpida a com està construïda l'aplicació per dins, basada en l'au
 | **Protecció API** | Zod + Sentry | Interceptors tipats per evitar excepcions de xarxa no controlades a producció. |
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent d'alt rendiment (`idb-keyval`) per a funcionament offline-first. |
 | **Dades Externes** | Open-Meteo API | Fusió intel·ligent de múltiples models orogràfics. |
-| **Intel·ligència** | Google Gemini API | Integració segura via Proxy per a narratives descriptives adaptades al relleu local. |
+| **Intel·ligència** | Groq | Integració segura via Proxy per a narratives descriptives adaptades al relleu local. |
 
 ---
 
