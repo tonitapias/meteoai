@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   MapPin, Loader2, CloudRain, Wind, 
-  ShieldCheck, CloudLightning, ThermometerSun, Activity, Zap,
-  HelpCircle
+  ShieldCheck, CloudLightning, ThermometerSun, Zap,
+  HelpCircle, Crosshair
 } from 'lucide-react';
 import { Language, TranslationType } from '../translations';
 import pkg from '../../package.json';
@@ -17,22 +17,25 @@ interface WelcomeScreenProps {
   loading: boolean;
 }
 
+// Interfícies estrictes per a telemetria atmosfèrica
+interface Particle { id: number; left: string; top: string; size: string; duration: string; delay: string; drift: string; }
+interface Drop { id: number; left: string; delay: string; z: string; }
+interface Cloud { id: number; y: string; delay: string; z: string; }
+
 /**
- * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v6.2 PRO)
+ * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v7.51 SINGULARITY DECOMPRESSED)
  * Arquitectura: Spatial UI, Modal Desacoblat i18n, Puresa React garantida.
- * Holograma v2.0: Volum Atmosfèric Tàctic amb Terreny 3D i Flux de Dades.
- * Lògica Dual: Prioritat AROME HD + Fallback Global (WRF/GFS).
- * Fix: React Strict Mode complert (Math.random extret del JSX).
+ * Holograma v7.0: Motor DOM 3D Pur, Vectors SVG integrats, Plasma Pillar.
+ * UI v7.51 Update: Linter Purity Fix + TypeScript Modal Fix (openDiagnosticsModal restaurat).
  */
 export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: WelcomeScreenProps) {
   const year = new Date().getFullYear();
 
-  // DOCTRINA RISC ZERO: Extracció profunda i tipada per a i18n
+  // DOCTRINA RISC ZERO: Tipatge
   const tRecord = (t && typeof t === 'object') ? (t as Record<string, unknown>) : {};
   const tWelcome = (tRecord.welcome && typeof tRecord.welcome === 'object') ? (tRecord.welcome as Record<string, string>) : {};
   const safeVersion = pkg && pkg.version ? pkg.version : '6.2.0-PRO';
 
-  // DICCIONARI PRINCIPAL (Dual Engine Topology)
   const systemText = {
     loading: tWelcome.loading || (lang === 'es' ? "SINTETIZANDO ATMÓSFERA..." : lang === 'en' ? "SYNTHESIZING ATMOSPHERE..." : lang === 'fr' ? "SYNTHÈSE ATMOSPHÉRIQUE..." : "SINTETITZANT ATMOSFERA..."),
     tagline: tWelcome.tagline || (lang === 'es' ? "TELEMETRÍA TÁCTICA PARA TERRENO TÉCNICO" : lang === 'en' ? "TACTICAL TELEMETRY FOR TECHNICAL TERRAIN" : lang === 'fr' ? "TÉLÉMÉTRIE TACTIQUE POUR TERRAIN TECHNIQUE" : "TELEMETRIA TÀCTICA PER A TERRENY TÈCNIC"),
@@ -46,7 +49,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     sysAuto: tWelcome.sysAuto || (lang === 'es' ? "[ AUTO-SWITCH ]" : lang === 'en' ? "[ AUTO-SWITCH ]" : lang === 'fr' ? "[ AUTO-SWITCH ]" : "[ AUTO-SWITCH ]"),
   };
 
-  // NAVEGACIÓ TÀCTICA (History API)
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const closeDiagnosticsModal = useCallback(() => {
@@ -57,16 +59,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     }
   }, []);
 
-  useEffect(() => {
-    const handlePopState = () => {
-      if (showDiagnostics) {
-        setShowDiagnostics(false);
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showDiagnostics]);
-
   const openDiagnosticsModal = () => {
     if (typeof window !== 'undefined') {
       window.history.pushState({ modal: 'meteo_diagnostics' }, '');
@@ -74,62 +66,92 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     }
   };
 
-  // ==========================================
-  // ESTATS PURS (REACT STRICT MODE FIX)
-  // Evitem 'Math.random' durant la fase de renderitzat.
-  // ==========================================
-  const [particles] = useState(() => 
-    Array.from({ length: 35 }).map(() => ({
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      size: `${Math.random() * 2 + 0.5}px`,
-      duration: `${6 + Math.random() * 12}s`,
-      delay: `-${Math.random() * 10}s`,
-      drift: `${(Math.random() - 0.5) * 60}px`
-    }))
-  );
+  useEffect(() => {
+    const handlePopState = () => { if (showDiagnostics) setShowDiagnostics(false); };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showDiagnostics]);
 
-  const [precipDrops] = useState(() => 
-    Array.from({ length: 20 }).map(() => ({
-      left: `${Math.random() * 80 + 10}%`,
-      top: `${Math.random() * 40}%`,
-      delay: `-${Math.random() * 4}s`,
-      z: `${Math.random() * 60}px`
-    }))
-  );
+  // ESTATS PURS DINS DE COORDENADES FIXES (400x400)
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [precipDrops, setPrecipDrops] = useState<Drop[]>([]);
+  const [clouds, setClouds] = useState<Cloud[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
-  const [clouds] = useState(() => 
-    Array.from({ length: 4 }).map(() => ({
-      yDrift: `${Math.random() * 15 - 7.5}px`
-    }))
-  );
+  useEffect(() => {
+    // Tècnica de Descompressió de Render (Fix per al Linter react-hooks/set-state-in-effect).
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      
+      setParticles(Array.from({ length: 30 }).map((_, i) => ({
+        id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
+        size: `${Math.random() * 2 + 1}px`, duration: `${5 + Math.random() * 15}s`,
+        delay: `-${Math.random() * 15}s`, drift: `${(Math.random() - 0.5) * 80}px`
+      })));
+
+      setPrecipDrops(Array.from({ length: 40 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 140 + 10}px`,
+        delay: `-${Math.random() * 5}s`,
+        z: `${Math.random() * 140 - 70}px`
+      })));
+
+      setClouds(Array.from({ length: 8 }).map((_, i) => ({
+        id: i,
+        y: `${Math.random() * 120 + 20}px`,
+        delay: `-${Math.random() * 15}s`,
+        z: `${Math.random() * 140 - 70}px`
+      })));
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const orbitingSensors = useMemo(() => [
-    { Icon: CloudRain, color: 'text-sky-300', angle: 0, label: 'PRECIP', width: '75%' },
-    { Icon: Wind, color: 'text-indigo-300', angle: 120, label: 'WIND', width: '65%' },
-    { Icon: ThermometerSun, color: 'text-amber-300', angle: 240, label: 'TEMP', width: '85%' }
+    { Icon: CloudRain, color: 'text-sky-300', angle: 0, label: 'PRECIP', width: '75%', val: '0.0 mm' },
+    { Icon: Wind, color: 'text-indigo-300', angle: 120, label: 'WIND', width: '65%', val: 'KNOTS' },
+    { Icon: ThermometerSun, color: 'text-amber-300', angle: 240, label: 'TEMP', width: '85%', val: 'SYNC' }
   ], []);
 
   return (
-    <div className="relative w-full min-h-dvh overflow-y-auto bg-[#020617] select-none font-sans text-slate-200 antialiased flex flex-col">
+    <div className="relative w-full min-h-dvh overflow-x-hidden overflow-y-auto bg-[#020617] select-none font-sans text-slate-200 antialiased flex flex-col">
       
-      {/* CSS ESPECÍFIC DE LA PANTALLA */}
       <style>{`
         @keyframes aurora-shift {
-          0% { transform: translateX(-15%) translateY(-15%) scale(1); filter: hue-rotate(0deg); opacity: 0.45; }
-          50% { transform: translateX(15%) translateY(15%) scale(1.3); filter: hue-rotate(40deg); opacity: 0.75; }
-          100% { transform: translateX(-15%) translateY(-15%) scale(1); filter: hue-rotate(0deg); opacity: 0.45; }
+          0% { transform: translateX(-10%) translateY(-10%) scale(1); filter: hue-rotate(0deg); opacity: 0.3; }
+          50% { transform: translateX(10%) translateY(10%) scale(1.2); filter: hue-rotate(30deg); opacity: 0.6; }
+          100% { transform: translateX(-10%) translateY(-10%) scale(1); filter: hue-rotate(0deg); opacity: 0.3; }
         }
-        @keyframes holographic-rotation {
-          0% { transform: rotateY(0deg) rotateX(12deg); }
-          100% { transform: rotateY(360deg) rotateX(12deg); }
+        @keyframes turntable-spin {
+          from { transform: rotateY(0deg); }
+          to { transform: rotateY(360deg); }
         }
-        @keyframes pulse-core {
-          0%, 100% { transform: scale(1); opacity: 0.85; filter: blur(1px); }
-          50% { transform: scale(1.08); opacity: 1; filter: blur(0px); }
+        @keyframes ring-spin-x {
+          from { transform: rotateX(60deg) rotateY(0deg) rotateZ(0deg); }
+          to { transform: rotateX(60deg) rotateY(360deg) rotateZ(360deg); }
+        }
+        @keyframes ring-spin-y {
+          from { transform: rotateX(120deg) rotateY(0deg) rotateZ(0deg); }
+          to { transform: rotateX(120deg) rotateY(-360deg) rotateZ(180deg); }
+        }
+        @keyframes cube-spin {
+          from { transform: rotateY(0deg); }
+          to { transform: rotateY(-360deg); }
+        }
+        @keyframes radar-sweep {
+          from { transform: rotateZ(0deg); }
+          to { transform: rotateZ(360deg); }
+        }
+        @keyframes scan-line {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(300%); }
+        }
+        @keyframes plasma-pulse {
+          0%, 100% { opacity: 0.3; transform: scale(0.95); filter: blur(2px); }
+          50% { opacity: 1; transform: scale(1.05); filter: blur(0px); }
         }
         @keyframes particle-rise {
-          0% { transform: translateY(15px) translateX(0px); opacity: 0; }
+          0% { transform: translateY(20px) translateX(0px); opacity: 0; }
           20% { opacity: 1; }
           80% { opacity: 0.8; }
           100% { transform: translateY(-100vh) translateX(var(--drift)); opacity: 0; }
@@ -137,297 +159,308 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         @keyframes thunder-bolt {
           0%, 90%, 100% { opacity: 0; }
           92% { opacity: 1; }
-          93% { opacity: 0.3; }
+          93% { opacity: 0.2; }
           94% { opacity: 1; }
-        }
-        @keyframes telemetry-scan {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
         }
         @keyframes title-shine {
           0% { background-position: 200% center; }
           100% { background-position: -200% center; }
         }
-        @keyframes data-stream-flow {
-          0% { background-position: 0% 100%; }
-          100% { background-position: 0% -100%; }
+        @keyframes precip-drop {
+          0% { transform: translateY(0px) translateZ(var(--z)); opacity: 0; }
+          10%, 80% { opacity: 0.9; }
+          100% { transform: translateY(260px) translateZ(var(--z)); opacity: 0; }
         }
-        @keyframes precip-flow {
-          0% { transform: translateY(-20px) translateZ(var(--z)); opacity: 0; }
-          10%, 90% { opacity: 0.6; }
-          100% { transform: translateY(100px) translateZ(var(--z)); opacity: 0; }
+        @keyframes cloud-pan {
+          0% { transform: translateX(200px) translateY(var(--y)) translateZ(var(--z)); opacity: 0; }
+          15%, 85% { opacity: 0.7; }
+          100% { transform: translateX(-80px) translateY(var(--y)) translateZ(var(--z)); opacity: 0; }
         }
-        @keyframes cloud-drift {
-          0% { transform: translateX(100%) translateY(0px); opacity: 0; }
-          15%, 85% { opacity: 0.4; }
-          50% { transform: translateX(0%) translateY(var(--y-drift)); }
-          100% { transform: translateX(-100%) translateY(0px); opacity: 0; }
-        }
-        @keyframes vertical-scan {
-          0%, 100% { transform: translateY(120px) translateZ(100px); opacity: 0; }
-          25%, 75% { opacity: 1; }
-          50% { transform: translateY(-120px) translateZ(100px); opacity: 0; }
+        @keyframes float-hologram {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-15px); }
         }
 
-        .perspective-lg { perspective: 2000px; }
+        .perspective-xl { perspective: 2500px; }
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         
-        .glass-panel {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+        .glass-panel-tactical {
+          background: linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(2, 6, 23, 0.9) 100%);
+          backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+          box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.1);
         }
 
+        .glass-panel-interactive {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
         .glass-panel-interactive:hover {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
-          border-color: rgba(56, 189, 248, 0.3);
+          border-color: rgba(56, 189, 248, 0.5); transform: translateY(-1px);
+        }
+
+        .glitch-overlay::before {
+          content: ""; position: absolute; inset: 0; pointer-events: none;
+          background: repeating-linear-gradient(transparent 0, transparent 2px, rgba(56, 189, 248, 0.05) 2px, rgba(56, 189, 248, 0.05) 4px);
+          mix-blend-mode: overlay; z-index: 50; opacity: 0.3; border-radius: 1.5rem;
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* FONS ATMOSFÈRIC AMB AURORA */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(15,23,42,0)_0%,rgba(2,6,23,1)_95%)] z-10"></div>
-        <div className="absolute -top-1/4 -left-1/4 w-full h-full bg-sky-600/15 rounded-full blur-[140px] mix-blend-screen animate-[aurora-shift_25s_ease-in-out_infinite]"></div>
-        <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-indigo-700/15 rounded-full blur-[140px] mix-blend-screen animate-[aurora-shift_30s_ease-in-out_infinite_reverse]"></div>
+      {/* FONS ATMOSFÈRIC AURORA ATENUADA PER PC */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(15,23,42,0)_0%,rgba(2,6,23,1)_100%)]">
+        <div className="absolute -top-[30%] -left-[20%] w-[120%] h-[120%] bg-sky-500/10 lg:bg-sky-500/5 rounded-full blur-[120px] mix-blend-screen animate-[aurora-shift_30s_ease-in-out_infinite]"></div>
+        <div className="absolute -bottom-[30%] -right-[20%] w-[120%] h-[120%] bg-indigo-600/10 lg:bg-indigo-600/5 rounded-full blur-[120px] mix-blend-screen animate-[aurora-shift_35s_ease-in-out_infinite_reverse]"></div>
 
         <div className="absolute inset-0 z-10">
-          {particles.map((p, i) => (
-            <div 
-              key={i}
-              className="absolute bg-sky-300 rounded-full"
-              style={{
-                left: p.left,
-                top: p.top,
-                width: p.size,
-                height: p.size,
-                opacity: 0,
-                filter: `blur(${parseFloat(p.size) / 2}px)`,
-                animation: `particle-rise ${p.duration} linear infinite`,
-                animationDelay: p.delay,
-                '--drift': p.drift
-              } as React.CSSProperties}
-            />
+          {isMounted && particles.map((p) => (
+            <div key={p.id} className="absolute bg-sky-200 rounded-full"
+              style={{ left: p.left, top: p.top, width: p.size, height: p.size, opacity: 0,
+                filter: `blur(${parseFloat(p.size) / 2}px)`, animation: `particle-rise ${p.duration} linear infinite`, animationDelay: p.delay, '--drift': p.drift } as React.CSSProperties} />
           ))}
         </div>
       </div>
 
-      {/* HUD CENTRAL */}
-      <main className="relative z-30 flex-1 w-full max-w-screen-xl mx-auto px-4 py-8 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-20 no-scrollbar">
+      {/* DISTRIBUCIÓ DESCOMPRIMIDA */}
+      <main className="relative z-30 flex-1 w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 xl:px-24 py-8 sm:py-12 flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-12 lg:gap-8 xl:gap-12 no-scrollbar">
         
-        {/* HOLOGRAMA 3D V2.0 */}
-        <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-[550px] lg:h-[550px] shrink-0 perspective-lg flex items-center justify-center">
+        {/* =========================================================================
+            HOLOGRAMA V7.0 (Mida Controlada)
+            ========================================================================= */}
+        <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[480px] xl:max-w-[540px] aspect-square shrink-0 flex items-center justify-center perspective-xl animate-[float-hologram_10s_ease-in-out_infinite]">
             
-            <div className={`absolute inset-0 rounded-full blur-[80px] sm:blur-[100px] lg:blur-[150px] transition-colors duration-1000 ${loading ? 'bg-amber-600/35' : 'bg-sky-500/30'}`}></div>
+            <div className={`absolute inset-0 rounded-full blur-[100px] lg:blur-[140px] transition-colors duration-1000 opacity-50 lg:opacity-40 ${loading ? 'bg-amber-600/30' : 'bg-sky-500/20'}`}></div>
             
-            <div className="absolute w-full h-full preserve-3d animate-[holographic-rotation_55s_linear_infinite]">
+            <div className="absolute w-[400px] h-[400px] preserve-3d transform scale-[0.75] sm:scale-100 lg:scale-[1.1] xl:scale-[1.2]">
                 
-                {/* TERRENY TÀCTIC */}
-                <div className="absolute inset-[15%] preserve-3d transform rotateX(75deg) translateZ(-80px) backface-hidden">
-                    <div className="absolute inset-0 hologram-terrain bg-gradient-to-br from-black via-sky-950/20 to-black rounded-[40%_50%_60%_40%_/_50%_40%_50%_60%] border-[2px] border-sky-400/20 shadow-[0_0_40px_rgba(56,189,248,0.2)]"></div>
-                    <div className="absolute inset-[2px] rounded-[40%_50%_60%_40%_/_50%_40%_50%_60%] overflow-hidden">
-                        <div className="absolute inset-0 w-[400%] h-full text-[6px] font-mono font-black text-sky-200/20 animate-[data-stream-flow_3s_linear_infinite] uppercase" style={{ backgroundImage: 'repeating-linear-gradient(rgba(56,189,248,0.1) 0px, rgba(56,189,248,0.1) 1px, transparent 1px, transparent 10px)' }}>
-                          {`...${Array(120).fill('TAW_AROME_HD_DATA_STREAM_OK').join('...')}...`}
-                        </div>
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_80%)]"></div>
-                    </div>
-                </div>
-
-                {/* COLUMNA ATMOSFÈRICA VOLUMÈTRICA */}
-                <div className="absolute inset-x-[25%] inset-y-0 preserve-3d transform rotateX(12deg) translateZ(0px) backface-hidden">
-                    <div className="absolute inset-0 atmos-column bg-gradient-to-b from-transparent via-indigo-950/15 to-sky-900/10 rounded-full border border-sky-400/10 shadow-[0_0_30px_rgba(56,189,248,0.15)] backdrop-blur-sm"></div>
+                <div className="absolute inset-0 preserve-3d" style={{ transform: 'rotateX(20deg) translateY(-30px)' }}>
                     
-                    {[...Array(6)].map((_, i) => (
-                      <div key={`wind-${i}`} className="absolute inset-y-0 left-1/2 w-[1px] preserve-3d" style={{ transform: `rotateY(${i * 60}deg)` }}>
-                          <div className={`absolute top-0 left-0 w-20 h-0.5 bg-sky-300 rounded-full transform rotateZ(${i * 3}deg) animate-pulse`} style={{ transform: `translateZ(${i * 5}px) rotateZ(${i * 3}deg)` }}></div>
-                          <div className={`absolute bottom-20 left-0 w-16 h-0.5 bg-sky-300 rounded-full transform rotateZ(${-i * 3}deg) animate-pulse`} style={{ transform: `translateZ(${i * 8}px) rotateZ(${-i * 3}deg)` }}></div>
-                      </div>
-                    ))}
+                    <div className="absolute inset-0 preserve-3d animate-[turntable-spin_60s_linear_infinite]">
+                        
+                        {/* TERRENY HÍBRID NADIU */}
+                        <div className="absolute w-[360px] h-[360px] left-[20px] top-[180px] preserve-3d" style={{ transform: 'rotateX(90deg)' }}>
+                            <div className="absolute inset-[-20%] bg-sky-500/10 blur-[60px] rounded-full"></div>
+                            
+                            <div className="absolute inset-0 rounded-full bg-slate-950/95 border border-sky-800/80 preserve-3d" style={{ transform: 'translateZ(-20px)' }}></div>
+                            
+                            {[...Array(8)].map((_, i) => (
+                                <div key={i} className="absolute inset-0 rounded-full border border-sky-400/15 preserve-3d" style={{ transform: `translateZ(${-20 + i*2.5}px)` }}></div>
+                            ))}
 
-                    {/* USANT L'ESTAT PUR PER LES GOTES */}
-                    {precipDrops.map((drop, i) => (
-                      <div 
-                        key={`drop-${i}`} 
-                        className="absolute inset-y-0 left-1/2 w-1.5 h-1.5 bg-sky-300 rounded-full opacity-60 animate-[precip-flow_4s_linear_infinite]" 
-                        style={{ 
-                            left: drop.left, 
-                            top: drop.top, 
-                            animationDelay: drop.delay, 
-                            '--z': drop.z 
-                        } as React.CSSProperties}>
-                      </div>
-                    ))}
+                            <div className="absolute inset-0 rounded-full border-[3px] border-sky-400/50 bg-gradient-to-br from-slate-900/90 via-sky-950/70 to-slate-900/90 shadow-[inset_0_0_50px_rgba(56,189,248,0.5)] preserve-3d overflow-hidden" style={{ transform: 'translateZ(0px)' }}>
+                                
+                                <svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 opacity-40">
+                                    <defs>
+                                        <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+                                            <path d="M 8 0 L 0 0 0 8" fill="none" stroke="rgba(56,189,248,0.5)" strokeWidth="0.5"/>
+                                        </pattern>
+                                    </defs>
+                                    <rect width="100" height="100" fill="url(#grid)" />
+                                    <path d="M 50 10 L 50 45 M 50 55 L 50 90 M 10 50 L 45 50 M 55 50 L 90 50" stroke="rgba(56,189,248,0.8)" strokeWidth="0.5" strokeDasharray="2,2"/>
+                                    <circle cx="50" cy="50" r="15" fill="none" stroke="rgba(56,189,248,0.4)" strokeWidth="0.5"/>
+                                    <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(56,189,248,0.2)" strokeWidth="0.5"/>
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(56,189,248,0.1)" strokeWidth="0.5"/>
+                                </svg>
 
-                    {/* USANT L'ESTAT PUR PELS NÚVOLS */}
-                    {clouds.map((cloud, i) => (
-                        <div 
-                            key={`cloud-${i}`} 
-                            className="absolute preserve-3d animate-[cloud-drift_20s_linear_infinite]" 
-                            style={{ 
-                                top: `${15 + i * 15}%`, 
-                                animationDelay: `-${i * 5}s`, 
-                                '--y-drift': cloud.yDrift 
-                            } as React.CSSProperties}>
-                            <div className="relative w-20 h-10 preserve-3d" style={{ transform: `translateZ(${i * 30}px)` }}>
-                                <div className="absolute inset-0 bg-white/30 rounded-full blur-[8px]"></div>
-                                <div className="absolute inset-2 bg-slate-200/20 rounded-full blur-[10px]"></div>
-                                <div className="absolute -bottom-1 -right-1 w-10 h-6 bg-white/20 rounded-full blur-[6px]"></div>
+                                <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_80%,rgba(56,189,248,0.8)_100%)] animate-[radar-sweep_3s_linear_infinite] mix-blend-screen rounded-full origin-center"></div>
+                                <div className="absolute inset-[38%] bg-black rounded-full border-[2px] border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.8)]"></div>
                             </div>
                         </div>
-                    ))}
-                </div>
 
-                {/* CORE HOLOGRÀFIC I ESCANEIG */}
-                <div className="absolute inset-[30%] rounded-full preserve-3d animate-[pulse-core_5s_ease-in-out_infinite] backface-hidden" style={{ transform: 'translateZ(90px)' }}>
-                   <div className={`absolute inset-0 rounded-full blur-lg transition-colors duration-1000 ${loading ? 'bg-amber-500/60' : 'bg-sky-300/50'}`}></div>
-                   <div className="absolute inset-3 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.9)_0%,rgba(56,189,248,0.3)_75%,transparent_100%)]"></div>
-                   <div className="absolute inset-0 flex items-center justify-center">
-                    {loading ? (
-                      <Zap className="w-1/3 h-1/3 text-amber-200 animate-[thunder-bolt_3s_linear_infinite]" strokeWidth={1.5} />
-                    ) : (
-                      <CloudLightning className="w-1/3 h-1/3 text-white drop-shadow-[0_0_20px_rgba(255,255,255,1)]" strokeWidth={1} />
-                    )}
-                   </div>
-                </div>
+                        {/* CILINDRE DE CONTENCIÓ (PLASMA PILLAR) */}
+                        <div className="absolute w-[180px] h-[280px] left-[110px] top-[10px] preserve-3d">
+                            {[0, 60, 120].map(deg => (
+                                <div key={`plasma-${deg}`} className="absolute inset-0 rounded-full border-x-[1px] border-sky-300/20 bg-gradient-to-b from-transparent via-sky-400/5 to-transparent shadow-[0_0_15px_rgba(56,189,248,0.1)] preserve-3d" style={{ transform: `rotateY(${deg}deg)` }}>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-sky-500/5 to-transparent blur-[2px] opacity-40 mix-blend-screen"></div>
+                                </div>
+                            ))}
 
-                <div className={`absolute inset-x-[-10%] preserve-3d animate-[vertical-scan_10s_ease-in-out_infinite] border-[3px] rounded-xl backface-hidden transition-colors ${loading ? 'border-amber-400/40 shadow-[0_0_30px_rgba(245,158,11,0.5)]' : 'border-sky-400/30 shadow-[0_0_25px_rgba(56,189,248,0.4)]'}`} style={{ transform: 'translateZ(100px)' }}>
-                    <div className={`absolute inset-0 w-[400%] h-full text-[5px] font-mono font-black text-sky-200/10 animate-[data-stream-flow_1.5s_linear_infinite] uppercase overflow-hidden`} style={{ backgroundImage: 'repeating-linear-gradient(rgba(56,189,248,0.1) 0px, rgba(56,189,248,0.1) 1px, transparent 1px, transparent 10px)' }}>
-                        {`...${Array(120).fill('TAW_AROME_DEEP_SCAN').join('...')}...`}
+                            <div className="absolute inset-x-[40%] inset-y-0 bg-gradient-to-t from-sky-400/0 via-sky-300/20 to-sky-400/0 blur-[15px] animate-[plasma-pulse_3s_ease-in-out_infinite] preserve-3d" style={{ transform: 'translateZ(0px)' }}></div>
+
+                            {isMounted && precipDrops.map(drop => (
+                                <div key={drop.id} className="absolute w-[1.5px] h-[15px] bg-gradient-to-b from-transparent via-sky-200 to-sky-400 rounded-full opacity-80 animate-[precip-drop_2.5s_linear_infinite] preserve-3d shadow-[0_0_5px_rgba(56,189,248,0.6)]" 
+                                    style={{ left: drop.left, animationDelay: drop.delay, '--z': drop.z } as React.CSSProperties}></div>
+                            ))}
+
+                            {isMounted && clouds.map((cloud) => (
+                                <div key={`cloud-${cloud.id}`} className="absolute w-32 h-16 preserve-3d animate-[cloud-pan_20s_linear_infinite]" 
+                                    style={{ animationDelay: cloud.delay, '--y': cloud.y, '--z': cloud.z } as React.CSSProperties}>
+                                    <div className="absolute inset-0 bg-white/10 rounded-full blur-[20px] shadow-[0_0_20px_rgba(255,255,255,0.2)] mix-blend-screen"></div>
+                                    <div className="absolute inset-[15%] bg-slate-100/20 rounded-full blur-[10px]"></div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* DYSON CORE I ANELLS ORBITALS VECTORIALS */}
+                        <div className="absolute w-[90px] h-[90px] left-[155px] top-[105px] preserve-3d">
+                            <div className={`absolute inset-0 rounded-full blur-[30px] transition-colors duration-1000 ${loading ? 'bg-amber-500/60 shadow-[0_0_60px_rgba(245,158,11,0.7)]' : 'bg-sky-400/70 shadow-[0_0_60px_rgba(56,189,248,0.7)]'}`}></div>
+                            <div className="absolute inset-[15%] bg-gradient-to-tr from-white via-sky-100 to-transparent rounded-full blur-[6px] animate-[plasma-pulse_2s_ease-in-out_infinite] shadow-[0_0_20px_white]"></div>
+
+                            <div className="absolute inset-[-40%] preserve-3d animate-[ring-spin-x_8s_linear_infinite]">
+                                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(56,189,248,0.4)" strokeWidth="1" strokeDasharray="20, 10, 5, 10" />
+                                </svg>
+                            </div>
+                            <div className="absolute inset-[-30%] preserve-3d animate-[ring-spin-y_12s_linear_infinite]">
+                                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeDasharray="30, 40" />
+                                </svg>
+                            </div>
+
+                            <div className="absolute inset-[25%] preserve-3d">
+                                {[0, 72, 144, 216, 288].map(rot => (
+                                    <div key={rot} className="absolute inset-0 flex items-center justify-center preserve-3d backface-hidden" style={{ transform: `rotateY(${rot}deg)` }}>
+                                        {loading ? (
+                                            <Zap className="w-full h-full text-amber-100 animate-[thunder-bolt_2s_linear_infinite]" strokeWidth={2.5} />
+                                        ) : (
+                                            <CloudLightning className="w-full h-full text-white drop-shadow-[0_0_20px_rgba(255,255,255,1)]" strokeWidth={2.5} />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* DATA CUBES AMB PANELLS FLOTANTS */}
+                        {orbitingSensors.map((sensor, i) => (
+                            <div key={`sensor-orbit-${i}`} className="absolute left-[200px] top-[150px] preserve-3d" style={{ transform: `rotateY(${sensor.angle}deg)` }}>
+                                <div className="absolute top-1/2 left-1/2 h-[1px] bg-sky-400/50 preserve-3d shadow-[0_0_8px_rgba(56,189,248,0.6)]"
+                                     style={{ width: '220px', transform: 'translateX(-110px) translateY(-50px) translateZ(110px) rotateY(-90deg)' }}></div>
+
+                                <div className="absolute preserve-3d" style={{ transform: 'translateX(-45px) translateY(-55px) translateZ(220px)' }}>
+                                    <div className="relative w-[90px] h-[110px] preserve-3d animate-[cube-spin_15s_linear_infinite]">
+                                        <div className="absolute inset-[25%] bg-sky-400/20 blur-[15px] rounded-full preserve-3d"></div>
+
+                                        {[0, 90, 180, 270].map(rot => (
+                                            <div key={`face-${rot}`} className="absolute inset-0 flex flex-col items-center justify-between py-2.5 px-2 rounded-xl bg-slate-900/95 backdrop-blur-xl border-[1.5px] border-sky-400/30 shadow-[0_10px_25px_rgba(0,0,0,0.8),inset_0_0_10px_rgba(56,189,248,0.15)] preserve-3d backface-hidden" style={{ transform: `rotateY(${rot}deg) translateZ(45px)` }}>
+                                                <div className="absolute inset-0 overflow-hidden rounded-xl opacity-10 pointer-events-none">
+                                                    <div className="w-full h-2 bg-sky-400 blur-[2px] animate-[scan-line_2s_linear_infinite]"></div>
+                                                </div>
+                                                <div className="p-1.5 rounded-lg bg-black/90 shadow-[inset_0_0_10px_rgba(56,189,248,0.3)] border border-white/5 z-10">
+                                                    <sensor.Icon className={`w-4 h-4 ${sensor.color} animate-[plasma-pulse_1.5s_ease-in-out_infinite]`} strokeWidth={2.5} />
+                                                </div>
+                                                <div className="flex flex-col items-center z-10">
+                                                    <span className="text-[10px] font-mono tracking-widest font-black text-white uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">{sensor.label}</span>
+                                                    <span className="text-[8px] font-mono font-bold text-sky-300/70 mt-0.5">{sensor.val}</span>
+                                                </div>
+                                                <div className={`w-14 h-1.5 ${loading ? 'bg-amber-950/80' : 'bg-sky-950/80'} rounded-full overflow-hidden border border-white/10 z-10 shadow-inner`}>
+                                                    <div className={`h-full rounded-full ${loading ? 'bg-gradient-to-r from-amber-600 to-amber-300' : 'bg-gradient-to-r from-sky-500 to-white'}`} style={{ width: sensor.width }}></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
-
-                {/* SENSORS ORBITALS */}
-                {orbitingSensors.map(({ Icon, color, angle, label, width }, i) => (
-                  <div 
-                    key={`sensor-${i}`}
-                    className="absolute inset-0 preserve-3d"
-                    style={{ transform: `rotateY(${angle}deg) translateZ(145px) scale(0.9)` }}
-                  >
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 p-2 glass-panel rounded-lg transform rotateY(${-angle}deg) backface-hidden border border-sky-500/20 shadow-xl">
-                      <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color} animate-pulse`} />
-                      <span className="text-[9px] font-mono tracking-wider font-bold text-slate-200 uppercase">{label}</span>
-                      <div className={`w-10 h-0.5 ${loading ? 'bg-amber-500/40' : 'bg-sky-400/35'} rounded-full overflow-hidden mt-0.5`}>
-                        <div className={`h-full ${loading ? 'bg-amber-400' : 'bg-sky-300'}`} style={{ width }}></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
             </div>
         </div>
 
-        {/* PANELL PRINCIPAL */}
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-md shrink-0 z-30 gap-6">
+        {/* =========================================================================
+            PANELL PRINCIPAL TÀCTIC (Mida Contenida en PC per Descompressió)
+            ========================================================================= */}
+        <div className="relative flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-[420px] lg:max-w-[420px] xl:max-w-[460px] shrink-0 z-30 gap-6 lg:gap-7">
             
-            <div className="flex flex-col items-center lg:items-start w-full">
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-sky-200 to-sky-500 drop-shadow-[0_0_25px_rgba(56,189,248,0.3)] animate-[title-shine_8s_linear_infinite] bg-[length:200%_auto]">
-                METEOTONI
-                <span className="text-sky-400 ml-2">AI</span>
+            {/* CAPÇALERA TÍTOL */}
+            <div className="flex flex-col items-center lg:items-start w-full gap-2.5 lg:gap-3 relative z-10">
+              
+              <div className="flex items-center gap-2 opacity-80 mb-[-8px] lg:mb-[-10px] ml-1">
+                <div className="w-5 h-[2px] bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.8)]"></div>
+                <span className="text-[8px] sm:text-[9px] font-mono font-black tracking-[0.3em] text-sky-400 uppercase">
+                  SYS.INIT // OMEGA
+                </span>
+              </div>
+
+              <h1 className="relative flex items-center text-5xl sm:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tighter">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-100 to-sky-400 drop-shadow-[0_0_25px_rgba(56,189,248,0.5)] animate-[title-shine_4s_linear_infinite] bg-[length:200%_auto]">
+                  METEOTONI
+                </span>
+                <div className="relative ml-1.5 flex items-center justify-center">
+                   <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-sky-300 to-indigo-500 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">AI</span>
+                   <span className="absolute inset-0 text-sky-400 blur-[8px] opacity-70 animate-[plasma-pulse_3s_ease-in-out_infinite]" aria-hidden="true">AI</span>
+                   <div className="absolute -right-3 -top-0.5 w-2 h-2 bg-sky-400 rounded-full animate-ping opacity-80 hidden lg:block"></div>
+                   <div className="absolute -right-3 -top-0.5 w-1.5 h-1.5 bg-sky-300 rounded-full shadow-[0_0_8px_rgba(56,189,248,1)] hidden lg:block"></div>
+                </div>
               </h1>
-              <div className="flex items-center gap-2 mt-2 px-3 py-1 rounded-full glass-panel border-sky-500/20">
-                  <Activity className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                  <span className="text-[10px] sm:text-xs font-bold tracking-[0.2em] text-sky-100 uppercase">
-                    {systemText.tagline}
-                  </span>
+
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-sky-400/30 bg-sky-950/40 backdrop-blur-md shadow-[0_0_15px_rgba(56,189,248,0.2)] mt-1">
+                  <Crosshair className="w-3.5 h-3.5 text-sky-400 animate-[plasma-pulse_2s_ease-in-out_infinite]" />
+                  <span className="text-[10px] font-bold tracking-[0.25em] text-sky-100 uppercase">{systemText.tagline}</span>
               </div>
             </div>
 
-            <div className="w-full glass-panel rounded-2xl p-4 sm:p-5 flex flex-col gap-5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            {/* CONSOLA BLINDADA */}
+            <div className="w-full glass-panel-tactical rounded-[1.5rem] p-5 sm:p-6 flex flex-col gap-6 relative z-10 glitch-overlay">
               
-              {/* SISTEMA DUAL DE COBERTURA */}
-              <div className="w-full flex flex-col gap-2 bg-black/40 p-3 rounded-xl border border-white/5 shadow-inner">
+              <div className="w-full relative px-4 py-4 rounded-xl lg:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]">
                 
-                {/* Motor 1: AROME HD (Prioritari) */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between items-center w-full">
-                    <span className="text-[10px] sm:text-xs font-mono font-bold text-emerald-300">
+                <div className="absolute top-0 left-0 w-3 h-3 border-t-[1.5px] border-l-[1.5px] border-sky-500/40 rounded-tl-xl lg:rounded-tl-2xl pointer-events-none"></div>
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[1.5px] border-r-[1.5px] border-sky-500/40 rounded-br-xl lg:rounded-br-2xl pointer-events-none"></div>
+
+                <div className="w-full relative flex flex-col gap-4 lg:gap-5">
+                  <div className="absolute left-[7px] top-[12px] bottom-[12px] w-[1.5px] bg-gradient-to-b from-emerald-500/80 via-sky-500/30 to-transparent shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div>
+
+                  <div className="relative flex flex-col sm:flex-row sm:items-center justify-between w-full pl-8 gap-2 sm:gap-0">
+                    <div className="absolute left-0 w-4 h-4 flex items-center justify-center -translate-x-1/2">
+                      <div className="absolute w-full h-full bg-emerald-500/40 rounded-full animate-ping"></div>
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
+                    </div>
+                    
+                    <span className="text-[11px] sm:text-xs font-mono font-black text-emerald-300 tracking-widest drop-shadow-[0_0_5px_rgba(52,211,153,0.5)] uppercase text-left">
                       {systemText.modelArome}
                     </span>
-                    <span className="text-[10px] sm:text-xs font-mono font-bold text-emerald-400 animate-pulse">
-                      {systemText.sysActive}
-                    </span>
+                    
+                    <div className="flex items-center self-start sm:self-auto bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-emerald-400 tracking-wider">
+                        {systemText.sysActive}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full h-1 bg-slate-800/80 rounded-full overflow-hidden relative">
-                    <div className="absolute inset-0 w-3/4 bg-gradient-to-r from-transparent via-emerald-400/80 to-transparent animate-[telemetry-scan_2s_ease-in-out_infinite]"></div>
-                  </div>
-                </div>
 
-                {/* Motor 2: GFS/WRF (Fallback Global) */}
-                <div className="flex flex-col gap-1 pt-2 border-t border-white/10 mt-1">
-                  <div className="flex justify-between items-center w-full opacity-75">
-                    <span className="text-[9px] sm:text-[10px] font-mono font-semibold text-slate-400">
+                  <div className="relative flex flex-col sm:flex-row sm:items-center justify-between w-full pl-8 gap-2 sm:gap-0 opacity-60 transition-opacity hover:opacity-100">
+                    <div className="absolute left-0 w-4 h-4 flex items-center justify-center -translate-x-1/2">
+                      <div className="w-1.5 h-1.5 bg-sky-600 rounded-full shadow-[0_0_5px_rgba(2,132,199,0.5)]"></div>
+                    </div>
+                    
+                    <span className="text-[10px] sm:text-[11px] font-mono font-semibold text-slate-300 tracking-widest uppercase text-left">
                       {systemText.modelFallback}
                     </span>
-                    <span className="text-[9px] sm:text-[10px] font-mono font-semibold text-sky-400/80">
+                    
+                    <span className="text-[9px] sm:text-[10px] font-mono font-bold text-sky-500/80 tracking-wider self-start sm:self-auto shrink-0">
                       {systemText.sysAuto}
                     </span>
-                  </div>
-                  <div className="w-full h-[3px] bg-slate-800/80 rounded-full overflow-hidden relative">
-                    <div className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-sky-400/30 to-transparent animate-[telemetry-scan_3s_ease-in-out_infinite]"></div>
                   </div>
                 </div>
               </div>
 
-              {/* BOTÓ D'ACCIÓ PRINCIPAL */}
-              <button 
-                  type="button"
-                  onClick={onLocate}
-                  disabled={loading}
-                  className={`group relative w-full py-4 transition-all duration-300 overflow-hidden flex items-center justify-center rounded-xl border
-                  ${loading 
-                      ? 'cursor-wait bg-gradient-to-r from-amber-600 to-orange-700 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)]' 
-                      : 'cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-600 border-sky-400/50 shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:shadow-[0_0_40px_rgba(56,189,248,0.7)] hover:from-sky-400 hover:to-indigo-500 active:scale-[0.97]'
-                  }`}
-              >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-[200%] animate-[title-shine_3s_linear_infinite] pointer-events-none"></div>
+              <button type="button" onClick={onLocate} disabled={loading}
+                  className={`group relative w-full py-5 transition-all duration-300 overflow-hidden flex items-center justify-center rounded-xl border ${loading ? 'cursor-wait bg-gradient-to-r from-amber-700 to-orange-900 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.4)]' : 'cursor-pointer bg-gradient-to-r from-sky-600 to-indigo-700 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.3)] hover:shadow-[0_0_50px_rgba(56,189,248,0.6)] hover:from-sky-500 hover:to-indigo-600 active:scale-[0.98] lg:hover:scale-[1.02]'}`} >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent w-[200%] animate-[title-shine_2s_linear_infinite] pointer-events-none"></div>
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${loading ? 'bg-amber-400' : 'bg-sky-300'} shadow-[0_0_10px_currentColor]`}></div>
                   <div className="relative flex items-center gap-3 z-10">
                       {loading ? (
-                          <>
-                              <Loader2 className="w-5 h-5 text-white animate-spin drop-shadow-md" />
-                              <span className="font-sans font-bold tracking-widest text-sm text-white uppercase drop-shadow-md">{systemText.loading}</span>
-                          </>
+                          <><Loader2 className="w-5 h-5 text-white animate-spin drop-shadow-lg" /><span className="font-sans font-black tracking-widest text-sm sm:text-base text-white uppercase drop-shadow-lg">{systemText.loading}</span></>
                       ) : (
-                          <>
-                              <MapPin className="w-5 h-5 text-white group-hover:-translate-y-1 transition-transform duration-300 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]" />
-                              <span className="font-sans font-black tracking-[0.25em] text-lg text-white uppercase drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]">
-                                  {systemText.start}
-                              </span>
-                          </>
+                          <><MapPin className="w-5 h-5 text-white group-hover:-translate-y-0.5 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" /><span className="font-sans font-black tracking-[0.25em] text-lg sm:text-xl text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{systemText.start}</span></>
                       )}
                   </div>
               </button>
 
               <div className="flex items-center justify-between w-full pt-1">
-                  <button 
-                      type="button"
-                      onClick={openDiagnosticsModal}
-                      className="flex items-center gap-1.5 group opacity-80 hover:opacity-100 transition-all cursor-pointer px-3 py-1.5 rounded-lg glass-panel-interactive border-white/10"
-                  >
-                      <HelpCircle className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                          {systemText.manual}
-                      </span>
+                  <button type="button" onClick={openDiagnosticsModal} className="flex items-center gap-1.5 group cursor-pointer px-3.5 py-2 rounded-lg glass-panel-interactive">
+                      <HelpCircle className="w-4 h-4 text-sky-400 group-hover:text-sky-300 group-hover:scale-110 transition-all" />
+                      <span className="text-[10px] font-bold text-slate-300 group-hover:text-white uppercase tracking-widest transition-colors">{systemText.manual}</span>
                   </button>
-
-                  <div className="flex gap-1 bg-black/30 p-1 rounded-full border border-white/5">
+                  <div className="flex gap-1 bg-black/60 p-1 rounded-lg border border-white/10 shadow-inner">
                       {(['ca', 'es', 'en', 'fr'] as Language[]).map((l) => (
-                          <button
-                              key={l}
-                              type="button"
-                              disabled={loading}
-                              onClick={() => setLang(l)}
-                              className={`
-                                  px-3 py-1 font-sans text-[10px] font-bold uppercase transition-all duration-300 rounded-full
-                                  ${lang === l 
-                                      ? 'bg-sky-500 text-white shadow-[0_0_10px_rgba(56,189,248,0.5)]' 
-                                      : 'text-slate-400 hover:text-white hover:bg-white/10'}
-                                  ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}
-                              `}
-                          >
+                          <button key={l} type="button" disabled={loading} onClick={() => setLang(l)}
+                              className={`px-3.5 py-1.5 font-sans text-[10px] font-black uppercase transition-all duration-300 rounded-md ${lang === l ? 'bg-sky-500 text-white shadow-[0_0_15px_rgba(56,189,248,0.6)]' : 'text-slate-400 hover:text-white hover:bg-white/10'} ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} >
                               {l}
                           </button>
                       ))}
@@ -437,36 +470,26 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         </div>
       </main>
 
-      {/* MODAL I18N ENLLAÇAT */}
+      {/* MODAL I18N */}
       {showDiagnostics && (
-        <DiagnosticsModal
-          onClose={closeDiagnosticsModal}
-          lang={lang}
-          t={t}
-          wrfWindFormatted={systemText.sysAuto}
-          aromeWindFormatted={systemText.sysActive}
-        />
+        <DiagnosticsModal onClose={closeDiagnosticsModal} lang={lang} t={t} wrfWindFormatted={systemText.sysAuto} aromeWindFormatted={systemText.sysActive} />
       )}
 
-      {/* FOOTER TELEMÈTRIC */}
-      <footer className="relative w-full border-t border-white/5 px-4 py-3 flex items-center justify-between z-40 shrink-0 bg-transparent mt-auto">
-          <div className="flex items-center gap-2">
+      {/* FOOTER */}
+      <footer className="relative w-full border-t border-white/10 px-4 py-3 sm:py-4 flex items-center justify-between z-40 shrink-0 bg-black/30 backdrop-blur-md mt-auto">
+          <div className="flex items-center gap-2.5">
               <div className="relative flex items-center justify-center">
-                <div className="absolute w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-60"></div>
-                <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,1)]"></div>
+                <div className="absolute w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping opacity-60"></div>
+                <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,1)]"></div>
               </div>
-              <span className="text-[10px] font-bold text-emerald-200 tracking-widest uppercase">
-                  {systemText.systemStatus}
-              </span>
+              <span className="text-[10px] font-black text-emerald-400 tracking-widest uppercase">{systemText.systemStatus}</span>
           </div>
-
-          <div className="flex items-center gap-4">
-              <div className="hidden xs:flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400/80" /> {systemText.secure}
+          <div className="flex items-center gap-4 sm:gap-6">
+              <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {systemText.secure}
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 tracking-widest">
-                  <span>© {year} MT-AI</span>
-                  <span>v{safeVersion}</span>
+              <div className="flex items-center gap-2 text-[10px] font-mono font-black text-slate-500 tracking-widest uppercase">
+                  <span className="text-slate-400">© {year} MT-AI</span><span className="text-sky-500/90 drop-shadow-[0_0_5px_rgba(56,189,248,0.5)]">v{safeVersion}</span>
               </div>
           </div>
       </footer>
