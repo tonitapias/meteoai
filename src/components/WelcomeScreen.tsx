@@ -23,11 +23,11 @@ interface Drop { id: number; left: string; delay: string; z: string; }
 interface Cloud { id: number; y: string; delay: string; z: string; }
 
 /**
- * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v7.6 ULTRA-MINIMAL)
+ * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v7.7 SOLID STATE)
  * Arquitectura: Spatial UI, Modal Desacoblat i18n, Puresa React garantida.
  * Holograma v7.0: Motor DOM 3D Pur, Vectors SVG integrats, Plasma Pillar.
- * UI v7.6 Update: Purgat de complexitat visual. Micro-HUD d'una línia per evitar
- * saturació en mòbil i garantir ajustament perfecte sense scroll vertical.
+ * UI v7.7 Update: Flickering fix (eliminades animacions pesades text-clip) i
+ * purgat total del panell de models per a una UX 100% directa al botó d'acció.
  */
 export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: WelcomeScreenProps) {
   const year = new Date().getFullYear();
@@ -44,8 +44,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     manual: tWelcome.manual || (lang === 'es' ? "MANUAL IA" : lang === 'en' ? "AI MANUAL" : lang === 'fr' ? "MANUEL IA" : "MANUAL IA"),
     systemStatus: tWelcome.systemStatus || (lang === 'es' ? "SISTEMA ÓPTIMO" : lang === 'en' ? "SYSTEM OPTIMAL" : lang === 'fr' ? "SYSTÈME OPTIMAL" : "SISTEMA ÒPTIM"),
     secure: tWelcome.secure || (lang === 'es' ? "CONEXIÓN SEGURA" : lang === 'en' ? "SECURE CONNECTION" : lang === 'fr' ? "CONNEXION SÉCURISÉE" : "CONNEXIÓ SEGURA"),
-    modelArome: tWelcome.modelArome || (lang === 'es' ? "AROME HD (COBERTURA TÁCTICA)" : lang === 'en' ? "AROME HD (TACTICAL COVERAGE)" : lang === 'fr' ? "AROME HD (COUVERTURE TACTIQUE)" : "AROME HD (COBERTURA TÀCTICA)"),
-    modelFallback: tWelcome.modelFallback || (lang === 'es' ? "MULTI-MODELO GLOBAL" : lang === 'en' ? "GLOBAL MULTI-MODEL" : lang === 'fr' ? "MULTI-MODÈLE GLOBAL" : "MULTI-MODEL GLOBAL"),
+    // Aquests texts es mantenen per ser enviats al DiagnosticsModal, però no es renderitzen a la portada.
     sysActive: tWelcome.sysActive || (lang === 'es' ? "[ PRIORIDAD ]" : lang === 'en' ? "[ PRIORITY ]" : lang === 'fr' ? "[ PRIORITÉ ]" : "[ PRIORITAT ]"),
     sysAuto: tWelcome.sysAuto || (lang === 'es' ? "[ AUTO-SWITCH ]" : lang === 'en' ? "[ AUTO-SWITCH ]" : lang === 'fr' ? "[ AUTO-SWITCH ]" : "[ AUTO-SWITCH ]"),
   };
@@ -147,9 +146,10 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
           0% { transform: translateY(-100%); }
           100% { transform: translateY(300%); }
         }
+        /* Simplificat per no forçar redibuixats constants a la GPU del mòbil */
         @keyframes plasma-pulse {
-          0%, 100% { opacity: 0.3; transform: scale(0.95); filter: blur(2px); }
-          50% { opacity: 1; transform: scale(1.05); filter: blur(0px); }
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
         }
         @keyframes particle-rise {
           0% { transform: translateY(20px) translateX(0px); opacity: 0; }
@@ -162,10 +162,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
           92% { opacity: 1; }
           93% { opacity: 0.2; }
           94% { opacity: 1; }
-        }
-        @keyframes title-shine {
-          0% { background-position: 200% center; }
-          100% { background-position: -200% center; }
         }
         @keyframes precip-drop {
           0% { transform: translateY(0px) translateZ(var(--z)); opacity: 0; }
@@ -214,7 +210,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* FONS ATMOSFÈRIC AURORA ATENUADA PER PC */}
+      {/* FONS ATMOSFÈRIC AURORA ATENUADA PER PC I MÒBIL */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(15,23,42,0)_0%,rgba(2,6,23,1)_100%)]">
         <div className="absolute -top-[30%] -left-[20%] w-[120%] h-[120%] bg-sky-500/10 lg:bg-sky-500/5 rounded-full blur-[120px] mix-blend-screen animate-[aurora-shift_30s_ease-in-out_infinite]"></div>
         <div className="absolute -bottom-[30%] -right-[20%] w-[120%] h-[120%] bg-indigo-600/10 lg:bg-indigo-600/5 rounded-full blur-[120px] mix-blend-screen animate-[aurora-shift_35s_ease-in-out_infinite_reverse]"></div>
@@ -228,17 +224,16 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         </div>
       </div>
 
-      {/* DISTRIBUCIÓ PRINCIPAL (Més compacta en mòbil per evitar scroll) */}
+      {/* DISTRIBUCIÓ PRINCIPAL */}
       <main className="relative z-30 flex-1 w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 xl:px-24 py-6 sm:py-12 flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-6 lg:gap-8 xl:gap-12 no-scrollbar">
         
         {/* =========================================================================
-            HOLOGRAMA V7.0 (Escalat reduït en mòbil per descarregar pantalla)
+            HOLOGRAMA V7.0
             ========================================================================= */}
         <div className="relative w-full max-w-[280px] sm:max-w-[420px] lg:max-w-[480px] xl:max-w-[540px] aspect-square shrink-0 flex items-center justify-center perspective-xl animate-[float-hologram_10s_ease-in-out_infinite]">
             
             <div className={`absolute inset-0 rounded-full blur-[100px] lg:blur-[140px] transition-colors duration-1000 opacity-50 lg:opacity-40 ${loading ? 'bg-amber-600/30' : 'bg-sky-500/20'}`}></div>
             
-            {/* Reduït de scale-[0.75] a scale-[0.65] en mòbil per guanyar espai vital */}
             <div className="absolute w-[400px] h-[400px] preserve-3d transform scale-[0.65] sm:scale-100 lg:scale-[1.1] xl:scale-[1.2]">
                 
                 <div className="absolute inset-0 preserve-3d" style={{ transform: 'rotateX(20deg) translateY(-30px)' }}>
@@ -300,7 +295,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                         {/* DYSON CORE I ANELLS ORBITALS VECTORIALS */}
                         <div className="absolute w-[90px] h-[90px] left-[155px] top-[105px] preserve-3d">
                             <div className={`absolute inset-0 rounded-full blur-[30px] transition-colors duration-1000 ${loading ? 'bg-amber-500/60 shadow-[0_0_60px_rgba(245,158,11,0.7)]' : 'bg-sky-400/70 shadow-[0_0_60px_rgba(56,189,248,0.7)]'}`}></div>
-                            <div className="absolute inset-[15%] bg-gradient-to-tr from-white via-sky-100 to-transparent rounded-full blur-[6px] animate-[plasma-pulse_2s_ease-in-out_infinite] shadow-[0_0_20px_white]"></div>
+                            <div className="absolute inset-[15%] bg-gradient-to-tr from-white via-sky-100 to-transparent rounded-full blur-[6px] shadow-[0_0_20px_white]"></div>
 
                             <div className="absolute inset-[-40%] preserve-3d animate-[ring-spin-x_8s_linear_infinite]">
                                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
@@ -342,7 +337,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                                                     <div className="w-full h-2 bg-sky-400 blur-[2px] animate-[scan-line_2s_linear_infinite]"></div>
                                                 </div>
                                                 <div className="p-1.5 rounded-lg bg-black/90 shadow-[inset_0_0_10px_rgba(56,189,248,0.3)] border border-white/5 z-10">
-                                                    <sensor.Icon className={`w-4 h-4 ${sensor.color} animate-[plasma-pulse_1.5s_ease-in-out_infinite]`} strokeWidth={2.5} />
+                                                    <sensor.Icon className={`w-4 h-4 ${sensor.color} animate-[plasma-pulse_2s_ease-in-out_infinite]`} strokeWidth={2.5} />
                                                 </div>
                                                 <div className="flex flex-col items-center z-10">
                                                     <span className="text-[10px] font-mono tracking-widest font-black text-white uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">{sensor.label}</span>
@@ -363,11 +358,11 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         </div>
 
         {/* =========================================================================
-            PANELL PRINCIPAL TÀCTIC (Compacte i Ultra-Minimalista)
+            PANELL PRINCIPAL TÀCTIC (Simplificat per evitar pampallugues)
             ========================================================================= */}
         <div className="relative flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-[420px] lg:max-w-[420px] xl:max-w-[460px] shrink-0 z-30 gap-5 lg:gap-7">
             
-            {/* CAPÇALERA TÍTOL */}
+            {/* CAPÇALERA TÍTOL NÍTIDA SENSE ANIMACIONS DE FONS */}
             <div className="flex flex-col items-center lg:items-start w-full gap-2 lg:gap-3 relative z-10">
               
               <div className="flex items-center gap-2 opacity-80 mb-[-6px] lg:mb-[-10px] ml-1">
@@ -377,15 +372,15 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                 </span>
               </div>
 
+              {/* Lletres de color sòlid amb degradat fix per evitar flickering a iOS/Android */}
               <h1 className="relative flex items-center text-[2.75rem] sm:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tighter">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-100 to-sky-400 drop-shadow-[0_0_25px_rgba(56,189,248,0.5)] animate-[title-shine_4s_linear_infinite] bg-[length:200%_auto]">
+                <span className="text-transparent bg-clip-text bg-gradient-to-br from-white to-sky-200 drop-shadow-[0_2px_10px_rgba(56,189,248,0.4)]">
                   METEOTONI
                 </span>
                 <div className="relative ml-1.5 flex items-center justify-center">
-                   <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-sky-300 to-indigo-500 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">AI</span>
-                   <span className="absolute inset-0 text-sky-400 blur-[8px] opacity-70 animate-[plasma-pulse_3s_ease-in-out_infinite]" aria-hidden="true">AI</span>
-                   <div className="absolute -right-3 -top-0.5 w-2 h-2 bg-sky-400 rounded-full animate-ping opacity-80 hidden lg:block"></div>
-                   <div className="absolute -right-3 -top-0.5 w-1.5 h-1.5 bg-sky-300 rounded-full shadow-[0_0_8px_rgba(56,189,248,1)] hidden lg:block"></div>
+                   <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-sky-300 to-indigo-400 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]">AI</span>
+                   {/* Eliminat el blur extrem. Deixem un indicador sòlid i nítid */}
+                   <div className="absolute -right-3 -top-0.5 w-1.5 h-1.5 bg-sky-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.8)] hidden lg:block"></div>
                 </div>
               </h1>
 
@@ -395,43 +390,21 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
               </div>
             </div>
 
-            {/* CONSOLA BLINDADA (Lleugera per a mòbil) */}
-            <div className="w-full glass-panel-tactical rounded-[1.25rem] p-4 sm:p-5 lg:p-6 flex flex-col gap-5 lg:gap-6 relative z-10 glitch-overlay">
+            {/* CONSOLA BLINDADA (Focalitzada només en l'acció principal) */}
+            <div className="w-full glass-panel-tactical rounded-[1.25rem] p-4 sm:p-5 lg:p-6 flex flex-col gap-4 lg:gap-5 relative z-10 glitch-overlay">
               
-              {/* MICRO-HUD DE MODELS (Ultra-compacte per evitar saturació) */}
-              <div className="w-full flex items-center justify-between px-3.5 py-2.5 lg:px-4 lg:py-3 rounded-lg lg:rounded-xl border border-white/10 bg-black/40 backdrop-blur-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative flex items-center justify-center">
-                    <div className="absolute w-2 h-2 bg-emerald-500/50 rounded-full animate-ping"></div>
-                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,1)]"></div>
-                  </div>
-                  <span className="text-[10px] lg:text-xs font-mono font-black text-emerald-300 tracking-widest uppercase">
-                    {systemText.modelArome}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-mono font-semibold text-slate-400 tracking-widest uppercase hidden sm:block">
-                    / {systemText.modelFallback}
-                  </span>
-                  <div className="bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
-                    <span className="text-[9px] lg:text-[10px] font-mono font-bold text-emerald-400 tracking-wider">
-                      {systemText.sysActive}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* BOTÓ D'ACCIÓ */}
+              {/* BOTÓ D'ACCIÓ PRINCIPAL (El rei absolut de la pantalla) */}
               <button type="button" onClick={onLocate} disabled={loading}
-                  className={`group relative w-full py-4 lg:py-5 transition-all duration-300 overflow-hidden flex items-center justify-center rounded-xl border ${loading ? 'cursor-wait bg-gradient-to-r from-amber-700 to-orange-900 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.4)]' : 'cursor-pointer bg-gradient-to-r from-sky-600 to-indigo-700 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.3)] hover:shadow-[0_0_50px_rgba(56,189,248,0.6)] hover:from-sky-500 hover:to-indigo-600 active:scale-[0.98] lg:hover:scale-[1.02]'}`} >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent w-[200%] animate-[title-shine_2s_linear_infinite] pointer-events-none"></div>
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${loading ? 'bg-amber-400' : 'bg-sky-300'} shadow-[0_0_10px_currentColor]`}></div>
+                  className={`group relative w-full py-5 lg:py-6 transition-transform duration-300 overflow-hidden flex items-center justify-center rounded-xl border ${loading ? 'cursor-wait bg-gradient-to-r from-amber-700 to-orange-900 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.4)]' : 'cursor-pointer bg-gradient-to-r from-sky-600 to-indigo-700 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.3)] lg:hover:shadow-[0_0_50px_rgba(56,189,248,0.6)] lg:hover:from-sky-500 lg:hover:to-indigo-600 active:scale-[0.98]'}`} >
+                  
+                  {/* Simplificat l'efecte hover d'escriptori i eliminades animacions backgound-position pesades */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 lg:w-2 ${loading ? 'bg-amber-400' : 'bg-sky-300'} shadow-[0_0_10px_currentColor]`}></div>
+                  
                   <div className="relative flex items-center gap-3 z-10">
                       {loading ? (
-                          <><Loader2 className="w-5 h-5 text-white animate-spin drop-shadow-lg" /><span className="font-sans font-black tracking-widest text-sm sm:text-base text-white uppercase drop-shadow-lg">{systemText.loading}</span></>
+                          <><Loader2 className="w-5 h-5 lg:w-6 lg:h-6 text-white animate-spin drop-shadow-lg" /><span className="font-sans font-black tracking-widest text-sm sm:text-base lg:text-lg text-white uppercase drop-shadow-lg">{systemText.loading}</span></>
                       ) : (
-                          <><MapPin className="w-5 h-5 text-white group-hover:-translate-y-0.5 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" /><span className="font-sans font-black tracking-[0.25em] text-lg sm:text-xl text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{systemText.start}</span></>
+                          <><MapPin className="w-5 h-5 lg:w-6 lg:h-6 text-white group-hover:-translate-y-0.5 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" /><span className="font-sans font-black tracking-[0.25em] text-lg sm:text-xl lg:text-2xl text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{systemText.start}</span></>
                       )}
                   </div>
               </button>
@@ -439,13 +412,13 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
               {/* CONTROLS INFERIORS */}
               <div className="flex items-center justify-between w-full pt-1">
                   <button type="button" onClick={openDiagnosticsModal} className="flex items-center gap-1.5 group cursor-pointer px-3.5 py-2 rounded-lg glass-panel-interactive">
-                      <HelpCircle className="w-4 h-4 text-sky-400 group-hover:text-sky-300 group-hover:scale-110 transition-all" />
+                      <HelpCircle className="w-4 h-4 text-sky-400 group-hover:text-sky-300 lg:group-hover:scale-110 transition-all" />
                       <span className="text-[10px] font-bold text-slate-300 group-hover:text-white uppercase tracking-widest transition-colors">{systemText.manual}</span>
                   </button>
                   <div className="flex gap-1 bg-black/60 p-1 rounded-lg border border-white/10 shadow-inner">
                       {(['ca', 'es', 'en', 'fr'] as Language[]).map((l) => (
                           <button key={l} type="button" disabled={loading} onClick={() => setLang(l)}
-                              className={`px-3 py-1.5 font-sans text-[10px] font-black uppercase transition-all duration-300 rounded-md ${lang === l ? 'bg-sky-500 text-white shadow-[0_0_15px_rgba(56,189,248,0.6)]' : 'text-slate-400 hover:text-white hover:bg-white/10'} ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} >
+                              className={`px-3 py-1.5 font-sans text-[10px] font-black uppercase transition-colors duration-200 rounded-md ${lang === l ? 'bg-sky-500 text-white shadow-[0_0_15px_rgba(56,189,248,0.6)]' : 'text-slate-400 hover:text-white hover:bg-white/10'} ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} >
                               {l}
                           </button>
                       ))}
@@ -464,7 +437,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
       <footer className="relative w-full border-t border-white/10 px-4 py-3 sm:py-4 flex items-center justify-between z-40 shrink-0 bg-black/30 backdrop-blur-md mt-auto">
           <div className="flex items-center gap-2.5">
               <div className="relative flex items-center justify-center">
-                <div className="absolute w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-60"></div>
+                <div className="absolute w-3 h-3 rounded-full bg-emerald-400 animate-[plasma-pulse_1.5s_ease-in-out_infinite]"></div>
                 <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,1)]"></div>
               </div>
               <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 tracking-widest uppercase">{systemText.systemStatus}</span>
