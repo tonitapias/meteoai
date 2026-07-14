@@ -1,3 +1,4 @@
+// src/components/DewPointWidget.tsx
 import { Droplets, CloudOff, AlertTriangle } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
@@ -68,45 +69,50 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
           <div className={MATRIX_BG}></div>
           <div className={`absolute top-0 left-0 w-24 h-24 rounded-full blur-3xl pointer-events-none z-0 transition-colors duration-700 ${hasData ? barColor.replace('bg-', 'bg-').replace('/50', '') : 'bg-slate-700'}`} style={{ opacity: 0.05 }}></div>
 
-          <div className={`${TITLE_STYLE.replace('mb-4', 'mb-2')} flex items-center gap-1.5 relative z-10`}>
+          {/* Capçalera tàctica */}
+          <div className={`${TITLE_STYLE.replace('mb-4', 'mb-2')} flex items-center gap-1.5 relative z-10 shrink-0`}>
               {hasData ? (
-                  <Droplets className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-colors duration-500" /> 
+                  <Droplets className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-colors duration-500 shrink-0" /> 
               ) : (
-                  <CloudOff className="w-4 h-4 text-slate-500" />
+                  <CloudOff className="w-4 h-4 text-slate-500 shrink-0" />
               )}
-              <span className="tracking-wider text-slate-200">{tDew}</span>
+              <span className="tracking-wider text-slate-200 truncate">{tDew}</span>
           </div>
           
-          <div className="flex items-center justify-between flex-1 pb-4 pt-2 relative z-10">
+          {/* Graella Simètrica Blindada (1fr - auto - 1fr) per evitar compressió al PC */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-2 flex-1 pb-3 pt-1 sm:pt-2 relative z-10 w-full min-w-0">
+              
               {/* Targeta Punt de Rosada */}
-              <div className={`flex flex-col items-start px-3 py-2 rounded-lg border backdrop-blur-sm transform transition-colors duration-500 ${hasValue ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
-                  <span className={`text-4xl sm:text-5xl font-black tabular-nums tracking-tighter leading-none ${hasValue ? 'text-white drop-shadow-xl' : 'text-slate-600'}`}>
+              <div className={`flex flex-col items-start px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg border backdrop-blur-sm transform transition-colors duration-500 w-full min-w-0 overflow-hidden ${hasValue ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
+                  {/* Tipografia escalada a xl:text-4xl (màxim 3 caràcters segurs) + whitespace-nowrap per bloquejar salts de línia */}
+                  <span className={`text-2xl sm:text-3xl xl:text-4xl font-black tabular-nums tracking-tighter leading-none whitespace-nowrap w-full ${hasValue ? 'text-white drop-shadow-xl' : 'text-slate-600'}`}>
                       {displayVal}{hasValue ? '°' : ''}
                   </span>
-                  <div className="flex items-center gap-1 mt-2">
-                      {hasValue && safeValue < 0 && <AlertTriangle className="w-2.5 h-2.5 text-cyan-400" />}
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                  <div className="flex items-center gap-1 mt-1 sm:mt-1.5 w-full min-w-0">
+                      {hasValue && safeValue < 0 && <AlertTriangle className="w-2.5 h-2.5 text-cyan-400 shrink-0" />}
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate w-full">
                           {lang === 'ca' ? 'Rosada' : 'Dew Pt.'}
                       </span>
                   </div>
               </div>
               
-              {/* Divisor òptic */}
-              <div className="h-12 w-px bg-gradient-to-b from-transparent via-slate-500/30 to-transparent mx-2"></div>
+              {/* Divisor òptic central */}
+              <div className="h-9 sm:h-11 w-px bg-gradient-to-b from-transparent via-slate-500/30 to-transparent shrink-0"></div>
               
               {/* Targeta Humitat */}
-              <div className={`flex flex-col items-end px-3 py-2 rounded-lg border backdrop-blur-sm transform transition-colors duration-500 ${hasHumidity ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
-                  <span className={`text-3xl sm:text-4xl font-black tabular-nums leading-none ${hasHumidity ? 'text-cyan-400 drop-shadow-md' : 'text-slate-600'}`}>
+              <div className={`flex flex-col items-end px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg border backdrop-blur-sm transform transition-colors duration-500 w-full min-w-0 overflow-hidden ${hasHumidity ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
+                  {/* Tipografia asimètrica escalada a xl:text-3xl (blindatge per a 4 caràcters "100%") + whitespace-nowrap */}
+                  <span className={`text-2xl sm:text-3xl xl:text-3xl font-black tabular-nums tracking-tighter leading-none whitespace-nowrap w-full text-right ${hasHumidity ? 'text-cyan-400 drop-shadow-md' : 'text-slate-600'}`}>
                       {displayHum}{hasHumidity ? '%' : ''}
                   </span>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2 text-right">
-                      {lang === 'ca' ? 'Humitat Rel.' : 'RH'}
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1 sm:mt-1.5 text-right truncate w-full">
+                      {lang === 'ca' ? 'Humitat' : 'RH'}
                   </span>
               </div>
           </div>
 
           {/* Instrument Analògic: Barra Lineal */}
-          <div className={`w-full h-2 rounded-full overflow-hidden border shadow-inner mt-2 relative z-10 transition-colors duration-500 ${hasData ? 'bg-[#0a0b10] border-white/5' : 'bg-slate-900/50 border-slate-800'}`}>
+          <div className={`w-full h-2 rounded-full overflow-hidden border shadow-inner mt-1 sm:mt-2 relative z-10 shrink-0 transition-colors duration-500 ${hasData ? 'bg-[#0a0b10] border-white/5' : 'bg-slate-900/50 border-slate-800'}`}>
               
               {/* Línies de calibratge absolutes (Ticks) */}
               <div className="absolute inset-0 z-10 pointer-events-none">
