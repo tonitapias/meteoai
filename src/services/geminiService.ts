@@ -6,7 +6,6 @@ import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { AI_PROMPTS } from '../constants/aiPrompts';
 
-// Importem la configuració centralitzada
 import { 
     GEMINI_PROXY_URL, 
     AI_CACHE_TTL, 
@@ -19,7 +18,6 @@ interface AICacheData {
     tips: string[];
 }
 
-// Tipus auxiliar per coordenades
 type LocatableData = {
     latitude?: number;
     longitude?: number;
@@ -27,31 +25,24 @@ type LocatableData = {
 };
 
 export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, language: string): Promise<AICacheData | null> => {
-    // Validació de seguretat de la configuració
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
-        // CANVI: Warn en lloc d'Error per no embrutar logs si algú fa un fork sense config
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
         return null;
     }
 
     try {
-        // 1. Validació de dades
         if (!weatherData?.current || !weatherData.hourly || !weatherData.daily) return null;
 
-        // 2. Preparació del context
         const context = prepareContextForAI(weatherData.current, weatherData.daily, weatherData.hourly);
         if (!context) return null;
 
-        // 3. Generació de Clau Única per a la Cache
         const safeData = weatherData as unknown as LocatableData;
         const lat = safeData.latitude ?? safeData.location?.latitude ?? 0;
         const lon = safeData.longitude ?? safeData.location?.longitude ?? 0;
         
-        // Usem l'elevació com a part de la clau (context geogràfic únic)
         const elevationKey = context.location.elevation.toString(); 
         const cacheKey = cacheService.generateAiKey(elevationKey, lat, lon, language);
         
-        // 4. Verificació de Caché (Estalvi de peticions)
         try {
             const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
             if (cachedData) {
@@ -61,58 +52,82 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             console.warn("⚠️ Error llegint Cache IA:", dbError);
         }
 
-        // 5. Construcció del Prompt (Enginyeria de Prompts)
+        let finestraPrevista = "Sense dades horàries.";
+        if (weatherData.hourly && Array.isArray(weatherData.hourly.time)) {
+            const nowMs = Date.now();
+            const times = weatherData.hourly.time;
+            
+            let startIndex = times.findIndex(t => {
+                const tMs = typeof t === 'number' ? t * 1000 : new Date(t).getTime();
+                return tMs >= nowMs - (30 * 60 * 1000);
+            });
+
+            if (startIndex === -1) startIndex = 0;
+            const endIndex = Math.min(startIndex + 6, times.length); 
+
+            const slices = [];
+            for (let i = startIndex; i < endIndex; i++) {
+                const timeRaw = times[i];
+                const dateObj = new Date(typeof timeRaw === 'number' ? timeRaw * 1000 : timeRaw);
+                const hourStr = `${dateObj.getHours().toString().padStart(2, '0')}:00`;
+
+                const temp = weatherData.hourly.temperature_2m?.[i] ?? '--';
+                const wind = weatherData.hourly.wind_speed_10m?.[i] ?? '--';
+                const gusts = weatherData.hourly.wind_gusts_10m?.[i] ?? '--';
+                const precip = weatherData.hourly.precipitation?.[i] ?? 0;
+                const prob = weatherData.hourly.precipitation_probability?.[i] ?? 0;
+
+                slices.push(`[${hourStr}] Temp: ${temp}ºC | Vent: ${wind}km/h | Ratxes: ${gusts}km/h | Pluja: ${precip}mm (Prob: ${prob}%)`);
+            }
+            finestraPrevista = slices.join('\n');
+        }
+
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
-
-        const role = prompts.role;
-        const tone = prompts.tone;
-        const task = prompts.task;
-
         const targetLanguage = TARGET_LANGUAGES[language] || 'English';
 
+        const terminologyRule = 
+            language === 'ca' ? '- DIRECTIVA LINGÜÍSTICA CRÍTICA: Has d\'escriure en un català central impecable, natural i genuí (normativa IEC). ZERO ANGLICISMES i ZERO calcs del castellà. Revisa estrictament l\'ortografia. Vocabulari obligatori: fes servir "ruixat" o "xàfec" (mai "xubasco"), "matinada" (mai "madrugada"). Per al vent, utilitza SEMPRE "ratxes" o "ràfegues" (ESTRICTAMENT PROHIBIT escriure "ràtzes" o inventar faltes d\'ortografia). MAI utilitzis la paraula "umbrella".' :
+            language === 'es' ? '- Utiliza términos cercanos y naturales. CERO ANGLICISMOS: es obligatorio traducirlo todo al español (ex: usa "paraguas", NUNCA la palabra "umbrella").' :
+            language === 'fr' ? '- Utilisez des termes naturels et familiers. ZÉRO ANGLICISME : traduisez tout en français correct (ex: utilisez "parapluie", JAMAIS le mot "umbrella").' :
+            '- Use natural and approachable terms like "wind gusts", "showers" or "cooling down".';
         const prompt = `
-          ROL: ${role}
+          ROL: ${prompts.role}
           
-          DADES (Context JSON):
-          ${JSON.stringify(context)}
-          
-          TASKA: ${task}
-          
-          REGLES CRÍTIQUES DE COHERÈNCIA (OBLIGATÒRIES):
-          1. JERARQUIA D'INFORMACIÓ:
-             - 1r: ALERTES o Perills (si n'hi ha).
-             - 2n: Precipitació imminent (si plou ARA o risc > 50%).
-             - 3r: Sensació tèrmica i vent (només si destaca).
-          
-          2. LLINDARS DE PLUJA (Thresholds):
-             - Probabilitat < 20%: NO esmentis la pluja. Parla de núvols o sol.
-             - Probabilitat 20% - 50%: Fes servir "possible" o "risc de".
-             - Probabilitat > 50%: Dona-ho per fet ("s'espera", "tindrem").
-             - Si "is_raining": true -> Està plovent ARA.
+          ESTAT ACTUAL (Ara mateix):
+          Temperatura: ${weatherData.current.temperature_2m}ºC
+          Pluja actual: ${weatherData.current.precipitation}mm
 
-          3. LLINDARS DE VENT:
-             - < 20 km/h: Ignora'l.
-             - > 40 km/h: Esmenta'l com a factor molest/perillós.
+          EVOLUCIÓ PREVISTA (PROPERES 6 HORES):
+          ${finestraPrevista}
           
-          4. ESTIL:
-             - ${tone}
-             - DIRECTE: No comencis amb "Segons les dades...".
+          TASKA: ${prompts.task}
+          
+          REGLES DE REDACCIÓ (OBLIGATÒRIES):
+          1. ENFOCAMENT PRÀCTIC I PROPER:
+             - En condicions normals, explica de manera senzilla i amable com evolucionarà el temps.
+          
+          2. PROTOCOL DE RISC (MOLT IMPORTANT):
+             - Si detectes anomalies a la taula de dades (ex: vent o ratxes > 60 km/h, precipitacions intenses > 5 mm, o caigudes brusques de temperatura de més de 5ºC), CANVIA EL TO IMMEDIATAMENT.
+             - Emet un avís clar, directe i objectiu de precaució. En aquests casos, la seguretat passa per davant de l'amabilitat.
+          
+          3. LIMITACIONS DEL MODEL:
+             - Llegeix NOMÉS la taula d'Evolució Prevista.
+             - PROHIBIT inventar dades o parlar de l'endemà.
+             - PROHIBIT començar la resposta amb "Segons les dades..." o "Hola,".
 
-          5. TERMINOLOGIA I TRADUCCIÓ (MOLT IMPORTANT):
-             ${language === 'ca' ? '- "Wind Gusts" o "Gusts" s\'ha de traduir SEMPRE com "Ratxes de vent" o "Ràfegues". MAI facis servir "Gusts de vent" (això és incorrecte).' : ''}
-             - Evita traduccions literals que sonin robòtiques.
-             - Fes servir un llenguatge natural i fluid.
+          3. TERMINOLOGIA I IDIOMA:
+             - Has de respondre EXCLUSIVAMENT en ${targetLanguage}.
+             ${terminologyRule}
 
           OBJECTIUS DE LA RESPOSTA (JSON):
-          - "text": Un paràgraf fluid (màxim 3-4 frases) centrat en l'impacte (mullar-se, fred/calor, perill).
-          - "tips": 2 consells pràctics i curts.
+          - "text": Un paràgraf amable, directe i fàcil de llegir (màxim 3 frases curtes).
+          - "tips": 2 consells molt pràctics i quotidians.
 
           IDIOMA DE SORTIDA: ${targetLanguage}
           FORMAT: JSON pur (sense markdown).
           {"text": "...", "tips": ["...", "..."]}
         `;
 
-        // 6. Crida al Proxy amb TIMEOUT (IMPLEMENTACIÓ DE SEGURETAT)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT);
 
@@ -120,20 +135,14 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             const response = await fetch(GEMINI_PROXY_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // DOCTRINA RISC ZERO: Injecció tàctica de l'idioma per anul·lar el biaix del model
-                body: JSON.stringify({ 
-                    prompt: prompt,
-                    lang: language 
-                }),
+                body: JSON.stringify({ prompt: prompt, lang: language }),
                 signal: controller.signal 
             });
 
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                // MILLORA PAS 2: Gestió silenciosa d'errors HTTP
-                // No llancem Error, només log i retornem null
-                console.warn(`⚠️ IA Proxy Error: ${response.status} ${response.statusText}`);
+                console.error(`❌ Error Proxy: ${response.status} ${response.statusText}`);
                 Sentry.addBreadcrumb({
                     category: 'ai-api',
                     message: `Proxy Error ${response.status}`,
@@ -144,48 +153,62 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
             const data = await response.json();
             const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            if (!rawText) return null;
 
-            // 7. Parseig i validació bàsica
-            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) return null;
-            
-            const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
+            if (!rawText) {
+                console.error("❌ Groq ha retornat una resposta buida o format invàlid.");
+                Sentry.addBreadcrumb({
+                    category: 'ai-api',
+                    message: 'Groq empty response',
+                    level: 'warning'
+                });
+                return null;
+            }
 
-            // 8. Guardar a Cache si el format és correcte
-            if (parsed.text && Array.isArray(parsed.tips)) {
-                await cacheService.set(cacheKey, parsed);
-                return parsed;
+            const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+            
+            if (!jsonMatch) {
+                console.error("❌ La resposta no conté estructura JSON.");
+                Sentry.addBreadcrumb({
+                    category: 'ai-api',
+                    message: 'Invalid JSON format from Groq',
+                    level: 'error'
+                });
+                return null;
+            }
+            
+            try {
+                const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
+
+                if (parsed.text && Array.isArray(parsed.tips)) {
+                    await cacheService.set(cacheKey, parsed);
+                    return parsed;
+                } else {
+                    console.error("❌ El JSON no té l'estructura 'text' i 'tips[]' esperada.");
+                }
+            } catch (parseError) {
+                // ARA SÍ QUE FEM SERVIR SENTRY I LA VARIABLE parseError
+                console.error("❌ Error crític fent JSON.parse:", parseError);
+                Sentry.captureException(parseError, { tags: { service: 'GeminiService', type: 'parse_error' } });
             }
 
             return null;
 
         } catch (fetchError) {
             clearTimeout(timeoutId);
-            
-            // MILLORA PAS 2: Gestió silenciosa de xarxa/timeout
             if (fetchError instanceof Error) {
-                 // Diferenciem Timeout d'altres errors de xarxa
-                 const msg = fetchError.name === 'AbortError' 
-                    ? `Gemini Timeout (${AI_REQUEST_TIMEOUT}ms)` 
-                    : `Gemini Network Error: ${fetchError.message}`;
-
-                 console.warn(`⚠️ ${msg}`);
-                 
-                 // Sentry Breadcrumb (Informació de context, no ERROR)
+                 console.error(`❌ Error de Xarxa/Timeout:`, fetchError.message);
                  Sentry.addBreadcrumb({
                     category: 'ai-network',
-                    message: msg,
+                    message: fetchError.message,
                     level: 'warning'
                  });
             }
-            return null; // Silent failover
+            return null;
         }
 
     } catch (e) {
-        // Captura global d'errors de LÒGICA (Aquests sí que són bugs reals)
-        console.error("Gemini Logic Error:", e);
+        console.error("❌ Error de Lògica General a GeminiService:", e);
         Sentry.captureException(e, { tags: { service: 'GeminiService', type: 'logic_error' } });
         return null;
     }
