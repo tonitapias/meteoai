@@ -1,3 +1,4 @@
+// src/views/DashboardView.tsx
 // Layout & UI Shell
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import Header from '../components/Header';
@@ -14,36 +15,42 @@ import { useAppContext } from '../context/AppContext';
 
 export default function DashboardView() {
   // 1. RECUPEREM EL CONTROLADOR DEL CONTEXT
-  // 🟢 FIX: Eliminem 'modals' d'aquí perquè ja no el necessitem
   const { state, actions, flags } = useAppContext();
-  const { weatherData, calculations } = state;
+  
+  // DOCTRINA RISC ZERO: Desestructuració segura i valors per defecte 
+  // per evitar caigudes si l'estat inicial triga mil·lisegons en muntar-se.
+  const weatherData = state?.weatherData || null;
+  const calculations = state?.calculations || {};
+  const notification = state?.notification || null;
+  const error = state?.error || null;
 
   return (
     <DashboardLayout
-      weatherCode={calculations.effectiveWeatherCode}
+      // PROTECCIÓ: Fallback segur per a valors crítics de la UI
+      weatherCode={calculations.effectiveWeatherCode ?? 0}
       
       // Header Net
       header={<Header />}
       
-      // Footer
-      footer={<Footer className="mt-auto" />}
+      // Footer (Assegurem que quedi per sobre de possibles fons espacials)
+      footer={<Footer className="mt-auto relative z-20" />}
       
-      // Toast
+      // Toast amb accessos segurs
       toast={
         <Toast 
-            message={state.notification?.msg || null} 
-            type={state.notification?.type} 
-            onClose={actions.dismissNotification} 
+            message={notification?.msg || null} 
+            type={notification?.type} 
+            onClose={actions?.dismissNotification} 
         />
       }
       
-      // Debug
+      // Debug protegit
       debugPanel={
-        flags.showDebug && weatherData && (
+        flags?.showDebug && weatherData && (
             <DebugPanel 
                 weatherData={weatherData} 
-                supportsArome={flags.supportsArome} 
-                error={state.error} 
+                supportsArome={flags?.supportsArome ?? false} 
+                error={error} 
             />
         )
       }
@@ -51,8 +58,11 @@ export default function DashboardView() {
       // Modals Nets (Sense props!)
       modals={<DashboardModals />} 
     >
-        {/* Contingut Net */}
-        <div className="mt-6 md:mt-10 flex-1">
+        {/* SPATIAL UI / MOBILE FIRST: 
+            Contenidor fluid amb z-index per surar sobre el fons del Layout.
+            Marges adaptatius ajustats per maximitzar aprofitament de pantalla en mòbil (mt-4)
+        */}
+        <div className="relative z-10 flex flex-col flex-1 w-full mt-4 sm:mt-6 md:mt-10">
             <DashboardContent />
         </div>
     </DashboardLayout>

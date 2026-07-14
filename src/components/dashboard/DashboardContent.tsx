@@ -1,7 +1,5 @@
 // src/components/dashboard/DashboardContent.tsx
 import { lazy, Suspense } from 'react';
-// ELIMINEM useAppController vell
-// NOU IMPORT:
 import { useAppContext } from '../../context/AppContext';
 
 // Components estàtics
@@ -17,20 +15,18 @@ const AIInsights = lazy(() => import('../AIInsights'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 
+// SPATIAL UI: Skeleton amb estètica Dark Dashboard (baix contrast, sense colors estridents)
 const SectionSkeleton = () => (
-    <div className="w-full h-48 bg-white/5 animate-pulse rounded-[2rem] border border-white/5 my-4" />
+    <div className="w-full h-48 bg-[#0B0C15]/50 animate-pulse rounded-[2rem] border border-white/5 my-4 shadow-inner" />
 );
 
-// JA NO NECESSITEM INTERFACE PROPS NI TIPUS
-
-// Definim el tipus exacte de location per evitar el fallback a {} de TS (Risc Zero)
 interface LocationMeta {
     name: string;
     [key: string]: unknown;
 }
 
 export const DashboardContent = () => {
-    // 1. OBTENIM TOT DIRECTAMENT DEL CONTEXT
+    // OBTENIM TOT DIRECTAMENT DEL CONTEXT
     const { state, actions, flags, t } = useAppContext();
     const { weatherData, calculations } = state;
 
@@ -39,16 +35,17 @@ export const DashboardContent = () => {
     if (state.loading && !weatherData) return <LoadingSkeleton />;
     if (!weatherData) return null;
 
-    // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
+    // Forcem el tipatge de location per corregir la pèrdua d'inferència (Risc Zero)
     const loc = weatherData.location as LocationMeta | undefined;
+    const isExpert = flags.viewMode === 'expert';
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col gap-8">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col gap-6 sm:gap-8 relative z-10 w-full max-w-7xl mx-auto">
             
             {/* 1. SECCIÓ PRINCIPAL */}
             <CurrentWeather 
                 data={weatherData} 
-                effectiveCode={calculations.effectiveWeatherCode} 
+                effectiveCode={calculations.effectiveWeatherCode ?? 0} 
                 unit={flags.unit} 
                 lang={flags.lang} 
                 shiftedNow={calculations.shiftedNow}
@@ -62,13 +59,15 @@ export const DashboardContent = () => {
 
             {/* 2. GRÀFIC PRECIPITACIÓ MINUTAL */}
             {calculations.minutelyPreciseData && (
-                <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border border-indigo-500/20 bg-indigo-950/10 shadow-[0_0_20px_rgba(30,27,75,0.5)] backdrop-blur-sm relative overflow-hidden">
-                        <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none"></div>
-                    <MinutelyPreciseChart 
-                        data={calculations.minutelyPreciseData} 
-                        label={t.preciseRain || "SCAN PRECIPITACIÓ (1H)"} 
-                        currentPrecip={calculations.chartData24h?.[0]?.precip || 0} 
-                    />
+                <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border border-indigo-500/30 bg-[#060913]/90 shadow-[0_10px_30px_rgba(30,27,75,0.6)] backdrop-blur-xl relative overflow-hidden preserve-3d">
+                    <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none"></div>
+                    <div className="relative z-10 [transform:translateZ(10px)]">
+                        <MinutelyPreciseChart 
+                            data={calculations.minutelyPreciseData} 
+                            label={t.preciseRain || "SCAN PRECIPITACIÓ (1H)"} 
+                            currentPrecip={calculations.chartData24h?.[0]?.precip || 0} 
+                        />
+                    </div>
                 </div>
             )}
 
@@ -78,16 +77,16 @@ export const DashboardContent = () => {
             </Suspense>
 
             <ErrorBoundary>
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-6 sm:gap-8">
                     {/* 4. GINYS EXPERTS */}
-                    {flags.viewMode === 'expert' && (
+                    {isExpert && (
                         <Suspense fallback={<SectionSkeleton />}>
                             <ExpertWidgets 
                                 weatherData={weatherData} 
                                 aqiData={state.aqiData} 
                                 lang={flags.lang} 
                                 unit={flags.unit} 
-                                freezingLevel={calculations.currentFreezingLevel}
+                                freezingLevel={calculations.currentFreezingLevel ?? null}
                             />
                         </Suspense>
                     )}
@@ -100,24 +99,24 @@ export const DashboardContent = () => {
                     {/* 6. PREVISIÓ SETMANAL */}
                     <Suspense fallback={<SectionSkeleton />}>
                         <ForecastSection 
-                            chartData={calculations.chartDataFull} 
-                            comparisonData={calculations.comparisonData} 
+                            chartData={calculations.chartDataFull || []} 
+                            comparisonData={calculations.comparisonData || null} 
                             dailyData={weatherData.daily}
                             weeklyExtremes={calculations.weeklyExtremes} 
                             unit={flags.unit} 
                             lang={flags.lang} 
                             onDayClick={actions.setSelectedDayIndex}
-                            comparisonEnabled={flags.viewMode === 'expert'} 
+                            comparisonEnabled={isExpert} 
                             showCharts={false} 
                         />
                     </Suspense>
 
                     {/* 7. GRÀFICS AVANÇATS (MODE EXPERT) */}
-                    {flags.viewMode === 'expert' && (
-                        <div className="bento-card p-6 md:p-8 bg-[#0B0C15] border border-white/5 shadow-2xl">
+                    {isExpert && (
+                        <div className="bento-card p-4 sm:p-6 md:p-8 bg-[#0B0C15]/90 border border-white/10 shadow-2xl backdrop-blur-xl">
                             <SmartForecastCharts 
-                                data={calculations.chartData24h} 
-                                comparisonData={calculations.comparisonData} 
+                                data={calculations.chartData24h || []} 
+                                comparisonData={calculations.comparisonData || null} 
                                 unit={flags.unit === 'F' ? '°F' : '°C'} 
                                 lang={flags.lang} 
                             />

@@ -1,3 +1,4 @@
+// src/components/current-weather/WeatherStatsGrid.tsx
 import { Droplets, Activity, Navigation, Wind, CloudOff } from 'lucide-react';
 import { Language } from '../../translations';
 
@@ -82,49 +83,49 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
     return t.cardinals[index];
   };
 
-  // SPATIAL UI BASE
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
-  const BASE_CARD = "relative overflow-hidden backdrop-blur-md bg-gradient-to-br border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700";
+  // SPATIAL UI BASE (Bateria optimitzada per a mòbil)
+  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px] md:bg-[size:16px_16px]`;
+  const BASE_CARD = "relative overflow-hidden backdrop-blur-md bg-gradient-to-br border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-500";
 
   return (
-    <div className="flex flex-col gap-3 relative z-10 w-full">
+    <div className="flex flex-col gap-3 md:gap-4 relative z-10 w-full">
       
       {/* MÒDUL DE VENT TÀCTIC */}
-      <div className={`${BASE_CARD} p-4 md:p-5 rounded-2xl flex items-center justify-between group ${isValidWind ? 'from-[#0f111a]/90 to-black/80 border-white/5 hover:border-white/10' : 'from-slate-900/50 to-black/80 border-slate-700/50'}`}>
+      <div className={`${BASE_CARD} p-4 sm:p-5 rounded-2xl md:rounded-[20px] flex items-center justify-between group ${isValidWind ? 'from-[#0B0D14]/95 to-black/90 border-white/10 hover:border-white/20' : 'from-[#1a1d27]/90 to-black/80 border-slate-700/60'}`}>
         <div className={MATRIX_BG}></div>
         
         <div className="flex flex-col gap-1 z-10 relative">
           <div className="flex items-center gap-2 mb-1">
             {isValidWind ? (
-              <Wind className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)] transition-colors" />
+              <Wind className="w-4 h-4 md:w-5 md:h-5 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)] transition-colors" />
             ) : (
-              <CloudOff className="w-4 h-4 text-slate-500" />
+              <CloudOff className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
             )}
-            <span className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-500 ${isValidWind ? 'text-slate-300' : 'text-slate-500'}`}>
+            <span className={`text-[11px] sm:text-xs font-black uppercase tracking-widest transition-colors duration-500 drop-shadow-sm ${isValidWind ? 'text-slate-200' : 'text-slate-400'}`}>
               {t.windDynamics}
             </span>
           </div>
           
-          <div className="flex items-baseline gap-1">
-            <span className={`text-3xl sm:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 ${isValidWind ? 'text-white drop-shadow-md' : 'text-slate-600'}`}>
+          <div className="flex items-baseline gap-1.5">
+            <span className={`text-3xl sm:text-4xl md:text-5xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidWind ? 'text-white' : 'text-slate-500'}`}>
               {formatValue(windSpeed, isValidWind)}
             </span>
-            <span className={`text-xs font-bold uppercase ml-1 transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-600'}`}>km/h</span>
+            <span className={`text-[11px] sm:text-xs font-bold uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>km/h</span>
           </div>
           
-          <div className={`text-[11px] font-mono font-medium mt-1 uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-500' : 'text-slate-600'}`}>
-            {t.gusts}: <span className={`font-bold tabular-nums ${isValidGusts ? 'text-indigo-300' : 'text-slate-600'}`}>
+          <div className={`text-[11px] sm:text-xs font-mono font-medium mt-1 sm:mt-1.5 uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>
+            {t.gusts}: <span className={`font-black tabular-nums drop-shadow-md ${isValidGusts ? 'text-indigo-300' : 'text-slate-500'}`}>
               {formatValue(windGusts, isValidGusts)}
-            </span> km/h
+            </span> <span className={isValidGusts ? 'text-slate-500' : 'text-slate-600'}>km/h</span>
           </div>
         </div>
 
         {/* Brúixola Digital i Direcció */}
-        <div className="flex flex-col items-center gap-2 z-10 relative">
-          <div className={`relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full border shadow-inner transition-colors duration-500 ${isValidDir ? 'bg-[#0B0C15] border-white/10' : 'bg-slate-900/50 border-slate-700/50'}`}>
-            {/* Marques de la brúixola decoratives */}
-            <div className={`absolute top-1 text-[7px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-500' : 'text-slate-700'}`}>N</div>
-            <div className={`absolute bottom-1 text-[7px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-500' : 'text-slate-700'}`}>S</div>
+        <div className="flex flex-col items-center gap-2 sm:gap-2.5 z-10 relative">
+          <div className={`relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border shadow-inner transition-colors duration-500 ${isValidDir ? 'bg-[#06080D]/80 border-white/10' : 'bg-[#1a1d27]/50 border-slate-700/60'}`}>
+            {/* Marques de la brúixola decoratives amb alt contrast */}
+            <div className={`absolute top-1 md:top-1.5 text-[8px] md:text-[9px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-400' : 'text-slate-600'}`}>N</div>
+            <div className={`absolute bottom-1 md:bottom-1.5 text-[8px] md:text-[9px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-400' : 'text-slate-600'}`}>S</div>
             
             {isValidDir && windDirection !== null && windDirection !== undefined ? (
               <Navigation 
@@ -132,57 +133,57 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
                 style={{ transform: `rotate(${windDirection}deg)` }}
               />
             ) : (
-              <span className="text-slate-600 font-mono text-sm z-10 relative">--</span>
+              <span className="text-slate-500 font-mono text-sm sm:text-base font-bold z-10 relative">--</span>
             )}
           </div>
-          <span className={`text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md border transition-colors duration-500 ${isValidDir ? 'text-white bg-white/5 border-white/5' : 'text-slate-600 bg-transparent border-slate-700/50'}`}>
+          <span className={`text-[11px] sm:text-xs font-black tracking-widest px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md border transition-colors duration-500 drop-shadow-sm ${isValidDir ? 'text-white bg-white/10 border-white/10' : 'text-slate-400 bg-[#1a1d27]/50 border-slate-700/60'}`}>
             {getCardinal(windDirection)}
           </span>
         </div>
       </div>
 
       {/* MÈTRIQUES SECUNDÀRIES: Humitat i Sensació en dues columnes */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
         
         {/* HUMITAT */}
-        <div className={`${BASE_CARD} p-4 rounded-2xl flex flex-col group ${isValidHum ? 'from-[#0f111a]/90 to-black/80 border-white/5 hover:border-white/10' : 'from-slate-900/50 to-black/80 border-slate-700/50'}`}>
+        <div className={`${BASE_CARD} p-4 sm:p-5 rounded-2xl md:rounded-[20px] flex flex-col group ${isValidHum ? 'from-[#0B0D14]/95 to-black/90 border-white/10 hover:border-white/20' : 'from-[#1a1d27]/90 to-black/80 border-slate-700/60'}`}>
           <div className={MATRIX_BG}></div>
-          <div className="flex items-center gap-2 mb-2 z-10 relative">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3 z-10 relative">
             {isValidHum ? (
-              <Droplets className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] transition-colors" />
+              <Droplets className="w-4 h-4 md:w-5 md:h-5 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] transition-colors" />
             ) : (
-              <CloudOff className="w-4 h-4 text-slate-500" />
+              <CloudOff className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
             )}
-            <span className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-500 ${isValidHum ? 'text-slate-300' : 'text-slate-500'}`}>
+            <span className={`text-[11px] sm:text-xs font-black uppercase tracking-widest transition-colors duration-500 drop-shadow-sm ${isValidHum ? 'text-slate-200' : 'text-slate-400'}`}>
               {t.humidity}
             </span>
           </div>
           <div className="flex items-baseline gap-1 mt-auto z-10 relative">
-            <span className={`text-2xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 ${isValidHum ? 'text-white drop-shadow-md' : 'text-slate-600'}`}>
+            <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidHum ? 'text-white' : 'text-slate-500'}`}>
               {formatValue(humidity, isValidHum)}
             </span>
-            <span className={`text-sm transition-colors duration-500 ${isValidHum ? 'text-slate-400' : 'text-slate-600'}`}>%</span>
+            <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidHum ? 'text-slate-400' : 'text-slate-500'}`}>%</span>
           </div>
         </div>
 
         {/* SENSACIÓ TÈRMICA */}
-        <div className={`${BASE_CARD} p-4 rounded-2xl flex flex-col group ${isValidTemp ? 'from-[#0f111a]/90 to-black/80 border-white/5 hover:border-white/10' : 'from-slate-900/50 to-black/80 border-slate-700/50'}`}>
+        <div className={`${BASE_CARD} p-4 sm:p-5 rounded-2xl md:rounded-[20px] flex flex-col group ${isValidTemp ? 'from-[#0B0D14]/95 to-black/90 border-white/10 hover:border-white/20' : 'from-[#1a1d27]/90 to-black/80 border-slate-700/60'}`}>
           <div className={MATRIX_BG}></div>
-          <div className="flex items-center gap-2 mb-2 z-10 relative">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3 z-10 relative">
             {isValidTemp ? (
-              <Activity className="w-4 h-4 text-rose-400 drop-shadow-[0_0_5px_rgba(251,113,133,0.5)] transition-colors" />
+              <Activity className="w-4 h-4 md:w-5 md:h-5 text-rose-400 drop-shadow-[0_0_5px_rgba(251,113,133,0.5)] transition-colors" />
             ) : (
-              <CloudOff className="w-4 h-4 text-slate-500" />
+              <CloudOff className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
             )}
-            <span className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-500 ${isValidTemp ? 'text-slate-300' : 'text-slate-500'}`}>
+            <span className={`text-[11px] sm:text-xs font-black uppercase tracking-widest transition-colors duration-500 drop-shadow-sm ${isValidTemp ? 'text-slate-200' : 'text-slate-400'}`}>
               {t.feelsLike}
             </span>
           </div>
           <div className="flex items-baseline gap-1 mt-auto z-10 relative">
-            <span className={`text-2xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 ${isValidTemp ? 'text-white drop-shadow-md' : 'text-slate-600'}`}>
+            <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>
               {formatValue(apparentTemp, isValidTemp)}
             </span>
-            <span className={`text-sm transition-colors duration-500 ${isValidTemp ? 'text-slate-400' : 'text-slate-600'}`}>°</span>
+            <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidTemp ? 'text-slate-400' : 'text-slate-500'}`}>°</span>
           </div>
         </div>
 

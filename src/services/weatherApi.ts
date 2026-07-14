@@ -34,7 +34,7 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         return response;
-    } catch (error) {
+    } catch (error: unknown) {
         clearTimeout(id);
         throw error;
     }
@@ -47,7 +47,6 @@ const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RET
             const response = await fetchWithTimeout(url);
             
             if (!response.ok) {
-                 // Log d'error HTTP (404, 500, etc)
                  Sentry.addBreadcrumb({
                     category: 'http-error',
                     message: `HTTP Error ${response.status} en ${contextTag}`,
@@ -60,15 +59,15 @@ const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RET
             }
             
             return response;
-        } catch (err) {
+        } catch (err: unknown) {
             if (i === retries) {
                 const isTimeout = err instanceof Error && err.name === 'AbortError';
                 const errorType = isTimeout ? 'network_timeout' : 'network_critical';
+                const errorMessage = err instanceof Error ? err.message : String(err);
                 
-                // Log final abans de llançar l'excepció
                 console.error(`❌ Error fatal (${contextTag}) després de ${retries + 1} intents`, err);
                 
-                Sentry.captureException(err, { 
+                Sentry.captureException(err instanceof Error ? err : new Error(errorMessage), { 
                     tags: { 
                         service: 'weather_api', 
                         type: errorType, 
@@ -83,7 +82,6 @@ const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RET
                 throw err; 
             }
             
-            // Log de reintent (Warning) - Molt útil per veure si la connexió és inestable
             console.warn(`⚠️ Intent ${i + 1} fallit (${contextTag}). Reintentant...`);
             Sentry.addBreadcrumb({
                 category: "network-retry", 
@@ -98,16 +96,29 @@ const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RET
     throw new Error("Unexpected retry loop exit");
 };
 
-// --- Normalitzador de Models ---
-// MILLORA QA: Ús de Generics <T> per evitar 'unknown' indiscriminat al return
+// --- Normalitzador i Sanejador de Models (Doctrina Risc Zero) ---
 const normalizeModelKeys = <T = unknown>(data: unknown): T => {
     if (!data || typeof data !== 'object') return data as T;
     
     const processObject = (obj: unknown): unknown => {
         if (!obj || typeof obj !== 'object') return obj;
         const typedObj = obj as Record<string, unknown>;
-        const newObj = { ...typedObj };
+        const newObj: Record<string, unknown> = {};
         
+        // Fase 1: Sanejament estricte de matrius
+        Object.keys(typedObj).forEach(key => {
+            const value = typedObj[key];
+            if (Array.isArray(value)) {
+                // Forcem `null` davant qualsevol forat de dades (NaN, undefined, string buit)
+                newObj[key] = value.map(v => 
+                    (v === null || v === undefined || Number.isNaN(v) || v === "") ? null : v
+                );
+            } else {
+                newObj[key] = value;
+            }
+        });
+
+        // Fase 2: Aplicació del best_match
         Object.keys(newObj).forEach(key => {
             if (key.endsWith('_best_match')) {
                 const baseKey = key.replace('_best_match', '');
@@ -130,7 +141,6 @@ const normalizeModelKeys = <T = unknown>(data: unknown): T => {
 };
 
 // --- Validació Zod Genèrica ---
-// MILLORA ARQUITECTURA: Aquesta funció ara garanteix que la sortida T coincideix amb l'Schema
 const validateData = <T>(schema: ZodType<T, ZodTypeDef, unknown>, data: unknown, context: string): T => {
     const cleanData = normalizeModelKeys<unknown>(data);
     const result = schema.safeParse(cleanData);
@@ -143,14 +153,13 @@ const validateData = <T>(schema: ZodType<T, ZodTypeDef, unknown>, data: unknown,
             tags: { type: 'schema_validation_fatal' },
             extra: { 
                 zodError: result.error.format(),
-                rawKeys: typeof data === 'object' ? Object.keys(data as object) : 'not-object'
+                rawKeys: typeof data === 'object' && data !== null ? Object.keys(data as object) : 'not-object'
             }
         });
         
         throw validationError;
     }
     
-    // Retornem les dades ja tipades estrictament com a T
     return result.data;
 };
 
@@ -180,9 +189,8 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
     });
 
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getWeatherData');
-    const rawData = await response.json();
+    const rawData: unknown = await response.json(); // Zero Risk: unknown en lloc d'any implicat
     
-    // MILLORA: Ja no cal fer "as WeatherData" perquè validateData<WeatherData> ho garanteix
     return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getWeatherData');
 };
 
@@ -204,7 +212,7 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<AirQu
     });
 
     const response = await fetchWithRetry(`${AIR_QUALITY_URL}?${params.toString()}`, 'getAirQualityData');
-    const rawData = await response.json();
+    const rawData: unknown = await response.json();
 
     return validateData<AirQualityData>(AirQualitySchema, rawData, 'getAirQualityData');
 };
@@ -229,7 +237,7 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
     });
 
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getAromeData');
-    const rawData = await response.json();
+    const rawData: unknown = await response.json();
 
     return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getAromeData');
 };
