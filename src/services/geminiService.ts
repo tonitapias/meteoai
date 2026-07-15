@@ -18,6 +18,12 @@ interface AICacheData {
     tips: string[];
 }
 
+interface RawLLMResponse {
+    tactical_reasoning?: string;
+    text?: unknown;
+    tips?: unknown;
+}
+
 type LocatableData = {
     latitude?: number;
     longitude?: number;
@@ -45,8 +51,6 @@ const getTacticalHourStr = (
     utcOffsetSeconds?: number
 ): string => {
     try {
-        // Cas 1: Si és una cadena ISO local del model SENSE identificador de zona (ex: Open-Meteo "2026-07-14T14:00"),
-        // AIXÒ JA ÉS L'HORA EXACTA A LA CIUTAT/CIM. N'extreiem les hores directament!
         if (typeof timeRaw === 'string') {
             const hasExplicitTz = timeRaw.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(timeRaw);
             if (!hasExplicitTz) {
@@ -57,7 +61,6 @@ const getTacticalHourStr = (
             }
         }
 
-        // Cas 2: Si disposem de Unix Timestamp o ISO amb offset real i identificador IANA (ex: "America/Los_Angeles")
         if (timezone && typeof timeRaw === 'number') {
             const formatter = new Intl.DateTimeFormat('ca-ES', {
                 timeZone: timezone,
@@ -81,7 +84,6 @@ const getTacticalHourStr = (
             }
         }
 
-        // Cas 3: Unix Timestamp amb desplaçament UTC explícit en segons sense IANA
         if (typeof timeRaw === 'number') {
             const offset = utcOffsetSeconds ?? 0;
             const locationDate = new Date((timeRaw + offset) * 1000);
@@ -111,7 +113,6 @@ const getTacticalModelInfo = (weatherData: ExtendedWeatherData): ModelTacticalIn
         const modelStr = String(rawModel).trim();
         const modelLower = modelStr.toLowerCase();
 
-        // Models d'Alta Resolució (Mesoescala HD - Alta fiabilitat en orografia, tempestes i vents locals)
         if (/arome|wrf|harmonie|icon_d2|icon-d2|ukmo_2km|hrrr|cosmo/i.test(modelLower)) {
             return {
                 name: modelStr.toUpperCase(),
@@ -120,7 +121,6 @@ const getTacticalModelInfo = (weatherData: ExtendedWeatherData): ModelTacticalIn
             };
         }
 
-        // Models Globals (Sinòptics - Alta fiabilitat en tendències generals i estabilitat de masses d'aire)
         if (/ecmwf|gfs|icon|gem|cfs|arpege/i.test(modelLower)) {
             return {
                 name: modelStr.toUpperCase(),
@@ -150,7 +150,6 @@ const getTacticalModelInfo = (weatherData: ExtendedWeatherData): ModelTacticalIn
 const getTacticalWeatherDescription = (code: number | null | undefined, temp: number | null | undefined = null): string => {
     if (code === null || code === undefined) return "Estat atmosfèric no determinat";
     
-    // Escut Termodinàmic Invertit (Risc Zero): Exigeix <= 3ºC per permetre lèxic gèlid.
     const isFreezing = temp !== null && temp !== undefined && temp <= 3.0;
 
     switch (code) {
@@ -188,14 +187,12 @@ const getTacticalWeatherDescription = (code: number | null | undefined, temp: nu
 
 /**
  * MOTOR D'ANÀLISI DE QUALITAT DE L'AIRE (AQI) - CALIBRACIÓ DOBLE ESCALA
- * Aplica els llindars exactes de l'EEA (Europa, 0-100+) o de l'EPA (EUA, 0-500)
- * segons la telemetria disponible per evitar camuflar episodis de contaminació.
+ * Aplica els llindars exactes de l'EEA (Europa, 0-100+) o de l'EPA (EUA, 0-500).
  */
 const getTacticalAqiDescription = (aqi: number | null | undefined, scale: 'EU' | 'US' = 'EU'): string => {
     if (aqi === null || aqi === undefined || aqi < 0) return "N/D";
     
     if (scale === 'EU') {
-        // Escala EAQI (Agència Europea de Medi Ambient)
         if (aqi <= 20) return `${aqi} (Bona / Aire net)`;
         if (aqi <= 40) return `${aqi} (Acceptable / Regular)`;
         if (aqi <= 60) return `${aqi} (Moderada)`;
@@ -203,7 +200,6 @@ const getTacticalAqiDescription = (aqi: number | null | undefined, scale: 'EU' |
         if (aqi <= 100) return `${aqi} (Molt deficient / Grups sensibles)`;
         return `${aqi} (ALERTA EXTREMA: Qualitat de l'aire perillosa / Contaminació severa)`;
     } else {
-        // Escala US AQI (EPA - Agència de Protecció Ambiental dels EUA)
         if (aqi <= 50) return `${aqi} (Bona / Aire net)`;
         if (aqi <= 100) return `${aqi} (Moderada / Acceptable)`;
         if (aqi <= 150) return `${aqi} (Desfavorable per a grups sensibles)`;
@@ -213,9 +209,9 @@ const getTacticalAqiDescription = (aqi: number | null | undefined, scale: 'EU' |
 };
 
 /**
- * MOTOR D'ANÀLISI DE CONFORT TÈRMIC I XAFOGOR (DOCTRINA RISC ZERO)
- * Avaluació tàctica de la relació entre temperatura seca, humitat relativa i sensació tèrmica
- * per detectar episodis d'estrès tèrmic (xafogor per humitat) o refredament per vent (wind chill).
+ * MOTOR D'ANÀLISI DE CONFORT TÈRMIC (100% ALTA FREQÜÈNCIA I CLARICITAT UX)
+ * S'han eliminat termes poc freqüents ("apegalosa", "feixuga", "basca") a favor
+ * de conceptes de reconeixement instantani: Calor humida, Estrès tèrmic, Ambient saturat.
  */
 const getTacticalComfortDescription = (
     temp: number | null | undefined, 
@@ -229,18 +225,18 @@ const getTacticalComfortDescription = (
     const diff = apparentTemp - temp;
     const humStr = (humidity !== null && humidity !== undefined) ? `${humidity}%` : "N/D";
 
-    // Episodi de XAFOGOR (Sensació tèrmica superior a la temperatura real per alta humitat)
+    // Episodi d'ESTRÈS TÈRMIC PER HUMITAT (Lèxic de màxima claredat i impacte)
     if (temp >= 24 && diff >= 2.0) {
         if (apparentTemp >= 38) {
-            return `ALERTA EXTREMA DE XAFOGOR (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Perill sever d'esgotament o cop de calor`;
+            return `ALERTA EXTREMA D'ESTRÈS TÈRMIC (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Perill sever de cop de calor per calor sufocant i sudoració ineficient`;
         }
         if (apparentTemp >= 32) {
-            return `XAFOGOR INTENSA (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Precaució per fatiga tèrmica i sudoració ineficient`;
+            return `ESTRÈS TÈRMIC INTENS / CALOR HUMIDA (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Precaució per alt cost energètic i fatiga tèrmica`;
         }
-        return `Xafogor moderada (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
+        return `Saturació evaporativa / Calor humida moderada (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
     }
 
-    // Episodi de REFREDAMENT PER VENT / WIND CHILL (Sensació inferior a la temperatura real)
+    // Episodi de REFREDAMENT PER VENT / WIND CHILL
     if (temp <= 12 && diff <= -2.5) {
         return `REFREDAMENT PER VENT / AMBIENT GÈLID (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Risc d'hipotèrmia ràpida en exposició`;
     }
@@ -266,15 +262,12 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const tz = safeData.timezone;
         const utcOffset = safeData.utc_offset_seconds;
         
-        // Extracció tàctica de l'estat dia/nit (is_day)
         const isDayRaw = (weatherData.current as Record<string, unknown>).is_day;
         const isDay = typeof isDayRaw === 'number' ? isDayRaw : 1;
         const descripcioPeriole = isDay === 1 ? "DIA (Llum solar activa)" : "NIT (Fosc, radiació solar zero)";
 
-        // Extracció del Model Meteorològic
         const modelInfo = getTacticalModelInfo(weatherData);
 
-        // Extracció de telemetria avançada actual (WMO, Xafogor, Humitat, UV, AQI i Hora Local)
         const currentObj = weatherData.current as Record<string, unknown>;
         const hourlyObj = weatherData.hourly as Record<string, unknown>;
 
@@ -284,12 +277,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const currentApparentTemp = typeof currentObj.apparent_temperature === 'number' ? currentObj.apparent_temperature : null;
         const currentHumidity = typeof currentObj.relative_humidity_2m === 'number' ? currentObj.relative_humidity_2m : (typeof currentObj.humidity === 'number' ? currentObj.humidity : null);
 
-        // Detecció automàtica i rigorosa de l'escala de Qualitat de l'Aire disponible ('EU' o 'US')
         const hasEuAqi = typeof currentObj.european_aqi === 'number' || Array.isArray(hourlyObj.european_aqi);
         const aqiScale: 'EU' | 'US' = hasEuAqi ? 'EU' : 'US';
         const currentAqi = typeof currentObj.european_aqi === 'number' ? currentObj.european_aqi : (typeof currentObj.us_aqi === 'number' ? currentObj.us_aqi : null);
 
-        // Càlcul blindat de l'Hora Local Actual (Protecció Risc Zero contra tipatge estricte)
         const currentTimeRaw = currentObj?.time;
         const currentHourStr = (typeof currentTimeRaw === 'string' || typeof currentTimeRaw === 'number')
             ? getTacticalHourStr(currentTimeRaw, tz, utcOffset) 
@@ -334,7 +325,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                         } else {
                             const fakeUtcMs = new Date(`${str}Z`).getTime();
                             const trueUtcMs = fakeUtcMs - utcOffsetMs;
-                            return trueUtcMs >= nowMs - (30 * 60 * 1000);
+                            return !isNaN(trueUtcMs) && trueUtcMs >= nowMs - (30 * 60 * 1000);
                         }
                     }
                 });
@@ -343,7 +334,11 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             if (startIndex === -1) startIndex = 0;
             const endIndex = Math.min(startIndex + 6, times.length); 
 
-            const slices: string[] = [];
+            const tableRows: string[] = [
+                "| HORA | ESTAT WMO | TEMP | SENSACIÓ | HUMITAT | PLUJA (PROB%) | VENT (RATXES) | UV | AQI |",
+                "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
+            ];
+
             for (let i = startIndex; i < endIndex; i++) {
                 const timeRaw = times[i];
                 if (timeRaw === undefined || timeRaw === null) continue;
@@ -356,7 +351,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 const precip = weatherData.hourly.precipitation?.[i] ?? 0;
                 const prob = weatherData.hourly.precipitation_probability?.[i] ?? 0;
 
-                // Telemetria horària avançada amb Escut Termodinàmic
                 const wmoArr = (hourlyObj.weather_code ?? hourlyObj.weathercode) as (number | null)[] | undefined;
                 const wmoHour = wmoArr?.[i] ?? null;
                 const wmoDesc = getTacticalWeatherDescription(wmoHour, tempNum);
@@ -371,25 +365,28 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
                 const uvArr = (hourlyObj.uv_index ?? hourlyObj.uv_index_max) as (number | null)[] | undefined;
                 const uvHour = uvArr?.[i] ?? (isDay === 0 ? 0 : null);
-                const uvStr = uvHour !== null ? `UV: ${uvHour}` : "UV: N/D";
+                const uvStr = uvHour !== null ? `${uvHour}` : "N/D";
 
                 const aqiArr = (hourlyObj.european_aqi ?? hourlyObj.us_aqi) as (number | null)[] | undefined;
                 const aqiHour = aqiArr?.[i] ?? null;
                 const aqiStr = getTacticalAqiDescription(aqiHour, aqiScale);
 
-                slices.push(`[${hourStr}] Estat: ${wmoDesc} | Temp: ${temp}ºC (Sensació/Xafogor: ${apparentStr}) | Humitat: ${humStr} | Pluja: ${precip}mm (Prob: ${prob}%) | Vent: ${wind}km/h (Ratxes: ${gusts}km/h) | ${uvStr} | AQI (${aqiScale}): ${aqiStr}`);
+                tableRows.push(`| ${hourStr} | ${wmoDesc} | ${temp}ºC | ${apparentStr} | ${humStr} | ${precip}mm (${prob}%) | ${wind}km/h (${gusts}km/h) | ${uvStr} | ${aqiStr} |`);
             }
-            finestraPrevista = slices.join('\n');
+            finestraPrevista = tableRows.join('\n');
         }
 
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
         const targetLanguage = TARGET_LANGUAGES[language] || 'English';
 
+        // ARQUITECTURA LÈXICA DE MÀXIMA FLUÏDESSA COGNITIVA (ZERO ARCAISMES, ZERO RESSÒ):
         const terminologyRule = 
-            language === 'ca' ? '- DIRECTIVA LINGÜÍSTICA CRÍTICA: Has d\'escriure en un català central impecable, natural i genuí (normativa IEC). ZERO ANGLICISMES i ZERO calcs del castellà. Revisa estrictament l\'ortografia. Vocabulari obligatori: fes servir "ruixat" o "xàfec" (mai "xubasco"), "matinada" (mai "madrugada"), "xafogor" (mai "bochorno"). Per al vent, utilitza SEMPRE "ratxes" o "ràfegues" (ESTRICTAMENT PROHIBIT escriure "ràtzes" o inventar faltes d\'ortografia).' :
-            language === 'es' ? '- Utiliza términos claros, precisos y naturales en español normativo. CERO ANGLICISMOS. Usa "bochorno" o "sensación térmica elevada" según corresponda.' :
-            language === 'fr' ? '- Utilisez un vocabulaire météorologique clair, naturel et professionnel en français (ex: "chaleur lourde" ou "température ressentie").' :
-            '- Use clear, accessible, and professional weather terminology (e.g., mugginess, heat index, apparent temperature, wind chill).';
+            language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA CRÍTICA (IEC): Escriu en un català central impecable, natural, clar i modern. ZERO ANGLICISMES i ZERO calcs del castellà ("bochorno", "xubasco", "madrugada").
+             - ROTACIÓ LÈXICA PRAGMÀTICA (ZERO RESSÒ): Per parlar de la combinació de calor i humitat alta, PROHIBIT utilitzar paraules poc freqüents o literàries com "basca", "amorrosiment", "apegalosa" o "feixuga", però tampoc abusis de "xafogor". Alterna de manera natural, moderna i directa entre: "estrès tèrmic", "calor humida", "calor sufocant", "ambient saturat" o "sensació tèrmica elevada".
+             - VENTS I FENÒMENS: Per al vent, utilitza SEMPRE "ratxes" o "ràfegues" (ESTRICTAMENT PROHIBIT inventar faltes d'ortografia com "ràtzes"). Per a la pluja, usa "ruixats" o "xàfecs".` :
+            language === 'es' ? '- Utiliza términos claros, precisos y naturales en español normativo. CERO ANGLICISMOS. Alterna entre "bochorno", "estrés térmico por humedad" y "sensación térmica elevada".' :
+            language === 'fr' ? '- Utilisez un vocabulaire météorologique clair, naturel et professionnel en français (ex: "chaleur lourde", "stress thermique" ou "température ressentie").' :
+            '- Use clear, accessible, and professional weather terminology (rotate between: mugginess, heat stress, oppressive humidity, apparent temperature, wind chill).';
             
         const prompt = `
           ROL: Ets un Meteoròleg Expert, Físic Atmosfèric i Divulgador Científic d'Alt Nivell. La teva missió és oferir un part meteorològic tàctic, precís, de lectura ràpida (scannable) i cronològicament exacte per a qualsevol usuari.
@@ -398,32 +395,34 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           HORA LOCAL ACTUAL A LA ZONA CONSULTADA: ${currentHourStr} (${descripcioPeriole})
           Estat Atmosfèric: ${getTacticalWeatherDescription(currentWmoCode, currentTempNum)}
           Temperatura Real: ${weatherData.current.temperature_2m}ºC | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
-          Confort Tèrmic i Xafogor: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
+          Confort Tèrmic i Fisiologia: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
           Pluja actual: ${weatherData.current.precipitation}mm | Índex UV Actual: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat de l'Aire (${aqiScale === 'EU' ? 'EAQI Europeu' : 'US AQI'}): ${getTacticalAqiDescription(currentAqi, aqiScale)}
           MODEL METEOROLÒGIC UTILITZAT: ${modelInfo.name} (${modelInfo.description})
 
-          EVOLUCIÓ PREVISTA (PROPERES 6 HORES DES DE LES ${currentHourStr}):
+          EVOLUCIÓ PREVISTA (PROPERES 6 HORES DES DE LES ${currentHourStr} - TAULA TÀCTICA):
           ${finestraPrevista}
           
           TASKA: ${prompts.task}
           
           DIRECTIVES TÀCTIQUES DE REDACCIÓ (INNEGOCIABLES - DOCTRINA RISC ZERO):
           
-          1. ENFOCAMENT METEOROLÒGIC PUR (ZERO PATERNALISME):
+          1. ENFOCAMENT METEOROLÒGIC PUR (ZERO PATERNALISME I LÈXIC TÀCTIC):
              - Utilitza SEMPRE un llenguatge purament descriptiu, científic i objectiu per exposar els fets atmosfèrics.
-             - Si no plou, descriu-ho en positiu: "Finestra d'estabilitat 100% seca", "Absència total de precipitació" o "Atmosfera estable". NO utilitzis mai expressions de consell com "no caldrà paraigua", "no agafeu abric" o "beveu aigua".
+             - PROHIBICIÓ ABSOLUTA de donar consells de roba, material o salut ("no cal paraigua", "agafa abric", "beu aigua"). 
+             - En lloc de consells, descriu l'impacte físic: si plou, parla de "terreny lliscant" o "visibilitat reduïda"; si fa calor, de "fatiga tèrmica o sudoració ineficient".
+             - Si no plou, descriu-ho en positiu: "Finestra d'estabilitat 100% seca", "Absència total de precipitació" o "Atmosfera estable".
           
-          2. ANÀLISI DE PATRÓ I TENDÈNCIA (CADENA DE PENSAMENT):
-             - Abans de redactar, avalua el gradient de la taula: La temperatura cau o puja ràpidament? La humitat es dispara en poques hores? Hi ha un canvi de règim de vents?
-             - Explica la relació entre variables: Si la sensació tèrmica és alta per la humitat, parla d'amorrosiment o xafogor; si el vent desploma la sensació a l'hivern, parla d'efecte gèlid (wind chill). Si és NIT, ignora la radiació UV.
+          2. CADENA DE PENSAMENT (SCRATCHPAD PREVI OBLIGATORI):
+             - Al camp "tactical_reasoning" del JSON, escriu breument el teu càlcul de tendències: La temperatura cau o puja ràpidament? La humitat es dispara? Hi ha un canvi de règim de vents o un front d'inestabilitat?
+             - Explica la relació entre variables: Si la sensació tèrmica és alta per la humitat, parla d'estrès tèrmic o calor humida; si el vent desploma la sensació a l'hivern, parla d'efecte gèlid (wind chill). Si és NIT, ignora la radiació UV.
           
           3. DIRECTIVA CRÍTICA DE COHERÈNCIA TEMPORAL (ZERO AL·LUCINACIONS):
-             - Ancóra't ESTRICTAMENT en l'HORA LOCAL ACTUAL (${currentHourStr}) i en les etiquetes [HH:MM] de la taula. 
+             - Ancóra't ESTRICTAMENT en l'HORA LOCAL ACTUAL (${currentHourStr}) i en les hores exactes de la taula. 
              - Respecta el progrés del dia: Si la consulta és a la tarda/vespre (ex: 18:00), utilitza ancoratges reals com "durant el capvespre", "a última hora de la tarda" o "en entrar la nit". NO al·lucinis referències al "matí" o al "migdia".
           
           4. CALIBRACIÓ D'INCERTESA I PERILLS SEVERS:
              - Modula el to segons la física del model: Aprofita la resolució de ${modelInfo.name}. En fenòmens convectius (xàfecs WMO 80-82 o tempestes WMO 95-99), parla de "probabilitat de ruixats irregulars" o "inestabilitat localitzada". En estabilitat o pluja estratiforme (WMO 61-63), parla amb certesa absoluta.
-             - Si detectes perills severs (tempestes elèctriques, xafogor extrema >= 38ºC, ratxes > 60 km/h, pluja > 5 mm o AQI en Alerta), emet un avís clar i objectiu sobre l'impacte atmosfèric.
+             - Si detectes perills severs (tempestes elèctriques, estrès tèrmic extrem >= 38ºC, ratxes > 60 km/h, pluja > 5 mm o AQI en Alerta), emet un avís clar i objectiu sobre l'impacte atmosfèric.
 
           5. LIMITACIONS DEL MODEL:
              - Llegeix NOMÉS la taula d'Evolució Prevista. PROHIBIT inventar dades, parlar de l'endemà o d'hores fora de la finestra de 6 hores.
@@ -432,16 +431,19 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
              - Has de respondre EXCLUSIVAMENT en ${targetLanguage}.
              ${terminologyRule}
 
-          OBJECTIUS DE LA RESPOSTA (JSON):
-          - "text": Un paràgraf fluid, natural, directe i cronològicament exacte explicant l'evolució del cel, la temperatura/xafogor, el vent i els factors rellevants per a les properes 6 hores (màxim 2 o 3 frases denses en informació).
+          7. RIQUESA LÈXICA I ROTACIÓ (ZERO PARASITISME):
+             - PROHIBIT repetir sistemàticament el mateix substantiu o adjectiu per descriure l'ambient (ex: si al camp "text" parles de "calor humida", als "tips" has d'utilitzar "estrès tèrmic" o "sensació tèrmica elevada"). Demostra un domini absolut del lèxic meteorològic variat i d'alta freqüència.
+
+          OBJECTIUS DE LA RESPOSTA (JSON STRICT SCHEMA):
+          - "tactical_reasoning": Espai de càlcul intern breu (1-2 frases) analitzant el gradient horari de la taula (temp, vent, pluja) abans de generar el text.
+          - "text": Un paràgraf fluid, natural, directe i cronològicament exacte explicant l'evolució del cel, el confort fisiològic, el vent i els factors rellevants per a les properes 6 hores (màxim 2 o 3 frases denses en informació).
           - "tips": Llista EXACTA de 2 Punts Clau d'Observació Pràctica sota aquesta estricta estructura de slots:
               * Posició [0]: Reservat EXCLUSIVAMENT per a l'estat del cel, tendència de precipitació o fiabilitat del model (ex: "El model AROME confirma estabilitat seca tota la matinada", "Risc de xàfecs convectius locals a mitja tarda").
-              * Posició [1]: Reservat EXCLUSIVAMENT per a confort tèrmic (xafogor/fred), vent o qualitat de l'aire (ex: "Xafogor moderada per humitat del 66% amb sensació de 30ºC", "Vent suau de component marítim sense ratxes destacables", "Qualitat de l'aire regular (EAQI 45) per pols en suspensió").
-          - MAI incloguis consells de roba, material ni expressions paternals ("no cal paraigua").
+              * Posició [1]: Reservat EXCLUSIVAMENT per a confort tèrmic (estrès tèrmic/fred), vent o qualitat de l'aire (ex: "Calor humida per humitat del 66% amb sensació de 30ºC", "Vent suau de component marítim sense ratxes destacables", "Qualitat de l'aire regular (EAQI 45) per pols en suspensió").
 
           IDIOMA DE SORTIDA: ${targetLanguage}
-          FORMAT: JSON pur (sense markdown).
-          {"text": "...", "tips": ["...", "..."]}
+          FORMAT: JSON pur (sense markdown, sense etiquetes de codi).
+          {"tactical_reasoning": "...", "text": "...", "tips": ["...", "..."]}
         `;
 
         const controller = new AbortController();
@@ -484,7 +486,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
             
             if (!jsonMatch) {
-                console.error("❌ La resposta no conté estructura JSON.");
+                console.error("❌ La resposta no conté structure JSON.");
                 Sentry.addBreadcrumb({
                     category: 'ai-api',
                     message: 'Invalid JSON format from Groq',
@@ -494,13 +496,26 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             }
             
             try {
-                const parsed = JSON.parse(jsonMatch[0]) as AICacheData;
+                const parsed = JSON.parse(jsonMatch[0]) as RawLLMResponse;
 
-                if (parsed.text && Array.isArray(parsed.tips)) {
-                    await cacheService.set(cacheKey, parsed);
-                    return parsed;
+                if (typeof parsed.text === 'string' && Array.isArray(parsed.tips)) {
+                    const safeTips = parsed.tips
+                        .filter((tip): tip is string => typeof tip === 'string' && tip.trim().length > 0)
+                        .slice(0, 2);
+
+                    if (safeTips.length === 2 && parsed.text.trim().length > 0) {
+                        const validatedData: AICacheData = {
+                            text: parsed.text.trim(),
+                            tips: safeTips
+                        };
+
+                        await cacheService.set(cacheKey, validatedData);
+                        return validatedData;
+                    } else {
+                        console.error("❌ La IA ha retornat menys de 2 tips vàlids o un text buit.", parsed);
+                    }
                 } else {
-                    console.error("❌ El JSON no té l'estructura 'text' i 'tips[]' esperada.");
+                    console.error("❌ El JSON no té l'estructure 'text' (string) i 'tips' (array) esperada.", parsed);
                 }
             } catch (parseError) {
                 console.error("❌ Error crític fent JSON.parse:", parseError);
