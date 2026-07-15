@@ -56,7 +56,6 @@ interface ModelTacticalInfo {
 
 /**
  * RESOLUCIÓ HORÀRIA (BLINDADA CONTRA DOUBLE-OFFSET)
- * Formateja l'hora respectant exclusivament la zona horària de la localització consultada.
  */
 const getTacticalHourStr = (
     timeRaw: number | string, 
@@ -113,7 +112,6 @@ const getTacticalHourStr = (
 
 /**
  * IDENTIFICACIÓ CLARA DE MODELS
- * Utilitza descripcions entenedores per a l'usuari general en lloc d'argot sinòptic.
  */
 const getTacticalModelInfo = (weatherData: ExtendedWeatherData): ModelTacticalInfo => {
     try {
@@ -156,8 +154,7 @@ const getTacticalModelInfo = (weatherData: ExtendedWeatherData): ModelTacticalIn
 };
 
 /**
- * DESXIFRATGE WMO ENTENEDOR (AMB ESCUT TERMODINÀMIC)
- * Tradueix els codis WMO amb paraules del dia a dia evitant absurds físics com neu amb calor.
+ * DESXIFRATGE WMO ENTENEDOR
  */
 const getTacticalWeatherDescription = (code: number | null | undefined, temp: number | null | undefined = null): string => {
     if (code === null || code === undefined) return "Estat del cel no determinat";
@@ -198,7 +195,7 @@ const getTacticalWeatherDescription = (code: number | null | undefined, temp: nu
 };
 
 /**
- * ANÀLISI DE QUALITAT DE L'AIRE (AQI) - ENTENEDOR
+ * ANÀLISI DE QUALITAT DE L'AIRE (AQI)
  */
 const getTacticalAqiDescription = (aqi: number | null | undefined, scale: 'EU' | 'US' = 'EU'): string => {
     if (aqi === null || aqi === undefined || aqi < 0) return "N/D";
@@ -221,7 +218,6 @@ const getTacticalAqiDescription = (aqi: number | null | undefined, scale: 'EU' |
 
 /**
  * CONFORT TÈRMIC CONCÌS I DIRECTE
- * Textos nets, sense contradiccions i amb consells directes per al dia a dia.
  */
 const getTacticalComfortDescription = (
     temp: number | null | undefined, 
@@ -395,6 +391,9 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             language === 'fr' ? '- Utilisez un vocabulaire météorologique clair, naturel et accessible en français (ex: "chaleur lourde", "refroidissement éolien" ou "température ressentie").' :
             '- Use clear, accessible, and friendly weather terminology (rotate between: mugginess, heat stress, humid heat, apparent temperature, wind chill).';
             
+        // -----------------------------------------------------------------------------------------
+        // LLINDARS ACTUALITZATS AMB LA REGLA DE RISC COMBINAT
+        // -----------------------------------------------------------------------------------------
         const prompt = `
           ANÀLISI METEOROLÒGICA EN TEMPS REAL - DADES ACTUALS:
           
@@ -411,15 +410,19 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           TASCA ESPECÍFICA: ${prompts.task}
           
           REQUERIMENTS COMUNICATIUS DE LA RESPOSTA:
-          1. ANCORATGE TEMPORAL ESTRICTE: Centra la previsió en l'evolució de les 6 hores de la taula. Si és tarda o nit, prohibit fer referències al matí.
-          2. AVALUACIÓ DE RISC METEOROLÒGIC: Determina el "risk_level" de la finestra: "GREEN" (temps tranquil i segur), "AMBER" (canvis de temps, ràfegues moderades, fred o calor intensa), "RED" (alerta meteorològica important com tempestes, pedra, vent >60km/h o calor sufocant).
-          3. TIPO DE PERILL ("hazard_type"): Tria estrictament un entre: "NONE", "WIND" (vent fort), "HEAT" (calor o xafogor), "COLD" (fred intens pel vent), "CONVECTIVE" (tempestes), "VISIBILITY" (boira) o "SNOW_ICE" (neu o gel).
+          1. ANCORATGE TEMPORAL ESTRICTE: Centra la previsió en l'evolució de les 6 hores de la taula.
+          2. AVALUACIÓ DE RISC METEOROLÒGIC (LLINDARS STRICTES): Determina el "risk_level" basant-te exclusivament en aquests valors:
+             - "GREEN" (Sense Risc): Vent < 50 km/h, Temperatura entre 0ºC i 34ºC, Pluja feble (< 5mm/h). Si el temps no supera cap llindar d'AMBER, ha de ser GREEN.
+             - "AMBER" (Precaució): Ràfegues de vent entre 50 i 80 km/h, Calor (35ºC a 39ºC), Fred (< 0ºC), Pluja forta, Visibilitat baixa, O RISC COMBINAT (Pluja present + Vent > 35 km/h + Temp < 10ºC).
+             - "RED" (Perill): Ràfegues > 80 km/h, Calor Extrema (>= 40ºC), Fred Extrem (< -8ºC), o Tempestat forta amb pedra.
+          3. TIPO DE PERILL ("hazard_type"): Tria estrictament un entre: "NONE" (si risk és GREEN), "WIND" (vent fort), "HEAT" (calor o xafogor), "COLD" (fred intens), "CONVECTIVE" (tempestes), "VISIBILITY" (boira) o "SNOW_ICE" (neu o gel).
           4. CATEGORITZACIÓ DE PUNTS CLAU: Genera EXACTAMENT 2 punts d'observació a l'array "tips". Cada objecte ha de tenir una clau "category" triada estrictament entre ["SKY", "THERMAL", "WIND", "HAZARD"] i una clau "text" amb la descripció entenedora i directa.
           5. IDIOMA I LÈXIC: Respon exclusivament en ${targetLanguage}, evitant tecnicismes incomprensibles.
           ${terminologyRule}
           
           RECORDATORI: La resposta ha de ser exclusivament el JSON estricte sol·licitat en les regles de sistema.
         `;
+        // -----------------------------------------------------------------------------------------
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT);
