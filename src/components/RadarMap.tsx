@@ -64,7 +64,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const [error, setError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
-  const [activeBase, setActiveBase] = useState<BaseLayerType>('dark');
+  const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('dark');
   const [overlays, setOverlays] = useState({ precip: true, satIR: true, labels: true });
   const [showLayerMenu, setShowLayerMenu] = useState(false);
 
@@ -82,17 +82,22 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
   const overlaysRef = useRef(overlays);
   const activeViewRef = useRef(activeView);
+  const isMountedRef = useRef(true);
   
   useEffect(() => { overlaysRef.current = overlays; }, [overlays]);
   useEffect(() => { activeViewRef.current = activeView; }, [activeView]);
   useEffect(() => { if (!isActive && isPlaying) setIsPlaying(false); }, [isActive, isPlaying]);
 
-  const formatTime = useCallback((ts?: number) => {
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  const formatTime = useCallback((ts?: number | null) => {
     if (!ts || isNaN(ts)) return "--:--";
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
 
-  // NOU: Garbage Collector - Elimina només les textures VRAM dels timestamps caducats
   const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -100,14 +105,15 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const activeRadarTimes = new Set(validRadarFrames.map(f => f.time));
     const activeSatTimes = new Set(validSatFrames.map(f => f.time));
 
-    // 1. Purgar Radar caducat
     Object.keys(loadedRadarIdsRef.current).forEach((key) => {
       const idx = Number(key);
       const layerId = loadedRadarIdsRef.current[idx];
-      const timeStr = layerId?.replace('rad-layer-', '');
+      if (!layerId) return;
+      
+      const timeStr = layerId.replace('rad-layer-', '');
       const timestamp = Number(timeStr);
 
-      if (!timestamp || !activeRadarTimes.has(timestamp)) {
+      if (!timestamp || isNaN(timestamp) || !activeRadarTimes.has(timestamp)) {
         const radSourceId = `rad-src-${timestamp}`;
         try {
           if (map.getLayer(layerId)) map.removeLayer(layerId);
@@ -119,14 +125,15 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       }
     });
 
-    // 2. Purgar Satèl·lit IR caducat
     Object.keys(loadedSatIdsRef.current).forEach((key) => {
       const idx = Number(key);
       const layerId = loadedSatIdsRef.current[idx];
-      const timeStr = layerId?.replace('sat-layer-', '');
+      if (!layerId) return;
+
+      const timeStr = layerId.replace('sat-layer-', '');
       const timestamp = Number(timeStr);
 
-      if (!timestamp || !activeSatTimes.has(timestamp)) {
+      if (!timestamp || isNaN(timestamp) || !activeSatTimes.has(timestamp)) {
         const satSourceId = `sat-src-${timestamp}`;
         try {
           if (map.getLayer(layerId)) map.removeLayer(layerId);
@@ -139,16 +146,17 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     });
   }, []);
 
-  // Càrrega esglaonada: Radar amb opcions + Satèl·lit base amb suavitzat 100% GPU
   const ensureFrameLoaded = useCallback((index: number) => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !hostRef.current) return;
     
     const rFrames = radarFramesRef.current;
     const sFrames = satFramesRef.current;
-    if (!rFrames[index]) return;
-
+    
+    if (!rFrames || rFrames.length === 0 || index < 0 || index >= rFrames.length) return;
     const rFrame = rFrames[index];
+    if (!rFrame || !rFrame.time) return;
+
     const radSourceId = `rad-src-${rFrame.time}`;
     const radLayerId = `rad-layer-${rFrame.time}`;
     const beforeLayer = map.getLayer('layer-labels') ? 'layer-labels' : undefined;
@@ -157,13 +165,12 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const isRadarActive = activeViewRef.current === 'radar';
     const initialRadOpacity = (isTarget && isRadarActive && overlaysRef.current.precip) ? 0.85 : 0;
 
-    // 1. INJECCIÓ DEL RADAR (Admet 1_1.png per suavitzar al servidor + WebGL)
     if (!loadedRadarIdsRef.current[index] && !map.getSource(radSourceId)) {
       map.addSource(radSourceId, {
         type: 'raster',
         tiles: [`${hostRef.current}${rFrame.path}/256/{z}/{x}/{y}/6/1_1.png`],
         tileSize: 256,
-        maxzoom: 6, // Bloquejem al 6: els zooms superiors els suavitza la GPU
+        maxzoom: 6,
       });
       map.addLayer({
         id: radLayerId,
@@ -180,41 +187,43 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       loadedRadarIdsRef.current[index] = radLayerId;
     }
 
-    // 2. INJECCIÓ DEL SATÈL·LIT IR (URL 0_0.png + Overscaling de GPU)
-    if (sFrames.length > 0) {
+    if (sFrames && sFrames.length > 0) {
       let closestSatIdx = 0;
       let minDiff = Infinity;
       sFrames.forEach((sFrame, sIdx) => {
+        if (!sFrame || !sFrame.time) return;
         const diff = Math.abs(sFrame.time - rFrame.time);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
       
       const sFrame = sFrames[closestSatIdx];
-      const satSourceId = `sat-src-${sFrame.time}`;
-      const satLayerId = `sat-layer-${sFrame.time}`;
-      const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.80 : 0;
+      if (sFrame && sFrame.time) {
+        const satSourceId = `sat-src-${sFrame.time}`;
+        const satLayerId = `sat-layer-${sFrame.time}`;
+        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.80 : 0;
 
-      if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
-        map.addSource(satSourceId, {
-          type: 'raster',
-          tiles: [`${hostRef.current}${sFrame.path}/256/{z}/{x}/{y}/0/0_0.png`],
-          tileSize: 256,
-          maxzoom: 5, // VITAL: Capar al zoom 5 obliga la GPU a fer l'estirament suau
-        });
-        map.addLayer({
-          id: satLayerId,
-          type: 'raster',
-          source: satSourceId,
-          layout: { visibility: 'visible' },
-          paint: {
-            'raster-opacity': initialSatOpacity,
-            'raster-contrast': 0.18,
-            'raster-brightness-min': 0.05,
-            'raster-resampling': 'linear',
-            'raster-fade-duration': 0,
-          },
-        }, beforeLayer);
-        loadedSatIdsRef.current[closestSatIdx] = satLayerId;
+        if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
+          map.addSource(satSourceId, {
+            type: 'raster',
+            tiles: [`${hostRef.current}${sFrame.path}/256/{z}/{x}/{y}/0/0_0.png`],
+            tileSize: 256,
+            maxzoom: 5,
+          });
+          map.addLayer({
+            id: satLayerId,
+            type: 'raster',
+            source: satSourceId,
+            layout: { visibility: 'visible' },
+            paint: {
+              'raster-opacity': initialSatOpacity,
+              'raster-contrast': 0.18,
+              'raster-brightness-min': 0.05,
+              'raster-resampling': 'linear',
+              'raster-fade-duration': 0,
+            },
+          }, beforeLayer);
+          loadedSatIdsRef.current[closestSatIdx] = satLayerId;
+        }
       }
     }
   }, []);
@@ -223,15 +232,17 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    ensureFrameLoaded(index);
     const rFramesCount = radarFramesRef.current.length;
-    if (rFramesCount > 0) {
-      ensureFrameLoaded((index + 1) % rFramesCount);
-      ensureFrameLoaded((index + 2) % rFramesCount);
-    }
+    if (rFramesCount === 0) return;
 
-    const targetRadarId = loadedRadarIdsRef.current[index];
-    const currentRadarFrame = radarFramesRef.current[index];
+    const safeIndex = (index % rFramesCount + rFramesCount) % rFramesCount;
+
+    ensureFrameLoaded(safeIndex);
+    ensureFrameLoaded((safeIndex + 1) % rFramesCount);
+    ensureFrameLoaded((safeIndex + 2) % rFramesCount);
+
+    const targetRadarId = loadedRadarIdsRef.current[safeIndex];
+    const currentRadarFrame = radarFramesRef.current[safeIndex];
 
     if (timeDisplayRef.current && currentRadarFrame) {
       timeDisplayRef.current.textContent = formatTime(currentRadarFrame.time);
@@ -240,7 +251,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const isRadarViewActive = activeViewRef.current === 'radar';
 
     Object.values(loadedRadarIdsRef.current).forEach((id) => {
-      if (map.getLayer(id)) {
+      if (id && map.getLayer(id)) {
         const isTarget = id === targetRadarId;
         const targetOpacity = (isRadarViewActive && overlaysRef.current.precip && isTarget) ? 0.85 : 0;
         map.setPaintProperty(id, 'raster-opacity', targetOpacity);
@@ -251,13 +262,15 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       let closestSatIdx = 0;
       let minDiff = Infinity;
       satFramesRef.current.forEach((sFrame, sIdx) => {
+        if (!sFrame || !sFrame.time) return;
         const diff = Math.abs(sFrame.time - currentRadarFrame.time);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
+      
       const targetSatId = loadedSatIdsRef.current[closestSatIdx];
       
       Object.values(loadedSatIdsRef.current).forEach((id) => {
-        if (map.getLayer(id)) {
+        if (id && map.getLayer(id)) {
           const isTarget = id === targetSatId;
           const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.80 : 0;
           map.setPaintProperty(id, 'raster-opacity', targetOpacity);
@@ -272,21 +285,21 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
     const { host, radar, satellite } = parsedData;
     hostRef.current = host;
-    const rFrames = radar?.past || [];
-    const sFrames = satellite?.infrared || [];
+    
+    const rFrames = (radar?.past || []).filter(f => f && f.time);
+    const sFrames = (satellite?.infrared || []).filter(f => f && f.time);
 
     radarFramesRef.current = rFrames;
     satFramesRef.current = sFrames;
 
-    // NOU: En lloc d'esborrar-ho tot a cegues, executem el Garbage Collector
-    // Mantenim en VRAM el que encara serveix i esborrem només el que és vell.
     cleanupExpiredLayers(rFrames, sFrames);
+
+    if (rFrames.length === 0) return;
 
     const initialIdx = Math.max(0, rFrames.length - 1);
     currentFrameIndexRef.current = initialIdx;
     setCurrentFrameIndex(initialIdx);
     
-    // Injecció instantània de les tesel·les amb opacitat ja activa
     ensureFrameLoaded(initialIdx);
     if (rFrames.length > 1) {
       setTimeout(() => ensureFrameLoaded(0), 100);
@@ -294,49 +307,55 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     
     applyFrameVisibility(initialIdx);
 
-    map.once('idle', () => {
-      applyFrameVisibility(currentFrameIndexRef.current);
-    });
-    setTimeout(() => {
-      applyFrameVisibility(currentFrameIndexRef.current);
-    }, 150);
+    map.once('idle', () => applyFrameVisibility(currentFrameIndexRef.current));
+    setTimeout(() => applyFrameVisibility(currentFrameIndexRef.current), 150);
   }, [ensureFrameLoaded, applyFrameVisibility, cleanupExpiredLayers]);
 
   const fetchAndInjectRadarData = useCallback(async (forceFetch = false) => {
+    if (!isMountedRef.current) return;
     setLoading(true);
+    
     try {
       const now = Date.now();
       if (!forceFetch && globalRadarCache && (now - globalRadarCache.timestamp < CACHE_TTL)) {
         injectLayersIntoMap(globalRadarCache.data);
-        setError(false); setLoading(false); return;
+        if (isMountedRef.current) { setError(false); setLoading(false); }
+        return;
       }
 
       if (!globalRadarFetchPromise || forceFetch) {
         globalRadarFetchPromise = (async () => {
           const response = await fetch('https://api.librewxr.net/public/weather-maps.json');
-          if (!response.ok) throw new Error('Error HTTP');
+          if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
           return await response.json();
         })();
       }
 
       const rawData = await globalRadarFetchPromise;
       const parsed = RainViewerResponseSchema.safeParse(rawData);
-      if (!parsed.success) { setError(true); return; }
+      
+      if (!parsed.success) { 
+        if (isMountedRef.current) setError(true); 
+        return; 
+      }
       
       globalRadarCache = { data: parsed.data, timestamp: now };
-      injectLayersIntoMap(parsed.data);
-      setError(false);
+      if (isMountedRef.current) {
+        injectLayersIntoMap(parsed.data);
+        setError(false);
+      }
     } catch (err) {
       console.error("Error obtenint dades de radar:", err);
-      setError(true);
+      if (isMountedRef.current) setError(true);
     } finally {
       globalRadarFetchPromise = null;
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, [injectLayersIntoMap]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
+    
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: { version: 8, sources: {}, layers: [] },
@@ -348,6 +367,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       fadeDuration: 0,
     });
     mapRef.current = map;
+    
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
 
     const handleTouchOrClick = () => setShowLayerMenu(false);
@@ -362,10 +382,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           id: `base-layer-${key}`,
           type: 'raster',
           source: `base-src-${key}`,
-          layout: { visibility: key === 'dark' ? 'visible' : 'none' },
+          layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
           paint: { 'raster-opacity': 1 },
         });
       });
+      
       map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
       map.addLayer({
         id: 'layer-labels',
@@ -374,13 +395,20 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         layout: { visibility: 'visible' },
         paint: { 'raster-opacity': 0.9 },
       });
+      
       fetchAndInjectRadarData();
     });
 
     return () => {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+      if (mapRef.current) { 
+        mapRef.current.remove(); 
+        mapRef.current = null; 
+      }
+      loadedRadarIdsRef.current = {};
+      loadedSatIdsRef.current = {};
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lon, fetchAndInjectRadarData, BASE_LAYERS]);
 
   useEffect(() => {
@@ -389,10 +417,10 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
       const layerId = `base-layer-${key}`;
       if (map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, 'visibility', key === activeBase ? 'visible' : 'none');
+        map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
       }
     });
-  }, [activeBase, BASE_LAYERS]);
+  }, [activeBaseLayer, BASE_LAYERS]);
 
   useEffect(() => {
     applyFrameVisibility(currentFrameIndexRef.current);
@@ -406,6 +434,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     if (isPlaying && radarFramesRef.current.length > 0 && isActive && activeView === 'radar') {
       animationTimerRef.current = setInterval(() => {
         const totalFrames = radarFramesRef.current.length;
+        if (totalFrames === 0) return; 
+        
         const nextIndex = (currentFrameIndexRef.current + 1) % totalFrames;
         currentFrameIndexRef.current = nextIndex;
         applyFrameVisibility(nextIndex);
@@ -468,114 +498,92 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         <div className="absolute inset-1 bg-cyan-500 border border-white rounded-full shadow-[0_0_12px_rgba(6,182,212,1)]"></div>
       </div>
 
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col items-end">
+      <div className="absolute top-4 right-4 z-[1010] flex flex-col items-end pointer-events-none">
         <button 
           onClick={() => setShowLayerMenu(!showLayerMenu)} 
-          className={`p-3.5 rounded-xl backdrop-blur-xl border transition-all shadow-lg active:scale-95 ${showLayerMenu ? 'bg-cyan-950/90 border-cyan-500/60 text-cyan-300' : 'bg-[#050810]/85 border-white/15 text-slate-200 hover:bg-white/15 hover:text-white'}`} 
+          className={`pointer-events-auto p-3.5 rounded-xl backdrop-blur-xl border transition-all shadow-[0_8px_32px_rgba(0,0,0,0.5)] active:scale-95 ${showLayerMenu ? 'bg-black/40 border-cyan-400/50 text-cyan-300' : 'bg-black/20 border-white/15 text-slate-200 hover:bg-black/40 hover:text-white'}`} 
           title={t('layerControl')}
           aria-label={t('layerControl')}
         >
-          <Layers className="w-5 h-5" />
+          <Layers className="w-5 h-5 drop-shadow-md" />
         </button>
 
         {showLayerMenu && (
-          <div className="hidden sm:block mt-2 w-64 bg-[#050810]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 block mb-2">{t('baseMapTitle')}</span>
-            <div className="grid grid-cols-2 gap-1.5 mb-4">
+          <div className="pointer-events-auto mt-2 w-[280px] sm:w-[340px] max-h-[65vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-thumb]:rounded-full bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 sm:p-5 shadow-[0_15px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 origin-top-right duration-200">
+            
+            <div className="flex items-center justify-between mb-3 border-b sm:border-0 border-white/15 pb-2 sm:pb-0">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 drop-shadow-md">{t('baseMapTitle')}</span>
+              <button 
+                onClick={() => setShowLayerMenu(false)} 
+                className="sm:hidden p-1.5 rounded-full bg-black/30 hover:bg-black/50 border border-white/10 text-slate-200 transition-colors shadow-sm"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-4 sm:mb-5">
               {(Object.keys(BASE_LAYERS) as BaseLayerType[]).map((key) => (
-                <button key={key} onClick={() => setActiveBase(key)} className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-[11px] font-medium transition-all ${activeBase === key ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-500/50 font-bold shadow-sm' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-transparent'}`}>
-                  <span className="truncate">{BASE_LAYERS[key].name}</span>
-                  {activeBase === key && <Check className="w-3.5 h-3.5 shrink-0 ml-1 text-cyan-400" />}
+                <button key={key} onClick={() => setActiveBaseLayer(key)} className={`flex items-center justify-between px-2.5 py-2 sm:p-3 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium sm:font-bold transition-all backdrop-blur-md ${activeBaseLayer === key ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : 'bg-black/30 text-slate-200 hover:bg-black/50 hover:text-white border border-white/10'}`}>
+                  <span className="truncate drop-shadow-md">{BASE_LAYERS[key].name}</span>
+                  {activeBaseLayer === key && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ml-1 text-cyan-400 drop-shadow-md" />}
                 </button>
               ))}
             </div>
 
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 block mb-2">{t('overlayTitle')}</span>
-            <div className="space-y-1.5">
-              <button onClick={() => setOverlays(prev => ({ ...prev, precip: !prev.precip }))} className="w-full flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-xs text-slate-200 font-medium">
-                <span>{t('layerPrecip')}</span>
-                {overlays.precip ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4 text-slate-500" />}
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 block mb-2 sm:mb-2.5 drop-shadow-md">{t('overlayTitle')}</span>
+            
+            <div className="space-y-1.5 sm:space-y-2">
+              <button onClick={() => setOverlays(prev => ({ ...prev, precip: !prev.precip }))} className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-colors text-xs text-slate-100 font-medium sm:font-bold backdrop-blur-md">
+                <span className="drop-shadow-md">{t('layerPrecip')}</span>
+                {overlays.precip ? <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 drop-shadow-md" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
               </button>
-              <button onClick={() => setOverlays(prev => ({ ...prev, satIR: !prev.satIR }))} className="w-full flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-xs text-slate-200 font-medium">
-                <span>{t('layerSat')}</span>
-                {overlays.satIR ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4 text-slate-500" />}
+              <button onClick={() => setOverlays(prev => ({ ...prev, satIR: !prev.satIR }))} className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-colors text-xs text-slate-100 font-medium sm:font-bold backdrop-blur-md">
+                <span className="drop-shadow-md">{t('layerSat')}</span>
+                {overlays.satIR ? <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 drop-shadow-md" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
               </button>
-              <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-xs text-slate-200 font-medium">
-                <span>{t('layerLabels')}</span>
-                {overlays.labels ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4 text-slate-500" />}
+              <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-colors text-xs text-slate-100 font-medium sm:font-bold backdrop-blur-md">
+                <span className="drop-shadow-md">{t('layerLabels')}</span>
+                {overlays.labels ? <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 drop-shadow-md" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {showLayerMenu && (
-        <div className="sm:hidden fixed inset-x-0 bottom-0 z-[1002] bg-[#050810]/95 backdrop-blur-2xl border-t border-white/15 rounded-t-3xl p-5 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] pb-safe animate-in slide-in-from-bottom duration-300">
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
-            <span className="text-xs font-black tracking-wider uppercase text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-cyan-400" /> {t('layerControl')}
-            </span>
-            <button onClick={() => setShowLayerMenu(false)} className="p-1.5 rounded-full bg-white/10 text-slate-300 hover:text-white">
-              <CloseIcon className="w-4 h-4" />
-            </button>
-          </div>
-
-          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 block mb-2.5">{t('baseMapTitle')}</span>
-          <div className="grid grid-cols-2 gap-2 mb-5">
-            {(Object.keys(BASE_LAYERS) as BaseLayerType[]).map((key) => (
-              <button key={key} onClick={() => setActiveBase(key)} className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all ${activeBase === key ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-500/50 shadow' : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent'}`}>
-                <span className="truncate">{BASE_LAYERS[key].name}</span>
-                {activeBase === key && <Check className="w-4 h-4 shrink-0 ml-1 text-cyan-400" />}
-              </button>
-            ))}
-          </div>
-
-          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 block mb-2.5">{t('overlayTitle')}</span>
-          <div className="space-y-2 mb-2">
-            <button onClick={() => setOverlays(prev => ({ ...prev, precip: !prev.precip }))} className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-xs text-slate-200 font-bold">
-              <span>{t('layerPrecip')}</span>
-              {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-            </button>
-            <button onClick={() => setOverlays(prev => ({ ...prev, satIR: !prev.satIR }))} className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-xs text-slate-200 font-bold">
-              <span>{t('layerSat')}</span>
-              {overlays.satIR ? <Eye className="w-5 h-5 text-cyan-400" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-            </button>
-            <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-xs text-slate-200 font-bold">
-              <span>{t('layerLabels')}</span>
-              {overlays.labels ? <Eye className="w-5 h-5 text-cyan-400" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-md bg-[#050810]/90 backdrop-blur-xl px-5 py-3.5 rounded-2xl border border-white/15 flex items-center justify-between gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.7)] transition-all hover:border-cyan-500/40 pb-safe">
+      <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-md flex items-center justify-between gap-3 sm:pb-0 pb-[env(safe-area-inset-bottom,16px)] mb-[calc(env(safe-area-inset-bottom,0px)*0.5)] pointer-events-none">
+        
         <button 
           onClick={togglePlay} 
-          disabled={radarFramesRef.current.length === 0} 
-          className={`flex items-center justify-center w-12 h-12 rounded-full transition-all shrink-0 active:scale-95 ${isPlaying ? 'bg-white/15 text-cyan-300 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.25)]' : 'bg-cyan-500 hover:bg-cyan-400 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'} disabled:opacity-40 disabled:cursor-not-allowed`} 
+          disabled={!radarFramesRef.current || radarFramesRef.current.length === 0} 
+          className={`pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full transition-all shrink-0 active:scale-95 backdrop-blur-xl border shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${isPlaying ? 'bg-black/30 border-white/20 text-cyan-400' : 'bg-cyan-500/90 hover:bg-cyan-400 border-cyan-400/50 text-black font-black'} disabled:opacity-40 disabled:cursor-not-allowed`} 
           aria-label={isPlaying ? t('btnPause') : t('btnPlay')}
         >
-          {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+          {isPlaying ? <Pause className="w-6 h-6 fill-current drop-shadow-md" /> : <Play className="w-6 h-6 fill-current ml-1 drop-shadow-sm" />}
         </button>
 
-        <div className="flex flex-col flex-1 items-center px-2 border-x border-white/15">
-          <span className="text-[10px] text-cyan-300 font-mono font-bold uppercase tracking-[0.2em] mb-0.5">{isPlaying ? t('animPlaying') : t('animCurrent')}</span>
+        <div className="pointer-events-auto flex flex-col flex-1 items-center justify-center h-14 bg-black/20 backdrop-blur-xl border border-white/15 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] px-4">
+          <span className="text-[9px] text-cyan-300 font-mono font-bold uppercase tracking-[0.2em] mb-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {isPlaying ? t('animPlaying') : t('animCurrent')}
+          </span>
           <div className="flex items-center gap-2.5">
-            <span className={`h-2.5 w-2.5 rounded-full ${isPlaying ? 'bg-cyan-400 animate-ping' : 'bg-cyan-500'}`}></span>
-            <span ref={timeDisplayRef} className="text-white font-mono font-black text-2xl tracking-tighter tabular-nums drop-shadow">{currentFrame ? formatTime(currentFrame.time) : '--:--'}</span>
+            <span className={`h-2 w-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.9)] ${isPlaying ? 'bg-cyan-400 animate-ping' : 'bg-cyan-500'}`}></span>
+            <span ref={timeDisplayRef} className="text-white font-mono font-black text-xl sm:text-2xl tracking-tighter tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+              {currentFrame ? formatTime(currentFrame.time) : '--:--'}
+            </span>
           </div>
         </div>
 
         <button 
           onClick={() => fetchAndInjectRadarData(true)} 
           disabled={loading} 
-          className="p-3 rounded-full bg-white/5 hover:bg-white/15 text-slate-200 hover:text-cyan-300 border border-white/10 transition-all active:scale-95 shrink-0" 
+          className="pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-xl border border-white/15 text-slate-100 hover:text-cyan-300 transition-all active:scale-95 shrink-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" 
           title={t('btnRefresh')}
           aria-label={t('btnRefresh')}
         >
-          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
+          <RefreshCw className={`w-5 h-5 drop-shadow-lg ${loading ? 'animate-spin text-cyan-400' : ''}`} />
         </button>
       </div>
+
     </div>
   );
 }
