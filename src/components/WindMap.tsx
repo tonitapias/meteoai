@@ -1,20 +1,16 @@
 // src/components/WindMap.tsx
 import { useState, useEffect } from 'react';
 import { Wind, Activity, AlertTriangle, RefreshCw } from 'lucide-react';
-import { TRANSLATIONS, Language } from '../translations';
+import { useTranslation } from 'react-i18next';
 
 interface WindMapProps {
   lat: number;
   lon: number;
-  lang: Language;
 }
 
-export default function WindMap({ lat, lon, lang }: WindMapProps) {
-  // Motor de traducció segur
-  const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
-  const t = (key: string, fallback: string): string => {
-      return typeof tRecord[key] === 'string' ? (tRecord[key] as string) : fallback;
-  };
+export default function WindMap({ lat, lon }: WindMapProps) {
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language?.split('-')[0] || 'ca'; // Agafem 'ca', 'es', etc.
 
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -24,7 +20,7 @@ export default function WindMap({ lat, lon, lang }: WindMapProps) {
 
   // ECMWF Injecció amb paràmetre d'idioma autònom per Windy
   const windyUrl = isValidCoords 
-    ? `https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=default&metricWind=km%2Fh&zoom=9&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&lang=${lang}`
+    ? `https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=default&metricWind=km%2Fh&zoom=9&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&lang=${currentLang}`
     : '';
 
   useEffect(() => {
@@ -54,7 +50,9 @@ export default function WindMap({ lat, lon, lang }: WindMapProps) {
         <div className="w-full h-full min-h-0 bg-[#020308] relative overflow-hidden flex items-center justify-center">
             <div className="text-center z-10 flex flex-col items-center">
                 <AlertTriangle className="w-8 h-8 text-rose-500 mb-2 drop-shadow-md" />
-                <span className="text-slate-400 text-xs font-mono font-bold uppercase tracking-widest">{t('errCoords', 'Error de Coordenades')}</span>
+                <span className="text-slate-400 text-xs font-mono font-bold uppercase tracking-widest">
+                  {t('errCoords', 'Error de Coordenades')}
+                </span>
             </div>
         </div>
       );
@@ -70,8 +68,12 @@ export default function WindMap({ lat, lon, lang }: WindMapProps) {
                   <div className="absolute inset-0 rounded-full border border-rose-500/30 animate-ping opacity-50"></div>
                   <AlertTriangle className="w-8 h-8 text-rose-500 drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
              </div>
-             <span className="text-white font-black tracking-widest uppercase mb-1 drop-shadow-md z-10">{t('errWindDown', 'Connexió ECMWF Caiguda')}</span>
-             <span className="text-xs text-slate-400 font-mono font-bold mb-6 z-10">{t('errWindDesc', "Temps d'espera esgotat per Windy")}</span>
+             <span className="text-white font-black tracking-widest uppercase mb-1 drop-shadow-md z-10">
+               {t('errWindDown', 'Connexió ECMWF Caiguda')}
+             </span>
+             <span className="text-xs text-slate-400 font-mono font-bold mb-6 z-10">
+               {t('errWindDesc', "Temps d'espera esgotat per Windy")}
+             </span>
              <button onClick={handleRetry} className="flex items-center gap-2 px-6 py-2.5 bg-[#0a0b10]/80 border border-white/10 hover:bg-white/10 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-[inset_0_1px_4px_rgba(255,255,255,0.05)] z-10">
                  <RefreshCw className="w-3.5 h-3.5" /> {t('btnReconnect', 'Reconnectar')}
              </button>

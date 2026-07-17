@@ -74,6 +74,10 @@ describe('useArome Hook', () => {
   });
 
   it('hauria de gestionar errors de l\'API o fallada de Zod (Out of Bounds)', async () => {
+    // Silenciem tant els errors com els avisos (warnings) temporalment
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     // PREPARACIÓ: Simulem que la dada ve trencada (falta 'time') i Zod l'ha de rebutjar
     const badData = { 
         hourly: { temperature_2m: [15] } // Sense array de 'time', Zod petarà
@@ -92,6 +96,10 @@ describe('useArome Hook', () => {
     // VERIFICACIÓ: L'estat cau a NULL i tenim missatge d'error de seguretat
     expect(result.current.aromeData).toBeNull();
     expect(result.current.error).toBeDefined();
+
+    // Restaurem les consoles
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it('hauria de netejar l\'estat amb clearArome', async () => {

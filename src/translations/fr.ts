@@ -1,5 +1,30 @@
 export const fr = {
   // --- CLAUS ORIGINALS ---
+  // --- Modals & Headers ---
+  liveBadge: "EN DIRECT",
+
+  // --- Menú de capes ---
+  layerControl: "Contrôle des Couches",
+  baseMapTitle: "CARTE DE BASE",
+  baseDark: "Sombre (Tactique)",
+  baseLight: "Clair (Blanc)",
+  baseRelief: "Relief",
+  baseSat: "Satellite (Optique)",
+  overlayTitle: "COUCHES SUPERPOSÉES",
+  layerSat: "Nuages (Satellite IR)",
+
+  // --- Controls del reproductor ---
+  btnPlay: "Lecture",
+  btnPause: "Pause",
+  animPlaying: "ANIMATION EN COURS",
+  animCurrent: "IMAGE ACTUELLE",
+  btnRefresh: "Actualiser les données",
+  btnForceSync: "Réessayer la Connexion",
+
+  // --- Errors i estats de càrrega ---
+  syncingDoppler: "Synchronisation des couches météo...",
+  errRadarDown: "Radar Doppler Hors Ligne",
+  errRadarDesc: "Impossible de recevoir les données de précipitations",
   radarTitle: "RADAR MÉTÉOROLOGIQUE",
   windTitle: "CARTE DU VENT",
   dopplerSubtitle: "DOPPLER RAINVIEWER",
@@ -14,10 +39,6 @@ export const fr = {
   layerSatIR: "Nuages (Satellite IR)",
   layerPrecip: "Précipitations (Radar)",
   layerLabels: "Étiquettes",
-  syncingDoppler: "Synchronisation Doppler & IR...",
-  errRadarDown: "Radar Doppler en panne",
-  errRadarDesc: "Impossible de recevoir les paquets de RainViewer",
-  btnForceSync: "Forcer la synchronisation",
   playMatrix: "Lecture de la matrice",
   currentCapture: "Capture actuelle",
   ariaPlay: "Démarrer l'animation",

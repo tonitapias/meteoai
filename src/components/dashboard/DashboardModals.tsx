@@ -1,4 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react'; // NOU: Importem useEffect
+import { useTranslation } from 'react-i18next'; // NOU: Importem el hook d'idioma
+
 // 1. IMPORTEM EL CONTEXT
 import { useAppContext } from '../../context/AppContext';
 
@@ -20,6 +22,17 @@ export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
     const { state, actions, flags, modals } = useAppContext();
     const { weatherData, calculations } = state;
+
+    // NOU: Instanciem el motor de traduccions
+    const { i18n } = useTranslation();
+
+    // NOU: Sincronitzem l'idioma global amb el motor i18next
+    // Ho col·loquem ABANS de qualsevol `return` per no trencar les regles de React
+    useEffect(() => {
+        if (flags.lang && i18n.language !== flags.lang) {
+            i18n.changeLanguage(flags.lang);
+        }
+    }, [flags.lang, i18n]);
 
     // Protecció: Si no hi ha dades, no podem mostrar modals de detall
     if (!weatherData) return null;
@@ -44,7 +57,6 @@ export const DashboardModals = () => {
                     lat={loc?.latitude || 0} 
                     lon={loc?.longitude || 0} 
                     onClose={() => actions.setShowRadar(false)} 
-                    lang={flags.lang} 
                 />
             )}
             {modals.showArome && (

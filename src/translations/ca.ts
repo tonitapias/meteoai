@@ -1,5 +1,28 @@
 export const ca = {
-  // --- CLAUS ORIGINALS & CORE ---
+  liveBadge: "EN DIRECTE",
+
+  // Menú de capes
+  layerControl: "Control de Capes",
+  baseMapTitle: "MAPA BASE",
+  baseDark: "Fosc (Tàctic)",
+  baseLight: "Clar (Blanc)",
+  baseRelief: "Relleu",
+  baseSat: "Satèl·lit (Òptic)",
+  overlayTitle: "CAPES SUPERPOSADES",
+  layerSat: "Núvols (Satèl·lit IR)",
+
+  // Controls del reproductor
+  btnPlay: "Reproduir",
+  btnPause: "Pausar",
+  animPlaying: "ANIMACIÓ EN CURS",
+  animCurrent: "CAPTURA ACTUAL",
+  btnRefresh: "Actualitzar dades",
+  btnForceSync: "Reintentar Connexió",
+
+  // Errors i estats de càrrega
+  syncingDoppler: "Sincronitzant capes meteorològiques...",
+  errRadarDown: "Radar Doppler Caigut",
+  errRadarDesc: "No s'han pogut rebre dades de precipitació",
   radarTitle: "RADAR METEOROLÒGIC",
   windTitle: "MAPA DE VENT",
   dopplerSubtitle: "DOPPLER RAINVIEWER",
@@ -14,10 +37,6 @@ export const ca = {
   layerSatIR: "Núvols (Satèl·lit IR)",
   layerPrecip: "Precipitació (Radar)",
   layerLabels: "Etiquetes",
-  syncingDoppler: "Sincronitzant Doppler & IR...",
-  errRadarDown: "Radar Doppler Caigut",
-  errRadarDesc: "No s'han pogut rebre paquets de RainViewer",
-  btnForceSync: "Forçar Sincronització",
   playMatrix: "Reproduint Matriu",
   currentCapture: "Captura Actual",
   ariaPlay: "Iniciar Animació",

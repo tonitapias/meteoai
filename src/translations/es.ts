@@ -1,5 +1,29 @@
 export const es = {
-  // --- CLAUS ORIGINALS ---
+   // --- Modals & Headers ---
+  liveBadge: "EN DIRECTO",
+
+  // --- Menú de capes ---
+  layerControl: "Control de Capas",
+  baseMapTitle: "MAPA BASE",
+  baseDark: "Oscuro (Táctico)",
+  baseLight: "Claro (Blanco)",
+  baseRelief: "Relieve",
+  baseSat: "Satélite (Óptico)",
+  overlayTitle: "CAPAS SUPERPUESTAS",
+  layerSat: "Nubes (Satélite IR)",
+
+  // --- Controls del reproductor ---
+  btnPlay: "Reproducir",
+  btnPause: "Pausar",
+  animPlaying: "ANIMACIÓN EN CURSO",
+  animCurrent: "CAPTURA ACTUAL",
+  btnRefresh: "Actualizar datos",
+  btnForceSync: "Reintentar Conexión",
+
+  // --- Errors i estats de càrrega ---
+  syncingDoppler: "Sincronizando capas meteorológicas...",
+  errRadarDown: "Radar Doppler Caído",
+  errRadarDesc: "No se han podido recibir datos de precipitación",
   radarTitle: "RADAR METEOROLÓGICO",
   windTitle: "MAPA DE VIENTO",
   dopplerSubtitle: "DOPPLER RAINVIEWER",
@@ -14,10 +38,6 @@ export const es = {
   layerSatIR: "Nubes (Satélite IR)",
   layerPrecip: "Precipitación (Radar)",
   layerLabels: "Etiquetas",
-  syncingDoppler: "Sincronizando Doppler & IR...",
-  errRadarDown: "Radar Doppler Caído",
-  errRadarDesc: "No se han podido recibir paquetes de RainViewer",
-  btnForceSync: "Forzar Sincronización",
   playMatrix: "Reproduciendo Matriz",
   currentCapture: "Captura Actual",
   ariaPlay: "Iniciar Animación",

@@ -65,6 +65,10 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
   });
 
   it('hauria de rebutjar dades corruptes (Fallada de Zod) i posar l\'estat a null', async () => {
+    // Silenciem tant els errors com els avisos
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     // PREPARACIÓ: Creem un objecte al qual li falta la matriu "precipitation" (obligatòria)
     const badData = {
       latitude: 41.38,
@@ -92,9 +96,17 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
 
     // VERIFICACIÓ: L'escut ha funcionat, la dada corrupte no passa a la UI
     expect(result.current.wrfData).toBeNull();
+
+    // Restaurem les consoles
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it('hauria de gestionar fallades de xarxa HTTP (!response.ok)', async () => {
+    // Silenciem la consola per precaució en cas d'errors de xarxa
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     // PREPARACIÓ: Simulem un error de servidor (ex. 500 Internal Server Error)
     fetchMock.mockResolvedValue({
       ok: false,
@@ -111,6 +123,10 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
 
     // VERIFICACIÓ: Silencia l'error i assegura que no hi ha dades residuals
     expect(result.current.wrfData).toBeNull();
+
+    // Restaurem les consoles
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it('hauria de netejar l\'estat manualment amb clearWRFData', async () => {

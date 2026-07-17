@@ -4,73 +4,74 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: '/meteoai/', 
+  base: '/meteoai/', //[cite: 3]
   
   build: {
-    sourcemap: true,
-    chunkSizeWarningLimit: 1000, // Puja el límit a 1MB per evitar l'avís
+    sourcemap: true, //[cite: 3]
+    chunkSizeWarningLimit: 2000, // Ajustat a 2MB per silenciar l'avís del motor GIS WebGL
     rollupOptions: {
       output: {
         manualChunks: {
-          // Separem les llibreries grans per optimitzar la càrrega
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-leaflet': ['leaflet', 'react-leaflet'],
-          'vendor-utils': ['lucide-react', 'zod']
+          // Separem les llibreries grans per optimitzar la càrrega i la persistència a la memòria cau
+          'vendor-react': ['react', 'react-dom'], //[cite: 3]
+          'vendor-leaflet': ['leaflet', 'react-leaflet'], //[cite: 3]
+          'vendor-utils': ['lucide-react', 'zod'], //[cite: 3]
+          'vendor-mapbox': ['mapbox-gl'] // NOU: Aïllament estratègic de la llibreria WebGL
         }
       }
     }
   },
 
   plugins: [
-    react(),
+    react(), //[cite: 3]
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'autoUpdate', //[cite: 3]
       devOptions: {
-        enabled: true
+        enabled: true //[cite: 3]
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-96x96.png', 'maskable-icon.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-96x96.png', 'maskable-icon.png'], //[cite: 3]
       manifest: {
-        name: 'MeteoToni AI',
-        short_name: 'MeteoToni',
-        description: 'Previsió meteorològica intel·ligent amb models ECMWF i AROME.',
-        theme_color: '#05060A',
-        background_color: '#05060A',
-        display: 'standalone',
-        orientation: 'any',
-        scope: '/meteoai/',
-        start_url: '/meteoai/',
+        name: 'MeteoToni AI', //[cite: 3]
+        short_name: 'MeteoToni', //[cite: 3]
+        description: 'Previsió meteorològica intel·ligent amb models ECMWF i AROME.', //[cite: 3]
+        theme_color: '#05060A', //[cite: 3]
+        background_color: '#05060A', //[cite: 3]
+        display: 'standalone', //[cite: 3]
+        orientation: 'any', //[cite: 3]
+        scope: '/meteoai/', //[cite: 3]
+        start_url: '/meteoai/', //[cite: 3]
         icons: [
           {
-            src: 'android-chrome-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
+            src: 'android-chrome-192x192.png', //[cite: 3]
+            sizes: '192x192', //[cite: 3]
+            type: 'image/png' //[cite: 3]
           },
           {
-            src: 'android-chrome-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            src: 'android-chrome-512x512.png', //[cite: 3]
+            sizes: '512x512', //[cite: 3]
+            type: 'image/png' //[cite: 3]
           },
           {
-             src: 'maskable-icon.png',
-             sizes: '512x512',
-             type: 'image/png',
-             purpose: 'maskable' 
+             src: 'maskable-icon.png', //[cite: 3]
+             sizes: '512x512', //[cite: 3]
+             type: 'image/png', //[cite: 3]
+             purpose: 'maskable' //[cite: 3]
           }
         ],
         screenshots: [
           {
-            src: 'screenshot-mobile.png',
-            sizes: '390x844',
-            type: 'image/png',
-            form_factor: 'narrow',
-            label: 'Previsió al detall'
+            src: 'screenshot-mobile.png', //[cite: 3]
+            sizes: '390x844', //[cite: 3]
+            type: 'image/png', //[cite: 3]
+            form_factor: 'narrow', //[cite: 3]
+            label: 'Previsió al detall' //[cite: 3]
           },
           {
-            src: 'screenshot-desktop.png',
-            sizes: '1280x800',
-            type: 'image/png',
-            form_factor: 'wide',
-            label: 'Panell de control'
+            src: 'screenshot-desktop.png', //[cite: 3]
+            sizes: '1280x800', //[cite: 3]
+            type: 'image/png', //[cite: 3]
+            form_factor: 'wide', //[cite: 3]
+            label: 'Panell de control' //[cite: 3]
           }
         ]
       }
@@ -78,8 +79,8 @@ export default defineConfig({
   ],
 
   test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
+    globals: true, //[cite: 3]
+    environment: 'jsdom', //[cite: 3]
+    setupFiles: './src/test/setup.ts', //[cite: 3]
   }
 });

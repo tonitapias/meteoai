@@ -1,5 +1,30 @@
 export const en = {
   // --- CLAUS ORIGINALS ---
+  // --- Modals & Headers ---
+  liveBadge: "LIVE",
+
+  // --- Menú de capes ---
+  layerControl: "Layer Control",
+  baseMapTitle: "BASE MAP",
+  baseDark: "Dark (Tactical)",
+  baseLight: "Light",
+  baseRelief: "Relief",
+  baseSat: "Satellite (Optical)",
+  overlayTitle: "OVERLAYS",
+  layerSat: "Clouds (IR Satellite)",
+
+  // --- Controls del reproductor ---
+  btnPlay: "Play",
+  btnPause: "Pause",
+  animPlaying: "ANIMATION PLAYING",
+  animCurrent: "CURRENT FRAME",
+  btnRefresh: "Refresh data",
+  btnForceSync: "Retry Connection",
+
+  // --- Errors i estats de càrrega ---
+  syncingDoppler: "Syncing weather layers...",
+  errRadarDown: "Doppler Radar Down",
+  errRadarDesc: "Could not retrieve precipitation data",
   radarTitle: "WEATHER RADAR",
   windTitle: "WIND MAP",
   dopplerSubtitle: "DOPPLER RAINVIEWER",
@@ -14,10 +39,6 @@ export const en = {
   layerSatIR: "Clouds (Satellite IR)",
   layerPrecip: "Precipitation (Radar)",
   layerLabels: "Labels",
-  syncingDoppler: "Syncing Doppler & IR...",
-  errRadarDown: "Doppler Radar Down",
-  errRadarDesc: "Could not receive RainViewer packets",
-  btnForceSync: "Force Sync",
   playMatrix: "Playing Matrix",
   currentCapture: "Current Capture",
   ariaPlay: "Start Animation",
