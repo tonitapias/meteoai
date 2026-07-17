@@ -38,6 +38,7 @@ jobs:
           VITE_API_AQI_BASE: ${{ secrets.VITE_API_AQI_BASE }}
           VITE_API_GEOCODING: ${{ secrets.VITE_API_GEOCODING }}
           VITE_API_TIMEOUT: ${{ secrets.VITE_API_TIMEOUT }}
+          VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
         run: npm run build
         
       - name: Upload artifact
