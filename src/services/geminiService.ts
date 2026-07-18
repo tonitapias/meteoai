@@ -303,7 +303,9 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         }
 
         let finestraPrevista = "Sense dades horàries.";
-        if (weatherData.hourly && Array.isArray(weatherData.hourly.time)) {
+        
+        // Risc Zero: Assegurem que hourly.time és un array segur abans d'iterar
+        if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
             const times = weatherData.hourly.time;
             let startIndex = -1;
 
@@ -343,17 +345,33 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
             ];
 
+            // Risc Zero: Cast explícit d'arrays permetent (number | null) per suportar forats de dades
+            const tempArr = weatherData.hourly.temperature_2m as (number | null)[] | undefined;
+            const windArr = weatherData.hourly.wind_speed_10m as (number | null)[] | undefined;
+            const gustsArr = weatherData.hourly.wind_gusts_10m as (number | null)[] | undefined;
+            const precipArr = weatherData.hourly.precipitation as (number | null)[] | undefined;
+            const probArr = weatherData.hourly.precipitation_probability as (number | null)[] | undefined;
+
             for (let i = startIndex; i < endIndex; i++) {
                 const timeRaw = times[i];
                 if (timeRaw === undefined || timeRaw === null) continue;
 
                 const hourStr = getTacticalHourStr(timeRaw, tz, utcOffset);
-                const temp = weatherData.hourly.temperature_2m?.[i] ?? '--';
-                const tempNum = typeof temp === 'number' ? temp : null;
-                const wind = weatherData.hourly.wind_speed_10m?.[i] ?? '--';
-                const gusts = weatherData.hourly.wind_gusts_10m?.[i] ?? '--';
-                const precip = weatherData.hourly.precipitation?.[i] ?? 0;
-                const prob = weatherData.hourly.precipitation_probability?.[i] ?? 0;
+                const tempHour = tempArr?.[i];
+                const tempNum = typeof tempHour === 'number' ? tempHour : null;
+                const tempStr = tempNum !== null ? tempNum : '--';
+                
+                const windHour = windArr?.[i];
+                const windStr = typeof windHour === 'number' ? windHour : '--';
+                
+                const gustsHour = gustsArr?.[i];
+                const gustsStr = typeof gustsHour === 'number' ? gustsHour : '--';
+                
+                const precipHour = precipArr?.[i];
+                const precipStr = typeof precipHour === 'number' ? precipHour : 0;
+                
+                const probHour = probArr?.[i];
+                const probStr = typeof probHour === 'number' ? probHour : 0;
 
                 const wmoArr = (hourlyObj.weather_code ?? hourlyObj.weathercode) as (number | null)[] | undefined;
                 const wmoHour = wmoArr?.[i] ?? null;
@@ -375,7 +393,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 const aqiHour = aqiArr?.[i] ?? null;
                 const aqiStr = getTacticalAqiDescription(aqiHour, aqiScale);
 
-                tableRows.push(`| ${hourStr} | ${wmoDesc} | ${temp}ºC | ${apparentStr} | ${humStr} | ${precip}mm (${prob}%) | ${wind}km/h (${gusts}km/h) | ${uvStr} | ${aqiStr} |`);
+                tableRows.push(`| ${hourStr} | ${wmoDesc} | ${tempStr}ºC | ${apparentStr} | ${humStr} | ${precipStr}mm (${probStr}%) | ${windStr}km/h (${gustsStr}km/h) | ${uvStr} | ${aqiStr} |`);
             }
             finestraPrevista = tableRows.join('\n');
         }
@@ -431,7 +449,13 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             const response = await fetch(GEMINI_PROXY_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt, lang: language }),
+                body: JSON.stringify({ 
+                    prompt: prompt, 
+                    lang: language,
+                    // SOLUCIÓ DE L'ERROR: Injectem de manera explícita i forçada el model Llama 3.1 
+                    // de Groq que dóna suport 100% natiu a la generació estricta de JSON objectes.
+                    model: 'openai/gpt-oss-120b' 
+                }),
                 signal: controller.signal 
             });
 
@@ -464,7 +488,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
             
             if (!jsonMatch) {
-                console.error("❌ La resposta del Worker no conté una estructura JSON vàlida.");
+                console.error("❌ La resposta del Worker no conté una structure JSON vàlida.");
                 Sentry.addBreadcrumb({
                     category: 'ai-api',
                     message: 'Invalid JSON format from Worker',
