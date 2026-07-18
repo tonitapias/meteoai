@@ -14,7 +14,7 @@ import {
     Zap 
 } from 'lucide-react';
 import { TypewriterText } from './WeatherUI';
-import { TRANSLATIONS, Language, TranslationType } from '../translations';
+import { TRANSLATIONS, Language } from '../translations';
 import { AICacheData, TacticalTip, TacticalRiskLevel, TacticalHazardType } from '../services/geminiService';
 
 // --- INTERFÍCIES ESTRICTES I DE COMPATIBILITAT (DOCTRINA RISC ZERO) ---
@@ -60,11 +60,11 @@ interface LocalUIText {
 const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
     ca: {
         stable: 'TEMPS TRANQUIL',
-        warning: 'ATENCIÓ / CANVIS',
+        warning: 'AVÍS PRECAUCIÓ',
         danger: 'ALERTA METEO',
         reason: 'Motiu',
         tipsHeader: 'Punts clau per a les properes hores:',
-        aiTitle: 'Previsió Intel·ligent IA',
+        aiTitle: 'Anàlisi Meteo IA',
         offlineTitle: 'Anàlisi IA no disponible',
         offlineDesc: "No s'ha pogut connectar amb el motor de previsió intel·ligent. Les dades i gràfics de la pantalla continuen 100% actualitzats.",
         retry: 'Torna-ho a provar',
@@ -81,11 +81,11 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
     },
     es: {
         stable: 'TIEMPO TRANQUILO',
-        warning: 'ATENCIÓN / CAMBIOS',
+        warning: 'AVISO PRECAUCIÓN',
         danger: 'ALERTA METEO',
         reason: 'Motivo',
         tipsHeader: 'Puntos clave para las próximas horas:',
-        aiTitle: 'Previsión Inteligente IA',
+        aiTitle: 'Análisis Meteo IA',
         offlineTitle: 'Análisis IA no disponible',
         offlineDesc: 'No se pudo conectar con el motor de previsión inteligente. Los datos y gráficos de la pantalla siguen 100% actualizados.',
         retry: 'Volver a intentar',
@@ -102,11 +102,11 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
     },
     fr: {
         stable: 'TEMPS CALME',
-        warning: 'ATTENTION / CHANGEMENTS',
+        warning: 'AVIS DE PRÉCAUTION',
         danger: 'ALERTE MÉTÉO',
         reason: 'Raison',
         tipsHeader: 'Points clés pour les prochaines heures :',
-        aiTitle: 'Prévision Intelligente IA',
+        aiTitle: 'Analyse Météo IA',
         offlineTitle: 'Analyse IA indisponible',
         offlineDesc: "Impossible de se connecter au moteur de prévision. Les données et graphiques à l'écran restent 100% à jour.",
         retry: 'Réessayer',
@@ -123,11 +123,11 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
     },
     en: {
         stable: 'CALM WEATHER',
-        warning: 'CAUTION / CHANGES',
+        warning: 'CAUTION ADVISORY',
         danger: 'WEATHER ALERT',
         reason: 'Reason',
         tipsHeader: 'Key highlights for the next few hours:',
-        aiTitle: 'AI Smart Forecast',
+        aiTitle: 'AI Weather Analysis',
         offlineTitle: 'AI Analysis Unavailable',
         offlineDesc: 'Could not connect to the intelligent forecast engine. On-screen data and charts remain 100% updated in real time.',
         retry: 'Try again',
@@ -147,10 +147,9 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
 // --- SUB-COMPONENTS D'ESTIL CLARS I ENTENEDORS (SPATIAL UI) ---
 
 /**
- * SEMÀFOR DE RISC ENTENEDOR
- * Adaptat dinàmicament a l'idioma seleccionat.
+ * SEMÀFOR DE RISC ENTENEDOR (Efecte Vidre)
  */
-const TacticalRiskBadge = ({ analysis, t, ui }: { analysis: TacticalAnalysisResult; t: TranslationType; ui: LocalUIText }) => {
+const TacticalRiskBadge = ({ analysis, ui }: { analysis: TacticalAnalysisResult; ui: LocalUIText }) => {
     if (!analysis) return null;
     
     let risk: TacticalRiskLevel = analysis.risk_level || 'AMBER';
@@ -161,26 +160,26 @@ const TacticalRiskBadge = ({ analysis, t, ui }: { analysis: TacticalAnalysisResu
 
     const styles: Record<TacticalRiskLevel, { badge: string; dot: string; label: string }> = {
         GREEN: {
-            badge: 'text-emerald-300 border-emerald-500/50 bg-emerald-950/80 shadow-[0_0_15px_rgba(16,185,129,0.25)]',
-            dot: 'bg-emerald-400 animate-pulse',
+            badge: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_0_10px_rgba(16,185,129,0.1)]',
+            dot: 'bg-emerald-400 shadow-[0_0_5px_rgba(16,185,129,0.8)] animate-pulse',
             label: ui.stable
         },
         AMBER: {
-            badge: 'text-amber-300 border-amber-500/50 bg-amber-950/80 shadow-[0_0_15px_rgba(245,158,11,0.25)]',
-            dot: 'bg-amber-400 animate-pulse',
-            label: t.alertWarning || ui.warning
+            badge: 'text-amber-300 border-amber-500/30 bg-amber-500/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_0_10px_rgba(245,158,11,0.1)]',
+            dot: 'bg-amber-400 shadow-[0_0_5px_rgba(245,158,11,0.8)] animate-pulse',
+            label: ui.warning
         },
         RED: {
-            badge: 'text-rose-300 border-rose-500/60 bg-rose-950/90 shadow-[0_0_18px_rgba(244,63,94,0.35)]',
-            dot: 'bg-rose-400 animate-ping',
-            label: t.alertDanger || ui.danger
+            badge: 'text-rose-200 border-rose-500/40 bg-rose-500/20 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_15px_rgba(244,63,94,0.3)]',
+            dot: 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.9)] animate-ping',
+            label: ui.danger
         }
     };
     
     const currentStyle = styles[risk] || styles.AMBER;
     
     return (
-        <span className={`text-[10px] sm:text-xs font-mono font-bold px-3 py-1 rounded-full border ${currentStyle.badge} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`}>
+        <span className={`text-[10px] sm:text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${currentStyle.badge} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`}>
             <span className={`w-2 h-2 rounded-full ${currentStyle.dot} shrink-0`}></span>
             <span className="truncate max-w-[130px] sm:max-w-none font-sans font-extrabold tracking-wider">
                 {currentStyle.label}
@@ -190,34 +189,38 @@ const TacticalRiskBadge = ({ analysis, t, ui }: { analysis: TacticalAnalysisResu
 };
 
 /**
- * BÀNER DE PERILL ATMOSFÈRIC CLAR I MULTILINGÜE
+ * BÀNER DE PERILL ATMOSFÈRIC CLAR (Sense duplicitats de títol, espaiat corregit)
  */
-const TacticalHazardBanner = ({ hazardType, riskLevel, t, ui }: { hazardType?: TacticalHazardType; riskLevel?: TacticalRiskLevel; t: TranslationType; ui: LocalUIText }) => {
+const TacticalHazardBanner = ({ hazardType, riskLevel, ui }: { hazardType?: TacticalHazardType; riskLevel?: TacticalRiskLevel; ui: LocalUIText }) => {
     if (!hazardType || hazardType === 'NONE') return null;
 
     const isSevere = riskLevel === 'RED';
     const hazardText = ui.hazards[hazardType] || hazardType;
 
     return (
-        <div className={`flex items-start gap-3 p-3.5 sm:p-4 rounded-xl border shadow-lg ${
+        <div className={`relative flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border backdrop-blur-md overflow-hidden shadow-lg ${
             isSevere 
-                ? 'bg-rose-950/85 border-rose-500/50 text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.2)]' 
-                : 'bg-amber-950/85 border-amber-500/50 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                ? 'bg-rose-950/40 border-rose-500/40 text-rose-100 ring-1 ring-inset ring-rose-500/20' 
+                : 'bg-amber-950/40 border-amber-500/40 text-amber-100 ring-1 ring-inset ring-amber-500/20'
         } animate-in slide-in-from-top-2 duration-500 transform-gpu translate-z-0`}>
-            <div className="shrink-0 mt-0.5">
+            
+            {/* Ràfega de llum tàctica de fons */}
+            <div className={`absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none ${isSevere ? 'bg-gradient-to-r from-rose-500 to-transparent' : 'bg-gradient-to-r from-amber-500 to-transparent'}`} />
+
+            <div className="shrink-0 relative z-10">
                 {isSevere ? (
-                    <AlertOctagon className="w-5 h-5 text-rose-400 animate-pulse drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+                    <AlertOctagon className="w-6 h-6 text-rose-400 animate-pulse drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]" />
                 ) : (
-                    <AlertTriangle className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                    <AlertTriangle className="w-6 h-6 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]" />
                 )}
             </div>
-            <div className="flex-1 min-w-0">
-                <h4 className={`text-xs font-mono font-bold uppercase tracking-widest mb-1 ${isSevere ? 'text-rose-400' : 'text-amber-400'}`}>
-                    {isSevere ? (t.alertDanger || ui.danger) : (t.alertWarning || ui.warning)}
-                </h4>
-                <p className="text-xs sm:text-sm font-medium leading-normal opacity-95 text-left break-words">
-                    <span className="font-bold mr-1.5">{ui.reason}:</span>
-                    {hazardText}
+            
+            <div className="flex-1 min-w-0 relative z-10">
+                <p className="text-sm sm:text-base leading-tight font-sans">
+                    <span className="font-mono text-[10px] sm:text-xs uppercase opacity-70 tracking-widest mr-1">{ui.reason}:</span>{' '}
+                    <span className={`font-extrabold tracking-wide ${isSevere ? 'text-rose-300' : 'text-amber-300'}`}>
+                        {hazardText}
+                    </span>
                 </p>
             </div>
         </div>
@@ -227,30 +230,33 @@ const TacticalHazardBanner = ({ hazardType, riskLevel, t, ui }: { hazardType?: T
 /**
  * COMPONENT D'ALERTA CLÀSSIC (Compatibilitat)
  */
-const InsightAlert = ({ alert, t, ui }: { alert: AlertItem; t: TranslationType; ui: LocalUIText }) => {
+const InsightAlert = ({ alert }: { alert: AlertItem }) => {
     if (!alert || typeof alert !== 'object') return null;
 
     const isHigh = alert.level === 'high';
     return (
-        <div className={`flex items-start gap-3 p-3 sm:p-4 rounded-xl border shadow-md ${
+        <div className={`relative flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border backdrop-blur-md overflow-hidden shadow-lg ${
             isHigh 
-                ? 'bg-rose-950/80 border-rose-500/40 text-rose-100 shadow-rose-950/50' 
-                : 'bg-amber-950/80 border-amber-500/40 text-amber-100 shadow-amber-950/50'
+                ? 'bg-rose-950/40 border-rose-500/40 text-rose-100 ring-1 ring-inset ring-rose-500/20' 
+                : 'bg-amber-950/40 border-amber-500/40 text-amber-100 ring-1 ring-inset ring-amber-500/20'
         } animate-in slide-in-from-top-2 duration-500 transform-gpu translate-z-0`}>
-            <div className="shrink-0 mt-0.5">
+            
+            <div className={`absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none ${isHigh ? 'bg-gradient-to-r from-rose-500 to-transparent' : 'bg-gradient-to-r from-amber-500 to-transparent'}`} />
+
+            <div className="shrink-0 relative z-10">
                 {isHigh ? (
-                    <AlertOctagon className="w-5 h-5 text-rose-400 animate-pulse drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                    <AlertOctagon className="w-6 h-6 text-rose-400 animate-pulse drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]" />
                 ) : (
-                    <AlertTriangle className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                    <AlertTriangle className="w-6 h-6 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]" />
                 )}
             </div>
-            <div className="flex-1 min-w-0">
-                <h4 className={`text-xs font-mono font-bold uppercase tracking-widest mb-1 ${isHigh ? 'text-rose-400' : 'text-amber-400'}`}>
-                    {isHigh ? (t.alertDanger || ui.danger) : (t.alertWarning || ui.warning)}
-                </h4>
-                <p className="text-xs sm:text-sm font-medium leading-normal opacity-95 text-left break-words">
-                    {alert.type && <span className="font-bold underline decoration-current/40 mr-1.5">{alert.type}:</span>}
-                    {alert.msg}
+            
+            <div className="flex-1 min-w-0 relative z-10">
+                <p className="text-sm sm:text-base leading-tight font-sans">
+                    {alert.type && <span className="font-mono text-[10px] sm:text-xs uppercase opacity-70 tracking-widest mr-1">{alert.type}:</span>}{' '}
+                    <span className={`font-extrabold tracking-wide ${isHigh ? 'text-rose-300' : 'text-amber-300'}`}>
+                        {alert.msg}
+                    </span>
                 </p>
             </div>
         </div>
@@ -258,7 +264,7 @@ const InsightAlert = ({ alert, t, ui }: { alert: AlertItem; t: TranslationType; 
 };
 
 /**
- * PÍNDOLA D'INFORMACIÓ RÀPIDA (100% DETERMINÍSTICA)
+ * PÍNDOLA D'INFORMACIÓ RÀPIDA (Spatial UI Glassmorphism)
  */
 const InsightTip = ({ tip, index }: { tip: TacticalTip | string; index: number }) => {
     if (!tip) return null;
@@ -270,28 +276,28 @@ const InsightTip = ({ tip, index }: { tip: TacticalTip | string; index: number }
     if (!textStr || textStr.trim() === '') return null;
 
     let Icon = Activity;
-    let badgeStyle = "bg-slate-950/90 hover:bg-slate-900 text-cyan-200 border-cyan-500/40 hover:border-cyan-400/80 shadow-[0_2px_10px_rgba(6,182,212,0.15)]";
-    let iconColor = "text-cyan-400 drop-shadow-[0_0_6px_rgba(6,182,212,0.8)]";
+    let badgeStyle = "bg-slate-800/40 hover:bg-slate-800/60 text-cyan-100 border-cyan-500/30 ring-1 ring-inset ring-cyan-500/10 shadow-[0_2px_10px_rgba(6,182,212,0.1)]";
+    let iconColor = "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]";
 
     switch (category) {
         case 'WIND':
             Icon = Wind;
-            badgeStyle = "bg-slate-950/90 hover:bg-slate-900 text-cyan-200 border-cyan-500/40 hover:border-cyan-400/80 shadow-[0_2px_10px_rgba(6,182,212,0.15)]";
-            iconColor = "text-cyan-400 drop-shadow-[0_0_6px_rgba(6,182,212,0.8)]";
+            badgeStyle = "bg-slate-800/40 hover:bg-slate-800/60 text-cyan-100 border-cyan-500/30 ring-1 ring-inset ring-cyan-500/10 shadow-[0_2px_10px_rgba(6,182,212,0.1)]";
+            iconColor = "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]";
             break;
         case 'THERMAL':
             Icon = Thermometer;
-            badgeStyle = "bg-amber-950/60 hover:bg-amber-950/80 text-amber-200 border-amber-500/40 hover:border-amber-400/80 shadow-[0_2px_10px_rgba(245,158,11,0.15)]";
-            iconColor = "text-amber-400 drop-shadow-[0_0_6px_rgba(245,158,11,0.8)]";
+            badgeStyle = "bg-amber-950/40 hover:bg-amber-950/60 text-amber-100 border-amber-500/30 ring-1 ring-inset ring-amber-500/10 shadow-[0_2px_10px_rgba(245,158,11,0.1)]";
+            iconColor = "text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]";
             break;
         case 'SKY':
             Icon = Layers;
-            badgeStyle = "bg-indigo-950/60 hover:bg-indigo-950/80 text-indigo-200 border-indigo-500/40 hover:border-indigo-400/80 shadow-[0_2px_10px_rgba(99,102,241,0.15)]";
-            iconColor = "text-indigo-400 drop-shadow-[0_0_6px_rgba(99,102,241,0.8)]";
+            badgeStyle = "bg-indigo-950/40 hover:bg-indigo-950/60 text-indigo-100 border-indigo-500/30 ring-1 ring-inset ring-indigo-500/10 shadow-[0_2px_10px_rgba(99,102,241,0.1)]";
+            iconColor = "text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]";
             break;
         case 'HAZARD':
             Icon = ShieldAlert;
-            badgeStyle = "bg-rose-950/70 hover:bg-rose-950/90 text-rose-200 border-rose-500/50 hover:border-rose-400/80 shadow-[0_2px_12px_rgba(244,63,94,0.25)]";
+            badgeStyle = "bg-rose-950/40 hover:bg-rose-950/60 text-rose-100 border-rose-500/30 ring-1 ring-inset ring-rose-500/10 shadow-[0_2px_12px_rgba(244,63,94,0.15)]";
             iconColor = "text-rose-400 animate-pulse drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]";
             break;
         default:
@@ -301,11 +307,11 @@ const InsightTip = ({ tip, index }: { tip: TacticalTip | string; index: number }
 
     return (
         <div 
-            className={`text-xs sm:text-sm px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border flex items-start sm:items-center gap-2.5 transition-all animate-in zoom-in-95 duration-300 fill-mode-backwards shrink-0 max-w-full break-words ${badgeStyle}`} 
+            className={`text-xs sm:text-sm px-3.5 py-2 rounded-xl backdrop-blur-md border flex items-start sm:items-center gap-2.5 transition-all animate-in zoom-in-95 duration-300 fill-mode-backwards shrink-0 max-w-full break-words ${badgeStyle}`} 
             style={{ animationDelay: `${index * 120}ms` }}
         >
             <Icon className={`w-4 h-4 shrink-0 mt-0.5 sm:mt-0 ${iconColor}`} />
-            <span className="leading-snug flex-1 font-medium">{textStr}</span>
+            <span className="leading-snug flex-1 font-medium tracking-wide">{textStr}</span>
         </div>
     );
 };
@@ -314,7 +320,7 @@ const InsightSkeleton = () => (
     <div className="flex flex-col gap-4 w-full h-full p-4 sm:p-6 animate-pulse">
         <div className="flex justify-between items-center mb-1 sm:mb-2">
             <div className="h-4 w-28 sm:w-32 bg-slate-800/80 rounded"></div>
-            <div className="h-6 w-24 bg-slate-800/80 rounded-full"></div>
+            <div className="h-7 w-28 bg-slate-800/80 rounded-full"></div>
         </div>
         <div className="space-y-3">
             <div className="h-4 sm:h-5 w-3/4 bg-slate-800/60 rounded"></div>
@@ -322,8 +328,8 @@ const InsightSkeleton = () => (
             <div className="h-4 sm:h-5 w-5/6 bg-slate-800/60 rounded"></div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-2">
-            <div className="h-9 w-full sm:w-48 bg-slate-800/50 rounded-xl"></div>
-            <div className="h-9 w-full sm:w-44 bg-slate-800/50 rounded-xl"></div>
+            <div className="h-10 w-full sm:w-48 bg-slate-800/50 rounded-xl"></div>
+            <div className="h-10 w-full sm:w-44 bg-slate-800/50 rounded-xl"></div>
         </div>
     </div>
 );
@@ -340,7 +346,7 @@ const InsightError = ({ ui, onRetry }: { ui: LocalUIText; onRetry?: () => void }
         {onRetry && (
             <button 
                 onClick={onRetry}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 text-xs font-mono font-bold uppercase tracking-widest rounded-xl transition-all border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.2)] active:scale-95 min-h-[40px] w-full sm:w-auto"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 text-xs font-mono font-bold uppercase tracking-widest rounded-xl transition-all border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.15)] active:scale-95 min-h-[40px] w-full sm:w-auto backdrop-blur-md"
             >
                 <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
                 {ui.retry}
@@ -358,7 +364,7 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
     
     if (hasError) {
         return (
-            <div className="flex-1 w-full bg-slate-950/80 border border-white/10 rounded-2xl sm:rounded-3xl backdrop-blur-xl min-h-[200px] sm:min-h-[220px] flex items-center justify-center transform-gpu translate-z-0 shadow-2xl">
+            <div className="flex-1 w-full bg-slate-950/60 border border-white/10 rounded-2xl sm:rounded-3xl backdrop-blur-2xl min-h-[200px] sm:min-h-[220px] flex items-center justify-center transform-gpu translate-z-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                 <InsightError ui={ui} onRetry={onRetry} />
             </div>
         );
@@ -366,7 +372,7 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
 
     if (isLoading || !analysis) {
         return (
-            <div className="flex-1 w-full bg-slate-950/80 border border-white/10 rounded-2xl sm:rounded-3xl backdrop-blur-xl min-h-[200px] sm:min-h-[220px] transform-gpu translate-z-0 shadow-2xl">
+            <div className="flex-1 w-full bg-slate-950/60 border border-white/10 rounded-2xl sm:rounded-3xl backdrop-blur-2xl min-h-[200px] sm:min-h-[220px] transform-gpu translate-z-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                 <InsightSkeleton />
             </div>
         );
@@ -377,18 +383,19 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
     const hasNewHazard = analysis.hazard_type && analysis.hazard_type !== 'NONE';
 
     return (
-        <div className={`flex flex-col w-full h-full min-h-[200px] sm:min-h-[220px] border rounded-2xl sm:rounded-3xl backdrop-blur-xl shadow-2xl relative overflow-hidden transition-all duration-700 transform-gpu translate-z-0 ${
+        <div className={`flex flex-col w-full h-full min-h-[200px] sm:min-h-[220px] rounded-2xl sm:rounded-3xl backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden transition-all duration-700 transform-gpu translate-z-0 ring-1 ring-inset ${
             isGemini 
-                ? 'bg-gradient-to-br from-slate-950 via-indigo-950/60 to-slate-950 border-indigo-500/30 shadow-[0_8px_32px_rgba(30,27,75,0.45)]' 
-                : 'bg-slate-950/80 border-white/10 shadow-slate-950/50'
+                ? 'bg-gradient-to-br from-slate-900/90 via-indigo-950/40 to-slate-950/90 ring-indigo-500/20' 
+                : 'bg-slate-950/80 ring-white/10'
         }`}>
             
+            {/* Matriu Tàctica (Fons) */}
             <div 
-                className="absolute inset-0 opacity-15 mix-blend-overlay pointer-events-none"
+                className="absolute inset-0 opacity-[0.08] mix-blend-overlay pointer-events-none"
                 style={{ 
                     backgroundImage: `
-                        linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)
+                        linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255,255,255,0.2) 1px, transparent 1px)
                     `,
                     backgroundSize: '24px 24px'
                 }}
@@ -396,14 +403,14 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
 
             {isGemini && (
                 <div 
-                    className="absolute inset-0 opacity-25 mix-blend-soft-light pointer-events-none"
+                    className="absolute inset-0 opacity-[0.15] mix-blend-soft-light pointer-events-none"
                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}
                 ></div>
             )}
 
             {/* CAPÇALERA ENTENEDORA I MULTILINGÜE */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 p-4 sm:p-5 md:p-6 pb-2.5 sm:pb-3 shrink-0 z-10 border-b border-white/5">
-                <div className={`flex items-center gap-1.5 sm:gap-2 text-xs font-mono font-bold uppercase tracking-widest transition-colors duration-500 ${isGemini ? 'text-indigo-300' : 'text-slate-400'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-4 sm:p-5 md:p-6 pb-2.5 sm:pb-3 shrink-0 z-10 border-b border-white/5 relative">
+                <div className={`flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest transition-colors duration-500 ${isGemini ? 'text-indigo-300' : 'text-slate-400'}`}>
                     {isGemini ? (
                         <>
                             <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> 
@@ -419,11 +426,11 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                     )}
                 </div>
                 
-                <TacticalRiskBadge analysis={analysis} t={t} ui={ui} />
+                <TacticalRiskBadge analysis={analysis} ui={ui} />
             </div>
             
             {/* CONTINGUT SCROLLABLE */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-5 md:p-6 pt-3.5 sm:pt-4 relative z-10 flex flex-col justify-between gap-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-5 md:p-6 pt-3.5 sm:pt-4 relative z-10 flex flex-col justify-between gap-5">
                 <div className="animate-in fade-in duration-700 space-y-4">
                     
                     {/* 1. Bàners d'Avís i Alerta multilingües */}
@@ -431,7 +438,6 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                         <TacticalHazardBanner 
                             hazardType={analysis.hazard_type} 
                             riskLevel={analysis.risk_level} 
-                            t={t}
                             ui={ui}
                         />
                     )}
@@ -439,28 +445,28 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                     {!hasNewHazard && hasLegacyAlerts && (
                         <div className="flex flex-col gap-2.5">
                             {analysis.alerts!.map((alert, i) => (
-                                <InsightAlert key={i} alert={alert} t={t} ui={ui} />
+                                <InsightAlert key={i} alert={alert} />
                             ))}
                         </div>
                     )}
 
                     {/* 2. Text Principal amb màxima llegibilitat */}
-                    <div key={analysis.source || 'default'} className="min-h-[3rem] py-0.5"> 
+                    <div key={analysis.source || 'default'} className="min-h-[3rem] py-1"> 
                         <TypewriterText 
                             text={analysis.text || ''} 
-                            className="text-base sm:text-lg md:text-xl text-slate-100 font-medium leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] whitespace-pre-wrap font-sans"
+                            className="text-base sm:text-lg md:text-xl text-slate-100 font-medium leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] whitespace-pre-wrap font-sans tracking-wide"
                         />
                     </div>
                 </div>
                 
                 {/* 3. Píndoles d'informació clau */}
                 {Array.isArray(analysis.tips) && analysis.tips.length > 0 && (
-                    <div className="pt-3.5 border-t border-white/5 flex flex-col gap-2.5">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                    <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
+                        <div className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-400">
                             <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0 drop-shadow-[0_0_4px_rgba(6,182,212,0.6)]" />
                             <span>{ui.tipsHeader}</span>
                         </div>
-                        <div className="flex flex-wrap gap-2 items-center">
+                        <div className="flex flex-wrap gap-2.5 items-center">
                             {analysis.tips.map((tip, i) => (
                                 <InsightTip key={i} tip={tip} index={i} />
                             ))}

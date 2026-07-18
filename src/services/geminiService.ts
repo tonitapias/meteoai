@@ -248,6 +248,72 @@ const getTacticalComfortDescription = (
     return `Confort tèrmic normal (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
 };
 
+/**
+ * --- TALLAFOCS DETERMINISTA (DOCTRINA RISC ZERO) ---
+ * Analitza les matrius crues i retorna el risc objectiu més alt previst a la finestra horària,
+ * blindant el sistema contra al·lucinacions tranquil·litzadores de l'IA.
+ */
+const evaluateDeterministicRisk = (
+    weatherData: ExtendedWeatherData, 
+    startIndex: number, 
+    endIndex: number
+): { risk: TacticalRiskLevel, hazard: TacticalHazardType | null } => {
+    let maxRisk: TacticalRiskLevel = 'GREEN';
+    let detectedHazard: TacticalHazardType | null = null;
+
+    try {
+        const hourly = weatherData.hourly as Record<string, unknown> | undefined;
+        if (!hourly) return { risk: 'GREEN', hazard: null };
+
+        const wmoArr = (hourly.weather_code ?? hourly.weathercode) as (number | null)[] | undefined;
+        const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
+        const tempArr = hourly.temperature_2m as (number | null)[] | undefined;
+
+        const upgradeRisk = (newRisk: TacticalRiskLevel, newHazard: TacticalHazardType) => {
+            const hierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
+            if (hierarchy[newRisk] > hierarchy[maxRisk]) {
+                maxRisk = newRisk;
+            }
+            if (detectedHazard === null || hierarchy[newRisk] >= hierarchy[maxRisk]) {
+                detectedHazard = newHazard;
+            }
+        };
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const wmo = wmoArr?.[i];
+            const gust = gustsArr?.[i];
+            const temp = tempArr?.[i];
+
+            if (wmo !== undefined && wmo !== null) {
+                // Tempestes i llamps (Escenari Convectiu)
+                if (wmo === 95 || wmo === 96 || wmo === 99) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
+                // Gel i nevades (Escenari de superfície lliscant)
+                else if ([66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
+                // Pèrdua de visibilitat dràstica per boira gebradora o densa
+                else if ([45, 48].includes(wmo as number)) upgradeRisk('AMBER', 'VISIBILITY');
+            }
+
+            // Avaluació de ràfegues tàctiques (Vent)
+            if (typeof gust === 'number') {
+                if (gust >= 80) upgradeRisk('RED', 'WIND');
+                else if (gust >= 50) upgradeRisk('AMBER', 'WIND');
+            }
+
+            // Avaluació tèrmica (Calor / Fred extrem)
+            if (typeof temp === 'number') {
+                if (temp >= 40) upgradeRisk('RED', 'HEAT');
+                else if (temp >= 35) upgradeRisk('AMBER', 'HEAT');
+                else if (temp <= -8) upgradeRisk('RED', 'COLD');
+                else if (temp <= 0) upgradeRisk('AMBER', 'COLD');
+            }
+        }
+    } catch (e) {
+        console.warn("⚠️ Error en l'avaluació matemàtica del tallafocs", e);
+    }
+
+    return { risk: maxRisk, hazard: detectedHazard };
+};
+
 export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, language: string): Promise<AICacheData | null> => {
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
@@ -303,6 +369,8 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         }
 
         let finestraPrevista = "Sense dades horàries.";
+        let evalStartIndex = 0;
+        let evalEndIndex = 0;
         
         if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
             const times = weatherData.hourly.time;
@@ -338,6 +406,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
             if (startIndex === -1) startIndex = 0;
             const endIndex = Math.min(startIndex + 6, times.length);
+            
+            // Capturem els índexs per llançar el tallafocs posteriorment
+            evalStartIndex = startIndex;
+            evalEndIndex = endIndex;
 
             const tableRows: string[] = [
                 "| HORA | ESTAT DEL CEL | TEMP | SENSACIÓ | HUMITAT | PLUJA (PROB%) | VENT (RÀFEGUES) | UV | AQI |",
@@ -399,7 +471,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
         const targetLanguage = TARGET_LANGUAGES[language] || 'English';
 
-        // REGLA CLÍNICA DE FLUIDESA I TRACTAMENT EQUILIBRAT DE TIPS
         const terminologyRule = 
             language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA: Tò expert de guia de muntanya. 
              - AL CAMP TEXT: Descriu l'escenari sense llistes, arrodonint enters. Prohibit donar consells o adreçar-se a l'usuari aquí.
@@ -423,15 +494,17 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           
           TASCA ESPECÍFICA: ${prompts.task}
           
-          REQUERIMENTS COMUNICATIUS CLÍNICS:
-          1. AVALUACIÓ DE RISC MATEMÀTICA: Determina el "risk_level":
+          REQUERIMENTS COMUNICATIUS CLÍNICS (DOCTRINA RISC ZERO):
+          0. FORMAT OBLIGATORI: Has de respondre SEMPRE i ÚNICAMENT amb un objecte JSON vàlid. Està TOTALMENT PROHIBIT generar text conversacional abans o després del JSON, ni utilitzar codi Markdown (com \`\`\`json).
+          1. GESTIÓ FORA DE DOMINI: Si la "MATRIU D'EVOLUCIÓ" indica "Sense dades horàries", significa que la ubicació cau fora de l'abast del model regional. EN AQUEST CAS, PROHIBIT DISCULPAR-SE. Retorna exactament aquest JSON: {"risk_level": "GREEN", "hazard_type": "NONE", "text": "Ubicació fora de la zona de cobertura d'aquest model d'alta resolució. No hi ha dades de telemetria previstes.", "tips": []}
+          2. AVALUACIÓ DE RISC MATEMÀTICA: Determina el "risk_level":
              - "GREEN" (Sense Risc): Vent < 50 km/h, Temp 0ºC a 34ºC, Pluja < 5mm/h.
              - "AMBER" (Precaució): Ràfegues 50-80 km/h, Temp 35ºC-39ºC o < 0ºC, Pluja forta, Visibilitat baixa, RISC COMBINAT (Pluja + Vent > 35 km/h + Temp < 10ºC).
              - "RED" (Perill): Ràfegues > 80 km/h, Temp >= 40ºC o < -8ºC, Tempestat forta.
-          2. TIPUS DE PERILL ("hazard_type"): "NONE", "WIND", "HEAT", "COLD", "CONVECTIVE", "VISIBILITY" o "SNOW_ICE".
-          3. SÍNTESI FLUIDA AL CAMP 'TEXT': Redacta l'ESCENARI. Arrodoneix a l'enter (ZERO decimals). Prohibit llistes aïllades. REGLA CRÍTICA: Prohibit consells humans aquí.
-          4. CAMP 'TIPS' (AVISOS PRÀCTICS): Genera de 0 a 2 punts. TENS L'OBLIGACIÓ de retornar [] si el temps és tranquil i sense interès. Si hi ha un factor clau, usa l'estructura "[Fenomen]: [Conseqüència]". No superis les 15 paraules per tip.
-          5. IDIOMA: Respon exclusivament en ${targetLanguage}.
+          3. TIPUS DE PERILL ("hazard_type"): "NONE", "WIND", "HEAT", "COLD", "CONVECTIVE", "VISIBILITY" o "SNOW_ICE".
+          4. SÍNTESI FLUIDA AL CAMP 'TEXT': Redacta l'ESCENARI. Arrodoneix a l'enter (ZERO decimals). Prohibit llistes aïllades. REGLA CRÍTICA: Prohibit consells humans aquí.
+          5. CAMP 'TIPS' (AVISOS PRÀCTICS): Genera de 0 a 2 punts. TENS L'OBLIGACIÓ de retornar [] si el temps és tranquil i sense interès. Si hi ha un factor clau, usa l'estructura "[Fenomen]: [Conseqüència]". No superis les 15 paraules per tip.
+          6. IDIOMA: Respon exclusivament en ${targetLanguage}.
           ${terminologyRule}
         `;
 
@@ -481,7 +554,9 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             try {
                 const parsed = JSON.parse(jsonMatch[0]) as RawLLMResponse;
 
-                // RISC ZERO: Desacoplem validació del Text de l'existència rigorosa del camp Tips.
+                // Execució del tallafocs matemàtic fora del bucle IA
+                const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex);
+
                 if (typeof parsed.text === 'string' && parsed.text.trim().length > 0) {
                     
                     const validRisks: TacticalRiskLevel[] = ['GREEN', 'AMBER', 'RED'];
@@ -492,9 +567,20 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                     const rawHazard = String(parsed.hazard_type ?? 'NONE').toUpperCase() as TacticalHazardType;
                     const safeHazardType: TacticalHazardType = validHazards.includes(rawHazard) ? rawHazard : 'NONE';
 
+                    // --- INTERVENCIÓ DE SEGURETAT TÀCTICA (TALLAFOCS) ---
+                    const riskHierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
+                    let finalRiskLevel = safeRiskLevel;
+                    let finalHazardType = safeHazardType;
+
+                    if (riskHierarchy[deterministicEval.risk] > riskHierarchy[safeRiskLevel]) {
+                        console.warn(`🛡️ TALLAFOCS DE SEGURETAT ACTIVAT: La IA ha avaluat '${safeRiskLevel}', però les dades crues forcen '${deterministicEval.risk}' a causa de '${deterministicEval.hazard}'.`);
+                        finalRiskLevel = deterministicEval.risk;
+                        finalHazardType = deterministicEval.hazard ?? safeHazardType;
+                    } else if (safeHazardType === 'NONE' && deterministicEval.hazard !== null) {
+                        finalHazardType = deterministicEval.hazard;
+                    }
+
                     const validCategories: TacticalTipCategory[] = ['SKY', 'THERMAL', 'WIND', 'HAZARD'];
-                    
-                    // Saniteig Defensiu de Tips: Si és null, undefined o s'ha omès, recau en un array buit [].
                     const rawTipsArray = Array.isArray(parsed.tips) ? parsed.tips : [];
                     
                     const safeTips: TacticalTip[] = rawTipsArray
@@ -509,8 +595,8 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                         .slice(0, 2);
 
                     const validatedData: AICacheData = {
-                        risk_level: safeRiskLevel,
-                        hazard_type: safeHazardType,
+                        risk_level: finalRiskLevel,
+                        hazard_type: finalHazardType,
                         tactical_reasoning: typeof parsed.tactical_reasoning === 'string' ? parsed.tactical_reasoning : undefined,
                         text: parsed.text.trim(),
                         tips: safeTips 
