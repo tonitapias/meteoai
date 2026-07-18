@@ -55,7 +55,7 @@ interface ModelTacticalInfo {
 }
 
 /**
- * RESOLUCIÓ HORÀRIA (BLINDADA CONTRA DOUBLE-OFFSET)
+ * RESOLUCIÓ HORÀRIA (BLINDADA CONTRA DOUBLE-OFFSET I COMPATIBLE AMB fusos horaris)
  */
 const getTacticalHourStr = (
     timeRaw: number | string, 
@@ -399,15 +399,14 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
         const targetLanguage = TARGET_LANGUAGES[language] || 'English';
 
-        // REGLA CLÍNICA DE FLUIDESA I SEPARACIÓ ESTRICTA D'AVISOS
+        // REGLA CLÍNICA DE FLUIDESA I TRACTAMENT EQUILIBRAT DE TIPS
         const terminologyRule = 
-            language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA: Escriu en català central tàctic i FLUID.
-             - SEPARACIÓ CRÍTICA: Al camp 'text' TENS TERMINANTMENT PROHIBIT donar consells humans, recomanar roba, aigua o objectes (ex: paraigües). Només física atmosfèrica. Prohibit parlar amb l'usuari.
-             - REGLA ANTI-PLANTILLA: Integra la informació amb connectors ("amb", "mentre"). La primera frase defineix l'escenari.
-             - ARRODONIMENT: Zero decimals al text. Arrodoneix a l'enter més proper.` :
-            language === 'es' ? '- Estilo táctico fluido. SEPARACIÓN CRÍTICA: En el campo "text" TIENES PROHIBIDO dar consejos, recomendar ropa, agua o paraguas. Solo física. Prohibido hablar con el usuario.' :
-            language === 'fr' ? '- Style tactique fluide. SÉPARATION CRITIQUE: Dans le champ "text", il est INTERDIT de donner des conseils, de recommander des vêtements, de l\'eau ou des parapluies. Uniquement de la physique.' :
-            '- Fluid tactical style. CRITICAL SEPARATION: In the "text" field you are FORBIDDEN to give advice, recommend clothing, water, or umbrellas. Only physics. Forbidden to address the user.';
+            language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA: Tò expert de guia de muntanya. 
+             - AL CAMP TEXT: Descriu l'escenari sense llistes, arrodonint enters. Prohibit donar consells o adreçar-se a l'usuari aquí.
+             - AL CAMP TIPS: Si no hi ha perill ni res clau a destacar (dia rutinari), retorna []. Si hi ha dada rellevant, usa el format 'Fenomen: Consell/Avís'. Màxim 15 paraules.` :
+            language === 'es' ? '- Tono de experto. En "text": solo describe escenario, sin listas ni consejos. En "tips": retorna [] si no hay nada clave. Si hay peligro o dato relevante, usa "Fenómeno: Consejo". Máx 15 palabras.' :
+            language === 'fr' ? '- Ton expert. Dans "text": scénario sans listes ni conseils. Dans "tips": retourne [] si la météo est routinière. Sinon, format "Phénomène: Avis". Max 15 mots.' :
+            '- Expert tone. In "text": scenario description only, no lists or advice. In "tips": return [] if weather is routine. Otherwise, use "Phenomenon: Advice". Max 15 words.';
             
         const prompt = `
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
@@ -430,8 +429,8 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
              - "AMBER" (Precaució): Ràfegues 50-80 km/h, Temp 35ºC-39ºC o < 0ºC, Pluja forta, Visibilitat baixa, RISC COMBINAT (Pluja + Vent > 35 km/h + Temp < 10ºC).
              - "RED" (Perill): Ràfegues > 80 km/h, Temp >= 40ºC o < -8ºC, Tempestat forta.
           2. TIPUS DE PERILL ("hazard_type"): "NONE", "WIND", "HEAT", "COLD", "CONVECTIVE", "VISIBILITY" o "SNOW_ICE".
-          3. SÍNTESI FLUIDA AL CAMP 'TEXT': Redacta la TENDÈNCIA atmosfèrica definint l'ESCENARI en la primera frase. Arrodoneix TOTS els números a l'enter (prohibit decimals). REGLA CRÍTICA: Aquest camp és només per a descriure fets atmosfèrics. Prohibit consells de roba, hidratació o equipament (paraigües). Prohibit dirigir-se a l'usuari.
-          4. CAMP 'TIPS' PER ORDRES: Genera EXACTAMENT 2 punts d'observació/acció. Han de ser ordres imperatives i mecàniques (màx 5 paraules per tip). En cas de risc CONVECTIVE, prioritza tips de protecció (refugi, allunyar-se de carenes) i ignora la calor prèvia.
+          3. SÍNTESI FLUIDA AL CAMP 'TEXT': Redacta l'ESCENARI. Arrodoneix a l'enter (ZERO decimals). Prohibit llistes aïllades. REGLA CRÍTICA: Prohibit consells humans aquí.
+          4. CAMP 'TIPS' (AVISOS PRÀCTICS): Genera de 0 a 2 punts. TENS L'OBLIGACIÓ de retornar [] si el temps és tranquil i sense interès. Si hi ha un factor clau, usa l'estructura "[Fenomen]: [Conseqüència]". No superis les 15 paraules per tip.
           5. IDIOMA: Respon exclusivament en ${targetLanguage}.
           ${terminologyRule}
         `;
@@ -482,7 +481,8 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             try {
                 const parsed = JSON.parse(jsonMatch[0]) as RawLLMResponse;
 
-                if (typeof parsed.text === 'string' && Array.isArray(parsed.tips)) {
+                // RISC ZERO: Desacoplem validació del Text de l'existència rigorosa del camp Tips.
+                if (typeof parsed.text === 'string' && parsed.text.trim().length > 0) {
                     
                     const validRisks: TacticalRiskLevel[] = ['GREEN', 'AMBER', 'RED'];
                     const rawRisk = String(parsed.risk_level ?? 'AMBER').toUpperCase() as TacticalRiskLevel;
@@ -493,7 +493,11 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                     const safeHazardType: TacticalHazardType = validHazards.includes(rawHazard) ? rawHazard : 'NONE';
 
                     const validCategories: TacticalTipCategory[] = ['SKY', 'THERMAL', 'WIND', 'HAZARD'];
-                    const safeTips: TacticalTip[] = parsed.tips
+                    
+                    // Saniteig Defensiu de Tips: Si és null, undefined o s'ha omès, recau en un array buit [].
+                    const rawTipsArray = Array.isArray(parsed.tips) ? parsed.tips : [];
+                    
+                    const safeTips: TacticalTip[] = rawTipsArray
                         .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
                         .map(item => {
                             const rawCat = String(item.category ?? 'SKY').toUpperCase() as TacticalTipCategory;
@@ -504,18 +508,16 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                         .filter(tip => tip.text.length > 0)
                         .slice(0, 2);
 
-                    if (safeTips.length === 2 && parsed.text.trim().length > 0) {
-                        const validatedData: AICacheData = {
-                            risk_level: safeRiskLevel,
-                            hazard_type: safeHazardType,
-                            tactical_reasoning: typeof parsed.tactical_reasoning === 'string' ? parsed.tactical_reasoning : undefined,
-                            text: parsed.text.trim(),
-                            tips: safeTips
-                        };
+                    const validatedData: AICacheData = {
+                        risk_level: safeRiskLevel,
+                        hazard_type: safeHazardType,
+                        tactical_reasoning: typeof parsed.tactical_reasoning === 'string' ? parsed.tactical_reasoning : undefined,
+                        text: parsed.text.trim(),
+                        tips: safeTips 
+                    };
 
-                        await cacheService.set(cacheKey, validatedData);
-                        return validatedData;
-                    }
+                    await cacheService.set(cacheKey, validatedData);
+                    return validatedData;
                 }
             } catch (parseError) {
                 console.error("❌ Error crític fent JSON.parse de la resposta IA:", parseError);

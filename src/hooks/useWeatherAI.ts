@@ -89,7 +89,7 @@ export function useWeatherAI(
                 ...prev,
                 text: gemini.text,
                 // Risc Zero: Assegurem que 'tips' sigui realment un Array abans de sobreescriure
-                tips: Array.isArray(gemini.tips) && gemini.tips.length > 0 ? gemini.tips : prev.tips,
+                tips: Array.isArray(gemini.tips) ? gemini.tips : prev.tips,
                 // Propagació de la telemetria tàctica (Semàfor de risc i alertes severes)
                 risk_level: gemini.risk_level || prev.risk_level,
                 hazard_type: gemini.hazard_type || prev.hazard_type,
