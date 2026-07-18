@@ -44,6 +44,17 @@ interface TableRowData {
     isDay: boolean;
 }
 
+// HELPER RISC ZERO: Resolució de localització robusta per l'Intl
+const getSafeLocale = (lang: Language): string => {
+    switch (lang) {
+        case 'es': return 'es-ES';
+        case 'fr': return 'fr-FR';
+        case 'en': return 'en-US';
+        case 'ca':
+        default: return 'ca-ES';
+    }
+};
+
 interface DayDetailModalProps {
   weatherData: ExtendedWeatherData | null;
   selectedDayIndex: number | null;
@@ -60,10 +71,21 @@ export default function DayDetailModal({
   unit, 
   lang
 }: DayDetailModalProps) {
-  // DOCTRINA RISC ZERO: Extracció tipada de diccionari
+  // DOCTRINA RISC ZERO: Extracció tipada de diccionari amb fallbacks severs per no dependre exclusivament del .ts
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
   const tDayDetail = (typeof tRecord.dayDetail === 'object' && tRecord.dayDetail !== null) ? (tRecord.dayDetail as Record<string, string>) : {};
   
+  // DICCIONARI INTERN TÀCTIC (Per capçaleres dures de la taula)
+  const TACTICAL_I18N = useMemo(() => ({
+    detailHeader: lang === 'en' ? 'DAY DETAIL' : lang === 'fr' ? 'DÉTAIL DU JOUR' : lang === 'es' ? 'DETALLE DEL DÍA' : 'DETALL DEL DIA',
+    hourlyHeader: lang === 'en' ? 'HOURLY FORECAST' : lang === 'fr' ? 'PRÉVISIONS HORAIRES' : lang === 'es' ? 'PREVISIÓN POR HORAS' : 'PREVISIÓ PER HORES',
+    colHour: lang === 'en' ? 'HOUR' : lang === 'fr' ? 'HEURE' : 'HORA',
+    colSky: lang === 'en' ? 'SKY' : lang === 'fr' ? 'CIEL' : lang === 'es' ? 'CIELO' : 'CEL',
+    colTemp: 'TEMP',
+    colRain: lang === 'en' ? 'RAIN' : lang === 'fr' ? 'PLUIE' : lang === 'es' ? 'LLUVIA' : 'PLUJA',
+    colWind: lang === 'en' ? 'WIND' : lang === 'es' ? 'VIENTO' : 'VENT'
+  }), [lang]);
+
   const { dayData, hourlyData, comparisonData, snowLevelText } = useDayDetailData(weatherData, selectedDayIndex);
 
   // --- NAVEGACIÓ TÀCTICA (UNIFICADA) ---
@@ -195,7 +217,8 @@ export default function DayDetailModal({
 
   const formatDate = (isoString: string) => {
       try {
-          return new Date(isoString).toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'ca-ES', {
+          // Solució Risc Zero: Assegurem que toLocaleDateString rep sempre una clau de localització suportada 
+          return new Date(isoString).toLocaleDateString(getSafeLocale(lang), {
               weekday: 'long', day: 'numeric', month: 'long'
           });
       } catch { return isoString; }
@@ -237,7 +260,8 @@ export default function DayDetailModal({
 
               <div className="flex flex-col items-center justify-center text-center relative z-10 pt-6 sm:pt-2">
                   <div className="flex items-center gap-2 text-cyan-400 font-black uppercase tracking-[0.3em] text-[10px] mb-3 bg-cyan-950/40 px-3 py-1.5 rounded-md border border-cyan-500/30 backdrop-blur-md shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-                      <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || "DETALL DEL DIA"}
+                      {/* Solució tàctica per la capçalera traduïda */}
+                      <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || TACTICAL_I18N.detailHeader}
                   </div>
                   
                   <h2 className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg">
@@ -267,7 +291,7 @@ export default function DayDetailModal({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <StatCard 
                     icon={Droplets} 
-                    label={tDayDetail.precip || (typeof tRecord.precip === 'string' ? tRecord.precip : "PRECIPITACIÓ")} 
+                    label={tDayDetail.precip || (typeof tRecord.precip === 'string' ? tRecord.precip : TACTICAL_I18N.colRain)} 
                     value={formattedPrecipitation.val} 
                     sub={formattedPrecipitation.unit} 
                     color="text-blue-400" 
@@ -351,17 +375,17 @@ export default function DayDetailModal({
                     <div className="px-6 md:px-8 py-5 border-b border-white/5 bg-[#0f111a]/90 backdrop-blur-md">
                          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
                             <Clock className="w-4 h-4 text-cyan-400" /> 
-                            PREVISIÓ PER HORES
+                            {TACTICAL_I18N.hourlyHeader}
                         </h3>
                     </div>
                     
                     <div className="divide-y divide-white/5">
                         <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-black/60 shadow-inner">
-                            <div className="col-span-2">HORA</div>
-                            <div className="col-span-2 text-center">CEL</div>
-                            <div className="col-span-3 text-center">TEMP</div>
-                            <div className="col-span-3 text-right">PLUJA</div>
-                            <div className="col-span-2 text-right">VENT</div>
+                            <div className="col-span-2">{TACTICAL_I18N.colHour}</div>
+                            <div className="col-span-2 text-center">{TACTICAL_I18N.colSky}</div>
+                            <div className="col-span-3 text-center">{TACTICAL_I18N.colTemp}</div>
+                            <div className="col-span-3 text-right">{TACTICAL_I18N.colRain}</div>
+                            <div className="col-span-2 text-right">{TACTICAL_I18N.colWind}</div>
                         </div>
                         
                         {tableRows.map((row: TableRowData, idx: number) => {

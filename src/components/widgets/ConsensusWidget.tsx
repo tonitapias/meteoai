@@ -26,13 +26,44 @@ interface ConsensusWidgetProps {
   aromeTemp: number | undefined;
   aromePrecip: number | undefined;
   aromeWind: number | undefined;
-  lang: Language;
+  lang: Language | string;
   utcOffset?: number; 
   hourlyTimes?: string[];
   hourlyGlobalTimes?: string[];
   hourlyLocal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
   hourlyGlobal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
 }
+
+const translations = {
+  ca: {
+    title: 'Motor de Consens',
+    affinity: 'Precisió',
+    temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Δ',
+    chartsBtn: 'Telemetria Gràfica Completa',
+    status: { sync: 'Alineat', discrepancy: 'Discrepància', alert: 'Divergència' }
+  },
+  es: {
+    title: 'Motor de Consenso',
+    affinity: 'Precisión',
+    temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Δ',
+    chartsBtn: 'Telemetría Gráfica Completa',
+    status: { sync: 'Alineado', discrepancy: 'Discrepancia', alert: 'Divergencia' }
+  },
+  en: {
+    title: 'Consensus Engine',
+    affinity: 'Accuracy',
+    temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Δ',
+    chartsBtn: 'Full Graphical Telemetry',
+    status: { sync: 'Aligned', discrepancy: 'Variance', alert: 'Divergence' }
+  },
+  fr: {
+    title: 'Moteur de Consensus',
+    affinity: 'Précision',
+    temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Δ',
+    chartsBtn: 'Télémétrie Graphique Complète',
+    status: { sync: 'Aligné', discrepancy: 'Écart', alert: 'Divergence' }
+  }
+};
 
 export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   metrics, aromeTemp, aromePrecip, aromeWind, lang,
@@ -42,15 +73,8 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   
-  const isCa = lang === 'ca';
-  
-  const t = {
-    title: isCa ? 'Motor de Consens' : 'Consensus Engine',
-    affinity: isCa ? 'Precisió' : 'Accuracy',
-    temp: 'TEMP', rain: isCa ? 'PLUJA' : 'RAIN', snow: 'NEU', wind: 'VENT', diff: 'Δ',
-    chartsBtn: isCa ? 'Telemetria Gràfica Completa' : 'Full Graphical Telemetry',
-    status: { sync: isCa ? 'Alineat' : 'Aligned', discrepancy: isCa ? 'Discrepància' : 'Variance', alert: isCa ? 'Divergència' : 'Divergence' }
-  };
+  const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
+  const t = translations[safeLang];
 
   // DOCTRINA RISC ZERO: Validació estricta de números
   const isValidNum = (val: unknown): val is number => typeof val === 'number' && !Number.isNaN(val);

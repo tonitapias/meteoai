@@ -13,8 +13,9 @@ if (MAPBOX_TOKEN) {
   console.error("Alerta: No s'ha detectat VITE_MAPBOX_TOKEN al fitxer .env");
 }
 
+// Risc Zero: Acceptem nuls als frames per protegir el renderitzat contra forats d'API
 const RadarFrameSchema = z.object({
-  time: z.number(),
+  time: z.number().nullable(),
   path: z.string(),
 });
 
@@ -94,7 +95,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   }, []);
 
   const formatTime = useCallback((ts?: number | null) => {
-    if (!ts || isNaN(ts)) return "--:--";
+    if (ts === null || ts === undefined || isNaN(ts)) return "--:--";
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
 
@@ -155,7 +156,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     
     if (!rFrames || rFrames.length === 0 || index < 0 || index >= rFrames.length) return;
     const rFrame = rFrames[index];
-    if (!rFrame || !rFrame.time) return;
+    if (!rFrame || rFrame.time === null) return;
 
     const radSourceId = `rad-src-${rFrame.time}`;
     const radLayerId = `rad-layer-${rFrame.time}`;
@@ -191,13 +192,13 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       let closestSatIdx = 0;
       let minDiff = Infinity;
       sFrames.forEach((sFrame, sIdx) => {
-        if (!sFrame || !sFrame.time) return;
-        const diff = Math.abs(sFrame.time - rFrame.time);
+        if (!sFrame || sFrame.time === null) return;
+        const diff = Math.abs(sFrame.time - rFrame.time!);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
       
       const sFrame = sFrames[closestSatIdx];
-      if (sFrame && sFrame.time) {
+      if (sFrame && sFrame.time !== null) {
         const satSourceId = `sat-src-${sFrame.time}`;
         const satLayerId = `sat-layer-${sFrame.time}`;
         const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.80 : 0;
@@ -233,6 +234,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     if (!map || !map.isStyleLoaded()) return;
 
     const rFramesCount = radarFramesRef.current.length;
+    // Matemàtica Segura: Preveure divisió per 0 si la matriu ve buida
     if (rFramesCount === 0) return;
 
     const safeIndex = (index % rFramesCount + rFramesCount) % rFramesCount;
@@ -258,12 +260,12 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       }
     });
 
-    if (satFramesRef.current.length > 0 && currentRadarFrame) {
+    if (satFramesRef.current.length > 0 && currentRadarFrame && currentRadarFrame.time !== null) {
       let closestSatIdx = 0;
       let minDiff = Infinity;
       satFramesRef.current.forEach((sFrame, sIdx) => {
-        if (!sFrame || !sFrame.time) return;
-        const diff = Math.abs(sFrame.time - currentRadarFrame.time);
+        if (!sFrame || sFrame.time === null) return;
+        const diff = Math.abs(sFrame.time - currentRadarFrame.time!);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
       
@@ -286,8 +288,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const { host, radar, satellite } = parsedData;
     hostRef.current = host;
     
-    const rFrames = (radar?.past || []).filter(f => f && f.time);
-    const sFrames = (satellite?.infrared || []).filter(f => f && f.time);
+    const rFrames = (radar?.past || []).filter(f => f && f.time !== null);
+    const sFrames = (satellite?.infrared || []).filter(f => f && f.time !== null);
 
     radarFramesRef.current = rFrames;
     satFramesRef.current = sFrames;
@@ -459,18 +461,18 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   };
 
   const currentFrame = radarFramesRef.current[currentFrameIndex] || null;
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
+  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.05] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:16px_16px]`;
 
   if (error) {
     return (
-      <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-gradient-to-br from-[#0f111a]/95 to-black/90 backdrop-blur-md p-6 text-center">
+      <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-gradient-to-br from-[#0a0d16]/95 to-[#020308]/95 backdrop-blur-2xl p-6 text-center">
         <div className={MATRIX_BG}></div>
-        <div className="w-16 h-16 rounded-full bg-rose-950/40 border border-rose-500/30 shadow-[inset_0_1px_8px_rgba(244,63,94,0.3)] flex items-center justify-center mb-4 relative z-10">
-          <AlertTriangle className="w-8 h-8 text-rose-500 drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
+        <div className="w-20 h-20 rounded-2xl bg-rose-950/40 border border-rose-500/40 shadow-[inset_0_2px_15px_rgba(244,63,94,0.2),0_10px_30px_rgba(244,63,94,0.3)] flex items-center justify-center mb-6 relative z-10">
+          <AlertTriangle className="w-10 h-10 text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.8)]" />
         </div>
-        <span className="text-white font-black tracking-widest uppercase mb-1 z-10 text-base">{t('errRadarDown')}</span>
-        <span className="text-xs text-slate-300 font-mono mb-6 max-w-xs z-10">{t('errRadarDesc')}</span>
-        <button onClick={() => fetchAndInjectRadarData(true)} className="px-6 py-3 bg-[#0a0b10] border border-white/20 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 z-10 shadow-lg">
+        <span className="text-white font-black tracking-[0.2em] uppercase mb-2 z-10 text-lg drop-shadow-md">{t('errRadarDown')}</span>
+        <span className="text-sm text-slate-400 font-mono mb-8 max-w-sm z-10 leading-relaxed">{t('errRadarDesc')}</span>
+        <button onClick={() => fetchAndInjectRadarData(true)} className="px-8 py-4 bg-black/40 border border-white/20 hover:bg-white/10 hover:border-white/40 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 z-10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-md">
           {t('btnForceSync')}
         </button>
       </div>
@@ -478,96 +480,100 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   }
 
   return (
-    <div className="relative w-full h-full min-h-0 overflow-hidden bg-[#020308] select-none">
+    <div className="relative w-full h-full min-h-0 overflow-hidden bg-[#020308] select-none [transform:translateZ(0)]">
       {loading && (
-        <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-[#020308]/80 backdrop-blur-md transition-opacity duration-300">
+        <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-[#020308]/90 backdrop-blur-2xl transition-opacity duration-300">
           <div className={MATRIX_BG}></div>
-          <div className="relative w-14 h-14 flex items-center justify-center mb-4 z-10">
-            <div className="absolute inset-0 border-[3px] border-cyan-500/20 rounded-full"></div>
-            <div className="absolute inset-0 border-[3px] border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
-            <Radio className="w-6 h-6 text-cyan-400 animate-pulse" />
+          <div className="relative w-16 h-16 flex items-center justify-center mb-5 z-10">
+            <div className="absolute inset-0 border-[4px] border-cyan-500/20 rounded-full shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]"></div>
+            <div className="absolute inset-0 border-[4px] border-cyan-400 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
+            <Radio className="w-7 h-7 text-cyan-400 animate-pulse drop-shadow-[0_0_10px_rgba(6,182,212,1)]" />
           </div>
-          <p className="text-cyan-300 text-xs font-mono font-bold tracking-widest uppercase z-10 drop-shadow">{t('syncingDoppler')}</p>
+          <p className="text-cyan-300 text-sm font-mono font-bold tracking-[0.2em] uppercase z-10 drop-shadow-lg">{t('syncingDoppler')}</p>
         </div>
       )}
 
       <div ref={mapContainerRef} className="w-full h-full" />
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10">
-        <div className="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-75"></div>
-        <div className="absolute inset-1 bg-cyan-500 border border-white rounded-full shadow-[0_0_12px_rgba(6,182,212,1)]"></div>
+      {/* Punt de mira Tàctic Central */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none z-10 flex items-center justify-center">
+        <div className="absolute inset-0 bg-cyan-400/20 rounded-full animate-ping"></div>
+        <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(6,182,212,1)]"></div>
+        <div className="absolute w-6 h-6 border border-cyan-500/30 rounded-full"></div>
       </div>
 
+      {/* Menú de Capes Flotant */}
       <div className="absolute top-4 right-4 z-[1010] flex flex-col items-end pointer-events-none">
         <button 
           onClick={() => setShowLayerMenu(!showLayerMenu)} 
-          className={`pointer-events-auto p-3.5 rounded-xl backdrop-blur-xl border transition-all shadow-[0_8px_32px_rgba(0,0,0,0.5)] active:scale-95 ${showLayerMenu ? 'bg-black/40 border-cyan-400/50 text-cyan-300' : 'bg-black/20 border-white/15 text-slate-200 hover:bg-black/40 hover:text-white'}`} 
+          className={`pointer-events-auto p-4 rounded-2xl backdrop-blur-2xl border transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.6)] active:scale-95 ${showLayerMenu ? 'bg-black/60 border-cyan-400/50 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/15 text-slate-200 hover:bg-black/60 hover:text-white'}`} 
           title={t('layerControl')}
           aria-label={t('layerControl')}
         >
-          <Layers className="w-5 h-5 drop-shadow-md" />
+          <Layers className="w-6 h-6 drop-shadow-md" />
         </button>
 
         {showLayerMenu && (
-          <div className="pointer-events-auto mt-2 w-[280px] sm:w-[340px] max-h-[65vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-thumb]:rounded-full bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 sm:p-5 shadow-[0_15px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 origin-top-right duration-200">
+          <div className="pointer-events-auto mt-3 w-[calc(100vw-32px)] max-w-[320px] max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-thumb]:rounded-full bg-black/60 backdrop-blur-2xl border border-white/15 rounded-2xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 origin-top-right duration-200 ring-1 ring-white/5">
             
-            <div className="flex items-center justify-between mb-3 border-b sm:border-0 border-white/15 pb-2 sm:pb-0">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 drop-shadow-md">{t('baseMapTitle')}</span>
+            <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+              <span className="text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 drop-shadow-md">{t('baseMapTitle')}</span>
               <button 
                 onClick={() => setShowLayerMenu(false)} 
-                className="sm:hidden p-1.5 rounded-full bg-black/30 hover:bg-black/50 border border-white/10 text-slate-200 transition-colors shadow-sm"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors shadow-sm active:scale-95"
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
             </div>
             
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-4 sm:mb-5">
+            <div className="grid grid-cols-2 gap-2 mb-5">
               {(Object.keys(BASE_LAYERS) as BaseLayerType[]).map((key) => (
-                <button key={key} onClick={() => setActiveBaseLayer(key)} className={`flex items-center justify-between px-2.5 py-2 sm:p-3 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium sm:font-bold transition-all backdrop-blur-md ${activeBaseLayer === key ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : 'bg-black/30 text-slate-200 hover:bg-black/50 hover:text-white border border-white/10'}`}>
+                <button key={key} onClick={() => setActiveBaseLayer(key)} className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all duration-300 backdrop-blur-md ${activeBaseLayer === key ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10'}`}>
                   <span className="truncate drop-shadow-md">{BASE_LAYERS[key].name}</span>
-                  {activeBaseLayer === key && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ml-1 text-cyan-400 drop-shadow-md" />}
+                  {activeBaseLayer === key && <Check className="w-4 h-4 shrink-0 ml-1.5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" />}
                 </button>
               ))}
             </div>
 
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-300 block mb-2 sm:mb-2.5 drop-shadow-md">{t('overlayTitle')}</span>
+            <span className="text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block mb-3 drop-shadow-md">{t('overlayTitle')}</span>
             
-            <div className="space-y-1.5 sm:space-y-2">
-              <button onClick={() => setOverlays(prev => ({ ...prev, precip: !prev.precip }))} className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-colors text-xs text-slate-100 font-medium sm:font-bold backdrop-blur-md">
+            <div className="space-y-2">
+              <button onClick={() => setOverlays(prev => ({ ...prev, precip: !prev.precip }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
                 <span className="drop-shadow-md">{t('layerPrecip')}</span>
-                {overlays.precip ? <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 drop-shadow-md" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
+                {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
               </button>
-              <button onClick={() => setOverlays(prev => ({ ...prev, satIR: !prev.satIR }))} className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-colors text-xs text-slate-100 font-medium sm:font-bold backdrop-blur-md">
+              <button onClick={() => setOverlays(prev => ({ ...prev, satIR: !prev.satIR }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
                 <span className="drop-shadow-md">{t('layerSat')}</span>
-                {overlays.satIR ? <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 drop-shadow-md" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
+                {overlays.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
               </button>
-              <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-colors text-xs text-slate-100 font-medium sm:font-bold backdrop-blur-md">
+              <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
                 <span className="drop-shadow-md">{t('layerLabels')}</span>
-                {overlays.labels ? <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 drop-shadow-md" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />}
+                {overlays.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-md flex items-center justify-between gap-3 sm:pb-0 pb-[env(safe-area-inset-bottom,16px)] mb-[calc(env(safe-area-inset-bottom,0px)*0.5)] pointer-events-none">
+      {/* Control Inferior Flotant Spatial UI (Càpsula) */}
+      <div className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-1/2 -translate-x-1/2 z-[1000] w-[94%] sm:w-[450px] flex items-center justify-between gap-3 pointer-events-none">
         
         <button 
           onClick={togglePlay} 
           disabled={!radarFramesRef.current || radarFramesRef.current.length === 0} 
-          className={`pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full transition-all shrink-0 active:scale-95 backdrop-blur-xl border shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${isPlaying ? 'bg-black/30 border-white/20 text-cyan-400' : 'bg-cyan-500/90 hover:bg-cyan-400 border-cyan-400/50 text-black font-black'} disabled:opacity-40 disabled:cursor-not-allowed`} 
+          className={`pointer-events-auto flex items-center justify-center w-16 h-16 rounded-2xl transition-all duration-300 shrink-0 active:scale-95 backdrop-blur-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${isPlaying ? 'bg-black/60 border-white/20 text-cyan-400 shadow-[inset_0_0_15px_rgba(6,182,212,0.15)]' : 'bg-cyan-500 border-cyan-400/50 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]'} disabled:opacity-30 disabled:cursor-not-allowed`} 
           aria-label={isPlaying ? t('btnPause') : t('btnPlay')}
         >
-          {isPlaying ? <Pause className="w-6 h-6 fill-current drop-shadow-md" /> : <Play className="w-6 h-6 fill-current ml-1 drop-shadow-sm" />}
+          {isPlaying ? <Pause className="w-7 h-7 fill-current drop-shadow-md" /> : <Play className="w-7 h-7 fill-current ml-1.5 drop-shadow-sm" />}
         </button>
 
-        <div className="pointer-events-auto flex flex-col flex-1 items-center justify-center h-14 bg-black/20 backdrop-blur-xl border border-white/15 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] px-4">
-          <span className="text-[9px] text-cyan-300 font-mono font-bold uppercase tracking-[0.2em] mb-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+        <div className="pointer-events-auto flex flex-col flex-1 items-center justify-center h-16 bg-black/50 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 ring-1 ring-white/5">
+          <span className="text-[10px] text-cyan-300 font-mono font-black uppercase tracking-[0.25em] mb-0.5 drop-shadow-[0_1px_4px_rgba(0,0,0,1)]">
             {isPlaying ? t('animPlaying') : t('animCurrent')}
           </span>
-          <div className="flex items-center gap-2.5">
-            <span className={`h-2 w-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.9)] ${isPlaying ? 'bg-cyan-400 animate-ping' : 'bg-cyan-500'}`}></span>
-            <span ref={timeDisplayRef} className="text-white font-mono font-black text-xl sm:text-2xl tracking-tighter tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+          <div className="flex items-center gap-3">
+            <span className={`h-2.5 w-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,1)] ${isPlaying ? 'bg-cyan-400 animate-ping shadow-[0_0_15px_rgba(6,182,212,0.8)]' : 'bg-cyan-500'}`}></span>
+            <span ref={timeDisplayRef} className="text-white font-mono font-black text-2xl tracking-tighter tabular-nums drop-shadow-[0_2px_12px_rgba(0,0,0,1)]">
               {currentFrame ? formatTime(currentFrame.time) : '--:--'}
             </span>
           </div>
@@ -576,11 +582,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         <button 
           onClick={() => fetchAndInjectRadarData(true)} 
           disabled={loading} 
-          className="pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-xl border border-white/15 text-slate-100 hover:text-cyan-300 transition-all active:scale-95 shrink-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" 
+          className="pointer-events-auto flex items-center justify-center w-16 h-16 rounded-2xl bg-black/40 hover:bg-black/60 backdrop-blur-2xl border border-white/15 text-slate-200 hover:text-cyan-300 transition-all duration-300 active:scale-95 shrink-0 shadow-[0_8px_32px_rgba(0,0,0,0.6)]" 
           title={t('btnRefresh')}
           aria-label={t('btnRefresh')}
         >
-          <RefreshCw className={`w-5 h-5 drop-shadow-lg ${loading ? 'animate-spin text-cyan-400' : ''}`} />
+          <RefreshCw className={`w-6 h-6 drop-shadow-lg ${loading ? 'animate-spin text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]' : ''}`} />
         </button>
       </div>
 

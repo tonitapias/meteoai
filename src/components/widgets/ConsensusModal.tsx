@@ -7,7 +7,7 @@ import { ModalType } from './ConsensusWidget';
 interface ConsensusModalProps {
   activeModal: ModalType;
   closeModal: () => void;
-  lang: Language;
+  lang: Language | string;
   utcOffset: number;
   nowTimestamp: number;
   hourlyTimes: string[];
@@ -16,16 +16,47 @@ interface ConsensusModalProps {
   hourlyGlobal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
 }
 
+const translations = {
+  ca: {
+    modalTitle: 'Telemetria Horària',
+    local: 'LOC', global: 'GLO', now: 'ARA',
+    sync: 'Sincronitzant matrius horàries...',
+    tempLabel: 'TEMPERATURA',
+    rainLabel: 'PLUJA / NEU',
+    windLabel: 'VENT (10M)'
+  },
+  es: {
+    modalTitle: 'Telemetría Horaria',
+    local: 'LOC', global: 'GLO', now: 'AHORA',
+    sync: 'Sincronizando matrices horarias...',
+    tempLabel: 'TEMPERATURA',
+    rainLabel: 'LLUVIA / NIEVE',
+    windLabel: 'VIENTO (10M)'
+  },
+  en: {
+    modalTitle: 'Hourly Telemetry',
+    local: 'LOC', global: 'GLO', now: 'NOW',
+    sync: 'Synchronizing hourly matrices...',
+    tempLabel: 'TEMPERATURE',
+    rainLabel: 'RAIN / SNOW',
+    windLabel: 'WIND (10M)'
+  },
+  fr: {
+    modalTitle: 'Télémétrie Horaire',
+    local: 'LOC', global: 'GLO', now: 'ACTUEL',
+    sync: 'Synchronisation des matrices horaires...',
+    tempLabel: 'TEMPÉRATURE',
+    rainLabel: 'PLUIE / NEIGE',
+    windLabel: 'VENT (10M)'
+  }
+};
+
 export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   activeModal, closeModal, lang, utcOffset, nowTimestamp,
   hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal
 }) => {
-  const isCa = lang === 'ca';
-  
-  const t = {
-    modalTitle: isCa ? 'Telemetria Horària' : 'Hourly Telemetry',
-    local: 'LOC', global: 'GLO', now: isCa ? 'ARA' : 'NOW'
-  };
+  const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
+  const t = translations[safeLang];
 
   const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val : '--';
   
@@ -56,8 +87,8 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   };
 
   const getMappedData = () => {
-     let startIndex = hourlyTimes.findIndex(t => {
-        const epoch = getAbsoluteEpoch(t);
+     let startIndex = hourlyTimes.findIndex(timeStr => {
+        const epoch = getAbsoluteEpoch(timeStr);
         return !isNaN(epoch) && epoch >= nowTimestamp - (60 * 60 * 1000); 
      });
      if (startIndex === -1) startIndex = 0;
@@ -69,7 +100,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
            const ep = getAbsoluteEpoch(hourlyGlobalTimes[idx]);
            if (!isNaN(ep)) dict.set(ep, val);
         });
-        return displayTimes.map(t => dict.get(getAbsoluteEpoch(t)) ?? null);
+        return displayTimes.map(timeStr => dict.get(getAbsoluteEpoch(timeStr)) ?? null);
      };
 
      const getAlignedLocal = (arr: (number|null|undefined)[] | undefined) => {
@@ -95,7 +126,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   };
 
   const renderListContent = () => {
-    if (hourlyTimes.length === 0) return <div className="text-slate-400 text-center py-12 font-mono text-[10px] sm:text-xs tracking-widest uppercase animate-pulse">Sincronitzant matrius horàries...</div>;
+    if (hourlyTimes.length === 0) return <div className="text-slate-400 text-center py-12 font-mono text-[10px] sm:text-xs tracking-widest uppercase animate-pulse">{t.sync}</div>;
     const { displayTimes, ...mapped } = getMappedData();
     
     const locArr = activeModal === 'temp' ? mapped.tempLoc : activeModal === 'rain' ? mapped.rainLoc : mapped.windLoc;
@@ -139,7 +170,6 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
               <span className="text-xs sm:text-sm font-black text-white leading-none font-mono drop-shadow-md">
                 {diff !== '--' && Number(diff) > 0 ? `+${diff}` : diff}
               </span>
-              {/* CORRECCIÓ TYPESCRIPT: Tipatge estricte limitat a les claus que accepta la funció */}
               {renderTrend(locVal, gloVal, activeModal as 'temp' | 'rain' | 'wind')}
             </div>
           );
@@ -208,7 +238,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
             <div>
               <h3 className="text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
               <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5">
-                {activeModal === 'temp' ? 'TEMPERATURA' : activeModal === 'rain' ? 'PLUJA / NEU' : 'VENT (10M)'}
+                {activeModal === 'temp' ? t.tempLabel : activeModal === 'rain' ? t.rainLabel : t.windLabel}
               </p>
             </div>
           </div>

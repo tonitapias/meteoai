@@ -39,6 +39,17 @@ const getSafeArrayNum = (arr: unknown, index: number, fallback: number = 0): num
     return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
 };
 
+// HELPER RISC ZERO: Solució robusta per localitzacions amb francès inclòs
+const getSafeLocale = (lang: Language): string => {
+    switch (lang) {
+        case 'es': return 'es-ES';
+        case 'fr': return 'fr-FR';
+        case 'en': return 'en-US';
+        case 'ca':
+        default: return 'ca-ES';
+    }
+};
+
 const ForecastSection = memo(function ForecastSection({ 
     chartData, comparisonData, dailyData, weeklyExtremes, unit, lang, onDayClick, comparisonEnabled, showCharts = true 
 }: ForecastSectionProps) {
@@ -47,6 +58,9 @@ const ForecastSection = memo(function ForecastSection({
     
     // Risc Zero: Evitem fallades en el renderitzat si la dada principal està malformada
     if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length === 0) return null;
+
+    // Diccionari tàctic intern
+    const NO_PRECIP_LABEL = lang === 'en' ? 'NONE' : lang === 'fr' ? 'AUCUN' : lang === 'es' ? 'NADA' : 'CAP';
 
     // SPATIAL UI BASE
     const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
@@ -79,7 +93,8 @@ const ForecastSection = memo(function ForecastSection({
 
                         const i = index + 1; // Índex real desplaçat (obviem "avui" índex 0)
                         
-                        const dayName = date.toLocaleDateString(lang === 'ca' ? 'ca-ES' : lang === 'es' ? 'es-ES' : 'en-US', { weekday: 'long' });
+                        // Resolució del dia amb el Helper de Locals de Risc Zero
+                        const dayName = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'long' });
                         const dateNum = date.getDate();
                         
                         // Lectura robusta Risc Zero
@@ -91,7 +106,7 @@ const ForecastSection = memo(function ForecastSection({
                         const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i); 
                         const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
 
-                        // MOTOR VISUAL INTEL·LIGENT (Amb protecció contra el tipus unknown del ChartDataPoint)
+                        // MOTOR VISUAL INTEL·LIGENT
                         let code = rawCode;
                         if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
                             const dateOnly = rawDate.slice(0, 10); 
@@ -183,7 +198,7 @@ const ForecastSection = memo(function ForecastSection({
                                         </span>
                                     ) : (
                                         <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
-                                            CAP
+                                            {NO_PRECIP_LABEL}
                                         </span>
                                     )}
                                     

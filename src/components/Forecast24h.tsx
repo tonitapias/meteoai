@@ -46,6 +46,9 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
 
         const rows: ChartDataPoint[] = [];
         const MAX_HOURS = 25;
+        
+        // Helper d'idioma per la targeta "Ara"
+        const NOW_LABEL = lang === 'en' ? 'NOW' : lang === 'es' ? 'AHORA' : lang === 'fr' ? 'ACTU' : 'ARA';
 
         // DOCTRINA RISC ZERO: Bucle segur. Si l'API lliura menys hores de les esperades, 
         // aturem la iteració en lloc d'injectar objectes buits o falsos zeros.
@@ -99,7 +102,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             }
 
             rows.push({
-                time: i === 0 ? (lang === 'ca' ? 'ARA' : 'NOW') : `${hours}H`,
+                time: i === 0 ? NOW_LABEL : `${hours}H`,
                 temp: temp,
                 // Assignem iconografia tàctica tenint en compte velocitat de vent i perill
                 icon: getWeatherIcon(code, "w-8 h-8", isDay, pProb, windSpeed),

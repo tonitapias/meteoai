@@ -3,7 +3,7 @@ import { Moon, CloudOff } from 'lucide-react';
 import * as SunCalc from 'suncalc'; 
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
-import { getTrans, getMoonPhaseText } from './widgetHelpers';
+import { getTrans } from './widgetHelpers';
 import { MoonPhaseIcon } from '../MoonPhaseIcon'; 
 
 // Ampliem la interfície localment. Afegim el timezone per a la telemetria global.
@@ -11,6 +11,34 @@ type TacticalMoonWidgetProps = WidgetProps & {
     lon?: number; 
     date?: Date | string | number; 
     timezone?: string;
+};
+
+// DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte
+const getTranslatedMoonPhase = (phase: number, lang: string): string => {
+    const safePhase = typeof phase === 'number' && !isNaN(phase) ? Math.max(0, Math.min(1, phase)) : 0;
+    
+    // Mapatge astronòmic rigorós (8 fases)
+    let phaseIndex = 0;
+    if (safePhase < 0.02 || safePhase > 0.98) phaseIndex = 0; // Nova
+    else if (safePhase < 0.23) phaseIndex = 1; // Creixent
+    else if (safePhase < 0.27) phaseIndex = 2; // Quart Creixent
+    else if (safePhase < 0.48) phaseIndex = 3; // Gibosa Creixent
+    else if (safePhase <= 0.52) phaseIndex = 4; // Plena
+    else if (safePhase < 0.73) phaseIndex = 5; // Gibosa Minvant
+    else if (safePhase < 0.77) phaseIndex = 6; // Quart Minvant
+    else phaseIndex = 7; // Minvant
+
+    const dict: Record<string, string[]> = {
+        ca: ['Lluna Nova', 'Creixent', 'Quart Creixent', 'Gibosa Creixent', 'Lluna Plena', 'Gibosa Minvant', 'Quart Minvant', 'Minvant'],
+        es: ['Luna Nueva', 'Creciente', 'Cuarto Creciente', 'Gibosa Creciente', 'Luna Llena', 'Gibosa Menguante', 'Cuarto Menguante', 'Menguante'],
+        en: ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'],
+        fr: ['Nouvelle Lune', 'Premier Croissant', 'Premier Quartier', 'Lune Gibbeuse Crois.', 'Pleine Lune', 'Lune Gibbeuse Décrois.', 'Dernier Quartier', 'Dernier Croissant']
+    };
+
+    const safeLang = typeof lang === 'string' ? lang.toLowerCase() : 'ca';
+    const activeLang = dict[safeLang] ? safeLang : 'ca';
+    
+    return dict[activeLang][phaseIndex] || '--';
 };
 
 export const MoonWidget = ({ phase, lat, lon, lang, date, timezone }: TacticalMoonWidgetProps) => {
@@ -29,7 +57,8 @@ export const MoonWidget = ({ phase, lat, lon, lang, date, timezone }: TacticalMo
     // Càlcul de la il·luminació real (0-100%) protegit contra divisions o nuls
     const illumination = hasData ? Math.round(((1 - Math.cos(phase * 2 * Math.PI)) / 2) * 100) : 0;
     
-    const moonText = hasData ? getMoonPhaseText(phase) : '--';
+    // Usem el nou motor intern per la traducció i evitem dependre de getMoonPhaseText extern
+    const moonText = hasData ? getTranslatedMoonPhase(phase, lang) : '--';
     const moonAge = hasData ? Math.round(phase * 29.53) : '--';
     
     // Utilitzem 'lat' per detectar l'hemisferi de manera segura
