@@ -408,13 +408,13 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                         <>
                             <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> 
                             <span className="bg-gradient-to-r from-cyan-300 via-indigo-200 to-purple-300 bg-clip-text text-transparent font-extrabold tracking-wider truncate">
-                                {ui.aiTitle}
+                                {ui.aiTitle} | +6H
                             </span>
                         </>
                     ) : (
                         <>
                             <Zap className="w-4 h-4 text-cyan-400 shrink-0" /> 
-                            <span className="truncate">{t.aiAnalysis || ui.aiTitle}</span>
+                            <span className="truncate">{t.aiAnalysis || ui.aiTitle} | +6H</span>
                         </>
                     )}
                 </div>

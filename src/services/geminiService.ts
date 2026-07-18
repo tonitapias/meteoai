@@ -233,16 +233,16 @@ const getTacticalComfortDescription = (
 
     if (temp >= 24 && diff >= 2.0) {
         if (apparentTemp >= 38) {
-            return `ALERTA PER CALOR INTENSA (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Evita esforços al sol i hidrata't`;
+            return `ALERTA PER CALOR INTENSA (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
         }
         if (apparentTemp >= 32) {
-            return `CALOR I XAFOGOR (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - Ambient pesat i sudorós`;
+            return `CALOR I XAFOGOR (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
         }
         return `Calor humida (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
     }
 
     if (temp <= 12 && diff <= -2.5) {
-        return `FRED INTENS PEL VENT (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr}) - El vent accentua el fred, abrica't bé`;
+        return `FRED INTENS PEL VENT (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
     }
 
     return `Confort tèrmic normal (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
@@ -304,7 +304,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
         let finestraPrevista = "Sense dades horàries.";
         
-        // Risc Zero: Assegurem que hourly.time és un array segur abans d'iterar
         if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
             const times = weatherData.hourly.time;
             let startIndex = -1;
@@ -338,14 +337,13 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             }
 
             if (startIndex === -1) startIndex = 0;
-            const endIndex = Math.min(startIndex + 6, times.length); 
+            const endIndex = Math.min(startIndex + 6, times.length);
 
             const tableRows: string[] = [
                 "| HORA | ESTAT DEL CEL | TEMP | SENSACIÓ | HUMITAT | PLUJA (PROB%) | VENT (RÀFEGUES) | UV | AQI |",
                 "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
             ];
 
-            // Risc Zero: Cast explícit d'arrays permetent (number | null) per suportar forats de dades
             const tempArr = weatherData.hourly.temperature_2m as (number | null)[] | undefined;
             const windArr = weatherData.hourly.wind_speed_10m as (number | null)[] | undefined;
             const gustsArr = weatherData.hourly.wind_gusts_10m as (number | null)[] | undefined;
@@ -401,46 +399,42 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
         const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
         const targetLanguage = TARGET_LANGUAGES[language] || 'English';
 
+        // REGLA CLÍNICA DE FLUIDESA I SEPARACIÓ ESTRICTA D'AVISOS
         const terminologyRule = 
-            language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA CRÍTICA: Escriu en un català central impecable, natural, clar i modern. ZERO ANGLICISMES i ZERO calcs del castellà ("bochorno", "xubasco").
-             - ROTACIÓ LÈXICA: Alterna de manera natural i directa entre: "xafogor", "calor humida", "ambient pesat" o "sensació de fred pel vent".
-             - VENTS I FENÒMENS: Utilitza SEMPRE "ràfegues" o "cop de vent". Per a la pluja, usa "ruixats" o "xàfecs".` :
-            language === 'es' ? '- Utiliza términos claros, precisos y naturales en español normativo. CERO ANGLICISMOS. Alterna entre "bochorno", "calor húmedo" y "sensación de frío por el viento".' :
-            language === 'fr' ? '- Utilisez un vocabulaire météorologique clair, naturel et accessible en français (ex: "chaleur lourde", "refroidissement éolien" ou "température ressentie").' :
-            '- Use clear, accessible, and friendly weather terminology (rotate between: mugginess, heat stress, humid heat, apparent temperature, wind chill).';
+            language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA: Escriu en català central tàctic i FLUID.
+             - SEPARACIÓ CRÍTICA: Al camp 'text' TENS TERMINANTMENT PROHIBIT donar consells humans, recomanar roba, aigua o objectes (ex: paraigües). Només física atmosfèrica. Prohibit parlar amb l'usuari.
+             - REGLA ANTI-PLANTILLA: Integra la informació amb connectors ("amb", "mentre"). La primera frase defineix l'escenari.
+             - ARRODONIMENT: Zero decimals al text. Arrodoneix a l'enter més proper.` :
+            language === 'es' ? '- Estilo táctico fluido. SEPARACIÓN CRÍTICA: En el campo "text" TIENES PROHIBIDO dar consejos, recomendar ropa, agua o paraguas. Solo física. Prohibido hablar con el usuario.' :
+            language === 'fr' ? '- Style tactique fluide. SÉPARATION CRITIQUE: Dans le champ "text", il est INTERDIT de donner des conseils, de recommander des vêtements, de l\'eau ou des parapluies. Uniquement de la physique.' :
+            '- Fluid tactical style. CRITICAL SEPARATION: In the "text" field you are FORBIDDEN to give advice, recommend clothing, water, or umbrellas. Only physics. Forbidden to address the user.';
             
-        // -----------------------------------------------------------------------------------------
-        // LLINDARS ACTUALITZATS AMB LA REGLA DE RISC COMBINAT
-        // -----------------------------------------------------------------------------------------
         const prompt = `
-          ANÀLISI METEOROLÒGICA EN TEMPS REAL - DADES ACTUALS:
+          TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
           Estat del Cel: ${getTacticalWeatherDescription(currentWmoCode, currentTempNum)}
           Temperatura Real: ${weatherData.current.temperature_2m}ºC | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
-          Confort Tèrmic i Sensació: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
-          Pluja actual: ${weatherData.current.precipitation}mm | Índex UV Actual: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat de l'Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}
-          MODEL METEOROLÒGIC UTILITZAT: ${modelInfo.name} (${modelInfo.description})
+          Confort Tèrmic: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
+          Pluja actual: ${weatherData.current.precipitation}mm | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}
+          MODEL EN ÚS: ${modelInfo.name}
 
-          TAULA D'EVOLUCIÓ PREVISTA (PROPERES 6 HORES DES DE LES ${currentHourStr}):
+          MATRIU D'EVOLUCIÓ PREVISTA (6 HORES):
           ${finestraPrevista}
           
           TASCA ESPECÍFICA: ${prompts.task}
           
-          REQUERIMENTS COMUNICATIUS DE LA RESPOSTA:
-          1. ANCORATGE TEMPORAL ESTRICTE: Centra la previsió en l'evolució de les 6 hores de la taula.
-          2. AVALUACIÓ DE RISC METEOROLÒGIC (LLINDARS STRICTES): Determina el "risk_level" basant-te exclusivament en aquests valors:
-             - "GREEN" (Sense Risc): Vent < 50 km/h, Temperatura entre 0ºC i 34ºC, Pluja feble (< 5mm/h). Si el temps no supera cap llindar d'AMBER, ha de ser GREEN.
-             - "AMBER" (Precaució): Ràfegues de vent entre 50 i 80 km/h, Calor (35ºC a 39ºC), Fred (< 0ºC), Pluja forta, Visibilitat baixa, O RISC COMBINAT (Pluja present + Vent > 35 km/h + Temp < 10ºC).
-             - "RED" (Perill): Ràfegues > 80 km/h, Calor Extrema (>= 40ºC), Fred Extrem (< -8ºC), o Tempestat forta amb pedra.
-          3. TIPO DE PERILL ("hazard_type"): Tria estrictament un entre: "NONE" (si risk és GREEN), "WIND" (vent fort), "HEAT" (calor o xafogor), "COLD" (fred intens), "CONVECTIVE" (tempestes), "VISIBILITY" (boira) o "SNOW_ICE" (neu o gel).
-          4. CATEGORITZACIÓ DE PUNTS CLAU: Genera EXACTAMENT 2 punts d'observació a l'array "tips". Cada objecte ha de tenir una clau "category" triada estrictament entre ["SKY", "THERMAL", "WIND", "HAZARD"] i una clau "text" amb la descripció entenedora i directa.
-          5. IDIOMA I LÈXIC: Respon exclusivament en ${targetLanguage}, evitant tecnicismes incomprensibles.
+          REQUERIMENTS COMUNICATIUS CLÍNICS:
+          1. AVALUACIÓ DE RISC MATEMÀTICA: Determina el "risk_level":
+             - "GREEN" (Sense Risc): Vent < 50 km/h, Temp 0ºC a 34ºC, Pluja < 5mm/h.
+             - "AMBER" (Precaució): Ràfegues 50-80 km/h, Temp 35ºC-39ºC o < 0ºC, Pluja forta, Visibilitat baixa, RISC COMBINAT (Pluja + Vent > 35 km/h + Temp < 10ºC).
+             - "RED" (Perill): Ràfegues > 80 km/h, Temp >= 40ºC o < -8ºC, Tempestat forta.
+          2. TIPUS DE PERILL ("hazard_type"): "NONE", "WIND", "HEAT", "COLD", "CONVECTIVE", "VISIBILITY" o "SNOW_ICE".
+          3. SÍNTESI FLUIDA AL CAMP 'TEXT': Redacta la TENDÈNCIA atmosfèrica definint l'ESCENARI en la primera frase. Arrodoneix TOTS els números a l'enter (prohibit decimals). REGLA CRÍTICA: Aquest camp és només per a descriure fets atmosfèrics. Prohibit consells de roba, hidratació o equipament (paraigües). Prohibit dirigir-se a l'usuari.
+          4. CAMP 'TIPS' PER ORDRES: Genera EXACTAMENT 2 punts d'observació/acció. Han de ser ordres imperatives i mecàniques (màx 5 paraules per tip). En cas de risc CONVECTIVE, prioritza tips de protecció (refugi, allunyar-se de carenes) i ignora la calor prèvia.
+          5. IDIOMA: Respon exclusivament en ${targetLanguage}.
           ${terminologyRule}
-          
-          RECORDATORI: La resposta ha de ser exclusivament el JSON estricte sol·licitat en les regles de sistema.
         `;
-        // -----------------------------------------------------------------------------------------
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT);
@@ -452,8 +446,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 body: JSON.stringify({ 
                     prompt: prompt, 
                     lang: language,
-                    // SOLUCIÓ DE L'ERROR: Injectem de manera explícita i forçada el model Llama 3.1 
-                    // de Groq que dóna suport 100% natiu a la generació estricta de JSON objectes.
                     model: 'openai/gpt-oss-120b' 
                 }),
                 signal: controller.signal 
@@ -476,11 +468,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
             if (!rawText) {
                 console.error("❌ El Worker ha retornat una resposta buida o format invàlid.");
-                Sentry.addBreadcrumb({
-                    category: 'ai-api',
-                    message: 'Worker empty response',
-                    level: 'warning'
-                });
                 return null;
             }
 
@@ -488,12 +475,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
             
             if (!jsonMatch) {
-                console.error("❌ La resposta del Worker no conté una structure JSON vàlida.");
-                Sentry.addBreadcrumb({
-                    category: 'ai-api',
-                    message: 'Invalid JSON format from Worker',
-                    level: 'error'
-                });
+                console.error("❌ La resposta del Worker no conté una estructura JSON vàlida.");
                 return null;
             }
             
@@ -533,11 +515,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
                         await cacheService.set(cacheKey, validatedData);
                         return validatedData;
-                    } else {
-                        console.error("❌ La IA ha retornat menys de 2 tips vàlids o un text buit.", parsed);
                     }
-                } else {
-                    console.error("❌ El JSON no té l'estructura 'text' (string) i 'tips' (array) esperada.", parsed);
                 }
             } catch (parseError) {
                 console.error("❌ Error crític fent JSON.parse de la resposta IA:", parseError);
@@ -550,11 +528,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             clearTimeout(timeoutId);
             if (fetchError instanceof Error) {
                  console.error(`❌ Error de Xarxa/Timeout amb el Worker:`, fetchError.message);
-                 Sentry.addBreadcrumb({
-                    category: 'ai-network',
-                    message: fetchError.message,
-                    level: 'warning'
-                 });
             }
             return null;
         }
