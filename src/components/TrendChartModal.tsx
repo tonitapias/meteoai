@@ -206,8 +206,8 @@ const TrendChartModal = memo(function TrendChartModal({
                 to { stroke-dashoffset: 0; }
               }
               .anim-draw-line {
-                stroke-dasharray: 400;
-                stroke-dashoffset: 400;
+                stroke-dasharray: 2000;
+                stroke-dashoffset: 2000;
                 animation: drawLine 1.5s ease-out forwards;
               }
               .anim-column {
