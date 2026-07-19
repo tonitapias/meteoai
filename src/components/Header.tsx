@@ -7,22 +7,108 @@ import * as Sentry from "@sentry/react";
 import { useAppContext } from '../context/AppContext';
 import { Language, TranslationType } from '../translations';
 
-// Regex de llista negra
+// DOCTRINA RISC ZERO: Regex de llista negra per sanitejar inputs
 const DANGEROUS_CHARS = /[<>{}[\]\\/]/;
 
+// DOCTRINA RISC ZERO: Guàrdia de tipus per discriminar entre favorit i resultat de cerca
 function isLocationData(item: GeoSearchResult | LocationData): item is LocationData {
-    return (item as LocationData).admin1 !== undefined || (item as GeoSearchResult).id === undefined;
+  return (item as LocationData).admin1 !== undefined || (item as GeoSearchResult).id === undefined;
 }
+
+// DOCTRINA RISC ZERO: Interfície estricta per blindar totes les cadenes del Header
+interface HeaderTranslations {
+  searchPlaceholder: string;
+  detectedLocation: string;
+  currentLocation: string;
+  geoNotSupported: string;
+  geoError: string;
+  favorites: string;
+  results: string;
+  visualMode: string;
+  basic: string;
+  expert: string;
+  devMode: string;
+  locationTitle: string;
+  useCurrentLocation: string;
+  clearSearch: string;
+}
+
+// MATRIU DE TRADUCCIÓ NATIVA (Garanteix paritat 100% en ca, es, fr, en)
+const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
+  ca: {
+    searchPlaceholder: "CERCAR CIUTAT...",
+    detectedLocation: "Ubicació detectada",
+    currentLocation: "Ubicació actual",
+    geoNotSupported: "El teu navegador no suporta la geolocalització.",
+    geoError: "No s'ha pogut obtenir la ubicació precisa. Comprova el GPS o la connexió.",
+    favorites: "FAVORITS",
+    results: "RESULTATS",
+    visualMode: "MODE VISUAL",
+    basic: "BÀSIC",
+    expert: "EXPERT",
+    devMode: "MODE DEV",
+    locationTitle: "Localització",
+    useCurrentLocation: "Utilitzar la meva ubicació actual",
+    clearSearch: "Esborrar cerca"
+  },
+  es: {
+    searchPlaceholder: "BUSCAR CIUDAD...",
+    detectedLocation: "Ubicación detectada",
+    currentLocation: "Ubicación actual",
+    geoNotSupported: "Tu navegador no soporta la geolocalización.",
+    geoError: "No se ha podido obtener la ubicación precisa. Comprueba el GPS o la conexión.",
+    favorites: "FAVORITOS",
+    results: "RESULTADOS",
+    visualMode: "MODO VISUAL",
+    basic: "BÁSICO",
+    expert: "EXPERTO",
+    devMode: "MODO DEV",
+    locationTitle: "Localización",
+    useCurrentLocation: "Usar mi ubicación actual",
+    clearSearch: "Borrar búsqueda"
+  },
+  fr: {
+    searchPlaceholder: "RECHERCHER VILLE...",
+    detectedLocation: "Emplacement détecté",
+    currentLocation: "Emplacement actuel",
+    geoNotSupported: "Votre navigateur ne supporte pas la géolocalisation.",
+    geoError: "Impossible d'obtenir une position précise. Vérifiez le GPS ou la connexion.",
+    favorites: "FAVORIS",
+    results: "RÉSULTATS",
+    visualMode: "MODE VISUEL",
+    basic: "BASIQUE",
+    expert: "EXPERT",
+    devMode: "MODE DÉV",
+    locationTitle: "Localisation",
+    useCurrentLocation: "Utiliser ma position actuelle",
+    clearSearch: "Effacer la recherche"
+  },
+  en: {
+    searchPlaceholder: "SEARCH CITY...",
+    detectedLocation: "Detected location",
+    currentLocation: "Current location",
+    geoNotSupported: "Your browser does not support geolocation.",
+    geoError: "Could not obtain precise location. Check GPS or connection.",
+    favorites: "FAVORITES",
+    results: "RESULTS",
+    visualMode: "VISUAL MODE",
+    basic: "BASIC",
+    expert: "EXPERT",
+    devMode: "DEV MODE",
+    locationTitle: "Location",
+    useCurrentLocation: "Use my current location",
+    clearSearch: "Clear search"
+  }
+};
 
 interface HeaderProps {
   lang?: Language;
-  // Fem servir Partial per indicar que pot rebre l'objecte buit o incomplet
   t?: Partial<TranslationType>; 
 }
 
-export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
-  // 1. CONNEXIÓ AL CONTEXT
-  const { actions, state, flags } = useAppContext();
+export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
+  // 1. CONNEXIÓ AL CONTEXT GESTOR D'ESTAT (Font Única de Veritat)
+  const { actions, state, flags, t: contextT } = useAppContext();
   
   const onSearch = actions.fetchWeatherByCoords;
   const loading = state.loading;
@@ -30,7 +116,16 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
   const setViewMode = actions.setViewMode;
   const onDebugToggle = actions.toggleDebug;
 
-  const { favorites } = usePreferences();
+  // Risc Zero: Prioritzem l'idioma i traduccions del context. Ignorem props exteriors desactualitzades.
+  const activeLang: Language = (flags.lang as Language) || propLang || 'ca';
+  const activeT = contextT || propT || {};
+
+  // Risc Zero: Obtenim favorits del context o fem fallback segur a usePreferences si el tipatge d'AppContext encara no s'ha actualitzat.
+  const stateRecord = (state && typeof state === 'object') ? (state as Record<string, unknown>) : {};
+  const contextFavorites = Array.isArray(stateRecord.favorites) ? (stateRecord.favorites as LocationData[]) : undefined;
+  const { favorites: hookFavorites } = usePreferences();
+  const favorites: LocationData[] = contextFavorites ?? hookFavorites ?? [];
+
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<GeoSearchResult[]>([]);
@@ -59,23 +154,21 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
   };
 
   // ============================================================================
-  // SMART DICTIONARY: DICCIONARI INTERN MULTILINGÜE DEL HEADER
+  // DOCTRINA RISC ZERO: FUSIÓ DE DICCIONARI BLINDADA
+  // Garantim que safeLang sigui un dels 4 idiomes suportats per evitar indexacions indefinides.
   // ============================================================================
-  const tRecord = (t && typeof t === 'object') ? (t as Record<string, unknown>) : {};
-  const tHeader = (tRecord.header && typeof tRecord.header === 'object') ? (tRecord.header as Record<string, string>) : {};
+  const safeLang: Language = (['ca', 'es', 'fr', 'en'] as const).includes(activeLang) ? activeLang : 'ca';
+  const defaultDict = DEFAULT_HEADER_TRANSLATIONS[safeLang];
 
-  const dict = {
-    searchPlaceholder: tHeader.searchPlaceholder || (lang === 'es' ? "BUSCAR CIUDAD..." : lang === 'en' ? "SEARCH CITY..." : lang === 'fr' ? "RECHERCHER VILLE..." : "CERCAR CIUTAT..."),
-    detectedLocation: tHeader.detectedLocation || (lang === 'es' ? "Ubicación detectada" : lang === 'en' ? "Detected location" : lang === 'fr' ? "Emplacement détecté" : "Ubicació detectada"),
-    currentLocation: tHeader.currentLocation || (lang === 'es' ? "Ubicación actual" : lang === 'en' ? "Current location" : lang === 'fr' ? "Emplacement actuel" : "Ubicació actual"),
-    geoNotSupported: tHeader.geoNotSupported || (lang === 'es' ? "Tu navegador no soporta la geolocalización." : lang === 'en' ? "Your browser does not support geolocation." : lang === 'fr' ? "Votre navigateur ne supporte pas la géolocalisation." : "El teu navegador no suporta la geolocalització."),
-    geoError: tHeader.geoError || (lang === 'es' ? "No se ha podido obtener la ubicación precisa. Comprueba el GPS o la conexión." : lang === 'en' ? "Could not obtain precise location. Check GPS or connection." : lang === 'fr' ? "Impossible d'obtenir une position précise. Vérifiez le GPS ou la connexion." : "No s'ha pogut obtenir la ubicació precisa. Comprova el GPS o la connexió."),
-    favorites: tHeader.favorites || (lang === 'es' ? "FAVORITOS" : lang === 'en' ? "FAVORITES" : lang === 'fr' ? "FAVORIS" : "FAVORITS"),
-    results: tHeader.results || (lang === 'es' ? "RESULTADOS" : lang === 'en' ? "RESULTS" : lang === 'fr' ? "RÉSULTATS" : "RESULTATS"),
-    visualMode: tHeader.visualMode || (lang === 'es' ? "MODO VISUAL" : lang === 'en' ? "VISUAL MODE" : lang === 'fr' ? "MODE VISUEL" : "MODE VISUAL"),
-    basic: tHeader.basic || (lang === 'es' ? "BÁSICO" : lang === 'en' ? "BASIC" : lang === 'fr' ? "BASIQUE" : "BÀSIC"),
-    expert: tHeader.expert || (lang === 'es' ? "EXPERTO" : lang === 'en' ? "EXPERT" : lang === 'fr' ? "EXPERT" : "EXPERT"),
-    devMode: "DEV MODE"
+  const tRecord = (activeT && typeof activeT === 'object') ? (activeT as Record<string, unknown>) : {};
+  const tHeader = (tRecord.header && typeof tRecord.header === 'object') 
+    ? (tRecord.header as Partial<HeaderTranslations>) 
+    : {};
+
+  // FUSIONEM: El diccionari per defecte protegeix, tHeader sobreescriu si existeix via context
+  const dict: HeaderTranslations = {
+    ...defaultDict,
+    ...tHeader
   };
 
   const showFavorites = query.length === 0 && favorites.length > 0;
@@ -108,10 +201,16 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
       }
 
       setIsSearching(true);
-      const results = await searchCity(cleanQuery);
-      setSuggestions(results);
-      setSelectedIndex(-1); 
-      setIsSearching(false);
+      try {
+        const results = await searchCity(cleanQuery);
+        setSuggestions(results || []);
+      } catch (err) {
+        console.error("Error en la cerca de ciutat:", err);
+        setSuggestions([]);
+      } finally {
+        setSelectedIndex(-1); 
+        setIsSearching(false);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [query]);
@@ -173,7 +272,7 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
 
       try {
           const resp = await fetch(
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${lang}`
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${safeLang}`
           );
           
           if (resp.ok) {
@@ -209,10 +308,10 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
   };
 
   const handleSelectFavorite = (fav: LocationData) => {
-      if (fav.latitude && fav.longitude) {
+      if (typeof fav.latitude === 'number' && typeof fav.longitude === 'number' && !isNaN(fav.latitude) && !isNaN(fav.longitude)) {
           processSelection(fav.latitude, fav.longitude, fav.name, fav.country);
       } else {
-          console.warn("Favorit sense coordenades");
+          console.warn("Favorit sense coordenades vàlides");
       }
   };
 
@@ -226,7 +325,7 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
              const geo = item as GeoSearchResult;
              processSelection(geo.latitude, geo.longitude, geo.name, geo.country);
         }
-    } else if (suggestions.length > 0) {
+    } else if (suggestions.length > 0 && suggestions[0]) {
         const topHit = suggestions[0];
         processSelection(topHit.latitude, topHit.longitude, topHit.name, topHit.country);
     }
@@ -244,6 +343,11 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
           setIsFocused(false);
           setSelectedIndex(-1);
       }
+  };
+
+  // DOCTRINA RISC ZERO: Càlcul segur de visualització de coordenades
+  const formatCoord = (val: unknown): string => {
+      return (typeof val === 'number' && !isNaN(val)) ? val.toFixed(2) : '0.00';
   };
 
   return (
@@ -334,7 +438,7 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
                     type="button"
                     onClick={() => { setQuery(''); setSuggestions([]); setSelectedIndex(-1); }}
                     className="p-2 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
-                    aria-label="Esborrar cerca"
+                    aria-label={dict.clearSearch}
                 >
                     <X className="w-4 h-4" />
                 </button>
@@ -352,8 +456,8 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
                     : 'bg-black/40 border-white/5 hover:bg-sky-500/20 text-slate-400 hover:text-sky-400 hover:border-sky-500/40 hover:shadow-[0_0_15px_rgba(56,189,248,0.2)]'
                 }
               `}
-              title="Localització"
-              aria-label="Utilitzar la meva ubicació actual"
+              title={dict.locationTitle}
+              aria-label={dict.useCurrentLocation}
             >
                 {isLocating ? (
                     <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin drop-shadow-md" />
@@ -407,7 +511,7 @@ export default function Header({ lang = 'ca', t = {} }: HeaderProps) {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className={`text-[10px] sm:text-xs font-mono font-bold px-2 py-1 rounded bg-black/50 border border-white/5 ${selectedIndex === idx ? 'text-sky-300 border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.15)]' : 'text-slate-500'}`}>
-                                        {geo.latitude.toFixed(2)}, {geo.longitude.toFixed(2)}
+                                        {formatCoord(geo.latitude)}, {formatCoord(geo.longitude)}
                                     </span>
                                     {selectedIndex === idx && <CornerDownLeft className="w-4 h-4 text-sky-400 animate-in fade-in slide-in-from-right-2 hidden sm:block" />}
                                 </div>

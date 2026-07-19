@@ -12,7 +12,7 @@ export function useAppController() {
   // Aquestes són les úniques dades que necessitem abans d'arrencar res més
   const { 
     lang, setLang, unit, viewMode, setViewMode, 
-    addFavorite, removeFavorite, isFavorite 
+    favorites, addFavorite, removeFavorite, isFavorite 
   } = usePreferences();
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
@@ -46,14 +46,14 @@ export function useAppController() {
   // Reconstruïm l'objecte gegant original perquè les Vistes no es trenquin.
   return {
       state: {
-          // Fusionem estats de Dades i UI
+          // Fusionem estats de Dades i UI, afegint 'favorites' per centralitzar la font de veritat
           weatherData: data.state.weatherData,
           aqiData: data.state.aqiData,
           loading: data.state.loading,
           error: data.state.error,
           aiAnalysis: data.state.aiAnalysis,
           calculations: data.state.calculations,
-          
+          favorites,
           notification: ui.state.notification,
           now: ui.state.now
       },
