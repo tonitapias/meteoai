@@ -29,7 +29,7 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
         // Fallback robust d'interfície si falla l'API
         if (!hasValidData || !sunrise || !sunset) {
             return { 
-                sunPosition: { x: 50, y: 90 }, // Posatíem l'indicador mort al centre baix
+                sunPosition: { x: 50, y: 90 }, 
                 progressPercent: 0, 
                 statusText: tNoData, 
                 countdown: '--h --m', 
@@ -99,22 +99,24 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
         };
     }, [currentTimeSeconds, sunrise, sunset, lang, utcOffset, hasValidData, tNoData]);
 
-    // SPATIAL UI BASE AMB MATRIU DE FONS
+    // SPATIAL UI BASE AMB MOTOR 3D ACTIVAT
     const bgGlow = hasValidData 
         ? (isDaytime ? "from-amber-950/20 to-black/90" : "from-indigo-950/20 to-black/90")
         : "from-slate-900/50 to-black/80";
         
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br transition-colors duration-1000 ${bgGlow} border ${hasValidData ? 'border-white/5' : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu select-none`;
+    // Injecció de [perspective:1200px] i [transform-style:preserve-3d] per crear la "càmera"
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br transition-colors duration-1000 ${bgGlow} border ${hasValidData ? 'border-white/5' : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu select-none [perspective:1200px] [transform-style:preserve-3d]`;
     const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>
              <div className={MATRIX_BG}></div>
 
-             <div className="flex justify-between items-start w-full z-10 p-1 relative">
-                <div className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-1.5`}>
+             {/* CAPA FRONTAL SUPERIOR (Cognició): Es desplaça cap a l'usuari amb translateZ */}
+             <div className="flex justify-between items-start w-full z-20 p-1 relative [transform:translateZ(40px)] [transform-style:preserve-3d]">
+                <div className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-1.5 shadow-black drop-shadow-md`}>
                     {hasValidData ? (
-                        <Sunrise className={`w-4 h-4 transition-colors duration-500 ${isDaytime ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.5)]'}`} />
+                        <Sunrise className={`w-4 h-4 transition-colors duration-500 ${isDaytime ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.6)]'}`} />
                     ) : (
                         <CloudOff className="w-4 h-4 text-slate-500" />
                     )}
@@ -122,13 +124,15 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
                         {titleSunCycle}
                     </span>
                 </div>
-                <div className={`flex flex-col items-end px-2.5 py-1 rounded-md border backdrop-blur-sm transition-colors duration-500 ${hasValidData ? 'bg-black/40 border-white/5' : 'bg-slate-800/40 border-slate-700/50'}`}>
+                
+                {/* Targeta flotant amb contrast alt per llegibilitat extrema */}
+                <div className={`flex flex-col items-end px-3 py-1.5 rounded-lg border backdrop-blur-md transition-all duration-500 shadow-[0_8px_16px_rgba(0,0,0,0.6)] ${hasValidData ? 'bg-black/60 border-white/10' : 'bg-slate-800/60 border-slate-700/50'}`}>
                     <span className={`text-[9px] font-bold uppercase tracking-widest transition-colors duration-500 ${hasValidData ? 'text-slate-400' : 'text-slate-500'}`}>
                         {statusText}
                     </span>
                     <div className="flex items-center gap-1.5 mt-0.5">
                         {hasValidData ? (
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse transition-colors duration-500 ${isDaytime ? 'bg-amber-400 shadow-[0_0_6px_#fbbf24]' : 'bg-indigo-400 shadow-[0_0_6px_#818cf8]'}`}></span>
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse transition-colors duration-500 ${isDaytime ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' : 'bg-indigo-400 shadow-[0_0_8px_#818cf8]'}`}></span>
                         ) : (
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
                         )}
@@ -139,16 +143,17 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
                 </div>
              </div>
 
-             <div className="relative flex-1 w-full flex items-center justify-center mt-4 z-10">
-                 <svg className="w-full h-28 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+             {/* CAPA TÀCTICA ISOMÈTRICA: El gràfic rotat i incrustat. Alçada a h-36 per compensar la rotació */}
+             <div className="relative flex-1 w-full flex items-center justify-center mt-3 z-10 [transform:rotateX(40deg)_translateZ(10px)] [transform-style:preserve-3d]">
+                 <svg className="w-full h-36 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                      <defs>
                         <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.4" />
-                            <stop offset="50%" stopColor="#fbbf24" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.4" />
+                            <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.3" />
+                            <stop offset="50%" stopColor="#fbbf24" stopOpacity="1" />
+                            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.3" />
                         </linearGradient>
                         <filter id="tacticalGlow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                            <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
                             <feMerge>
                                 <feMergeNode in="coloredBlur"/>
                                 <feMergeNode in="SourceGraphic"/>
@@ -156,22 +161,25 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
                         </filter>
                      </defs>
 
-                     {/* Ruta de fons (Òrbita passiva) */}
+                     {/* Base de la projecció tàctica (Horitzó isométric) */}
+                     <line x1="5" y1="90" x2="95" y2="90" stroke="#1e293b" strokeWidth="1" strokeDasharray="1 3" />
+
+                     {/* Ruta de fons (Òrbita passiva completa) */}
                      <path 
                         d="M 10,90 Q 50,10 90,90" 
                         fill="none" 
                         stroke="#1e293b" 
                         strokeWidth="2" 
-                        strokeDasharray="4 4" 
+                        strokeDasharray="3 4" 
                         strokeLinecap="round" 
                      />
                      
-                     {/* Marca del Migdia Solar (Zenit) */}
+                     {/* Marca del Migdia Solar (Zenit topogràfic) */}
                      {hasValidData && (
-                         <line x1="50" y1="8" x2="50" y2="12" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
+                         <line x1="50" y1="90" x2="50" y2="10" stroke="#334155" strokeWidth="1" strokeDasharray="2 4" className="opacity-50" />
                      )}
 
-                     {/* Ruta de progrés il·luminada (S'apaga si no hi ha dades) */}
+                     {/* Ruta de progrés il·luminada */}
                      {hasValidData && (
                          <path 
                             d="M 10,90 Q 50,10 90,90" 
@@ -181,34 +189,47 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
                             strokeLinecap="round"
                             strokeDasharray="135" 
                             strokeDashoffset={135 - (135 * (isDaytime ? progressPercent / 100 : 0))} 
-                            className="transition-all duration-1000 ease-out opacity-90"
+                            className="transition-all duration-1000 ease-out opacity-95 drop-shadow-[0_0_10px_rgba(251,191,36,0.2)]"
                          />
                      )}
 
-                     {/* Sol o Lluna dinàmic (S'amaga si no hi ha dades) */}
+                     {/* Línia de Balisa (Volumetria Vertical): Causa l'efecte que el sol flota sobre el mapa */}
+                     {hasValidData && (
+                         <line 
+                            x1={sunPosition.x} y1="90" 
+                            x2={sunPosition.x} y2={sunPosition.y} 
+                            stroke={isDaytime ? "#fbbf24" : "#818cf8"} 
+                            strokeWidth="1.5" 
+                            strokeDasharray="2 2" 
+                            className="opacity-50 transition-all duration-1000"
+                         />
+                     )}
+
+                     {/* Sol o Lluna dinàmic amb emissió */}
                      {hasValidData && (
                          <g style={{ transform: `translate(${sunPosition.x}px, ${sunPosition.y}px)`, transition: 'transform 1s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                            <circle r="9" fill={isDaytime ? "#fbbf24" : "#4f46e5"} className="opacity-20 animate-pulse" />
-                            <circle r="4" fill={isDaytime ? "#ffffff" : "#c7d2fe"} filter="url(#tacticalGlow)" />
+                            <circle r="9" fill={isDaytime ? "#fbbf24" : "#4f46e5"} className="opacity-25 animate-pulse" />
+                            <circle r="4.5" fill={isDaytime ? "#ffffff" : "#c7d2fe"} filter="url(#tacticalGlow)" />
                          </g>
                      )}
                  </svg>
 
-                 {/* Horitzó espacial */}
-                 <div className="absolute bottom-0 w-full h-[2px] bg-gradient-to-r from-transparent via-slate-500/30 to-transparent"></div>
+                 {/* Horitzó espacial profund (Glow base) */}
+                 <div className="absolute bottom-2 w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-900/40 to-transparent blur-sm"></div>
              </div>
              
-             <div className="flex justify-between items-end w-full mt-3 px-2 z-10 relative">
+             {/* CAPA FRONTAL INFERIOR (Cognició): Hores vitals a l'avantguarda [translateZ(40px)] */}
+             <div className="flex justify-between items-end w-full mt-2 px-2 z-20 relative [transform:translateZ(40px)] [transform-style:preserve-3d]">
                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{labelSunrise}</span>
-                    <span className={`text-[13px] font-mono font-black tabular-nums px-2.5 py-1 rounded border shadow-inner transition-colors duration-500 ${hasValidData ? 'text-white bg-[#0f111a] border-white/10' : 'text-slate-600 bg-slate-900/50 border-slate-700/50'}`}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest drop-shadow-md">{labelSunrise}</span>
+                    <span className={`text-[13px] font-mono font-black tabular-nums px-3 py-1 rounded-md border shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-colors duration-500 ${hasValidData ? 'text-white bg-black/80 border-white/10' : 'text-slate-600 bg-slate-900/50 border-slate-700/50'}`}>
                         {displaySunrise}
                     </span>
                  </div>
                  
                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{labelSunset}</span>
-                    <span className={`text-[13px] font-mono font-black tabular-nums px-2.5 py-1 rounded border shadow-inner transition-colors duration-500 ${hasValidData ? 'text-white bg-[#0f111a] border-white/10' : 'text-slate-600 bg-slate-900/50 border-slate-700/50'}`}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest drop-shadow-md">{labelSunset}</span>
+                    <span className={`text-[13px] font-mono font-black tabular-nums px-3 py-1 rounded-md border shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-colors duration-500 ${hasValidData ? 'text-white bg-black/80 border-white/10' : 'text-slate-600 bg-slate-900/50 border-slate-700/50'}`}>
                         {displaySunset}
                     </span>
                  </div>
