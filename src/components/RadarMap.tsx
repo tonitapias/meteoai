@@ -313,7 +313,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (sFrame && sFrame.time !== null) {
         const satSourceId = `sat-src-${sFrame.time}`;
         const satLayerId = `sat-layer-${sFrame.time}`;
-        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.75 : 0;
+        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.85 : 0;
 
         if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
           map.addSource(satSourceId, {
@@ -330,11 +330,9 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
             layout: { visibility: 'visible' },
             paint: {
               'raster-opacity': getSatOpacityExp(initialSatOpacity),
-              'raster-contrast': 0.35,
-              'raster-brightness-min': 0.15,
-              'raster-saturation': -0.15,
+              'raster-contrast': 0.40,
               'raster-resampling': 'linear',
-              'raster-fade-duration': 0,
+              'raster-fade-duration': 0
             },
           }, 'anchor-clouds');
           loadedSatIdsRef.current[closestSatIdx] = satLayerId;
@@ -390,7 +388,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       Object.values(loadedSatIdsRef.current).forEach((id) => {
         if (id && map.getLayer(id)) {
           const isTarget = id === targetSatId;
-          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.75 : 0;
+          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.85 : 0;
           map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp(targetOpacity));
         }
       });
@@ -516,7 +514,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       
       map.addSource('night-source', { 
         type: 'geojson', 
-        // INJECCIÓ QUIRÚRGICA COMPROVADA: Matemàticament idèntica a setData
+        // INJECCIÓ QUIRÚRGICA FINAL: Assignat explícitament per superar la fragmentació de definicions de tipus
         data: computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
       });
       map.addLayer({
