@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { AlertTriangle, RefreshCw, Play, Pause, Radio, Layers, Eye, EyeOff, Check, X as CloseIcon } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Play, Pause, Radio, Layers, Eye, EyeOff, Check, X as CloseIcon, Moon } from 'lucide-react';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +13,6 @@ if (MAPBOX_TOKEN) {
   console.error("Alerta: No s'ha detectat VITE_MAPBOX_TOKEN al fitxer .env");
 }
 
-// Risc Zero: Acceptem nuls als frames per protegir el renderitzat contra forats d'API
 const RadarFrameSchema = z.object({
   time: z.number().nullable(),
   path: z.string(),
@@ -32,7 +31,7 @@ const RainViewerResponseSchema = z.object({
 
 type RadarFrame = z.infer<typeof RadarFrameSchema>;
 type BaseLayerType = 'dark' | 'light' | 'relief' | 'sat_optic';
-type MapView = 'radar' | 'wind';
+type MapView = 'radar' | 'wind'; 
 
 interface BaseLayerConfig {
   name: string;
@@ -40,34 +39,116 @@ interface BaseLayerConfig {
   attribution: string;
 }
 
+// Interfícies GeoJSON estructurals 
+interface GeoPolygon {
+  type: 'Polygon';
+  coordinates: number[][][];
+}
+interface GeoFeature {
+  type: 'Feature';
+  properties: { level: number };
+  geometry: GeoPolygon;
+}
+interface GeoFeatureCollection {
+  type: 'FeatureCollection';
+  features: GeoFeature[];
+}
+
 let globalRadarCache: { data: z.infer<typeof RainViewerResponseSchema>; timestamp: number } | null = null;
 let globalRadarFetchPromise: Promise<z.infer<typeof RainViewerResponseSchema>> | null = null;
 const CACHE_TTL = 5 * 60 * 1000;
 
 /* --- FUNCIONS PURES PER A LA DOCTRINA VISUAL "ZOOM EARTH" --- */
-// Aquestes funcions generen expressions de Mapbox GL per interpolar opacitat via GPU
 
-// El Radar manté presència, però es suavitza lleugerament a vista de carrer per permetre la navegació
 const getRadOpacityExp = (baseOp: number): mapboxgl.Expression | number => {
   if (baseOp <= 0) return 0;
   return [
     'interpolate', ['linear'], ['zoom'],
-    3, baseOp,         // Vista planetària: 100% del baseOp
-    10, baseOp * 0.90, // Nivell ciutat: lleugera reducció
-    15, baseOp * 0.65  // Nivell carrer: translúcid per veure el mapa base
+    2, baseOp,          
+    6, baseOp * 0.90,   
+    11, baseOp * 0.65,  
+    16, baseOp * 0.40   
   ];
 };
 
-// Els núvols IR són espectaculars des de l'espai, però desapareixen al fer zoom per no tapar la ciutat
 const getSatOpacityExp = (baseOp: number): mapboxgl.Expression | number => {
   if (baseOp <= 0) return 0;
   return [
     'interpolate', ['linear'], ['zoom'],
-    3, baseOp,         // Vista planetària: Màxima opacitat
-    6, baseOp * 0.60,  // Vista regional: Comencen a esvair-se
-    9, baseOp * 0.10,  // Vista àrea metropolitana: Gairebé invisibles
-    12, 0              // Vista ciutat/carrer: Desapareixen totalment
+    2, baseOp,          
+    5, baseOp * 0.65,   
+    7, baseOp * 0.15,   
+    9, 0                
   ];
+};
+
+const getNightOpacityExp = (isDark: boolean): mapboxgl.Expression | number => {
+  const baseOp = isDark ? 0.65 : 0.40;
+  return [
+    'interpolate', ['linear'], ['zoom'],
+    2, baseOp,          
+    6, baseOp * 0.60,   
+    10, 0               
+  ];
+};
+
+// Generador Geològic de la Nit (Cartesià a prova de fallades)
+const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {
+  const PI = Math.PI;
+  const rad = PI / 180;
+  const deg = 180 / PI;
+
+  const date = new Date(timestamp);
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  const d = jd - 2451545.0; 
+
+  const M = (357.5291 + 0.98560028 * d) * rad;
+  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
+  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad; 
+
+  const e = 23.439 * rad; 
+  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
+  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+
+  const gmst = (280.46061837 + 360.98564736629 * d) % 360 * rad;
+
+  let sunLon = sunRA - gmst;
+  while (sunLon < -PI) sunLon += 2 * PI;
+  while (sunLon > PI) sunLon -= 2 * PI;
+
+  const coords: number[][] = [];
+  const safeSunDec = sunDec === 0 ? 0.000001 : sunDec;
+
+  if (safeSunDec > 0) {
+    coords.push([-180, -90]);
+    coords.push([180, -90]);
+    for (let lonDeg = 180; lonDeg >= -180; lonDeg -= 1) {
+      const lon = lonDeg * rad;
+      const lat = Math.atan(-Math.cos(lon - sunLon) / Math.tan(safeSunDec));
+      coords.push([lonDeg, lat * deg]);
+    }
+    coords.push([-180, -90]); 
+  } else {
+    coords.push([180, 90]);
+    coords.push([-180, 90]);
+    for (let lonDeg = -180; lonDeg <= 180; lonDeg += 1) {
+      const lon = lonDeg * rad;
+      const lat = Math.atan(-Math.cos(lon - sunLon) / Math.tan(safeSunDec));
+      coords.push([lonDeg, lat * deg]);
+    }
+    coords.push([180, 90]); 
+  }
+
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: { level: 0 },
+        geometry: { type: 'Polygon', coordinates: [coords] }
+      }
+    ]
+  };
 };
 /* ----------------------------------------------------------- */
 
@@ -92,13 +173,12 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const [error, setError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   
-  // Per complir l'estàndard pur de React, tot allò que es renderitzi al DOM
-  // ha de ser llegit de l'estat, no d'un ref. Afegim estats sincronitzats amb els refs:
   const [framesCount, setFramesCount] = useState(0);
   const [currentFrameTimestamp, setCurrentFrameTimestamp] = useState<number | null>(null);
 
-  const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('dark');
-  const [overlays, setOverlays] = useState({ precip: true, satIR: true, labels: true });
+  const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
+  
+  const [overlays, setOverlays] = useState({ precip: true, satIR: true, night: true, labels: true });
   const [showLayerMenu, setShowLayerMenu] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -111,6 +191,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const loadedSatIdsRef = useRef<Record<number, string>>({});
   
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nightTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentFrameIndexRef = useRef<number>(0);
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
   const overlaysRef = useRef(overlays);
@@ -192,9 +273,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const radSourceId = `rad-src-${rFrame.time}`;
     const radLayerId = `rad-layer-${rFrame.time}`;
     
-    // Z-Index Base Anchor: Les etiquetes estaran per sobre de tot
-    const baseAnchorLayer = map.getLayer('layer-labels') ? 'layer-labels' : undefined;
-
     const isTarget = index === currentFrameIndexRef.current;
     const isRadarActive = activeViewRef.current === 'radar';
     const initialRadOpacity = (isTarget && isRadarActive && overlaysRef.current.precip) ? 0.85 : 0;
@@ -214,12 +292,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         paint: { 
           'raster-opacity': getRadOpacityExp(initialRadOpacity), 
           'raster-fade-duration': 0,
-          'raster-resampling': 'linear',
-          // Cinematics per a un radar més viu
+          'raster-resampling': 'linear', 
           'raster-contrast': 0.25, 
-          'raster-saturation': 1,
+          'raster-saturation': 1, 
         },
-      }, baseAnchorLayer); // Radar per sota de les etiquetes
+      }, 'anchor-radar');
       loadedRadarIdsRef.current[index] = radLayerId;
     }
 
@@ -236,7 +313,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (sFrame && sFrame.time !== null) {
         const satSourceId = `sat-src-${sFrame.time}`;
         const satLayerId = `sat-layer-${sFrame.time}`;
-        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.80 : 0;
+        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.75 : 0;
 
         if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
           map.addSource(satSourceId, {
@@ -246,9 +323,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
             maxzoom: 5,
           });
           
-          // Z-Index Perfecte: Inserim el núvol JUST PER SOTA del Radar acabat de crear
-          const satAnchorLayer = map.getLayer(radLayerId) ? radLayerId : baseAnchorLayer;
-          
           map.addLayer({
             id: satLayerId,
             type: 'raster',
@@ -256,14 +330,13 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
             layout: { visibility: 'visible' },
             paint: {
               'raster-opacity': getSatOpacityExp(initialSatOpacity),
-              // Cinematics per donar volumetria i profunditat als núvols espacials
-              'raster-contrast': 0.30,
-              'raster-brightness-min': 0.10,
-              'raster-saturation': -0.10, // Desaturació lleugera pel realisme
+              'raster-contrast': 0.35,
+              'raster-brightness-min': 0.15,
+              'raster-saturation': -0.15,
               'raster-resampling': 'linear',
               'raster-fade-duration': 0,
             },
-          }, satAnchorLayer); 
+          }, 'anchor-clouds');
           loadedSatIdsRef.current[closestSatIdx] = satLayerId;
         }
       }
@@ -275,7 +348,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     if (!map || !map.isStyleLoaded()) return;
 
     const rFramesCount = radarFramesRef.current.length;
-    // Matemàtica Segura: Preveure divisió per 0 si la matriu ve buida
     if (rFramesCount === 0) return;
 
     const safeIndex = (index % rFramesCount + rFramesCount) % rFramesCount;
@@ -291,7 +363,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (timeDisplayRef.current) {
          timeDisplayRef.current.textContent = formatTime(currentRadarFrame.time);
       }
-      // Actualitzem l'estat per renderitzats segurs a React (no-ref policy)
       setCurrentFrameTimestamp(currentRadarFrame.time);
     }
 
@@ -319,7 +390,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       Object.values(loadedSatIdsRef.current).forEach((id) => {
         if (id && map.getLayer(id)) {
           const isTarget = id === targetSatId;
-          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.80 : 0;
+          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.75 : 0;
           map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp(targetOpacity));
         }
       });
@@ -363,7 +434,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     setLoading(true);
     
     try {
-      const now = Date.now(); // Lícit fora del render cycle (dins funció async d'efecte)
+      const now = Date.now();
       if (!forceFetch && globalRadarCache && (now - globalRadarCache.timestamp < CACHE_TTL)) {
         injectLayersIntoMap(globalRadarCache.data);
         if (isMountedRef.current) { setError(false); setLoading(false); }
@@ -407,11 +478,12 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       container: mapContainerRef.current,
       style: { version: 8, sources: {}, layers: [] },
       center: [lon, lat],
-      zoom: 7.5,
+      zoom: 8.5, 
       attributionControl: false,
       maxZoom: 18,
-      minZoom: 3,
+      minZoom: 2,
       fadeDuration: 0,
+      projection: { name: 'globe' } as unknown as mapboxgl.MapboxOptions['projection'], 
     });
     mapRef.current = map;
     
@@ -422,6 +494,14 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     map.on('touchstart', handleTouchOrClick);
 
     map.on('load', () => {
+      map.setFog({
+        'color': 'rgb(2, 3, 8)', 
+        'high-color': 'rgb(12, 24, 48)',
+        'horizon-blend': 0.15,
+        'space-color': 'rgb(2, 3, 8)',
+        'star-intensity': 0.45 
+      });
+
       (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
         const config = BASE_LAYERS[key];
         map.addSource(`base-src-${key}`, { type: 'raster', tiles: [config.url], tileSize: 256, attribution: config.attribution });
@@ -434,20 +514,47 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         });
       });
       
+      map.addSource('night-source', { 
+        type: 'geojson', 
+        // INJECCIÓ QUIRÚRGICA COMPROVADA: Matemàticament idèntica a setData
+        data: computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
+      });
+      map.addLayer({
+        id: 'layer-night',
+        type: 'fill',
+        source: 'night-source',
+        layout: { visibility: overlaysRef.current.night ? 'visible' : 'none' },
+        paint: {
+          'fill-color': activeBaseLayer === 'dark' ? '#000000' : '#040714',
+          'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark')
+        }
+      });
+
+      map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+      map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+
       map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
       map.addLayer({
         id: 'layer-labels',
         type: 'raster',
         source: 'labels-src',
-        layout: { visibility: 'visible' },
+        layout: { visibility: overlaysRef.current.labels ? 'visible' : 'none' },
         paint: { 'raster-opacity': 0.9 },
       });
       
+      nightTimerRef.current = setInterval(() => {
+        if (mapRef.current && mapRef.current.getSource('night-source')) {
+          const source = mapRef.current.getSource('night-source') as mapboxgl.GeoJSONSource;
+          source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0]);
+        }
+      }, 60000);
+
       fetchAndInjectRadarData();
     });
 
     return () => {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
+      if (nightTimerRef.current) clearInterval(nightTimerRef.current);
       if (mapRef.current) { 
         mapRef.current.remove(); 
         mapRef.current = null; 
@@ -461,23 +568,35 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
+    
     (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
       const layerId = `base-layer-${key}`;
       if (map.getLayer(layerId)) {
         map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
       }
     });
+
+    if (map.getLayer('layer-night')) {
+      map.setPaintProperty('layer-night', 'fill-color', activeBaseLayer === 'dark' ? '#000000' : '#040714');
+      map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark'));
+    }
+
+    map.triggerRepaint();
   }, [activeBaseLayer, BASE_LAYERS]);
 
   useEffect(() => {
     applyFrameVisibility(currentFrameIndexRef.current);
     const map = mapRef.current;
-    if (map && map.isStyleLoaded() && map.getLayer('layer-labels')) {
-      map.setLayoutProperty('layer-labels', 'visibility', overlays.labels ? 'visible' : 'none');
+    if (map && map.isStyleLoaded()) {
+      if (map.getLayer('layer-labels')) {
+        map.setLayoutProperty('layer-labels', 'visibility', overlays.labels ? 'visible' : 'none');
+      }
+      if (map.getLayer('layer-night')) {
+        map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
+      }
     }
   }, [overlays, activeView, applyFrameVisibility]);
 
-  // 1. Efecte asíncron pur per aturar l'animació si es canvia de vista (Zero errors ESLint)
   useEffect(() => {
     if (!isActive || activeView !== 'radar') {
       const t = setTimeout(() => {
@@ -487,7 +606,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     }
   }, [isActive, activeView]);
 
-  // 2. Efecte només per gestionar el timer
   useEffect(() => {
     if (isPlaying && radarFramesRef.current.length > 0 && isActive && activeView === 'radar') {
       animationTimerRef.current = setInterval(() => {
@@ -542,7 +660,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
             <div className="absolute inset-0 border-[4px] border-cyan-400 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
             <Radio className="w-7 h-7 text-cyan-400 animate-pulse drop-shadow-[0_0_10px_rgba(6,182,212,1)]" />
           </div>
-          {/* Risc Zero: Assegurem text-center, padding horitzontal i límits per a qualsevol pantalla i idioma */}
           <p className="text-cyan-300 text-sm font-mono font-bold tracking-[0.2em] uppercase z-10 drop-shadow-lg text-center px-4 max-w-[80vw] leading-relaxed">
             {t('syncingDoppler')}
           </p>
@@ -602,6 +719,14 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                 <span className="drop-shadow-md">{t('layerSat')}</span>
                 {overlays.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
               </button>
+              
+              <button onClick={() => setOverlays(prev => ({ ...prev, night: !prev.night }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
+                <span className="drop-shadow-md flex items-center gap-2">
+                  <Moon className="w-3.5 h-3.5 text-slate-400" /> {t('layerNight', 'Nit')}
+                </span>
+                {overlays.night ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
+              </button>
+              
               <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
                 <span className="drop-shadow-md">{t('layerLabels')}</span>
                 {overlays.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
