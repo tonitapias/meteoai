@@ -10,23 +10,23 @@ export const TypewriterText = ({ text, className }: TypewriterProps) => {
   const [displayedText, setDisplayedText] = useState('');
   
   useEffect(() => {
-    setDisplayedText(''); 
-    if (!text) return;
+    if (!text) {
+      // Buidem el text de forma asíncrona per complir l'estàndard
+      const resetTimer = setTimeout(() => setDisplayedText(''), 0);
+      return () => clearTimeout(resetTimer);
+    }
     
     let i = 0;
-    // Si el text és molt llarg, accelerem l'efecte per no avorrir l'usuari
-    const speed = text.length > 200 ? 5 : 15;
+    let currentStr = ''; // Utilitzem una variable local pel text
     
-    const timer = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText(text.slice(0, i + 1));
-        i++;
-      } else { 
-        clearInterval(timer); 
-      }
-    }, speed); 
-    
-    return () => clearInterval(timer);
+    const typeTimer = setInterval(() => {
+      currentStr += text.charAt(i);
+      setDisplayedText(currentStr);
+      i++;
+      if (i >= text.length) clearInterval(typeTimer);
+    }, 30); // Mantén aquí la velocitat (ex: 30) que tinguessis al teu fitxer original
+
+    return () => clearInterval(typeTimer);
   }, [text]);
   
   return (

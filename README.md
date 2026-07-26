@@ -10,7 +10,7 @@
 
 > **La meteorologia de precisió es troba amb l'enginyeria tàctica de software.**
 
-MeteoToni AI no és una simple aplicació del temps; és un **sistema de telemetria meteorològica d'alta precisió** dissenyat per operar en condicions extremes i d'alta muntanya. Combina la potència predictiva de models globals amb la precisió topogràfica de models d'alta resolució, tot processat per una arquitectura tolerant a fallades i un motor d'Intel·ligència Artificial en temps real.
+MeteoToni AI no és una simple aplicació del temps; és un **sistema de telemetria meteorològica d'alta precisió** dissenyat per tenir una previsió meteorològica el més precisa possible. Combina la potència predictiva de models globals amb la precisió topogràfica de models d'alta resolució, tot processat per una arquitectura tolerant a fallades i un motor d'Intel·ligència Artificial en temps real.
 
 ### ⚠️ Propòsit i Responsabilitat Operativa
 MeteoToni AI és exclusivament una eina d'informació analítica. Proporciona dades basades en models matemàtics, **però les matemàtiques no eviten els riscos físics**. Aquesta aplicació no és un sistema de prevenció d'accidents, no detecta perills objectius sobre el terreny i no garanteix la seguretat en cap ruta. L'avaluació final de les condicions i la presa de decisions recau sempre, i de manera innegociable, en la formació, l'experiència visual i el criteri de l'usuari sobre el terreny.
