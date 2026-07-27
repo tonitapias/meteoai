@@ -10,6 +10,7 @@ export const ca = {
   baseSat: "Satèl·lit (Òptic)",
   overlayTitle: "CAPES SUPERPOSADES",
   layerSat: "Núvols (Satèl·lit IR)",
+  layerNight: "Nit",
 
   // Controls del reproductor
   btnPlay: "Reproduir",

@@ -11,6 +11,7 @@ export const es = {
   baseSat: "Satélite (Óptico)",
   overlayTitle: "CAPAS SUPERPUESTAS",
   layerSat: "Nubes (Satélite IR)",
+  layerNight: "Noche",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",

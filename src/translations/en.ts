@@ -12,6 +12,7 @@ export const en = {
   baseSat: "Satellite (Optical)",
   overlayTitle: "OVERLAYS",
   layerSat: "Clouds (IR Satellite)",
+  layerNight: "Night",
 
   // --- Controls del reproductor ---
   btnPlay: "Play",

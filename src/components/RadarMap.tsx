@@ -39,7 +39,6 @@ interface BaseLayerConfig {
   attribution: string;
 }
 
-// Interfícies GeoJSON estructurals 
 interface GeoPolygon {
   type: 'Polygon';
   coordinates: number[][][];
@@ -58,32 +57,32 @@ let globalRadarCache: { data: z.infer<typeof RainViewerResponseSchema>; timestam
 let globalRadarFetchPromise: Promise<z.infer<typeof RainViewerResponseSchema>> | null = null;
 const CACHE_TTL = 5 * 60 * 1000;
 
-/* --- FUNCIONS PURES PER A LA DOCTRINA VISUAL "ZOOM EARTH" --- */
+/* --- FUNCIONS PURES CORREGIDES (Sense canvi de tipus) --- */
 
-const getRadOpacityExp = (baseOp: number): mapboxgl.Expression | number => {
-  if (baseOp <= 0) return 0;
+const getRadOpacityExp = (baseOp: number): mapboxgl.Expression => {
+  // Retornem SEMPRE l'expressió. Si baseOp és 0, tota la corba valdrà 0.
+  // Això prevé el "Type-Switching bug" de WebGL a MapLibre.
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp,          
-    6, baseOp * 0.90,   
-    11, baseOp * 0.65,  
-    16, baseOp * 0.40   
+    2, baseOp * 0.95,
+    6, baseOp * 0.85,
+    10, baseOp * 0.65,
+    15, baseOp * 0.35
   ];
 };
 
-const getSatOpacityExp = (baseOp: number): mapboxgl.Expression | number => {
-  if (baseOp <= 0) return 0;
+const getSatOpacityExp = (baseOp: number): mapboxgl.Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp,          
-    5, baseOp * 0.65,   
-    7, baseOp * 0.15,   
-    9, 0                
+    2, baseOp,
+    5, baseOp * 0.75,
+    7, baseOp * 0.25,
+    9, 0
   ];
 };
 
-const getNightOpacityExp = (isDark: boolean): mapboxgl.Expression | number => {
-  const baseOp = isDark ? 0.65 : 0.40;
+const getNightOpacityExp = (isDark: boolean): mapboxgl.Expression => {
+  const baseOp = isDark ? 0.75 : 0.45;
   return [
     'interpolate', ['linear'], ['zoom'],
     2, baseOp,          
@@ -92,7 +91,6 @@ const getNightOpacityExp = (isDark: boolean): mapboxgl.Expression | number => {
   ];
 };
 
-// Generador Geològic de la Nit (Cartesià a prova de fallades)
 const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {
   const PI = Math.PI;
   const rad = PI / 180;
@@ -150,7 +148,6 @@ const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {
     ]
   };
 };
-/* ----------------------------------------------------------- */
 
 interface RadarMapProps {
   lat: number;
@@ -293,8 +290,9 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           'raster-opacity': getRadOpacityExp(initialRadOpacity), 
           'raster-fade-duration': 0,
           'raster-resampling': 'linear', 
+          // CORRECCIÓ: Valors dins del rang estrictament permès [-1, 1]
           'raster-contrast': 0.25, 
-          'raster-saturation': 1, 
+          'raster-saturation': 0.8, 
         },
       }, 'anchor-radar');
       loadedRadarIdsRef.current[index] = radLayerId;
@@ -313,7 +311,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (sFrame && sFrame.time !== null) {
         const satSourceId = `sat-src-${sFrame.time}`;
         const satLayerId = `sat-layer-${sFrame.time}`;
-        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.85 : 0;
+        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.95 : 0;
 
         if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
           map.addSource(satSourceId, {
@@ -330,7 +328,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
             layout: { visibility: 'visible' },
             paint: {
               'raster-opacity': getSatOpacityExp(initialSatOpacity),
-              'raster-contrast': 0.40,
+              'raster-contrast': 0.20,
               'raster-resampling': 'linear',
               'raster-fade-duration': 0
             },
@@ -388,7 +386,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       Object.values(loadedSatIdsRef.current).forEach((id) => {
         if (id && map.getLayer(id)) {
           const isTarget = id === targetSatId;
-          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.85 : 0;
+          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.95 : 0;
           map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp(targetOpacity));
         }
       });
@@ -493,11 +491,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
     map.on('load', () => {
       map.setFog({
-        'color': 'rgb(2, 3, 8)', 
+        'color': 'rgb(6, 12, 28)', 
         'high-color': 'rgb(12, 24, 48)',
-        'horizon-blend': 0.15,
-        'space-color': 'rgb(2, 3, 8)',
-        'star-intensity': 0.45 
+        'horizon-blend': 0.25, 
+        'space-color': 'rgb(1, 2, 6)', 
+        'star-intensity': 0.65 
       });
 
       (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
@@ -512,10 +510,10 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         });
       });
       
+      const initialNightTime = Date.now();
       map.addSource('night-source', { 
         type: 'geojson', 
-        // INJECCIÓ QUIRÚRGICA FINAL: Assignat explícitament per superar la fragmentació de definicions de tipus
-        data: computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
+        data: computeNightFeatures(initialNightTime) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
       });
       map.addLayer({
         id: 'layer-night',
@@ -530,6 +528,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
       map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
       map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+      map.addLayer({ id: 'anchor-wind', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
       map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
       map.addLayer({

@@ -12,6 +12,7 @@ export const fr = {
   baseSat: "Satellite (Optique)",
   overlayTitle: "COUCHES SUPERPOSÉES",
   layerSat: "Nuages (Satellite IR)",
+  layerNight: "Nuit",
 
   // --- Controls del reproductor ---
   btnPlay: "Lecture",
