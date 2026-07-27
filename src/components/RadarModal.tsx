@@ -157,7 +157,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
         <div className="flex-1 min-h-0 w-full relative z-10 bg-[#020308]">
           
           <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isRadar ? 'opacity-100 z-20 pointer-events-auto' : 'opacity-0 pointer-events-none z-0'}`}>
-             <RadarMap lat={lat} lon={lon} isActive={isRadar} activeView={activeView} />
+             <RadarMap lat={lat} lon={lon} isActive={isRadar} />
           </div>
 
           <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${!isRadar ? 'opacity-100 z-20 pointer-events-auto' : 'opacity-0 pointer-events-none z-0'}`}>

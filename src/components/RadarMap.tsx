@@ -1,9 +1,29 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { AlertTriangle, RefreshCw, Play, Pause, Radio, Layers, Eye, EyeOff, Check, X as CloseIcon, Moon, Camera } from 'lucide-react';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
+
+// 1. DOMINI FÍSIC EXTRET
+import { 
+  RainViewerResponseSchema, 
+  RadarFrame, 
+  BaseLayerType, 
+  BaseLayerConfig,
+  getNASADate, 
+  getRadOpacityExp, 
+  getSatOpacityExp, 
+  getNightOpacityExp, 
+  computeNightFeatures 
+} from '../utils/radarPhysics';
+
+// 2. DOMINI D'ESTAT EXTRET
+import { useRadarData } from '../hooks/useRadarData';
+
+// 3. COMPONENTS DE UI EXTRETS
+import { RadarOverlays } from './radar/RadarOverlays';
+import { RadarPlaybackControls } from './radar/RadarPlaybackControls';
+import { RadarLayerMenu } from './radar/RadarLayerMenu';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -13,151 +33,17 @@ if (MAPBOX_TOKEN) {
   console.error("Alerta: No s'ha detectat VITE_MAPBOX_TOKEN al fitxer .env");
 }
 
-const RadarFrameSchema = z.object({
-  time: z.number().nullable(),
-  path: z.string(),
-});
-
-const RainViewerResponseSchema = z.object({
-  host: z.string(),
-  radar: z.object({
-    past: z.array(RadarFrameSchema).default([]),
-    nowcast: z.array(RadarFrameSchema).default([]),
-  }).optional(),
-  satellite: z.object({
-    infrared: z.array(RadarFrameSchema).default([]),
-  }).optional(),
-});
-
-type RadarFrame = z.infer<typeof RadarFrameSchema>;
-type BaseLayerType = 'dark' | 'light' | 'relief' | 'sat_optic';
-type MapView = 'radar' | 'wind'; 
-
-interface BaseLayerConfig {
-  name: string;
-  url: string;
-  attribution: string;
-}
-
-interface GeoPolygon {
-  type: 'Polygon';
-  coordinates: number[][][];
-}
-interface GeoFeature {
-  type: 'Feature';
-  properties: { level: number };
-  geometry: GeoPolygon;
-}
-interface GeoFeatureCollection {
-  type: 'FeatureCollection';
-  features: GeoFeature[];
-}
-
-let globalRadarCache: { data: z.infer<typeof RainViewerResponseSchema>; timestamp: number } | null = null;
-let globalRadarFetchPromise: Promise<z.infer<typeof RainViewerResponseSchema>> | null = null;
-const CACHE_TTL = 5 * 60 * 1000;
-
-/* --- FUNCIONS PURES I DE FÍSICA VISUAL --- */
-
-const getNASADate = (): string => {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - 1); 
-  return d.toISOString().split('T')[0];
-};
-
-const getRadOpacityExp = (baseOp: number): mapboxgl.Expression => {
-  return [
-    'interpolate', ['linear'], ['zoom'],
-    2, baseOp * 0.98,
-    6, baseOp * 0.90,
-    10, baseOp * 0.75,
-    14, baseOp * 0.45,
-    18, baseOp * 0.20
-  ];
-};
-
-const getSatOpacityExp = (baseOp: number): mapboxgl.Expression => {
-  return [
-    'interpolate', ['linear'], ['zoom'],
-    2, baseOp * 0.95,
-    5, baseOp * 0.80,
-    8, baseOp * 0.45,
-    11, baseOp * 0.10,
-    13, 0
-  ];
-};
-
-const getNightOpacityExp = (isDark: boolean): mapboxgl.Expression => {
-  const baseOp = isDark ? 0.78 : 0.48;
-  return [
-    'interpolate', ['linear'], ['zoom'],
-    2, baseOp,          
-    6, baseOp * 0.65,   
-    11, 0               
-  ];
-};
-
-const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {
-  const PI = Math.PI;
-  const rad = PI / 180;
-  const deg = 180 / PI;
-
-  const date = new Date(timestamp);
-  const jd = date.getTime() / 86400000 + 2440587.5;
-  const d = jd - 2451545.0; 
-
-  const M = (357.5291 + 0.98560028 * d) * rad;
-  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
-  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad; 
-
-  const e = 23.439 * rad; 
-  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
-  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
-
-  const gmst = (280.46061837 + 360.98564736629 * d) % 360 * rad;
-
-  let sunLon = sunRA - gmst;
-  while (sunLon < -PI) sunLon += 2 * PI;
-  while (sunLon > PI) sunLon -= 2 * PI;
-
-  const coords: number[][] = [];
-  const safeSunDec = sunDec === 0 ? 0.000001 : sunDec;
-
-  if (safeSunDec > 0) {
-    coords.push([-180, -90]);
-    coords.push([180, -90]);
-    for (let lonDeg = 180; lonDeg >= -180; lonDeg -= 1) {
-      const lon = lonDeg * rad;
-      const lat = Math.atan(-Math.cos(lon - sunLon) / Math.tan(safeSunDec));
-      coords.push([lonDeg, lat * deg]);
-    }
-    coords.push([-180, -90]); 
-  } else {
-    coords.push([180, 90]);
-    coords.push([-180, 90]);
-    for (let lonDeg = -180; lonDeg <= 180; lonDeg += 1) {
-      const lon = lonDeg * rad;
-      const lat = Math.atan(-Math.cos(lon - sunLon) / Math.tan(safeSunDec));
-      coords.push([lonDeg, lat * deg]);
-    }
-    coords.push([180, 90]); 
-  }
-
-  return {
-    type: 'FeatureCollection',
-    features: [{ type: 'Feature', properties: { level: 0 }, geometry: { type: 'Polygon', coordinates: [coords] } }]
-  };
-};
-
 interface RadarMapProps {
   lat: number;
   lon: number;
   isActive: boolean;
-  activeView?: MapView;
 }
 
-export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: RadarMapProps) {
+export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const { t } = useTranslation();
+  
+  // Custom Hook per dades de radar
+  const { loading, error, radarData, fetchRadarData } = useRadarData();
   
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
     dark: { name: t('baseDark'), url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
@@ -166,17 +52,16 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     sat_optic: { name: t('baseSat'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
   }), [t]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  
   const [framesCount, setFramesCount] = useState(0);
   const [currentFrameTimestamp, setCurrentFrameTimestamp] = useState<number | null>(null);
-
   const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
   
   const [overlays, setOverlays] = useState({ precip: true, satIR: true, night: true, labels: true, nasaReal: false });
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+  
+  // Clau per ressuscitar el mapa si el mòbil mata la GPU per estalviar bateria
+  const [webglKey, setWebglKey] = useState(0);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -192,10 +77,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const currentFrameIndexRef = useRef<number>(0);
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
   const overlaysRef = useRef(overlays);
-  const activeViewRef = useRef(activeView);
-  const isMountedRef = useRef(true);
 
-  // Referències tàctiques per a la coreografia cinemàtica de la NASA
   const prevNasaRealRef = useRef(overlays.nasaReal);
   const tacticalCameraRef = useRef<{ 
     center: [number, number]; 
@@ -203,18 +85,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     pitch: number; 
     bearing: number 
   } | null>(null);
-  
-  useEffect(() => { activeViewRef.current = activeView; }, [activeView]);
-  
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => { isMountedRef.current = false; };
-  }, []);
 
-  /**
-   * SETTER ATÒMIC: Mutació síncrona d'estat React + Ref per eliminar condicions de cursa
-   * en clicar ràpidament els botons del menú flotant.
-   */
   const toggleOverlay = useCallback((key: keyof typeof overlays) => {
     setOverlays(prev => {
       const next = { ...prev, [key]: !prev[key] };
@@ -287,9 +158,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     const radLayerId = `rad-layer-${rFrame.time}`;
     
     const isTarget = index === currentFrameIndexRef.current;
-    const isRadarActive = activeViewRef.current === 'radar';
-    const isPrecipEnabled = overlaysRef.current.precip;
-    const initialRadOpacity = (isTarget && isRadarActive && isPrecipEnabled) ? 0.88 : 0;
+    const initialRadOpacity = (isTarget && overlaysRef.current.precip) ? 0.88 : 0;
 
     if (!loadedRadarIdsRef.current[index] && !map.getSource(radSourceId)) {
       map.addSource(radSourceId, {
@@ -302,13 +171,12 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         id: radLayerId,
         type: 'raster',
         source: radSourceId,
-        layout: { visibility: isPrecipEnabled ? 'visible' : 'none' },
+        layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
         paint: { 
-          'raster-opacity': getRadOpacityExp(initialRadOpacity), 
+          'raster-opacity': getRadOpacityExp(initialRadOpacity),
+          'raster-opacity-transition': { duration: 400, delay: 0 }, 
           'raster-fade-duration': 0,
-          'raster-resampling': 'linear', 
-          'raster-contrast': 0.30,       
-          'raster-saturation': 0.85, 
+          'raster-resampling': 'linear' 
         },
       }, 'anchor-radar');
       loadedRadarIdsRef.current[index] = radLayerId;
@@ -327,8 +195,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (sFrame && sFrame.time !== null) {
         const satSourceId = `sat-src-${sFrame.time}`;
         const satLayerId = `sat-layer-${sFrame.time}`;
-        const isSatEnabled = overlaysRef.current.satIR;
-        const initialSatOpacity = (isTarget && isRadarActive && isSatEnabled) ? 0.90 : 0;
+        const initialSatOpacity = (isTarget && overlaysRef.current.satIR) ? 0.85 : 0;
 
         if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
           map.addSource(satSourceId, {
@@ -342,11 +209,13 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
             id: satLayerId,
             type: 'raster',
             source: satSourceId,
-            layout: { visibility: isSatEnabled ? 'visible' : 'none' },
+            layout: { visibility: overlaysRef.current.satIR ? 'visible' : 'none' },
             paint: {
               'raster-opacity': getSatOpacityExp(initialSatOpacity),
-              'raster-contrast': 0.15, 
-              'raster-saturation': 0.1,
+              'raster-opacity-transition': { duration: 400, delay: 0 }, 
+              'raster-contrast': 0.35,       
+              'raster-saturation': -1,       
+              'raster-brightness-min': 0.15, 
               'raster-resampling': 'linear',
               'raster-fade-duration': 0
             },
@@ -379,9 +248,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       setCurrentFrameTimestamp(currentRadarFrame.time);
     }
 
-    const isRadarViewActive = activeViewRef.current === 'radar';
-    const showPrecip = isRadarViewActive && overlaysRef.current.precip;
-    const showSat = isRadarViewActive && overlaysRef.current.satIR;
+    const showPrecip = overlaysRef.current.precip;
+    const showSat = overlaysRef.current.satIR;
 
     Object.values(loadedRadarIdsRef.current).forEach((id) => {
       if (id && map.getLayer(id)) {
@@ -406,15 +274,10 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         if (id && map.getLayer(id)) {
           const isTarget = id === targetSatId;
           map.setLayoutProperty(id, 'visibility', showSat ? 'visible' : 'none');
-          const targetOpacity = (showSat && isTarget) ? 0.90 : 0;
+          const targetOpacity = (showSat && isTarget) ? 0.85 : 0;
           map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp(targetOpacity));
         }
       });
-    }
-
-    if (map.getLayer('layer-wind-vectors')) {
-      const isWindViewActive = activeViewRef.current === 'wind';
-      map.setLayoutProperty('layer-wind-vectors', 'visibility', isWindViewActive ? 'visible' : 'none');
     }
   }, [ensureFrameLoaded, formatTime]);
 
@@ -447,43 +310,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     setTimeout(() => applyFrameVisibility(currentFrameIndexRef.current), 150);
   }, [ensureFrameLoaded, applyFrameVisibility, cleanupExpiredLayers]);
 
-  const fetchAndInjectRadarData = useCallback(async (forceFetch = false) => {
-    if (!isMountedRef.current) return;
-    setLoading(true);
-    try {
-      const now = Date.now();
-      if (!forceFetch && globalRadarCache && (now - globalRadarCache.timestamp < CACHE_TTL)) {
-        injectLayersIntoMap(globalRadarCache.data);
-        if (isMountedRef.current) { setError(false); setLoading(false); }
-        return;
-      }
-      if (!globalRadarFetchPromise || forceFetch) {
-        globalRadarFetchPromise = (async () => {
-          const response = await fetch('https://api.librewxr.net/public/weather-maps.json');
-          if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-          return await response.json();
-        })();
-      }
-      const rawData = await globalRadarFetchPromise;
-      const parsed = RainViewerResponseSchema.safeParse(rawData);
-      
-      if (!parsed.success) { 
-        if (isMountedRef.current) setError(true); 
-        return; 
-      }
-      globalRadarCache = { data: parsed.data, timestamp: now };
-      if (isMountedRef.current) {
-        injectLayersIntoMap(parsed.data);
-        setError(false);
-      }
-    } catch (err) {
-      console.error("Error obtenint dades de radar:", err);
-      if (isMountedRef.current) setError(true);
-    } finally {
-      globalRadarFetchPromise = null;
-      if (isMountedRef.current) setLoading(false);
+  useEffect(() => {
+    if (radarData && mapRef.current) {
+      injectLayersIntoMap(radarData);
     }
-  }, [injectLayersIntoMap]);
+  }, [radarData, injectLayersIntoMap]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -507,13 +338,20 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     map.on('mousedown', handleTouchOrClick);
     map.on('touchstart', handleTouchOrClick);
 
+    // Escut protector de memòria mòbil
+    map.on('webglcontextlost', (e) => {
+      e.originalEvent?.preventDefault(); // <-- Canvi aquí
+      console.warn("[WebGL] Memòria gràfica alliberada pel dispositiu. Ressuscitant motor...");
+      setWebglKey(prev => prev + 1); 
+    });
+
     map.on('load', () => {
       map.setFog({
-        'color': 'rgb(6, 12, 28)', 
-        'high-color': 'rgb(12, 24, 48)',
-        'horizon-blend': 0.30, 
-        'space-color': 'rgb(1, 2, 6)', 
-        'star-intensity': 0.75 
+        'color': 'rgb(12, 22, 40)',       
+        'high-color': 'rgb(18, 30, 55)',  
+        'horizon-blend': 0.40,            
+        'space-color': 'rgb(2, 4, 10)',   
+        'star-intensity': 0.85            
       });
 
       const nasaDate = getNASADate();
@@ -568,27 +406,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
       map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
       map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-      
-      map.addSource('wind-skeleton-source', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      });
-      map.addLayer({
-        id: 'layer-wind-vectors',
-        type: 'line',
-        source: 'wind-skeleton-source',
-        layout: { 
-          'visibility': activeViewRef.current === 'wind' ? 'visible' : 'none',
-          'line-cap': 'round',
-          'line-join': 'round'
-        },
-        paint: {
-          'line-color': '#00ffff',
-          'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.5, 10, 2],
-          'line-opacity': 0.8
-        }
-      });
-      map.addLayer({ id: 'anchor-wind', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
       map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
       map.addLayer({
@@ -606,7 +423,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         }
       }, 60000);
 
-      fetchAndInjectRadarData();
+      fetchRadarData();
     });
 
     return () => {
@@ -620,22 +437,41 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       loadedSatIdsRef.current = {};
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lon, fetchAndInjectRadarData, BASE_LAYERS]);
+  }, [lat, lon, fetchRadarData, BASE_LAYERS, webglKey]);
 
-  /**
-   * EL CONTROLADOR MESTRE UNIFICAT (Atòmic):
-   * Executa immediatament qualsevol canvi d'estat visual sense bloquejos d'estil.
-   */
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     
     const syncAllLayers = () => {
+      if (map.getLayer('layer-nasa-real')) {
+        map.setLayoutProperty('layer-nasa-real', 'visibility', overlays.nasaReal ? 'visible' : 'none');
+        map.setPaintProperty('layer-nasa-real', 'raster-opacity', overlays.nasaReal ? [
+          'interpolate', ['linear'], ['zoom'],
+          5.5, 1,   
+          7.5, 0    
+        ] : 0);
+      }
+
       (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
         const layerId = `base-layer-${key}`;
         if (map.getLayer(layerId)) {
           map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
-          const targetOpacity = (key === activeBaseLayer && !overlays.nasaReal) ? 1 : 0.000001;
+          
+          let targetOpacity: number | mapboxgl.Expression = 0.000001;
+          
+          if (key === activeBaseLayer) {
+            if (overlays.nasaReal) {
+              targetOpacity = [
+                'interpolate', ['linear'], ['zoom'],
+                5.5, 0.000001, 
+                7.5, 1         
+              ];
+            } else {
+              targetOpacity = 1;
+            }
+          }
+          
           map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
         }
       });
@@ -659,12 +495,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     if (!map.isStyleLoaded()) {
       map.once('idle', syncAllLayers);
     }
-  }, [activeBaseLayer, BASE_LAYERS, overlays, activeView, applyFrameVisibility]);
+  }, [activeBaseLayer, BASE_LAYERS, overlays, applyFrameVisibility]);
 
-  /**
-   * COREOGRAFIA CINEMÀTICA (Vol Orbital i Retorn Tàctic):
-   * Fa zoom out a escala planetària al activar la NASA i retorna exactament a la pica local en desactivar-la.
-   */
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -714,26 +546,26 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   }, [overlays.nasaReal]);
 
   useEffect(() => {
-    if (!isActive || activeView !== 'radar') {
+    if (!isActive) {
       const t = setTimeout(() => { setIsPlaying(false); }, 0);
       return () => clearTimeout(t);
     }
-  }, [isActive, activeView]);
+  }, [isActive]);
 
   useEffect(() => {
-    if (isPlaying && radarFramesRef.current.length > 0 && isActive && activeView === 'radar') {
+    if (isPlaying && radarFramesRef.current.length > 0 && isActive) {
       animationTimerRef.current = setInterval(() => {
         const totalFrames = radarFramesRef.current.length;
         if (totalFrames === 0) return; 
         const nextIndex = (currentFrameIndexRef.current + 1) % totalFrames;
         currentFrameIndexRef.current = nextIndex;
         applyFrameVisibility(nextIndex);
-      }, 450);
+      }, 600); 
     } else {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
     }
     return () => { if (animationTimerRef.current) clearInterval(animationTimerRef.current); };
-  }, [isPlaying, isActive, activeView, applyFrameVisibility]);
+  }, [isPlaying, isActive, applyFrameVisibility]);
 
   const togglePlay = () => {
     if (radarFramesRef.current.length === 0) return;
@@ -745,227 +577,43 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     }
   };
 
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.05] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:16px_16px]`;
-
-  if (error) {
-    return (
-      <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-gradient-to-br from-[#0a0d16]/95 to-[#020308]/95 backdrop-blur-2xl p-6 text-center">
-        <div className={MATRIX_BG}></div>
-        <div className="w-20 h-20 rounded-2xl bg-rose-950/40 border border-rose-500/40 shadow-[inset_0_2px_15px_rgba(244,63,94,0.2),0_10px_30px_rgba(244,63,94,0.3)] flex items-center justify-center mb-6 relative z-10">
-          <AlertTriangle className="w-10 h-10 text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.8)]" />
-        </div>
-        <span className="text-white font-black tracking-[0.2em] uppercase mb-2 z-10 text-lg drop-shadow-md text-center px-4 max-w-[90vw] leading-tight">{t('errRadarDown')}</span>
-        <span className="text-sm text-slate-400 font-mono mb-8 max-w-sm z-10 leading-relaxed text-center px-4">{t('errRadarDesc')}</span>
-        <button onClick={() => fetchAndInjectRadarData(true)} className="px-8 py-4 bg-black/40 border border-white/20 hover:bg-white/10 hover:border-white/40 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 z-10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-md">
-          {t('btnForceSync')}
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="relative w-full h-full min-h-0 overflow-hidden bg-[#020308] select-none [transform:translateZ(0)]">
-      {loading && (
-        <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-[#020308]/90 backdrop-blur-2xl transition-opacity duration-300">
-          <div className={MATRIX_BG}></div>
-          <div className="relative w-16 h-16 flex items-center justify-center mb-5 z-10">
-            <div className="absolute inset-0 border-[4px] border-cyan-500/20 rounded-full shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]"></div>
-            <div className="absolute inset-0 border-[4px] border-cyan-400 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
-            <Radio className="w-7 h-7 text-cyan-400 animate-pulse drop-shadow-[0_0_10px_rgba(6,182,212,1)]" />
-          </div>
-          <p className="text-cyan-300 text-sm font-mono font-bold tracking-[0.2em] uppercase z-10 drop-shadow-lg text-center px-4 max-w-[80vw] leading-relaxed">
-            {t('syncingDoppler')}
-          </p>
-        </div>
-      )}
+      
+      <RadarOverlays 
+        loading={loading} 
+        error={error} 
+        onForceSync={() => fetchRadarData(true)} 
+      />
 
-      <div ref={mapContainerRef} className="w-full h-full" />
+      <div key={`mapbox-phoenix-${webglKey}`} ref={mapContainerRef} className="w-full h-full" />
 
-      {/* Punt de mira Tàctic Central */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none z-10 flex items-center justify-center">
         <div className="absolute inset-0 bg-cyan-400/20 rounded-full animate-ping"></div>
         <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(6,182,212,1)]"></div>
         <div className="absolute w-6 h-6 border border-cyan-500/30 rounded-full"></div>
       </div>
 
-      {/* Menú de Capes Flotant */}
-      <div className="absolute top-[max(env(safe-area-inset-top,16px),16px)] right-[max(env(safe-area-inset-right,16px),16px)] bottom-[110px] z-[1010] flex flex-col items-end pointer-events-none">
-        
-        <button 
-          onClick={() => setShowLayerMenu(!showLayerMenu)} 
-          className={`shrink-0 pointer-events-auto p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.8)] active:scale-95 ${
-            showLayerMenu 
-              ? 'bg-black/85 border-cyan-400 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.35)] scale-[0.98]' 
-              : 'bg-black/60 border-white/15 text-slate-200 hover:bg-black/80 hover:text-white hover:border-white/30 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]'
-          }`} 
-          title={t('layerControl')}
-          aria-label={t('layerControl')}
-        >
-          <Layers className="w-5 h-5 sm:w-6 sm:h-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
-        </button>
+      <RadarLayerMenu 
+        showLayerMenu={showLayerMenu} 
+        setShowLayerMenu={setShowLayerMenu}
+        activeBaseLayer={activeBaseLayer}
+        setActiveBaseLayer={setActiveBaseLayer}
+        overlays={overlays}
+        toggleOverlay={toggleOverlay}
+        baseLayers={BASE_LAYERS}
+      />
 
-        {showLayerMenu && (
-          <div className="pointer-events-auto pt-3 w-[calc(100vw-32px)] max-w-[320px] sm:max-w-[340px] shrink min-h-0 max-h-full flex flex-col animate-in fade-in zoom-in-95 origin-top-right duration-200">
-            
-            <div className="flex flex-col flex-1 min-h-0 bg-black/85 sm:bg-black/80 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] ring-1 ring-cyan-500/20 overflow-hidden transform-gpu">
-              
-              <div className="shrink-0 flex items-center justify-between py-3.5 px-4 sm:px-5 border-b border-white/15 bg-gradient-to-b from-white/[0.08] to-transparent">
-                <span className="text-[11px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
-                  <span className="truncate">{t('layerControl', 'Capes i Telemetria')}</span>
-                </span>
-                <button 
-                  onClick={() => setShowLayerMenu(false)} 
-                  className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 hover:text-white transition-all shadow-sm active:scale-90"
-                  aria-label="Tancar menú de capes"
-                >
-                  <CloseIcon className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-5 [scrollbar-width:thin] [scrollbar-color:rgba(6,182,212,0.4)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-cyan-500/30 hover:[&::-webkit-scrollbar-thumb]:bg-cyan-400/60 [&::-webkit-scrollbar-thumb]:rounded-full">
-                
-                <div className="space-y-2.5 shrink-0">
-                  <span className="text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block drop-shadow-md">
-                    {t('baseMapTitle')}
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {BASE_LAYERS && (Object.keys(BASE_LAYERS) as BaseLayerType[]).map((key) => {
-                      const layer = BASE_LAYERS[key];
-                      const isActive = activeBaseLayer === key;
-                      return (
-                        <button 
-                          key={key} 
-                          onClick={() => setActiveBaseLayer(key)} 
-                          className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all duration-300 backdrop-blur-md ${
-                            isActive 
-                              ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400/70 shadow-[0_0_15px_rgba(6,182,212,0.3)] font-black' 
-                              : 'bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 active:scale-95'
-                          }`}
-                        >
-                          <span className="truncate drop-shadow-md">{layer?.name ?? key}</span>
-                          {isActive && <Check className="w-4 h-4 shrink-0 ml-1.5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-2.5 shrink-0 pt-3 border-t border-white/15">
-                  <span className="text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block drop-shadow-md">
-                    {t('overlayTitle')}
-                  </span>
-                  
-                  <div className="space-y-2">
-                    <button 
-                      onClick={() => toggleOverlay('precip')} 
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
-                        overlays?.precip 
-                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
-                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
-                      }`}
-                    >
-                      <span className="drop-shadow-md">{t('layerPrecip')}</span>
-                      {overlays?.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
-                    </button>
-                    
-                    <button 
-                      onClick={() => toggleOverlay('satIR')} 
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
-                        overlays?.satIR 
-                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
-                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
-                      }`}
-                    >
-                      <span className="drop-shadow-md truncate pr-2">{t('layerSat')} <span className="font-normal text-[11px] opacity-75">{t('layerSatAnim', '(IR Animació)')}</span></span>
-                      {overlays?.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
-                    </button>
-                    
-                    <button 
-                      onClick={() => toggleOverlay('nasaReal')} 
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all text-xs font-bold backdrop-blur-md border ${
-                        overlays?.nasaReal 
-                          ? 'bg-cyan-950/60 border-cyan-400/70 text-cyan-100 shadow-[inset_0_0_18px_rgba(6,182,212,0.25)]' 
-                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
-                      }`}
-                    >
-                      <span className="drop-shadow-md flex items-center gap-2 truncate pr-2">
-                        <Camera className={`w-4 h-4 shrink-0 ${overlays?.nasaReal ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.8)]' : 'text-slate-400'}`} /> 
-                        <span className="truncate">{t('layerNasa', 'Foto Terra (NASA)')}</span>
-                      </span>
-                      {overlays?.nasaReal ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
-                    </button>
-                    
-                    <button 
-                      onClick={() => toggleOverlay('night')} 
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
-                        overlays?.night 
-                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
-                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
-                      }`}
-                    >
-                      <span className="drop-shadow-md flex items-center gap-2 truncate pr-2">
-                        <Moon className={`w-3.5 h-3.5 shrink-0 ${overlays?.night ? 'text-cyan-300' : 'text-slate-400'}`} /> 
-                        <span className="truncate">{t('layerNight', 'Nit')}</span>
-                      </span>
-                      {overlays?.night ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
-                    </button>
-                    
-                    <button 
-                      onClick={() => toggleOverlay('labels')} 
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
-                        overlays?.labels 
-                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
-                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
-                      }`}
-                    >
-                      <span className="drop-shadow-md truncate pr-2">{t('layerLabels')}</span>
-                      {overlays?.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-        )}
-      </div>
-      
-      {/* Control Inferior Flotant Spatial UI */}
-      <div className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-1/2 -translate-x-1/2 z-[1000] w-[94%] sm:w-[450px] flex items-center justify-between gap-3 pointer-events-none">
-        
-        <button 
-          onClick={togglePlay} 
-          disabled={framesCount === 0} 
-          className={`pointer-events-auto flex items-center justify-center w-16 h-16 rounded-2xl transition-all duration-300 shrink-0 active:scale-95 backdrop-blur-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${isPlaying ? 'bg-black/60 border-white/20 text-cyan-400 shadow-[inset_0_0_15px_rgba(6,182,212,0.15)]' : 'bg-cyan-500 border-cyan-400/50 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]'} disabled:opacity-30 disabled:cursor-not-allowed`} 
-          aria-label={isPlaying ? t('btnPause') : t('btnPlay')}
-        >
-          {isPlaying ? <Pause className="w-7 h-7 fill-current drop-shadow-md" /> : <Play className="w-7 h-7 fill-current ml-1.5 drop-shadow-sm" />}
-        </button>
-
-        <div className="pointer-events-auto flex flex-col flex-1 items-center justify-center h-16 bg-black/50 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 ring-1 ring-white/5">
-          <span className="text-[10px] text-cyan-300 font-mono font-black uppercase tracking-[0.25em] mb-0.5 drop-shadow-[0_1px_4px_rgba(0,0,0,1)]">
-            {isPlaying ? t('animPlaying') : t('animCurrent')}
-          </span>
-          <div className="flex items-center gap-3">
-            <span className={`h-2.5 w-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,1)] ${isPlaying ? 'bg-cyan-400 animate-ping shadow-[0_0_15px_rgba(6,182,212,0.8)]' : 'bg-cyan-500'}`}></span>
-            <span ref={timeDisplayRef} className="text-white font-mono font-black text-2xl tracking-tighter tabular-nums drop-shadow-[0_2px_12px_rgba(0,0,0,1)]">
-              {currentFrameTimestamp ? formatTime(currentFrameTimestamp) : '--:--'}
-            </span>
-          </div>
-        </div>
-
-        <button 
-          onClick={() => fetchAndInjectRadarData(true)} 
-          disabled={loading} 
-          className="pointer-events-auto flex items-center justify-center w-16 h-16 rounded-2xl bg-black/40 hover:bg-black/60 backdrop-blur-2xl border border-white/15 text-slate-200 hover:text-cyan-300 transition-all duration-300 active:scale-95 shrink-0 shadow-[0_8px_32px_rgba(0,0,0,0.6)]" 
-          title={t('btnRefresh')}
-          aria-label={t('btnRefresh')}
-        >
-          <RefreshCw className={`w-6 h-6 drop-shadow-lg ${loading ? 'animate-spin text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]' : ''}`} />
-        </button>
-      </div>
+      <RadarPlaybackControls 
+        isPlaying={isPlaying}
+        togglePlay={togglePlay}
+        framesCount={framesCount}
+        currentFrameTimestamp={currentFrameTimestamp}
+        formatTime={formatTime}
+        loading={loading}
+        onRefresh={() => fetchRadarData(true)}
+        timeDisplayRef={timeDisplayRef}
+      />
 
     </div>
   );
