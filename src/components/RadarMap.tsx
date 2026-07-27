@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { AlertTriangle, RefreshCw, Play, Pause, Radio, Layers, Eye, EyeOff, Check, X as CloseIcon, Moon } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Play, Pause, Radio, Layers, Eye, EyeOff, Check, X as CloseIcon, Moon, Camera } from 'lucide-react';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 
@@ -57,11 +57,15 @@ let globalRadarCache: { data: z.infer<typeof RainViewerResponseSchema>; timestam
 let globalRadarFetchPromise: Promise<z.infer<typeof RainViewerResponseSchema>> | null = null;
 const CACHE_TTL = 5 * 60 * 1000;
 
-/* --- FUNCIONS PURES CORREGIDES (Sense canvi de tipus) --- */
+/* --- FUNCIONS PURES --- */
+
+const getNASADate = (): string => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - 1); 
+  return d.toISOString().split('T')[0];
+};
 
 const getRadOpacityExp = (baseOp: number): mapboxgl.Expression => {
-  // Retornem SEMPRE l'expressió. Si baseOp és 0, tota la corba valdrà 0.
-  // Això prevé el "Type-Switching bug" de WebGL a MapLibre.
   return [
     'interpolate', ['linear'], ['zoom'],
     2, baseOp * 0.95,
@@ -139,13 +143,7 @@ const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {
 
   return {
     type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        properties: { level: 0 },
-        geometry: { type: 'Polygon', coordinates: [coords] }
-      }
-    ]
+    features: [{ type: 'Feature', properties: { level: 0 }, geometry: { type: 'Polygon', coordinates: [coords] } }]
   };
 };
 
@@ -175,7 +173,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
   const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
   
-  const [overlays, setOverlays] = useState({ precip: true, satIR: true, night: true, labels: true });
+  const [overlays, setOverlays] = useState({ precip: true, satIR: true, night: true, labels: true, nasaReal: false });
   const [showLayerMenu, setShowLayerMenu] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -219,10 +217,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       const idx = Number(key);
       const layerId = loadedRadarIdsRef.current[idx];
       if (!layerId) return;
-      
       const timeStr = layerId.replace('rad-layer-', '');
       const timestamp = Number(timeStr);
-
       if (!timestamp || isNaN(timestamp) || !activeRadarTimes.has(timestamp)) {
         const radSourceId = `rad-src-${timestamp}`;
         try {
@@ -230,7 +226,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           if (map.getSource(radSourceId)) map.removeSource(radSourceId);
           delete loadedRadarIdsRef.current[idx];
         } catch (e) {
-          console.warn(`[Garbage Collector] Error netejant VRAM radar (${layerId}):`, e);
+          console.warn(`[Garbage Collector] Error netejant VRAM radar:`, e);
         }
       }
     });
@@ -239,10 +235,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       const idx = Number(key);
       const layerId = loadedSatIdsRef.current[idx];
       if (!layerId) return;
-
       const timeStr = layerId.replace('sat-layer-', '');
       const timestamp = Number(timeStr);
-
       if (!timestamp || isNaN(timestamp) || !activeSatTimes.has(timestamp)) {
         const satSourceId = `sat-src-${timestamp}`;
         try {
@@ -250,7 +244,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           if (map.getSource(satSourceId)) map.removeSource(satSourceId);
           delete loadedSatIdsRef.current[idx];
         } catch (e) {
-          console.warn(`[Garbage Collector] Error netejant VRAM satèl·lit (${layerId}):`, e);
+          console.warn(`[Garbage Collector] Error netejant VRAM satèl·lit:`, e);
         }
       }
     });
@@ -290,7 +284,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           'raster-opacity': getRadOpacityExp(initialRadOpacity), 
           'raster-fade-duration': 0,
           'raster-resampling': 'linear', 
-          // CORRECCIÓ: Valors dins del rang estrictament permès [-1, 1]
           'raster-contrast': 0.25, 
           'raster-saturation': 0.8, 
         },
@@ -347,7 +340,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     if (rFramesCount === 0) return;
 
     const safeIndex = (index % rFramesCount + rFramesCount) % rFramesCount;
-
     ensureFrameLoaded(safeIndex);
     ensureFrameLoaded((safeIndex + 1) % rFramesCount);
     ensureFrameLoaded((safeIndex + 2) % rFramesCount);
@@ -380,7 +372,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         const diff = Math.abs(sFrame.time - currentRadarFrame.time!);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
-      
       const targetSatId = loadedSatIdsRef.current[closestSatIdx];
       
       Object.values(loadedSatIdsRef.current).forEach((id) => {
@@ -415,10 +406,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     currentFrameIndexRef.current = initialIdx;
     
     ensureFrameLoaded(initialIdx);
-    if (rFrames.length > 1) {
-      setTimeout(() => ensureFrameLoaded(0), 100);
-    }
-    
+    if (rFrames.length > 1) { setTimeout(() => ensureFrameLoaded(0), 100); }
     applyFrameVisibility(initialIdx);
 
     map.once('idle', () => applyFrameVisibility(currentFrameIndexRef.current));
@@ -428,7 +416,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const fetchAndInjectRadarData = useCallback(async (forceFetch = false) => {
     if (!isMountedRef.current) return;
     setLoading(true);
-    
     try {
       const now = Date.now();
       if (!forceFetch && globalRadarCache && (now - globalRadarCache.timestamp < CACHE_TTL)) {
@@ -436,7 +423,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         if (isMountedRef.current) { setError(false); setLoading(false); }
         return;
       }
-
       if (!globalRadarFetchPromise || forceFetch) {
         globalRadarFetchPromise = (async () => {
           const response = await fetch('https://api.librewxr.net/public/weather-maps.json');
@@ -444,7 +430,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           return await response.json();
         })();
       }
-
       const rawData = await globalRadarFetchPromise;
       const parsed = RainViewerResponseSchema.safeParse(rawData);
       
@@ -452,7 +437,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         if (isMountedRef.current) setError(true); 
         return; 
       }
-      
       globalRadarCache = { data: parsed.data, timestamp: now };
       if (isMountedRef.current) {
         injectLayersIntoMap(parsed.data);
@@ -498,6 +482,28 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         'star-intensity': 0.65 
       });
 
+      // 1. EL SOTERRANI: La capa de la NASA s'afegeix la PRIMERA de totes.
+      // Queda per sota de qualsevol altre mapa i MAI es mou ni s'amaga estructuralment.
+      const nasaDate = getNASADate();
+      map.addSource('source-nasa-real', {
+        type: 'raster',
+        tiles: [
+          `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+        ],
+        tileSize: 256,
+        maxzoom: 9, 
+        attribution: '&copy; NASA'
+      });
+
+      map.addLayer({
+        id: 'layer-nasa-real',
+        type: 'raster',
+        source: 'source-nasa-real',
+        layout: { visibility: 'visible' },
+        paint: { 'raster-opacity': 1 } // Sempre a opacitat 1!
+      });
+
+      // 2. EL TELÓ: Les capes base s'afegeixen a SOBRE de la NASA, tapant-la físicament.
       (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
         const config = BASE_LAYERS[key];
         map.addSource(`base-src-${key}`, { type: 'raster', tiles: [config.url], tileSize: 256, attribution: config.attribution });
@@ -506,7 +512,10 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           type: 'raster',
           source: `base-src-${key}`,
           layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
-          paint: { 'raster-opacity': 1 },
+          paint: {
+            'raster-opacity': 1,
+            'raster-fade-duration': 400 // Transició teatral per destapar la NASA
+          }
         });
       });
       
@@ -562,6 +571,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lon, fetchAndInjectRadarData, BASE_LAYERS]);
 
+  // EL CONTROLADOR MESTRE: Gestiona els mapes base i la NASA
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -569,7 +579,13 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
       const layerId = `base-layer-${key}`;
       if (map.getLayer(layerId)) {
+        // Mantenim l'estructura només per al mapa actiu
         map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
+        
+        // LA DOCTRINA DEL TELÓ: Si la NASA està activa, el mapa base actiu s'esvaeix matemàticament,
+        // destapant la foto de la NASA que sempre ha estat allà. (0.000001 evita que MapLibre matí la capa).
+        const targetOpacity = (key === activeBaseLayer && !overlays.nasaReal) ? 1 : 0.000001;
+        map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
       }
     });
 
@@ -579,11 +595,13 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     }
 
     map.triggerRepaint();
-  }, [activeBaseLayer, BASE_LAYERS]);
+  }, [activeBaseLayer, BASE_LAYERS, overlays.nasaReal]); // Fixat: Ens suscribim directament a nasaReal
 
+  // S'encarrega de les capes flotants restants
   useEffect(() => {
     applyFrameVisibility(currentFrameIndexRef.current);
     const map = mapRef.current;
+    
     if (map && map.isStyleLoaded()) {
       if (map.getLayer('layer-labels')) {
         map.setLayoutProperty('layer-labels', 'visibility', overlays.labels ? 'visible' : 'none');
@@ -591,14 +609,13 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (map.getLayer('layer-night')) {
         map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
       }
+      map.triggerRepaint();
     }
-  }, [overlays, activeView, applyFrameVisibility]);
+  }, [overlays.labels, overlays.night, overlays.precip, overlays.satIR, activeView, applyFrameVisibility]);
 
   useEffect(() => {
     if (!isActive || activeView !== 'radar') {
-      const t = setTimeout(() => {
-        setIsPlaying(false);
-      }, 0);
+      const t = setTimeout(() => { setIsPlaying(false); }, 0);
       return () => clearTimeout(t);
     }
   }, [isActive, activeView]);
@@ -608,7 +625,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       animationTimerRef.current = setInterval(() => {
         const totalFrames = radarFramesRef.current.length;
         if (totalFrames === 0) return; 
-        
         const nextIndex = (currentFrameIndexRef.current + 1) % totalFrames;
         currentFrameIndexRef.current = nextIndex;
         applyFrameVisibility(nextIndex);
@@ -672,68 +688,164 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         <div className="absolute w-6 h-6 border border-cyan-500/30 rounded-full"></div>
       </div>
 
-      {/* Menú de Capes Flotant */}
-      <div className="absolute top-4 right-4 z-[1010] flex flex-col items-end pointer-events-none">
+      {/* Menú de Capes Flotant - Arquitectura Remasteritzada per a Espais Verticals Reduïts (PC / DevTools) */}
+      <div className="absolute top-[max(env(safe-area-inset-top,16px),16px)] right-[max(env(safe-area-inset-right,16px),16px)] bottom-[110px] z-[1010] flex flex-col items-end pointer-events-none">
+        
+        {/* Botó Flotant d'Activació */}
         <button 
           onClick={() => setShowLayerMenu(!showLayerMenu)} 
-          className={`pointer-events-auto p-4 rounded-2xl backdrop-blur-2xl border transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.6)] active:scale-95 ${showLayerMenu ? 'bg-black/60 border-cyan-400/50 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/15 text-slate-200 hover:bg-black/60 hover:text-white'}`} 
+          className={`shrink-0 pointer-events-auto p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.8)] active:scale-95 ${
+            showLayerMenu 
+              ? 'bg-black/85 border-cyan-400 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.35)] scale-[0.98]' 
+              : 'bg-black/60 border-white/15 text-slate-200 hover:bg-black/80 hover:text-white hover:border-white/30 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]'
+          }`} 
           title={t('layerControl')}
           aria-label={t('layerControl')}
         >
-          <Layers className="w-6 h-6 drop-shadow-md" />
+          <Layers className="w-5 h-5 sm:w-6 sm:h-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
         </button>
 
+        {/* Finestra Modal Tàctica del Menú */}
         {showLayerMenu && (
-          <div className="pointer-events-auto mt-3 w-[calc(100vw-32px)] max-w-[320px] max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-thumb]:rounded-full bg-black/60 backdrop-blur-2xl border border-white/15 rounded-2xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 origin-top-right duration-200 ring-1 ring-white/5">
+          /* PONT DE RATOLÍ I SOSTRE FLEXIBLE:
+             1. 'pt-3': Elimina el buit perillós per a ratolins a PC entre el botó i el menú.
+             2. 'max-h-full': Força a respectar estrictament el sostre del pare (bottom-[110px] / top-16).
+             3. 'w-[calc(100vw-32px)] max-w-[320px] sm:max-w-[340px]': Adaptabilitat perfecta Mòbil/PC. */
+          <div className="pointer-events-auto pt-3 w-[calc(100vw-32px)] max-w-[320px] sm:max-w-[340px] shrink min-h-0 max-h-full flex flex-col animate-in fade-in zoom-in-95 origin-top-right duration-200">
             
-            <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
-              <span className="text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 drop-shadow-md">{t('baseMapTitle')}</span>
-              <button 
-                onClick={() => setShowLayerMenu(false)} 
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors shadow-sm active:scale-95"
-              >
-                <CloseIcon className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 mb-5">
-              {(Object.keys(BASE_LAYERS) as BaseLayerType[]).map((key) => (
-                <button key={key} onClick={() => setActiveBaseLayer(key)} className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all duration-300 backdrop-blur-md ${activeBaseLayer === key ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10'}`}>
-                  <span className="truncate drop-shadow-md">{BASE_LAYERS[key].name}</span>
-                  {activeBaseLayer === key && <Check className="w-4 h-4 shrink-0 ml-1.5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" />}
-                </button>
-              ))}
-            </div>
-
-            <span className="text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block mb-3 drop-shadow-md">{t('overlayTitle')}</span>
-            
-            <div className="space-y-2">
-              <button onClick={() => setOverlays(prev => ({ ...prev, precip: !prev.precip }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
-                <span className="drop-shadow-md">{t('layerPrecip')}</span>
-                {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-              </button>
-              <button onClick={() => setOverlays(prev => ({ ...prev, satIR: !prev.satIR }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
-                <span className="drop-shadow-md">{t('layerSat')}</span>
-                {overlays.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-              </button>
+            <div className="flex flex-col flex-1 min-h-0 bg-black/85 sm:bg-black/80 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] ring-1 ring-cyan-500/20 overflow-hidden transform-gpu">
               
-              <button onClick={() => setOverlays(prev => ({ ...prev, night: !prev.night }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
-                <span className="drop-shadow-md flex items-center gap-2">
-                  <Moon className="w-3.5 h-3.5 text-slate-400" /> {t('layerNight', 'Nit')}
+              {/* CAPÇALERA FIXA MINIMALISTA (Només Títol i Botó Tancar - Ocupa el mínim espai indispensable: ~45px) */}
+              <div className="shrink-0 flex items-center justify-between py-3.5 px-4 sm:px-5 border-b border-white/15 bg-gradient-to-b from-white/[0.08] to-transparent">
+                <span className="text-[11px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+                  <span className="truncate">{t('layerControl', 'Capes i Telemetria')}</span>
                 </span>
-                {overlays.night ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-              </button>
-              
-              <button onClick={() => setOverlays(prev => ({ ...prev, labels: !prev.labels }))} className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-100 font-bold backdrop-blur-md">
-                <span className="drop-shadow-md">{t('layerLabels')}</span>
-                {overlays.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" /> : <EyeOff className="w-5 h-5 text-slate-500" />}
-              </button>
+                <button 
+                  onClick={() => setShowLayerMenu(false)} 
+                  className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 hover:text-white transition-all shadow-sm active:scale-90"
+                  aria-label="Tancar menú de capes"
+                >
+                  <CloseIcon className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* UNIFICACIÓ TÀCTICA DE L'SCROLL: 
+                  Posem MAPES BASE i SUPERPOSICIONS dins d'un únic contenidor 'overflow-y-auto'.
+                  Això evita que el bloc de mapes base robi el 80% de l'espai en resolucions baixes de PC o amb DevTools obert.
+                  S'aplica 'scrollbar-width: thin' i 'scrollbar-color' perquè desaparegui la barra grisa de Windows de la imatge. */}
+              <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-5 [scrollbar-width:thin] [scrollbar-color:rgba(6,182,212,0.4)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-cyan-500/30 hover:[&::-webkit-scrollbar-thumb]:bg-cyan-400/60 [&::-webkit-scrollbar-thumb]:rounded-full">
+                
+                {/* SECCIÓ 1: MAPES BASE */}
+                <div className="space-y-2.5 shrink-0">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block drop-shadow-md">
+                    {t('baseMapTitle')}
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BASE_LAYERS && (Object.keys(BASE_LAYERS) as BaseLayerType[]).map((key) => {
+                      const layer = BASE_LAYERS[key];
+                      const isActive = activeBaseLayer === key;
+                      return (
+                        <button 
+                          key={key} 
+                          onClick={() => setActiveBaseLayer(key)} 
+                          className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all duration-300 backdrop-blur-md ${
+                            isActive 
+                              ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400/70 shadow-[0_0_15px_rgba(6,182,212,0.3)] font-black' 
+                              : 'bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 active:scale-95'
+                          }`}
+                        >
+                          <span className="truncate drop-shadow-md">{layer?.name ?? key}</span>
+                          {isActive && <Check className="w-4 h-4 shrink-0 ml-1.5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* SECCIÓ 2: SUPERPOSICIONS I CAPES TÀCTIQUES */}
+                <div className="space-y-2.5 shrink-0 pt-3 border-t border-white/15">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block drop-shadow-md">
+                    {t('overlayTitle')}
+                  </span>
+                  
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), precip: !prev?.precip }))} 
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
+                        overlays?.precip 
+                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
+                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
+                      }`}
+                    >
+                      <span className="drop-shadow-md">{t('layerPrecip')}</span>
+                      {overlays?.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
+                    </button>
+                    
+                    <button 
+                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), satIR: !prev?.satIR }))} 
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
+                        overlays?.satIR 
+                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
+                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
+                      }`}
+                    >
+                      <span className="drop-shadow-md truncate pr-2">{t('layerSat')} <span className="font-normal text-[11px] opacity-75">{t('layerSatAnim', '(IR Animació)')}</span></span>
+                      {overlays?.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
+                    </button>
+                    
+                    <button 
+                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), nasaReal: !prev?.nasaReal }))} 
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all text-xs font-bold backdrop-blur-md border ${
+                        overlays?.nasaReal 
+                          ? 'bg-cyan-950/60 border-cyan-400/70 text-cyan-100 shadow-[inset_0_0_18px_rgba(6,182,212,0.25)]' 
+                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
+                      }`}
+                    >
+                      <span className="drop-shadow-md flex items-center gap-2 truncate pr-2">
+                        <Camera className={`w-4 h-4 shrink-0 ${overlays?.nasaReal ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(6,182,212,0.8)]' : 'text-slate-400'}`} /> 
+                        <span className="truncate">{t('layerNasa', 'Foto Terra (NASA)')}</span>
+                      </span>
+                      {overlays?.nasaReal ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
+                    </button>
+                    
+                    <button 
+                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), night: !prev?.night }))} 
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
+                        overlays?.night 
+                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
+                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
+                      }`}
+                    >
+                      <span className="drop-shadow-md flex items-center gap-2 truncate pr-2">
+                        <Moon className={`w-3.5 h-3.5 shrink-0 ${overlays?.night ? 'text-cyan-300' : 'text-slate-400'}`} /> 
+                        <span className="truncate">{t('layerNight', 'Nit')}</span>
+                      </span>
+                      {overlays?.night ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
+                    </button>
+                    
+                    <button 
+                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), labels: !prev?.labels }))} 
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
+                        overlays?.labels 
+                          ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
+                          : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-slate-200 active:scale-[0.99]'
+                      }`}
+                    >
+                      <span className="drop-shadow-md truncate pr-2">{t('layerLabels')}</span>
+                      {overlays?.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" /> : <EyeOff className="w-5 h-5 text-slate-500 shrink-0" />}
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
           </div>
         )}
       </div>
-
-      {/* Control Inferior Flotant Spatial UI (Càpsula) */}
+      
+       {/* Control Inferior Flotant Spatial UI (Càpsula) */}
       <div className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-1/2 -translate-x-1/2 z-[1000] w-[94%] sm:w-[450px] flex items-center justify-between gap-3 pointer-events-none">
         
         <button 

@@ -11,6 +11,8 @@ export const ca = {
   overlayTitle: "CAPES SUPERPOSADES",
   layerSat: "Núvols (Satèl·lit IR)",
   layerNight: "Nit",
+  layerSatAnim: "(IR Animació)",
+  layerNasa: "Foto Terra (NASA)",
 
   // Controls del reproductor
   btnPlay: "Reproduir",

@@ -13,6 +13,8 @@ export const fr = {
   overlayTitle: "COUCHES SUPERPOSÉES",
   layerSat: "Nuages (Satellite IR)",
   layerNight: "Nuit",
+  layerSatAnim: "(Animation IR)",
+  layerNasa: "Photo Terre (NASA)",
 
   // --- Controls del reproductor ---
   btnPlay: "Lecture",

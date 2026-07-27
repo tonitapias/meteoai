@@ -12,6 +12,8 @@ export const es = {
   overlayTitle: "CAPAS SUPERPUESTAS",
   layerSat: "Nubes (Satélite IR)",
   layerNight: "Noche",
+  layerSatAnim: "(Animación IR)",
+  layerNasa: "Foto Tierra (NASA)",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",

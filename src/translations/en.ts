@@ -13,6 +13,8 @@ export const en = {
   overlayTitle: "OVERLAYS",
   layerSat: "Clouds (IR Satellite)",
   layerNight: "Night",
+  layerSatAnim: "(IR Animation)",
+  layerNasa: "Earth Photo (NASA)",
 
   // --- Controls del reproductor ---
   btnPlay: "Play",
