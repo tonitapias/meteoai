@@ -57,7 +57,7 @@ let globalRadarCache: { data: z.infer<typeof RainViewerResponseSchema>; timestam
 let globalRadarFetchPromise: Promise<z.infer<typeof RainViewerResponseSchema>> | null = null;
 const CACHE_TTL = 5 * 60 * 1000;
 
-/* --- FUNCIONS PURES --- */
+/* --- FUNCIONS PURES I DE FÍSICA VISUAL --- */
 
 const getNASADate = (): string => {
   const d = new Date();
@@ -68,30 +68,32 @@ const getNASADate = (): string => {
 const getRadOpacityExp = (baseOp: number): mapboxgl.Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp * 0.95,
-    6, baseOp * 0.85,
-    10, baseOp * 0.65,
-    15, baseOp * 0.35
+    2, baseOp * 0.98,
+    6, baseOp * 0.90,
+    10, baseOp * 0.75,
+    14, baseOp * 0.45,
+    18, baseOp * 0.20
   ];
 };
 
 const getSatOpacityExp = (baseOp: number): mapboxgl.Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp,
-    5, baseOp * 0.75,
-    7, baseOp * 0.25,
-    9, 0
+    2, baseOp * 0.95,
+    5, baseOp * 0.80,
+    8, baseOp * 0.45,
+    11, baseOp * 0.10,
+    13, 0
   ];
 };
 
 const getNightOpacityExp = (isDark: boolean): mapboxgl.Expression => {
-  const baseOp = isDark ? 0.75 : 0.45;
+  const baseOp = isDark ? 0.78 : 0.48;
   return [
     'interpolate', ['linear'], ['zoom'],
     2, baseOp,          
-    6, baseOp * 0.60,   
-    10, 0               
+    6, baseOp * 0.65,   
+    11, 0               
   ];
 };
 
@@ -192,13 +194,33 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   const overlaysRef = useRef(overlays);
   const activeViewRef = useRef(activeView);
   const isMountedRef = useRef(true);
+
+  // Referències tàctiques per a la coreografia cinemàtica de la NASA
+  const prevNasaRealRef = useRef(overlays.nasaReal);
+  const tacticalCameraRef = useRef<{ 
+    center: [number, number]; 
+    zoom: number; 
+    pitch: number; 
+    bearing: number 
+  } | null>(null);
   
-  useEffect(() => { overlaysRef.current = overlays; }, [overlays]);
   useEffect(() => { activeViewRef.current = activeView; }, [activeView]);
   
   useEffect(() => {
     isMountedRef.current = true;
     return () => { isMountedRef.current = false; };
+  }, []);
+
+  /**
+   * SETTER ATÒMIC: Mutació síncrona d'estat React + Ref per eliminar condicions de cursa
+   * en clicar ràpidament els botons del menú flotant.
+   */
+  const toggleOverlay = useCallback((key: keyof typeof overlays) => {
+    setOverlays(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      overlaysRef.current = next;
+      return next;
+    });
   }, []);
 
   const formatTime = useCallback((ts?: number | null) => {
@@ -208,7 +230,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
   const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
 
     const activeRadarTimes = new Set(validRadarFrames.map(f => f.time));
     const activeSatTimes = new Set(validSatFrames.map(f => f.time));
@@ -252,7 +274,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
   const ensureFrameLoaded = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !hostRef.current) return;
+    if (!map || !hostRef.current) return;
     
     const rFrames = radarFramesRef.current;
     const sFrames = satFramesRef.current;
@@ -266,26 +288,27 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     
     const isTarget = index === currentFrameIndexRef.current;
     const isRadarActive = activeViewRef.current === 'radar';
-    const initialRadOpacity = (isTarget && isRadarActive && overlaysRef.current.precip) ? 0.85 : 0;
+    const isPrecipEnabled = overlaysRef.current.precip;
+    const initialRadOpacity = (isTarget && isRadarActive && isPrecipEnabled) ? 0.88 : 0;
 
     if (!loadedRadarIdsRef.current[index] && !map.getSource(radSourceId)) {
       map.addSource(radSourceId, {
         type: 'raster',
-        tiles: [`${hostRef.current}${rFrame.path}/256/{z}/{x}/{y}/6/1_1.png`],
-        tileSize: 256,
-        maxzoom: 6,
+        tiles: [`${hostRef.current}${rFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
+        tileSize: 512,
+        maxzoom: 8,
       });
       map.addLayer({
         id: radLayerId,
         type: 'raster',
         source: radSourceId,
-        layout: { visibility: 'visible' },
+        layout: { visibility: isPrecipEnabled ? 'visible' : 'none' },
         paint: { 
           'raster-opacity': getRadOpacityExp(initialRadOpacity), 
           'raster-fade-duration': 0,
           'raster-resampling': 'linear', 
-          'raster-contrast': 0.25, 
-          'raster-saturation': 0.8, 
+          'raster-contrast': 0.30,       
+          'raster-saturation': 0.85, 
         },
       }, 'anchor-radar');
       loadedRadarIdsRef.current[index] = radLayerId;
@@ -304,24 +327,26 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       if (sFrame && sFrame.time !== null) {
         const satSourceId = `sat-src-${sFrame.time}`;
         const satLayerId = `sat-layer-${sFrame.time}`;
-        const initialSatOpacity = (isTarget && isRadarActive && overlaysRef.current.satIR) ? 0.95 : 0;
+        const isSatEnabled = overlaysRef.current.satIR;
+        const initialSatOpacity = (isTarget && isRadarActive && isSatEnabled) ? 0.90 : 0;
 
         if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
           map.addSource(satSourceId, {
             type: 'raster',
-            tiles: [`${hostRef.current}${sFrame.path}/256/{z}/{x}/{y}/0/0_0.png`],
-            tileSize: 256,
-            maxzoom: 5,
+            tiles: [`${hostRef.current}${sFrame.path}/512/{z}/{x}/{y}/0/0_0.png`],
+            tileSize: 512,
+            maxzoom: 6,
           });
           
           map.addLayer({
             id: satLayerId,
             type: 'raster',
             source: satSourceId,
-            layout: { visibility: 'visible' },
+            layout: { visibility: isSatEnabled ? 'visible' : 'none' },
             paint: {
               'raster-opacity': getSatOpacityExp(initialSatOpacity),
-              'raster-contrast': 0.20,
+              'raster-contrast': 0.15, 
+              'raster-saturation': 0.1,
               'raster-resampling': 'linear',
               'raster-fade-duration': 0
             },
@@ -334,7 +359,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
   const applyFrameVisibility = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
 
     const rFramesCount = radarFramesRef.current.length;
     if (rFramesCount === 0) return;
@@ -355,11 +380,14 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
     }
 
     const isRadarViewActive = activeViewRef.current === 'radar';
+    const showPrecip = isRadarViewActive && overlaysRef.current.precip;
+    const showSat = isRadarViewActive && overlaysRef.current.satIR;
 
     Object.values(loadedRadarIdsRef.current).forEach((id) => {
       if (id && map.getLayer(id)) {
         const isTarget = id === targetRadarId;
-        const targetOpacity = (isRadarViewActive && overlaysRef.current.precip && isTarget) ? 0.85 : 0;
+        map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
+        const targetOpacity = (showPrecip && isTarget) ? 0.88 : 0;
         map.setPaintProperty(id, 'raster-opacity', getRadOpacityExp(targetOpacity));
       }
     });
@@ -377,10 +405,16 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       Object.values(loadedSatIdsRef.current).forEach((id) => {
         if (id && map.getLayer(id)) {
           const isTarget = id === targetSatId;
-          const targetOpacity = (isRadarViewActive && overlaysRef.current.satIR && isTarget) ? 0.95 : 0;
+          map.setLayoutProperty(id, 'visibility', showSat ? 'visible' : 'none');
+          const targetOpacity = (showSat && isTarget) ? 0.90 : 0;
           map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp(targetOpacity));
         }
       });
+    }
+
+    if (map.getLayer('layer-wind-vectors')) {
+      const isWindViewActive = activeViewRef.current === 'wind';
+      map.setLayoutProperty('layer-wind-vectors', 'visibility', isWindViewActive ? 'visible' : 'none');
     }
   }, [ensureFrameLoaded, formatTime]);
 
@@ -477,13 +511,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
       map.setFog({
         'color': 'rgb(6, 12, 28)', 
         'high-color': 'rgb(12, 24, 48)',
-        'horizon-blend': 0.25, 
+        'horizon-blend': 0.30, 
         'space-color': 'rgb(1, 2, 6)', 
-        'star-intensity': 0.65 
+        'star-intensity': 0.75 
       });
 
-      // 1. EL SOTERRANI: La capa de la NASA s'afegeix la PRIMERA de totes.
-      // Queda per sota de qualsevol altre mapa i MAI es mou ni s'amaga estructuralment.
       const nasaDate = getNASADate();
       map.addSource('source-nasa-real', {
         type: 'raster',
@@ -500,10 +532,9 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         type: 'raster',
         source: 'source-nasa-real',
         layout: { visibility: 'visible' },
-        paint: { 'raster-opacity': 1 } // Sempre a opacitat 1!
+        paint: { 'raster-opacity': 1 }
       });
 
-      // 2. EL TELÓ: Les capes base s'afegeixen a SOBRE de la NASA, tapant-la físicament.
       (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
         const config = BASE_LAYERS[key];
         map.addSource(`base-src-${key}`, { type: 'raster', tiles: [config.url], tileSize: 256, attribution: config.attribution });
@@ -514,7 +545,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
           paint: {
             'raster-opacity': 1,
-            'raster-fade-duration': 400 // Transició teatral per destapar la NASA
+            'raster-fade-duration': 400 
           }
         });
       });
@@ -537,6 +568,26 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
 
       map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
       map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+      
+      map.addSource('wind-skeleton-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.addLayer({
+        id: 'layer-wind-vectors',
+        type: 'line',
+        source: 'wind-skeleton-source',
+        layout: { 
+          'visibility': activeViewRef.current === 'wind' ? 'visible' : 'none',
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        paint: {
+          'line-color': '#00ffff',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.5, 10, 2],
+          'line-opacity': 0.8
+        }
+      });
       map.addLayer({ id: 'anchor-wind', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
       map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
@@ -571,47 +622,96 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lon, fetchAndInjectRadarData, BASE_LAYERS]);
 
-  // EL CONTROLADOR MESTRE: Gestiona els mapes base i la NASA
+  /**
+   * EL CONTROLADOR MESTRE UNIFICAT (Atòmic):
+   * Executa immediatament qualsevol canvi d'estat visual sense bloquejos d'estil.
+   */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
     
-    (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
-      const layerId = `base-layer-${key}`;
-      if (map.getLayer(layerId)) {
-        // Mantenim l'estructura només per al mapa actiu
-        map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
-        
-        // LA DOCTRINA DEL TELÓ: Si la NASA està activa, el mapa base actiu s'esvaeix matemàticament,
-        // destapant la foto de la NASA que sempre ha estat allà. (0.000001 evita que MapLibre matí la capa).
-        const targetOpacity = (key === activeBaseLayer && !overlays.nasaReal) ? 1 : 0.000001;
-        map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
+    const syncAllLayers = () => {
+      (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
+        const layerId = `base-layer-${key}`;
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
+          const targetOpacity = (key === activeBaseLayer && !overlays.nasaReal) ? 1 : 0.000001;
+          map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
+        }
+      });
+
+      if (map.getLayer('layer-night')) {
+        map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
+        map.setPaintProperty('layer-night', 'fill-color', activeBaseLayer === 'dark' ? '#000000' : '#040714');
+        map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark'));
       }
-    });
 
-    if (map.getLayer('layer-night')) {
-      map.setPaintProperty('layer-night', 'fill-color', activeBaseLayer === 'dark' ? '#000000' : '#040714');
-      map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark'));
-    }
-
-    map.triggerRepaint();
-  }, [activeBaseLayer, BASE_LAYERS, overlays.nasaReal]); // Fixat: Ens suscribim directament a nasaReal
-
-  // S'encarrega de les capes flotants restants
-  useEffect(() => {
-    applyFrameVisibility(currentFrameIndexRef.current);
-    const map = mapRef.current;
-    
-    if (map && map.isStyleLoaded()) {
       if (map.getLayer('layer-labels')) {
         map.setLayoutProperty('layer-labels', 'visibility', overlays.labels ? 'visible' : 'none');
       }
-      if (map.getLayer('layer-night')) {
-        map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
-      }
+
+      applyFrameVisibility(currentFrameIndexRef.current);
       map.triggerRepaint();
+    };
+
+    syncAllLayers();
+    
+    if (!map.isStyleLoaded()) {
+      map.once('idle', syncAllLayers);
     }
-  }, [overlays.labels, overlays.night, overlays.precip, overlays.satIR, activeView, applyFrameVisibility]);
+  }, [activeBaseLayer, BASE_LAYERS, overlays, activeView, applyFrameVisibility]);
+
+  /**
+   * COREOGRAFIA CINEMÀTICA (Vol Orbital i Retorn Tàctic):
+   * Fa zoom out a escala planetària al activar la NASA i retorna exactament a la pica local en desactivar-la.
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const isNasaNow = overlays.nasaReal;
+    const wasNasaBefore = prevNasaRealRef.current;
+    prevNasaRealRef.current = isNasaNow;
+
+    if (isNasaNow && !wasNasaBefore) {
+      const currentZoom = map.getZoom();
+      
+      if (currentZoom > 4.5) {
+        const center = map.getCenter();
+        
+        tacticalCameraRef.current = {
+          center: [center.lng, center.lat],
+          zoom: currentZoom,
+          pitch: map.getPitch(),
+          bearing: map.getBearing()
+        };
+
+        map.flyTo({
+          zoom: 3.2,
+          pitch: 0,
+          bearing: 0,
+          speed: 1.3,
+          curve: 1.42,
+          essential: true
+        });
+      }
+    } 
+    else if (!isNasaNow && wasNasaBefore && tacticalCameraRef.current) {
+      const saved = tacticalCameraRef.current;
+      
+      map.flyTo({
+        center: saved.center,
+        zoom: saved.zoom,
+        pitch: saved.pitch,
+        bearing: saved.bearing,
+        speed: 1.5,
+        curve: 1.42,
+        essential: true
+      });
+      
+      tacticalCameraRef.current = null; 
+    }
+  }, [overlays.nasaReal]);
 
   useEffect(() => {
     if (!isActive || activeView !== 'radar') {
@@ -688,10 +788,9 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         <div className="absolute w-6 h-6 border border-cyan-500/30 rounded-full"></div>
       </div>
 
-      {/* Menú de Capes Flotant - Arquitectura Remasteritzada per a Espais Verticals Reduïts (PC / DevTools) */}
+      {/* Menú de Capes Flotant */}
       <div className="absolute top-[max(env(safe-area-inset-top,16px),16px)] right-[max(env(safe-area-inset-right,16px),16px)] bottom-[110px] z-[1010] flex flex-col items-end pointer-events-none">
         
-        {/* Botó Flotant d'Activació */}
         <button 
           onClick={() => setShowLayerMenu(!showLayerMenu)} 
           className={`shrink-0 pointer-events-auto p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.8)] active:scale-95 ${
@@ -705,17 +804,11 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
           <Layers className="w-5 h-5 sm:w-6 sm:h-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
         </button>
 
-        {/* Finestra Modal Tàctica del Menú */}
         {showLayerMenu && (
-          /* PONT DE RATOLÍ I SOSTRE FLEXIBLE:
-             1. 'pt-3': Elimina el buit perillós per a ratolins a PC entre el botó i el menú.
-             2. 'max-h-full': Força a respectar estrictament el sostre del pare (bottom-[110px] / top-16).
-             3. 'w-[calc(100vw-32px)] max-w-[320px] sm:max-w-[340px]': Adaptabilitat perfecta Mòbil/PC. */
           <div className="pointer-events-auto pt-3 w-[calc(100vw-32px)] max-w-[320px] sm:max-w-[340px] shrink min-h-0 max-h-full flex flex-col animate-in fade-in zoom-in-95 origin-top-right duration-200">
             
             <div className="flex flex-col flex-1 min-h-0 bg-black/85 sm:bg-black/80 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] ring-1 ring-cyan-500/20 overflow-hidden transform-gpu">
               
-              {/* CAPÇALERA FIXA MINIMALISTA (Només Títol i Botó Tancar - Ocupa el mínim espai indispensable: ~45px) */}
               <div className="shrink-0 flex items-center justify-between py-3.5 px-4 sm:px-5 border-b border-white/15 bg-gradient-to-b from-white/[0.08] to-transparent">
                 <span className="text-[11px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] flex items-center gap-2">
                   <Layers className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
@@ -730,13 +823,8 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                 </button>
               </div>
 
-              {/* UNIFICACIÓ TÀCTICA DE L'SCROLL: 
-                  Posem MAPES BASE i SUPERPOSICIONS dins d'un únic contenidor 'overflow-y-auto'.
-                  Això evita que el bloc de mapes base robi el 80% de l'espai en resolucions baixes de PC o amb DevTools obert.
-                  S'aplica 'scrollbar-width: thin' i 'scrollbar-color' perquè desaparegui la barra grisa de Windows de la imatge. */}
               <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-5 [scrollbar-width:thin] [scrollbar-color:rgba(6,182,212,0.4)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-cyan-500/30 hover:[&::-webkit-scrollbar-thumb]:bg-cyan-400/60 [&::-webkit-scrollbar-thumb]:rounded-full">
                 
-                {/* SECCIÓ 1: MAPES BASE */}
                 <div className="space-y-2.5 shrink-0">
                   <span className="text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block drop-shadow-md">
                     {t('baseMapTitle')}
@@ -763,7 +851,6 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                   </div>
                 </div>
 
-                {/* SECCIÓ 2: SUPERPOSICIONS I CAPES TÀCTIQUES */}
                 <div className="space-y-2.5 shrink-0 pt-3 border-t border-white/15">
                   <span className="text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-[0.2em] text-slate-300 block drop-shadow-md">
                     {t('overlayTitle')}
@@ -771,7 +858,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                   
                   <div className="space-y-2">
                     <button 
-                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), precip: !prev?.precip }))} 
+                      onClick={() => toggleOverlay('precip')} 
                       className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
                         overlays?.precip 
                           ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
@@ -783,7 +870,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                     </button>
                     
                     <button 
-                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), satIR: !prev?.satIR }))} 
+                      onClick={() => toggleOverlay('satIR')} 
                       className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
                         overlays?.satIR 
                           ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
@@ -795,7 +882,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                     </button>
                     
                     <button 
-                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), nasaReal: !prev?.nasaReal }))} 
+                      onClick={() => toggleOverlay('nasaReal')} 
                       className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all text-xs font-bold backdrop-blur-md border ${
                         overlays?.nasaReal 
                           ? 'bg-cyan-950/60 border-cyan-400/70 text-cyan-100 shadow-[inset_0_0_18px_rgba(6,182,212,0.25)]' 
@@ -810,7 +897,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                     </button>
                     
                     <button 
-                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), night: !prev?.night }))} 
+                      onClick={() => toggleOverlay('night')} 
                       className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
                         overlays?.night 
                           ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
@@ -825,7 +912,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
                     </button>
                     
                     <button 
-                      onClick={() => setOverlays(prev => ({ ...(prev ?? {}), labels: !prev?.labels }))} 
+                      onClick={() => toggleOverlay('labels')} 
                       className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-xs font-bold backdrop-blur-md ${
                         overlays?.labels 
                           ? 'bg-cyan-950/50 border-cyan-400/60 text-cyan-100 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
@@ -845,7 +932,7 @@ export default function RadarMap({ lat, lon, isActive, activeView = 'radar' }: R
         )}
       </div>
       
-       {/* Control Inferior Flotant Spatial UI (Càpsula) */}
+      {/* Control Inferior Flotant Spatial UI */}
       <div className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-1/2 -translate-x-1/2 z-[1000] w-[94%] sm:w-[450px] flex items-center justify-between gap-3 pointer-events-none">
         
         <button 
