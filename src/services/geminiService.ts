@@ -518,7 +518,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 body: JSON.stringify({ 
                     prompt: prompt, 
                     lang: language,
-                    model: 'gemini-3.5-flash-lite' 
+                    model: 'openai/gpt-oss-120b' 
                 }),
                 signal: controller.signal 
             });
