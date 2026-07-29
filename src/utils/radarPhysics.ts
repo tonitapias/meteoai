@@ -20,7 +20,8 @@ export const RainViewerResponseSchema = z.object({
 
 // --- TYPES ---
 export type RadarFrame = z.infer<typeof RadarFrameSchema>;
-export type BaseLayerType = 'dark' | 'light' | 'relief' | 'sat_optic';
+// S'Afegeix 'black_marble' als tipus per mantenir el TypeScript estricte
+export type BaseLayerType = 'dark' | 'light' | 'relief' | 'sat_optic' | 'black_marble';
 
 export interface BaseLayerConfig {
   name: string;
@@ -46,6 +47,12 @@ export const getNASADate = (): string => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - 1); 
   return d.toISOString().split('T')[0];
+};
+
+export const getBlackMarbleUrl = (): string => {
+  // Capa global "Black Marble" de la NASA lliure de núvols (VIIRS).
+  // Resolució nativa fins a nivell 8 en Web Mercator (EPSG:3857).
+  return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.png';
 };
 
 export const getRadOpacityExp = (baseOp: number): Expression => {
@@ -77,6 +84,16 @@ export const getNightOpacityExp = (isDark: boolean): Expression => {
     2, baseOp,          
     6, baseOp * 0.65,   
     11, 0               
+  ];
+};
+
+export const getBlackMarbleOpacityExp = (baseOp: number): Expression => {
+  return [
+    'interpolate', ['linear'], ['zoom'],
+    2, baseOp,          
+    5, baseOp * 0.9,
+    8, baseOp * 0.3,    // A Z8 s'assoleix la resolució màxima de la NASA
+    10, 0               // S'esvaeix suaument abans de pixelar-se
   ];
 };
 

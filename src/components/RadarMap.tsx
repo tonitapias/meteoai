@@ -14,7 +14,9 @@ import {
   getRadOpacityExp, 
   getSatOpacityExp, 
   getNightOpacityExp, 
-  computeNightFeatures 
+  computeNightFeatures,
+  getBlackMarbleUrl,
+  getBlackMarbleOpacityExp
 } from '../utils/radarPhysics';
 
 // 2. DOMINI D'ESTAT EXTRET
@@ -45,11 +47,13 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   // Custom Hook per dades de radar
   const { loading, error, radarData, fetchRadarData } = useRadarData();
   
+  // S'afegeix black_marble com un mapa base natiu més
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
-    dark: { name: t('baseDark'), url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
-    light: { name: t('baseLight'), url: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
-    relief: { name: t('baseRelief'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
-    sat_optic: { name: t('baseSat'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
+    dark: { name: t('baseDark', 'Fosc'), url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
+    light: { name: t('baseLight', 'Clar'), url: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
+    relief: { name: t('baseRelief', 'Relleu'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
+    sat_optic: { name: t('baseSat', 'Satèl·lit'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
+    black_marble: { name: t('baseNightMap', 'Terra de Nit (NASA)'), url: getBlackMarbleUrl(), attribution: '&copy; NASA GIBS' }
   }), [t]);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -80,6 +84,15 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const prevNasaRealRef = useRef(overlays.nasaReal);
   const tacticalCameraRef = useRef<{ 
+    center: [number, number]; 
+    zoom: number; 
+    pitch: number; 
+    bearing: number 
+  } | null>(null);
+
+  // Referències exclusives per l'Easter Egg
+  const prevBlackMarbleRef = useRef(activeBaseLayer === 'black_marble');
+  const tacticalCameraEasterEggRef = useRef<{ 
     center: [number, number]; 
     zoom: number; 
     pitch: number; 
@@ -340,7 +353,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
     // Escut protector de memòria mòbil
     map.on('webglcontextlost', (e) => {
-      e.originalEvent?.preventDefault(); // <-- Canvi aquí
+      e.originalEvent?.preventDefault();
       console.warn("[WebGL] Memòria gràfica alliberada pel dispositiu. Ressuscitant motor...");
       setWebglKey(prev => prev + 1); 
     });
@@ -375,19 +388,28 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
       (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
         const config = BASE_LAYERS[key];
-        map.addSource(`base-src-${key}`, { type: 'raster', tiles: [config.url], tileSize: 256, attribution: config.attribution });
+        const isBlackMarble = key === 'black_marble';
+        
+        map.addSource(`base-src-${key}`, { 
+          type: 'raster', 
+          tiles: [config.url], 
+          tileSize: 256,
+          ...(isBlackMarble ? { maxzoom: 8 } : {}),
+          attribution: config.attribution 
+        });
+        
         map.addLayer({
           id: `base-layer-${key}`,
           type: 'raster',
           source: `base-src-${key}`,
           layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
           paint: {
-            'raster-opacity': 1,
+            'raster-opacity': key === activeBaseLayer ? (isBlackMarble ? getBlackMarbleOpacityExp(1) : 1) : 0.000001,
             'raster-fade-duration': 400 
           }
         });
       });
-      
+
       const initialNightTime = Date.now();
       map.addSource('night-source', { 
         type: 'geojson', 
@@ -399,8 +421,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         source: 'night-source',
         layout: { visibility: overlaysRef.current.night ? 'visible' : 'none' },
         paint: {
-          'fill-color': activeBaseLayer === 'dark' ? '#000000' : '#040714',
-          'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark')
+          'fill-color': (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714',
+          'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble')
         }
       });
 
@@ -467,6 +489,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
                 5.5, 0.000001, 
                 7.5, 1         
               ];
+            } else if (key === 'black_marble') {
+              targetOpacity = getBlackMarbleOpacityExp(1);
             } else {
               targetOpacity = 1;
             }
@@ -478,8 +502,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
       if (map.getLayer('layer-night')) {
         map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
-        map.setPaintProperty('layer-night', 'fill-color', activeBaseLayer === 'dark' ? '#000000' : '#040714');
-        map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark'));
+        map.setPaintProperty('layer-night', 'fill-color', (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714');
+        map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble'));
       }
 
       if (map.getLayer('layer-labels')) {
@@ -497,6 +521,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     }
   }, [activeBaseLayer, BASE_LAYERS, overlays, applyFrameVisibility]);
 
+  // Càmera: NASA Dia
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -544,6 +569,56 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       tacticalCameraRef.current = null; 
     }
   }, [overlays.nasaReal]);
+
+  // Càmera: EASTER EGG (NASA Nit)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const isBlackMarbleNow = activeBaseLayer === 'black_marble';
+    const wasBlackMarbleBefore = prevBlackMarbleRef.current;
+    prevBlackMarbleRef.current = isBlackMarbleNow;
+
+    if (isBlackMarbleNow && !wasBlackMarbleBefore) {
+      const currentZoom = map.getZoom();
+
+      // Fem zoom out gairebé sempre que no estiguem ja veient la Terra sencera
+      if (currentZoom > 3.0) {
+        const center = map.getCenter();
+        
+        tacticalCameraEasterEggRef.current = {
+          center: [center.lng, center.lat],
+          zoom: currentZoom,
+          pitch: map.getPitch(),
+          bearing: map.getBearing()
+        };
+
+        map.flyTo({
+          zoom: 2.2, // Zoom out màxim espectacular
+          pitch: 0,
+          bearing: 0,
+          speed: 1.2,
+          curve: 1.42,
+          essential: true
+        });
+      }
+    } 
+    else if (!isBlackMarbleNow && wasBlackMarbleBefore && tacticalCameraEasterEggRef.current) {
+      const saved = tacticalCameraEasterEggRef.current;
+      
+      map.flyTo({
+        center: saved.center,
+        zoom: saved.zoom,
+        pitch: saved.pitch,
+        bearing: saved.bearing,
+        speed: 1.5,
+        curve: 1.42,
+        essential: true
+      });
+      
+      tacticalCameraEasterEggRef.current = null; 
+    }
+  }, [activeBaseLayer]);
 
   useEffect(() => {
     if (!isActive) {
