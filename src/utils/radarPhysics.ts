@@ -20,7 +20,6 @@ export const RainViewerResponseSchema = z.object({
 
 // --- TYPES ---
 export type RadarFrame = z.infer<typeof RadarFrameSchema>;
-// S'Afegeix 'black_marble' als tipus per mantenir el TypeScript estricte
 export type BaseLayerType = 'dark' | 'light' | 'relief' | 'sat_optic' | 'black_marble';
 
 export interface BaseLayerConfig {
@@ -41,6 +40,9 @@ export interface GeoFeatureCollection {
   }[];
 }
 
+// --- CONSTANTS NOVES (3D Terrain) ---
+export const MAPBOX_DEM_URL = 'mapbox://mapbox.mapbox-terrain-dem-v1';
+
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---
 
 export const getNASADate = (): string => {
@@ -49,10 +51,24 @@ export const getNASADate = (): string => {
   return d.toISOString().split('T')[0];
 };
 
+export const getNasaFiresDate = (): string => {
+  const d = new Date();
+  // Doctrina Risc Zero: -1 dia (Ahir) per garantir cobertura global sense falsos negatius per l'òrbita del satèl·lit.
+  d.setUTCDate(d.getUTCDate() - 1); 
+  return d.toISOString().split('T')[0];
+};
+
 export const getBlackMarbleUrl = (): string => {
-  // Capa global "Black Marble" de la NASA lliure de núvols (VIIRS).
-  // Resolució nativa fins a nivell 8 en Web Mercator (EPSG:3857).
+  // Risc Zero Rollback: El "Black Marble" és un mosaic global estàtic. 
+  // No admet data diària. Hem de deixar el paràmetre de temps buit (//) 
+  // per evitar errors 404 i bloquejos de CORS de la NASA.
   return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.png';
+};
+
+// WMS Dinàmica Anti-404 amb "Truc Retina" (WIDTH=512 & HEIGHT=512)
+export const getNasaFiresWmsUrl = (): string => {
+  const dateStr = getNasaFiresDate();
+  return `https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&LAYERS=VIIRS_SNPP_Thermal_Anomalies_375m_Day,VIIRS_SNPP_Thermal_Anomalies_375m_Night&VERSION=1.1.1&FORMAT=image/png&TRANSPARENT=true&WIDTH=512&HEIGHT=512&TIME=${dateStr}&SRS=EPSG:3857&BBOX={bbox-epsg-3857}`;
 };
 
 export const getRadOpacityExp = (baseOp: number): Expression => {
@@ -92,8 +108,18 @@ export const getBlackMarbleOpacityExp = (baseOp: number): Expression => {
     'interpolate', ['linear'], ['zoom'],
     2, baseOp,          
     5, baseOp * 0.9,
-    8, baseOp * 0.3,    // A Z8 s'assoleix la resolució màxima de la NASA
-    10, 0               // S'esvaeix suaument abans de pixelar-se
+    8, baseOp * 0.3,    
+    10, 0               
+  ];
+};
+
+export const getNasaFiresOpacityExp = (baseOp: number): Expression => {
+  return [
+    'interpolate', ['linear'], ['zoom'],
+    2, baseOp,
+    5, baseOp * 0.9,
+    8, baseOp * 0.7,    
+    11, 0               
   ];
 };
 

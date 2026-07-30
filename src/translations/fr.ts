@@ -15,6 +15,8 @@ export const fr = {
   layerNight: "Nuit",
   layerSatAnim: "(Animation IR)",
   layerNasa: "Photo Terre (NASA)",
+  layerNasaFires: "Incendies Actifs (NASA)",
+  layerTerrain3D: "Relief 3D et Montagnes",
 
   // --- Controls del reproductor ---
   btnPlay: "Lecture",

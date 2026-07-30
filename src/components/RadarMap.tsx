@@ -16,7 +16,10 @@ import {
   getNightOpacityExp, 
   computeNightFeatures,
   getBlackMarbleUrl,
-  getBlackMarbleOpacityExp
+  getBlackMarbleOpacityExp,
+  MAPBOX_DEM_URL,
+  getNasaFiresWmsUrl,
+  getNasaFiresOpacityExp
 } from '../utils/radarPhysics';
 
 // 2. DOMINI D'ESTAT EXTRET
@@ -44,10 +47,8 @@ interface RadarMapProps {
 export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const { t } = useTranslation();
   
-  // Custom Hook per dades de radar
   const { loading, error, radarData, fetchRadarData } = useRadarData();
   
-  // S'afegeix black_marble com un mapa base natiu més
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
     dark: { name: t('baseDark', 'Fosc'), url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
     light: { name: t('baseLight', 'Clar'), url: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
@@ -61,10 +62,17 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const [currentFrameTimestamp, setCurrentFrameTimestamp] = useState<number | null>(null);
   const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
   
-  const [overlays, setOverlays] = useState({ precip: true, satIR: true, night: true, labels: true, nasaReal: false });
+  const [overlays, setOverlays] = useState({ 
+    precip: true, 
+    satIR: true, 
+    night: true, 
+    labels: true, 
+    nasaReal: false,
+    nasaFires: false,
+    terrain3D: false
+  });
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   
-  // Clau per ressuscitar el mapa si el mòbil mata la GPU per estalviar bateria
   const [webglKey, setWebglKey] = useState(0);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -82,22 +90,11 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
   const overlaysRef = useRef(overlays);
 
+  // REFERÈNCIES DE CÀMERA
   const prevNasaRealRef = useRef(overlays.nasaReal);
-  const tacticalCameraRef = useRef<{ 
-    center: [number, number]; 
-    zoom: number; 
-    pitch: number; 
-    bearing: number 
-  } | null>(null);
-
-  // Referències exclusives per l'Easter Egg
   const prevBlackMarbleRef = useRef(activeBaseLayer === 'black_marble');
-  const tacticalCameraEasterEggRef = useRef<{ 
-    center: [number, number]; 
-    zoom: number; 
-    pitch: number; 
-    bearing: number 
-  } | null>(null);
+  const prevNasaFiresRef = useRef(overlays.nasaFires);
+  const prevTerrain3DRef = useRef(overlays.terrain3D);
 
   const toggleOverlay = useCallback((key: keyof typeof overlays) => {
     setOverlays(prev => {
@@ -114,7 +111,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return; // Correcció Risc Zero: isStyleLoaded
 
     const activeRadarTimes = new Set(validRadarFrames.map(f => f.time));
     const activeSatTimes = new Set(validSatFrames.map(f => f.time));
@@ -158,7 +155,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const ensureFrameLoaded = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map || !hostRef.current) return;
+    if (!map || !map.isStyleLoaded() || !hostRef.current) return; // Correcció Risc Zero: isStyleLoaded
     
     const rFrames = radarFramesRef.current;
     const sFrames = satFramesRef.current;
@@ -241,7 +238,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const applyFrameVisibility = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return; // Correcció Risc Zero: isStyleLoaded
 
     const rFramesCount = radarFramesRef.current.length;
     if (rFramesCount === 0) return;
@@ -351,7 +348,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     map.on('mousedown', handleTouchOrClick);
     map.on('touchstart', handleTouchOrClick);
 
-    // Escut protector de memòria mòbil
     map.on('webglcontextlost', (e) => {
       e.originalEvent?.preventDefault();
       console.warn("[WebGL] Memòria gràfica alliberada pel dispositiu. Ressuscitant motor...");
@@ -359,93 +355,129 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     });
 
     map.on('load', () => {
-      map.setFog({
-        'color': 'rgb(12, 22, 40)',       
-        'high-color': 'rgb(18, 30, 55)',  
-        'horizon-blend': 0.40,            
-        'space-color': 'rgb(2, 4, 10)',   
-        'star-intensity': 0.85            
-      });
-
-      const nasaDate = getNASADate();
-      map.addSource('source-nasa-real', {
-        type: 'raster',
-        tiles: [
-          `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
-        ],
-        tileSize: 256,
-        maxzoom: 9, 
-        attribution: '&copy; NASA'
-      });
-
-      map.addLayer({
-        id: 'layer-nasa-real',
-        type: 'raster',
-        source: 'source-nasa-real',
-        layout: { visibility: 'visible' },
-        paint: { 'raster-opacity': 1 }
-      });
-
-      (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
-        const config = BASE_LAYERS[key];
-        const isBlackMarble = key === 'black_marble';
-        
-        map.addSource(`base-src-${key}`, { 
-          type: 'raster', 
-          tiles: [config.url], 
-          tileSize: 256,
-          ...(isBlackMarble ? { maxzoom: 8 } : {}),
-          attribution: config.attribution 
+      try {
+        map.setFog({
+          'color': 'rgb(12, 22, 40)',       
+          'high-color': 'rgb(18, 30, 55)',  
+          'horizon-blend': 0.40,            
+          'space-color': 'rgb(2, 4, 10)',   
+          'star-intensity': 0.85            
         });
-        
-        map.addLayer({
-          id: `base-layer-${key}`,
+
+        // 1. TERRAIN 3D
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: MAPBOX_DEM_URL,
+          tileSize: 512,
+          maxzoom: 14
+        });
+
+        // 2. NASA REAL (True Color - Base inferior)
+        const nasaDate = getNASADate();
+        map.addSource('source-nasa-real', {
           type: 'raster',
-          source: `base-src-${key}`,
-          layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
+          tiles: [
+            `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+          ],
+          tileSize: 256,
+          maxzoom: 9, 
+          attribution: '&copy; NASA'
+        });
+
+        map.addLayer({
+          id: 'layer-nasa-real',
+          type: 'raster',
+          source: 'source-nasa-real',
+          layout: { visibility: 'visible' },
+          paint: { 'raster-opacity': 1 }
+        });
+
+        // 3. MAPES BASE
+        (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
+          const config = BASE_LAYERS[key];
+          const isBlackMarble = key === 'black_marble';
+          
+          map.addSource(`base-src-${key}`, { 
+            type: 'raster', 
+            tiles: [config.url], 
+            tileSize: 256,
+            ...(isBlackMarble ? { maxzoom: 8 } : {}),
+            attribution: config.attribution 
+          });
+          
+          map.addLayer({
+            id: `base-layer-${key}`,
+            type: 'raster',
+            source: `base-src-${key}`,
+            layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
+            paint: {
+              'raster-opacity': key === activeBaseLayer ? (isBlackMarble ? getBlackMarbleOpacityExp(1) : 1) : 0.000001,
+              'raster-fade-duration': 400 
+            }
+          });
+        });
+
+        // 4. CAPA DE NIT (Ombra)
+        const initialNightTime = Date.now();
+        map.addSource('night-source', { 
+          type: 'geojson', 
+          data: computeNightFeatures(initialNightTime) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
+        });
+        map.addLayer({
+          id: 'layer-night',
+          type: 'fill',
+          source: 'night-source',
+          layout: { visibility: overlaysRef.current.night ? 'visible' : 'none' },
           paint: {
-            'raster-opacity': key === activeBaseLayer ? (isBlackMarble ? getBlackMarbleOpacityExp(1) : 1) : 0.000001,
-            'raster-fade-duration': 400 
+            'fill-color': (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714',
+            'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble')
           }
         });
-      });
 
-      const initialNightTime = Date.now();
-      map.addSource('night-source', { 
-        type: 'geojson', 
-        data: computeNightFeatures(initialNightTime) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
-      });
-      map.addLayer({
-        id: 'layer-night',
-        type: 'fill',
-        source: 'night-source',
-        layout: { visibility: overlaysRef.current.night ? 'visible' : 'none' },
-        paint: {
-          'fill-color': (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714',
-          'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble')
-        }
-      });
+        // 5. ANCORATGES METEOROLÒGICS
+        map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
-      map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-      map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        // 6. NASA FIRES (WMS DINÀMIC PER EVITAR 404 I FUSIONAR DIA/NIT)
+        map.addSource('source-nasa-fires', {
+          type: 'raster',
+          tiles: [getNasaFiresWmsUrl()],
+          tileSize: 256,
+        });
 
-      map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
-      map.addLayer({
-        id: 'layer-labels',
-        type: 'raster',
-        source: 'labels-src',
-        layout: { visibility: overlaysRef.current.labels ? 'visible' : 'none' },
-        paint: { 'raster-opacity': 0.9 },
-      });
-      
-      nightTimerRef.current = setInterval(() => {
-        if (mapRef.current && mapRef.current.getSource('night-source')) {
-          const source = mapRef.current.getSource('night-source') as mapboxgl.GeoJSONSource;
-          source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0]);
-        }
-      }, 60000);
+        map.addLayer({
+          id: 'layer-nasa-fires',
+          type: 'raster',
+          source: 'source-nasa-fires',
+          layout: { visibility: overlaysRef.current.nasaFires ? 'visible' : 'none' },
+          paint: { 
+            'raster-opacity': getNasaFiresOpacityExp(1),
+            'raster-fade-duration': 400,
+            'raster-resampling': 'nearest' 
+          }
+        }, 'anchor-clouds'); 
 
-      fetchRadarData();
+        // 7. ETIQUETES DE CIUTATS
+        map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
+        map.addLayer({
+          id: 'layer-labels',
+          type: 'raster',
+          source: 'labels-src',
+          layout: { visibility: overlaysRef.current.labels ? 'visible' : 'none' },
+          paint: { 'raster-opacity': 0.9 },
+        });
+        
+        nightTimerRef.current = setInterval(() => {
+          if (mapRef.current && mapRef.current.getSource('night-source')) {
+            const source = mapRef.current.getSource('night-source') as mapboxgl.GeoJSONSource;
+            source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0]);
+          }
+        }, 60000);
+
+        fetchRadarData();
+      } catch (e) {
+        console.error("[Zero Risk] Fallada crítica carregant capes inicials:", e);
+      }
     });
 
     return () => {
@@ -466,57 +498,77 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     if (!map) return;
     
     const syncAllLayers = () => {
-      if (map.getLayer('layer-nasa-real')) {
-        map.setLayoutProperty('layer-nasa-real', 'visibility', overlays.nasaReal ? 'visible' : 'none');
-        map.setPaintProperty('layer-nasa-real', 'raster-opacity', overlays.nasaReal ? [
-          'interpolate', ['linear'], ['zoom'],
-          5.5, 1,   
-          7.5, 0    
-        ] : 0);
-      }
+      // Correcció Risc Zero: Ara comprovem si l'estil està TOTALMENT incrustat sense cridar getStyle()
+      if (!map.isStyleLoaded()) return;
 
-      (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
-        const layerId = `base-layer-${key}`;
-        if (map.getLayer(layerId)) {
-          map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
-          
-          let targetOpacity: number | mapboxgl.Expression = 0.000001;
-          
-          if (key === activeBaseLayer) {
-            if (overlays.nasaReal) {
-              targetOpacity = [
-                'interpolate', ['linear'], ['zoom'],
-                5.5, 0.000001, 
-                7.5, 1         
-              ];
-            } else if (key === 'black_marble') {
-              targetOpacity = getBlackMarbleOpacityExp(1);
-            } else {
-              targetOpacity = 1;
-            }
+      try {
+        if (map.getSource('mapbox-dem')) {
+          if (overlays.terrain3D) {
+            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+          } else {
+            map.setTerrain(null as unknown as mapboxgl.TerrainSpecification);
           }
-          
-          map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
         }
-      });
 
-      if (map.getLayer('layer-night')) {
-        map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
-        map.setPaintProperty('layer-night', 'fill-color', (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714');
-        map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble'));
+        if (map.getLayer('layer-nasa-fires')) {
+          map.setLayoutProperty('layer-nasa-fires', 'visibility', overlays.nasaFires ? 'visible' : 'none');
+          map.setPaintProperty('layer-nasa-fires', 'raster-opacity', overlays.nasaFires ? getNasaFiresOpacityExp(1) : 0);
+        }
+
+        if (map.getLayer('layer-nasa-real')) {
+          map.setLayoutProperty('layer-nasa-real', 'visibility', overlays.nasaReal ? 'visible' : 'none');
+          map.setPaintProperty('layer-nasa-real', 'raster-opacity', overlays.nasaReal ? [
+            'interpolate', ['linear'], ['zoom'],
+            5.5, 1,   
+            7.5, 0    
+          ] : 0);
+        }
+
+        (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
+          const layerId = `base-layer-${key}`;
+          if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', key === activeBaseLayer ? 'visible' : 'none');
+            
+            let targetOpacity: number | mapboxgl.Expression = 0.000001;
+            
+            if (key === activeBaseLayer) {
+              if (overlays.nasaReal) {
+                targetOpacity = [
+                  'interpolate', ['linear'], ['zoom'],
+                  5.5, 0.000001, 
+                  7.5, 1         
+                ];
+              } else if (key === 'black_marble') {
+                targetOpacity = getBlackMarbleOpacityExp(1);
+              } else {
+                targetOpacity = 1;
+              }
+            }
+            
+            map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
+          }
+        });
+
+        if (map.getLayer('layer-night')) {
+          map.setLayoutProperty('layer-night', 'visibility', overlays.night ? 'visible' : 'none');
+          map.setPaintProperty('layer-night', 'fill-color', (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714');
+          map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble'));
+        }
+
+        if (map.getLayer('layer-labels')) {
+          map.setLayoutProperty('layer-labels', 'visibility', overlays.labels ? 'visible' : 'none');
+        }
+
+        applyFrameVisibility(currentFrameIndexRef.current);
+        map.triggerRepaint();
+      } catch (error) {
+        console.error("[Zero Risk] Error sincronitzant capes:", error);
       }
-
-      if (map.getLayer('layer-labels')) {
-        map.setLayoutProperty('layer-labels', 'visibility', overlays.labels ? 'visible' : 'none');
-      }
-
-      applyFrameVisibility(currentFrameIndexRef.current);
-      map.triggerRepaint();
     };
 
-    syncAllLayers();
-    
-    if (!map.isStyleLoaded()) {
+    if (map.isStyleLoaded()) {
+      syncAllLayers();
+    } else {
       map.once('idle', syncAllLayers);
     }
   }, [activeBaseLayer, BASE_LAYERS, overlays, applyFrameVisibility]);
@@ -525,99 +577,80 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
     const isNasaNow = overlays.nasaReal;
     const wasNasaBefore = prevNasaRealRef.current;
     prevNasaRealRef.current = isNasaNow;
 
     if (isNasaNow && !wasNasaBefore) {
-      const currentZoom = map.getZoom();
-      
-      if (currentZoom > 4.5) {
-        const center = map.getCenter();
-        
-        tacticalCameraRef.current = {
-          center: [center.lng, center.lat],
-          zoom: currentZoom,
-          pitch: map.getPitch(),
-          bearing: map.getBearing()
-        };
-
-        map.flyTo({
-          zoom: 3.2,
-          pitch: 0,
-          bearing: 0,
-          speed: 1.3,
-          curve: 1.42,
-          essential: true
-        });
-      }
+      const executeCamera = () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom > 4.5) map.flyTo({ zoom: 3.2, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
+      };
+      // Risc Zero 2.0: Ens assegurem de no perdre el moviment si l'estil està carregant
+      if (map.isStyleLoaded()) executeCamera();
+      else map.once('idle', executeCamera);
     } 
-    else if (!isNasaNow && wasNasaBefore && tacticalCameraRef.current) {
-      const saved = tacticalCameraRef.current;
-      
-      map.flyTo({
-        center: saved.center,
-        zoom: saved.zoom,
-        pitch: saved.pitch,
-        bearing: saved.bearing,
-        speed: 1.5,
-        curve: 1.42,
-        essential: true
-      });
-      
-      tacticalCameraRef.current = null; 
-    }
   }, [overlays.nasaReal]);
+
+  // Càmera: NASA Fires
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const isFiresNow = overlays.nasaFires;
+    const wasFiresBefore = prevNasaFiresRef.current;
+    prevNasaFiresRef.current = isFiresNow;
+
+    if (isFiresNow && !wasFiresBefore) {
+      const executeCamera = () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom > 4.5) map.flyTo({ zoom: 3.5, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
+      };
+      if (map.isStyleLoaded()) executeCamera();
+      else map.once('idle', executeCamera);
+    } 
+  }, [overlays.nasaFires]);
+
+  // Càmera: Relleu 3D
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    
+    const isTerrainNow = overlays.terrain3D;
+    const wasTerrainBefore = prevTerrain3DRef.current;
+    prevTerrain3DRef.current = isTerrainNow;
+
+    if (isTerrainNow && !wasTerrainBefore) {
+      const executeCamera = () => {
+        const currentZoom = map.getZoom();
+        map.flyTo({ zoom: Math.max(currentZoom, 11.5), pitch: 65, speed: 1.2, curve: 1.42, essential: true });
+      };
+      if (map.isStyleLoaded()) executeCamera();
+      else map.once('idle', executeCamera);
+    } else if (!isTerrainNow && wasTerrainBefore) {
+      const executeCamera = () => {
+        map.flyTo({ pitch: 0, speed: 1.2, essential: true });
+      };
+      if (map.isStyleLoaded()) executeCamera();
+      else map.once('idle', executeCamera);
+    }
+  }, [overlays.terrain3D]);
 
   // Càmera: EASTER EGG (NASA Nit)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
     const isBlackMarbleNow = activeBaseLayer === 'black_marble';
     const wasBlackMarbleBefore = prevBlackMarbleRef.current;
     prevBlackMarbleRef.current = isBlackMarbleNow;
 
     if (isBlackMarbleNow && !wasBlackMarbleBefore) {
-      const currentZoom = map.getZoom();
-
-      // Fem zoom out gairebé sempre que no estiguem ja veient la Terra sencera
-      if (currentZoom > 3.0) {
-        const center = map.getCenter();
-        
-        tacticalCameraEasterEggRef.current = {
-          center: [center.lng, center.lat],
-          zoom: currentZoom,
-          pitch: map.getPitch(),
-          bearing: map.getBearing()
-        };
-
-        map.flyTo({
-          zoom: 2.2, // Zoom out màxim espectacular
-          pitch: 0,
-          bearing: 0,
-          speed: 1.2,
-          curve: 1.42,
-          essential: true
-        });
-      }
+      const executeCamera = () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom > 3.0) map.flyTo({ zoom: 2.2, pitch: 0, bearing: 0, speed: 1.2, curve: 1.42, essential: true });
+      };
+      if (map.isStyleLoaded()) executeCamera();
+      else map.once('idle', executeCamera);
     } 
-    else if (!isBlackMarbleNow && wasBlackMarbleBefore && tacticalCameraEasterEggRef.current) {
-      const saved = tacticalCameraEasterEggRef.current;
-      
-      map.flyTo({
-        center: saved.center,
-        zoom: saved.zoom,
-        pitch: saved.pitch,
-        bearing: saved.bearing,
-        speed: 1.5,
-        curve: 1.42,
-        essential: true
-      });
-      
-      tacticalCameraEasterEggRef.current = null; 
-    }
   }, [activeBaseLayer]);
 
   useEffect(() => {

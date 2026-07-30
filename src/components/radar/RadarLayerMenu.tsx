@@ -10,7 +10,9 @@ import {
   CloudRain, 
   Satellite, 
   Map as MapIcon, 
-  Type as TypeIcon 
+  Type as TypeIcon,
+  Flame,
+  Mountain
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BaseLayerType, BaseLayerConfig } from '../../utils/radarPhysics';
@@ -20,8 +22,16 @@ interface RadarLayerMenuProps {
   setShowLayerMenu: (show: boolean) => void;
   activeBaseLayer: BaseLayerType;
   setActiveBaseLayer: (layer: BaseLayerType) => void;
-  overlays: { precip: boolean; satIR: boolean; night: boolean; labels: boolean; nasaReal: boolean };
-  toggleOverlay: (key: 'precip' | 'satIR' | 'night' | 'labels' | 'nasaReal') => void;
+  overlays: { 
+    precip: boolean; 
+    satIR: boolean; 
+    night: boolean; 
+    labels: boolean; 
+    nasaReal: boolean;
+    nasaFires: boolean;
+    terrain3D: boolean;
+  };
+  toggleOverlay: (key: 'precip' | 'satIR' | 'night' | 'labels' | 'nasaReal' | 'nasaFires' | 'terrain3D') => void;
   baseLayers: Record<BaseLayerType, BaseLayerConfig>;
 }
 
@@ -148,7 +158,7 @@ export function RadarLayerMenu({
                 <div className="flex items-center gap-2 px-1">
                   <div className="w-1 h-3 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
                   <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-[0.2em] text-slate-400 drop-shadow-md">
-                    {t('baseMapTitle')}
+                    {t('baseMapTitle', 'Mapa Base')}
                   </span>
                 </div>
                 
@@ -194,7 +204,7 @@ export function RadarLayerMenu({
                 <div className="flex items-center gap-2 px-1">
                   <div className="w-1 h-3 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></div>
                   <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-[0.2em] text-slate-400 drop-shadow-md">
-                    {t('overlayTitle')}
+                    {t('overlayTitle', 'Anomalies i Dades')}
                   </span>
                 </div>
                 
@@ -210,12 +220,12 @@ export function RadarLayerMenu({
                     }`}
                   >
                     {overlays.precip && <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-transparent"></div>}
-                    <div className="relative flex items-center gap-3 truncate">
+                    <div className="relative flex items-center gap-3 truncate pr-2">
                       <div className={`p-1.5 rounded-lg transition-colors ${overlays.precip ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
                         <CloudRain className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.precip ? 'text-cyan-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerPrecip')}
+                        {t('layerPrecip', 'Precipitació')}
                       </span>
                     </div>
                     {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
@@ -236,7 +246,7 @@ export function RadarLayerMenu({
                         <Satellite className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.satIR ? 'text-cyan-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerSat')} <span className={`font-normal text-[11px] transition-opacity ${overlays.satIR ? 'opacity-90' : 'opacity-60 group-hover:opacity-100'}`}>{t('layerSatAnim', '(IR Animació)')}</span>
+                        {t('layerSat', 'Satèl·lit')} <span className={`font-normal text-[11px] transition-opacity ${overlays.satIR ? 'opacity-90' : 'opacity-60 group-hover:opacity-100'}`}>{t('layerSatAnim', '(IR Animació)')}</span>
                       </span>
                     </div>
                     {overlays.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
@@ -262,6 +272,48 @@ export function RadarLayerMenu({
                     </div>
                     {overlays.nasaReal ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
+
+                  {/* Overlay: NASA Incendis (NOU) */}
+                  <button 
+                    onClick={() => toggleOverlay('nasaFires')} 
+                    className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
+                      overlays.nasaFires 
+                        ? 'bg-orange-950/60 border-orange-400/50 shadow-[inset_0_0_20px_rgba(249,115,22,0.15)]' 
+                        : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 active:scale-[0.98]'
+                    }`}
+                  >
+                    {overlays.nasaFires && <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-transparent"></div>}
+                    <div className="relative flex items-center gap-3 truncate pr-2">
+                      <div className={`p-1.5 rounded-lg transition-colors ${overlays.nasaFires ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
+                        <Flame className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-bold truncate transition-colors ${overlays.nasaFires ? 'text-orange-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        {t('layerNasaFires', 'Incendis Actius (NASA)')}
+                      </span>
+                    </div>
+                    {overlays.nasaFires ? <Eye className="w-5 h-5 text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
+                  </button>
+
+                  {/* Overlay: Relleu 3D (NOU) */}
+                  <button 
+                    onClick={() => toggleOverlay('terrain3D')} 
+                    className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
+                      overlays.terrain3D 
+                        ? 'bg-emerald-950/60 border-emerald-400/50 shadow-[inset_0_0_20px_rgba(16,185,129,0.15)]' 
+                        : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 active:scale-[0.98]'
+                    }`}
+                  >
+                    {overlays.terrain3D && <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent"></div>}
+                    <div className="relative flex items-center gap-3 truncate pr-2">
+                      <div className={`p-1.5 rounded-lg transition-colors ${overlays.terrain3D ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
+                        <Mountain className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-bold truncate transition-colors ${overlays.terrain3D ? 'text-emerald-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        {t('layerTerrain3D', 'Relleu 3D i Muntanyes')}
+                      </span>
+                    </div>
+                    {overlays.terrain3D ? <Eye className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
+                  </button>
                   
                   {/* Overlay: Nit (AMB EASTER EGG INCLÒS) */}
                   <button 
@@ -278,7 +330,7 @@ export function RadarLayerMenu({
                         <Moon className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.night ? 'text-indigo-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerNight', 'Nit')}
+                        {t('layerNight', 'Nit en Temps Real')}
                       </span>
                     </div>
                     {overlays.night ? <Eye className="w-5 h-5 text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
@@ -299,7 +351,7 @@ export function RadarLayerMenu({
                         <TypeIcon className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.labels ? 'text-cyan-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerLabels')}
+                        {t('layerLabels', 'Etiquetes i Ciutats')}
                       </span>
                     </div>
                     {overlays.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}

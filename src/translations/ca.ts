@@ -13,6 +13,8 @@ export const ca = {
   layerNight: "Nit",
   layerSatAnim: "(IR Animació)",
   layerNasa: "Foto Terra (NASA)",
+  layerNasaFires: "Incendis Actius (NASA)",
+  layerTerrain3D: "Relleu 3D i Muntanyes",
 
   // Controls del reproductor
   btnPlay: "Reproduir",
