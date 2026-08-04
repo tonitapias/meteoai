@@ -47,13 +47,19 @@ export const MAPBOX_DEM_URL = 'mapbox://mapbox.mapbox-terrain-dem-v1';
 
 export const getNASADate = (): string => {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() - 1); 
+  // Doctrina Risc Zero: -2 dies (48h). El procés "Corrected Reflectance (True Color)" 
+  // de VIIRS triga fins a 48h a acoblar-se globalment al 100%.
+  // Demanar ahir (-1) genera errors 404 massius en els forats encara no processats, ofegant la xarxa.
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - 2); 
   return d.toISOString().split('T')[0];
 };
 
 export const getNasaFiresDate = (): string => {
   const d = new Date();
-  // Doctrina Risc Zero: -1 dia (Ahir) per garantir cobertura global sense falsos negatius per l'òrbita del satèl·lit.
+  // Doctrina Risc Zero: -1 dia (Ahir) per garantir cobertura global.
+  // Els incendis (Thermal Anomalies) es processen molt més ràpid que l'òptica.
+  d.setUTCHours(0, 0, 0, 0);
   d.setUTCDate(d.getUTCDate() - 1); 
   return d.toISOString().split('T')[0];
 };

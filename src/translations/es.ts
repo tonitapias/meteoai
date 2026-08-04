@@ -13,7 +13,7 @@ export const es = {
   layerSat: "Nubes (Satélite IR)",
   layerNight: "Noche",
   layerSatAnim: "(Animación IR)",
-  layerNasa: "Foto Tierra (NASA)",
+  layerNasa: "Imagen Satélite (NASA)",
   layerNasaFires: "Incendios Activos (NASA)",
   layerTerrain3D: "Relieve 3D y Montañas",
 

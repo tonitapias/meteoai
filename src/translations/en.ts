@@ -14,7 +14,7 @@ export const en = {
   layerSat: "Clouds (IR Satellite)",
   layerNight: "Night",
   layerSatAnim: "(IR Animation)",
-  layerNasa: "Earth Photo (NASA)",
+  layerNasa: "Satellite Image (NASA)",
   layerNasaFires: "Active Fires (NASA)",
   layerTerrain3D: "3D Terrain and Mountains",
 

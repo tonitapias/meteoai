@@ -12,7 +12,7 @@ export const ca = {
   layerSat: "Núvols (Satèl·lit IR)",
   layerNight: "Nit",
   layerSatAnim: "(IR Animació)",
-  layerNasa: "Foto Terra (NASA)",
+  layerNasa: "Imatge Satèl·lit (NASA)",
   layerNasaFires: "Incendis Actius (NASA)",
   layerTerrain3D: "Relleu 3D i Muntanyes",
 

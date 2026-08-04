@@ -267,7 +267,7 @@ export function RadarLayerMenu({
                         <Camera className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.nasaReal ? 'text-cyan-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerNasa', 'Foto Terra (NASA)')}
+                        {t('layerNasa', 'Imatge Satèl·lit (NASA)')}
                       </span>
                     </div>
                     {overlays.nasaReal ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}

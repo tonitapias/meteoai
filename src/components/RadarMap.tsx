@@ -372,27 +372,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           maxzoom: 14
         });
 
-        // 2. NASA REAL (True Color - Base inferior)
-        const nasaDate = getNASADate();
-        map.addSource('source-nasa-real', {
-          type: 'raster',
-          tiles: [
-            `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
-          ],
-          tileSize: 256,
-          maxzoom: 9, 
-          attribution: '&copy; NASA'
-        });
-
-        map.addLayer({
-          id: 'layer-nasa-real',
-          type: 'raster',
-          source: 'source-nasa-real',
-          layout: { visibility: 'visible' },
-          paint: { 'raster-opacity': 1 }
-        });
-
-        // 3. MAPES BASE
+        // 2. MAPES BASE
         (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
           const config = BASE_LAYERS[key];
           const isBlackMarble = key === 'black_marble';
@@ -417,7 +397,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           });
         });
 
-        // 4. CAPA DE NIT (Ombra)
+        // 3. CAPA DE NIT (Ombra)
         const initialNightTime = Date.now();
         map.addSource('night-source', { 
           type: 'geojson', 
@@ -434,30 +414,11 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           }
         });
 
-        // 5. ANCORATGES METEOROLÒGICS
+        // 4. ANCORATGES METEOROLÒGICS
         map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
         map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
-        // 6. NASA FIRES (WMS DINÀMIC PER EVITAR 404 I FUSIONAR DIA/NIT)
-        map.addSource('source-nasa-fires', {
-          type: 'raster',
-          tiles: [getNasaFiresWmsUrl()],
-          tileSize: 256,
-        });
-
-        map.addLayer({
-          id: 'layer-nasa-fires',
-          type: 'raster',
-          source: 'source-nasa-fires',
-          layout: { visibility: overlaysRef.current.nasaFires ? 'visible' : 'none' },
-          paint: { 
-            'raster-opacity': getNasaFiresOpacityExp(1),
-            'raster-fade-duration': 400,
-            'raster-resampling': 'nearest' 
-          }
-        }, 'anchor-clouds'); 
-
-        // 7. ETIQUETES DE CIUTATS
+        // 5. ETIQUETES DE CIUTATS
         map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
         map.addLayer({
           id: 'layer-labels',
@@ -502,6 +463,49 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       if (!map.isStyleLoaded()) return;
 
       try {
+        // --- LAZY LOADING DE CAPES NASA (RISC ZERO 2.0) ---
+        // Aquestes capes NO neixen fins que l'usuari les demana, evitant inundar la xarxa i el Worker de 404s.
+        
+        if (overlays.nasaReal && !map.getSource('source-nasa-real')) {
+          const nasaDate = getNASADate();
+          map.addSource('source-nasa-real', {
+            type: 'raster',
+            tiles: [
+              `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+            ],
+            tileSize: 256,
+            maxzoom: 9, 
+            attribution: '&copy; NASA'
+          });
+          map.addLayer({
+            id: 'layer-nasa-real',
+            type: 'raster',
+            source: 'source-nasa-real',
+            layout: { visibility: 'none' }, // Inicialment ocult abans de ser modificat sota
+            paint: { 'raster-opacity': 0 }
+          }, 'anchor-clouds'); // Ho fiquem a sota de les capes meteorològiques
+        }
+
+        if (overlays.nasaFires && !map.getSource('source-nasa-fires')) {
+          map.addSource('source-nasa-fires', {
+            type: 'raster',
+            tiles: [getNasaFiresWmsUrl()],
+            tileSize: 256,
+          });
+          map.addLayer({
+            id: 'layer-nasa-fires',
+            type: 'raster',
+            source: 'source-nasa-fires',
+            layout: { visibility: 'none' },
+            paint: { 
+              'raster-opacity': 0,
+              'raster-fade-duration': 400,
+              'raster-resampling': 'nearest' 
+            }
+          }, 'anchor-clouds'); 
+        }
+        // ---------------------------------------------------
+
         if (map.getSource('mapbox-dem')) {
           if (overlays.terrain3D) {
             map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
