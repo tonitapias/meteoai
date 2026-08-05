@@ -47,9 +47,6 @@ export const MAPBOX_DEM_URL = 'mapbox://mapbox.mapbox-terrain-dem-v1';
 
 export const getNASADate = (): string => {
   const d = new Date();
-  // Doctrina Risc Zero: -3 dies (72h). 
-  // Els satèl·lits polars necessiten temps per escanejar tota la Terra en franges i processar la imatge.
-  // Amb -3 dies garantim un mosaic global 100% complet i s'eviten zones buides o transparents.
   d.setUTCHours(0, 0, 0, 0);
   d.setUTCDate(d.getUTCDate() - 3); 
   return d.toISOString().split('T')[0];
@@ -57,21 +54,15 @@ export const getNASADate = (): string => {
 
 export const getNasaFiresDate = (): string => {
   const d = new Date();
-  // Doctrina Risc Zero: -1 dia (Ahir) per garantir cobertura global.
-  // Els incendis (Thermal Anomalies) es processen molt més ràpid que l'òptica.
   d.setUTCHours(0, 0, 0, 0);
   d.setUTCDate(d.getUTCDate() - 1); 
   return d.toISOString().split('T')[0];
 };
 
 export const getBlackMarbleUrl = (): string => {
-  // Risc Zero Rollback: El "Black Marble" és un mosaic global estàtic. 
-  // No admet data diària. Hem de deixar el paràmetre de temps buit (//) 
-  // per evitar errors 404 i bloquejos de CORS de la NASA.
   return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.png';
 };
 
-// WMS Dinàmica Anti-404 amb "Truc Retina" (WIDTH=512 & HEIGHT=512)
 export const getNasaFiresWmsUrl = (): string => {
   const dateStr = getNasaFiresDate();
   return `https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&LAYERS=VIIRS_SNPP_Thermal_Anomalies_375m_Day,VIIRS_SNPP_Thermal_Anomalies_375m_Night&VERSION=1.1.1&FORMAT=image/png&TRANSPARENT=true&WIDTH=512&HEIGHT=512&TIME=${dateStr}&SRS=EPSG:3857&BBOX={bbox-epsg-3857}`;
@@ -91,9 +82,9 @@ export const getRadOpacityExp = (baseOp: number): Expression => {
 export const getSatOpacityExp = (baseOp: number): Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp * 0.90,
-    5, baseOp * 0.75,
-    8, baseOp * 0.35, 
+    2, baseOp * 0.85,
+    5, baseOp * 0.65,
+    8, baseOp * 0.25, 
     11, baseOp * 0.05,
     13, 0
   ];
@@ -123,10 +114,71 @@ export const getNasaFiresOpacityExp = (baseOp: number): Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],
     2, baseOp,
-    5, baseOp * 0.9,
-    8, baseOp * 0.7,    
-    11, 0               
+    8, baseOp * 0.9,
+    14, baseOp * 0.8,    
+    18, baseOp * 0.6 
   ];
+};
+
+// =========================================================================
+// MOTORS ASTRONÒMICS I D'OMBRES (FIXAT: Sincronització Radiants/Graus)
+// =========================================================================
+
+export const getSunLightConfig = (timestamp: number, lat: number, lon: number): { position: [number, number, number], intensity: number } => {
+  const PI = Math.PI;
+  const rad = PI / 180;
+  const deg = 180 / PI;
+
+  const date = new Date(timestamp);
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  const d = jd - 2451545.0;
+
+  // Càlcul de coordenades orbitals solars
+  const M = (357.5291 + 0.98560028 * d) * rad;
+  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
+  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad;
+  const e = 23.439 * rad;
+
+  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
+  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+
+  // CORRECCIÓ GRAUS/RADIANTS:
+  const gmstDeg = (280.46061837 + 360.98564736629 * d) % 360;
+  let lmstDeg = (gmstDeg + lon) % 360;
+  if (lmstDeg < 0) lmstDeg += 360; // Normalitzar
+  const lmstRad = lmstDeg * rad;
+
+  const hourAngle = lmstRad - sunRA;
+  const latRad = lat * rad;
+
+  // Elevació i Azimut
+  const sinAlt = Math.sin(latRad) * Math.sin(sunDec) + Math.cos(latRad) * Math.cos(sunDec) * Math.cos(hourAngle);
+  const alt = Math.asin(sinAlt);
+
+  const cosAz = (Math.sin(sunDec) - Math.sin(latRad) * Math.sin(alt)) / (Math.cos(latRad) * Math.cos(alt));
+  const safeCosAz = Math.max(-1, Math.min(1, cosAz)); // Evitem desbordaments matemàtics de JS
+  let az = Math.acos(safeCosAz);
+  
+  if (Math.sin(hourAngle) > 0) {
+    az = 2 * PI - az;
+  }
+
+  const altDeg = alt * deg;
+  const azDeg = az * deg;
+
+  // Traducció al Motor 3D de Mapbox
+  const polar = Math.max(0, Math.min(90, 90 - altDeg));
+  
+  // Intensitat de la llum solar segons elevació
+  let intensity = 0.15; // Llum nocturna base
+  if (altDeg > 0) {
+    intensity = 0.15 + (0.7 * Math.min(1, altDeg / 25)); 
+  }
+
+  return {
+    position: [1.5, azDeg, polar],
+    intensity: intensity
+  };
 };
 
 export const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {

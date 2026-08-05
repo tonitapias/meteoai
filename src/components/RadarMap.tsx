@@ -19,7 +19,8 @@ import {
   getBlackMarbleOpacityExp,
   MAPBOX_DEM_URL,
   getNasaFiresWmsUrl,
-  getNasaFiresOpacityExp
+  getNasaFiresOpacityExp,
+  getSunLightConfig
 } from '../utils/radarPhysics';
 
 // 2. DOMINI D'ESTAT EXTRET
@@ -43,6 +44,35 @@ interface RadarMapProps {
   lon: number;
   isActive: boolean;
 }
+
+// -----------------------------------------------------------------------------
+// HELPER ASTRONÒMIC LOCAL PER A L'ATMOSFERA DE MAPBOX
+// -----------------------------------------------------------------------------
+const getSunAltitude = (timestamp: number, lat: number, lon: number): number => {
+  const PI = Math.PI, rad = PI / 180, deg = 180 / PI;
+  const d = (timestamp / 86400000 + 2440587.5) - 2451545.0;
+  const M = (357.5291 + 0.98560028 * d) * rad;
+  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
+  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad;
+  const e = 23.439 * rad;
+  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
+  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  
+  const gmstDeg = (280.46061837 + 360.98564736629 * d) % 360;
+  let lmstDeg = (gmstDeg + lon) % 360;
+  if (lmstDeg < 0) lmstDeg += 360;
+  const lmstRad = lmstDeg * rad;
+  
+  const hourAngle = lmstRad - sunRA;
+  const latRad = lat * rad;
+  const sinAlt = Math.sin(latRad) * Math.sin(sunDec) + Math.cos(latRad) * Math.cos(sunDec) * Math.cos(hourAngle);
+  return Math.asin(sinAlt) * deg;
+};
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const lerpColor = (c1: number[], c2: number[], t: number) => 
+  `rgb(${Math.round(lerp(c1[0], c2[0], t))}, ${Math.round(lerp(c1[1], c2[1], t))}, ${Math.round(lerp(c1[2], c2[2], t))})`;
+// -----------------------------------------------------------------------------
 
 export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const { t } = useTranslation();
@@ -81,20 +111,25 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const radarFramesRef = useRef<RadarFrame[]>([]);
   const satFramesRef = useRef<RadarFrame[]>([]);
   
-  const loadedRadarIdsRef = useRef<Record<number, string>>({});
-  const loadedSatIdsRef = useRef<Record<number, string>>({});
-  
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nightTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentFrameIndexRef = useRef<number>(0);
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
+  
+  // ESTRUCTURES SEGURES PER A ESDEVENIMENTS
+  const loadedRadarIdsRef = useRef<Record<number, string>>({});
+  const loadedSatIdsRef = useRef<Record<number, string>>({});
   const overlaysRef = useRef(overlays);
+  const activeBaseLayerRef = useRef(activeBaseLayer);
+  const currentFrameTimestampRef = useRef<number | null>(null);
 
   // REFERÈNCIES DE CÀMERA
   const prevNasaRealRef = useRef(overlays.nasaReal);
   const prevBlackMarbleRef = useRef(activeBaseLayer === 'black_marble');
   const prevNasaFiresRef = useRef(overlays.nasaFires);
   const prevTerrain3DRef = useRef(overlays.terrain3D);
+
+  useEffect(() => { activeBaseLayerRef.current = activeBaseLayer; }, [activeBaseLayer]);
 
   const toggleOverlay = useCallback((key: keyof typeof overlays) => {
     setOverlays(prev => {
@@ -108,6 +143,71 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     if (ts === null || ts === undefined || isNaN(ts)) return "--:--";
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
+
+  // --- MOTOR D'ATMOSFERA REACTIVA ---
+  const syncAtmosphere = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    try {
+      const center = map.getCenter();
+      const evalTime = currentFrameTimestampRef.current ? currentFrameTimestampRef.current * 1000 : Date.now();
+      const alt = getSunAltitude(evalTime, center.lat, center.lng);
+
+      const isDarkTheme = activeBaseLayerRef.current === 'dark' || activeBaseLayerRef.current === 'black_marble';
+      
+      let factor = 0; // 0 = Dia pur
+      if (isDarkTheme) {
+        factor = 1; // Forcem nit
+      } else {
+        if (alt < -12) factor = 1; 
+        else if (alt < 0) factor = Math.abs(alt) / 12; // Transició (0.01 a 0.99)
+      }
+
+      // Paletes de color (Dia -> Nit)
+      const colorDay = [186, 210, 235], colorNight = [12, 22, 40];
+      const highDay = [36, 92, 223], highNight = [18, 30, 55];
+      const spaceDay = [11, 23, 44], spaceNight = [2, 4, 10];
+
+      map.setFog({
+        'color': lerpColor(colorDay, colorNight, factor),
+        'high-color': lerpColor(highDay, highNight, factor),
+        'space-color': lerpColor(spaceDay, spaceNight, factor),
+        'horizon-blend': lerp(0.15, 0.40, factor),
+        'star-intensity': lerp(0.0, 0.85, factor)
+      });
+    } catch {
+      // Silenciat intencionadament (Doctrina Risc Zero)
+    }
+  }, []);
+
+  const syncLighting = useCallback((timestampMs: number | null) => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const evalTime = timestampMs || Date.now();
+    const { position, intensity } = getSunLightConfig(evalTime, lat, lon);
+
+    const isDarkTheme = activeBaseLayerRef.current === 'dark' || activeBaseLayerRef.current === 'black_marble';
+    const finalIntensity = isDarkTheme ? 0.15 : intensity; 
+    
+    try {
+      map.setLights([
+        {
+          id: 'flat-light',
+          type: 'flat',
+          properties: {
+            anchor: 'map',
+            position: position,
+            color: isDarkTheme ? '#8ba1c5' : '#ffffff', 
+            intensity: finalIntensity
+          }
+        }
+      ]);
+    } catch {
+      // Silenciat intencionadament (Doctrina Risc Zero)
+    }
+  }, [lat, lon]);
 
   const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
@@ -128,8 +228,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           if (map.getLayer(layerId)) map.removeLayer(layerId);
           if (map.getSource(radSourceId)) map.removeSource(radSourceId);
           delete loadedRadarIdsRef.current[idx];
-        } catch (e) {
-          console.warn(`[Garbage Collector] Error netejant VRAM radar:`, e);
+        } catch {
+          // Silenciat intencionadament (Doctrina Risc Zero)
         }
       }
     });
@@ -146,8 +246,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           if (map.getLayer(layerId)) map.removeLayer(layerId);
           if (map.getSource(satSourceId)) map.removeSource(satSourceId);
           delete loadedSatIdsRef.current[idx];
-        } catch (e) {
-          console.warn(`[Garbage Collector] Error netejant VRAM satèl·lit:`, e);
+        } catch {
+          // Silenciat intencionadament (Doctrina Risc Zero)
         }
       }
     });
@@ -188,7 +288,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           'raster-fade-duration': 0,
           'raster-resampling': 'linear' 
         },
-      }, 'z-index-radar'); // Inserit al seu nivell estricte Z-Index
+      }, 'z-index-radar'); 
       loadedRadarIdsRef.current[index] = radLayerId;
     }
 
@@ -223,13 +323,13 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
             paint: {
               'raster-opacity': getSatOpacityExp(initialSatOpacity),
               'raster-opacity-transition': { duration: 400, delay: 0 }, 
-              'raster-contrast': 0.35,       
-              'raster-saturation': -1,       
-              'raster-brightness-min': 0.15, 
+              'raster-contrast': 0.20,       
+              'raster-saturation': -0.85,    
+              'raster-brightness-min': 0.05, 
               'raster-resampling': 'linear',
               'raster-fade-duration': 0
             },
-          }, 'z-index-clouds'); // Inserit al seu nivell estricte Z-Index
+          }, 'z-index-clouds'); 
           loadedSatIdsRef.current[closestSatIdx] = satLayerId;
         }
       }
@@ -256,6 +356,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
          timeDisplayRef.current.textContent = formatTime(currentRadarFrame.time);
       }
       setCurrentFrameTimestamp(currentRadarFrame.time);
+      currentFrameTimestampRef.current = currentRadarFrame.time; 
+      
+      syncLighting(currentRadarFrame.time * 1000); 
+      syncAtmosphere();
     }
 
     const showPrecip = overlaysRef.current.precip;
@@ -289,7 +393,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         }
       });
     }
-  }, [ensureFrameLoaded, formatTime]);
+  }, [ensureFrameLoaded, formatTime, syncLighting, syncAtmosphere]);
 
   const injectLayersIntoMap = useCallback((parsedData: z.infer<typeof RainViewerResponseSchema>) => {
     const map = mapRef.current;
@@ -348,6 +452,9 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     map.on('mousedown', handleTouchOrClick);
     map.on('touchstart', handleTouchOrClick);
 
+    // ESCUDA L'ATMOSFERA A CADA MOVIMENT DE GLOBUS
+    map.on('move', syncAtmosphere);
+
     map.on('webglcontextlost', (e) => {
       e.originalEvent?.preventDefault();
       console.warn("[WebGL] Memòria gràfica alliberada pel dispositiu. Ressuscitant motor...");
@@ -356,15 +463,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
     map.on('load', () => {
       try {
-        map.setFog({
-          'color': 'rgb(12, 22, 40)',       
-          'high-color': 'rgb(18, 30, 55)',  
-          'horizon-blend': 0.40,            
-          'space-color': 'rgb(2, 4, 10)',   
-          'star-intensity': 0.85            
-        });
+        syncAtmosphere(); 
+        syncLighting(null);
 
-        // 1. TERRAIN 3D (Sense afectar Z-Index)
+        // 1. TERRAIN 3D
         map.addSource('mapbox-dem', {
           type: 'raster-dem',
           url: MAPBOX_DEM_URL,
@@ -372,7 +474,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           maxzoom: 14
         });
 
-        // 2. MAPES BASE (Base absoluta)
+        // 2. MAPES BASE 
         (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
           const config = BASE_LAYERS[key];
           const isBlackMarble = key === 'black_marble';
@@ -397,14 +499,12 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           });
         });
 
-        // 3. ESTRUCTURA Z-INDEX RISC ZERO (D'Abaix a dalt)
-        // Aquestes capes transparents actuen com a delimitadors estrictes on inserirem capes de forma segura.
+        // 3. ESTRUCTURA Z-INDEX RISC ZERO
         map.addLayer({ id: 'z-index-nasa-real', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-        map.addLayer({ id: 'z-index-nasa-fires', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
         map.addLayer({ id: 'z-index-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
         map.addLayer({ id: 'z-index-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
-        // 4. CAPA DE NIT (Ombra, per sobre de tots els fenòmens)
+        // 4. CAPA DE NIT 
         const initialNightTime = Date.now();
         map.addSource('night-source', { 
           type: 'geojson', 
@@ -421,7 +521,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           }
         });
 
-        // 5. ETIQUETES DE CIUTATS (Capa Suprema)
+        // 5. INCENDIS NASA 
+        map.addLayer({ id: 'z-index-nasa-fires', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+
+        // 6. ETIQUETES DE CIUTATS
         map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
         map.addLayer({
           id: 'layer-labels',
@@ -448,6 +551,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
       if (nightTimerRef.current) clearInterval(nightTimerRef.current);
       if (mapRef.current) { 
+        mapRef.current.off('move', syncAtmosphere);
         mapRef.current.remove(); 
         mapRef.current = null; 
       }
@@ -455,7 +559,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       loadedSatIdsRef.current = {};
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lon, fetchRadarData, BASE_LAYERS, webglKey]);
+  }, [lat, lon, fetchRadarData, BASE_LAYERS, webglKey, syncLighting, syncAtmosphere]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -465,8 +569,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       if (!map.isStyleLoaded()) return;
 
       try {
-        // --- LAZY LOADING DE CAPES NASA (Z-INDEX ESTRUCTURAT) ---
-        
+        syncAtmosphere(); 
+        syncLighting(currentFrameIndexRef.current ? (radarFramesRef.current[currentFrameIndexRef.current]?.time || null) : null);
+
+        // --- LAZY LOADING DE CAPES NASA ---
         if (overlays.nasaReal && !map.getSource('source-nasa-real')) {
           const nasaDate = getNASADate();
           map.addSource('source-nasa-real', {
@@ -484,7 +590,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
             source: 'source-nasa-real',
             layout: { visibility: 'none' }, 
             paint: { 'raster-opacity': 0 }
-          }, 'z-index-nasa-real'); // Injectat just sota el seu nivell segur (Sota focs i radars)
+          }, 'z-index-nasa-real'); 
         }
 
         if (overlays.nasaFires && !map.getSource('source-nasa-fires')) {
@@ -501,11 +607,12 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
             paint: { 
               'raster-opacity': 0,
               'raster-fade-duration': 400,
-              'raster-resampling': 'nearest' 
+              'raster-resampling': 'nearest',
+              'raster-contrast': 0.35,  
+              'raster-saturation': 0.8  
             }
-          }, 'z-index-nasa-fires'); // Injectat just sota radar/satèl·lit però sobre base i Nasa Real
+          }, 'z-index-nasa-fires'); 
         }
-        // ---------------------------------------------------
 
         if (map.getSource('mapbox-dem')) {
           if (overlays.terrain3D) {
@@ -576,7 +683,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     } else {
       map.once('idle', syncAllLayers);
     }
-  }, [activeBaseLayer, BASE_LAYERS, overlays, applyFrameVisibility]);
+  }, [activeBaseLayer, BASE_LAYERS, overlays, applyFrameVisibility, syncLighting, syncAtmosphere]);
 
   // Càmera: NASA Dia
   useEffect(() => {
