@@ -111,7 +111,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return; // Correcció Risc Zero: isStyleLoaded
+    if (!map || !map.isStyleLoaded()) return;
 
     const activeRadarTimes = new Set(validRadarFrames.map(f => f.time));
     const activeSatTimes = new Set(validSatFrames.map(f => f.time));
@@ -155,7 +155,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const ensureFrameLoaded = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !hostRef.current) return; // Correcció Risc Zero: isStyleLoaded
+    if (!map || !map.isStyleLoaded() || !hostRef.current) return;
     
     const rFrames = radarFramesRef.current;
     const sFrames = satFramesRef.current;
@@ -188,7 +188,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           'raster-fade-duration': 0,
           'raster-resampling': 'linear' 
         },
-      }, 'anchor-radar');
+      }, 'z-index-radar'); // Inserit al seu nivell estricte Z-Index
       loadedRadarIdsRef.current[index] = radLayerId;
     }
 
@@ -229,7 +229,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
               'raster-resampling': 'linear',
               'raster-fade-duration': 0
             },
-          }, 'anchor-clouds');
+          }, 'z-index-clouds'); // Inserit al seu nivell estricte Z-Index
           loadedSatIdsRef.current[closestSatIdx] = satLayerId;
         }
       }
@@ -238,7 +238,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   const applyFrameVisibility = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return; // Correcció Risc Zero: isStyleLoaded
+    if (!map || !map.isStyleLoaded()) return; 
 
     const rFramesCount = radarFramesRef.current.length;
     if (rFramesCount === 0) return;
@@ -333,7 +333,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       container: mapContainerRef.current,
       style: { version: 8, sources: {}, layers: [] },
       center: [lon, lat],
-      zoom: 8.5, 
+      zoom: 8, 
       attributionControl: false,
       maxZoom: 18,
       minZoom: 2,
@@ -364,7 +364,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           'star-intensity': 0.85            
         });
 
-        // 1. TERRAIN 3D
+        // 1. TERRAIN 3D (Sense afectar Z-Index)
         map.addSource('mapbox-dem', {
           type: 'raster-dem',
           url: MAPBOX_DEM_URL,
@@ -372,7 +372,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           maxzoom: 14
         });
 
-        // 2. MAPES BASE
+        // 2. MAPES BASE (Base absoluta)
         (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
           const config = BASE_LAYERS[key];
           const isBlackMarble = key === 'black_marble';
@@ -397,7 +397,14 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           });
         });
 
-        // 3. CAPA DE NIT (Ombra)
+        // 3. ESTRUCTURA Z-INDEX RISC ZERO (D'Abaix a dalt)
+        // Aquestes capes transparents actuen com a delimitadors estrictes on inserirem capes de forma segura.
+        map.addLayer({ id: 'z-index-nasa-real', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: 'z-index-nasa-fires', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: 'z-index-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: 'z-index-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+
+        // 4. CAPA DE NIT (Ombra, per sobre de tots els fenòmens)
         const initialNightTime = Date.now();
         map.addSource('night-source', { 
           type: 'geojson', 
@@ -414,11 +421,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           }
         });
 
-        // 4. ANCORATGES METEOROLÒGICS
-        map.addLayer({ id: 'anchor-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-        map.addLayer({ id: 'anchor-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-
-        // 5. ETIQUETES DE CIUTATS
+        // 5. ETIQUETES DE CIUTATS (Capa Suprema)
         map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
         map.addLayer({
           id: 'layer-labels',
@@ -459,12 +462,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     if (!map) return;
     
     const syncAllLayers = () => {
-      // Correcció Risc Zero: Ara comprovem si l'estil està TOTALMENT incrustat sense cridar getStyle()
       if (!map.isStyleLoaded()) return;
 
       try {
-        // --- LAZY LOADING DE CAPES NASA (RISC ZERO 2.0) ---
-        // Aquestes capes NO neixen fins que l'usuari les demana, evitant inundar la xarxa i el Worker de 404s.
+        // --- LAZY LOADING DE CAPES NASA (Z-INDEX ESTRUCTURAT) ---
         
         if (overlays.nasaReal && !map.getSource('source-nasa-real')) {
           const nasaDate = getNASADate();
@@ -481,9 +482,9 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
             id: 'layer-nasa-real',
             type: 'raster',
             source: 'source-nasa-real',
-            layout: { visibility: 'none' }, // Inicialment ocult abans de ser modificat sota
+            layout: { visibility: 'none' }, 
             paint: { 'raster-opacity': 0 }
-          }, 'anchor-clouds'); // Ho fiquem a sota de les capes meteorològiques
+          }, 'z-index-nasa-real'); // Injectat just sota el seu nivell segur (Sota focs i radars)
         }
 
         if (overlays.nasaFires && !map.getSource('source-nasa-fires')) {
@@ -502,7 +503,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
               'raster-fade-duration': 400,
               'raster-resampling': 'nearest' 
             }
-          }, 'anchor-clouds'); 
+          }, 'z-index-nasa-fires'); // Injectat just sota radar/satèl·lit però sobre base i Nasa Real
         }
         // ---------------------------------------------------
 
@@ -590,7 +591,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         const currentZoom = map.getZoom();
         if (currentZoom > 4.5) map.flyTo({ zoom: 3.2, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
       };
-      // Risc Zero 2.0: Ens assegurem de no perdre el moviment si l'estil està carregant
       if (map.isStyleLoaded()) executeCamera();
       else map.once('idle', executeCamera);
     } 

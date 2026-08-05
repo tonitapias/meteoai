@@ -47,11 +47,11 @@ export const MAPBOX_DEM_URL = 'mapbox://mapbox.mapbox-terrain-dem-v1';
 
 export const getNASADate = (): string => {
   const d = new Date();
-  // Doctrina Risc Zero: -2 dies (48h). El procés "Corrected Reflectance (True Color)" 
-  // de VIIRS triga fins a 48h a acoblar-se globalment al 100%.
-  // Demanar ahir (-1) genera errors 404 massius en els forats encara no processats, ofegant la xarxa.
+  // Doctrina Risc Zero: -3 dies (72h). 
+  // Els satèl·lits polars necessiten temps per escanejar tota la Terra en franges i processar la imatge.
+  // Amb -3 dies garantim un mosaic global 100% complet i s'eviten zones buides o transparents.
   d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - 2); 
+  d.setUTCDate(d.getUTCDate() - 3); 
   return d.toISOString().split('T')[0];
 };
 
