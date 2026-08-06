@@ -2,10 +2,11 @@ import React, { useMemo, useEffect, useCallback } from 'react';
 import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, ArrowDown, ArrowUp } from 'lucide-react';
 import { SmartForecastCharts } from './WeatherCharts'; 
 import { TRANSLATIONS, Language } from '../translations';
-import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
+import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -32,7 +33,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses }: StatCar
   </div>
 );
 
-// DOCTRINA RISC ZERO: Interfície estricta per evitar usar 'any'
+// DOCTRINA RISC ZERO: Interfície estricta
 interface TableRowData {
     hour: string;
     temp: number | null;
@@ -44,7 +45,7 @@ interface TableRowData {
     isDay: boolean;
 }
 
-// HELPER RISC ZERO: Resolució de localització robusta per l'Intl
+// HELPER RISC ZERO
 const getSafeLocale = (lang: Language): string => {
     switch (lang) {
         case 'es': return 'es-ES';
@@ -53,6 +54,13 @@ const getSafeLocale = (lang: Language): string => {
         case 'ca':
         default: return 'ca-ES';
     }
+};
+
+// HELPER RISC ZERO LOCAL (Extracció d'arrays iteratius)
+const getSafeArrNum = (arr: unknown, index: number, fallback: number = 0): number => {
+    if (!Array.isArray(arr)) return fallback;
+    const val = arr[index];
+    return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
 };
 
 interface DayDetailModalProps {
@@ -71,11 +79,9 @@ export default function DayDetailModal({
   unit, 
   lang
 }: DayDetailModalProps) {
-  // DOCTRINA RISC ZERO: Extracció tipada de diccionari amb fallbacks severs per no dependre exclusivament del .ts
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
   const tDayDetail = (typeof tRecord.dayDetail === 'object' && tRecord.dayDetail !== null) ? (tRecord.dayDetail as Record<string, string>) : {};
   
-  // DICCIONARI INTERN TÀCTIC (Per capçaleres dures de la taula)
   const TACTICAL_I18N = useMemo(() => ({
     detailHeader: lang === 'en' ? 'DAY DETAIL' : lang === 'fr' ? 'DÉTAIL DU JOUR' : lang === 'es' ? 'DETALLE DEL DÍA' : 'DETALL DEL DIA',
     hourlyHeader: lang === 'en' ? 'HOURLY FORECAST' : lang === 'fr' ? 'PRÉVISIONS HORAIRES' : lang === 'es' ? 'PREVISIÓN POR HORAS' : 'PREVISIÓ PER HORES',
@@ -88,7 +94,6 @@ export default function DayDetailModal({
 
   const { dayData, hourlyData, comparisonData, snowLevelText } = useDayDetailData(weatherData, selectedDayIndex);
 
-  // --- NAVEGACIÓ TÀCTICA (UNIFICADA) ---
   const handleClose = useCallback(() => {
       window.history.back();
   }, []);
@@ -102,15 +107,8 @@ export default function DayDetailModal({
   useEffect(() => {
       window.history.pushState({ modal: 'dayDetail' }, '');
       
-      const handlePopState = () => {
-          onClose(); 
-      };
-      
-      const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === 'Escape') {
-              handleClose(); 
-          }
-      };
+      const handlePopState = () => onClose(); 
+      const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
       
       window.addEventListener('popstate', handlePopState);
       window.addEventListener('keydown', handleKeyDown);
@@ -130,7 +128,6 @@ export default function DayDetailModal({
         ? (snowSumArr[selectedDayIndex] as number) 
         : 0;
     
-    // Si no hi ha dades de precipitació vàlides, retornem fallback
     if (typeof dayData.precipSum !== 'number' || isNaN(dayData.precipSum)) {
         return { val: "--", unit: "" };
     }
@@ -147,7 +144,6 @@ export default function DayDetailModal({
     if (typeof dateStr !== 'string') return [];
 
     const startIndex = weatherData.hourly.time.findIndex((timeStr) => typeof timeStr === 'string' && timeStr.startsWith(dateStr));
-    
     if (startIndex === -1) return [];
 
     let sunriseHour = 7;
@@ -162,6 +158,7 @@ export default function DayDetailModal({
 
     const rows: TableRowData[] = [];
     const hRaw = weatherData.hourly as unknown as Record<string, unknown>;
+    const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
 
     for (let i = 0; i < 24; i++) {
         const idx = startIndex + i;
@@ -170,31 +167,62 @@ export default function DayDetailModal({
         const time = weatherData.hourly.time[idx];
         if (typeof time !== 'string') continue;
 
-        const t2m = weatherData.hourly.temperature_2m;
-        const temp = Array.isArray(t2m) && typeof t2m[idx] === 'number' ? t2m[idx] as number : null;
+        const temp = getSafeArrNum(hRaw.temperature_2m, idx, 0);
+        const rawCode = getSafeArrNum(hRaw.weather_code ?? hRaw.weathercode, idx, 0);
+        const precipProb = getSafeArrNum(hRaw.precipitation_probability, idx, 0);
+        const precipSum = getSafeArrNum(hRaw.precipitation, idx, 0);
+        const snowfall = getSafeArrNum(hRaw.snowfall, idx, 0);
+        const windSpeed = getSafeArrNum(hRaw.wind_speed_10m, idx, 0);
         
-        const weatherCodeArr = hRaw.weather_code ?? hRaw.weathercode;
-        const code = Array.isArray(weatherCodeArr) && typeof weatherCodeArr[idx] === 'number' ? weatherCodeArr[idx] as number : 0;
-        
-        const pProbArr = weatherData.hourly.precipitation_probability;
-        const precipProb = Array.isArray(pProbArr) && typeof pProbArr[idx] === 'number' ? pProbArr[idx] as number : 0;
-        
-        const pSumArr = weatherData.hourly.precipitation;
-        const precipSum = Array.isArray(pSumArr) && typeof pSumArr[idx] === 'number' ? pSumArr[idx] as number : 0;
-        
-        const sFallArr = hRaw.snowfall;
-        const snowfall = Array.isArray(sFallArr) && typeof sFallArr[idx] === 'number' ? sFallArr[idx] as number : 0;
-
-        const wSpeedArr = weatherData.hourly.wind_speed_10m;
-        const windSpeed = Array.isArray(wSpeedArr) && typeof wSpeedArr[idx] === 'number' ? wSpeedArr[idx] as number : null;
+        // Extracció expandida per al motor físic unificat
+        const humidity = getSafeArrNum(hRaw.relative_humidity_2m, idx, 70);
+        const cloudCover = getSafeArrNum(hRaw.cloud_cover, idx, 0);
+        const cloudLow = getSafeArrNum(hRaw.cloud_cover_low, idx, 0);
+        const cloudMid = getSafeArrNum(hRaw.cloud_cover_mid, idx, 0);
+        const cloudHigh = getSafeArrNum(hRaw.cloud_cover_high, idx, 0);
+        const cape = getSafeArrNum(hRaw.cape, idx, 0);
+        const visibility = getSafeArrNum(hRaw.visibility, idx, 10000);
         
         const currentHour = parseInt(time.split('T')[1]?.slice(0, 2) || "0", 10);
-        const isDay = currentHour >= sunriseHour && currentHour < sunsetHour;
+        const isDayNum = currentHour >= sunriseHour && currentHour < sunsetHour ? 1 : 0;
+        const isDay = isDayNum === 1;
+
+        let freezingLevel = getSafeArrNum(hRaw.freezing_level_height, idx, -1);
+        if (freezingLevel === -1) {
+            freezingLevel = Math.max(elevation, elevation + (temp / 0.0065));
+        }
+
+        // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb validació creuada
+        const simulatedCurrent = {
+            time: time,
+            weather_code: rawCode,
+            temperature_2m: temp,
+            apparent_temperature: temp,
+            wind_speed_10m: windSpeed,
+            visibility: visibility,
+            relative_humidity_2m: humidity,
+            cloud_cover_low: cloudLow,
+            cloud_cover_mid: cloudMid,
+            cloud_cover_high: cloudHigh,
+            cloud_cover: cloudCover,
+            precipitation: precipSum,
+            cape: cape,
+            is_day: isDayNum
+        } as unknown as StrictCurrentWeather;
+        // ^ Cast estricte validant TS2352 mitjançant 'unknown'
+
+        const finalCode = getRealTimeWeatherCode(
+            simulatedCurrent,
+            [precipSum],
+            precipProb,
+            freezingLevel,
+            elevation
+        );
 
         rows.push({
             hour: time.split('T')[1]?.slice(0, 5) || "--:--",
             temp,
-            code,
+            code: finalCode, // [Codi processat per motor]
             precipProb,
             precipSum,
             snowfall,
@@ -217,20 +245,17 @@ export default function DayDetailModal({
 
   const formatDate = (isoString: string) => {
       try {
-          // Solució Risc Zero: Assegurem que toLocaleDateString rep sempre una clau de localització suportada 
           return new Date(isoString).toLocaleDateString(getSafeLocale(lang), {
               weekday: 'long', day: 'numeric', month: 'long'
           });
       } catch { return isoString; }
   };
 
-  // DOCTRINA RISC ZERO: Formatadors assegurats per no renderitzar falsos zeros
   const safeMaxTemp = typeof dayData.maxTemp === 'number' && !isNaN(dayData.maxTemp) ? Math.round(dayData.maxTemp) : '--';
   const safeMinTemp = typeof dayData.minTemp === 'number' && !isNaN(dayData.minTemp) ? Math.round(dayData.minTemp) : '--';
   const safeWindMax = typeof dayData.windMax === 'number' && !isNaN(dayData.windMax) ? Math.round(dayData.windMax) : '--';
   const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? dayData.uvMax.toFixed(1) : '--';
   
-  // Formatador estricte per cota de neu
   const safeSnowLevel = typeof snowLevelText === 'number' && !isNaN(snowLevelText) 
     ? Math.round(snowLevelText) 
     : (snowLevelText === '--' ? '--' : snowLevelText);
@@ -260,7 +285,6 @@ export default function DayDetailModal({
 
               <div className="flex flex-col items-center justify-center text-center relative z-10 pt-6 sm:pt-2">
                   <div className="flex items-center gap-2 text-cyan-400 font-black uppercase tracking-[0.3em] text-[10px] mb-3 bg-cyan-950/40 px-3 py-1.5 rounded-md border border-cyan-500/30 backdrop-blur-md shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-                      {/* Solució tàctica per la capçalera traduïda */}
                       <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || TACTICAL_I18N.detailHeader}
                   </div>
                   
@@ -287,7 +311,6 @@ export default function DayDetailModal({
           </div>
 
           <div className="p-4 md:p-8 space-y-6 relative z-10">
-            {/* GRID DE MÈTRIQUES */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <StatCard 
                     icon={Droplets} 
@@ -323,7 +346,6 @@ export default function DayDetailModal({
                 />
             </div>
 
-            {/* CICLE SOLAR */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-5 rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-colors backdrop-blur-sm shadow-lg">
                    <div className={MATRIX_BG}></div>
@@ -352,7 +374,6 @@ export default function DayDetailModal({
                 </div>
             </div>
 
-            {/* GRÀFIC TÈRMIC */}
             <div className="relative overflow-hidden bg-[#0a0b10] border border-white/5 rounded-3xl p-5 md:p-8 shadow-inner">
                <div className={MATRIX_BG}></div>
                <div className="relative z-10">
@@ -369,7 +390,6 @@ export default function DayDetailModal({
                </div>
             </div>
 
-            {/* TAULA TELEMÈTRICA PER HORES */}
             {tableRows && tableRows.length > 0 && (
                 <div className="bg-[#0a0b10] border border-white/5 rounded-3xl overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
                     <div className="px-6 md:px-8 py-5 border-b border-white/5 bg-[#0f111a]/90 backdrop-blur-md">
@@ -395,19 +415,16 @@ export default function DayDetailModal({
                             
                             return (
                             <div key={`row-${idx}`} className="grid grid-cols-12 px-4 md:px-6 py-4 items-center hover:bg-white/[0.02] transition-colors group">
-                                {/* HORA */}
                                 <div className="col-span-2 text-xs md:text-sm font-mono font-bold text-slate-400 group-hover:text-cyan-300 transition-colors">
                                     {row.hour}
                                 </div>
                                 
-                                {/* ICONA CEL (Telemetria totalment connectada: temp i precipSum) */}
                                 <div className="col-span-2 flex justify-center">
                                     <div className="scale-[0.6] md:scale-75 origin-center filter drop-shadow-md group-hover:scale-90 transition-transform duration-300">
                                         {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb, row.windSpeed || 0, row.temp, row.precipSum)}
                                     </div>
                                 </div>
                                 
-                                {/* TEMPERATURA */}
                                 <div className="col-span-3 text-center text-sm md:text-base font-mono font-bold tabular-nums">
                                     {hasTemp ? (
                                         <span className="text-white">{Math.round(row.temp!)}°</span>
@@ -416,7 +433,6 @@ export default function DayDetailModal({
                                     )}
                                 </div>
                                 
-                                {/* PLUJA */}
                                 <div className="col-span-3 flex flex-col md:flex-row justify-end items-end md:items-center gap-0.5 md:gap-1.5">
                                     {showPrecip ? (
                                         <>
@@ -434,7 +450,6 @@ export default function DayDetailModal({
                                     )}
                                 </div>
                                 
-                                {/* VENT */}
                                 <div className="col-span-2 flex flex-col items-end text-xs font-mono font-bold tabular-nums transition-colors">
                                     {hasWind ? (
                                         <>

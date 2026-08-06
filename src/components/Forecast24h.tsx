@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
+import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 
 // HELPER DE DOCTRINA RISC ZERO: Extracció matemàticament segura d'arrays dinàmics
 const getSafeNum = (arr: unknown, index: number, fallback: number = 0): number => {
@@ -16,6 +18,9 @@ const getSafeNum = (arr: unknown, index: number, fallback: number = 0): number =
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
     const { hourly, current, utc_offset_seconds } = data;
+    
+    // EXTRACCIÓ TÀCTICA DE SEGURETAT (Solució TS2345 / TS18046)
+    const safeElevation = typeof data.elevation === 'number' && !isNaN(data.elevation) ? data.elevation : 0;
     
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
     const isArome = current?.source === 'AROME HD';
@@ -50,8 +55,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         // Helper d'idioma per la targeta "Ara"
         const NOW_LABEL = lang === 'en' ? 'NOW' : lang === 'es' ? 'AHORA' : lang === 'fr' ? 'ACTU' : 'ARA';
 
-        // DOCTRINA RISC ZERO: Bucle segur. Si l'API lliura menys hores de les esperades, 
-        // aturem la iteració en lloc d'injectar objectes buits o falsos zeros.
+        // DOCTRINA RISC ZERO: Bucle segur. Si l'API lliura menys hores de les esperades, aturem la iteració.
         for (let i = 0; i < MAX_HOURS; i++) {
             const targetIndex = startIndex + i;
             
@@ -69,11 +73,50 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const sAmt = getSafeNum(hourly.snowfall, targetIndex);
             const rawCode = getSafeNum(hourly.weather_code, targetIndex);
             
-            // ELIMINAT: Motor Intel·ligent de Núvols. Única Font de Veritat = rawCode + Telemetria
-            const code = rawCode; 
+            // Extracció expandida per al motor físic unificat
+            const humidity = getSafeNum(hourly.relative_humidity_2m, targetIndex, 70);
+            const cloudCover = getSafeNum(hourly.cloud_cover, targetIndex, 0);
+            const cloudLow = getSafeNum(hourly.cloud_cover_low, targetIndex, 0);
+            const cloudMid = getSafeNum(hourly.cloud_cover_mid, targetIndex, 0);
+            const cloudHigh = getSafeNum(hourly.cloud_cover_high, targetIndex, 0);
+            const cape = getSafeNum(hourly.cape, targetIndex, 0);
+            const visibility = getSafeNum(hourly.visibility, targetIndex, 10000);
             
             // Identificador Dia/Nit 
-            const isDay = getSafeNum(hourly.is_day, targetIndex, 1) === 1;
+            const isDayNum = getSafeNum(hourly.is_day, targetIndex, 1);
+            const isDay = isDayNum === 1;
+
+            let freezingLevel = getSafeNum(hourly.freezing_level_height, targetIndex, -1);
+            if (freezingLevel === -1) {
+                freezingLevel = Math.max(safeElevation, safeElevation + (temp / 0.0065));
+            }
+
+            // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb l'estructura que demana TS2352
+            const simulatedCurrent = {
+                time: timeStr,
+                weather_code: rawCode,
+                temperature_2m: temp,
+                apparent_temperature: temp, 
+                wind_speed_10m: windSpeed,  
+                visibility: visibility,
+                relative_humidity_2m: humidity,
+                cloud_cover_low: cloudLow,
+                cloud_cover_mid: cloudMid,
+                cloud_cover_high: cloudHigh,
+                cloud_cover: cloudCover,
+                precipitation: pAmt,
+                cape: cape,
+                is_day: isDayNum
+            } as unknown as StrictCurrentWeather; 
+            // ^ Cast segur 'unknown' primer, com suggereix TypeScript, per evitar col·lisions d'herència
+
+            const finalCode = getRealTimeWeatherCode(
+                simulatedCurrent,
+                [pAmt],
+                pProb,
+                freezingLevel,
+                safeElevation // Ús del paràmetre netejat contra TS2345
+            );
 
             let precipString = '';
             if (pAmt > 0) {
@@ -85,8 +128,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             rows.push({
                 time: i === 0 ? NOW_LABEL : `${hours}H`,
                 temp: temp,
-                // INJECCIÓ RISC ZERO: Passem el pAmt (precipitació real) com a 7è paràmetre
-                icon: getWeatherIcon(code, "w-8 h-8", isDay, pProb, windSpeed, temp, pAmt),
+                icon: getWeatherIcon(finalCode, "w-8 h-8", isDay, pProb, windSpeed, temp, pAmt),
                 precip: pProb || (pAmt > 0 ? 100 : 0),
                 precipText: precipString,
                 isNow: i === 0
@@ -94,9 +136,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         }
         
         return rows;
-    }, [hourly, lang, utc_offset_seconds]);
+    }, [hourly, lang, utc_offset_seconds, safeElevation]);
 
-    // Protecció d'estat buit per no renderitzar contenidors inútils
     if (hourlyChartData.length === 0) return null;
 
     return (
