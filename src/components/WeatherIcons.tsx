@@ -18,52 +18,7 @@ interface Particle {
   opacity: number;
 }
 
-// DOCTRINA RISC ZERO: Funció d'avaluació estricta per evitar falsos positius amb el 0
 const checkIsDaylight = (isDay?: number | boolean) => isDay === 1 || isDay === true;
-
-// DOCTRINA RISC ZERO: Sincronització de Telemetria (Evita Falsos Positius/Negatius per desajust del model)
-const applyTelemetrySync = (code: number, precipAmt: number = 0): number => {
-  let syncedCode = code;
-
-  if (precipAmt > 0) {
-    // Fals Negatiu (Tempesta Oculta): El model diu sol/núvol/boira però hi ha precipitació real
-    if (syncedCode <= 48) {
-      if (precipAmt <= 2) syncedCode = 61;       // Pluja feble
-      else if (precipAmt <= 10) syncedCode = 63; // Pluja moderada
-      else syncedCode = 65;                      // Pluja forta (ex: 19mm forçat a tempesta)
-    }
-  } else if (precipAmt === 0) {
-    // Fals Positiu (Gota Freda visual): El model marca pluja/neu però la precipitació real és 0mm
-    const isPrecipCode = 
-      (syncedCode >= 51 && syncedCode <= 67) || 
-      (syncedCode >= 71 && syncedCode <= 77) || 
-      (syncedCode >= 80 && syncedCode <= 86) || 
-      syncedCode === 95;
-      
-    if (isPrecipCode) {
-      syncedCode = 3; // Rebaixem la icona a Ennuvolat pur per no generar alarma visual
-    }
-  }
-
-  return syncedCode;
-};
-
-// DOCTRINA RISC ZERO: Bloqueig Tèrmic (Thermal Lock) per imperatius físics
-const applyThermalLock = (code: number, temp?: number | null): number => {
-  if (typeof temp !== 'number' || temp <= 0) return code;
-  
-  let safeCode = code;
-  // Si estem a +0ºC, qualsevol formació de gel/neu és un error del model i la rebaixem a aigua
-  if (safeCode === 48) safeCode = 45; // Boira gebradora -> Boira
-  if (safeCode === 56) safeCode = 51; // Plugim gebrador -> Plugim
-  if (safeCode === 57) safeCode = 53; // Plugim gebrador fort -> Plugim fort
-  if (safeCode === 66) safeCode = 61; // Pluja gebradora -> Pluja
-  if (safeCode === 67) safeCode = 63; // Pluja gebradora forta -> Pluja forta
-  if (safeCode >= 71 && safeCode <= 77) safeCode = 63; // Neu -> Pluja moderada
-  if (safeCode === 85 || safeCode === 86) safeCode = 81; // Xàfecs de neu -> Xàfecs de pluja
-  
-  return safeCode;
-};
 
 const VariableWeatherIcon = ({ isDay, className, ...props }: CommonIconProps) => {
   const isDaylight = checkIsDaylight(isDay);
@@ -99,9 +54,9 @@ const VariableRainIcon = ({ isDay, className, ...props }: CommonIconProps) => {
   );
 };
 
-export const WeatherParticles = memo(({ code, temp, precipAmt = 0 }: { code: number, temp?: number | null, precipAmt?: number }) => {
-  const syncedCode = applyTelemetrySync(code, precipAmt);
-  const safeCode = applyThermalLock(syncedCode, temp);
+export const WeatherParticles = memo(({ code, temp: _t, precipAmt: _p = 0 }: { code: number, temp?: number | null, precipAmt?: number }) => {
+  // L'Orquestrador ja ens envia el codi net i purificat. Confiança cega.
+  const safeCode = code; 
   
   const isSnow = (safeCode >= 71 && safeCode <= 77) || safeCode === 85 || safeCode === 86;
   const isRain = (safeCode >= 51 && safeCode <= 67) || (safeCode >= 80 && safeCode <= 82) || (safeCode >= 95);
@@ -159,14 +114,13 @@ export const getWeatherIcon = (
     isDay: number | boolean = 1, 
     _rainProb: number = 0, 
     windSpeed: number = 0,
-    temp?: number | null,
-    precipAmt: number = 0
+    _temp?: number | null, 
+    _precipAmt: number = 0 
 ): React.ReactNode => {
     const isDaylight = checkIsDaylight(isDay);
     
-    // Filtres en cascada: 1r Sincronització Telemetria -> 2n Bloqueig Tèrmic
-    const syncedCode = applyTelemetrySync(code, precipAmt);
-    const safeCode = applyThermalLock(syncedCode, temp);
+    // L'Orquestrador dicta sentència. Single Source of Truth tancat.
+    const safeCode = code;
     
     // SPATIAL UI: Base compartida amb drop-shadow genèric per volumetria
     const commonProps = {
@@ -208,6 +162,5 @@ export const getWeatherIcon = (
     if (safeCode >= 85 && safeCode <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]`} />;
     if (safeCode >= 95) return <VariableWeatherIcon isDay={isDaylight} {...commonProps} />;
     
-    // Fallback universal tàctic
     return <Cloud {...commonProps} className={`${commonProps.className} text-slate-500 fill-slate-500/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
 };

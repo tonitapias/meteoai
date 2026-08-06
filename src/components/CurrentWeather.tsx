@@ -65,6 +65,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
   // Cerquem ratxes (Risc Zero: Fallback segur en cascada sense errors del compilador)
   const rawWindGusts = 
     currentData.wind_gusts_10m ?? 
+    currentData.wind_gusts ??
     currentWeather.windgusts ?? 
     rawData.wind_gusts_10m;
 
@@ -75,6 +76,11 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
     currentWeather.winddirection ?? 
     rawData.wind_direction_10m ??
     rawData.winddirection_10m;
+
+  // EXTRACCIÓ TÀCTICA DE TELEMETRIA: Alimentem la icona principal per al bloqueig tèrmic i de precipitació
+  const currentTemp = parseMetric(weather.temps.main) ?? null;
+  const currentWindSpeed = parseMetric(weather.stats.windSpeed) ?? 0;
+  const currentPrecip = parseMetric(currentData.precipitation) ?? 0;
 
   // SPATIAL UI BASE AMB MATRIU DE FONS (Optimitzat per baix consum)
   const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px] md:bg-[size:16px_16px]`;
@@ -125,14 +131,17 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         {/* RIGHT COLUMN: Icon, Grid & Actions */}
         <div className="w-full md:w-[320px] flex flex-col gap-4 z-10 shrink-0 mt-0 relative md:[transform:translateZ(20px)]">
           
-          {/* Weather Icon Block */}
+          {/* Weather Icon Block (Amb Telemetria Connectada) */}
           <div className="flex-1 flex items-center justify-center min-h-[160px] sm:min-h-[180px] md:min-h-[220px] relative -mt-4 md:mt-0">
             <div className="drop-shadow-[0_0_30px_rgba(99,102,241,0.4)] md:drop-shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-transform duration-700 hover:scale-105 relative z-20">
               {getWeatherIcon(
                 props.effectiveCode,
                 'w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56',
-                // PONT DE CONVERSIÓ NATIVA: Boolean en comptes d'as boolean
-                Boolean(weather.meta.isDay) 
+                Boolean(weather.meta.isDay),
+                0, // probabilitat de pluja (visualment 0 aquí ja que la principal mana sobre el precipAmt)
+                currentWindSpeed,
+                currentTemp,
+                currentPrecip // Passem el volum real de pluja per a la sincronització de telemetria
               )}
             </div>
           </div>
