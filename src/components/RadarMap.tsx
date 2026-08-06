@@ -448,6 +448,25 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
 
+    // --- TALLAFOCS D'ERRORS (DOCTRINA RISC ZERO) ---
+    // Evitem que els errors de tessel·la (404 de NASA o RainViewer) trenquin React o passin a Sentry
+    map.on('error', (e) => {
+      // TS2352 Fix: Convertim a 'unknown' abans de forçar el tipat 'Record'
+      const mapError = e.error as unknown as Record<string, unknown> | undefined;
+      const status = mapError?.status as number | undefined;
+      const message = (mapError?.message as string | undefined)?.toLowerCase() || '';
+      
+      const is404 = status === 404 || message.includes('404') || message.includes('not found');
+      // Fem el mateix per l'event complet per extreure'n el sourceId amb seguretat estricta
+      const sourceId = (e as unknown as Record<string, unknown>).sourceId as string | undefined;
+      const isVolatileSource = sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-'));
+      
+      if (is404 || isVolatileSource) {
+        // Silenciat completament. Bloquegem la cascada d'errors.
+        return;
+      }
+    });
+
     const handleTouchOrClick = () => setShowLayerMenu(false);
     map.on('mousedown', handleTouchOrClick);
     map.on('touchstart', handleTouchOrClick);
@@ -572,17 +591,18 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         syncAtmosphere(); 
         syncLighting(currentFrameIndexRef.current ? (radarFramesRef.current[currentFrameIndexRef.current]?.time || null) : null);
 
-        // --- LAZY LOADING DE CAPES NASA ---
+        // --- LAZY LOADING DE CAPES NASA (DOCTRINA RISC ZERO APLICADA) ---
         if (overlays.nasaReal && !map.getSource('source-nasa-real')) {
           const nasaDate = getNASADate();
           map.addSource('source-nasa-real', {
             type: 'raster',
             tiles: [
-              `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+              // Canvi de MODIS (amb talls orbitals) a NOAA-20 VIIRS (Sense talls, diari 100%)
+              `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
             ],
             tileSize: 256,
-            maxzoom: 9, 
-            attribution: '&copy; NASA'
+            maxzoom: 8, // Limitem a Z8 estricte per evitar errors 404 de límits inexistents
+            attribution: '&copy; NASA / NOAA'
           });
           map.addLayer({
             id: 'layer-nasa-real',
@@ -632,7 +652,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           map.setPaintProperty('layer-nasa-real', 'raster-opacity', overlays.nasaReal ? [
             'interpolate', ['linear'], ['zoom'],
             5.5, 1,   
-            7.5, 0    
+            8.0, 0    // Transició ajustada al maxzoom 8
           ] : 0);
         }
 
@@ -648,7 +668,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
                 targetOpacity = [
                   'interpolate', ['linear'], ['zoom'],
                   5.5, 0.000001, 
-                  7.5, 1         
+                  8.0, 1         // Transició ajustada al maxzoom 8
                 ];
               } else if (key === 'black_marble') {
                 targetOpacity = getBlackMarbleOpacityExp(1);
