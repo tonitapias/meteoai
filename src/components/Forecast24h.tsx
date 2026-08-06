@@ -69,28 +69,9 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const sAmt = getSafeNum(hourly.snowfall, targetIndex);
             const rawCode = getSafeNum(hourly.weather_code, targetIndex);
             
-            // Motor Intel·ligent de Núvols (Màgia Visual)
-            const cloudTotal = getSafeNum(hourly.cloud_cover, targetIndex);
-            const cloudLow = getSafeNum(hourly.cloud_cover_low, targetIndex);
-            const cloudMid = getSafeNum(hourly.cloud_cover_mid, targetIndex);
-            const cloudHigh = getSafeNum(hourly.cloud_cover_high, targetIndex);
-
-            let code = rawCode;
+            // ELIMINAT: Motor Intel·ligent de Núvols. Única Font de Veritat = rawCode + Telemetria
+            const code = rawCode; 
             
-            // Si el codi base indica 'no precipitació', revaluem segons telemetria de capes
-            if (rawCode <= 3) {
-                const hasLayers = Array.isArray(hourly.cloud_cover_low) && hourly.cloud_cover_low.length > 0;
-                
-                const effectiveClouds = hasLayers 
-                    ? Math.min(100, (cloudLow * 1.0) + (cloudMid * 0.6) + (cloudHigh * 0.3))
-                    : cloudTotal;
-
-                if (effectiveClouds > 85) code = 3;      
-                else if (effectiveClouds > 45) code = 2; 
-                else if (effectiveClouds > 15) code = 1; 
-                else code = 0;                           
-            }
-
             // Identificador Dia/Nit 
             const isDay = getSafeNum(hourly.is_day, targetIndex, 1) === 1;
 
@@ -104,8 +85,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             rows.push({
                 time: i === 0 ? NOW_LABEL : `${hours}H`,
                 temp: temp,
-                // Assignem iconografia tàctica tenint en compte velocitat de vent i perill
-                icon: getWeatherIcon(code, "w-8 h-8", isDay, pProb, windSpeed),
+                // INJECCIÓ RISC ZERO: Passem el pAmt (precipitació real) com a 7è paràmetre
+                icon: getWeatherIcon(code, "w-8 h-8", isDay, pProb, windSpeed, temp, pAmt),
                 precip: pProb || (pAmt > 0 ? 100 : 0),
                 precipText: precipString,
                 isNow: i === 0
@@ -113,7 +94,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         }
         
         return rows;
-      }, [hourly, lang, utc_offset_seconds]);
+    }, [hourly, lang, utc_offset_seconds]);
 
     // Protecció d'estat buit per no renderitzar contenidors inútils
     if (hourlyChartData.length === 0) return null;
@@ -142,7 +123,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 )}
             </div>
             
-            {/* Contenidor de gràfics purificat (S'ha eliminat el doble requadre que trencava el disseny) */}
             <HourlyForecastWidget data={hourlyChartData} lang={lang} />
             
         </div>

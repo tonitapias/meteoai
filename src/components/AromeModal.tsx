@@ -497,7 +497,8 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                                                     )}
                                                 </div>
                                                 <div className="filter drop-shadow-xl shrink-0 w-8 h-8 md:w-11 md:h-11 flex items-center justify-center">
-                                                    {getWeatherIcon(row.code, "w-full h-full", row.isDay, row.precip > 0 ? 90 : 0, row.wind)}
+                                                    {/* SOLUCIÓ TÀCTICA: Injectades temp i precip per telemetria sincrònica i bloqueig tèrmic */}
+                                                    {getWeatherIcon(row.code, "w-full h-full", row.isDay, row.precip > 0 ? 90 : 0, row.wind, row.temp, row.precip)}
                                                 </div>
                                             </div>
 

@@ -400,10 +400,10 @@ export default function DayDetailModal({
                                     {row.hour}
                                 </div>
                                 
-                                {/* ICONA CEL */}
+                                {/* ICONA CEL (Telemetria totalment connectada: temp i precipSum) */}
                                 <div className="col-span-2 flex justify-center">
                                     <div className="scale-[0.6] md:scale-75 origin-center filter drop-shadow-md group-hover:scale-90 transition-transform duration-300">
-                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb, row.windSpeed || 0)}
+                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb, row.windSpeed || 0, row.temp, row.precipSum)}
                                     </div>
                                 </div>
                                 
