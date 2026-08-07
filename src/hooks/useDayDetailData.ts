@@ -1,6 +1,6 @@
 // src/hooks/useDayDetailData.ts
 import { useMemo } from 'react';
-import { ExtendedWeatherData } from '../types/weatherLogicTypes'; // IMPORT CORREGIT
+import { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
 
 export const useDayDetailData = (
   weatherData: ExtendedWeatherData | null, 
@@ -41,30 +41,56 @@ export const useDayDetailData = (
   const hourlyData = useMemo(() => {
     if (!weatherData || dayIndices.length === 0) return [];
 
+    // DOCTRINA RISC ZERO (TS7053 i TS2339): Cast segur a diccionaris estructurats 
+    // per validar propietats no previstes a la interfície sense usar 'any'
+    const hRaw = weatherData.hourly as Record<string, number[] | undefined>;
+    const compRaw = weatherData.hourlyComparison as Record<string, Record<string, unknown>[] | undefined> | undefined;
+
     return dayIndices.map((idx: number) => {
         let fl = weatherData.hourly.freezing_level_height?.[idx];
         if (fl == null) {
-             const gfsVal = weatherData.hourlyComparison?.gfs?.[idx]?.freezing_level_height;
-             const iconVal = weatherData.hourlyComparison?.icon?.[idx]?.freezing_level_height;
+             const gfsVal = compRaw?.gfs?.[idx]?.freezing_level_height;
+             const iconVal = compRaw?.icon?.[idx]?.freezing_level_height;
              fl = (typeof gfsVal === 'number' ? gfsVal : typeof iconVal === 'number' ? iconVal : null);
         }
         
         const snowLevel = (fl != null) ? Math.max(0, fl - 300) : null;
 
+        // Injecció de l'Alta Resolució utilitzant l'arrel mapejada (compRaw)
+        const aromeData = compRaw?.arome?.[idx];
+        
+        const precip = (typeof aromeData?.precipitation === 'number') 
+            ? aromeData.precipitation 
+            : weatherData.hourly.precipitation?.[idx];
+
+        const rainProb = (typeof aromeData?.precipitation_probability === 'number')
+            ? aromeData.precipitation_probability
+            : weatherData.hourly.precipitation_probability?.[idx];
+
+        // Extracció blindada de cloud_cover des de l'arrel hRaw
+        const baseCloudCover = hRaw.cloud_cover?.[idx];
+        const cloudCover = (typeof aromeData?.cloud_cover === 'number')
+            ? aromeData.cloud_cover
+            : (typeof baseCloudCover === 'number' ? baseCloudCover : 0);
+
         return {
             time: weatherData.hourly.time[idx],
             temp: weatherData.hourly.temperature_2m[idx],
-            rain: weatherData.hourly.precipitation_probability?.[idx],
+            rain: rainProb,
             snowLevel,
-            precip: weatherData.hourly.precipitation[idx],
+            precip: precip,
             wind: weatherData.hourly.wind_speed_10m[idx],
             humidity: weatherData.hourly.relative_humidity_2m[idx],
+            cloud: cloudCover
         };
     });
   }, [weatherData, dayIndices]);
 
   const comparisonData = useMemo(() => {
       if (!weatherData?.hourlyComparison || dayIndices.length === 0) return null;
+
+      // DOCTRINA RISC ZERO: Homologuem el tipatge a l'origen
+      const compRaw = weatherData.hourlyComparison as Record<string, Record<string, unknown>[] | undefined>;
 
       const extract = (modelArr: Record<string, unknown>[]) => {
           if (!modelArr?.length) return [];
@@ -76,14 +102,16 @@ export const useDayDetailData = (
                   temp: d.temperature_2m,
                   rain: d.precipitation_probability,
                   wind: d.wind_speed_10m,
-                  humidity: d.relative_humidity_2m
+                  humidity: d.relative_humidity_2m,
+                  precip: d.precipitation,
+                  cloud: d.cloud_cover
               };
           }).filter((item): item is NonNullable<typeof item> => item !== null);
       };
 
       return {
-          gfs: extract(weatherData.hourlyComparison.gfs),
-          icon: extract(weatherData.hourlyComparison.icon)
+          gfs: extract(compRaw.gfs || []),
+          icon: extract(compRaw.icon || [])
       };
   }, [weatherData, dayIndices]);
 
