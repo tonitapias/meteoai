@@ -247,26 +247,32 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
         const gust = h.wind_gusts_10m?.[i] ?? 0;
         const windDir = h.wind_direction_10m?.[i] ?? 0;
 
+        // DOCTRINA RISC ZERO: Injecció completa de telemetria per a l'Orquestrador
         const simulatedCurrent = {
             source: 'AROME HD',
+            time: timeStr,
             weather_code: h.weather_code?.[i] ?? 0, 
             temperature_2m: tempActual,
+            apparent_temperature: tempActual, 
+            wind_speed_10m: wind,
             visibility: h.visibility?.[i] ?? 10000,
             relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
             cloud_cover_low: low,
             cloud_cover_mid: mid,
             cloud_cover_high: high,
             cloud_cover: effectiveCloudCover,
+            precipitation: precipActual, // Injectat per sincronització de telemetria d'icones
+            cape: cape,                  // Injectat per detecció de tempestes convectives
             is_day: isDay ? 1 : 0 
-        };
+        } as unknown as StrictCurrentWeather;
 
-        const finalCode = (getRealTimeWeatherCode as (...args: unknown[]) => number)(
-            simulatedCurrent as unknown as StrictCurrentWeather,
+        // Ara la crida està totalment homologada als 5 paràmetres de l'Orquestrador purificat
+        const finalCode = getRealTimeWeatherCode(
+            simulatedCurrent,
             [precipActual], 
             precipActual > 0 ? 100 : 0, 
             freezingLevel,
-            elevation,
-            cape
+            elevation
         );
 
         rows.push({
@@ -497,7 +503,6 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                                                     )}
                                                 </div>
                                                 <div className="filter drop-shadow-xl shrink-0 w-8 h-8 md:w-11 md:h-11 flex items-center justify-center">
-                                                    {/* SOLUCIÓ TÀCTICA: Injectades temp i precip per telemetria sincrònica i bloqueig tèrmic */}
                                                     {getWeatherIcon(row.code, "w-full h-full", row.isDay, row.precip > 0 ? 90 : 0, row.wind, row.temp, row.precip)}
                                                 </div>
                                             </div>

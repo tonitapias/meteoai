@@ -1,14 +1,20 @@
 // src/hooks/useCurrentConditions.ts
-/* eslint-disable react-hooks/preserve-manual-memoization */
 import { useMemo } from 'react';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { calculateDewPoint, getMoonPhase } from '../utils/physics';
 import { calculateReliability } from '../utils/rules/reliabilityRules';
-import { ExtendedWeatherData, StrictDailyWeather } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictCurrentWeather, StrictDailyWeather } from '../types/weatherLogicTypes';
 import { getComparisonVal } from '../utils/weatherMappers';
 
 // Definim un tipus bàsic per a les dades del gràfic que necessitem aquí
 type ChartDataSubset = { rain: number; snowLevel: number | null }[];
+
+// HELPER RISC ZERO
+const getSafeArrNum = (arr: unknown, index: number, fallback: number = 0): number => {
+    if (!Array.isArray(arr)) return fallback;
+    const val = arr[index];
+    return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
+};
 
 export function useCurrentConditions(
     weatherData: ExtendedWeatherData | null, 
@@ -47,13 +53,32 @@ export function useCurrentConditions(
   const currentRainProbability = useMemo(() => chartData24h[0]?.rain || 0, [chartData24h]);
   const currentFreezingLevel = useMemo(() => (chartData24h.length > 0 && chartData24h[0].snowLevel !== null) ? chartData24h[0].snowLevel + 300 : 2500, [chartData24h]);
   
-  const effectiveWeatherCode = useMemo(() => {
-     if (!weatherData?.current) return 0;
-     const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
-     return getRealTimeWeatherCode(weatherData.current, minutelyPreciseData, currentRainProbability, currentFreezingLevel, elevation);
-  }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel]);
-  
   const currentCape = useMemo(() => getComparisonVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
+
+  const effectiveWeatherCode = useMemo(() => {
+      if (!weatherData?.current || !weatherData?.hourly) return 0;
+      const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+      
+      // DOCTRINA RISC ZERO: Enriquiment de la telemetria
+      // El node 'current' d'OpenMeteo sol venir sense CAPE, sense capes de núvols detallades i sense visibilitat.
+      // Injectem les dades de l'array horari per donar-li a l'Orquestrador tot el context termodinàmic.
+      const hRaw = weatherData.hourly as Record<string, unknown>;
+      const idx = currentHourlyIndex;
+      const currentRaw = weatherData.current as Record<string, unknown>;
+
+      const enrichedCurrent = {
+          ...currentRaw,
+          cape: currentRaw.cape ?? currentCape,
+          visibility: currentRaw.visibility ?? getSafeArrNum(hRaw.visibility, idx, 10000),
+          cloud_cover_low: currentRaw.cloud_cover_low ?? getSafeArrNum(hRaw.cloud_cover_low, idx, 0),
+          cloud_cover_mid: currentRaw.cloud_cover_mid ?? getSafeArrNum(hRaw.cloud_cover_mid, idx, 0),
+          cloud_cover_high: currentRaw.cloud_cover_high ?? getSafeArrNum(hRaw.cloud_cover_high, idx, 0),
+          precipitation: currentRaw.precipitation ?? getSafeArrNum(hRaw.precipitation, idx, 0),
+          relative_humidity_2m: currentRaw.relative_humidity_2m ?? getSafeArrNum(hRaw.relative_humidity_2m, idx, 50),
+      } as unknown as StrictCurrentWeather;
+
+      return getRealTimeWeatherCode(enrichedCurrent, minutelyPreciseData, currentRainProbability, currentFreezingLevel, elevation);
+  }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel, currentHourlyIndex, currentCape]);
 
   const weeklyExtremes = useMemo(() => {
     const minTemps = weatherData?.daily?.temperature_2m_min;
