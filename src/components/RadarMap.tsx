@@ -45,6 +45,9 @@ interface RadarMapProps {
   isActive: boolean;
 }
 
+// --- CIRURGIA 1: FORAT NEGRE PER A CANCEL·LACIÓ DE XARXA ---
+const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
 // -----------------------------------------------------------------------------
 // HELPER ASTRONÒMIC LOCAL PER A L'ATMOSFERA DE MAPBOX
 // -----------------------------------------------------------------------------
@@ -92,11 +95,15 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const [currentFrameTimestamp, setCurrentFrameTimestamp] = useState<number | null>(null);
   const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
   
+  // SISTEMA HÍBRID: Afegeixo estat HD
   const [overlays, setOverlays] = useState({ 
     precip: true, 
-    satIR: true, 
+    satIR: true, // Capa Global Edge Proxy
+    hdGoes: false, // Amèrica
+    hdMeteosat: false, // Europa
+    hdHimawari: false, // Àsia
     night: true, 
-    labels: true, 
+    labels: false, 
     nasaReal: false,
     nasaFires: false,
     terrain3D: false
@@ -113,17 +120,16 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nightTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const preloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentFrameIndexRef = useRef<number>(0);
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
   
-  // ESTRUCTURES SEGURES PER A ESDEVENIMENTS
   const loadedRadarIdsRef = useRef<Record<number, string>>({});
   const loadedSatIdsRef = useRef<Record<number, string>>({});
   const overlaysRef = useRef(overlays);
   const activeBaseLayerRef = useRef(activeBaseLayer);
   const currentFrameTimestampRef = useRef<number | null>(null);
 
-  // REFERÈNCIES DE CÀMERA
   const prevNasaRealRef = useRef(overlays.nasaReal);
   const prevBlackMarbleRef = useRef(activeBaseLayer === 'black_marble');
   const prevNasaFiresRef = useRef(overlays.nasaFires);
@@ -134,6 +140,19 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const toggleOverlay = useCallback((key: keyof typeof overlays) => {
     setOverlays(prev => {
       const next = { ...prev, [key]: !prev[key] };
+      
+      // LÒGICA D'ARQUITECTE: Exclusivitat de Satèl·lits
+      // Evita solapaments i millora l'experiència d'usuari
+      if (key === 'hdGoes' && next.hdGoes) {
+        next.satIR = false; next.hdMeteosat = false; next.hdHimawari = false;
+      } else if (key === 'hdMeteosat' && next.hdMeteosat) {
+        next.satIR = false; next.hdGoes = false; next.hdHimawari = false;
+      } else if (key === 'hdHimawari' && next.hdHimawari) {
+        next.satIR = false; next.hdGoes = false; next.hdMeteosat = false;
+      } else if (key === 'satIR' && next.satIR) {
+        next.hdGoes = false; next.hdMeteosat = false; next.hdHimawari = false;
+      }
+
       overlaysRef.current = next;
       return next;
     });
@@ -144,7 +163,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
 
-  // --- MOTOR D'ATMOSFERA REACTIVA ---
   const syncAtmosphere = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -156,15 +174,14 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
       const isDarkTheme = activeBaseLayerRef.current === 'dark' || activeBaseLayerRef.current === 'black_marble';
       
-      let factor = 0; // 0 = Dia pur
+      let factor = 0; 
       if (isDarkTheme) {
-        factor = 1; // Forcem nit
+        factor = 1; 
       } else {
         if (alt < -12) factor = 1; 
-        else if (alt < 0) factor = Math.abs(alt) / 12; // Transició (0.01 a 0.99)
+        else if (alt < 0) factor = Math.abs(alt) / 12; 
       }
 
-      // Paletes de color (Dia -> Nit)
       const colorDay = [186, 210, 235], colorNight = [12, 22, 40];
       const highDay = [36, 92, 223], highNight = [18, 30, 55];
       const spaceDay = [11, 23, 44], spaceNight = [2, 4, 10];
@@ -176,8 +193,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         'horizon-blend': lerp(0.15, 0.40, factor),
         'star-intensity': lerp(0.0, 0.85, factor)
       });
-    } catch {
-      // Silenciat intencionadament (Doctrina Risc Zero)
+    } catch (e) {
+      console.warn("[Zero Risk] Atmosfera silenciada", e);
     }
   }, []);
 
@@ -192,20 +209,18 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     const finalIntensity = isDarkTheme ? 0.15 : intensity; 
     
     try {
-      map.setLights([
-        {
-          id: 'flat-light',
-          type: 'flat',
-          properties: {
-            anchor: 'map',
-            position: position,
-            color: isDarkTheme ? '#8ba1c5' : '#ffffff', 
-            intensity: finalIntensity
-          }
+      map.setLights([{
+        id: 'flat-light',
+        type: 'flat',
+        properties: {
+          anchor: 'map',
+          position: position,
+          color: isDarkTheme ? '#8ba1c5' : '#ffffff', 
+          intensity: finalIntensity
         }
-      ]);
-    } catch {
-      // Silenciat intencionadament (Doctrina Risc Zero)
+      }]);
+    } catch (e) {
+      console.warn("[Zero Risk] Llums silenciades", e);
     }
   }, [lat, lon]);
 
@@ -228,8 +243,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           if (map.getLayer(layerId)) map.removeLayer(layerId);
           if (map.getSource(radSourceId)) map.removeSource(radSourceId);
           delete loadedRadarIdsRef.current[idx];
-        } catch {
-          // Silenciat intencionadament (Doctrina Risc Zero)
+        } catch (e) {
+          console.warn("[Zero Risk] Neteja de radar silenciada", e);
         }
       }
     });
@@ -240,14 +255,25 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       if (!layerId) return;
       const timeStr = layerId.replace('sat-layer-', '');
       const timestamp = Number(timeStr);
+      
       if (!timestamp || isNaN(timestamp) || !activeSatTimes.has(timestamp)) {
         const satSourceId = `sat-src-${timestamp}`;
         try {
           if (map.getLayer(layerId)) map.removeLayer(layerId);
           if (map.getSource(satSourceId)) map.removeSource(satSourceId);
+          
+          // NETEJA HD: Esborrem també les capes satèl·lit natives
+          const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
+          hdAgencies.forEach(agency => {
+             const hdLId = `hd-${agency}-layer-${timestamp}`;
+             const hdSId = `hd-${agency}-src-${timestamp}`;
+             if (map.getLayer(hdLId)) map.removeLayer(hdLId);
+             if (map.getSource(hdSId)) map.removeSource(hdSId);
+          });
+
           delete loadedSatIdsRef.current[idx];
-        } catch {
-          // Silenciat intencionadament (Doctrina Risc Zero)
+        } catch (e) {
+          console.warn("[Zero Risk] Neteja de satèl·lit silenciada", e);
         }
       }
     });
@@ -270,6 +296,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     const isTarget = index === currentFrameIndexRef.current;
     const initialRadOpacity = (isTarget && overlaysRef.current.precip) ? 0.88 : 0;
 
+    // --- 1. CAPA DE PRECIPITACIÓ ---
     if (!loadedRadarIdsRef.current[index] && !map.getSource(radSourceId)) {
       map.addSource(radSourceId, {
         type: 'raster',
@@ -284,7 +311,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
         paint: { 
           'raster-opacity': getRadOpacityExp(initialRadOpacity),
-          'raster-opacity-transition': { duration: 400, delay: 0 }, 
+          'raster-opacity-transition': { duration: 0, delay: 0 }, 
           'raster-fade-duration': 0,
           'raster-resampling': 'linear' 
         },
@@ -292,6 +319,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       loadedRadarIdsRef.current[index] = radLayerId;
     }
 
+    // --- 2. SISTEMA HÍBRID DE SATÈL·LIT ---
     if (sFrames && sFrames.length > 0) {
       let closestSatIdx = 0;
       let minDiff = Infinity;
@@ -303,16 +331,22 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       
       const sFrame = sFrames[closestSatIdx];
       if (sFrame && sFrame.time !== null) {
-        const satSourceId = `sat-src-${sFrame.time}`;
-        const satLayerId = `sat-layer-${sFrame.time}`;
-        const initialSatOpacity = (isTarget && overlaysRef.current.satIR) ? 0.85 : 0;
+        const timestamp = sFrame.time;
+        const satSourceId = `sat-src-${timestamp}`;
+        const satLayerId = `sat-layer-${timestamp}`;
+        
+        const workerHost = 'https://meteo-sat-proxy.tonitapias.workers.dev';
 
+        // --- A. SATÈL·LIT GLOBAL (Edge Proxy) ---
         if (!loadedSatIdsRef.current[closestSatIdx] && !map.getSource(satSourceId)) {
+          const rvHostEnc = encodeURIComponent(hostRef.current);
+          const rvPathEnc = encodeURIComponent(sFrame.path);
+
           map.addSource(satSourceId, {
             type: 'raster',
-            tiles: [`${hostRef.current}${sFrame.path}/512/{z}/{x}/{y}/0/0_0.png`],
+            tiles: [`${workerHost}/sat/{z}/{x}/{y}.png?host=${rvHostEnc}&path=${rvPathEnc}`],
             tileSize: 512,
-            maxzoom: 6,
+            maxzoom: 6
           });
           
           map.addLayer({
@@ -321,17 +355,63 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
             source: satSourceId,
             layout: { visibility: overlaysRef.current.satIR ? 'visible' : 'none' },
             paint: {
-              'raster-opacity': getSatOpacityExp(initialSatOpacity),
-              'raster-opacity-transition': { duration: 400, delay: 0 }, 
-              'raster-contrast': 0.20,       
-              'raster-saturation': -0.85,    
-              'raster-brightness-min': 0.05, 
+              'raster-opacity': getSatOpacityExp(isTarget && overlaysRef.current.satIR ? 0.85 : 0),
+              'raster-opacity-transition': { duration: 0, delay: 0 }, 
+              'raster-contrast': 0.25,
+              'raster-saturation': -1.0, 
               'raster-resampling': 'linear',
               'raster-fade-duration': 0
             },
           }, 'z-index-clouds'); 
+          
           loadedSatIdsRef.current[closestSatIdx] = satLayerId;
         }
+
+        // --- B. SATÈL·LITS HD CRUS (Generació Exclusiva i Protegida) ---
+        const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
+        
+        // TALLAFOCS 1: Límits geogràfics. Evita peticions 404/504 a zones buides.
+        const HD_BOUNDS: Record<string, [number, number, number, number]> = {
+          goes: [-160, -60, -20, 60],      // Amèrica
+          meteosat: [-30, -60, 70, 60],    // Europa i Àfrica
+          himawari: [80, -60, 180, 60]     // Àsia (Mapbox tolera fins a 180)
+        };
+
+        hdAgencies.forEach((agency) => {
+          const hdSourceId = `hd-${agency}-src-${timestamp}`;
+          const hdLayerId = `hd-${agency}-layer-${timestamp}`;
+          
+          let isHdVisible = false;
+          if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+          if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+          if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
+
+          if (isHdVisible && !map.getSource(hdSourceId)) {
+            map.addSource(hdSourceId, {
+              type: 'raster',
+              tiles: [`${workerHost}/hd/${agency}/${timestamp}/{z}/{x}/{y}.png`],
+              tileSize: 512, // TALLAFOCS 2: Demana menys tiles però més grans (75% menys de HTTPs)
+              bounds: HD_BOUNDS[agency], 
+              minzoom: 2,
+              maxzoom: 8
+            });
+            
+            map.addLayer({
+              id: hdLayerId,
+              type: 'raster',
+              source: hdSourceId,
+              // TALLAFOCS 3: La capa NEIX OCULTA per evitar el DDoS inicial
+              layout: { visibility: (isTarget && isHdVisible) ? 'visible' : 'none' },
+              paint: {
+                'raster-opacity': getSatOpacityExp(isTarget ? 1.0 : 0),
+                'raster-opacity-transition': { duration: 0, delay: 0 }, 
+                'raster-saturation': -1.0, 
+                'raster-contrast': 0.3,
+                'raster-fade-duration': 0
+              },
+            }, 'z-index-clouds');
+          }
+        });
       }
     }
   }, []);
@@ -344,9 +424,13 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     if (rFramesCount === 0) return;
 
     const safeIndex = (index % rFramesCount + rFramesCount) % rFramesCount;
+    
+    // ESTRATÈGIA DE FINESTRA: Carreguem només l'actual i els 3 següents.
+    // Això permet a la NASA processar sense saturar la xarxa del navegador.
     ensureFrameLoaded(safeIndex);
     ensureFrameLoaded((safeIndex + 1) % rFramesCount);
     ensureFrameLoaded((safeIndex + 2) % rFramesCount);
+    ensureFrameLoaded((safeIndex + 3) % rFramesCount);
 
     const targetRadarId = loadedRadarIdsRef.current[safeIndex];
     const currentRadarFrame = radarFramesRef.current[safeIndex];
@@ -357,7 +441,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       }
       setCurrentFrameTimestamp(currentRadarFrame.time);
       currentFrameTimestampRef.current = currentRadarFrame.time; 
-      
       syncLighting(currentRadarFrame.time * 1000); 
       syncAtmosphere();
     }
@@ -365,12 +448,12 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     const showPrecip = overlaysRef.current.precip;
     const showSat = overlaysRef.current.satIR;
 
+    // Actualitza Visibilitat Radar
     Object.values(loadedRadarIdsRef.current).forEach((id) => {
       if (id && map.getLayer(id)) {
         const isTarget = id === targetRadarId;
         map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
-        const targetOpacity = (showPrecip && isTarget) ? 0.88 : 0;
-        map.setPaintProperty(id, 'raster-opacity', getRadOpacityExp(targetOpacity));
+        map.setPaintProperty(id, 'raster-opacity', getRadOpacityExp((showPrecip && isTarget) ? 0.88 : 0));
       }
     });
 
@@ -382,16 +465,80 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         const diff = Math.abs(sFrame.time - currentRadarFrame.time!);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
-      const targetSatId = loadedSatIdsRef.current[closestSatIdx];
       
+      const targetSatId = loadedSatIdsRef.current[closestSatIdx];
+      // Calculem el fotograma immediatament següent per a la finestra de precàrrega
+      const nextSatId = loadedSatIdsRef.current[(closestSatIdx + 1) % satFramesRef.current.length];
+
+      // --- Neteja del timer anterior per evitar solapaments si cliques ràpid ---
+      if (preloadTimerRef.current) clearTimeout(preloadTimerRef.current);
+
+      // --- FASE 1: PRIORITAT AL TARGET (Síncron, 100% ample de banda) ---
       Object.values(loadedSatIdsRef.current).forEach((id) => {
-        if (id && map.getLayer(id)) {
-          const isTarget = id === targetSatId;
-          map.setLayoutProperty(id, 'visibility', showSat ? 'visible' : 'none');
-          const targetOpacity = (showSat && isTarget) ? 0.85 : 0;
-          map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp(targetOpacity));
+        if (!id) return;
+        const isTarget = id === targetSatId;
+        const timeStr = id.replace('sat-layer-', '');
+        const timestamp = Number(timeStr);
+
+        // Visibilitat Satèl·lit Global
+        if (map.getLayer(id)) {
+          map.setLayoutProperty(id, 'visibility', (showSat && isTarget) ? 'visible' : 'none');
+          map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp((showSat && isTarget) ? 0.85 : 0));
         }
+
+        // Visibilitat Estricta Satèl·lits HD Natius
+        const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
+        hdAgencies.forEach(agency => {
+          const hdLayerId = `hd-${agency}-layer-${timestamp}`;
+          if (map.getLayer(hdLayerId)) {
+            let isHdVisible = false;
+            if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+            if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+            if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
+
+            // Només el TARGET es pinta ara. Els altres, a 'none' absolut.
+            map.setLayoutProperty(hdLayerId, 'visibility', (isHdVisible && isTarget) ? 'visible' : 'none');
+            map.setPaintProperty(hdLayerId, 'raster-opacity', getSatOpacityExp((isTarget && isHdVisible) ? 1.0 : 0));
+          }
+        });
       });
+
+      // --- FASE 2: STAGGERED LOADING (+400ms decalatge per a mòbils) ---
+      preloadTimerRef.current = setTimeout(() => {
+        // Usem mapRef.current per evitar errors si el component es desmunta en aquests 400ms
+        const currentMap = mapRef.current;
+        if (!currentMap || !currentMap.isStyleLoaded()) return;
+
+        Object.values(loadedSatIdsRef.current).forEach((id) => {
+          if (!id || id !== nextSatId) return; // Només ens interessa el fotograma NEXT
+
+          const timeStr = id.replace('sat-layer-', '');
+          const timestamp = Number(timeStr);
+
+          // Precàrrega Satèl·lit Global a l'ombra (visible però opacitat 0)
+          if (currentMap.getLayer(id) && overlaysRef.current.satIR) {
+            currentMap.setLayoutProperty(id, 'visibility', 'visible');
+            currentMap.setPaintProperty(id, 'raster-opacity', 0);
+          }
+
+          // Precàrrega Satèl·lit HD a l'ombra
+          const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
+          hdAgencies.forEach(agency => {
+            const hdLayerId = `hd-${agency}-layer-${timestamp}`;
+            if (currentMap.getLayer(hdLayerId)) {
+              let isHdVisible = false;
+              if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+              if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+              if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
+
+              if (isHdVisible) {
+                currentMap.setLayoutProperty(hdLayerId, 'visibility', 'visible');
+                currentMap.setPaintProperty(hdLayerId, 'raster-opacity', 0);
+              }
+            }
+          });
+        });
+      }, 400); 
     }
   }, [ensureFrameLoaded, formatTime, syncLighting, syncAtmosphere]);
 
@@ -437,41 +584,61 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
       container: mapContainerRef.current,
       style: { version: 8, sources: {}, layers: [] },
       center: [lon, lat],
-      zoom: 8, 
+      zoom: 7, 
       attributionControl: false,
       maxZoom: 18,
       minZoom: 2,
       fadeDuration: 0,
       projection: { name: 'globe' } as unknown as mapboxgl.MapboxOptions['projection'], 
+      
+      // --- CIRURGIA 2: INTERCEPTOR DE XARXA NADIU (NETWORK FIREWALL) ---
+      transformRequest: (url, resourceType) => {
+        // Interceptem només les tessel·les WMS del nostre Worker
+        if (resourceType === 'Tile' && url.includes('/hd/')) {
+          
+          // Llegim l'estat exacte gràcies al teu Ref, trencant el closure de React
+          const currentOverlays = overlaysRef.current;
+          
+          const isGoes = url.includes('/hd/goes/');
+          const isMeteosat = url.includes('/hd/meteosat/');
+          const isHimawari = url.includes('/hd/himawari/');
+
+          // Si el mapa intenta carregar una tessel·la d'una capa que acaba de ser desactivada...
+          if (
+            (isGoes && !currentOverlays.hdGoes) ||
+            (isMeteosat && !currentOverlays.hdMeteosat) ||
+            (isHimawari && !currentOverlays.hdHimawari)
+          ) {
+            // ...avortem la connexió HTTP i servim el píxel de la RAM a 0ms
+            return { url: TRANSPARENT_PIXEL };
+          }
+        }
+        
+        // Via lliure per a la resta de peticions (BaseMaps, Radar, NASA Fires, etc.)
+        return { url };
+      }
     });
     mapRef.current = map;
     
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
 
     // --- TALLAFOCS D'ERRORS (DOCTRINA RISC ZERO) ---
-    // Evitem que els errors de tessel·la (404 de NASA o RainViewer) trenquin React o passin a Sentry
-    map.on('error', (e) => {
-      // TS2352 Fix: Convertim a 'unknown' abans de forçar el tipat 'Record'
+        map.on('error', (e) => {
       const mapError = e.error as unknown as Record<string, unknown> | undefined;
       const status = mapError?.status as number | undefined;
       const message = (mapError?.message as string | undefined)?.toLowerCase() || '';
       
       const is404 = status === 404 || message.includes('404') || message.includes('not found');
-      // Fem el mateix per l'event complet per extreure'n el sourceId amb seguretat estricta
       const sourceId = (e as unknown as Record<string, unknown>).sourceId as string | undefined;
-      const isVolatileSource = sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-'));
+      const isVolatileSource = sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-') || sourceId.includes('hd-'));
       
-      if (is404 || isVolatileSource) {
-        // Silenciat completament. Bloquegem la cascada d'errors.
-        return;
-      }
+      if (is404 || isVolatileSource) return;
     });
 
     const handleTouchOrClick = () => setShowLayerMenu(false);
     map.on('mousedown', handleTouchOrClick);
     map.on('touchstart', handleTouchOrClick);
 
-    // ESCUDA L'ATMOSFERA A CADA MOVIMENT DE GLOBUS
     map.on('move', syncAtmosphere);
 
     map.on('webglcontextlost', (e) => {
@@ -538,8 +705,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
             'fill-color': (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714',
             'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble')
           }
-        });
-
+        }, 'z-index-radar');
+        
         // 5. INCENDIS NASA 
         map.addLayer({ id: 'z-index-nasa-fires', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
@@ -591,17 +758,15 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         syncAtmosphere(); 
         syncLighting(currentFrameIndexRef.current ? (radarFramesRef.current[currentFrameIndexRef.current]?.time || null) : null);
 
-        // --- LAZY LOADING DE CAPES NASA (DOCTRINA RISC ZERO APLICADA) ---
         if (overlays.nasaReal && !map.getSource('source-nasa-real')) {
           const nasaDate = getNASADate();
           map.addSource('source-nasa-real', {
             type: 'raster',
             tiles: [
-              // Canvi de MODIS (amb talls orbitals) a NOAA-20 VIIRS (Sense talls, diari 100%)
               `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
             ],
             tileSize: 256,
-            maxzoom: 8, // Limitem a Z8 estricte per evitar errors 404 de límits inexistents
+            maxzoom: 8,
             attribution: '&copy; NASA / NOAA'
           });
           map.addLayer({
@@ -652,7 +817,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
           map.setPaintProperty('layer-nasa-real', 'raster-opacity', overlays.nasaReal ? [
             'interpolate', ['linear'], ['zoom'],
             5.5, 1,   
-            8.0, 0    // Transició ajustada al maxzoom 8
+            8.0, 0    
           ] : 0);
         }
 
@@ -668,7 +833,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
                 targetOpacity = [
                   'interpolate', ['linear'], ['zoom'],
                   5.5, 0.000001, 
-                  8.0, 1         // Transició ajustada al maxzoom 8
+                  8.0, 1         
                 ];
               } else if (key === 'black_marble') {
                 targetOpacity = getBlackMarbleOpacityExp(1);
@@ -705,7 +870,57 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     }
   }, [activeBaseLayer, BASE_LAYERS, overlays, applyFrameVisibility, syncLighting, syncAtmosphere]);
 
-  // Càmera: NASA Dia
+  // --- NAVEGACIÓ CÀMERA HD (REFACTORITZADA) ---
+  // Guardem l'estat previ per volar NOMÉS quan passem de OFF a ON (evita vols infinits)
+  const prevHdRef = useRef({ 
+    goes: overlays.hdGoes, 
+    meteosat: overlays.hdMeteosat, 
+    himawari: overlays.hdHimawari 
+  });
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Detectem qui acaba de ser activat ara mateix
+    const goesTurnedOn = overlays.hdGoes && !prevHdRef.current.goes;
+    const metTurnedOn = overlays.hdMeteosat && !prevHdRef.current.meteosat;
+    const himaTurnedOn = overlays.hdHimawari && !prevHdRef.current.himawari;
+
+    // Actualitzem la memòria històrica
+    prevHdRef.current = { 
+      goes: overlays.hdGoes, 
+      meteosat: overlays.hdMeteosat, 
+      himawari: overlays.hdHimawari 
+    };
+
+    const executeCamera = (center: [number, number]) => {
+      map.flyTo({ 
+        center, 
+        zoom: 3.0, 
+        pitch: 0, 
+        speed: 1.4, // Pujat a 1.4 per fer el viatge transoceànic més àgil 
+        essential: true 
+      });
+    };
+
+    const tryFly = (center: [number, number]) => {
+      // Si el mapa està ocupat component les noves capes HD WebGL (isStyleLoaded = false),
+      // NO avortem el vol (com feies abans). El posem a la cua fins que el mapa quedi lliure ('idle').
+      if (map.isStyleLoaded()) {
+        executeCamera(center);
+      } else {
+        map.once('idle', () => executeCamera(center));
+      }
+    };
+
+    // Dispariem el vol segons qui s'hagi encès
+    if (goesTurnedOn) tryFly([-95, 38]);
+    else if (metTurnedOn) tryFly([15, 45]);
+    else if (himaTurnedOn) tryFly([135, 20]);
+
+  }, [overlays.hdGoes, overlays.hdMeteosat, overlays.hdHimawari]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -723,7 +938,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     } 
   }, [overlays.nasaReal]);
 
-  // Càmera: NASA Fires
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -741,7 +955,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     } 
   }, [overlays.nasaFires]);
 
-  // Càmera: Relleu 3D
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -766,7 +979,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     }
   }, [overlays.terrain3D]);
 
-  // Càmera: EASTER EGG (NASA Nit)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

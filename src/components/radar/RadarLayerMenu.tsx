@@ -25,13 +25,16 @@ interface RadarLayerMenuProps {
   overlays: { 
     precip: boolean; 
     satIR: boolean; 
+    hdGoes: boolean;
+    hdMeteosat: boolean;
+    hdHimawari: boolean;
     night: boolean; 
     labels: boolean; 
     nasaReal: boolean;
     nasaFires: boolean;
     terrain3D: boolean;
   };
-  toggleOverlay: (key: 'precip' | 'satIR' | 'night' | 'labels' | 'nasaReal' | 'nasaFires' | 'terrain3D') => void;
+  toggleOverlay: (key: 'precip' | 'satIR' | 'hdGoes' | 'hdMeteosat' | 'hdHimawari' | 'night' | 'labels' | 'nasaReal' | 'nasaFires' | 'terrain3D') => void;
   baseLayers: Record<BaseLayerType, BaseLayerConfig>;
 }
 
@@ -231,7 +234,7 @@ export function RadarLayerMenu({
                     {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
                   
-                  {/* Overlay: Satèl·lit IR */}
+                  {/* Overlay: Satèl·lit IR (GLOBAL) */}
                   <button 
                     onClick={() => toggleOverlay('satIR')} 
                     className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
@@ -246,7 +249,7 @@ export function RadarLayerMenu({
                         <Satellite className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.satIR ? 'text-cyan-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerSat', 'Satèl·lit')} <span className={`font-normal text-[11px] transition-opacity ${overlays.satIR ? 'opacity-90' : 'opacity-60 group-hover:opacity-100'}`}>{t('layerSatAnim', '(IR Animació)')}</span>
+                        {t('layerSat', 'Satèl·lit')} <span className={`font-normal text-[11px] transition-opacity ${overlays.satIR ? 'opacity-90' : 'opacity-60 group-hover:opacity-100'}`}>{t('layerSatAnim', '(IR Global)')}</span>
                       </span>
                     </div>
                     {overlays.satIR ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
@@ -273,7 +276,7 @@ export function RadarLayerMenu({
                     {overlays.nasaReal ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
 
-                  {/* Overlay: NASA Incendis (NOU) */}
+                  {/* Overlay: NASA Incendis */}
                   <button 
                     onClick={() => toggleOverlay('nasaFires')} 
                     className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
@@ -294,7 +297,7 @@ export function RadarLayerMenu({
                     {overlays.nasaFires ? <Eye className="w-5 h-5 text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
 
-                  {/* Overlay: Relleu 3D (NOU) */}
+                  {/* Overlay: Relleu 3D */}
                   <button 
                     onClick={() => toggleOverlay('terrain3D')} 
                     className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
@@ -315,7 +318,7 @@ export function RadarLayerMenu({
                     {overlays.terrain3D ? <Eye className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
                   
-                  {/* Overlay: Nit (AMB EASTER EGG INCLÒS) */}
+                  {/* Overlay: Nit */}
                   <button 
                     onClick={handleNightEasterEgg} 
                     className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
@@ -356,9 +359,91 @@ export function RadarLayerMenu({
                     </div>
                     {overlays.labels ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
-
                 </div>
               </div>
+
+              {/* Línia Separadora Visual per al Mode Expert */}
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-fuchsia-500/30 to-transparent shrink-0 mt-2 mb-1"></div>
+
+              {/* --- INICI: SECCIÓ MODE EXPERT HD --- */}
+              <div className="space-y-3 shrink-0 pb-2">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-3 rounded-full bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)]"></div>
+                    <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-[0.2em] text-slate-400 drop-shadow-md">
+                     {t('layerHDTitle', 'Satèl·lits Alta Resolució')}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-fuchsia-400 bg-fuchsia-950/50 border border-fuchsia-500/30 px-1.5 py-0.5 rounded tracking-wider">EXPERT</span>
+                </div>
+                
+                <div className="space-y-2.5">
+                  {/* Botó Meteosat (Europa) */}
+                  <button 
+                    onClick={() => toggleOverlay('hdMeteosat')} 
+                    className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
+                      overlays.hdMeteosat 
+                        ? 'bg-fuchsia-950/60 border-fuchsia-400/50 shadow-[inset_0_0_20px_rgba(217,70,239,0.15)]' 
+                        : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 active:scale-[0.98]'
+                    }`}
+                  >
+                    {overlays.hdMeteosat && <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent"></div>}
+                    <div className="relative flex items-center gap-3 truncate pr-2">
+                      <div className={`p-1.5 rounded-lg transition-colors ${overlays.hdMeteosat ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
+                        <Satellite className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-bold truncate transition-colors ${overlays.hdMeteosat ? 'text-fuchsia-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        {t('layerhdMeteosat', 'Meteosat HD (Europa)')}
+                      </span>
+                    </div>
+                    {overlays.hdMeteosat ? <Eye className="w-5 h-5 text-fuchsia-400 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
+                  </button>
+
+                  {/* Botó GOES (Amèrica) */}
+                  <button 
+                    onClick={() => toggleOverlay('hdGoes')} 
+                    className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
+                      overlays.hdGoes 
+                        ? 'bg-fuchsia-950/60 border-fuchsia-400/50 shadow-[inset_0_0_20px_rgba(217,70,239,0.15)]' 
+                        : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 active:scale-[0.98]'
+                    }`}
+                  >
+                    {overlays.hdGoes && <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent"></div>}
+                    <div className="relative flex items-center gap-3 truncate pr-2">
+                      <div className={`p-1.5 rounded-lg transition-colors ${overlays.hdGoes ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
+                        <Satellite className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-bold truncate transition-colors ${overlays.hdGoes ? 'text-fuchsia-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        {t('layerhdGoes', 'GOES HD (Amèrica)')}
+                      </span>
+                    </div>
+                    {overlays.hdGoes ? <Eye className="w-5 h-5 text-fuchsia-400 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
+                  </button>
+
+                  {/* Botó Himawari (Àsia/Pacífic) */}
+                  <button 
+                    onClick={() => toggleOverlay('hdHimawari')} 
+                    className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
+                      overlays.hdHimawari 
+                        ? 'bg-fuchsia-950/60 border-fuchsia-400/50 shadow-[inset_0_0_20px_rgba(217,70,239,0.15)]' 
+                        : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 active:scale-[0.98]'
+                    }`}
+                  >
+                    {overlays.hdHimawari && <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent"></div>}
+                    <div className="relative flex items-center gap-3 truncate pr-2">
+                      <div className={`p-1.5 rounded-lg transition-colors ${overlays.hdHimawari ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
+                        <Satellite className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-bold truncate transition-colors ${overlays.hdHimawari ? 'text-fuchsia-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        {t('layerhdHimawari', 'Himawari HD (Àsia)')}
+                      </span>
+                    </div>
+                    {overlays.hdHimawari ? <Eye className="w-5 h-5 text-fuchsia-400 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
+                  </button>
+                </div>
+              </div>
+              {/* --- FI: SECCIÓ MODE EXPERT HD --- */}
+
             </div>
           </div>
         </div>

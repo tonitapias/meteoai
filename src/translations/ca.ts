@@ -15,6 +15,10 @@ export const ca = {
   layerNasa: "Imatge Satèl·lit (NASA)",
   layerNasaFires: "Incendis Actius (NASA)",
   layerTerrain3D: "Relleu 3D i Muntanyes",
+  layerHDTitle: "Satèl·lits Alta Resolució",
+  layerhdGoes: "GOES HD (Amèrica)",
+  layerhdMeteosat: "Meteosat HD (Europa)",
+  layerhdHimawari: "Himawari HD (Àsia)",
 
   // Controls del reproductor
   btnPlay: "Reproduir",

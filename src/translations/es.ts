@@ -16,6 +16,10 @@ export const es = {
   layerNasa: "Imagen Satélite (NASA)",
   layerNasaFires: "Incendios Activos (NASA)",
   layerTerrain3D: "Relieve 3D y Montañas",
+  layerHDTitle: "Satélites Alta Resolución",
+  layerhdGoes: "GOES HD (América)",
+  layerhdMeteosat: "Meteosat HD (Europa)",
+  layerhdHimawari: "Himawari HD (Ásia)",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",
