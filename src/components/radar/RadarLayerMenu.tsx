@@ -374,7 +374,7 @@ export function RadarLayerMenu({
                      {t('layerHDTitle', 'Satèl·lits Alta Resolució')}
                     </span>
                   </div>
-                  <span className="text-[9px] font-mono font-bold text-fuchsia-400 bg-fuchsia-950/50 border border-fuchsia-500/30 px-1.5 py-0.5 rounded tracking-wider">EXPERT</span>
+                  <span className="text-[9px] font-mono font-bold text-fuchsia-400 bg-fuchsia-950/50 border border-fuchsia-500/30 px-1.5 py-0.5 rounded tracking-wider">SAT</span>
                 </div>
                 
                 <div className="space-y-2.5">
