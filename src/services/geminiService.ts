@@ -7,7 +7,6 @@ import { AI_PROMPTS } from '../constants/aiPrompts';
 import { 
     GEMINI_PROXY_URL, 
     AI_CACHE_TTL, 
-    AI_REQUEST_TIMEOUT, 
     TARGET_LANGUAGES 
 } from '../constants/aiConfig';
 
@@ -508,9 +507,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           ${terminologyRule}
         `;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT);
-
         try {
             const response = await fetch(GEMINI_PROXY_URL, {
                 method: 'POST',
@@ -520,10 +516,9 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                     lang: language,
                     model: 'gemini-3.5-flash-lite' 
                 }),
-                signal: controller.signal 
+                // NOU ESCUT: Senyal natiu infal·lible que allibera memòria automàticament
+                signal: AbortSignal.timeout(30000) 
             });
-
-            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 console.error(`❌ Error Proxy: ${response.status} ${response.statusText}`);
@@ -613,7 +608,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             return null;
 
         } catch (fetchError) {
-            clearTimeout(timeoutId);
             if (fetchError instanceof Error) {
                  console.error(`❌ Error de Xarxa/Timeout amb el Worker:`, fetchError.message);
             }
