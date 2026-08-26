@@ -3,11 +3,9 @@ import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
-import { AI_PROMPTS } from '../constants/aiPrompts';
 import { 
     GEMINI_PROXY_URL, 
-    AI_CACHE_TTL, 
-    TARGET_LANGUAGES 
+    AI_CACHE_TTL 
 } from '../constants/aiConfig';
 
 // --- CONTRACTE D'INTERFÍCIES (RISC ZERO AMB MÀXIMA PRECISIÓ TÈRMICA) ---
@@ -249,8 +247,6 @@ const getTacticalComfortDescription = (
 
 /**
  * --- TALLAFOCS DETERMINISTA (DOCTRINA RISC ZERO) ---
- * Analitza les matrius crues i retorna el risc objectiu més alt previst a la finestra horària,
- * blindant el sistema contra al·lucinacions tranquil·litzadores de l'IA.
  */
 const evaluateDeterministicRisk = (
     weatherData: ExtendedWeatherData, 
@@ -284,21 +280,16 @@ const evaluateDeterministicRisk = (
             const temp = tempArr?.[i];
 
             if (wmo !== undefined && wmo !== null) {
-                // Tempestes i llamps (Escenari Convectiu)
                 if (wmo === 95 || wmo === 96 || wmo === 99) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
-                // Gel i nevades (Escenari de superfície lliscant)
                 else if ([66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
-                // Pèrdua de visibilitat dràstica per boira gebradora o densa
                 else if ([45, 48].includes(wmo as number)) upgradeRisk('AMBER', 'VISIBILITY');
             }
 
-            // Avaluació de ràfegues tàctiques (Vent)
             if (typeof gust === 'number') {
                 if (gust >= 80) upgradeRisk('RED', 'WIND');
                 else if (gust >= 50) upgradeRisk('AMBER', 'WIND');
             }
 
-            // Avaluació tèrmica (Calor / Fred extrem)
             if (typeof temp === 'number') {
                 if (temp >= 40) upgradeRisk('RED', 'HEAT');
                 else if (temp >= 35) upgradeRisk('AMBER', 'HEAT');
@@ -406,7 +397,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             if (startIndex === -1) startIndex = 0;
             const endIndex = Math.min(startIndex + 6, times.length);
             
-            // Capturem els índexs per llançar el tallafocs posteriorment
             evalStartIndex = startIndex;
             evalEndIndex = endIndex;
 
@@ -467,17 +457,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             finestraPrevista = tableRows.join('\n');
         }
 
-        const prompts = AI_PROMPTS[language] || AI_PROMPTS['en'] || AI_PROMPTS['ca'];
-        const targetLanguage = TARGET_LANGUAGES[language] || 'English';
-
-        const terminologyRule = 
-            language === 'ca' ? `- DIRECTIVA LINGÜÍSTICA: Tò expert de guia de muntanya. 
-             - AL CAMP TEXT: Descriu l'escenari sense llistes, arrodonint enters. Prohibit donar consells o adreçar-se a l'usuari aquí.
-             - AL CAMP TIPS: Si no hi ha perill ni res clau a destacar (dia rutinari), retorna []. Si hi ha dada rellevant, usa el format 'Fenomen: Consell/Avís'. Màxim 15 paraules.` :
-            language === 'es' ? '- Tono de experto. En "text": solo describe escenario, sin listas ni consejos. En "tips": retorna [] si no hay nada clave. Si hay peligro o dato relevante, usa "Fenómeno: Consejo". Máx 15 palabras.' :
-            language === 'fr' ? '- Ton expert. Dans "text": scénario sans listes ni conseils. Dans "tips": retourne [] si la météo est routinière. Sinon, format "Phénomène: Avis". Max 15 mots.' :
-            '- Expert tone. In "text": scenario description only, no lists or advice. In "tips": return [] if weather is routine. Otherwise, use "Phenomenon: Advice". Max 15 words.';
-            
+        // Prompt descarregat d'instruccions: Només telemetria en brut per al Worker
         const prompt = `
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
           
@@ -490,21 +470,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
           MATRIU D'EVOLUCIÓ PREVISTA (6 HORES):
           ${finestraPrevista}
-          
-          TASCA ESPECÍFICA: ${prompts.task}
-          
-          REQUERIMENTS COMUNICATIUS CLÍNICS (DOCTRINA RISC ZERO):
-          0. FORMAT OBLIGATORI: Has de respondre SEMPRE i ÚNICAMENT amb un objecte JSON vàlid. Està TOTALMENT PROHIBIT generar text conversacional abans o després del JSON, ni utilitzar codi Markdown (com \`\`\`json).
-          1. GESTIÓ FORA DE DOMINI: Si la "MATRIU D'EVOLUCIÓ" indica "Sense dades horàries", significa que la ubicació cau fora de l'abast del model regional. EN AQUEST CAS, PROHIBIT DISCULPAR-SE. Retorna exactament aquest JSON: {"risk_level": "GREEN", "hazard_type": "NONE", "text": "Ubicació fora de la zona de cobertura d'aquest model d'alta resolució. No hi ha dades de telemetria previstes.", "tips": []}
-          2. AVALUACIÓ DE RISC MATEMÀTICA: Determina el "risk_level":
-             - "GREEN" (Sense Risc): Vent < 50 km/h, Temp 0ºC a 34ºC, Pluja < 5mm/h.
-             - "AMBER" (Precaució): Ràfegues 50-80 km/h, Temp 35ºC-39ºC o < 0ºC, Pluja forta, Visibilitat baixa, RISC COMBINAT (Pluja + Vent > 35 km/h + Temp < 10ºC).
-             - "RED" (Perill): Ràfegues > 80 km/h, Temp >= 40ºC o < -8ºC, Tempestat forta.
-          3. TIPUS DE PERILL ("hazard_type"): "NONE", "WIND", "HEAT", "COLD", "CONVECTIVE", "VISIBILITY" o "SNOW_ICE".
-          4. SÍNTESI FLUIDA AL CAMP 'TEXT': Redacta l'ESCENARI. Arrodoneix a l'enter (ZERO decimals). Prohibit llistes aïllades. REGLA CRÍTICA: Prohibit consells humans aquí.
-          5. CAMP 'TIPS' (AVISOS PRÀCTICS): Genera de 0 a 2 punts. TENS L'OBLIGACIÓ de retornar [] si el temps és tranquil i sense interès. Si hi ha un factor clau, usa l'estructura "[Fenomen]: [Conseqüència]". No superis les 15 paraules per tip.
-          6. IDIOMA: Respon exclusivament en ${targetLanguage}.
-          ${terminologyRule}
         `;
 
         try {
@@ -516,7 +481,6 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                     lang: language,
                     model: 'gemini-3.5-flash-lite' 
                 }),
-                // NOU ESCUT: Senyal natiu infal·lible que allibera memòria automàticament
                 signal: AbortSignal.timeout(30000) 
             });
 
@@ -537,17 +501,15 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 console.error("❌ El Worker ha retornat una resposta buida o format invàlid.");
                 return null;
             }
-
-            const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-            const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-            
-            if (!jsonMatch) {
-                console.error("❌ La resposta del Worker no conté una estructura JSON vàlida.");
-                return null;
-            }
             
             try {
-                const parsed = JSON.parse(jsonMatch[0]) as RawLLMResponse;
+                // El Worker garanteix JSON, parseig directe:
+                const parsed = JSON.parse(rawText.trim()) as RawLLMResponse;
+
+                // Si el Worker ha hagut de llançar l'escut d'emergència, informem Sentry silenciosament
+                if (typeof parsed.tactical_reasoning === 'string' && parsed.tactical_reasoning.includes("Sistema IA inoperatiu")) {
+                    Sentry.captureMessage("Worker fallback activat: Gemini API ha fallat o superat el timeout. Retornant telemetria d'emergència.", 'warning');
+                }
 
                 // Execució del tallafocs matemàtic fora del bucle IA
                 const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex);
