@@ -9,7 +9,8 @@ import {
   MAPBOX_DEM_URL,
   getNasaFiresWmsUrl,
   getNasaFiresOpacityExp,
-  getNASADate
+  getNASADate,
+  Z_LAYERS
 } from '../../utils/radarPhysics';
 
 // --- CIRURGIA: FORAT NEGRE PER A CANCEL·LACIÓ DE XARXA ---
@@ -27,6 +28,9 @@ interface UseMapLifecycleProps {
     hdGoes: boolean;
     hdMeteosat: boolean;
     hdHimawari: boolean;
+    nasaReal: boolean;
+    nasaFires: boolean;
+    terrain3D: boolean;
     [key: string]: boolean;
   }>;
   setShowLayerMenu: Dispatch<SetStateAction<boolean>>;
@@ -50,6 +54,15 @@ export function useMapLifecycle({
   
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [webglKey, setWebglKey] = useState(0);
+  
+  // Tallafocs de Risc Zero per condicions de cursa i desmuntatge
+  const isMountedRef = useRef<boolean>(true);
+  const syncPendingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   // El Hook de Cicle de Vida s'encarrega d'instanciar i destruir.
   useEffect(() => {
@@ -92,7 +105,7 @@ export function useMapLifecycle({
     map.addControl(
       new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false, // Risc Zero
+        trackUserLocation: false,
         showUserHeading: false    
       }),
       'top-left'
@@ -123,6 +136,8 @@ export function useMapLifecycle({
     });
 
     map.on('load', () => {
+      if (!isMountedRef.current) return;
+      
       try {
         syncAtmosphere(); 
         syncLighting(null);
@@ -158,9 +173,10 @@ export function useMapLifecycle({
           });
         });
 
-        map.addLayer({ id: 'z-index-nasa-real', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-        map.addLayer({ id: 'z-index-clouds', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
-        map.addLayer({ id: 'z-index-radar', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        // --- ESTRATIGRAFIA RIGIDA --- (Instanciació en ordre PIS 1 -> PIS 6)
+        map.addLayer({ id: Z_LAYERS.PIS_1_TOPO, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: Z_LAYERS.PIS_2_SURFACE, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: Z_LAYERS.PIS_3_LOW_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
         const initialNightTime = Date.now();
         map.addSource('night-source', { 
@@ -168,7 +184,7 @@ export function useMapLifecycle({
           data: computeNightFeatures(initialNightTime) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
         });
         map.addLayer({
-          id: 'layer-night',
+          id: Z_LAYERS.PIS_4_FILTER, // layer-night
           type: 'fill',
           source: 'night-source',
           layout: { visibility: overlaysRef.current.night ? 'visible' : 'none' },
@@ -176,13 +192,13 @@ export function useMapLifecycle({
             'fill-color': (activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble') ? '#000000' : '#040714',
             'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble')
           }
-        }, 'z-index-radar');
+        });
         
-        map.addLayer({ id: 'z-index-nasa-fires', type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: Z_LAYERS.PIS_5_HIGH_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
         map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
         map.addLayer({
-          id: 'layer-labels',
+          id: Z_LAYERS.PIS_6_UI, // layer-labels
           type: 'raster',
           source: 'labels-src',
           layout: { visibility: overlaysRef.current.labels ? 'visible' : 'none' },
@@ -203,10 +219,131 @@ export function useMapLifecycle({
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [webglKey]); // Només es reconstrueix si forcem WebGLKey
+  }, [webglKey]); 
 
-  // Aquest efecte substitueix el gran bloque syncAllLayers() original
-  // Encapsulem la lògica de visibilitat segons estats
+  const executeSync = useCallback((
+    currentOverlays: typeof overlaysRef.current, 
+    currentActiveBase: BaseLayerType, 
+    applyFrameVisibility: (index: number) => void,
+    currentFrameIndex: number,
+    radarFramesLength: number
+  ) => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !isMountedRef.current) return;
+
+    try {
+      syncAtmosphere(); 
+      
+      // NASA REAL (Injecció asíncrona sota els núvols)
+      if (currentOverlays.nasaReal && !map.getSource('source-nasa-real')) {
+        const nasaDate = getNASADate();
+        map.addSource('source-nasa-real', {
+          type: 'raster',
+          tiles: [
+            `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+          ],
+          tileSize: 256,
+          maxzoom: 8,
+          attribution: '&copy; NASA / NOAA'
+        });
+        map.addLayer({
+          id: 'layer-nasa-real',
+          type: 'raster',
+          source: 'source-nasa-real',
+          layout: { visibility: 'none' }, 
+          paint: { 'raster-opacity': 0 }
+        }, Z_LAYERS.PIS_3_LOW_ATMOS); // Estratigrafia: Sempre per sota dels núvols
+      }
+
+      // NASA FIRES (Injecció asíncrona sota els núvols)
+      if (currentOverlays.nasaFires && !map.getSource('source-nasa-fires')) {
+        map.addSource('source-nasa-fires', {
+          type: 'raster',
+          tiles: [getNasaFiresWmsUrl()],
+          tileSize: 256,
+        });
+        map.addLayer({
+          id: 'layer-nasa-fires',
+          type: 'raster',
+          source: 'source-nasa-fires',
+          layout: { visibility: 'none' },
+          paint: { 
+            'raster-opacity': 0,
+            'raster-fade-duration': 400,
+            'raster-resampling': 'nearest',
+            'raster-contrast': 0.35,  
+            'raster-saturation': 0.8  
+          }
+        }, Z_LAYERS.PIS_3_LOW_ATMOS); 
+      }
+
+      if (map.getSource('mapbox-dem')) {
+        if (currentOverlays.terrain3D) {
+          map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+        } else {
+          map.setTerrain(null as unknown as mapboxgl.TerrainSpecification);
+        }
+      }
+
+      if (map.getLayer('layer-nasa-fires')) {
+        map.setLayoutProperty('layer-nasa-fires', 'visibility', currentOverlays.nasaFires ? 'visible' : 'none');
+        map.setPaintProperty('layer-nasa-fires', 'raster-opacity', currentOverlays.nasaFires ? getNasaFiresOpacityExp(1) : 0);
+      }
+
+      if (map.getLayer('layer-nasa-real')) {
+        map.setLayoutProperty('layer-nasa-real', 'visibility', currentOverlays.nasaReal ? 'visible' : 'none');
+        map.setPaintProperty('layer-nasa-real', 'raster-opacity', currentOverlays.nasaReal ? [
+          'interpolate', ['linear'], ['zoom'],
+          5.5, 1,   
+          8.0, 0    
+        ] : 0);
+      }
+
+      (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
+        const layerId = `base-layer-${key}`;
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, 'visibility', key === currentActiveBase ? 'visible' : 'none');
+          
+          let targetOpacity: number | mapboxgl.Expression = 0.000001;
+          
+          if (key === currentActiveBase) {
+            if (currentOverlays.nasaReal) {
+              targetOpacity = [
+                'interpolate', ['linear'], ['zoom'],
+                5.5, 0.000001, 
+                8.0, 1         
+              ];
+            } else if (key === 'black_marble') {
+              targetOpacity = getBlackMarbleOpacityExp(1);
+            } else {
+              targetOpacity = 1;
+            }
+          }
+          map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
+        }
+      });
+
+      if (map.getLayer(Z_LAYERS.PIS_4_FILTER)) {
+        map.setLayoutProperty(Z_LAYERS.PIS_4_FILTER, 'visibility', currentOverlays.night ? 'visible' : 'none');
+        map.setPaintProperty(Z_LAYERS.PIS_4_FILTER, 'fill-color', (currentActiveBase === 'dark' || currentActiveBase === 'black_marble') ? '#000000' : '#040714');
+        map.setPaintProperty(Z_LAYERS.PIS_4_FILTER, 'fill-opacity', getNightOpacityExp(currentActiveBase === 'dark' || currentActiveBase === 'black_marble'));
+      }
+
+      if (map.getLayer(Z_LAYERS.PIS_6_UI)) {
+        map.setLayoutProperty(Z_LAYERS.PIS_6_UI, 'visibility', currentOverlays.labels ? 'visible' : 'none');
+      }
+
+      if (radarFramesLength > 0) {
+         applyFrameVisibility(currentFrameIndex);
+      }
+      
+      map.triggerRepaint();
+    } catch (error) {
+      console.error("[Zero Risk] Error sincronitzant capes:", error);
+    }
+  }, [syncAtmosphere, BASE_LAYERS, overlaysRef]);
+
+  // Gestor Anti-Race-Conditions
   const syncLayersState = useCallback((
     currentOverlays: typeof overlaysRef.current, 
     currentActiveBase: BaseLayerType, 
@@ -217,128 +354,20 @@ export function useMapLifecycle({
     const map = mapRef.current;
     if (!map) return;
 
-    const syncAllLayers = () => {
-      if (!map.isStyleLoaded()) return;
-
-      try {
-        syncAtmosphere(); 
-        // SyncLighting es fa dins de applyFrameVisibility
-        
-        if (currentOverlays.nasaReal && !map.getSource('source-nasa-real')) {
-          const nasaDate = getNASADate();
-          map.addSource('source-nasa-real', {
-            type: 'raster',
-            tiles: [
-              `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
-            ],
-            tileSize: 256,
-            maxzoom: 8,
-            attribution: '&copy; NASA / NOAA'
-          });
-          map.addLayer({
-            id: 'layer-nasa-real',
-            type: 'raster',
-            source: 'source-nasa-real',
-            layout: { visibility: 'none' }, 
-            paint: { 'raster-opacity': 0 }
-          }, 'z-index-nasa-real'); 
-        }
-
-        if (currentOverlays.nasaFires && !map.getSource('source-nasa-fires')) {
-          map.addSource('source-nasa-fires', {
-            type: 'raster',
-            tiles: [getNasaFiresWmsUrl()],
-            tileSize: 256,
-          });
-          map.addLayer({
-            id: 'layer-nasa-fires',
-            type: 'raster',
-            source: 'source-nasa-fires',
-            layout: { visibility: 'none' },
-            paint: { 
-              'raster-opacity': 0,
-              'raster-fade-duration': 400,
-              'raster-resampling': 'nearest',
-              'raster-contrast': 0.35,  
-              'raster-saturation': 0.8  
-            }
-          }, 'z-index-nasa-fires'); 
-        }
-
-        if (map.getSource('mapbox-dem')) {
-          if (currentOverlays.terrain3D) {
-            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-          } else {
-            map.setTerrain(null as unknown as mapboxgl.TerrainSpecification);
-          }
-        }
-
-        if (map.getLayer('layer-nasa-fires')) {
-          map.setLayoutProperty('layer-nasa-fires', 'visibility', currentOverlays.nasaFires ? 'visible' : 'none');
-          map.setPaintProperty('layer-nasa-fires', 'raster-opacity', currentOverlays.nasaFires ? getNasaFiresOpacityExp(1) : 0);
-        }
-
-        if (map.getLayer('layer-nasa-real')) {
-          map.setLayoutProperty('layer-nasa-real', 'visibility', currentOverlays.nasaReal ? 'visible' : 'none');
-          map.setPaintProperty('layer-nasa-real', 'raster-opacity', currentOverlays.nasaReal ? [
-            'interpolate', ['linear'], ['zoom'],
-            5.5, 1,   
-            8.0, 0    
-          ] : 0);
-        }
-
-        (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
-          const layerId = `base-layer-${key}`;
-          if (map.getLayer(layerId)) {
-            map.setLayoutProperty(layerId, 'visibility', key === currentActiveBase ? 'visible' : 'none');
-            
-            let targetOpacity: number | mapboxgl.Expression = 0.000001;
-            
-            if (key === currentActiveBase) {
-              if (currentOverlays.nasaReal) {
-                targetOpacity = [
-                  'interpolate', ['linear'], ['zoom'],
-                  5.5, 0.000001, 
-                  8.0, 1         
-                ];
-              } else if (key === 'black_marble') {
-                targetOpacity = getBlackMarbleOpacityExp(1);
-              } else {
-                targetOpacity = 1;
-              }
-            }
-            
-            map.setPaintProperty(layerId, 'raster-opacity', targetOpacity);
+    if (map.isStyleLoaded()) {
+      executeSync(currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength);
+    } else {
+      if (!syncPendingRef.current) {
+        syncPendingRef.current = true;
+        map.once('idle', () => {
+          syncPendingRef.current = false;
+          if (isMountedRef.current) {
+            executeSync(currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength);
           }
         });
-
-        if (map.getLayer('layer-night')) {
-          map.setLayoutProperty('layer-night', 'visibility', currentOverlays.night ? 'visible' : 'none');
-          map.setPaintProperty('layer-night', 'fill-color', (currentActiveBase === 'dark' || currentActiveBase === 'black_marble') ? '#000000' : '#040714');
-          map.setPaintProperty('layer-night', 'fill-opacity', getNightOpacityExp(currentActiveBase === 'dark' || currentActiveBase === 'black_marble'));
-        }
-
-        if (map.getLayer('layer-labels')) {
-          map.setLayoutProperty('layer-labels', 'visibility', currentOverlays.labels ? 'visible' : 'none');
-        }
-
-        if (radarFramesLength > 0) {
-           applyFrameVisibility(currentFrameIndex);
-        }
-        
-        map.triggerRepaint();
-      } catch (error) {
-        console.error("[Zero Risk] Error sincronitzant capes:", error);
       }
-    };
-
-    if (map.isStyleLoaded()) {
-      syncAllLayers();
-    } else {
-      map.once('idle', syncAllLayers);
     }
-    
-  }, [mapRef, syncAtmosphere, BASE_LAYERS, overlaysRef]);
+  }, [executeSync, overlaysRef]);
 
   return {
     mapRef,

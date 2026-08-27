@@ -40,8 +40,17 @@ export interface GeoFeatureCollection {
   }[];
 }
 
-// --- CONSTANTS NOVES (3D Terrain) ---
+// --- CONSTANTS NOVES (3D Terrain & Z-Layers) ---
 export const MAPBOX_DEM_URL = 'mapbox://mapbox.mapbox-terrain-dem-v1';
+
+export const Z_LAYERS = {
+  PIS_1_TOPO: 'z-index-topo',
+  PIS_2_SURFACE: 'z-index-nasa-fires',
+  PIS_3_LOW_ATMOS: 'z-index-clouds',
+  PIS_4_FILTER: 'layer-night',
+  PIS_5_HIGH_ATMOS: 'z-index-radar',
+  PIS_6_UI: 'layer-labels'
+} as const;
 
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---
 
@@ -121,7 +130,7 @@ export const getNasaFiresOpacityExp = (baseOp: number): Expression => {
 };
 
 // =========================================================================
-// MOTORS ASTRONÒMICS I D'OMBRES (FIXAT: Sincronització Radiants/Graus)
+// MOTORS ASTRONÒMICS I D'OMBRES (Alt Rendiment V8 Math)
 // =========================================================================
 
 export const getSunLightConfig = (timestamp: number, lat: number, lon: number): { position: [number, number, number], intensity: number } => {
@@ -135,28 +144,37 @@ export const getSunLightConfig = (timestamp: number, lat: number, lon: number): 
 
   // Càlcul de coordenades orbitals solars
   const M = (357.5291 + 0.98560028 * d) * rad;
-  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
+  const sinM = Math.sin(M);
+  const C = (1.9148 * sinM + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
   const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad;
   const e = 23.439 * rad;
 
-  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
-  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const sinL = Math.sin(L);
+  const cosL = Math.cos(L);
+  const sunDec = Math.asin(Math.sin(e) * sinL);
+  const sunRA = Math.atan2(Math.cos(e) * sinL, cosL);
 
-  // CORRECCIÓ GRAUS/RADIANTS:
   const gmstDeg = (280.46061837 + 360.98564736629 * d) % 360;
   let lmstDeg = (gmstDeg + lon) % 360;
-  if (lmstDeg < 0) lmstDeg += 360; // Normalitzar
+  if (lmstDeg < 0) lmstDeg += 360; 
   const lmstRad = lmstDeg * rad;
 
   const hourAngle = lmstRad - sunRA;
   const latRad = lat * rad;
+  
+  const sinLat = Math.sin(latRad);
+  const cosLat = Math.cos(latRad);
+  const sinSunDec = Math.sin(sunDec);
+  const cosSunDec = Math.cos(sunDec);
 
   // Elevació i Azimut
-  const sinAlt = Math.sin(latRad) * Math.sin(sunDec) + Math.cos(latRad) * Math.cos(sunDec) * Math.cos(hourAngle);
+  const sinAlt = sinLat * sinSunDec + cosLat * cosSunDec * Math.cos(hourAngle);
   const alt = Math.asin(sinAlt);
 
-  const cosAz = (Math.sin(sunDec) - Math.sin(latRad) * Math.sin(alt)) / (Math.cos(latRad) * Math.cos(alt));
-  const safeCosAz = Math.max(-1, Math.min(1, cosAz)); // Evitem desbordaments matemàtics de JS
+  const cosAlt = Math.cos(alt);
+  // Evitem la divisió per zero si el sol està al zenit absolut (molt estrany, però Risc Zero)
+  const cosAz = cosAlt === 0 ? 0 : (sinSunDec - sinLat * sinAlt) / (cosLat * cosAlt);
+  const safeCosAz = Math.max(-1, Math.min(1, cosAz)); 
   let az = Math.acos(safeCosAz);
   
   if (Math.sin(hourAngle) > 0) {
@@ -188,12 +206,16 @@ export const computeNightFeatures = (timestamp: number): GeoFeatureCollection =>
   const date = new Date(timestamp);
   const jd = date.getTime() / 86400000 + 2440587.5;
   const d = jd - 2451545.0; 
+  
   const M = (357.5291 + 0.98560028 * d) * rad;
-  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
+  const sinM = Math.sin(M);
+  const C = (1.9148 * sinM + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
   const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad; 
   const e = 23.439 * rad; 
-  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
-  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  
+  const sinL = Math.sin(L);
+  const sunDec = Math.asin(Math.sin(e) * sinL);
+  const sunRA = Math.atan2(Math.cos(e) * sinL, Math.cos(L));
   const gmst = (280.46061837 + 360.98564736629 * d) % 360 * rad;
   
   let sunLon = sunRA - gmst;
@@ -202,12 +224,13 @@ export const computeNightFeatures = (timestamp: number): GeoFeatureCollection =>
   
   const coords: number[][] = [];
   const safeSunDec = sunDec === 0 ? 0.000001 : sunDec;
+  const tanSafeSunDec = Math.tan(safeSunDec);
   
   if (safeSunDec > 0) {
     coords.push([-180, -90], [180, -90]);
     for (let lonDeg = 180; lonDeg >= -180; lonDeg -= 1) {
       const lon = lonDeg * rad;
-      const lat = Math.atan(-Math.cos(lon - sunLon) / Math.tan(safeSunDec));
+      const lat = Math.atan(-Math.cos(lon - sunLon) / tanSafeSunDec);
       coords.push([lonDeg, lat * deg]);
     }
     coords.push([-180, -90]); 
@@ -215,7 +238,7 @@ export const computeNightFeatures = (timestamp: number): GeoFeatureCollection =>
     coords.push([180, 90], [-180, 90]);
     for (let lonDeg = -180; lonDeg <= 180; lonDeg += 1) {
       const lon = lonDeg * rad;
-      const lat = Math.atan(-Math.cos(lon - sunLon) / Math.tan(safeSunDec));
+      const lat = Math.atan(-Math.cos(lon - sunLon) / tanSafeSunDec);
       coords.push([lonDeg, lat * deg]);
     }
     coords.push([180, 90]); 

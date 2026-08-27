@@ -1,4 +1,4 @@
-import { useEffect, useRef, MutableRefObject } from 'react';
+import { useEffect, useRef, MutableRefObject, useCallback } from 'react';
 import type { Map } from 'mapbox-gl';
 import { BaseLayerType } from '../../utils/radarPhysics';
 
@@ -25,7 +25,9 @@ export function useCameraFlight({
   activeBaseLayer,
   overlays
 }: UseCameraFlightProps) {
-  // Inicialitzem les referències prèvies per detectar canvis (comportament original intacte)
+  const isMountedRef = useRef<boolean>(true);
+  const pendingCameraActionRef = useRef<boolean>(false);
+
   const prevHdRef = useRef({ 
     goes: overlays.hdGoes, 
     meteosat: overlays.hdMeteosat, 
@@ -36,18 +38,39 @@ export function useCameraFlight({
   const prevTerrain3DRef = useRef(overlays.terrain3D);
   const prevBlackMarbleRef = useRef(activeBaseLayer === 'black_marble');
 
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  // GC de Càmera Atòmic: Evita apilar crides idle de mapbox quan hi ha clics ràpids
+  const safeCameraExecute = useCallback((action: () => void) => {
+    const map = mapRef.current;
+    if (!map || !isMountedRef.current) return;
+
+    if (map.isStyleLoaded()) {
+      action();
+    } else {
+      if (!pendingCameraActionRef.current) {
+        pendingCameraActionRef.current = true;
+        map.once('idle', () => {
+          pendingCameraActionRef.current = false;
+          if (isMountedRef.current) action();
+        });
+      }
+    }
+  }, [mapRef]);
+
   // 1. Canvi de coordenades base
   useEffect(() => {
-    if (mapRef.current && mapRef.current.isStyleLoaded()) {
-      mapRef.current.flyTo({ center: [lon, lat], speed: 1.2 });
+    const map = mapRef.current;
+    if (map && map.isStyleLoaded() && isMountedRef.current) {
+      map.flyTo({ center: [lon, lat], speed: 1.2 });
     }
   }, [lat, lon, mapRef]);
 
   // 2. Satèl·lits HD
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
     const goesTurnedOn = overlays.hdGoes && !prevHdRef.current.goes;
     const metTurnedOn = overlays.hdMeteosat && !prevHdRef.current.meteosat;
     const himaTurnedOn = overlays.hdHimawari && !prevHdRef.current.himawari;
@@ -59,7 +82,8 @@ export function useCameraFlight({
     };
 
     const executeCamera = (center: [number, number]) => {
-      map.flyTo({ 
+      if (!mapRef.current) return;
+      mapRef.current.flyTo({ 
         center, 
         zoom: 3.0, 
         pitch: 0, 
@@ -68,96 +92,78 @@ export function useCameraFlight({
       });
     };
 
-    const tryFly = (center: [number, number]) => {
-      if (map.isStyleLoaded()) {
-        executeCamera(center);
-      } else {
-        map.once('idle', () => executeCamera(center));
-      }
-    };
+    if (goesTurnedOn) safeCameraExecute(() => executeCamera([-95, 38]));
+    else if (metTurnedOn) safeCameraExecute(() => executeCamera([15, 45]));
+    else if (himaTurnedOn) safeCameraExecute(() => executeCamera([135, 20]));
 
-    if (goesTurnedOn) tryFly([-95, 38]);
-    else if (metTurnedOn) tryFly([15, 45]);
-    else if (himaTurnedOn) tryFly([135, 20]);
-
-  }, [overlays.hdGoes, overlays.hdMeteosat, overlays.hdHimawari, mapRef]);
+  }, [overlays.hdGoes, overlays.hdMeteosat, overlays.hdHimawari, mapRef, safeCameraExecute]);
 
   // 3. NASA Real
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
     const isNasaNow = overlays.nasaReal;
     const wasNasaBefore = prevNasaRealRef.current;
     prevNasaRealRef.current = isNasaNow;
 
     if (isNasaNow && !wasNasaBefore) {
-      const executeCamera = () => {
+      safeCameraExecute(() => {
+        const map = mapRef.current;
+        if (!map) return;
         const currentZoom = map.getZoom();
         if (currentZoom > 4.5) map.flyTo({ zoom: 3.2, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
-      };
-      if (map.isStyleLoaded()) executeCamera();
-      else map.once('idle', executeCamera);
+      });
     } 
-  }, [overlays.nasaReal, mapRef]);
+  }, [overlays.nasaReal, mapRef, safeCameraExecute]);
 
   // 4. NASA Fires
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
     const isFiresNow = overlays.nasaFires;
     const wasFiresBefore = prevNasaFiresRef.current;
     prevNasaFiresRef.current = isFiresNow;
 
     if (isFiresNow && !wasFiresBefore) {
-      const executeCamera = () => {
+      safeCameraExecute(() => {
+        const map = mapRef.current;
+        if (!map) return;
         const currentZoom = map.getZoom();
         if (currentZoom > 4.5) map.flyTo({ zoom: 3.5, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
-      };
-      if (map.isStyleLoaded()) executeCamera();
-      else map.once('idle', executeCamera);
+      });
     } 
-  }, [overlays.nasaFires, mapRef]);
+  }, [overlays.nasaFires, mapRef, safeCameraExecute]);
 
   // 5. Terrain 3D
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    
     const isTerrainNow = overlays.terrain3D;
     const wasTerrainBefore = prevTerrain3DRef.current;
     prevTerrain3DRef.current = isTerrainNow;
 
     if (isTerrainNow && !wasTerrainBefore) {
-      const executeCamera = () => {
+      safeCameraExecute(() => {
+        const map = mapRef.current;
+        if (!map) return;
         const currentZoom = map.getZoom();
         map.flyTo({ zoom: Math.max(currentZoom, 11.5), pitch: 65, speed: 1.2, curve: 1.42, essential: true });
-      };
-      if (map.isStyleLoaded()) executeCamera();
-      else map.once('idle', executeCamera);
+      });
     } else if (!isTerrainNow && wasTerrainBefore) {
-      const executeCamera = () => {
-        map.flyTo({ pitch: 0, speed: 1.2, essential: true });
-      };
-      if (map.isStyleLoaded()) executeCamera();
-      else map.once('idle', executeCamera);
+      safeCameraExecute(() => {
+        const map = mapRef.current;
+        if (map) map.flyTo({ pitch: 0, speed: 1.2, essential: true });
+      });
     }
-  }, [overlays.terrain3D, mapRef]);
+  }, [overlays.terrain3D, mapRef, safeCameraExecute]);
 
   // 6. Terra de Nit (Black Marble)
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
     const isBlackMarbleNow = activeBaseLayer === 'black_marble';
     const wasBlackMarbleBefore = prevBlackMarbleRef.current;
     prevBlackMarbleRef.current = isBlackMarbleNow;
 
     if (isBlackMarbleNow && !wasBlackMarbleBefore) {
-      const executeCamera = () => {
+      safeCameraExecute(() => {
+        const map = mapRef.current;
+        if (!map) return;
         const currentZoom = map.getZoom();
         if (currentZoom > 3.0) map.flyTo({ zoom: 2.2, pitch: 0, bearing: 0, speed: 1.2, curve: 1.42, essential: true });
-      };
-      if (map.isStyleLoaded()) executeCamera();
-      else map.once('idle', executeCamera);
+      });
     } 
-  }, [activeBaseLayer, mapRef]);
+  }, [activeBaseLayer, mapRef, safeCameraExecute]);
 }

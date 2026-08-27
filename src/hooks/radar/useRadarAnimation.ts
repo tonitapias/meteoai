@@ -5,7 +5,8 @@ import {
   RainViewerResponseSchema, 
   RadarFrame, 
   getRadOpacityExp, 
-  getSatOpacityExp 
+  getSatOpacityExp,
+  Z_LAYERS
 } from '../../utils/radarPhysics';
 
 interface UseRadarAnimationProps {
@@ -35,34 +36,42 @@ export function useRadarAnimation({
   syncAtmosphere
 }: UseRadarAnimationProps) {
   
-  // Estats
   const [isPlaying, setIsPlaying] = useState(false);
   const [framesCount, setFramesCount] = useState(0);
   const [currentFrameTimestamp, setCurrentFrameTimestamp] = useState<number | null>(null);
 
-  // Referències d'estat
   const isPlayingRef = useRef<boolean>(false);
   const hostRef = useRef<string>('');
   const radarFramesRef = useRef<RadarFrame[]>([]);
   const satFramesRef = useRef<RadarFrame[]>([]);
   const currentFrameIndexRef = useRef<number>(0);
   
-  // Referències a diccionaris de memòria i timers
   const loadedRadarIdsRef = useRef<Record<number, string>>({});
   const loadedSatIdsRef = useRef<Record<number, string>>({});
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const preloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const isMountedRef = useRef<boolean>(true);
 
-  // Neteja en desmuntar el hook (Prevé fuites de memòria generals)
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
-      if (preloadTimerRef.current) clearTimeout(preloadTimerRef.current);
       loadedRadarIdsRef.current = {};
       loadedSatIdsRef.current = {};
     };
   }, []);
 
+  const safeRemoveLayerAndSource = useCallback((map: Map, layerId: string, sourceId: string) => {
+    try {
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    } catch (e) {
+      console.warn(`[Zero Risk] Error atòmic netejant ${layerId} / ${sourceId}:`, e);
+    }
+  }, []);
+
+  // Només destrueix frames quan la pròpia API ens diu que ja han caducat en el temps
   const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -72,47 +81,32 @@ export function useRadarAnimation({
 
     Object.keys(loadedRadarIdsRef.current).forEach((key) => {
       const timestampKey = Number(key);
-      const layerId = loadedRadarIdsRef.current[timestampKey];
-      if (!layerId) return;
-      
       if (!activeRadarTimes.has(timestampKey)) {
+        const layerId = loadedRadarIdsRef.current[timestampKey];
         const radSourceId = `rad-src-${timestampKey}`;
-        try {
-          if (map.getLayer(layerId)) map.removeLayer(layerId);
-          if (map.getSource(radSourceId)) map.removeSource(radSourceId);
-          delete loadedRadarIdsRef.current[timestampKey];
-        } catch (e) {
-          console.warn("[Zero Risk] Neteja de radar silenciada", e);
-        }
+        safeRemoveLayerAndSource(map, layerId, radSourceId);
+        delete loadedRadarIdsRef.current[timestampKey];
       }
     });
 
     Object.keys(loadedSatIdsRef.current).forEach((key) => {
       const timestampKey = Number(key);
-      const layerId = loadedSatIdsRef.current[timestampKey];
-      if (!layerId) return;
-      
       if (!activeSatTimes.has(timestampKey)) {
+        const layerId = loadedSatIdsRef.current[timestampKey];
         const satSourceId = `sat-src-${timestampKey}`;
-        try {
-          if (map.getLayer(layerId)) map.removeLayer(layerId);
-          if (map.getSource(satSourceId)) map.removeSource(satSourceId);
-          
-          const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
-          hdAgencies.forEach(agency => {
+        safeRemoveLayerAndSource(map, layerId, satSourceId);
+        
+        const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
+        hdAgencies.forEach(agency => {
              const hdLId = `hd-${agency}-layer-${timestampKey}`;
              const hdSId = `hd-${agency}-src-${timestampKey}`;
-             if (map.getLayer(hdLId)) map.removeLayer(hdLId);
-             if (map.getSource(hdSId)) map.removeSource(hdSId);
-          });
+             safeRemoveLayerAndSource(map, hdLId, hdSId);
+        });
 
-          delete loadedSatIdsRef.current[timestampKey];
-        } catch (e) {
-          console.warn("[Zero Risk] Neteja de satèl·lit silenciada", e);
-        }
+        delete loadedSatIdsRef.current[timestampKey];
       }
     });
-  }, [mapRef]);
+  }, [mapRef, safeRemoveLayerAndSource]);
 
   const ensureFrameLoaded = useCallback((index: number) => {
     const map = mapRef.current;
@@ -129,28 +123,34 @@ export function useRadarAnimation({
     const radLayerId = `rad-layer-${rFrame.time}`;
     
     const isTarget = index === currentFrameIndexRef.current;
-    const initialRadOpacity = (isTarget && overlaysRef.current.precip) ? 0.88 : 0;
+    
+    // HACK VRAM: 0.000001 força la pre-càrrega a GPU sense ser visible. Evita parpellejos.
+    const initialRadOpacity = (isTarget && overlaysRef.current.precip) ? 0.88 : 0.000001;
 
     if (!loadedRadarIdsRef.current[rFrame.time] && !map.getSource(radSourceId)) {
-      map.addSource(radSourceId, {
-        type: 'raster',
-        tiles: [`${hostRef.current}${rFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
-        tileSize: 512,
-        maxzoom: 8,
-      });
-      map.addLayer({
-        id: radLayerId,
-        type: 'raster',
-        source: radSourceId,
-        layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
-        paint: { 
-          'raster-opacity': getRadOpacityExp(initialRadOpacity),
-          'raster-opacity-transition': { duration: 0, delay: 0 }, 
-          'raster-fade-duration': 0,
-          'raster-resampling': 'linear' 
-        },
-      }, 'z-index-radar'); 
-      loadedRadarIdsRef.current[rFrame.time] = radLayerId;
+      try {
+        map.addSource(radSourceId, {
+          type: 'raster',
+          tiles: [`${hostRef.current}${rFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
+          tileSize: 512,
+          maxzoom: 8,
+        });
+        map.addLayer({
+          id: radLayerId,
+          type: 'raster',
+          source: radSourceId,
+          layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
+          paint: { 
+            'raster-opacity': getRadOpacityExp(initialRadOpacity),
+            'raster-opacity-transition': { duration: 0, delay: 0 }, 
+            'raster-fade-duration': 0,
+            'raster-resampling': 'linear' 
+          },
+        }, Z_LAYERS.PIS_6_UI); 
+        loadedRadarIdsRef.current[rFrame.time] = radLayerId;
+      } catch (e) {
+        console.warn(`[Zero Risk] Error afegint radar ${radLayerId}:`, e);
+      }
     }
 
     if (sFrames && sFrames.length > 0) {
@@ -173,29 +173,35 @@ export function useRadarAnimation({
           const rvHostEnc = encodeURIComponent(hostRef.current);
           const rvPathEnc = encodeURIComponent(sFrame.path);
 
-          map.addSource(satSourceId, {
-            type: 'raster',
-            tiles: [`${workerHost}/sat/{z}/{x}/{y}.png?host=${rvHostEnc}&path=${rvPathEnc}`],
-            tileSize: 512,
-            maxzoom: 6
-          });
-          
-          map.addLayer({
-            id: satLayerId,
-            type: 'raster',
-            source: satSourceId,
-            layout: { visibility: overlaysRef.current.satIR ? 'visible' : 'none' },
-            paint: {
-              'raster-opacity': getSatOpacityExp(isTarget && overlaysRef.current.satIR ? 0.85 : 0),
-              'raster-opacity-transition': { duration: 0, delay: 0 }, 
-              'raster-contrast': 0.25,
-              'raster-saturation': -1.0, 
-              'raster-resampling': 'linear',
-              'raster-fade-duration': 0
-            },
-          }, 'z-index-clouds'); 
-          
-          loadedSatIdsRef.current[timestamp] = satLayerId;
+          try {
+            map.addSource(satSourceId, {
+              type: 'raster',
+              tiles: [`${workerHost}/sat/{z}/{x}/{y}.png?host=${rvHostEnc}&path=${rvPathEnc}`],
+              tileSize: 512,
+              maxzoom: 6
+            });
+            
+            const targetSatOpacity = (isTarget && overlaysRef.current.satIR) ? 0.85 : 0.000001;
+            
+            map.addLayer({
+              id: satLayerId,
+              type: 'raster',
+              source: satSourceId,
+              layout: { visibility: overlaysRef.current.satIR ? 'visible' : 'none' },
+              paint: {
+                'raster-opacity': getSatOpacityExp(targetSatOpacity),
+                'raster-opacity-transition': { duration: 0, delay: 0 }, 
+                'raster-contrast': 0.25,
+                'raster-saturation': -1.0, 
+                'raster-resampling': 'linear',
+                'raster-fade-duration': 0
+              },
+            }, Z_LAYERS.PIS_4_FILTER);
+            
+            loadedSatIdsRef.current[timestamp] = satLayerId;
+          } catch (e) {
+            console.warn(`[Zero Risk] Error afegint satèl·lit ${satLayerId}:`, e);
+          }
         }
 
         const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
@@ -215,28 +221,34 @@ export function useRadarAnimation({
           if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
 
           if (isHdVisible && !map.getSource(hdSourceId)) {
-            map.addSource(hdSourceId, {
-              type: 'raster',
-              tiles: [`${workerHost}/hd/${agency}/${timestamp}/{z}/{x}/{y}.png`],
-              tileSize: 512,
-              bounds: HD_BOUNDS[agency], 
-              minzoom: 2,
-              maxzoom: 8
-            });
-            
-            map.addLayer({
-              id: hdLayerId,
-              type: 'raster',
-              source: hdSourceId,
-              layout: { visibility: (isTarget && isHdVisible) ? 'visible' : 'none' },
-              paint: {
-                'raster-opacity': getSatOpacityExp(isTarget ? 1.0 : 0),
-                'raster-opacity-transition': { duration: 0, delay: 0 }, 
-                'raster-saturation': -1.0, 
-                'raster-contrast': 0.3,
-                'raster-fade-duration': 0
-              },
-            }, 'z-index-clouds');
+            try {
+              map.addSource(hdSourceId, {
+                type: 'raster',
+                tiles: [`${workerHost}/hd/${agency}/${timestamp}/{z}/{x}/{y}.png`],
+                tileSize: 512,
+                bounds: HD_BOUNDS[agency], 
+                minzoom: 2,
+                maxzoom: 8
+              });
+              
+              const hdTargetOpacity = isTarget ? 1.0 : 0.000001;
+
+              map.addLayer({
+                id: hdLayerId,
+                type: 'raster',
+                source: hdSourceId,
+                layout: { visibility: isHdVisible ? 'visible' : 'none' },
+                paint: {
+                  'raster-opacity': getSatOpacityExp(hdTargetOpacity),
+                  'raster-opacity-transition': { duration: 0, delay: 0 }, 
+                  'raster-saturation': -1.0, 
+                  'raster-contrast': 0.3,
+                  'raster-fade-duration': 0
+                },
+              }, Z_LAYERS.PIS_4_FILTER);
+            } catch (e) {
+              console.warn(`[Zero Risk] Error afegint HD satèl·lit ${hdLayerId}:`, e);
+            }
           }
         });
       }
@@ -252,72 +264,15 @@ export function useRadarAnimation({
 
     const safeIndex = (index % rFramesCount + rFramesCount) % rFramesCount;
     
+    // Lazy Load Slider: Ens assegurem que els propers 4 frames estiguin injectats a Mapbox
+    // (Un cop injectats NO s'eliminen fins que l'API els caduca, solucionant el parpelleig al fer loops)
     const activeIndices = [
       safeIndex,
       (safeIndex + 1) % rFramesCount,
       (safeIndex + 2) % rFramesCount,
       (safeIndex + 3) % rFramesCount
     ];
-
     activeIndices.forEach(idx => ensureFrameLoaded(idx));
-
-    // --- GARBAGE COLLECTOR ---
-    const activeRadarTimestamps = new Set(
-      activeIndices.map(idx => radarFramesRef.current[idx]?.time).filter(t => t !== null && t !== undefined)
-    );
-    
-    const activeSatTimestamps = new Set<number>();
-    if (satFramesRef.current.length > 0) {
-      activeIndices.forEach(idx => {
-        const rTime = radarFramesRef.current[idx]?.time;
-        if (rTime) {
-          let closestSatIdx = 0;
-          let minDiff = Infinity;
-          satFramesRef.current.forEach((sFrame, sIdx) => {
-            if (!sFrame || sFrame.time === null) return;
-            const diff = Math.abs(sFrame.time - rTime);
-            if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
-          });
-          const sTime = satFramesRef.current[closestSatIdx]?.time;
-          if (sTime) activeSatTimestamps.add(sTime);
-        }
-      });
-    }
-
-    Object.keys(loadedRadarIdsRef.current).forEach((key) => {
-      const ts = Number(key);
-      if (!activeRadarTimestamps.has(ts)) {
-        const layerId = loadedRadarIdsRef.current[ts];
-        const sourceId = `rad-src-${ts}`;
-        try {
-          if (map.getLayer(layerId)) map.removeLayer(layerId);
-          if (map.getSource(sourceId)) map.removeSource(sourceId);
-          delete loadedRadarIdsRef.current[ts];
-        } catch { /* silenci */ }
-      }
-    });
-
-    Object.keys(loadedSatIdsRef.current).forEach((key) => {
-      const ts = Number(key);
-      if (!activeSatTimestamps.has(ts)) {
-        const layerId = loadedSatIdsRef.current[ts];
-        const sourceId = `sat-src-${ts}`;
-        try {
-          if (map.getLayer(layerId)) map.removeLayer(layerId);
-          if (map.getSource(sourceId)) map.removeSource(sourceId);
-          
-          const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
-          hdAgencies.forEach(agency => {
-             const hdLId = `hd-${agency}-layer-${ts}`;
-             const hdSId = `hd-${agency}-src-${ts}`;
-             if (map.getLayer(hdLId)) map.removeLayer(hdLId);
-             if (map.getSource(hdSId)) map.removeSource(hdSId);
-          });
-          
-          delete loadedSatIdsRef.current[ts];
-        } catch { /* silenci */ }
-      }
-    });
 
     const currentRadarFrame = radarFramesRef.current[safeIndex];
     const targetRadarId = currentRadarFrame?.time ? loadedRadarIdsRef.current[currentRadarFrame.time] : undefined;
@@ -337,13 +292,16 @@ export function useRadarAnimation({
 
     const showPrecip = overlaysRef.current.precip;
     const hasAnyHdEnabled = overlaysRef.current.hdGoes || overlaysRef.current.hdMeteosat || overlaysRef.current.hdHimawari;
-    const showSat = overlaysRef.current.satIR || (isPlayingRef.current && hasAnyHdEnabled);
+    const showSat = overlaysRef.current.satIR || hasAnyHdEnabled; // HD i IR van de la mà asíncrona
 
+    // Aplicació d'Opacitats GPU sense desmuntar capes
     Object.values(loadedRadarIdsRef.current).forEach((id) => {
       if (id && map.getLayer(id)) {
         const isTarget = id === targetRadarId;
+        const targetOpacity = isTarget ? 0.88 : 0.000001; 
+        
         map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
-        map.setPaintProperty(id, 'raster-opacity', getRadOpacityExp((showPrecip && isTarget) ? 0.88 : 0));
+        map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
       }
     });
 
@@ -359,11 +317,6 @@ export function useRadarAnimation({
       const sFrame = satFramesRef.current[closestSatIdx];
       const targetSatId = sFrame?.time ? loadedSatIdsRef.current[sFrame.time] : undefined;
       
-      const nextSFrame = satFramesRef.current[(closestSatIdx + 1) % satFramesRef.current.length];
-      const nextSatId = nextSFrame?.time ? loadedSatIdsRef.current[nextSFrame.time] : undefined;
-
-      if (preloadTimerRef.current) clearTimeout(preloadTimerRef.current);
-
       Object.values(loadedSatIdsRef.current).forEach((id) => {
         if (!id) return;
         const isTarget = id === targetSatId;
@@ -371,8 +324,9 @@ export function useRadarAnimation({
         const timestamp = Number(timeStr);
 
         if (map.getLayer(id)) {
-          map.setLayoutProperty(id, 'visibility', (showSat && isTarget) ? 'visible' : 'none');
-          map.setPaintProperty(id, 'raster-opacity', getSatOpacityExp((showSat && isTarget) ? 0.85 : 0));
+          const targetOpacity = isTarget ? 0.85 : 0.000001;
+          map.setLayoutProperty(id, 'visibility', showSat ? 'visible' : 'none');
+          map.setPaintProperty(id, 'raster-opacity', showSat ? getSatOpacityExp(targetOpacity) : 0);
         }
 
         const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
@@ -380,52 +334,16 @@ export function useRadarAnimation({
           const hdLayerId = `hd-${agency}-layer-${timestamp}`;
           if (map.getLayer(hdLayerId)) {
             let isHdVisible = false;
-            if (!isPlayingRef.current) {
-              if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
-              if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
-              if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
-            }
+            if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+            if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+            if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
 
-            map.setLayoutProperty(hdLayerId, 'visibility', (isHdVisible && isTarget) ? 'visible' : 'none');
-            map.setPaintProperty(hdLayerId, 'raster-opacity', getSatOpacityExp((isTarget && isHdVisible) ? 1.0 : 0));
+            const hdTargetOpacity = isTarget ? 1.0 : 0.000001;
+            map.setLayoutProperty(hdLayerId, 'visibility', isHdVisible ? 'visible' : 'none');
+            map.setPaintProperty(hdLayerId, 'raster-opacity', isHdVisible ? getSatOpacityExp(hdTargetOpacity) : 0);
           }
         });
       });
-
-      preloadTimerRef.current = setTimeout(() => {
-        const currentMap = mapRef.current;
-        if (!currentMap || !currentMap.isStyleLoaded()) return;
-
-        Object.values(loadedSatIdsRef.current).forEach((id) => {
-          if (!id || id !== nextSatId) return; 
-
-          const timeStr = id.replace('sat-layer-', '');
-          const timestamp = Number(timeStr);
-
-          if (currentMap.getLayer(id) && showSat) { 
-            currentMap.setLayoutProperty(id, 'visibility', 'visible');
-            currentMap.setPaintProperty(id, 'raster-opacity', 0);
-          }
-
-          const hdAgencies = ['goes', 'meteosat', 'himawari'] as const;
-          hdAgencies.forEach(agency => {
-            const hdLayerId = `hd-${agency}-layer-${timestamp}`;
-            if (currentMap.getLayer(hdLayerId)) {
-              let isHdVisible = false;
-              if (!isPlayingRef.current) {
-                if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
-                if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
-                if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
-              }
-
-              if (isHdVisible) {
-                currentMap.setLayoutProperty(hdLayerId, 'visibility', 'visible');
-                currentMap.setPaintProperty(hdLayerId, 'raster-opacity', 0);
-              }
-            }
-          });
-        });
-      }, 400); 
     }
   }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef]);
 
@@ -451,11 +369,19 @@ export function useRadarAnimation({
     currentFrameIndexRef.current = initialIdx;
     
     ensureFrameLoaded(initialIdx);
-    if (rFrames.length > 1) { setTimeout(() => ensureFrameLoaded(0), 100); }
-    applyFrameVisibility(initialIdx);
-
-    map.once('idle', () => applyFrameVisibility(currentFrameIndexRef.current));
-    setTimeout(() => applyFrameVisibility(currentFrameIndexRef.current), 150);
+    if (rFrames.length > 1) { 
+      setTimeout(() => {
+        if (isMountedRef.current) ensureFrameLoaded(0);
+      }, 100); 
+    }
+    
+    if (map.isStyleLoaded()) {
+      applyFrameVisibility(currentFrameIndexRef.current);
+    } else {
+      map.once('idle', () => {
+        if (isMountedRef.current) applyFrameVisibility(currentFrameIndexRef.current);
+      });
+    }
   }, [ensureFrameLoaded, applyFrameVisibility, cleanupExpiredLayers, mapRef]);
 
   const togglePlay = useCallback(() => {
@@ -476,6 +402,7 @@ export function useRadarAnimation({
     if (active && isPlayingRef.current && radarFramesRef.current.length > 0) {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
       animationTimerRef.current = setInterval(() => {
+        if (!isMountedRef.current) return;
         const totalFrames = radarFramesRef.current.length;
         if (totalFrames === 0) return; 
         const nextIndex = (currentFrameIndexRef.current + 1) % totalFrames;

@@ -47,14 +47,21 @@ export function useAstroEngine({
   activeBaseLayer,
   currentFrameTimestampRef
 }: UseAstroEngineProps) {
-  // Mantenim l'estat actualitzat per no tenir problemes de "stale closures" als callbacks
+  
   const activeBaseLayerRef = useRef(activeBaseLayer);
+  const isMountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     activeBaseLayerRef.current = activeBaseLayer;
   }, [activeBaseLayer]);
 
   const syncAtmosphere = useCallback(() => {
+    if (!isMountedRef.current) return;
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
@@ -90,6 +97,7 @@ export function useAstroEngine({
   }, [mapRef, currentFrameTimestampRef]);
 
   const syncLighting = useCallback((timestampMs: number | null) => {
+    if (!isMountedRef.current) return;
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
@@ -115,12 +123,17 @@ export function useAstroEngine({
     }
   }, [lat, lon, mapRef]);
 
-  // Aquest temporitzador s'emporta la lògica del nightTimerRef que teníem al 'load' del mapa original
   useEffect(() => {
     const nightTimer = setInterval(() => {
-      if (mapRef.current && mapRef.current.getSource('night-source')) {
-        const source = mapRef.current.getSource('night-source') as mapboxgl.GeoJSONSource;
-        source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0]);
+      if (!isMountedRef.current) return;
+      const map = mapRef.current;
+      if (map && map.isStyleLoaded() && map.getSource('night-source')) {
+        try {
+          const source = map.getSource('night-source') as mapboxgl.GeoJSONSource;
+          source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0]);
+        } catch (e) {
+          console.warn("[Zero Risk] Actualització de nit silenciada", e);
+        }
       }
     }, 60000);
 
