@@ -44,8 +44,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const { loading, error, radarData, fetchRadarData } = useRadarData();
   
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
-    dark: { name: t('baseDark', 'Fosc'), url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
-    light: { name: t('baseLight', 'Clar'), url: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', attribution: '&copy; CARTO' },
+    dark: { name: t('baseDark', 'Fosc'), url: `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, attribution: '&copy; Mapbox' },
+    light: { name: t('baseLight', 'Clar'), url: `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, attribution: '&copy; Mapbox' },
     relief: { name: t('baseRelief', 'Relleu'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
     sat_optic: { name: t('baseSat', 'Satèl·lit'), url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
     black_marble: { name: t('baseNightMap', 'Terra de Nit (NASA)'), url: getBlackMarbleUrl(), attribution: '&copy; NASA GIBS' }
@@ -69,7 +69,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   // Referències essencials per als Hooks
   const mapContainerRef = useRef<HTMLDivElement>(null);
-const timeDisplayRef = useRef<HTMLSpanElement>(null);
+  const timeDisplayRef = useRef<HTMLSpanElement>(null);
   const overlaysRef = useRef(overlays);
   const currentFrameTimestampRef = useRef<number | null>(null);
 
