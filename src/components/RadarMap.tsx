@@ -4,9 +4,10 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTranslation } from 'react-i18next';
 
 // 1. DOMINI FÍSIC EXTRET
-import { 
-  BaseLayerType, 
+import {
+  BaseLayerType,
   BaseLayerConfig,
+  Overlays,
   getBlackMarbleUrl,
 } from '../utils/radarPhysics';
 
@@ -40,9 +41,9 @@ interface RadarMapProps {
 
 export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   const { t } = useTranslation();
-  
+
   const { loading, error, radarData, fetchRadarData } = useRadarData();
-  
+
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
     dark: { name: t('baseDark', 'Fosc'), url: `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, attribution: '&copy; Mapbox' },
     light: { name: t('baseLight', 'Clar'), url: `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, attribution: '&copy; Mapbox' },
@@ -54,14 +55,17 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   // Estats UI Locals
   const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
-  const [overlays, setOverlays] = useState({ 
-    precip: true, 
-    satIR: true, 
-    hdGoes: false, 
-    hdMeteosat: false, 
-    hdHimawari: false, 
-    night: true, 
-    labels: false, 
+  // CORRECCIÓ (Fase 3): tipat explícitament amb la interfície Overlays
+  // (font única de veritat a radarPhysics.ts) en lloc de deixar que
+  // TypeScript l'infereixi de l'objecte literal.
+  const [overlays, setOverlays] = useState<Overlays>({
+    precip: true,
+    satIR: true,
+    hdGoes: false,
+    hdMeteosat: false,
+    hdHimawari: false,
+    night: true,
+    labels: false,
     nasaReal: false,
     nasaFires: false,
     terrain3D: false
@@ -70,7 +74,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   // Referències essencials per als Hooks
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const timeDisplayRef = useRef<HTMLSpanElement>(null);
-  const overlaysRef = useRef(overlays);
+  const overlaysRef = useRef<Overlays>(overlays);
   const currentFrameTimestampRef = useRef<number | null>(null);
 
   const formatTime = useCallback((ts?: number | null) => {
@@ -78,7 +82,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
 
-  const toggleOverlay = useCallback((key: keyof typeof overlays) => {
+  const toggleOverlay = useCallback((key: keyof Overlays) => {
     setOverlays(prev => {
       const next = { ...prev, [key]: !prev[key] };
       if (key === 'hdGoes' && next.hdGoes) {
@@ -106,7 +110,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     overlaysRef,
     setShowLayerMenu,
     syncAtmosphere: () => syncAtmosphere(),
-    syncLighting: (ts: number | null) => syncLighting(ts), // <-- TIPATGE AFEGIT AQUÍ
+    syncLighting: (ts: number | null) => syncLighting(ts),
     fetchRadarData
   });
 
@@ -118,10 +122,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
     currentFrameTimestampRef
   });
 
-  const { 
-    isPlaying, setIsPlaying, framesCount, currentFrameTimestamp, // <-- Hem eliminat isPlayingRef
-    injectLayersIntoMap, togglePlay, setAnimationActive, applyFrameVisibility, 
-    radarFramesRef, currentFrameIndexRef 
+  const {
+    isPlaying, setIsPlaying, framesCount, currentFrameTimestamp,
+    injectLayersIntoMap, togglePlay, setAnimationActive, applyFrameVisibility,
+    radarFramesRef, currentFrameIndexRef
   } = useRadarAnimation({
     mapRef,
     overlaysRef,
@@ -152,10 +156,10 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
   // 2. Sincronització global quan canvien els overlays o la baseLayer
   useEffect(() => {
     syncLayersState(
-      overlays, 
-      activeBaseLayer, 
-      applyFrameVisibility, 
-      currentFrameIndexRef.current, 
+      overlays,
+      activeBaseLayer,
+      applyFrameVisibility,
+      currentFrameIndexRef.current,
       radarFramesRef.current.length
     );
   }, [activeBaseLayer, overlays, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
@@ -175,11 +179,11 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   return (
     <div className="relative w-full h-full min-h-0 overflow-hidden bg-[#020308] select-none [transform:translateZ(0)]">
-      
-      <RadarOverlays 
-        loading={loading} 
-        error={error} 
-        onForceSync={() => fetchRadarData(true)} 
+
+      <RadarOverlays
+        loading={loading}
+        error={error}
+        onForceSync={() => fetchRadarData(true)}
       />
 
       <div key={`mapbox-phoenix-${webglKey}`} ref={mapContainerRef} className="w-full h-full" />
@@ -190,8 +194,8 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         <div className="absolute w-6 h-6 border border-cyan-500/30 rounded-full"></div>
       </div>
 
-      <RadarLayerMenu 
-        showLayerMenu={showLayerMenu} 
+      <RadarLayerMenu
+        showLayerMenu={showLayerMenu}
         setShowLayerMenu={setShowLayerMenu}
         activeBaseLayer={activeBaseLayer}
         setActiveBaseLayer={setActiveBaseLayer}
@@ -200,7 +204,7 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
         baseLayers={BASE_LAYERS}
       />
 
-      <RadarPlaybackControls 
+      <RadarPlaybackControls
         isPlaying={isPlaying}
         togglePlay={togglePlay}
         framesCount={framesCount}

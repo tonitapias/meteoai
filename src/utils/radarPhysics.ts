@@ -28,16 +28,41 @@ export interface BaseLayerConfig {
   attribution: string;
 }
 
+// --- FONT ÚNICA DE VERITAT: Overlays ---
+// Abans hi havia 4 formes estructurals diferents d'aquest mateix objecte
+// disperses per useMapLifecycle, useCameraFlight, useRadarAnimation i
+// RadarLayerMenu. Ara tots els hooks/components importen aquesta única
+// interfície.
+export interface Overlays {
+  precip: boolean;
+  satIR: boolean;
+  hdGoes: boolean;
+  hdMeteosat: boolean;
+  hdHimawari: boolean;
+  night: boolean;
+  labels: boolean;
+  nasaReal: boolean;
+  nasaFires: boolean;
+  terrain3D: boolean;
+}
+
+// CORRECCIÓ (revisió Fase 3): es va intentar definir GeoFeatureCollection
+// com a àlies directe de GeoJSON.FeatureCollection (namespace ambient de
+// @types/geojson), assumint que seria resoluble transitivament via
+// @types/mapbox-gl. La compilació real al projecte ha demostrat que aquest
+// namespace NO és resoluble en aquest entorn concret. Es manté, doncs, una
+// interfície pròpia i autònoma que no depèn de cap paquet de tipus extern
+// — exactament com a l'original, però centralitzada en un únic lloc.
 export interface GeoFeatureCollection {
   type: 'FeatureCollection';
-  features: {
+  features: Array<{
     type: 'Feature';
     properties: { level: number };
     geometry: {
       type: 'Polygon';
       coordinates: number[][][];
     };
-  }[];
+  }>;
 }
 
 // --- CONSTANTS NOVES (3D Terrain & Z-Layers) ---
@@ -57,14 +82,14 @@ export const Z_LAYERS = {
 export const getNASADate = (): string => {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - 3); 
+  d.setUTCDate(d.getUTCDate() - 3);
   return d.toISOString().split('T')[0];
 };
 
 export const getNasaFiresDate = (): string => {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - 1); 
+  d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().split('T')[0];
 };
 
@@ -84,7 +109,7 @@ export const getRadOpacityExp = (baseOp: number): Expression => {
     6, baseOp * 0.90,
     10, baseOp * 0.85,
     14, baseOp * 0.65,
-    18, baseOp * 0.45 
+    18, baseOp * 0.45
   ];
 };
 
@@ -93,7 +118,7 @@ export const getSatOpacityExp = (baseOp: number): Expression => {
     'interpolate', ['linear'], ['zoom'],
     2, baseOp * 0.85,
     5, baseOp * 0.65,
-    8, baseOp * 0.25, 
+    8, baseOp * 0.25,
     11, baseOp * 0.05,
     13, 0
   ];
@@ -103,19 +128,19 @@ export const getNightOpacityExp = (isDark: boolean): Expression => {
   const baseOp = isDark ? 0.78 : 0.48;
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp,          
-    6, baseOp * 0.65,   
-    11, 0               
+    2, baseOp,
+    6, baseOp * 0.65,
+    11, 0
   ];
 };
 
 export const getBlackMarbleOpacityExp = (baseOp: number): Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],
-    2, baseOp,          
+    2, baseOp,
     5, baseOp * 0.9,
-    8, baseOp * 0.3,    
-    10, 0               
+    8, baseOp * 0.3,
+    10, 0
   ];
 };
 
@@ -124,29 +149,37 @@ export const getNasaFiresOpacityExp = (baseOp: number): Expression => {
     'interpolate', ['linear'], ['zoom'],
     2, baseOp,
     8, baseOp * 0.9,
-    14, baseOp * 0.8,    
-    18, baseOp * 0.6 
+    14, baseOp * 0.8,
+    18, baseOp * 0.6
   ];
 };
 
 // =========================================================================
-// MOTORS ASTRONÒMICS I D'OMBRES (Alt Rendiment V8 Math)
+// MOTOR ASTRONÒMIC ÚNIC (Alt Rendiment V8 Math)
+// Abans: aquesta mateixa seqüència de càlcul (dia julià, anomalia mitjana,
+// equació del centre, longitud eclíptica, declinació, ascensió recta) estava
+// duplicada literalment en 3 llocs (aquí dues vegades i a useAstroEngine.ts
+// una tercera). Ara hi ha un únic punt de veritat: computeSolarEphemeris.
 // =========================================================================
 
-export const getSunLightConfig = (timestamp: number, lat: number, lon: number): { position: [number, number, number], intensity: number } => {
+interface SolarEphemeris {
+  sunDec: number;   // Declinació solar, en radians
+  sunRA: number;    // Ascensió recta solar, en radians
+  gmstDeg: number;  // Temps sideral mitjà de Greenwich, en graus
+}
+
+const computeSolarEphemeris = (timestamp: number): SolarEphemeris => {
   const PI = Math.PI;
   const rad = PI / 180;
   const deg = 180 / PI;
 
-  const date = new Date(timestamp);
-  const jd = date.getTime() / 86400000 + 2440587.5;
+  const jd = timestamp / 86400000 + 2440587.5;
   const d = jd - 2451545.0;
 
-  // Càlcul de coordenades orbitals solars
   const M = (357.5291 + 0.98560028 * d) * rad;
   const sinM = Math.sin(M);
   const C = (1.9148 * sinM + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
-  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad;
+  const L = ((280.4665 + 0.98564736 * d + C * deg) % 360) * rad;
   const e = 23.439 * rad;
 
   const sinL = Math.sin(L);
@@ -155,42 +188,77 @@ export const getSunLightConfig = (timestamp: number, lat: number, lon: number): 
   const sunRA = Math.atan2(Math.cos(e) * sinL, cosL);
 
   const gmstDeg = (280.46061837 + 360.98564736629 * d) % 360;
+
+  return { sunDec, sunRA, gmstDeg };
+};
+
+/**
+ * Calcula l'altitud i l'azimut solar (en graus) per a un instant i una
+ * coordenada geogràfica concreta. Substitueix la funció local `getSunAltitude`
+ * que abans vivia duplicada dins useAstroEngine.ts.
+ */
+export const getSunAltAz = (timestamp: number, lat: number, lon: number): { altitude: number; azimuth: number } => {
+  const PI = Math.PI;
+  const rad = PI / 180;
+  const deg = 180 / PI;
+
+  const { sunDec, sunRA, gmstDeg } = computeSolarEphemeris(timestamp);
+
   let lmstDeg = (gmstDeg + lon) % 360;
-  if (lmstDeg < 0) lmstDeg += 360; 
+  if (lmstDeg < 0) lmstDeg += 360;
   const lmstRad = lmstDeg * rad;
 
   const hourAngle = lmstRad - sunRA;
   const latRad = lat * rad;
-  
+
   const sinLat = Math.sin(latRad);
   const cosLat = Math.cos(latRad);
   const sinSunDec = Math.sin(sunDec);
   const cosSunDec = Math.cos(sunDec);
 
-  // Elevació i Azimut
   const sinAlt = sinLat * sinSunDec + cosLat * cosSunDec * Math.cos(hourAngle);
   const alt = Math.asin(sinAlt);
 
   const cosAlt = Math.cos(alt);
-  // Evitem la divisió per zero si el sol està al zenit absolut (molt estrany, però Risc Zero)
   const cosAz = cosAlt === 0 ? 0 : (sinSunDec - sinLat * sinAlt) / (cosLat * cosAlt);
-  const safeCosAz = Math.max(-1, Math.min(1, cosAz)); 
+  const safeCosAz = Math.max(-1, Math.min(1, cosAz));
   let az = Math.acos(safeCosAz);
-  
+
   if (Math.sin(hourAngle) > 0) {
     az = 2 * PI - az;
   }
 
-  const altDeg = alt * deg;
-  const azDeg = az * deg;
+  return { altitude: alt * deg, azimuth: az * deg };
+};
+
+/** Longitud subsolar (radians), normalitzada a [-PI, PI]. Ús: terminador de nit. */
+export const getSubsolarLongitude = (timestamp: number): number => {
+  const PI = Math.PI;
+  const rad = PI / 180;
+  const { sunRA, gmstDeg } = computeSolarEphemeris(timestamp);
+  const gmst = gmstDeg * rad;
+
+  let sunLon = sunRA - gmst;
+  while (sunLon < -PI) sunLon += 2 * PI;
+  while (sunLon > PI) sunLon -= 2 * PI;
+  return sunLon;
+};
+
+/** Declinació subsolar (radians). Ús: terminador de nit. */
+export const getSubsolarDeclination = (timestamp: number): number => {
+  return computeSolarEphemeris(timestamp).sunDec;
+};
+
+export const getSunLightConfig = (timestamp: number, lat: number, lon: number): { position: [number, number, number], intensity: number } => {
+  const { altitude: altDeg, azimuth: azDeg } = getSunAltAz(timestamp, lat, lon);
 
   // Traducció al Motor 3D de Mapbox
   const polar = Math.max(0, Math.min(90, 90 - altDeg));
-  
+
   // Intensitat de la llum solar segons elevació
   let intensity = 0.15; // Llum nocturna base
   if (altDeg > 0) {
-    intensity = 0.15 + (0.7 * Math.min(1, altDeg / 25)); 
+    intensity = 0.15 + (0.7 * Math.min(1, altDeg / 25));
   }
 
   return {
@@ -200,32 +268,16 @@ export const getSunLightConfig = (timestamp: number, lat: number, lon: number): 
 };
 
 export const computeNightFeatures = (timestamp: number): GeoFeatureCollection => {
-  const PI = Math.PI;
-  const rad = PI / 180;
-  const deg = 180 / PI;
-  const date = new Date(timestamp);
-  const jd = date.getTime() / 86400000 + 2440587.5;
-  const d = jd - 2451545.0; 
-  
-  const M = (357.5291 + 0.98560028 * d) * rad;
-  const sinM = Math.sin(M);
-  const C = (1.9148 * sinM + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
-  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad; 
-  const e = 23.439 * rad; 
-  
-  const sinL = Math.sin(L);
-  const sunDec = Math.asin(Math.sin(e) * sinL);
-  const sunRA = Math.atan2(Math.cos(e) * sinL, Math.cos(L));
-  const gmst = (280.46061837 + 360.98564736629 * d) % 360 * rad;
-  
-  let sunLon = sunRA - gmst;
-  while (sunLon < -PI) sunLon += 2 * PI;
-  while (sunLon > PI) sunLon -= 2 * PI;
-  
+  const rad = Math.PI / 180;
+  const deg = 180 / Math.PI;
+
+  const sunDec = getSubsolarDeclination(timestamp);
+  const sunLon = getSubsolarLongitude(timestamp);
+
   const coords: number[][] = [];
   const safeSunDec = sunDec === 0 ? 0.000001 : sunDec;
   const tanSafeSunDec = Math.tan(safeSunDec);
-  
+
   if (safeSunDec > 0) {
     coords.push([-180, -90], [180, -90]);
     for (let lonDeg = 180; lonDeg >= -180; lonDeg -= 1) {
@@ -233,7 +285,7 @@ export const computeNightFeatures = (timestamp: number): GeoFeatureCollection =>
       const lat = Math.atan(-Math.cos(lon - sunLon) / tanSafeSunDec);
       coords.push([lonDeg, lat * deg]);
     }
-    coords.push([-180, -90]); 
+    coords.push([-180, -90]);
   } else {
     coords.push([180, 90], [-180, 90]);
     for (let lonDeg = -180; lonDeg <= 180; lonDeg += 1) {
@@ -241,9 +293,9 @@ export const computeNightFeatures = (timestamp: number): GeoFeatureCollection =>
       const lat = Math.atan(-Math.cos(lon - sunLon) / tanSafeSunDec);
       coords.push([lonDeg, lat * deg]);
     }
-    coords.push([180, 90]); 
+    coords.push([180, 90]);
   }
-  
+
   return {
     type: 'FeatureCollection',
     features: [{ type: 'Feature', properties: { level: 0 }, geometry: { type: 'Polygon', coordinates: [coords] } }]

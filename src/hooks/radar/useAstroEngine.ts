@@ -1,36 +1,10 @@
 import { useCallback, useEffect, useRef, MutableRefObject } from 'react';
-import type { Map } from 'mapbox-gl';
-import { getSunLightConfig, computeNightFeatures, BaseLayerType } from '../../utils/radarPhysics';
-
-// -----------------------------------------------------------------------------
-// HELPER ASTRONÒMIC LOCAL PER A L'ATMOSFERA DE MAPBOX
-// -----------------------------------------------------------------------------
-const getSunAltitude = (timestamp: number, lat: number, lon: number): number => {
-  const PI = Math.PI, rad = PI / 180, deg = 180 / PI;
-  const d = (timestamp / 86400000 + 2440587.5) - 2451545.0;
-  const M = (357.5291 + 0.98560028 * d) * rad;
-  const C = (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) * rad;
-  const L = (280.4665 + 0.98564736 * d + C * deg) % 360 * rad;
-  const e = 23.439 * rad;
-  const sunDec = Math.asin(Math.sin(e) * Math.sin(L));
-  const sunRA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
-  
-  const gmstDeg = (280.46061837 + 360.98564736629 * d) % 360;
-  let lmstDeg = (gmstDeg + lon) % 360;
-  if (lmstDeg < 0) lmstDeg += 360;
-  const lmstRad = lmstDeg * rad;
-  
-  const hourAngle = lmstRad - sunRA;
-  const latRad = lat * rad;
-  const sinAlt = Math.sin(latRad) * Math.sin(sunDec) + Math.cos(latRad) * Math.cos(sunDec) * Math.cos(hourAngle);
-  return Math.asin(sinAlt) * deg;
-};
+import type { Map, GeoJSONSource } from 'mapbox-gl';
+import { getSunLightConfig, getSunAltAz, computeNightFeatures, BaseLayerType } from '../../utils/radarPhysics';
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const lerpColor = (c1: number[], c2: number[], t: number) => 
+const lerpColor = (c1: number[], c2: number[], t: number) =>
   `rgb(${Math.round(lerp(c1[0], c2[0], t))}, ${Math.round(lerp(c1[1], c2[1], t))}, ${Math.round(lerp(c1[2], c2[2], t))})`;
-
-// -----------------------------------------------------------------------------
 
 interface UseAstroEngineProps {
   mapRef: MutableRefObject<Map | null>;
@@ -47,7 +21,7 @@ export function useAstroEngine({
   activeBaseLayer,
   currentFrameTimestampRef
 }: UseAstroEngineProps) {
-  
+
   const activeBaseLayerRef = useRef(activeBaseLayer);
   const isMountedRef = useRef<boolean>(true);
 
@@ -68,16 +42,16 @@ export function useAstroEngine({
     try {
       const center = map.getCenter();
       const evalTime = currentFrameTimestampRef.current ? currentFrameTimestampRef.current * 1000 : Date.now();
-      const alt = getSunAltitude(evalTime, center.lat, center.lng);
+      const { altitude: alt } = getSunAltAz(evalTime, center.lat, center.lng);
 
       const isDarkTheme = activeBaseLayerRef.current === 'dark' || activeBaseLayerRef.current === 'black_marble';
-      
-      let factor = 0; 
+
+      let factor = 0;
       if (isDarkTheme) {
-        factor = 1; 
+        factor = 1;
       } else {
-        if (alt < -12) factor = 1; 
-        else if (alt < 0) factor = Math.abs(alt) / 12; 
+        if (alt < -12) factor = 1;
+        else if (alt < 0) factor = Math.abs(alt) / 12;
       }
 
       const colorDay = [186, 210, 235], colorNight = [12, 22, 40];
@@ -105,8 +79,8 @@ export function useAstroEngine({
     const { position, intensity } = getSunLightConfig(evalTime, lat, lon);
 
     const isDarkTheme = activeBaseLayerRef.current === 'dark' || activeBaseLayerRef.current === 'black_marble';
-    const finalIntensity = isDarkTheme ? 0.15 : intensity; 
-    
+    const finalIntensity = isDarkTheme ? 0.15 : intensity;
+
     try {
       map.setLights([{
         id: 'flat-light',
@@ -114,7 +88,7 @@ export function useAstroEngine({
         properties: {
           anchor: 'map',
           position: position,
-          color: isDarkTheme ? '#8ba1c5' : '#ffffff', 
+          color: isDarkTheme ? '#8ba1c5' : '#ffffff',
           intensity: finalIntensity
         }
       }]);
@@ -129,8 +103,12 @@ export function useAstroEngine({
       const map = mapRef.current;
       if (map && map.isStyleLoaded() && map.getSource('night-source')) {
         try {
-          const source = map.getSource('night-source') as mapboxgl.GeoJSONSource;
-          source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0]);
+          const source = map.getSource('night-source') as GeoJSONSource;
+          // CORRECCIÓ (revisió Fase 3): mateix motiu que a useMapLifecycle.ts
+          // — Parameters<> extreu el tipus real del paràmetre de setData
+          // sense haver-lo d'anomenar, evitant la dependència del namespace
+          // ambient GeoJSON que no és resoluble en aquest projecte.
+          source.setData(computeNightFeatures(Date.now()) as unknown as Parameters<typeof source.setData>[0]);
         } catch (e) {
           console.warn("[Zero Risk] Actualització de nit silenciada", e);
         }

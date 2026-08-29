@@ -1,21 +1,13 @@
 import { useEffect, useRef, MutableRefObject, useCallback } from 'react';
 import type { Map } from 'mapbox-gl';
-import { BaseLayerType } from '../../utils/radarPhysics';
+import { BaseLayerType, Overlays } from '../../utils/radarPhysics';
 
 interface UseCameraFlightProps {
   mapRef: MutableRefObject<Map | null>;
   lat: number;
   lon: number;
   activeBaseLayer: BaseLayerType;
-  overlays: {
-    hdGoes: boolean;
-    hdMeteosat: boolean;
-    hdHimawari: boolean;
-    nasaReal: boolean;
-    nasaFires: boolean;
-    terrain3D: boolean;
-    [key: string]: boolean | undefined;
-  };
+  overlays: Overlays;
 }
 
 export function useCameraFlight({
@@ -26,12 +18,19 @@ export function useCameraFlight({
   overlays
 }: UseCameraFlightProps) {
   const isMountedRef = useRef<boolean>(true);
-  const pendingCameraActionRef = useRef<boolean>(false);
 
-  const prevHdRef = useRef({ 
-    goes: overlays.hdGoes, 
-    meteosat: overlays.hdMeteosat, 
-    himawari: overlays.hdHimawari 
+  // CORRECCIÓ (Fase 3): abans era un simple booleà compartit entre les 5+
+  // crides de safeCameraExecute; si dues transicions demanaven una acció de
+  // càmera abans que l'estil estigués carregat, la segona es perdia en
+  // silenci. Ara és una cua: totes les accions pendents s'executen en ordre
+  // quan arriba el proper 'idle'.
+  const pendingActionsRef = useRef<Array<() => void>>([]);
+  const idleListenerAttachedRef = useRef<boolean>(false);
+
+  const prevHdRef = useRef({
+    goes: overlays.hdGoes,
+    meteosat: overlays.hdMeteosat,
+    himawari: overlays.hdHimawari
   });
   const prevNasaRealRef = useRef(overlays.nasaReal);
   const prevNasaFiresRef = useRef(overlays.nasaFires);
@@ -43,31 +42,41 @@ export function useCameraFlight({
     return () => { isMountedRef.current = false; };
   }, []);
 
-  // GC de Càmera Atòmic: Evita apilar crides idle de mapbox quan hi ha clics ràpids
   const safeCameraExecute = useCallback((action: () => void) => {
     const map = mapRef.current;
     if (!map || !isMountedRef.current) return;
 
     if (map.isStyleLoaded()) {
       action();
-    } else {
-      if (!pendingCameraActionRef.current) {
-        pendingCameraActionRef.current = true;
-        map.once('idle', () => {
-          pendingCameraActionRef.current = false;
-          if (isMountedRef.current) action();
-        });
-      }
+      return;
+    }
+
+    pendingActionsRef.current.push(action);
+
+    if (!idleListenerAttachedRef.current) {
+      idleListenerAttachedRef.current = true;
+      map.once('idle', () => {
+        idleListenerAttachedRef.current = false;
+        const actions = pendingActionsRef.current;
+        pendingActionsRef.current = [];
+        if (isMountedRef.current) {
+          actions.forEach((pendingAction) => pendingAction());
+        }
+      });
     }
   }, [mapRef]);
 
   // 1. Canvi de coordenades base
+  // CORRECCIÓ (Fase 3): abans aquest efecte NO passava per safeCameraExecute,
+  // era l'únic dels 6 sense protecció d'idle-defer. Si l'usuari canviava de
+  // localització abans que el mapa acabés de carregar l'estil, el flyTo es
+  // perdia i el mapa quedava encallat a la posició inicial.
   useEffect(() => {
-    const map = mapRef.current;
-    if (map && map.isStyleLoaded() && isMountedRef.current) {
-      map.flyTo({ center: [lon, lat], speed: 1.2 });
-    }
-  }, [lat, lon, mapRef]);
+    safeCameraExecute(() => {
+      const map = mapRef.current;
+      if (map) map.flyTo({ center: [lon, lat], speed: 1.2 });
+    });
+  }, [lat, lon, mapRef, safeCameraExecute]);
 
   // 2. Satèl·lits HD
   useEffect(() => {
@@ -75,20 +84,20 @@ export function useCameraFlight({
     const metTurnedOn = overlays.hdMeteosat && !prevHdRef.current.meteosat;
     const himaTurnedOn = overlays.hdHimawari && !prevHdRef.current.himawari;
 
-    prevHdRef.current = { 
-      goes: overlays.hdGoes, 
-      meteosat: overlays.hdMeteosat, 
-      himawari: overlays.hdHimawari 
+    prevHdRef.current = {
+      goes: overlays.hdGoes,
+      meteosat: overlays.hdMeteosat,
+      himawari: overlays.hdHimawari
     };
 
     const executeCamera = (center: [number, number]) => {
       if (!mapRef.current) return;
-      mapRef.current.flyTo({ 
-        center, 
-        zoom: 3.0, 
-        pitch: 0, 
-        speed: 1.4, 
-        essential: true 
+      mapRef.current.flyTo({
+        center,
+        zoom: 3.0,
+        pitch: 0,
+        speed: 1.4,
+        essential: true
       });
     };
 
@@ -111,7 +120,7 @@ export function useCameraFlight({
         const currentZoom = map.getZoom();
         if (currentZoom > 4.5) map.flyTo({ zoom: 3.2, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
       });
-    } 
+    }
   }, [overlays.nasaReal, mapRef, safeCameraExecute]);
 
   // 4. NASA Fires
@@ -127,7 +136,7 @@ export function useCameraFlight({
         const currentZoom = map.getZoom();
         if (currentZoom > 4.5) map.flyTo({ zoom: 3.5, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
       });
-    } 
+    }
   }, [overlays.nasaFires, mapRef, safeCameraExecute]);
 
   // 5. Terrain 3D
@@ -164,6 +173,6 @@ export function useCameraFlight({
         const currentZoom = map.getZoom();
         if (currentZoom > 3.0) map.flyTo({ zoom: 2.2, pitch: 0, bearing: 0, speed: 1.2, curve: 1.42, essential: true });
       });
-    } 
+    }
   }, [activeBaseLayer, mapRef, safeCameraExecute]);
 }

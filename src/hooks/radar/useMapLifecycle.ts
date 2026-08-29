@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback, RefObject, MutableRefObject, Dispatch, SetStateAction } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { 
-  BaseLayerType, 
+import {
+  BaseLayerType,
   BaseLayerConfig,
+  Overlays,
   computeNightFeatures,
   getNightOpacityExp,
   getBlackMarbleOpacityExp,
@@ -16,23 +17,25 @@ import {
 // --- CIRURGIA: FORAT NEGRE PER A CANCEL·LACIÓ DE XARXA ---
 const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
+// Tipatge propi per a l'esdeveniment d'error de Mapbox GL (evita els
+// dobles casts `as unknown as X` que hi havia abans).
+interface MapboxTileError {
+  status?: number;
+  message?: string;
+}
+
+interface MapboxErrorEventLike {
+  error?: MapboxTileError;
+  sourceId?: string;
+}
+
 interface UseMapLifecycleProps {
   mapContainerRef: RefObject<HTMLDivElement | null>;
   lat: number;
   lon: number;
   activeBaseLayer: BaseLayerType;
   BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig>;
-  overlaysRef: MutableRefObject<{
-    night: boolean;
-    labels: boolean;
-    hdGoes: boolean;
-    hdMeteosat: boolean;
-    hdHimawari: boolean;
-    nasaReal: boolean;
-    nasaFires: boolean;
-    terrain3D: boolean;
-    [key: string]: boolean;
-  }>;
+  overlaysRef: MutableRefObject<Overlays>;
   setShowLayerMenu: Dispatch<SetStateAction<boolean>>;
   syncAtmosphere: () => void;
   syncLighting: (timestampMs: number | null) => void;
@@ -51,10 +54,10 @@ export function useMapLifecycle({
   syncLighting,
   fetchRadarData
 }: UseMapLifecycleProps) {
-  
+
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [webglKey, setWebglKey] = useState(0);
-  
+
   // Tallafocs de Risc Zero per condicions de cursa i desmuntatge
   const isMountedRef = useRef<boolean>(true);
   const syncPendingRef = useRef<boolean>(false);
@@ -67,19 +70,19 @@ export function useMapLifecycle({
   // El Hook de Cicle de Vida s'encarrega d'instanciar i destruir.
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
-    
+
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: { version: 8, sources: {}, layers: [] },
       center: [lon, lat],
-      zoom: 7, 
+      zoom: 7,
       attributionControl: false,
       maxZoom: 18,
       minZoom: 2,
       fadeDuration: 0,
-      projection: { name: 'globe' } as unknown as mapboxgl.MapboxOptions['projection'],
+      projection: { name: 'globe' },
       antialias: false,
-            
+
       transformRequest: (url, resourceType) => {
         if (resourceType === 'Tile' && url.includes('/hd/')) {
           const currentOverlays = overlaysRef.current;
@@ -99,28 +102,41 @@ export function useMapLifecycle({
       }
     });
     mapRef.current = map;
-    
+
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
 
     map.addControl(
       new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: false,
-        showUserHeading: false    
+        showUserHeading: false
       }),
       'top-left'
     );
 
+    // CORRECCIÓ (Fase 3): abans, tant si l'error era "esperat" (404/font
+    // volàtil) com si NO ho era, la funció acabava igual: en silenci total,
+    // sense ni un console.error. Qualsevol fallada real de Mapbox GL
+    // (style corromput, token invàlid, tile server caigut de veritat)
+    // desapareixia sense deixar rastre. Ara només se silencien els casos
+    // realment esperats; la resta es reporta.
     map.on('error', (e) => {
-      const mapError = e.error as unknown as Record<string, unknown> | undefined;
-      const status = mapError?.status as number | undefined;
-      const message = (mapError?.message as string | undefined)?.toLowerCase() || '';
-      
+      const errorEvent = e as unknown as MapboxErrorEventLike;
+      const mapError = errorEvent.error;
+      const status = mapError?.status;
+      const message = mapError?.message?.toLowerCase() ?? '';
+
       const is404 = status === 404 || message.includes('404') || message.includes('not found');
-      const sourceId = (e as unknown as Record<string, unknown>).sourceId as string | undefined;
-      const isVolatileSource = sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-') || sourceId.includes('hd-'));
-      
-      if (is404 || isVolatileSource) return;
+      const sourceId = errorEvent.sourceId;
+      const isVolatileSource = !!sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-') || sourceId.includes('hd-'));
+
+      if (is404 || isVolatileSource) return; // Esperat: tessel·la fora de rang o font volàtil sense dades actuals
+
+      console.error('[Mapbox GL] Error no controlat:', {
+        status,
+        message: mapError?.message,
+        sourceId
+      });
     });
 
     const handleTouchOrClick = () => setShowLayerMenu(false);
@@ -132,14 +148,14 @@ export function useMapLifecycle({
     map.on('webglcontextlost', (e) => {
       e.originalEvent?.preventDefault();
       console.warn("[WebGL] Memòria gràfica alliberada pel dispositiu. Ressuscitant motor...");
-      setWebglKey(prev => prev + 1); 
+      setWebglKey(prev => prev + 1);
     });
 
     map.on('load', () => {
       if (!isMountedRef.current) return;
-      
+
       try {
-        syncAtmosphere(); 
+        syncAtmosphere();
         syncLighting(null);
 
         map.addSource('mapbox-dem', {
@@ -152,15 +168,15 @@ export function useMapLifecycle({
         (Object.keys(BASE_LAYERS) as BaseLayerType[]).forEach((key) => {
           const config = BASE_LAYERS[key];
           const isBlackMarble = key === 'black_marble';
-          
-          map.addSource(`base-src-${key}`, { 
-            type: 'raster', 
-            tiles: [config.url], 
+
+          map.addSource(`base-src-${key}`, {
+            type: 'raster',
+            tiles: [config.url],
             tileSize: 256,
             ...(isBlackMarble ? { maxzoom: 8 } : {}),
-            attribution: config.attribution 
+            attribution: config.attribution
           });
-          
+
           map.addLayer({
             id: `base-layer-${key}`,
             type: 'raster',
@@ -168,7 +184,7 @@ export function useMapLifecycle({
             layout: { visibility: key === activeBaseLayer ? 'visible' : 'none' },
             paint: {
               'raster-opacity': key === activeBaseLayer ? (isBlackMarble ? getBlackMarbleOpacityExp(1) : 1) : 0.000001,
-              'raster-fade-duration': 400 
+              'raster-fade-duration': 400
             }
           });
         });
@@ -179,10 +195,18 @@ export function useMapLifecycle({
         map.addLayer({ id: Z_LAYERS.PIS_3_LOW_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
         const initialNightTime = Date.now();
-        map.addSource('night-source', { 
-          type: 'geojson', 
-          data: computeNightFeatures(initialNightTime) as unknown as Parameters<mapboxgl.GeoJSONSource['setData']>[0] 
-        });
+        map.addSource('night-source', {
+          type: 'geojson',
+          // CORRECCIÓ (revisió Fase 3): Mapbox GL declara `data` amb un tipus
+          // ancorat al paquet extern `geojson`, que no és resoluble en
+          // aquest projecte. GeoFeatureCollection és estructuralment un
+          // FeatureCollection<Polygon> vàlid; el cast de l'objecte sencer
+          // via Parameters<> travessa aquesta frontera de tipus SENSE
+          // anomenar cap namespace extern, per la qual cosa és robust
+          // independentment de quina versió de @types/mapbox-gl /
+          // @types/geojson hi hagi instal·lada.
+          data: computeNightFeatures(initialNightTime)
+        } as unknown as Parameters<typeof map.addSource>[1]);
         map.addLayer({
           id: Z_LAYERS.PIS_4_FILTER, // layer-night
           type: 'fill',
@@ -193,7 +217,7 @@ export function useMapLifecycle({
             'fill-opacity': getNightOpacityExp(activeBaseLayer === 'dark' || activeBaseLayer === 'black_marble')
           }
         });
-        
+
         map.addLayer({ id: Z_LAYERS.PIS_5_HIGH_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
         map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
@@ -212,18 +236,18 @@ export function useMapLifecycle({
     });
 
     return () => {
-      if (mapRef.current) { 
+      if (mapRef.current) {
         mapRef.current.off('move', syncAtmosphere);
-        mapRef.current.remove(); 
-        mapRef.current = null; 
+        mapRef.current.remove();
+        mapRef.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [webglKey]); 
+  }, [webglKey]);
 
   const executeSync = useCallback((
-    currentOverlays: typeof overlaysRef.current, 
-    currentActiveBase: BaseLayerType, 
+    currentOverlays: Overlays,
+    currentActiveBase: BaseLayerType,
     applyFrameVisibility: (index: number) => void,
     currentFrameIndex: number,
     radarFramesLength: number
@@ -232,8 +256,8 @@ export function useMapLifecycle({
     if (!map || !map.isStyleLoaded() || !isMountedRef.current) return;
 
     try {
-      syncAtmosphere(); 
-      
+      syncAtmosphere();
+
       // NASA REAL (Injecció asíncrona sota els núvols)
       if (currentOverlays.nasaReal && !map.getSource('source-nasa-real')) {
         const nasaDate = getNASADate();
@@ -250,7 +274,7 @@ export function useMapLifecycle({
           id: 'layer-nasa-real',
           type: 'raster',
           source: 'source-nasa-real',
-          layout: { visibility: 'none' }, 
+          layout: { visibility: 'none' },
           paint: { 'raster-opacity': 0 }
         }, Z_LAYERS.PIS_3_LOW_ATMOS); // Estratigrafia: Sempre per sota dels núvols
       }
@@ -267,21 +291,21 @@ export function useMapLifecycle({
           type: 'raster',
           source: 'source-nasa-fires',
           layout: { visibility: 'none' },
-          paint: { 
+          paint: {
             'raster-opacity': 0,
             'raster-fade-duration': 400,
             'raster-resampling': 'nearest',
-            'raster-contrast': 0.35,  
-            'raster-saturation': 0.8  
+            'raster-contrast': 0.35,
+            'raster-saturation': 0.8
           }
-        }, Z_LAYERS.PIS_3_LOW_ATMOS); 
+        }, Z_LAYERS.PIS_3_LOW_ATMOS);
       }
 
       if (map.getSource('mapbox-dem')) {
         if (currentOverlays.terrain3D) {
           map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
         } else {
-          map.setTerrain(null as unknown as mapboxgl.TerrainSpecification);
+          map.setTerrain(null);
         }
       }
 
@@ -294,8 +318,8 @@ export function useMapLifecycle({
         map.setLayoutProperty('layer-nasa-real', 'visibility', currentOverlays.nasaReal ? 'visible' : 'none');
         map.setPaintProperty('layer-nasa-real', 'raster-opacity', currentOverlays.nasaReal ? [
           'interpolate', ['linear'], ['zoom'],
-          5.5, 1,   
-          8.0, 0    
+          5.5, 1,
+          8.0, 0
         ] : 0);
       }
 
@@ -303,15 +327,15 @@ export function useMapLifecycle({
         const layerId = `base-layer-${key}`;
         if (map.getLayer(layerId)) {
           map.setLayoutProperty(layerId, 'visibility', key === currentActiveBase ? 'visible' : 'none');
-          
+
           let targetOpacity: number | mapboxgl.Expression = 0.000001;
-          
+
           if (key === currentActiveBase) {
             if (currentOverlays.nasaReal) {
               targetOpacity = [
                 'interpolate', ['linear'], ['zoom'],
-                5.5, 0.000001, 
-                8.0, 1         
+                5.5, 0.000001,
+                8.0, 1
               ];
             } else if (key === 'black_marble') {
               targetOpacity = getBlackMarbleOpacityExp(1);
@@ -336,17 +360,17 @@ export function useMapLifecycle({
       if (radarFramesLength > 0) {
          applyFrameVisibility(currentFrameIndex);
       }
-      
+
       map.triggerRepaint();
     } catch (error) {
       console.error("[Zero Risk] Error sincronitzant capes:", error);
     }
-  }, [syncAtmosphere, BASE_LAYERS, overlaysRef]);
+  }, [syncAtmosphere, BASE_LAYERS]);
 
   // Gestor Anti-Race-Conditions
   const syncLayersState = useCallback((
-    currentOverlays: typeof overlaysRef.current, 
-    currentActiveBase: BaseLayerType, 
+    currentOverlays: Overlays,
+    currentActiveBase: BaseLayerType,
     applyFrameVisibility: (index: number) => void,
     currentFrameIndex: number,
     radarFramesLength: number
@@ -367,7 +391,7 @@ export function useMapLifecycle({
         });
       }
     }
-  }, [executeSync, overlaysRef]);
+  }, [executeSync]);
 
   return {
     mapRef,
