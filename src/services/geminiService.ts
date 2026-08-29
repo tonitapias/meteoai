@@ -11,7 +11,7 @@ import {
 // --- CONTRACTE D'INTERFÍCIES (RISC ZERO AMB MÀXIMA PRECISIÓ TÈRMICA) ---
 
 export type TacticalRiskLevel = 'GREEN' | 'AMBER' | 'RED';
-export type TacticalHazardType = 'NONE' | 'WIND' | 'THERMAL' | 'HEAT' | 'COLD' | 'CONVECTIVE' | 'VISIBILITY' | 'SNOW_ICE';
+export type TacticalHazardType = 'NONE' | 'WIND' | 'RAIN' | 'THERMAL' | 'HEAT' | 'COLD' | 'CONVECTIVE' | 'VISIBILITY' | 'SNOW_ICE';
 export type TacticalTipCategory = 'SKY' | 'THERMAL' | 'WIND' | 'HAZARD';
 
 export interface TacticalTip {
@@ -25,6 +25,9 @@ export interface AICacheData {
     tactical_reasoning?: string;
     text: string;
     tips: TacticalTip[];
+    // Quin motor ha generat aquesta anàlisi. Es guarda també a la cache,
+    // així una resposta servida des de cache manté la seva procedència real.
+    engine?: 'gemini' | 'groq' | 'emergency' | 'unknown';
 }
 
 interface RawLLMResponse {
@@ -263,13 +266,19 @@ const evaluateDeterministicRisk = (
         const wmoArr = (hourly.weather_code ?? hourly.weathercode) as (number | null)[] | undefined;
         const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
         const tempArr = hourly.temperature_2m as (number | null)[] | undefined;
+        const precipArr = hourly.precipitation as (number | null)[] | undefined;
 
         const upgradeRisk = (newRisk: TacticalRiskLevel, newHazard: TacticalHazardType) => {
             const hierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
+            // Només sobreescrivim l'hazard quan la severitat puja estrictament,
+            // o quan encara no n'hi ha cap assignat. Abans, un '>=' feia que
+            // dues hores amb el mateix nivell de risc "es robessin" l'hazard
+            // l'una a l'altra segons l'ordre del bucle (guanyava sempre la
+            // darrera detectada, no la primera).
             if (hierarchy[newRisk] > hierarchy[maxRisk]) {
                 maxRisk = newRisk;
-            }
-            if (detectedHazard === null || hierarchy[newRisk] >= hierarchy[maxRisk]) {
+                detectedHazard = newHazard;
+            } else if (detectedHazard === null && hierarchy[newRisk] === hierarchy[maxRisk]) {
                 detectedHazard = newHazard;
             }
         };
@@ -278,11 +287,23 @@ const evaluateDeterministicRisk = (
             const wmo = wmoArr?.[i];
             const gust = gustsArr?.[i];
             const temp = tempArr?.[i];
+            const precip = precipArr?.[i];
 
             if (wmo !== undefined && wmo !== null) {
                 if (wmo === 95 || wmo === 96 || wmo === 99) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
                 else if ([66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
                 else if ([45, 48].includes(wmo as number)) upgradeRisk('AMBER', 'VISIBILITY');
+            }
+
+            // Pluja en mm/h independent del codi WMO (abans no hi havia cap
+            // comprovació de precipitació aquí: una pluja contínua forta sense
+            // classificar-se com a tempesta no activava mai el tallafocs).
+            // Es comprova després del WMO perquè, si la mateixa hora ja és
+            // CONVECTIVE/SNOW_ICE/VISIBILITY, aquell hazard més específic té
+            // preferència sobre un "RAIN" genèric quan empaten en severitat.
+            if (typeof precip === 'number') {
+                if (precip > 20) upgradeRisk('RED', 'RAIN');
+                else if (precip >= 5) upgradeRisk('AMBER', 'RAIN');
             }
 
             if (typeof gust === 'number') {
@@ -486,15 +507,12 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
             if (!response.ok) {
                 console.error(`❌ Error Proxy: ${response.status} ${response.statusText}`);
-                Sentry.addBreadcrumb({
-                    category: 'ai-api',
-                    message: `Proxy Error ${response.status}`,
-                    level: 'warning'
-                });
+                Sentry.captureMessage(`Error del Worker meteoai-proxy: HTTP ${response.status}`, 'warning');
                 return null; 
             }
 
             const data = await response.json();
+            const engineUsed = typeof data?.engine === 'string' ? data.engine : 'unknown';
             const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (!rawText) {
@@ -506,9 +524,17 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 // El Worker garanteix JSON, parseig directe:
                 const parsed = JSON.parse(rawText.trim()) as RawLLMResponse;
 
-                // Si el Worker ha hagut de llançar l'escut d'emergència, informem Sentry silenciosament
-                if (typeof parsed.tactical_reasoning === 'string' && parsed.tactical_reasoning.includes("Sistema IA inoperatiu")) {
-                    Sentry.captureMessage("Worker fallback activat: Gemini API ha fallat o superat el timeout. Retornant telemetria d'emergència.", 'warning');
+                // Marcatge de motor independent de l'idioma: abans es detectava
+                // l'escut d'emergència cercant text traduït dins tactical_reasoning,
+                // cosa que només funcionava quan l'idioma era català.
+                if (engineUsed === 'emergency') {
+                    Sentry.captureMessage(`Worker fallback activat (escut d'emergència) per a l'idioma "${language}": Gemini i Groq han fallat.`, 'warning');
+                } else if (engineUsed === 'groq') {
+                    Sentry.addBreadcrumb({
+                        category: 'ai-api',
+                        message: 'Resposta servida pel fallback de Groq (Gemini ha fallat)',
+                        level: 'info'
+                    });
                 }
 
                 // Execució del tallafocs matemàtic fora del bucle IA
@@ -520,7 +546,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                     const rawRisk = String(parsed.risk_level ?? 'AMBER').toUpperCase() as TacticalRiskLevel;
                     const safeRiskLevel: TacticalRiskLevel = validRisks.includes(rawRisk) ? rawRisk : 'AMBER';
 
-                    const validHazards: TacticalHazardType[] = ['NONE', 'WIND', 'THERMAL', 'HEAT', 'COLD', 'CONVECTIVE', 'VISIBILITY', 'SNOW_ICE'];
+                    const validHazards: TacticalHazardType[] = ['NONE', 'WIND', 'RAIN', 'THERMAL', 'HEAT', 'COLD', 'CONVECTIVE', 'VISIBILITY', 'SNOW_ICE'];
                     const rawHazard = String(parsed.hazard_type ?? 'NONE').toUpperCase() as TacticalHazardType;
                     const safeHazardType: TacticalHazardType = validHazards.includes(rawHazard) ? rawHazard : 'NONE';
 
@@ -556,7 +582,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                         hazard_type: finalHazardType,
                         tactical_reasoning: typeof parsed.tactical_reasoning === 'string' ? parsed.tactical_reasoning : undefined,
                         text: parsed.text.trim(),
-                        tips: safeTips 
+                        tips: safeTips,
+                        engine: (engineUsed === 'gemini' || engineUsed === 'groq' || engineUsed === 'emergency')
+                            ? engineUsed
+                            : 'unknown'
                     };
 
                     await cacheService.set(cacheKey, validatedData);

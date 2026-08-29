@@ -71,6 +71,7 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
         hazards: {
             NONE: '',
             WIND: 'VENT FORT I RÀFEGUES',
+            RAIN: 'PLUJA INTENSA SOSTINGUDA',
             THERMAL: 'TEMPERATURES EXTREMES',
             HEAT: 'CALOR INTENSA O XAFOGOR',
             COLD: 'FRED INTENS O SENSACIÓ GÈLIDA',
@@ -92,6 +93,7 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
         hazards: {
             NONE: '',
             WIND: 'VIENTO FUERTE Y RACHAS',
+            RAIN: 'LLUVIA INTENSA SOSTENIDA',
             THERMAL: 'TEMPERATURAS EXTREMAS',
             HEAT: 'CALOR INTENSO O BOCHORNO',
             COLD: 'FRÍO INTENSO O SENSACIÓN GÉLIDA',
@@ -113,6 +115,7 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
         hazards: {
             NONE: '',
             WIND: 'VENT FORT ET RAFALES',
+            RAIN: 'PLUIE INTENSE ET SOUTENUE',
             THERMAL: 'TEMPÉRATURES EXTRÊMES',
             HEAT: 'CHALEUR INTENSE OU LOURDEUR',
             COLD: 'FROID INTENSE OU RESSENTI GLACIAL',
@@ -134,6 +137,7 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
         hazards: {
             NONE: '',
             WIND: 'STRONG WIND & GUSTS',
+            RAIN: 'SUSTAINED HEAVY RAIN',
             THERMAL: 'EXTREME TEMPERATURES',
             HEAT: 'INTENSE HEAT OR MUGGINESS',
             COLD: 'INTENSE COLD OR WIND CHILL',
@@ -379,7 +383,13 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
         );
     }
 
-    const isGemini = analysis.source?.includes('Gemini') ?? true;
+    // Abans es feia analysis.source?.includes('Gemini'), però 'source' val
+    // sempre 'MeteoToni AI Network' (mai conté la paraula "Gemini"), així
+    // que la comparació no coincidia mai amb una resposta real de la IA.
+    // 'engine' ve directament del Worker i és fiable: només és fancy quan
+    // hi ha una resposta viva de Gemini o Groq (l'escut d'emergència i el
+    // fallback local queden fora expressament).
+    const isGemini = analysis.engine === 'gemini' || analysis.engine === 'groq';
     const hasLegacyAlerts = Array.isArray(analysis.alerts) && analysis.alerts.length > 0;
     const hasNewHazard = analysis.hazard_type && analysis.hazard_type !== 'NONE';
 
