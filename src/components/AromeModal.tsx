@@ -5,6 +5,7 @@ import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../translations';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
 interface AromeModalProps {
   lat: number;
@@ -27,25 +28,6 @@ interface HourlyRow {
   freezingLevel: number;
   isDay: boolean;
   cloudCover: number;
-}
-
-interface AromeHourlyData {
-  time: string[];
-  temperature_2m: (number | null)[];
-  is_day?: (number | null)[];
-  precipitation?: (number | null)[];
-  cloud_cover_low?: (number | null)[];
-  cloud_cover_mid?: (number | null)[];
-  cloud_cover_high?: (number | null)[];
-  weather_code?: (number | null)[];
-  visibility?: (number | null)[];
-  relative_humidity_2m?: (number | null)[];
-  freezing_level_height?: (number | null)[];
-  cape?: (number | null)[];
-  wind_speed_10m?: (number | null)[];
-  wind_gusts_10m?: (number | null)[];
-  wind_direction_10m?: (number | null)[];
-  [key: string]: unknown;
 }
 
 const getLocalYYYYMMDD = (d: Date) => {
@@ -200,10 +182,9 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
   }, [lat, lon, fetchArome, clearArome]);
 
   const hourlyRows = useMemo<HourlyRow[]>(() => {
-    const hourlyRaw = aromeData?.hourly as Record<string, unknown> | undefined;
-    if (!hourlyRaw || !Array.isArray(hourlyRaw.time) || hourlyRaw.time.length === 0) return [];
-    
-    const h = hourlyRaw as unknown as AromeHourlyData;
+    const h = aromeData?.hourly;
+    if (!h || !Array.isArray(h.time) || h.time.length === 0) return [];
+
     const now = new Date();
     const todayDateStr = getLocalYYYYMMDD(now);
     const nowHour = now.getHours();
@@ -211,6 +192,25 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
     const rows: HourlyRow[] = [];
     const timeLength = h.time.length;
     const elevation = (typeof aromeData?.elevation === 'number' && !isNaN(aromeData.elevation)) ? aromeData.elevation : 0;
+
+    // Agrupem la precipitació minutal (15 min) per hora ("YYYY-MM-DDTHH") una
+    // sola vegada, en lloc de fingir una mostra horària única més avall.
+    // Això dona a getRealTimeWeatherCode mostres sub-horàries de veritat per
+    // detectar virga/intensitat real, en lloc d'un array d'1 element.
+    const minutelyByHour = new Map<string, number[]>();
+    const minutelyTime = aromeData?.minutely_15?.time;
+    const minutelyPrecip = aromeData?.minutely_15?.precipitation;
+    if (Array.isArray(minutelyTime)) {
+        minutelyTime.forEach((mTime, idx) => {
+            if (typeof mTime !== 'string') return;
+            const val = minutelyPrecip?.[idx];
+            if (val === null || val === undefined || isNaN(val)) return;
+            const hourKey = mTime.slice(0, 13); // "YYYY-MM-DDTHH"
+            const arr = minutelyByHour.get(hourKey) ?? [];
+            arr.push(val);
+            minutelyByHour.set(hourKey, arr);
+        });
+    }
 
     for (let i = 0; i < timeLength; i++) {
         const timeStr = h.time[i];
@@ -238,8 +238,10 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
 
         let freezingLevel = h.freezing_level_height?.[i];
         if (freezingLevel === null || freezingLevel === undefined || isNaN(freezingLevel)) {
-            // Càlcul segur blindat
-            freezingLevel = Math.max(elevation, elevation + (tempActual / 0.0065));
+            // Càlcul de fallback amb el gradient tèrmic estàndard (6,5°C/km).
+            // Sense clamp: si fa prou fred, la isoterma 0 pot quedar per sota
+            // de la teva pròpia elevació, i això és exactament el que cal mostrar.
+            freezingLevel = elevation + (tempActual / 0.0065);
         }
 
         const cape = h.cape?.[i] ?? 0;
@@ -264,12 +266,19 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
             precipitation: precipActual, // Injectat per sincronització de telemetria d'icones
             cape: cape,                  // Injectat per detecció de tempestes convectives
             is_day: isDay ? 1 : 0 
-        } as unknown as StrictCurrentWeather;
+        } as StrictCurrentWeather;
+
+        // Mostres sub-horàries de veritat si n'hi ha (fins a 4, cada 15 min);
+        // si no n'hi ha per a aquesta hora, l'única mostra disponible és el
+        // total horari, exactament com abans.
+        const hourKey = timeStr.slice(0, 13);
+        const minutelySamples = minutelyByHour.get(hourKey);
+        const precipSamplesForCode = (minutelySamples && minutelySamples.length > 0) ? minutelySamples : [precipActual];
 
         // Ara la crida està totalment homologada als 5 paràmetres de l'Orquestrador purificat
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
-            [precipActual], 
+            precipSamplesForCode, 
             precipActual > 0 ? 100 : 0, 
             freezingLevel,
             elevation
@@ -303,20 +312,20 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
   const minIso = useMemo(() => hourlyRows.length === 0 ? 0 : Math.min(...hourlyRows.map(r => r.freezingLevel)), [hourlyRows]);
 
   const getGustColor = (gust: number) => {
-    if (gust >= 90) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
-    if (gust >= 50) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
+    if (gust >= WEATHER_THRESHOLDS.WIND.EXTREME) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
+    if (gust >= WEATHER_THRESHOLDS.WIND.STRONG) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
     return 'text-emerald-400';
   };
 
   const getCapeColor = (capeValor: number) => {
-    if (capeValor >= 1500) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
-    if (capeValor >= 500) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
+    if (capeValor >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM) return 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]';
+    if (capeValor >= WEATHER_THRESHOLDS.CAPE.MIN_STORM) return 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]';
     return 'text-fuchsia-400';
   };
 
   const getRowDangerBg = (gust: number, capeValor: number) => {
-    if (gust >= 90 || capeValor >= 1500) return 'bg-rose-950/20';
-    if (gust >= 60 || capeValor >= 800) return 'bg-amber-950/20';
+    if (gust >= WEATHER_THRESHOLDS.WIND.EXTREME || capeValor >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM) return 'bg-rose-950/20';
+    if (gust >= WEATHER_THRESHOLDS.WIND.STRONG || capeValor >= WEATHER_THRESHOLDS.CAPE.MIN_STORM) return 'bg-amber-950/20';
     return 'bg-transparent';
   };
 
@@ -413,15 +422,15 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                          </div>
                          
                          {/* RATXA MÀXIMA (Amb colors de perill si se superen llindars) */}
-                         <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${maxGust >= 90 ? 'bg-rose-950/20 border-rose-900/40 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : maxGust >= 50 ? 'bg-amber-950/20 border-amber-900/40 shadow-[inset_0_1px_4px_rgba(251,191,36,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
+                         <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'bg-rose-950/20 border-rose-900/40 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'bg-amber-950/20 border-amber-900/40 shadow-[inset_0_1px_4px_rgba(251,191,36,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
-                                <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${maxGust >= 90 ? 'bg-rose-900/40 text-rose-400' : maxGust >= 50 ? 'bg-amber-900/40 text-amber-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
+                                <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'bg-rose-900/40 text-rose-400' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'bg-amber-900/40 text-amber-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
                                     <Wind className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${maxGust >= 90 ? 'text-rose-200' : maxGust >= 50 ? 'text-amber-200' : 'text-slate-400'}`}>{t.maxGust}</span>
+                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'text-rose-200' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'text-amber-200' : 'text-slate-400'}`}>{t.maxGust}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getGustColor(maxGust)}`}>
-                                {Math.round(maxGust)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${maxGust >= 50 ? 'opacity-80' : 'opacity-50 text-white'}`}>km/h</span>
+                                {Math.round(maxGust)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'opacity-80' : 'opacity-50 text-white'}`}>km/h</span>
                             </div>
                          </div>
 
@@ -439,15 +448,15 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                          </div>
                          
                          {/* INESTABILITAT (CAPE amb colors de perill) */}
-                         <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${maxCape >= 1500 ? 'bg-rose-950/20 border-rose-900/40 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : maxCape >= 500 ? 'bg-amber-950/20 border-amber-900/40 shadow-[inset_0_1px_4px_rgba(251,191,36,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
+                         <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'bg-rose-950/20 border-rose-900/40 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'bg-amber-950/20 border-amber-900/40 shadow-[inset_0_1px_4px_rgba(251,191,36,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
-                                <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${maxCape >= 1500 ? 'bg-rose-900/40 text-rose-400' : maxCape >= 500 ? 'bg-amber-900/40 text-amber-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
+                                <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'bg-rose-900/40 text-rose-400' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'bg-amber-900/40 text-amber-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
                                     <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${maxCape >= 1500 ? 'text-rose-200' : maxCape >= 500 ? 'text-amber-200' : 'text-slate-400'}`}>{t.cape}</span>
+                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'text-rose-200' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'text-amber-200' : 'text-slate-400'}`}>{t.cape}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getCapeColor(maxCape)}`}>
-                                {Math.round(maxCape)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${maxCape >= 500 ? 'opacity-80' : 'opacity-50 text-white'}`}>J/kg</span>
+                                {Math.round(maxCape)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'opacity-80' : 'opacity-50 text-white'}`}>J/kg</span>
                             </div>
                          </div>
                     </div>
@@ -463,7 +472,7 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                                 const isNewDay = index === 0 || (index > 0 && hourlyRows[index-1].date !== row.date);
                                 const isRaining = row.precip >= 0.05; 
                                 const isSnow = (row.code >= 71 && row.code <= 77) || row.code === 85 || row.code === 86;
-                                const stormRisk = row.cape > 1000;
+                                const stormRisk = row.cape > WEATHER_THRESHOLDS.CAPE.MIN_STORM;
                                 
                                 const maxWindScale = 120;
                                 const windWidth = Math.min(100, (row.wind / maxWindScale) * 100);
@@ -556,7 +565,7 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                                                 <div className="w-14 sm:w-24 h-1.5 bg-black/60 rounded-full mt-1.5 flex overflow-hidden border border-white/5 shadow-[inset_0_1px_4px_rgba(0,0,0,0.8)]">
                                                     <div className="h-full bg-slate-500/80 rounded-l-full transition-all duration-500" style={{ width: `${windWidth}%` }}></div>
                                                     {row.gust > row.wind && (
-                                                        <div className={`h-full transition-all duration-500 shadow-[0_0_5px_currentColor] ${row.gust >= 90 ? 'bg-rose-500' : row.gust >= 60 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${gustWidth}%` }}></div>
+                                                        <div className={`h-full transition-all duration-500 shadow-[0_0_5px_currentColor] ${row.gust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'bg-rose-500' : row.gust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${gustWidth}%` }}></div>
                                                     )}
                                                 </div>
                                             </div>

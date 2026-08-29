@@ -5,8 +5,8 @@ import { safeNum } from './physics';
 
 // --- IMPORTS DE REGLES (Mòduls especialitzats) ---
 import { adjustBaseSkyCode, calculateEffectiveCloudCover } from './rules/cloudRules';
-import { getInstantaneousPrecipitation, checkForVirga } from './rules/precipitationRules';
-import { checkForFog } from './rules/visibilityRules';
+import { getInstantaneousPrecipitation, checkForVirga, adjustRainIntensity } from './rules/precipitationRules';
+import { checkForFog, checkCriticalVisibility } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
 import { determineSnowCode } from './rules/winterRules';
 
@@ -17,11 +17,10 @@ import { determineSnowCode } from './rules/winterRules';
 const applyTelemetrySync = (code: number, precipAmt: number = 0): number => {
     let syncedCode = code;
     if (precipAmt > 0) {
-        // Fals Negatiu (Tempesta Oculta): L'API diu sol/núvol però plou
+        // Fals Negatiu (Tempesta Oculta): L'API diu sol/núvol però plou.
+        // Talls canònics (TRACE/MODERATE/HEAVY) en lloc de llindars fets a mà.
         if (syncedCode <= 48) {
-            if (precipAmt <= 2) syncedCode = 61;       
-            else if (precipAmt <= 10) syncedCode = 63; 
-            else syncedCode = 65;                      
+            syncedCode = adjustRainIntensity(syncedCode, precipAmt);
         }
     } else if (precipAmt === 0) {
         // Fals Positiu (Gota freda visual): L'API diu pluja però no cau aigua
@@ -74,9 +73,9 @@ export const getRealTimeWeatherCode = (
     const cape = safeNum(current.cape, 0); 
     
     // Constants
-    const { PRECIPITATION } = WEATHER_THRESHOLDS;
+    const { VISIBILITY } = WEATHER_THRESHOLDS;
 
-    // 1. Dades Calculades (Núvols i Precipitació)
+    // 1. Dades Calculades (Núvols, Precipitació i Visibilitat)
     const cloudCover = calculateEffectiveCloudCover(
         safeNum(current.cloud_cover_low, 0),
         safeNum(current.cloud_cover_mid, 0),
@@ -85,21 +84,28 @@ export const getRealTimeWeatherCode = (
 
     const precipInstantanea = getInstantaneousPrecipitation(minutelyPrecipData, safeNum(current.precipitation, 0));
 
+    // Sense dada real, assumim visibilitat bona (Risc Zero: no forcem boira sense proves)
+    const visibility = safeNum(current.visibility, VISIBILITY.GOOD);
+
     // --- PIPELINE DE DECISIÓ ---
     
     // A. Estat base del cel
     code = adjustBaseSkyCode(code, cloudCover);
 
-    // B. Correcció AROME
-    if (precipInstantanea >= PRECIPITATION.TRACE && code < 51) {
-        code = 61; 
-    }
+    // B. Sincronització de Telemetria — abans del virga/boira/neu.
+    // Ha de fixar si de debò plou o no (i amb quina intensitat) abans que
+    // els mòduls següents decideixin res sobre un codi encara no corregit.
+    code = applyTelemetrySync(code, precipInstantanea);
 
-    // C. Filtre Virga 
+    // C. Filtre Virga (última paraula real sobre si la pluja arriba a terra)
     code = checkForVirga(code, humidity, cloudCover, precipInstantanea);
 
-    // D. Detecció de Boira (Amb el seu propi tallafoc integrat)
+    // D. Detecció de Boira per punt de rosada (amb el seu propi tallafoc integrat)
     code = checkForFog(code, temp, humidity, cloudCover);
+
+    // D2. Detecció de Boira per visibilitat real d'AROME — xarxa de seguretat
+    // quan el punt de rosada no ha disparat però la visibilitat mesurada sí.
+    code = checkCriticalVisibility(code, visibility, precipInstantanea, temp, humidity);
     
     // E. Ajust per Tempestes (CAPE)
     code = adjustForStorms(code, cape, cloudCover, precipInstantanea);
@@ -108,12 +114,7 @@ export const getRealTimeWeatherCode = (
     code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
 
     // --- G. SEGELLAT DEFINITIU (DOCTRINA RISC ZERO) ---
-    // Qualsevol codi calculat anteriorment passa la duana final abans d'anar a producció
-    
-    // 1. Sincronització de Telemetria (Assegura icones segons mm reals)
-    code = applyTelemetrySync(code, precipInstantanea);
-    
-    // 2. Bloqueig Tèrmic (Erradica icones de neu/gel en temperatures positives)
+    // Bloqueig Tèrmic (Erradica icones de neu/gel en temperatures positives)
     code = applyThermalLock(code, temp);
 
     return code;

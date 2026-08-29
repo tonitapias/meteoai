@@ -4,8 +4,14 @@ import { z } from 'zod';
 import { getAromeData } from '../services/weatherApi';
 
 // ==========================================
-// 1. ESQUEMES DE VALIDACIÓ ZOD (MUR DE CONTENCIÓ)
+// ESQUEMES DE VALIDACIÓ ZOD (MUR DE CONTENCIÓ)
 // ==========================================
+// Aquest esquema és intencionadament més estricte que HourlyDataSchema
+// (weatherSchema.ts): allà CADA camp té `.catch(...)` perquè el forecast
+// principal (4 models) no pot fallar mai del tot encara que un camp vingui
+// malament. Aquí, en canvi, un `time` absent o trencat ha de tombar TOT
+// el parse — és preferible mostrar "Senyal Perduda" que un modal amb
+// arrays de mides incoherents. Per això mantenim un esquema propi.
 
 // Validem les matrius amb suport total per valors nuls i buits (Doctrina Risc Zero)
 const aromeHourlySchema = z.object({
@@ -14,11 +20,20 @@ const aromeHourlySchema = z.object({
     times.map((t) => typeof t === 'number' ? new Date(t * 1000).toISOString() : t)
   ),
   temperature_2m: z.array(z.number().nullable()).optional(),
+  apparent_temperature: z.array(z.number().nullable()).optional(),
   precipitation: z.array(z.number().nullable()).optional(),
   visibility: z.array(z.number().nullable()).optional(),
   wind_speed_10m: z.array(z.number().nullable()).optional(),
   wind_gusts_10m: z.array(z.number().nullable()).optional(),
+  wind_direction_10m: z.array(z.number().nullable()).optional(),
   relative_humidity_2m: z.array(z.number().nullable()).optional(),
+  weather_code: z.array(z.number().nullable()).optional(),
+  cloud_cover_low: z.array(z.number().nullable()).optional(),
+  cloud_cover_mid: z.array(z.number().nullable()).optional(),
+  cloud_cover_high: z.array(z.number().nullable()).optional(),
+  cape: z.array(z.number().nullable()).optional(),
+  freezing_level_height: z.array(z.number().nullable()).optional(),
+  is_day: z.array(z.number().nullable()).optional(),
 }).passthrough();
 
 const aromeMinutely15Schema = z.object({
@@ -40,7 +55,7 @@ const aromeDataSchema = z.object({
 export type AromeData = z.infer<typeof aromeDataSchema>;
 
 // ==========================================
-// 2. HOOK INDEPENDENT FAIL-SAFE
+// HOOK INDEPENDENT FAIL-SAFE
 // ==========================================
 export function useArome() {
   const [aromeData, setAromeData] = useState<AromeData | null>(null);

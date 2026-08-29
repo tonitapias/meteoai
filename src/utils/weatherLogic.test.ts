@@ -45,7 +45,7 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
         const current = createCurrent(3, 15, 0, 100); 
         const minutelyPrecip = [2.0]; // Radar detecta 2mm
         const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
-        expect(result).toBe(61); 
+        expect(result).toBe(63); 
     });
 
     it('hauria de detectar BOIRA per saturació (Dew Point Spread)', () => {

@@ -35,7 +35,7 @@ export const adjustRainIntensity = (code: number, precipAmount: number): number 
 
     if (precipAmount >= PRECIPITATION.TRACE) { 
         if (precipAmount > PRECIPITATION.HEAVY) return 65; 
-        if (precipAmount >= 1.0) return 63; 
+        if (precipAmount >= PRECIPITATION.MODERATE) return 63; 
         return 61; 
     } 
     return code;
