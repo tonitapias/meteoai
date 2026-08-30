@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
 import { generateHourlyChartData } from '../utils/weatherMappers';
+import { calculateSnowLevel } from '../utils/rules/winterRules';
 
 export function useChartData(weatherData: ExtendedWeatherData | null, currentHourlyIndex: number, unit: WeatherUnit) {
   
@@ -41,7 +42,7 @@ export function useChartData(weatherData: ExtendedWeatherData | null, currentHou
                  wind: d.wind_speed_10m,
                  cloud: d.cloud_cover,
                  humidity: d.relative_humidity_2m,
-                 snowLevel: (typeof fl === 'number') ? Math.max(0, fl - 300) : null
+                 snowLevel: calculateSnowLevel(fl)
              };
          }).filter((item): item is NonNullable<typeof item> => item !== null);
       };

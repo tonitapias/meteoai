@@ -1,4 +1,4 @@
-import { Navigation, Zap, Mountain, MapPinOff } from 'lucide-react';
+import { Navigation, Zap, ShieldCheck, Mountain, MapPinOff } from 'lucide-react';
 
 interface CurrentWeatherHeaderProps {
   locationName?: string;
@@ -43,9 +43,13 @@ export const CurrentWeatherHeader = ({
             </span>
           </div>
           
-          {isUsingArome && (
+          {isUsingArome ? (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 shadow-[inset_0_1px_4px_rgba(16,185,129,0.2)] text-[9px] font-mono font-black text-emerald-400 tracking-widest uppercase transition-all duration-300">
               <Zap className="w-3 h-3 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" /> AROME HD
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/30 shadow-[inset_0_1px_4px_rgba(99,102,241,0.2)] text-[9px] font-mono font-black text-indigo-400 tracking-widest uppercase transition-all duration-300">
+              <ShieldCheck className="w-3 h-3 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]" /> MODEL GLOBAL
             </span>
           )}
         </div>

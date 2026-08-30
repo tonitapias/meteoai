@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes'; 
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { calculateSnowLevel } from '../utils/rules/winterRules';
 
 const getSafeMonthFromIso = (isoString: string | undefined): number => {
     if (!isoString || isoString.length < 7) return new Date().getMonth();
@@ -66,7 +67,7 @@ export const useDayDetailData = (
                  : null);
         }
         
-        const snowLevel = (fl != null) ? Math.max(0, fl - WEATHER_THRESHOLDS.SNOW.FREEZING_BUFFER) : null;
+        const snowLevel = calculateSnowLevel(fl);
 
         // [NETEJA] Abans hi havia un bloc que llegia compRaw?.arome per a precip/rainProb/
         // cloudCover. normData.ts mai crea hourlyComparison.arome (només ecmwf/gfs/icon),

@@ -2,6 +2,7 @@ import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { LineChart, X, Droplets } from 'lucide-react'; 
 import { getWeatherIcon } from './WeatherIcons';
+import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
 import { Language } from '../translations';
 import { StrictDailyWeather } from '../types/weatherLogicTypes';
 
@@ -56,6 +57,15 @@ const I18N_MODAL = {
   en: { title: "Temperature Chart", trend: "7-Day Trend" }
 };
 
+// [FIX PRECISIÓ] Mateixa correcció que a ForecastSection.tsx: l'aria-label
+// estava fix en català independentment de `lang`.
+const I18N_ARIA_CLOSE = {
+  ca: "Tancar modal",
+  es: "Cerrar modal",
+  fr: "Fermer la fenêtre",
+  en: "Close modal"
+};
+
 const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
 const TrendChartModal = memo(function TrendChartModal({ 
@@ -95,6 +105,7 @@ const TrendChartModal = memo(function TrendChartModal({
   if (typeof document === 'undefined') return null;
 
   const mDict = I18N_MODAL[lang] || I18N_MODAL['ca'];
+  const closeAriaLabel = I18N_ARIA_CLOSE[lang] || I18N_ARIA_CLOSE['ca'];
 
   // 1. EXTRACCIÓ TÀCTICA DE DADES I MOTOR VISUAL INTEL·LIGENT
   const trendData = dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
@@ -116,7 +127,8 @@ const TrendChartModal = memo(function TrendChartModal({
           .toUpperCase();
       }
 
-      // Filtre de núvols diürns
+      // Filtre de núvols diürns — mateixa regla oficial que la resta de l'app
+      // (adjustBaseSkyCode, cloudRules.ts).
       if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
         const dateOnly = rawDate.slice(0, 10); 
         const dayHours = chartData.filter(d => 
@@ -128,10 +140,7 @@ const TrendChartModal = memo(function TrendChartModal({
             return acc + (isNaN(c) ? 0 : c);
           }, 0);
           const avgClouds = totalClouds / dayHours.length;
-          if (avgClouds > 85) code = 3;
-          else if (avgClouds > 45) code = 2;
-          else if (avgClouds > 15) code = 1;
-          else code = 0;
+          code = adjustBaseSkyCode(rawCode, avgClouds);
         }
       }
     }
@@ -146,7 +155,7 @@ const TrendChartModal = memo(function TrendChartModal({
   const minTemps = trendData.map(d => d.min);
   
   const chartMax = Math.max(...maxTemps);
-  const chartMin = Math.min(...minTemps); // Ara busquem la mínima absoluta de veritat per estirar l'eix
+  const chartMin = Math.min(...minTemps);
 
   const padding = chartMax === chartMin ? 2 : (chartMax - chartMin) * 0.25; 
   const yMax = chartMax + padding;
@@ -154,9 +163,7 @@ const TrendChartModal = memo(function TrendChartModal({
   const range = yMax - yMin;
 
   const N = trendData.length;
-  // Centrat per a la graella grid-cols-7
   const getX = (index: number) => ((index + 0.5) / N) * 100;
-  // Conversió Y: 0% dalt, 100% baix
   const getY = (val: number) => ((yMax - val) / range) * 100; 
 
   const pointsStr = trendData.map((d, i) => `${getX(i)},${getY(d.max)}`).join(' ');
@@ -164,7 +171,7 @@ const TrendChartModal = memo(function TrendChartModal({
   // 3. RENDERITZAT SPATIAL UI PORTAL
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 bg-black/80 backdrop-blur-xl transition-opacity overflow-y-auto">
-      <div className="absolute inset-0 cursor-pointer" onClick={onClose} aria-label="Tancar modal"></div>
+      <div className="absolute inset-0 cursor-pointer" onClick={onClose} aria-label={closeAriaLabel}></div>
       
       <div className="w-full max-w-5xl bg-gradient-to-br from-[#0f111a] to-black border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden transform-gpu flex flex-col my-auto max-h-[95vh] pointer-events-auto">
         <div className={MATRIX_BG}></div>
@@ -187,6 +194,7 @@ const TrendChartModal = memo(function TrendChartModal({
           </div>
           <button 
             onClick={onClose}
+            aria-label={closeAriaLabel}
             className="p-2 md:p-3 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors border border-white/5 cursor-pointer"
           >
             <X className="w-5 h-5 md:w-6 md:h-6" />

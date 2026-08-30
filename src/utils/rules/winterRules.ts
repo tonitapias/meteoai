@@ -27,3 +27,19 @@ export const determineSnowCode = (
     
     return code;
 };
+
+/**
+ * [FIX PRECISIÓ] Càlcul de la cota de neu (altitud on la pluja passa a neu) a
+ * partir del nivell de congelació. Abans hi havia tres còpies independents
+ * d'aquesta mateixa fórmula (useDayDetailData.ts, useChartData.ts,
+ * weatherMappers.ts): dues amb el número màgic 300 fix, una amb la constant
+ * SNOW.FREEZING_BUFFER. Es consolida aquí perquè un canvi futur del buffer
+ * només calgui fer-lo un cop.
+ * NOTA: no aplica el cap de visualització (MAX_DISPLAY_SNOW_LEVEL) — això és
+ * una decisió de presentació (veure snowLevelText a useDayDetailData.ts), no
+ * del càlcul físic en si.
+ */
+export const calculateSnowLevel = (freezingLevel: unknown): number | null => {
+    if (typeof freezingLevel !== 'number' || isNaN(freezingLevel)) return null;
+    return Math.max(0, freezingLevel - SNOW.FREEZING_BUFFER);
+};

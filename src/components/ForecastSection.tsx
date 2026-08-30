@@ -1,11 +1,12 @@
 import { memo } from 'react';
-import { Calendar, TrendingUp, Umbrella, ArrowRight } from 'lucide-react'; 
-import { SmartForecastCharts } from './WeatherCharts';
+import { Calendar, Umbrella, ArrowRight } from 'lucide-react'; 
 import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
-import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
-import { StrictDailyWeather } from '../types/weatherLogicTypes';
+import { formatPrecipitation } from '../utils/formatters';
+import { StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
 
 import { useTacticalModal } from '../hooks/useTacticalModal';
 import TrendChartModal from './TrendChartModal';
@@ -17,7 +18,11 @@ export interface ChartDataPoint {
   [key: string]: unknown;
 }
 
+// [NETEJA] Es manté exportada per si algun altre fitxer l'usa per tipar
+// calculations.comparisonData; ForecastSection ja no en fa ús intern des que
+// s'ha eliminat el bloc mort de SmartForecastCharts (punt 6 de l'auditoria).
 export interface ComparisonData {
+  ecmwf?: ChartDataPoint[];
   gfs: ChartDataPoint[];
   icon: ChartDataPoint[];
   [key: string]: unknown;
@@ -25,14 +30,10 @@ export interface ComparisonData {
 
 interface ForecastSectionProps {
   chartData: ChartDataPoint[]; 
-  comparisonData: ComparisonData | null; 
   dailyData: StrictDailyWeather; 
   weeklyExtremes: { min: number; max: number };
-  unit: WeatherUnit; 
   lang: Language; 
   onDayClick: (index: number) => void;
-  comparisonEnabled: boolean;
-  showCharts?: boolean;
 }
 
 // HELPER RISC ZERO
@@ -53,6 +54,15 @@ const getSafeLocale = (lang: Language): string => {
   }
 };
 
+// HELPER RISC ZERO — mateix patró que useDayDetailData.ts: mes extret directe de
+// l'ISO string, mai via `new Date().getMonth()`, per no dependre del fus horari
+// del navegador.
+const getSafeMonthFromIso = (isoString: string | undefined): number => {
+  if (!isoString || isoString.length < 7) return new Date().getMonth();
+  const monthNum = parseInt(isoString.slice(5, 7), 10);
+  return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
+};
+
 // DICCIONARI TÀCTIC INTERN PEL BOTÓ
 const I18N_BTN = {
   ca: "GRÀFIC",
@@ -61,12 +71,22 @@ const I18N_BTN = {
   en: "CHART"
 };
 
+// [FIX PRECISIÓ] Abans l'aria-label estava fix en català independentment de
+// `lang`, tot i que el text visible (I18N_BTN) sí que es traduïa.
+const I18N_ARIA_CHART_BTN = {
+  ca: "Obrir gràfic de temperatures",
+  es: "Abrir gráfico de temperaturas",
+  fr: "Ouvrir le graphique des températures",
+  en: "Open temperature chart"
+};
+
 const ForecastSection = memo(function ForecastSection({ 
-  chartData, comparisonData, dailyData, weeklyExtremes, unit, lang, onDayClick, comparisonEnabled, showCharts = true 
+  chartData, dailyData, weeklyExtremes, lang, onDayClick 
 }: ForecastSectionProps) {
   
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
   const btnText = I18N_BTN[lang] || I18N_BTN['ca'];
+  const btnAriaLabel = I18N_ARIA_CHART_BTN[lang] || I18N_ARIA_CHART_BTN['ca'];
   
   const { 
     isOpen: isTrendModalOpen, 
@@ -99,7 +119,7 @@ const ForecastSection = memo(function ForecastSection({
           <button 
             onClick={openTrendModal}
             className="group relative flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-cyan-500/30 hover:bg-cyan-950/40 hover:border-cyan-400 transition-all duration-300 backdrop-blur-md cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-            aria-label="Obrir gràfic de temperatures"
+            aria-label={btnAriaLabel}
           >
             {/* Escombrada de Llum (Sweep Effect) */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
@@ -118,7 +138,7 @@ const ForecastSection = memo(function ForecastSection({
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 relative z-10">
-          {dailyData.time.slice(1).map((rawDate: unknown, index: number) => {
+          {dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
             if (typeof rawDate !== 'string') return null;
             const date = new Date(rawDate);
             if (isNaN(date.getTime())) return null;
@@ -127,31 +147,63 @@ const ForecastSection = memo(function ForecastSection({
             const dayName = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'long' });
             const dateNum = date.getDate();
             
-            const maxTemp = getSafeArrayNum(dailyData.temperature_2m_max, i);
-            const minTemp = getSafeArrayNum(dailyData.temperature_2m_min, i);
+            const rawMaxTemp = getSafeArrayNum(dailyData.temperature_2m_max, i);
+            const rawMinTemp = getSafeArrayNum(dailyData.temperature_2m_min, i);
             const rawCode = getSafeArrayNum(dailyData.weather_code, i);
             const precipProb = getSafeArrayNum(dailyData.precipitation_probability_max, i);
             const precipSum = getSafeArrayNum(dailyData.precipitation_sum, i);
             const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i); 
             const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
 
-            // MOTOR VISUAL INTEL·LIGENT
+            // Hores d'aquest dia dins el chart horari complet (reutilitzat per la
+            // correcció d'inversió i per la icona de núvols, més avall)
+            const dateOnly = rawDate.slice(0, 10);
+            const dayHours = (Array.isArray(chartData) && chartData.length > 0)
+              ? chartData.filter(d => typeof d.time === 'string' && d.time.startsWith(dateOnly))
+              : [];
+
+            // [FIX PRECISIÓ] dailyData.temperature_2m_max/min és un valor de model en
+            // brut. Busquem dins les hores reals d'aquest dia quina és la més freda i
+            // la més càlida i apliquem getInversionCorrectedTemp NOMÉS a aquestes
+            // hores concretes, amb el seu propi mes — mateix patró que Forecast24h.tsx
+            // i DayDetailModal.tsx. Sense dades horàries per aquest dia, es manté el
+            // valor cru com a fallback.
+            let maxTemp = rawMaxTemp;
+            let minTemp = rawMinTemp;
+
+            const numericDayHours = dayHours.filter(
+              (d): d is ChartDataPoint & { temp: number } => typeof d.temp === 'number' && !isNaN(d.temp)
+            );
+
+            if (numericDayHours.length > 0) {
+              const hottestHour = numericDayHours.reduce((a, b) => (b.temp > a.temp ? b : a));
+              const coldestHour = numericDayHours.reduce((a, b) => (b.temp < a.temp ? b : a));
+
+              const toStrictCurrent = (h: ChartDataPoint & { temp: number }) => ({
+                temperature_2m: h.temp,
+                cloud_cover_low: typeof h.cloudLow === 'number' ? h.cloudLow : 0,
+                cloud_cover_mid: typeof h.cloudMid === 'number' ? h.cloudMid : 0,
+                cloud_cover_high: typeof h.cloudHigh === 'number' ? h.cloudHigh : 0,
+                wind_speed_10m: typeof h.wind === 'number' ? h.wind : 0,
+                is_day: h.isDay
+              } as unknown as StrictCurrentWeather);
+
+              maxTemp = getInversionCorrectedTemp(toStrictCurrent(hottestHour), getSafeMonthFromIso(hottestHour.time));
+              minTemp = getInversionCorrectedTemp(toStrictCurrent(coldestHour), getSafeMonthFromIso(coldestHour.time));
+            }
+
+            // MOTOR VISUAL INTEL·LIGENT — mateixa regla oficial que la resta de l'app
+            // (adjustBaseSkyCode, cloudRules.ts), no uns llindars propis d'aquesta vista.
             let code = rawCode;
-            if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
-              const dateOnly = rawDate.slice(0, 10); 
-              const dayHours = chartData.filter(d => 
-                typeof d.time === 'string' && d.time.startsWith(dateOnly) && d.isDay === 1
-              );
-              if (dayHours.length > 0) {
-                const totalClouds = dayHours.reduce((acc, curr) => {
+            if (rawCode <= 3) {
+              const daylightHours = dayHours.filter(d => d.isDay === 1);
+              if (daylightHours.length > 0) {
+                const totalClouds = daylightHours.reduce((acc, curr) => {
                   const c = Number(curr.cloud);
                   return acc + (isNaN(c) ? 0 : c);
                 }, 0);
-                const avgClouds = totalClouds / dayHours.length;
-                if (avgClouds > 85) code = 3;
-                else if (avgClouds > 45) code = 2;
-                else if (avgClouds > 15) code = 1;
-                else code = 0;
+                const avgClouds = totalClouds / daylightHours.length;
+                code = adjustBaseSkyCode(rawCode, avgClouds);
               }
             }
 
@@ -222,20 +274,6 @@ const ForecastSection = memo(function ForecastSection({
           })}
         </div>
       </div>
-
-      {showCharts && comparisonEnabled && (
-         <div className={PANEL_STYLE}>
-          <div className={MATRIX_BG}></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none mix-blend-screen z-0"></div>
-          <h3 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300 relative z-10">
-            <TrendingUp className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]"/> 
-            {typeof tRecord.trend24h === 'string' ? tRecord.trend24h : "TENDÈNCIA"}
-          </h3>
-          <div className="relative z-10">
-            <SmartForecastCharts data={chartData} comparisonData={comparisonData} unit={unit === 'F' ? '°F' : '°C'} lang={lang} />
-          </div>
-        </div>
-      )}
 
       {/* COMPONENT MODAL AÏLLAT */}
       <TrendChartModal 

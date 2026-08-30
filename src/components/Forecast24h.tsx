@@ -7,6 +7,7 @@ import { Language } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 
 // HELPER DE DOCTRINA RISC ZERO: Extracció matemàticament segura d'arrays dinàmics
 const getSafeNum = (arr: unknown, index: number, fallback: number = 0): number => {
@@ -17,14 +18,14 @@ const getSafeNum = (arr: unknown, index: number, fallback: number = 0): number =
 };
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
-    const { hourly, current, utc_offset_seconds } = data;
+    const { hourly, current, utc_offset_seconds, hourlyComparison } = data;
     
     // EXTRACCIÓ TÀCTICA DE SEGURETAT (Solució TS2345 / TS18046)
     const safeElevation = typeof data.elevation === 'number' && !isNaN(data.elevation) ? data.elevation : 0;
     
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
     const isArome = current?.source === 'AROME HD';
-    const sourceLabel = isArome ? 'AROME HD' : 'GFS / GLOBAL';
+    const sourceLabel = isArome ? 'AROME HD' : 'MODEL GLOBAL';
 
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time) || hourly.time.length === 0) return [];
@@ -66,7 +67,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const hours = String(dateObj.getHours()).padStart(2, '0');
             
             // EXTRACCIÓ BLINDADA: Evitem trencaments si l'API de Meteo omet capes
-            const temp = getSafeNum(hourly.temperature_2m, targetIndex);
+            const rawTemp = getSafeNum(hourly.temperature_2m, targetIndex);
             const pProb = getSafeNum(hourly.precipitation_probability, targetIndex);
             const pAmt = getSafeNum(hourly.precipitation, targetIndex);
             const windSpeed = getSafeNum(hourly.wind_speed_10m, targetIndex);
@@ -86,9 +87,47 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const isDayNum = getSafeNum(hourly.is_day, targetIndex, 1);
             const isDay = isDayNum === 1;
 
+            // [FIX PRECISIÓ] Apliquem la mateixa correcció d'inversió tèrmica que ja
+            // s'usa a la capçalera (useCurrentWeatherLogic) i a DayDetailModal, perquè
+            // el "ARA" d'aquesta tira no mostri una xifra diferent de la de dalt, i
+            // perquè applyThermalLock (weatherLogic.ts) decideixi neu/gel/pluja amb la
+            // temperatura de superfície real i no amb la del model en brut.
+            // Passem el mes de CADA hora (no el d'avui), tal com exigeix la firma
+            // actualitzada de getInversionCorrectedTemp per a hores futures.
+            const temp = getInversionCorrectedTemp(
+                {
+                    temperature_2m: rawTemp,
+                    is_day: isDayNum,
+                    wind_speed_10m: windSpeed,
+                    cloud_cover_low: cloudLow,
+                    cloud_cover_mid: cloudMid,
+                    cloud_cover_high: cloudHigh,
+                } as unknown as StrictCurrentWeather,
+                dateObj.getMonth()
+            );
+
             let freezingLevel = getSafeNum(hourly.freezing_level_height, targetIndex, -1);
             if (freezingLevel === -1) {
-                freezingLevel = Math.max(safeElevation, safeElevation + (temp / 0.0065));
+                // [FIX PRECISIÓ] Abans de recórrer a la nostra extrapolació, mirem si algun
+                // dels models de comparació (ecmwf/gfs/icon) sí que porta aquesta dada per a
+                // la mateixa hora — mateix ordre de prioritat que useDayDetailData.ts, per
+                // evitar que els dos components divergeixin en la cota de neu. Són valors
+                // reals d'un model, més fiables que una extrapolació de gradient estàndard.
+                const ecmwfVal = hourlyComparison?.ecmwf?.[targetIndex]?.freezing_level_height;
+                const gfsVal = hourlyComparison?.gfs?.[targetIndex]?.freezing_level_height;
+                const iconVal = hourlyComparison?.icon?.[targetIndex]?.freezing_level_height;
+                const comparisonFl = typeof ecmwfVal === 'number' ? ecmwfVal
+                    : typeof gfsVal === 'number' ? gfsVal
+                    : typeof iconVal === 'number' ? iconVal
+                    : null;
+
+                if (comparisonFl !== null) {
+                    freezingLevel = comparisonFl;
+                } else {
+                    // Últim recurs: extrapolació pròpia amb rawTemp (temperatura de model,
+                    // no corregida per inversió — vegeu nota de dalt).
+                    freezingLevel = Math.max(safeElevation, safeElevation + (rawTemp / 0.0065));
+                }
             }
 
             // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb l'estructura que demana TS2352
@@ -136,7 +175,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         }
         
         return rows;
-    }, [hourly, lang, utc_offset_seconds, safeElevation]);
+    }, [hourly, lang, utc_offset_seconds, safeElevation, hourlyComparison]);
 
     if (hourlyChartData.length === 0) return null;
 

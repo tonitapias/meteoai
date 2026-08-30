@@ -100,14 +100,10 @@ export const DashboardContent = () => {
                     <Suspense fallback={<SectionSkeleton />}>
                         <ForecastSection 
                             chartData={calculations.chartDataFull || []} 
-                            comparisonData={calculations.comparisonData || null} 
                             dailyData={weatherData.daily}
                             weeklyExtremes={calculations.weeklyExtremes} 
-                            unit={flags.unit} 
                             lang={flags.lang} 
                             onDayClick={actions.setSelectedDayIndex}
-                            comparisonEnabled={isExpert} 
-                            showCharts={false} 
                         />
                     </Suspense>
 
