@@ -11,7 +11,7 @@ import {
 
 interface SingleHourlyChartProps {
     data: ChartDataPoint[];
-    comparisonData: { gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
+    comparisonData: { ecmwf?: ChartDataPoint[], gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
     layer: 'temp' | 'rain' | 'precip' | 'wind' | 'cloud' | 'humidity' | 'snowLevel';
     unit: string;
     hoveredIndex: number | null;
@@ -86,7 +86,7 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
   const paddingY = 35;
 
   const chartPoints = useMemo(() => {
-    if (!data || data.length === 0) return { points: [], gfsPoints: [], iconPoints: [] };
+    if (!data || data.length === 0) return { points: [], ecmwfPoints: [], gfsPoints: [], iconPoints: [] };
     
     const extractRaw = (d: ChartDataPoint): number | null => {
         let val: unknown = undefined;
@@ -101,6 +101,9 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
 
     let allValues: number[] = data.map(extractRaw).filter((v): v is number => v !== null);
     
+    if (comparisonData?.ecmwf) {
+        allValues = [...allValues, ...comparisonData.ecmwf.map(extractRaw).filter((v): v is number => v !== null)];
+    }
     if (comparisonData?.gfs) {
         allValues = [...allValues, ...comparisonData.gfs.map(extractRaw).filter((v): v is number => v !== null)];
     }
@@ -115,12 +118,13 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
 
     return {
         points: generateGraphPoints(data, dims, domain, dataKey),
+        ecmwfPoints: comparisonData?.ecmwf ? generateGraphPoints(comparisonData.ecmwf, dims, domain, dataKey) : [],
         gfsPoints: comparisonData?.gfs ? generateGraphPoints(comparisonData.gfs, dims, domain, dataKey) : [],
         iconPoints: comparisonData?.icon ? generateGraphPoints(comparisonData.icon, dims, domain, dataKey) : [],
     };
   }, [data, comparisonData, layer, height, dataKey, width, paddingX, paddingY]);
 
-  const { points, gfsPoints, iconPoints } = chartPoints;
+  const { points, ecmwfPoints, gfsPoints, iconPoints } = chartPoints;
   const safeLength = Math.max(1, points.length); 
   const rectWidth = width / safeLength;
 
@@ -133,18 +137,20 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
       return { 
           linePath, 
           areaPath, 
+          ecmwfPath: comparisonData?.ecmwf ? generateSmoothPath(ecmwfPoints, height) : "",
           gfsPath: comparisonData?.gfs ? generateSmoothPath(gfsPoints, height) : "", 
           iconPath: comparisonData?.icon ? generateSmoothPath(iconPoints, height) : "" 
       };
-  }, [points, gfsPoints, iconPoints, height, comparisonData, width, paddingX]);
+  }, [points, ecmwfPoints, gfsPoints, iconPoints, height, comparisonData, width, paddingX]);
 
   if (!data || data.length === 0) return null;
 
   const hoverData = hoveredIndex !== null && hoveredIndex < points.length ? points[hoveredIndex] : null;
+  const hoverEcmwf = hoveredIndex !== null && hoveredIndex < ecmwfPoints.length ? ecmwfPoints[hoveredIndex] : null;
   const hoverGfs = hoveredIndex !== null && hoveredIndex < gfsPoints.length ? gfsPoints[hoveredIndex] : null;
   const hoverIcon = hoveredIndex !== null && hoveredIndex < iconPoints.length ? iconPoints[hoveredIndex] : null;
   
-  const showComparison = (hoverGfs && hoverGfs.value !== null) || (hoverIcon && hoverIcon.value !== null);
+  const showComparison = (hoverEcmwf && hoverEcmwf.value !== null) || (hoverGfs && hoverGfs.value !== null) || (hoverIcon && hoverIcon.value !== null);
   const fmtVal = (val: number | null | undefined): string => (val == null) ? "-" : (layer === 'precip' ? val.toFixed(1) : Math.round(val).toString());
 
   // SPATIAL UI BASE
@@ -166,7 +172,6 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
         <div 
           className="absolute z-20 pointer-events-none flex flex-col rounded-xl bg-[#050608]/95 backdrop-blur-xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-75 ease-out overflow-hidden"
           style={{ 
-            // Càlcul blindat per evitar overflow als laterals en dispositius mòbils
             left: `${Math.min(width - 80, Math.max(80, hoverData.x))}px`, 
             top: '12px', 
             transform: 'translateX(-50%)',
@@ -186,6 +191,12 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
             
             {showComparison && (
               <div className="flex flex-col gap-1 text-[11px] font-bold w-full border-t border-white/5 pt-1.5 mt-0.5">
+                {hoverEcmwf?.value != null && (
+                  <div style={{ color: CHART_COLORS.models.ecmwf }} className="flex justify-between px-1">
+                    <span className="text-slate-500 text-[9px] font-medium tracking-wide">ECMWF:</span>
+                    <span>{fmtVal(hoverEcmwf.value)}{unit}</span>
+                  </div>
+                )}
                 {hoverGfs?.value != null && (
                   <div style={{ color: CHART_COLORS.models.gfs }} className="flex justify-between px-1">
                     <span className="text-slate-500 text-[9px] font-medium tracking-wide">GFS:</span>
@@ -224,6 +235,7 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
 
         {/* Polílínies dels models de predicció */}
         {paths.areaPath && <path d={paths.areaPath} fill={`url(#gradient-${layer})`} className="transition-all duration-500 ease-out" />}
+        {paths.ecmwfPath && <path d={paths.ecmwfPath} fill="none" stroke={CHART_COLORS.models.ecmwf} strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="6 3"/>}
         {paths.gfsPath && <path d={paths.gfsPath} fill="none" stroke={CHART_COLORS.models.gfs} strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="3 5"/>}
         {paths.iconPath && <path d={paths.iconPath} fill="none" stroke={CHART_COLORS.models.icon} strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round" strokeDasharray="1 4"/>}
         {paths.linePath && <path d={paths.linePath} fill="none" stroke={currentConfig.color} strokeWidth="3" strokeLinecap="round" filter="url(#glow)" className="transition-all duration-500 ease-out" />}
@@ -257,6 +269,7 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
             <line x1={hoverData.x} y1={0} x2={hoverData.x} y2={height - paddingY} stroke={currentConfig.color} strokeWidth="1.5" strokeDasharray="4 4" opacity="0.6" />
             
             {/* Targetes de nodes */}
+            {hoverEcmwf?.value != null && <circle cx={hoverEcmwf.x} cy={hoverEcmwf.y} r="3.5" fill={CHART_COLORS.models.ecmwf} stroke="#050608" strokeWidth="1.5" opacity="0.9" />}
             {hoverGfs?.value != null && <circle cx={hoverGfs.x} cy={hoverGfs.y} r="3.5" fill={CHART_COLORS.models.gfs} stroke="#050608" strokeWidth="1.5" opacity="0.9" />}
             {hoverIcon?.value != null && <circle cx={hoverIcon.x} cy={hoverIcon.y} r="3.5" fill={CHART_COLORS.models.icon} stroke="#050608" strokeWidth="1.5" opacity="0.9" />}
             
@@ -273,7 +286,7 @@ SingleHourlyChart.displayName = 'SingleHourlyChart';
 
 interface SmartForecastChartsProps {
     data: ChartDataPoint[];
-    comparisonData: { gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
+    comparisonData: { ecmwf?: ChartDataPoint[], gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
     unit: string;
     lang?: Language;
 }
@@ -377,7 +390,6 @@ interface MinutelyPreciseChartProps {
 }
 
 export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPrecip = 0 }: MinutelyPreciseChartProps) => {
-    // SOLUCIÓ RISC ZERO (prefer-const): Bloquegem chartData per prevenir mutacions col·laterals
     const chartData = Array.isArray(data) ? [...data] : [];
     let processedData = chartData.map(v => v !== null && v !== undefined && !isNaN(v) ? v : 0);
     
@@ -387,7 +399,6 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPreci
     
     if (processedData.every(v => v === 0)) return null;
     
-    // Assegurem que l'escala tingui un màxim lògic per evitar divisions per zero
     const max = Math.max(...processedData, 0.5); 
     
     const getIntensityColor = (val: number): string => {
@@ -397,7 +408,6 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPreci
         return 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.8)]';                     
     };
 
-    // SPATIAL UI BASE
     const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (

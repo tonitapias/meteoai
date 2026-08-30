@@ -1,6 +1,14 @@
 // src/hooks/useDayDetailData.ts
 import { useMemo } from 'react';
-import { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
+import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes'; 
+import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+
+const getSafeMonthFromIso = (isoString: string | undefined): number => {
+    if (!isoString || isoString.length < 7) return new Date().getMonth();
+    const monthNum = parseInt(isoString.slice(5, 7), 10);
+    return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
+};
 
 export const useDayDetailData = (
   weatherData: ExtendedWeatherData | null, 
@@ -49,33 +57,45 @@ export const useDayDetailData = (
     return dayIndices.map((idx: number) => {
         let fl = weatherData.hourly.freezing_level_height?.[idx];
         if (fl == null) {
+             const ecmwfVal = compRaw?.ecmwf?.[idx]?.freezing_level_height;
              const gfsVal = compRaw?.gfs?.[idx]?.freezing_level_height;
              const iconVal = compRaw?.icon?.[idx]?.freezing_level_height;
-             fl = (typeof gfsVal === 'number' ? gfsVal : typeof iconVal === 'number' ? iconVal : null);
+             fl = (typeof ecmwfVal === 'number' ? ecmwfVal 
+                 : typeof gfsVal === 'number' ? gfsVal 
+                 : typeof iconVal === 'number' ? iconVal 
+                 : null);
         }
         
-        const snowLevel = (fl != null) ? Math.max(0, fl - 300) : null;
+        const snowLevel = (fl != null) ? Math.max(0, fl - WEATHER_THRESHOLDS.SNOW.FREEZING_BUFFER) : null;
 
-        // Injecció de l'Alta Resolució utilitzant l'arrel mapejada (compRaw)
-        const aromeData = compRaw?.arome?.[idx];
-        
-        const precip = (typeof aromeData?.precipitation === 'number') 
-            ? aromeData.precipitation 
-            : weatherData.hourly.precipitation?.[idx];
-
-        const rainProb = (typeof aromeData?.precipitation_probability === 'number')
-            ? aromeData.precipitation_probability
-            : weatherData.hourly.precipitation_probability?.[idx];
-
-        // Extracció blindada de cloud_cover des de l'arrel hRaw
+        // [NETEJA] Abans hi havia un bloc que llegia compRaw?.arome per a precip/rainProb/
+        // cloudCover. normData.ts mai crea hourlyComparison.arome (només ecmwf/gfs/icon),
+        // així que sempre queia al fallback — retirat, comportament idèntic.
+        const precip = weatherData.hourly.precipitation?.[idx];
+        const rainProb = weatherData.hourly.precipitation_probability?.[idx];
         const baseCloudCover = hRaw.cloud_cover?.[idx];
-        const cloudCover = (typeof aromeData?.cloud_cover === 'number')
-            ? aromeData.cloud_cover
-            : (typeof baseCloudCover === 'number' ? baseCloudCover : 0);
+        const cloudCover = typeof baseCloudCover === 'number' ? baseCloudCover : 0;
+
+        const time = weatherData.hourly.time[idx];
+        const rawTemp = weatherData.hourly.temperature_2m[idx];
+
+        const temp = (typeof rawTemp === 'number')
+            ? getInversionCorrectedTemp(
+                {
+                    temperature_2m: rawTemp,
+                    cloud_cover_low: hRaw.cloud_cover_low?.[idx] ?? 0,
+                    cloud_cover_mid: hRaw.cloud_cover_mid?.[idx] ?? 0,
+                    cloud_cover_high: hRaw.cloud_cover_high?.[idx] ?? 0,
+                    wind_speed_10m: weatherData.hourly.wind_speed_10m[idx],
+                    is_day: hRaw.is_day?.[idx] ?? 1
+                } as unknown as StrictCurrentWeather,
+                getSafeMonthFromIso(time)
+              )
+            : rawTemp;
 
         return {
-            time: weatherData.hourly.time[idx],
-            temp: weatherData.hourly.temperature_2m[idx],
+            time,
+            temp,
             rain: rainProb,
             snowLevel,
             precip: precip,
@@ -110,6 +130,7 @@ export const useDayDetailData = (
       };
 
       return {
+          ecmwf: extract(compRaw.ecmwf || []),
           gfs: extract(compRaw.gfs || []),
           icon: extract(compRaw.icon || [])
       };
@@ -125,10 +146,14 @@ export const useDayDetailData = (
      const min = Math.round(Math.min(...levels));
      const max = Math.round(Math.max(...levels));
      
-     if (min > 4500) return "> 4500m";
+     const cap = WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
+     if (min > cap) return `> ${cap}m`;
      if (Math.abs(max - min) < 50) return `${min}m`;
      return `${min} - ${max}m`;
   }, [hourlyData]);
 
-  return { dayData, hourlyData, comparisonData, snowLevelText };
+  // [NETEJA] Exposem dayIndices perquè DayDetailModal.tsx el pugui reutilitzar a
+  // tableRows en lloc de recalcular "les 24 hores del dia" amb una lògica pròpia
+  // que assumia un bloc contigu de 24 posicions.
+  return { dayData, hourlyData, comparisonData, snowLevelText, dayIndices };
 };

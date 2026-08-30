@@ -36,6 +36,7 @@ export const CHART_COLORS = {
     },
     // Colors de referència per comparativa (ECMWF vs GFS vs ICON)
     models: {
+        ecmwf: '#fb7185',      // Rose-400 [FIX] Afegit — abans hi mancava tot i que el comentari ja el preveia
         gfs: '#4ade80',        // Green-400
         icon: '#fbbf24'        // Amber-400
     }

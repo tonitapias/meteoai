@@ -7,8 +7,17 @@ import { calculateEffectiveCloudCover } from './cloudRules';
 /**
  * Calcula la temperatura corregida aplicant lògica d'inversió tèrmica intel·ligent.
  * Aquesta funció és PURA: no modifica l'objecte original, retorna un nou valor.
+ *
+ * [FIX PRECISIÓ] 'referenceMonth' ara és un paràmetre (0-indexat, com Date.getMonth())
+ * en lloc de calcular-se sempre amb `new Date()` internament. Per defecte manté el
+ * comportament anterior (mes real d'avui) perquè les crides existents ("ara mateix")
+ * no calgui tocar-les. Per a hores futures d'un dia de previsió, el cridant ha de
+ * passar el mes de l'hora en qüestió, no el d'avui.
  */
-export const getInversionCorrectedTemp = (current: StrictCurrentWeather): number => {
+export const getInversionCorrectedTemp = (
+    current: StrictCurrentWeather,
+    referenceMonth: number = new Date().getMonth()
+): number => {
     const rawTemp = safeNum(current.temperature_2m);
     
     // 1. Recalculem les condicions necessàries
@@ -20,14 +29,13 @@ export const getInversionCorrectedTemp = (current: StrictCurrentWeather): number
     );
 
     const wind = safeNum(current.wind_speed_10m);
-    const currentMonth = new Date().getMonth();
     
     // 2. Avaluem el risc base (usant la regla existent)
     const isInversionLikely = checkInversionRisk(
         current.is_day,
         wind,
         cloudCover,
-        currentMonth
+        referenceMonth
     );
 
     // Si no hi ha risc, retornem la temperatura original de l'API

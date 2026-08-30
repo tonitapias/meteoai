@@ -21,7 +21,7 @@ interface LocationMeta {
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
     const { state, actions, flags, modals } = useAppContext();
-    const { weatherData, calculations } = state;
+    const { weatherData } = state;
 
     // NOU: Instanciem el motor de traduccions
     const { i18n } = useTranslation();
@@ -49,7 +49,6 @@ export const DashboardModals = () => {
                     onClose={() => actions.setSelectedDayIndex(null)} 
                     unit={flags.unit} 
                     lang={flags.lang} 
-                    shiftedNow={calculations.shiftedNow} 
                 />
             )}
             {modals.showRadar && (

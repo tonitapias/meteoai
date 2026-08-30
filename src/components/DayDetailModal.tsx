@@ -7,6 +7,7 @@ import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -63,13 +64,28 @@ const getSafeArrNum = (arr: unknown, index: number, fallback: number = 0): numbe
     return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
 };
 
+// HELPER RISC ZERO: Extreu l'hora d'un ISO string sense passar per Date/fus horari del navegador
+const getSafeHourFromIso = (isoString: string | undefined): number | null => {
+    if (!isoString || !isoString.includes('T')) return null;
+    const timePart = isoString.split('T')[1];
+    if (!timePart) return null;
+    const hour = parseInt(timePart.slice(0, 2), 10);
+    return isNaN(hour) ? null : hour;
+};
+
+// HELPER RISC ZERO: Mes (0-indexat) extret de l'string ISO, per a getInversionCorrectedTemp
+const getSafeMonthFromIso = (isoString: string | undefined): number => {
+    if (!isoString || isoString.length < 7) return new Date().getMonth();
+    const monthNum = parseInt(isoString.slice(5, 7), 10);
+    return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
+};
+
 interface DayDetailModalProps {
   weatherData: ExtendedWeatherData | null;
   selectedDayIndex: number | null;
   onClose: () => void;
   unit: WeatherUnit;
   lang: Language;
-  shiftedNow?: Date;
 }
 
 export default function DayDetailModal({ 
@@ -92,7 +108,7 @@ export default function DayDetailModal({
     colWind: lang === 'en' ? 'WIND' : lang === 'es' ? 'VIENTO' : 'VENT'
   }), [lang]);
 
-  const { dayData, hourlyData, comparisonData, snowLevelText } = useDayDetailData(weatherData, selectedDayIndex);
+  const { dayData, hourlyData, comparisonData, snowLevelText, dayIndices } = useDayDetailData(weatherData, selectedDayIndex);
 
   const handleClose = useCallback(() => {
       window.history.back();
@@ -138,32 +154,29 @@ export default function DayDetailModal({
   }, [dayData, weatherData, selectedDayIndex]);
 
   const tableRows = useMemo<TableRowData[]>(() => {
-    if (!weatherData || selectedDayIndex === null || !weatherData.hourly || !Array.isArray(weatherData.hourly.time)) return [];
-    
-    const dateStr = weatherData.daily.time[selectedDayIndex];
-    if (typeof dateStr !== 'string') return [];
-
-    const startIndex = weatherData.hourly.time.findIndex((timeStr) => typeof timeStr === 'string' && timeStr.startsWith(dateStr));
-    if (startIndex === -1) return [];
+    if (!weatherData || !weatherData.hourly || !Array.isArray(weatherData.hourly.time) || dayIndices.length === 0) return [];
 
     let sunriseHour = 7;
     let sunsetHour = 20;
     
-    if (Array.isArray(weatherData.daily.sunrise) && Array.isArray(weatherData.daily.sunset)) {
+    if (selectedDayIndex !== null && Array.isArray(weatherData.daily.sunrise) && Array.isArray(weatherData.daily.sunset)) {
         const sr = weatherData.daily.sunrise[selectedDayIndex];
         const ss = weatherData.daily.sunset[selectedDayIndex];
-        if (typeof sr === 'string') sunriseHour = new Date(sr).getHours();
-        if (typeof ss === 'string') sunsetHour = new Date(ss).getHours();
+        const parsedSunrise = typeof sr === 'string' ? getSafeHourFromIso(sr) : null;
+        const parsedSunset = typeof ss === 'string' ? getSafeHourFromIso(ss) : null;
+        if (parsedSunrise !== null) sunriseHour = parsedSunrise;
+        if (parsedSunset !== null) sunsetHour = parsedSunset;
     }
 
     const rows: TableRowData[] = [];
     const hRaw = weatherData.hourly as unknown as Record<string, unknown>;
     const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
 
-    for (let i = 0; i < 24; i++) {
-        const idx = startIndex + i;
-        if (idx >= weatherData.hourly.time.length) break;
-
+    // [NETEJA] Abans: for (let i=0; i<24; i++) amb idx = startIndex + i, calculat amb
+    // un findIndex propi — assumia un bloc contigu de 24 hores. Ara reutilitzem
+    // dayIndices del hook (useDayDetailData), que filtra per data real i és robust
+    // encara que hi hagi menys/més de 24 hores o algun forat.
+    for (const idx of dayIndices) {
         const time = weatherData.hourly.time[idx];
         if (typeof time !== 'string') continue;
 
@@ -193,6 +206,8 @@ export default function DayDetailModal({
         }
 
         // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb validació creuada
+        // [NOTA] temperature_2m aquí es manté CRUA a propòsit: la correcció d'inversió
+        // només s'aplica a la temperatura MOSTRADA (displayTemp, més avall).
         const simulatedCurrent = {
             time: time,
             weather_code: rawCode,
@@ -219,9 +234,21 @@ export default function DayDetailModal({
             elevation
         );
 
+        const displayTemp = getInversionCorrectedTemp(
+            {
+                temperature_2m: temp,
+                cloud_cover_low: cloudLow,
+                cloud_cover_mid: cloudMid,
+                cloud_cover_high: cloudHigh,
+                wind_speed_10m: windSpeed,
+                is_day: isDayNum
+            } as unknown as StrictCurrentWeather,
+            getSafeMonthFromIso(time)
+        );
+
         rows.push({
             hour: time.split('T')[1]?.slice(0, 5) || "--:--",
-            temp,
+            temp: displayTemp,
             code: finalCode, // [Codi processat per motor]
             precipProb,
             precipSum,
@@ -232,15 +259,14 @@ export default function DayDetailModal({
     }
 
     return rows;
-  }, [weatherData, selectedDayIndex]);
+  }, [weatherData, selectedDayIndex, dayIndices]);
 
   if (!dayData) return null;
 
   const formatTime = (isoString?: string) => {
-      if (!isoString) return "--:--";
-      try {
-          return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
-      } catch { return "--:--"; }
+      if (!isoString || !isoString.includes('T')) return "--:--";
+      const timePart = isoString.split('T')[1];
+      return timePart ? timePart.slice(0, 5) : "--:--";
   };
 
   const formatDate = (isoString: string) => {
@@ -256,10 +282,8 @@ export default function DayDetailModal({
   const safeWindMax = typeof dayData.windMax === 'number' && !isNaN(dayData.windMax) ? Math.round(dayData.windMax) : '--';
   const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? dayData.uvMax.toFixed(1) : '--';
   
-  const safeSnowLevel = typeof snowLevelText === 'number' && !isNaN(snowLevelText) 
-    ? Math.round(snowLevelText) 
-    : (snowLevelText === '--' ? '--' : snowLevelText);
-  const snowLevelUnit = safeSnowLevel !== '--' && typeof snowLevelText === 'number' ? (unit === 'F' ? 'ft' : 'm') : '';
+  const safeSnowLevel = snowLevelText;
+  const snowLevelUnit = '';
 
   const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 

@@ -5,7 +5,10 @@ export const API_MAX_RETRIES = 2;
 
 // --- PARÀMETRES GENERALS DE LA PETICIÓ ---
 export const API_FORECAST_DAYS = "8"; // Dies de previsió
-export const API_MODELS_LIST = "best_match,ecmwf_ifs04,gfs_seamless,icon_seamless"; // Models base
+// [FIX PRECISIÓ] 'ecmwf_ifs04' és l'identificador antic (0.4°), retirat per Open-Meteo
+// en favor de 'ecmwf_ifs025' (0.25°). Amb l'antic, Open-Meteo no retornava mai
+// dades ECMWF (per això hourlyComparison.ecmwf sempre quedava buit).
+export const API_MODELS_LIST = "best_match,ecmwf_ifs025,gfs_seamless,icon_seamless"; // Models base
 export const AROME_MODELS_LIST = "meteofrance_arome_france_hd"; // Model alta resolució
 
 // --- CONFIGURACIÓ DE VARIABLES METEOROLÒGIQUES ---
