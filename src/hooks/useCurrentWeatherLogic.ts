@@ -71,7 +71,7 @@ export const useCurrentWeatherLogic = ({
             },
             meta: {
                 locationName: loc?.name,
-                country: loc?.country || "LOCAL",
+                country: loc?.country,
                 isUsingArome: current.source === 'AROME HD',
                 time: displayTimeStr,
                 date: dateStr,

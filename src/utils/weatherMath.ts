@@ -1,5 +1,4 @@
 // src/utils/weatherMath.ts
-import { StrictDailyWeather, ReliabilityResult } from '../types/weatherModels';
 
 // --- UTILITATS MATEMÀTIQUES I FÍSIQUES (DOCTRINA RISC ZERO) ---
 
@@ -71,55 +70,7 @@ export const isAromeSupported = (lat: number | null | undefined, lon: number | n
     return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
 };
 
-/**
- * Compara els 3 grans models (ECMWF, GFS, ICON) per determinar la fiabilitat.
- * Protegit contra matrius buides i errors de model (forats de dades).
- */
-export const calculateReliability = (
-    dailyBest?: StrictDailyWeather | null, 
-    dailyGFS?: StrictDailyWeather | null, 
-    dailyICON?: StrictDailyWeather | null, 
-    dayIndex: number = 0
-): ReliabilityResult => {
-    
-    // 1. Extracció segura de dades per al dia sol·licitat, filtrant els nulls
-    const validTemps = [
-        extractValidNum(dailyBest?.temperature_2m_max?.[dayIndex]),
-        extractValidNum(dailyGFS?.temperature_2m_max?.[dayIndex]),
-        extractValidNum(dailyICON?.temperature_2m_max?.[dayIndex])
-    ].filter((t): t is number => t !== null);
-
-    const validPrecips = [
-        extractValidNum(dailyBest?.precipitation_sum?.[dayIndex]),
-        extractValidNum(dailyGFS?.precipitation_sum?.[dayIndex]),
-        extractValidNum(dailyICON?.precipitation_sum?.[dayIndex])
-    ].filter((p): p is number => p !== null);
-
-    // 2. Si no tenim dades suficients per comparar com a mínim 2 models, declarem incertesa
-    if (validTemps.length < 2 && validPrecips.length < 2) {
-        return { level: 'medium', type: 'general', value: 0 }; 
-    }
-    
-    // 3. Càlcul de divergències protegit contra Infinity (Math.max amb matrius buides)
-    const diffTemp = validTemps.length >= 2 
-        ? Math.max(...validTemps) - Math.min(...validTemps) 
-        : 0;
-        
-    const diffPrecip = validPrecips.length >= 2 
-        ? Math.max(...validPrecips) - Math.min(...validPrecips) 
-        : 0;
-
-    // 4. Avaluació dels llindars
-    if (diffTemp > 5) {
-        return { level: 'low', type: 'temp', value: Number(diffTemp.toFixed(1)) };
-    }
-    if (diffPrecip > 10) {
-        return { level: 'low', type: 'precip', value: Number(diffPrecip.toFixed(1)) };
-    }
-    
-    if (diffTemp > 2 || diffPrecip > 3) {
-        return { level: 'medium', type: 'divergent', value: 0 };
-    }
-    
-    return { level: 'high', type: 'ok', value: 0 };
-};
+// [NETEJA] calculateReliability s'ha retirat d'aquí: la comparació ECMWF/GFS/ICON
+// viu ara a utils/rules/reliabilityRules.ts, que és la que fan servir
+// useAIAnalysis.ts i useCurrentConditions.ts. Aquesta còpia no tenia cap referència
+// real (confirmat via weatherLogic.test.ts, que ja importa la de rules/).

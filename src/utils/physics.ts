@@ -8,6 +8,5 @@ export {
     getShiftedDate,
     calculateDewPoint,
     getMoonPhase,
-    isAromeSupported,
-    calculateReliability
+    isAromeSupported
 } from './weatherMath';

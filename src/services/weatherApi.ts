@@ -4,7 +4,6 @@ import { ZodType, ZodTypeDef } from "zod";
 import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
 import { WeatherData, AirQualityData } from "../types/weather";
 
-// IMPORTS DE LA CONFIGURACIÓ
 import { 
     API_TIMEOUT_DEFAULT, 
     API_MAX_RETRIES,
@@ -20,13 +19,11 @@ import {
     AROME_HOURLY
 } from "../constants/apiConfig";
 
-// CONFIGURACIÓ DE L'ENTORN
 const BASE_URL = import.meta.env.VITE_API_WEATHER_BASE || "https://api.open-meteo.com/v1/forecast";
 const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-quality-api.open-meteo.com/v1/air-quality";
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || API_TIMEOUT_DEFAULT;
 const MAX_RETRIES = API_MAX_RETRIES;
 
-// --- Utilitat interna: Timeout ---
 const fetchWithTimeout = async (url: string): Promise<Response> => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -40,7 +37,6 @@ const fetchWithTimeout = async (url: string): Promise<Response> => {
     }
 };
 
-// --- Utilitat interna: Retry Logic ---
 const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RETRIES): Promise<Response> => {
     for (let i = 0; i <= retries; i++) {
         try {
@@ -96,7 +92,6 @@ const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RET
     throw new Error("Unexpected retry loop exit");
 };
 
-// --- Normalitzador i Sanejador de Models (Doctrina Risc Zero) ---
 const normalizeModelKeys = <T = unknown>(data: unknown): T => {
     if (!data || typeof data !== 'object') return data as T;
     
@@ -105,11 +100,9 @@ const normalizeModelKeys = <T = unknown>(data: unknown): T => {
         const typedObj = obj as Record<string, unknown>;
         const newObj: Record<string, unknown> = {};
         
-        // Fase 1: Sanejament estricte de matrius
         Object.keys(typedObj).forEach(key => {
             const value = typedObj[key];
             if (Array.isArray(value)) {
-                // Forcem `null` davant qualsevol forat de dades (NaN, undefined, string buit)
                 newObj[key] = value.map(v => 
                     (v === null || v === undefined || Number.isNaN(v) || v === "") ? null : v
                 );
@@ -118,7 +111,6 @@ const normalizeModelKeys = <T = unknown>(data: unknown): T => {
             }
         });
 
-        // Fase 2: Aplicació del best_match
         Object.keys(newObj).forEach(key => {
             if (key.endsWith('_best_match')) {
                 const baseKey = key.replace('_best_match', '');
@@ -140,7 +132,6 @@ const normalizeModelKeys = <T = unknown>(data: unknown): T => {
     return normalized as T;
 };
 
-// --- Validació Zod Genèrica ---
 const validateData = <T>(schema: ZodType<T, ZodTypeDef, unknown>, data: unknown, context: string): T => {
     const cleanData = normalizeModelKeys<unknown>(data);
     const result = schema.safeParse(cleanData);
@@ -164,6 +155,10 @@ const validateData = <T>(schema: ZodType<T, ZodTypeDef, unknown>, data: unknown,
 };
 
 // 1. Funció Principal
+// [FIX PRECISIÓ] Ja NO demanem temperature_unit a l'API: sempre Celsius (com AROME, i com
+// el valor per defecte d'Open-Meteo). La conversió C→F es fa NOMÉS a formatTemp(), en un sol
+// lloc, per a totes les fonts (base i AROME) i tots els camps (main/max/min/apparent).
+// `unit` es manté al paràmetre només per traçabilitat al breadcrumb de Sentry.
 export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'): Promise<WeatherData> => {
     Sentry.addBreadcrumb({
         category: 'api-call',
@@ -172,8 +167,6 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
         data: { lat, lon, unit }
     });
 
-    const tempUnit = unit === 'F' ? 'fahrenheit' : 'celsius';
-    
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
@@ -182,14 +175,13 @@ export const getWeatherData = async (lat: number, lon: number, unit: 'C' | 'F'):
         daily: PARAMS_DAILY.join(','),
         models: API_MODELS_LIST, 
         timezone: "auto",
-        temperature_unit: tempUnit,
         wind_speed_unit: "kmh",
         precipitation_unit: "mm",
         forecast_days: API_FORECAST_DAYS 
     });
 
     const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getWeatherData');
-    const rawData: unknown = await response.json(); // Zero Risk: unknown en lloc d'any implicat
+    const rawData: unknown = await response.json();
     
     return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getWeatherData');
 };
@@ -217,7 +209,7 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<AirQu
     return validateData<AirQualityData>(AirQualitySchema, rawData, 'getAirQualityData');
 };
 
-// 3. Funció AROME
+// 3. Funció AROME (sense canvis — ja era Celsius/kmh/mm per defecte)
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
     Sentry.addBreadcrumb({
         category: 'api-call',
