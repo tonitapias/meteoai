@@ -159,7 +159,13 @@ const TacticalRiskBadge = ({ analysis, ui }: { analysis: TacticalAnalysisResult;
     let risk: TacticalRiskLevel = analysis.risk_level || 'AMBER';
     
     if (!analysis.risk_level && Array.isArray(analysis.alerts) && analysis.alerts.length > 0) {
-        risk = analysis.alerts.some(a => a.level === 'high') ? 'RED' : 'AMBER';
+        if (analysis.alerts.some(a => a.level === 'high')) {
+            risk = 'RED';
+        } else if (analysis.alerts.some(a => a.level === 'warning')) {
+            risk = 'AMBER';
+        } else {
+            risk = 'GREEN';
+        }
     }
 
     // Eliminat backdrop-blur per no niar filtres. S'augmenta l'opacitat del fons.
@@ -188,6 +194,29 @@ const TacticalRiskBadge = ({ analysis, ui }: { analysis: TacticalAnalysisResult;
             <span className={`w-2 h-2 rounded-full ${currentStyle.dot} shrink-0`}></span>
             <span className="truncate max-w-[130px] sm:max-w-none font-sans font-extrabold tracking-wider">
                 {currentStyle.label}
+            </span>
+        </span>
+    );
+};
+
+/**
+ * DISTINTIU DE CONFIANÇA (Consens / Divergència de Models)
+ */
+const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => {
+    if (!analysis || !analysis.confidence || !analysis.confidenceLevel) return null;
+
+    const styles: Record<'high' | 'medium' | 'low', string> = {
+        high: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/80',
+        medium: 'text-amber-300 border-amber-500/40 bg-amber-950/80',
+        low: 'text-rose-200 border-rose-500/50 bg-rose-950/80'
+    };
+
+    const currentStyle = styles[analysis.confidenceLevel] || styles.medium;
+
+    return (
+        <span className={`text-[10px] sm:text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${currentStyle} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`}>
+            <span className="truncate max-w-[130px] sm:max-w-none font-sans font-extrabold tracking-wider">
+                {analysis.confidence}
             </span>
         </span>
     );
@@ -438,7 +467,10 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                     )}
                 </div>
                 
-                <TacticalRiskBadge analysis={analysis} ui={ui} />
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <ConfidenceBadge analysis={analysis} />
+                    <TacticalRiskBadge analysis={analysis} ui={ui} />
+                </div>
             </div>
             
             {/* CONTINGUT SCROLLABLE */}
@@ -464,7 +496,7 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                     )}
 
                     {/* 2. Text Principal amb màxima llegibilitat */}
-                    <div key={analysis.source || 'default'} className="min-h-[3rem] py-1"> 
+                    <div key={analysis.text || 'default'} className="min-h-[3rem] py-1"> 
                         <TypewriterText 
                             text={analysis.text || ''} 
                             className="text-base sm:text-lg md:text-xl text-slate-100 font-medium leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] whitespace-pre-wrap font-sans tracking-wide"

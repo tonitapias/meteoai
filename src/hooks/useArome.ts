@@ -96,7 +96,8 @@ export function useArome() {
       if (parsed.success) {
         setAromeData(parsed.data);
       } else {
-        // Mode Paracaigudes: Si AROME ve corrupte, forcem null perquè el WRF agafi el relleu
+        // Mode Paracaigudes: Si AROME ve corrupte, forcem null perquè la resta de l'app
+        // faci servir el model base/global (best_match) com a reserva
         console.warn("AROME validation failed (Out of Bounds or Bad Data):", parsed.error);
         setError("Fallada de telemetria AROME HD: Dades fora de paràmetres.");
         setAromeData(null);

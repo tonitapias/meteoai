@@ -2,6 +2,9 @@ import { Zap, AlertTriangle, Activity, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
+import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
+
+const { CAPE, ALERTS } = WEATHER_THRESHOLDS;
 
 export interface CapeWidgetProps extends Omit<WidgetProps, 'cape'> {
     capeData?: (number | null)[];
@@ -26,24 +29,24 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
     let borderColor = 'border-slate-500/20';
     let bgGlow = 'from-slate-950/20 to-black/80';
     
-    // Escala base de 3000 J/kg per al càlcul visual de la barra
-    const MAX_CAPE = 3000;
+    // Escala visual acoblada als llindars de domini (stormRules.ts), no números propis
+    const MAX_CAPE = CAPE.EXTREME;
     const heightPct = hasValidData ? Math.min((safeCape / MAX_CAPE) * 100, 100) : 0;
 
     if (hasValidData) {
-        if (safeCape >= 2000) { 
+        if (safeCape >= CAPE.HIGH_STORM) { 
             severity = String(t.severe || 'Severa'); 
             color = 'text-rose-500'; 
             barColor = 'bg-gradient-to-t from-rose-600 via-rose-500 to-orange-500'; 
             borderColor = 'border-rose-500/40';
             bgGlow = 'from-rose-950/30 to-black/80';
-        } else if (safeCape >= 1000) { 
+        } else if (safeCape >= ALERTS.CAPE_STORM) { 
             severity = String(t.high || 'Alta'); 
             color = 'text-amber-400'; 
             barColor = 'bg-gradient-to-t from-amber-500 via-amber-400 to-transparent'; 
             borderColor = 'border-amber-400/40';
             bgGlow = 'from-amber-950/20 to-black/80';
-        } else if (safeCape >= 300) { 
+        } else if (safeCape >= CAPE.MIN_STORM) { 
             severity = String(t.moderate || 'Moderada'); 
             color = 'text-yellow-300'; 
             barColor = 'bg-gradient-to-t from-yellow-400 to-transparent'; 
@@ -95,9 +98,9 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
               <div className="w-4 bg-black/60 rounded-full border border-white/5 relative overflow-hidden flex flex-col justify-end shadow-inner backdrop-blur-md">
                   {/* Línies de calibratge (Ticks) dels llindars */}
                   <div className="absolute inset-0 z-10 pointer-events-none">
-                      <div className="absolute w-full h-px bg-rose-500/50" style={{ bottom: `${(2000 / MAX_CAPE) * 100}%` }}></div>
-                      <div className="absolute w-full h-px bg-amber-500/50" style={{ bottom: `${(1000 / MAX_CAPE) * 100}%` }}></div>
-                      <div className="absolute w-full h-px bg-yellow-400/50" style={{ bottom: `${(300 / MAX_CAPE) * 100}%` }}></div>
+                      <div className="absolute w-full h-px bg-rose-500/50" style={{ bottom: `${(CAPE.HIGH_STORM / MAX_CAPE) * 100}%` }}></div>
+                      <div className="absolute w-full h-px bg-amber-500/50" style={{ bottom: `${(ALERTS.CAPE_STORM / MAX_CAPE) * 100}%` }}></div>
+                      <div className="absolute w-full h-px bg-yellow-400/50" style={{ bottom: `${(CAPE.MIN_STORM / MAX_CAPE) * 100}%` }}></div>
                   </div>
                   
                   {/* Barra de valor */}
@@ -114,8 +117,8 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                       {hasValidData ? 'J/kg' : String(t.no_data || 'SENSE DADES')}
                   </span>
                   
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border backdrop-blur-md bg-black/40 w-fit transition-colors duration-500 ${hasValidData && safeCape >= 300 ? borderColor : 'border-white/5'}`}>
-                      {hasValidData && safeCape >= 300 && <AlertTriangle className={`w-3.5 h-3.5 ${color}`} />}
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border backdrop-blur-md bg-black/40 w-fit transition-colors duration-500 ${hasValidData && safeCape >= CAPE.MIN_STORM ? borderColor : 'border-white/5'}`}>
+                      {hasValidData && safeCape >= CAPE.MIN_STORM && <AlertTriangle className={`w-3.5 h-3.5 ${color}`} />}
                       {!hasValidData && <CloudOff className="w-3.5 h-3.5 text-slate-500" />}
                       <span className={`text-[10px] font-black uppercase tracking-wider ${color}`}>
                           {severity}

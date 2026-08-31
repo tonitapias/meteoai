@@ -45,7 +45,19 @@ interface ExpertWidgetsProps {
 
 export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
-  const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []);
+  const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
+
+  const moonPhaseVal = useMemo(() => {
+    if (typeof currentTimeStr === 'string') {
+      const year = Number(currentTimeStr.substring(0, 4));
+      const month = Number(currentTimeStr.substring(5, 7));
+      const day = Number(currentTimeStr.substring(8, 10));
+      const hour = Number(currentTimeStr.substring(11, 13));
+      const minute = Number(currentTimeStr.substring(14, 16));
+      return getMoonPhase(new Date(Date.UTC(year, month - 1, day, hour, minute)));
+    }
+    return getMoonPhase(new Date());
+  }, [currentTimeStr]);
   
   const showSnowWidget = typeof freezingLevel === 'number' && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
@@ -75,8 +87,10 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
       }
     }
     
-    const currentHour = new Date().getHours();
-    const isLikelyNight = currentHour < 6 || currentHour > 21;
+    const locationHour = typeof current?.time === 'string'
+      ? Number(current.time.substring(11, 13))
+      : new Date().getHours();
+    const isLikelyNight = !Number.isNaN(locationHour) && (locationHour < 6 || locationHour > 21);
 
     if (!isLikelyNight && current?.is_day !== 0) {
       if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
@@ -128,8 +142,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   }, [currentTemp, currentPrecip, currentWindSpeed, globalData]);
   
   const localOffsetSeconds = new Date().getTimezoneOffset() * -60;
-  const targetOffsetSeconds = typeof utc_offset_seconds === 'number' ? utc_offset_seconds : 0;
-  const isSameTimezone = localOffsetSeconds === targetOffsetSeconds;
+  const hasKnownOffset = typeof utc_offset_seconds === 'number';
+  const targetOffsetSeconds = hasKnownOffset ? utc_offset_seconds : 0;
+  const isSameTimezone = hasKnownOffset && localOffsetSeconds === targetOffsetSeconds;
   
   const isGlobalFallback = useMemo(() => {
     const locTemp = Array.isArray(hourly?.temperature_2m) ? hourly.temperature_2m : [];
@@ -173,11 +188,11 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
 
   const currentHourIndex = useMemo(() => {
-    if (!hourly || !current || !Array.isArray(hourly.time) || typeof current.time !== 'string') return 0;
+    if (!hourly || !current || !Array.isArray(hourly.time) || typeof current.time !== 'string') return -1;
     
     const hourPrefix = current.time.substring(0, 13); 
     const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
-    return Math.max(0, idx); 
+    return idx; 
   }, [hourly, current]);
 
   // DOCTRINA RISC ZERO: Extracció del ΔP (Tendència Baromètrica de les últimes 3h)
@@ -311,8 +326,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           <WidgetCard>
               <MoonWidget 
                   phase={moonPhaseVal} 
-                  lat={safeLat || 41.728} 
-                  lon={safeLon || 1.824} 
+                  lat={safeLat ?? 41.728} 
+                  lon={safeLon ?? 1.824} 
                   timezone={typeof timezone === 'string' ? timezone : undefined}
                   lang={lang} 
               />

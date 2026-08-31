@@ -9,17 +9,6 @@ export const safeVal = (val: number | null | undefined): string | number => {
 // Helper de traduccions
 export const getTrans = (lang: Language) => TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-export const getMoonPhaseText = (phase: number) => {
-  if (phase < 0.03 || phase > 0.97) return "Nova";
-  if (phase < 0.22) return "Creixent";
-  if (phase < 0.28) return "1r Quart";
-  if (phase < 0.47) return "Gibosa C.";
-  if (phase < 0.53) return "Plena";
-  if (phase < 0.72) return "Gibosa M.";
-  if (phase < 0.78) return "3r Quart";
-  return "Minvant";
-};
-
 export const timeStringToSeconds = (timeStr: string | undefined) => {
     if (!timeStr) return 0;
     const timePart = timeStr.includes('T') ? timeStr.split('T')[1].slice(0, 5) : timeStr.slice(0, 5);

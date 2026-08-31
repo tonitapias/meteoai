@@ -2,6 +2,7 @@
 import React, { useId } from 'react';
 import { Language } from '../../translations';
 import { X, LineChart } from 'lucide-react';
+import { resolveHourlyEpoch } from '../../utils/weatherMath';
 
 interface ConsensusChartsModalProps {
   closeModal: () => void;
@@ -15,10 +16,13 @@ interface ConsensusChartsModalProps {
 }
 
 // DICCIONARI i18n INTERN
+// [FIX PRECISIÓ] "WRF" -> "GLOBAL": la comparació és amb Open-Meteo best_match, no amb cap
+// model WRF real (veure ConsensusWidget.tsx). "GLOBAL" es manté invariant als 4 idiomes,
+// igual que ja fèiem amb l'etiqueta "GLO".
 const translations = {
   ca: {
     modalTitle: 'Telemetria Gràfica Avançada',
-    subtitle: 'SÍNTESI WRF vs AROME / HARMONIE',
+    subtitle: 'SÍNTESI GLOBAL vs AROME / HARMONIE',
     sync: 'SINCRONITZANT MATRIUS VECTORS...',
     temp: 'Temperatura',
     rain: 'Precipitació',
@@ -27,7 +31,7 @@ const translations = {
   },
   es: {
     modalTitle: 'Telemetría Gráfica Avanzada',
-    subtitle: 'SÍNTESIS WRF vs AROME / HARMONIE',
+    subtitle: 'SÍNTESIS GLOBAL vs AROME / HARMONIE',
     sync: 'SINCRONIZANDO MATRICES DE VECTORES...',
     temp: 'Temperatura',
     rain: 'Precipitación',
@@ -36,7 +40,7 @@ const translations = {
   },
   en: {
     modalTitle: 'Advanced Graphical Telemetry',
-    subtitle: 'WRF vs AROME / HARMONIE SYNTHESIS',
+    subtitle: 'GLOBAL vs AROME / HARMONIE SYNTHESIS',
     sync: 'SYNCHRONIZING VECTOR MATRICES...',
     temp: 'Temperature',
     rain: 'Precipitation',
@@ -45,7 +49,7 @@ const translations = {
   },
   fr: {
     modalTitle: 'Télémétrie Graphique Avancée',
-    subtitle: 'SYNTHÈSE WRF vs AROME / HARMONIE',
+    subtitle: 'SYNTHÈSE GLOBAL vs AROME / HARMONIE',
     sync: 'SYNCHRONISATION DES MATRICES VECTORIELLES...',
     temp: 'Température',
     rain: 'Précipitations',
@@ -56,11 +60,11 @@ const translations = {
 
 // DOCTRINA RISC ZERO & SPATIAL UI: Renderitzat SVG Segur i Ultra-Estètic
 const TacticalSvgChart = ({
-  title, unit, times, locData, gloData, type, locColorHex, gloColorHex
+  title, unit, times, locData, gloData, type, zeroBased = false, locColorHex, gloColorHex
 }: {
   title: string; unit: string; times: string[]; 
   locData: (number | null)[]; gloData: (number | null)[];
-  type: 'line' | 'bar'; locColorHex: string; gloColorHex: string;
+  type: 'line' | 'bar'; zeroBased?: boolean; locColorHex: string; gloColorHex: string;
 }) => {
   const chartW = 1000; 
   const chartH = 220; 
@@ -76,7 +80,11 @@ const TacticalSvgChart = ({
   
   if (min === max) max = min + 1;
   
-  const isZeroBased = type === 'bar' || title.includes('VENT') || title.includes('Wind') || title.includes('Vent');
+  // [FIX PRECISIÓ] Abans es detectava "és un gràfic de vent?" mirant si el títol ja
+  // traduït contenia "VENT"/"Wind"/"Vent" — en castellà "Viento" no conté "Vent" com a
+  // subcadena, així que els gràfics de vent/ràfegues en castellà no començaven mai a
+  // zero. Ara es passa un booleà explícit, independent de l'idioma.
+  const isZeroBased = type === 'bar' || zeroBased;
   if (isZeroBased && min > 0) min = 0;
 
   const renderMin = isZeroBased ? min : min - (max - min) * 0.15;
@@ -335,15 +343,9 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
 
-  const getAbsoluteEpoch = (timeStr: string) => {
-    if (!timeStr) return NaN;
-    if (timeStr.includes('Z') || timeStr.match(/[+-]\d{2}:?\d{2}$/)) return new Date(timeStr).getTime();
-    return new Date(timeStr + 'Z').getTime() - (utcOffset * 1000);
-  };
-
   const getMappedData = () => {
-     let startIndex = hourlyTimes.findIndex(t => {
-        const epoch = getAbsoluteEpoch(t);
+     let startIndex = hourlyTimes.findIndex(time => {
+        const epoch = resolveHourlyEpoch(time, utcOffset);
         return !isNaN(epoch) && epoch >= nowTimestamp - (60 * 60 * 1000); 
      });
      if (startIndex === -1) startIndex = 0;
@@ -352,10 +354,10 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
      const mapGlobalArr = (arr: (number|null)[] = []) => {
         const dict = new Map<number, number | null>();
         arr.forEach((val, idx) => {
-           const ep = getAbsoluteEpoch(hourlyGlobalTimes[idx]);
+           const ep = resolveHourlyEpoch(hourlyGlobalTimes[idx], utcOffset);
            if (!isNaN(ep)) dict.set(ep, val);
         });
-        return displayTimes.map(time => dict.get(getAbsoluteEpoch(time)) ?? null);
+        return displayTimes.map(time => dict.get(resolveHourlyEpoch(time, utcOffset)) ?? null);
      };
 
      const getAlignedLocal = (arr: (number|null|undefined)[] | undefined) => {
@@ -415,8 +417,8 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
              <div className="flex flex-col gap-6 md:gap-8 pb-10 max-w-full">
                 <TacticalSvgChart title={t.temp} unit="°C" times={data.displayTimes} locData={data.tempLoc} gloData={data.tempGlo} type="line" locColorHex="#f43f5e" gloColorHex="#94a3b8" />
                 <TacticalSvgChart title={t.rain} unit="mm" times={data.displayTimes} locData={data.rainLoc} gloData={data.rainGlo} type="bar" locColorHex="#38bdf8" gloColorHex="#94a3b8" />
-                <TacticalSvgChart title={t.wind} unit="km/h" times={data.displayTimes} locData={data.windLoc} gloData={data.windGlo} type="line" locColorHex="#fbbf24" gloColorHex="#94a3b8" />
-                <TacticalSvgChart title={t.gusts} unit="km/h" times={data.displayTimes} locData={data.gustsLoc} gloData={data.gustsGlo} type="line" locColorHex="#f97316" gloColorHex="#94a3b8" />
+                <TacticalSvgChart title={t.wind} unit="km/h" times={data.displayTimes} locData={data.windLoc} gloData={data.windGlo} type="line" zeroBased locColorHex="#fbbf24" gloColorHex="#94a3b8" />
+                <TacticalSvgChart title={t.gusts} unit="km/h" times={data.displayTimes} locData={data.gustsLoc} gloData={data.gustsGlo} type="line" zeroBased locColorHex="#f97316" gloColorHex="#94a3b8" />
              </div>
           )}
         </div>

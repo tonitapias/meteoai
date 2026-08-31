@@ -73,11 +73,14 @@ export default function DiagnosticsModal({
     closeModal: tDiag.closeModal || (lang === 'es' ? "ENTENDIDO, VOLVER A LA APP" : lang === 'en' ? "GOT IT, BACK TO APP" : lang === 'fr' ? "COMPRIS, RETOUR À L'APP" : "ENTÈS, TORNA A L'APP"),
   };
 
+  // [FIX PRECISIÓ] "WRF (Global)" -> "Best Match (Open-Meteo)": l'app no fa servir cap model
+  // WRF real. Segons apiConfig.ts (API_MODELS_LIST), les 4 fonts globals reals són
+  // ECMWF, GFS, ICON i la selecció automàtica "Best Match" d'Open-Meteo.
   const globalModels = [
     lang === 'es' ? 'ECMWF (Europeo)' : lang === 'en' ? 'ECMWF (European)' : lang === 'fr' ? 'ECMWF (Européen)' : 'ECMWF (Europeu)',
     lang === 'es' ? 'GFS (Americano)' : lang === 'en' ? 'GFS (American)' : lang === 'fr' ? 'GFS (Américain)' : 'GFS (Americà)',
     lang === 'es' ? 'ICON (Alemán)' : lang === 'en' ? 'ICON (German)' : lang === 'fr' ? 'ICON (Allemand)' : 'ICON (Alemany)',
-    'WRF (Global)'
+    'Best Match (Open-Meteo)'
   ];
 
   // Partícules reduïdes de 15 a 10
