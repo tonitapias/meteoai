@@ -1,14 +1,14 @@
-// src/hooks/useWRF.test.ts
+// src/hooks/useGlobalModel.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useWRF } from './useWRF';
-import type { WRFData } from './useWRF';
+import { useGlobalModel } from './useGlobalModel';
+import type { GlobalModelData } from './useGlobalModel';
 
 // 1. MOCK DE FETCH GLOBAL (Mètode natiu de Vitest per evitar l'error TS2304)
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
-describe('useWRF Hook (Motor Secundari Global)', () => {
+describe('useGlobalModel Hook (Motor Secundari Global)', () => {
   
   // Netegem els mocks abans de cada test per evitar contaminació creuada
   beforeEach(() => {
@@ -16,10 +16,10 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
   });
 
   it('hauria d\'inicialitzar-se amb estat buit i segur', () => {
-    const { result } = renderHook(() => useWRF());
+    const { result } = renderHook(() => useGlobalModel());
     
-    expect(result.current.wrfData).toBeNull();
-    expect(result.current.loadingWRF).toBe(false);
+    expect(result.current.globalData).toBeNull();
+    expect(result.current.loadingGlobalModel).toBe(false);
   });
 
   it('hauria de carregar dades, TRANSFORMAR unixtime a ISO i superar el Mur Zod', async () => {
@@ -43,25 +43,25 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
     });
 
     // EXECUCIÓ
-    const { result } = renderHook(() => useWRF());
+    const { result } = renderHook(() => useGlobalModel());
 
     act(() => {
-      result.current.fetchWRFByCoords(41.38, 2.17);
+      result.current.fetchGlobalModelByCoords(41.38, 2.17);
     });
 
     // VERIFICACIÓ
-    await waitFor(() => expect(result.current.loadingWRF).toBe(false));
+    await waitFor(() => expect(result.current.loadingGlobalModel).toBe(false));
 
-    const wrfData = result.current.wrfData as WRFData;
-    expect(wrfData).not.toBeNull();
+    const globalData = result.current.globalData as GlobalModelData;
+    expect(globalData).not.toBeNull();
     
     // VERIFICACIÓ CRÍTICA: Zod ha d'haver transformat el número a String ISO automàticament
-    expect(typeof wrfData.hourly.time[0]).toBe('string');
-    expect(wrfData.hourly.time[0]).toBe('2023-01-01T12:00:00.000Z');
+    expect(typeof globalData.hourly.time[0]).toBe('string');
+    expect(globalData.hourly.time[0]).toBe('2023-01-01T12:00:00.000Z');
     
     // Verificació de matrius tipades
-    expect(wrfData.hourly.temperature_2m[0]).toBe(15.5);
-    expect(wrfData.hourly.wind_gusts_10m?.[0]).toBe(22.0);
+    expect(globalData.hourly.temperature_2m[0]).toBe(15.5);
+    expect(globalData.hourly.wind_gusts_10m?.[0]).toBe(22.0);
   });
 
   it('hauria de rebutjar dades corruptes (Fallada de Zod) i posar l\'estat a null', async () => {
@@ -86,16 +86,16 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
     });
 
     // EXECUCIÓ
-    const { result } = renderHook(() => useWRF());
+    const { result } = renderHook(() => useGlobalModel());
 
     act(() => {
-      result.current.fetchWRFByCoords(41.38, 2.17);
+      result.current.fetchGlobalModelByCoords(41.38, 2.17);
     });
 
-    await waitFor(() => expect(result.current.loadingWRF).toBe(false));
+    await waitFor(() => expect(result.current.loadingGlobalModel).toBe(false));
 
     // VERIFICACIÓ: L'escut ha funcionat, la dada corrupte no passa a la UI
-    expect(result.current.wrfData).toBeNull();
+    expect(result.current.globalData).toBeNull();
 
     // Restaurem les consoles
     errorSpy.mockRestore();
@@ -113,23 +113,23 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
       status: 500
     });
 
-    const { result } = renderHook(() => useWRF());
+    const { result } = renderHook(() => useGlobalModel());
 
     act(() => {
-      result.current.fetchWRFByCoords(41.38, 2.17);
+      result.current.fetchGlobalModelByCoords(41.38, 2.17);
     });
 
-    await waitFor(() => expect(result.current.loadingWRF).toBe(false));
+    await waitFor(() => expect(result.current.loadingGlobalModel).toBe(false));
 
     // VERIFICACIÓ: Silencia l'error i assegura que no hi ha dades residuals
-    expect(result.current.wrfData).toBeNull();
+    expect(result.current.globalData).toBeNull();
 
     // Restaurem les consoles
     errorSpy.mockRestore();
     warnSpy.mockRestore();
   });
 
-  it('hauria de netejar l\'estat manualment amb clearWRFData', async () => {
+  it('hauria de netejar l\'estat manualment amb clearGlobalModel', async () => {
     // PREPARACIÓ: Carreguem dades vàlides primer
     const validData = {
       latitude: 0, longitude: 0,
@@ -141,20 +141,20 @@ describe('useWRF Hook (Motor Secundari Global)', () => {
       json: async () => validData
     });
 
-    const { result } = renderHook(() => useWRF());
+    const { result } = renderHook(() => useGlobalModel());
 
     act(() => {
-      result.current.fetchWRFByCoords(0, 0);
+      result.current.fetchGlobalModelByCoords(0, 0);
     });
 
-    await waitFor(() => expect(result.current.wrfData).not.toBeNull());
+    await waitFor(() => expect(result.current.globalData).not.toBeNull());
 
     // EXECUCIÓ: Neteja manual
     act(() => {
-      result.current.clearWRFData();
+      result.current.clearGlobalModel();
     });
 
     // VERIFICACIÓ
-    expect(result.current.wrfData).toBeNull();
+    expect(result.current.globalData).toBeNull();
   });
 });

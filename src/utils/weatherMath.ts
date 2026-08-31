@@ -39,6 +39,21 @@ export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string
 };
 
 /**
+ * Converteix un timestamp horari d'una sèrie meteorològica (naive local, o ja absolut
+ * amb 'Z'/offset) en epoch UTC real, donat el desplaçament horari (en segons) de la
+ * població consultada. Centralitzat aquí perquè abans hi havia dues còpies idèntiques
+ * i independents d'aquesta mateixa lògica a ConsensusModal.tsx i a ExpertWidgets.tsx
+ * (isGlobalFallback) — amb el risc que un dia es corregís una i no l'altra.
+ */
+export const resolveHourlyEpoch = (timeStr: string, utcOffsetSeconds: number): number => {
+    if (!timeStr) return NaN;
+    if (timeStr.includes('Z') || timeStr.match(/[+-]\d{2}:?\d{2}$/)) {
+        return new Date(timeStr).getTime();
+    }
+    return new Date(timeStr + 'Z').getTime() - (utcOffsetSeconds * 1000);
+};
+
+/**
  * Fórmula de Magnus-Tetens per calcular el Punt de Rosada.
  * T = Temperatura (ºC), RH = Humitat Relativa (%)
  */

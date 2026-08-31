@@ -1,14 +1,15 @@
 // src/components/ExpertWidgets.tsx
 import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
-import { getMoonPhase, calculateDewPoint } from '../utils/physics';
+import { getMoonPhase, calculateDewPoint, isAromeSupported } from '../utils/physics';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { resolveHourlyEpoch } from '../utils/weatherMath';
 
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
-import { useWRF } from '../hooks/useWRF';
+import { useGlobalModel } from '../hooks/useGlobalModel';
 import { calculateModelConsensus } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
@@ -94,7 +95,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
         ? calculateDewPoint(currentTemp, currentHumidity)
         : undefined;
 
-  const { wrfData, fetchWRFByCoords } = useWRF();
+  const { globalData, fetchGlobalModelByCoords, clearGlobalModel } = useGlobalModel();
   
   const safeLat = location && typeof (location as Record<string, unknown>).latitude === 'number' 
     ? (location as Record<string, unknown>).latitude as number 
@@ -103,49 +104,48 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     ? (location as Record<string, unknown>).longitude as number 
     : undefined;
 
+  // [FIX PRECISIÓ] Només demanem el model global si la població és dins la cobertura AROME:
+  // fora d'aquesta zona, "local" i "global" acaben sent el mateix best_match d'Open-Meteo
+  // demanat dues vegades (ho detecta isGlobalFallback més avall), així que evitem la crida
+  // de xarxa sencera quan ja sabem que no pot aportar cap comparació real.
+  const supportsArome = safeLat !== undefined && safeLon !== undefined && isAromeSupported(safeLat, safeLon);
+
   useEffect(() => {
-    if (safeLat !== undefined && safeLon !== undefined) {
-      fetchWRFByCoords(safeLat, safeLon);
+    if (supportsArome && safeLat !== undefined && safeLon !== undefined) {
+      fetchGlobalModelByCoords(safeLat, safeLon);
+    } else {
+      clearGlobalModel();
     }
-  }, [safeLat, safeLon, fetchWRFByCoords]);
+  }, [supportsArome, safeLat, safeLon, fetchGlobalModelByCoords, clearGlobalModel]);
 
   const consensusMetrics = useMemo(() => {
     return calculateModelConsensus(
         currentTemp, 
         currentPrecip,
         currentWindSpeed, 
-        wrfData
+        globalData
     );
-  }, [currentTemp, currentPrecip, currentWindSpeed, wrfData]);
+  }, [currentTemp, currentPrecip, currentWindSpeed, globalData]);
   
   const localOffsetSeconds = new Date().getTimezoneOffset() * -60;
   const targetOffsetSeconds = typeof utc_offset_seconds === 'number' ? utc_offset_seconds : 0;
   const isSameTimezone = localOffsetSeconds === targetOffsetSeconds;
   
   const isGlobalFallback = useMemo(() => {
-    const getAbsoluteEpoch = (timeStr: string) => {
-        if (!timeStr) return NaN;
-        if (timeStr.includes('Z') || timeStr.match(/[+-]\d{2}:?\d{2}$/)) {
-            return new Date(timeStr).getTime();
-        }
-        const utcEpoch = new Date(timeStr + 'Z').getTime();
-        return utcEpoch - (targetOffsetSeconds * 1000);
-    };
-
     const locTemp = Array.isArray(hourly?.temperature_2m) ? hourly.temperature_2m : [];
-    const gloTemp = Array.isArray(wrfData?.hourly?.temperature_2m) ? wrfData.hourly.temperature_2m : [];
+    const gloTemp = Array.isArray(globalData?.hourly?.temperature_2m) ? globalData.hourly.temperature_2m : [];
     
     if (locTemp.length === 0 || locTemp.every(v => v === null)) return true;
     if (gloTemp.length === 0 || gloTemp.every(v => v === null)) return true;
     
     const locTimes = Array.isArray(hourly?.time) ? hourly.time : [];
-    const gloTimes = Array.isArray(wrfData?.hourly?.time) ? wrfData.hourly.time : [];
+    const gloTimes = Array.isArray(globalData?.hourly?.time) ? globalData.hourly.time : [];
 
     const globalDict = new Map<number, number | null>();
     gloTemp.forEach((val, idx) => {
         const tStr = gloTimes[idx];
         if (typeof tStr === 'string') {
-            const epoch = getAbsoluteEpoch(tStr);
+            const epoch = resolveHourlyEpoch(tStr, targetOffsetSeconds);
             if (!isNaN(epoch)) globalDict.set(epoch, typeof val === 'number' ? val : null);
         }
     });
@@ -158,7 +158,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
         const tStr = locTimes[i];
         if (typeof tStr !== 'string') continue;
 
-        const epochKey = getAbsoluteEpoch(tStr);
+        const epochKey = resolveHourlyEpoch(tStr, targetOffsetSeconds);
         const g = !isNaN(epochKey) ? (globalDict.get(epochKey) ?? null) : null;
 
         if (typeof l === 'number' && typeof g === 'number') {
@@ -168,7 +168,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     }
     
     return validPairs > 10 && (exactMatches / validPairs) > 0.85;
-  }, [hourly?.temperature_2m, hourly?.time, wrfData?.hourly?.temperature_2m, wrfData?.hourly?.time, targetOffsetSeconds]);
+  }, [hourly?.temperature_2m, hourly?.time, globalData?.hourly?.temperature_2m, globalData?.hourly?.time, targetOffsetSeconds]);
 
   const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
 
@@ -203,20 +203,20 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   if (!current) return null;
 
   const safeHourlyTimes = Array.isArray(hourly?.time) ? (hourly.time as string[]) : [];
-  const safeGloTimes = Array.isArray(wrfData?.hourly?.time) ? (wrfData.hourly.time as string[]) : [];
+  const safeGloTimes = Array.isArray(globalData?.hourly?.time) ? (globalData.hourly.time as string[]) : [];
 
   const safeHourlyTemp = Array.isArray(hourly?.temperature_2m) ? hourly.temperature_2m : undefined;
   const safeHourlyRain = Array.isArray(hourly?.precipitation) ? hourly.precipitation : undefined;
   const safeHourlyWind = Array.isArray(hourly?.wind_speed_10m) ? hourly.wind_speed_10m : undefined;
   const safeHourlyGusts = Array.isArray(hourly?.wind_gusts_10m) ? hourly.wind_gusts_10m : undefined;
   
-  const safeGloTemp = Array.isArray(wrfData?.hourly?.temperature_2m) ? wrfData.hourly.temperature_2m : undefined;
-  const safeGloRain = Array.isArray(wrfData?.hourly?.precipitation) ? wrfData.hourly.precipitation : undefined;
+  const safeGloTemp = Array.isArray(globalData?.hourly?.temperature_2m) ? globalData.hourly.temperature_2m : undefined;
+  const safeGloRain = Array.isArray(globalData?.hourly?.precipitation) ? globalData.hourly.precipitation : undefined;
   
-  const rawGloWind = (wrfData?.hourly as Record<string, unknown> | undefined)?.wind_speed_10m;
+  const rawGloWind = (globalData?.hourly as Record<string, unknown> | undefined)?.wind_speed_10m;
   const safeGloWind = Array.isArray(rawGloWind) ? rawGloWind : undefined;
 
-  const rawGloGusts = (wrfData?.hourly as Record<string, unknown> | undefined)?.wind_gusts_10m;
+  const rawGloGusts = (globalData?.hourly as Record<string, unknown> | undefined)?.wind_gusts_10m;
   const safeGloGusts = Array.isArray(rawGloGusts) ? rawGloGusts : undefined;
 
   const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';

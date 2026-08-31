@@ -8,29 +8,60 @@ interface ConsensusInactiveWidgetProps {
   reason?: 'timezone' | 'fallback'; 
 }
 
+// [FIX I18N] Abans només distingia ca/en (lang.includes('ca')); es i fr queien silenciosament
+// a l'anglès. Reestructurat amb el mateix patró de 4 idiomes que ja fan servir
+// ConsensusWidget.tsx i ConsensusModal.tsx.
+const translations = {
+  ca: {
+    title: { timezone: 'Matriu Global Inactiva', fallback: 'Motor de Consens Suspès' },
+    badge: { timezone: 'Telemetria Remota', fallback: 'Cobertura Global' },
+    description: {
+      timezone: "S'ha detectat una coordenada fora del sector local. El motor de consens s'ha posat en mode d'espera per evitar col·lisions de fusos horaris.",
+      fallback: "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base."
+    },
+    action: { timezone: 'Mode observació activat', fallback: 'Mode global en ús' }
+  },
+  es: {
+    title: { timezone: 'Matriz Global Inactiva', fallback: 'Motor de Consenso Suspendido' },
+    badge: { timezone: 'Telemetría Remota', fallback: 'Cobertura Global' },
+    description: {
+      timezone: "Se ha detectado una coordenada fuera del sector local. El motor de consenso se ha puesto en modo de espera para evitar colisiones de husos horarios.",
+      fallback: "Ubicación fuera de la malla de alta resolución. El análisis de divergencias se ha suspendido temporalmente para evitar redundancia matemática con modelos globales base."
+    },
+    action: { timezone: 'Modo observación activado', fallback: 'Modo global en uso' }
+  },
+  en: {
+    title: { timezone: 'Global Matrix Inactive', fallback: 'Consensus Engine Suspended' },
+    badge: { timezone: 'Remote Telemetry', fallback: 'Global Coverage' },
+    description: {
+      timezone: "Coordinate detected outside local sector. Consensus engine is in standby mode to prevent timezone data collisions.",
+      fallback: "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models."
+    },
+    action: { timezone: 'Observation mode engaged', fallback: 'Global mode in use' }
+  },
+  fr: {
+    title: { timezone: 'Matrice Globale Inactive', fallback: 'Moteur de Consensus Suspendu' },
+    badge: { timezone: 'Télémétrie Distante', fallback: 'Couverture Globale' },
+    description: {
+      timezone: "Une coordonnée hors du secteur local a été détectée. Le moteur de consensus est en mode veille pour éviter les collisions de fuseaux horaires.",
+      fallback: "Emplacement hors de la maille haute résolution. L'analyse des divergences est temporairement suspendue pour éviter une redondance mathématique avec les modèles globaux de base."
+    },
+    action: { timezone: 'Mode observation activé', fallback: 'Mode global en cours' }
+  }
+};
+
 export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = ({ 
     lang = 'ca', 
     reason = 'timezone' 
 }) => {
-  const isCa = lang.includes('ca');
-  
+  const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
+  const langT = translations[safeLang];
+
   const t = {
-    title: reason === 'timezone' 
-        ? (isCa ? 'Matriu Global Inactiva' : 'Global Matrix Inactive')
-        : (isCa ? 'Motor de Consens Suspès' : 'Consensus Engine Suspended'),
-    badge: reason === 'timezone'
-        ? (isCa ? 'Telemetria Remota' : 'Remote Telemetry')
-        : (isCa ? 'Cobertura Global' : 'Global Coverage'),
-    description: reason === 'timezone'
-      ? (isCa
-        ? "S'ha detectat una coordenada fora del sector local. El motor de consens s'ha posat en mode d'espera per evitar col·lisions de fusos horaris."
-        : "Coordinate detected outside local sector. Consensus engine is in standby mode to prevent timezone data collisions.")
-      : (isCa
-        ? "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base."
-        : "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models."),
-    action: reason === 'timezone' 
-        ? (isCa ? 'Mode observació activat' : 'Observation mode engaged')
-        : (isCa ? 'Mode global en ús' : 'Global mode in use')
+    title: langT.title[reason],
+    badge: langT.badge[reason],
+    description: langT.description[reason],
+    action: langT.action[reason]
   };
 
   // ARQUITECTURA NETA: Diccionari de temes per evitar el "Ternary Hell" al JSX

@@ -3,6 +3,7 @@ import React from 'react';
 import { Language } from '../../translations';
 import { Thermometer, CloudRain, Wind, X, ArrowUpRight, ArrowDownRight, MoveRight } from 'lucide-react';
 import { ModalType } from './ConsensusWidget';
+import { resolveHourlyEpoch } from '../../utils/weatherMath';
 
 interface ConsensusModalProps {
   activeModal: ModalType;
@@ -60,12 +61,6 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
 
   const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val : '--';
   
-  const getAbsoluteEpoch = (timeStr: string) => {
-    if (!timeStr) return NaN;
-    if (timeStr.includes('Z') || timeStr.match(/[+-]\d{2}:?\d{2}$/)) return new Date(timeStr).getTime();
-    return new Date(timeStr + 'Z').getTime() - (utcOffset * 1000);
-  };
-  
   const formatTimeSafely = (timeStr: string) => {
     try {
       const parts = timeStr.split('T');
@@ -88,7 +83,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
 
   const getMappedData = () => {
      let startIndex = hourlyTimes.findIndex(timeStr => {
-        const epoch = getAbsoluteEpoch(timeStr);
+        const epoch = resolveHourlyEpoch(timeStr, utcOffset);
         return !isNaN(epoch) && epoch >= nowTimestamp - (60 * 60 * 1000); 
      });
      if (startIndex === -1) startIndex = 0;
@@ -97,10 +92,10 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
      const mapGlobalArr = (arr: (number|null)[] = []) => {
         const dict = new Map<number, number | null>();
         arr.forEach((val, idx) => {
-           const ep = getAbsoluteEpoch(hourlyGlobalTimes[idx]);
+           const ep = resolveHourlyEpoch(hourlyGlobalTimes[idx], utcOffset);
            if (!isNaN(ep)) dict.set(ep, val);
         });
-        return displayTimes.map(timeStr => dict.get(getAbsoluteEpoch(timeStr)) ?? null);
+        return displayTimes.map(timeStr => dict.get(resolveHourlyEpoch(timeStr, utcOffset)) ?? null);
      };
 
      const getAlignedLocal = (arr: (number|null|undefined)[] | undefined) => {

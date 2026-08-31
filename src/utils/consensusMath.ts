@@ -1,5 +1,5 @@
 // src/utils/consensusMath.ts
-import { WRFData } from '../hooks/useWRF';
+import { GlobalModelData } from '../hooks/useGlobalModel';
 
 export interface ConsensusMetrics {
   isConsensusActive: boolean;
@@ -9,33 +9,38 @@ export interface ConsensusMetrics {
   modelsAgree: boolean;
   score: number;
   futureDivergence: boolean;
-  wrfTemp: number | null;
-  wrfPrecip: number | null;
-  wrfWind: number | null;
+  globalTemp: number | null;
+  globalPrecip: number | null;
+  globalWind: number | null;
   tempTrend: 'up' | 'down' | 'flat';
   precipTrend: 'up' | 'down' | 'flat';
   windTrend: 'up' | 'down' | 'flat';
 }
 
+// DOCTRINA RISC ZERO: marge màxim acceptable entre "ara" i l'hora del model global disponible
+// més propera. Les sèries són horàries, així que 90 min ja dona marge per sobre de l'espaiat
+// normal (30 min a cada banda); per sobre d'això és un forat de dades o una sèrie caducada.
+const MAX_GLOBAL_TIME_DRIFT_MS = 90 * 60 * 1000;
+
 export function calculateModelConsensus(
   aromeTemp: number | undefined, 
   aromePrecip: number | undefined, 
   aromeWind: number | undefined,
-  wrfData: WRFData | null
+  globalData: GlobalModelData | null
 ): ConsensusMetrics {
 
-  if (!wrfData || typeof aromeTemp !== 'number') {
+  if (!globalData || typeof aromeTemp !== 'number') {
     return {
       isConsensusActive: false,
       tempDiff: null, precipDiff: null, windDiff: null, 
       modelsAgree: true, score: 0, futureDivergence: false,
-      wrfTemp: null, wrfPrecip: null, wrfWind: null,
+      globalTemp: null, globalPrecip: null, globalWind: null,
       tempTrend: 'flat', precipTrend: 'flat', windTrend: 'flat'
     };
   }
 
   try {
-    const safeHourly = wrfData.hourly as Record<string, (string | number | null)[]>;
+    const safeHourly = globalData.hourly as Record<string, (string | number | null)[]>;
     
     // 1. SINCRONITZACIÓ HORÀRIA ABSOLUTA DE PROXIMITAT (BLINDADA)
     const nowTimestamp = Date.now();
@@ -56,41 +61,65 @@ export function calculateModelConsensus(
         }
     }
 
-    if (currentHourIndex === -1) currentHourIndex = 0; 
+    // DOCTRINA RISC ZERO: si no hi ha cap hora vàlida, o la més propera disponible
+    // s'allunya massa de l'instant actual (forat a la sèrie, dada no refrescada, etc.),
+    // no és una comparació fiable — desactivem el consens en lloc de comparar contra
+    // una hora equivocada en silenci.
+    if (currentHourIndex === -1 || minTimeDiff > MAX_GLOBAL_TIME_DRIFT_MS) {
+        const driftLabel = Number.isFinite(minTimeDiff) ? `${Math.round(minTimeDiff / 60000)} min` : 'cap hora vàlida';
+        throw new Error(`Sincronització horària del model global no fiable (desviació: ${driftLabel})`);
+    }
 
     // 2. EXTRACCIÓ ACTUAL SINCRONITZADA
-    const wrfTemp = safeHourly.temperature_2m?.[currentHourIndex];
-    const wrfPrecip = safeHourly.precipitation?.[currentHourIndex];
-    const wrfWind = Number(safeHourly.wind_speed_10m?.[currentHourIndex] ?? 0);
-    const safeAromeWind = aromeWind ?? 0;
+    const globalTemp = safeHourly.temperature_2m?.[currentHourIndex];
+    const globalPrecip = safeHourly.precipitation?.[currentHourIndex];
 
-    if (typeof wrfTemp !== 'number' || typeof wrfPrecip !== 'number') {
+    if (typeof globalTemp !== 'number' || typeof globalPrecip !== 'number') {
         throw new Error("Dades principals incompletes al model global");
     }
 
+    // DOCTRINA RISC ZERO: mai forcem un '0' quan falta la dada de vent o de pluja.
+    // Si falta a qualsevol dels dos costats, ho tractem com a comparació NO vàlida (null)
+    // en lloc de simular "0 km/h"/coincidència, que falsejaria l'acord entre models i inflaria el score.
+    const rawGlobalWind = safeHourly.wind_speed_10m?.[currentHourIndex];
+    const globalWindValid = typeof rawGlobalWind === 'number' && !Number.isNaN(rawGlobalWind);
+    const aromeWindValid = typeof aromeWind === 'number' && !Number.isNaN(aromeWind);
+    const hasValidWind = globalWindValid && aromeWindValid;
+
+    const globalWind: number | null = globalWindValid ? (rawGlobalWind as number) : null;
+    const safeAromeWind: number | null = aromeWindValid ? (aromeWind as number) : null;
+
+    const aromePrecipValid = typeof aromePrecip === 'number' && !Number.isNaN(aromePrecip);
+
     // 3. CÀLCUL DE DESVIACIONS
-    const tempDiff = Number(Math.abs(aromeTemp - wrfTemp).toFixed(1));
-    const precipDiff = Number(Math.abs((aromePrecip || 0) - wrfPrecip).toFixed(1));
-    const windDiff = Number(Math.abs(safeAromeWind - wrfWind).toFixed(1));
+    const tempDiff = Number(Math.abs(aromeTemp - globalTemp).toFixed(1));
+    const precipDiff = aromePrecipValid 
+        ? Number(Math.abs((aromePrecip as number) - globalPrecip).toFixed(1)) 
+        : null;
+    const windDiff = hasValidWind 
+        ? Number(Math.abs((safeAromeWind as number) - (globalWind as number)).toFixed(1)) 
+        : null;
 
     // 4. MOTOR DE PUNTUACIÓ (CONTÍNUU I SENSE ZONES MORTES)
     let scorePenalty = 0;
 
     // Penalització Base (Cada dècima compta perquè el 100% sigui gairebé impossible)
     scorePenalty += tempDiff * 3.5;  // Ex: 3.0°C de diff = 10.5 punts menys
-    scorePenalty += precipDiff * 10; // Ex: 0.5mm de diff = 5 punts menys
-    scorePenalty += windDiff * 0.8;  // Ex: 5km/h de diff = 4 punts menys
+    if (precipDiff !== null) scorePenalty += precipDiff * 10; // Ex: 0.5mm de diff = 5 punts menys
+    if (windDiff !== null) scorePenalty += windDiff * 0.8;  // Ex: 5km/h de diff = 4 punts menys
 
     // Penalització Exponencial per divergència greu (Orografia o Microclimes)
     if (tempDiff > 2.5) {
         scorePenalty += (tempDiff - 2.5) * 5; 
     }
-    if (precipDiff > 1.0) {
+    if (precipDiff !== null && precipDiff > 1.0) {
         scorePenalty += (precipDiff - 1.0) * 10;
     }
-    const maxWind = Math.max(safeAromeWind, wrfWind);
-    if (maxWind > 15 && windDiff > 5) {
-        scorePenalty += (windDiff - 5) * 1.5;
+    if (windDiff !== null) {
+        const maxWind = Math.max(safeAromeWind as number, globalWind as number);
+        if (maxWind > 15 && windDiff > 5) {
+            scorePenalty += (windDiff - 5) * 1.5;
+        }
     }
 
     const rawScore = 100 - scorePenalty;
@@ -109,16 +138,16 @@ export function calculateModelConsensus(
         const nextWind = safeHourly.wind_speed_10m?.[nextHourIndex];
 
         if (typeof nextTemp === 'number') {
-            if (nextTemp > wrfTemp + 0.5) tempTrend = 'up';
-            else if (nextTemp < wrfTemp - 0.5) tempTrend = 'down';
+            if (nextTemp > globalTemp + 0.5) tempTrend = 'up';
+            else if (nextTemp < globalTemp - 0.5) tempTrend = 'down';
         }
         if (typeof nextPrecip === 'number') {
-            if (nextPrecip > wrfPrecip + 0.2) precipTrend = 'up';
-            else if (nextPrecip < wrfPrecip - 0.2) precipTrend = 'down';
+            if (nextPrecip > globalPrecip + 0.2) precipTrend = 'up';
+            else if (nextPrecip < globalPrecip - 0.2) precipTrend = 'down';
         }
-        if (typeof nextWind === 'number') {
-            if (nextWind > wrfWind + 3) windTrend = 'up';
-            else if (nextWind < wrfWind - 3) windTrend = 'down';
+        if (typeof nextWind === 'number' && globalWind !== null) {
+            if (nextWind > globalWind + 3) windTrend = 'up';
+            else if (nextWind < globalWind - 3) windTrend = 'down';
         }
     }
 
@@ -141,7 +170,7 @@ export function calculateModelConsensus(
       isConsensusActive: true,
       tempDiff, precipDiff, windDiff,
       modelsAgree, score, futureDivergence,
-      wrfTemp, wrfPrecip, wrfWind,
+      globalTemp, globalPrecip, globalWind,
       tempTrend, precipTrend, windTrend
     };
 
@@ -151,7 +180,7 @@ export function calculateModelConsensus(
       isConsensusActive: false,
       tempDiff: null, precipDiff: null, windDiff: null, 
       modelsAgree: true, score: 0, futureDivergence: false,
-      wrfTemp: null, wrfPrecip: null, wrfWind: null,
+      globalTemp: null, globalPrecip: null, globalWind: null,
       tempTrend: 'flat', precipTrend: 'flat', windTrend: 'flat'
     };
   }

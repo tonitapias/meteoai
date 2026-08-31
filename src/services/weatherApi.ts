@@ -209,7 +209,12 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<AirQu
     return validateData<AirQualityData>(AirQualitySchema, rawData, 'getAirQualityData');
 };
 
-// 3. Funció AROME (sense canvis — ja era Celsius/kmh/mm per defecte)
+// 3. Funció AROME
+// [FIX PRECISIÓ] Abans confiàvem en els valors per defecte d'Open-Meteo per a
+// wind_speed_unit/precipitation_unit (que avui coincideixen amb "kmh"/"mm"). Ara els
+// fixem explícitament, igual que a getWeatherData, perquè si Open-Meteo canvia mai el seu
+// valor per defecte, AROME ("local") no acabi en unitats diferents de la resta de fonts
+// sense que cap tipus ni Zod ho detecti. Temperatura ja era Celsius per defecte, sense canvis.
 export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
     Sentry.addBreadcrumb({
         category: 'api-call',
@@ -225,6 +230,8 @@ export const getAromeData = async (lat: number, lon: number): Promise<WeatherDat
         hourly: AROME_HOURLY.join(','),
         minutely_15: "precipitation", 
         timezone: "auto",
+        wind_speed_unit: "kmh",
+        precipitation_unit: "mm",
         models: AROME_MODELS_LIST 
     });
 
