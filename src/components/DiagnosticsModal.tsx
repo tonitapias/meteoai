@@ -7,8 +7,6 @@ interface DiagnosticsModalProps {
   onClose: () => void;
   lang: Language;
   t: TranslationType;
-  wrfWindFormatted: string;
-  aromeWindFormatted: string;
 }
 
 /**
@@ -19,9 +17,7 @@ interface DiagnosticsModalProps {
 export default function DiagnosticsModal({
   onClose,
   lang,
-  t,
-  wrfWindFormatted,
-  aromeWindFormatted
+  t
 }: DiagnosticsModalProps) {
 
   // Aïllament d'esdeveniments: Escoltem ESC només quan el modal està obert
@@ -50,7 +46,6 @@ export default function DiagnosticsModal({
     step1Header: tDiag.step1Header || (lang === 'es' ? "MODELOS GLOBALES" : lang === 'en' ? "GLOBAL MODELS" : lang === 'fr' ? "MODÈLES GLOBAUX" : "MODELS GLOBALS"),
     step1Badge: tDiag.step1Badge || (lang === 'es' ? "4 FUENTES MUNDIALES" : lang === 'en' ? "4 WORLDWIDE SOURCES" : lang === 'fr' ? "4 SOURCES MONDIALES" : "4 FONTS MUNDIALS"),
     step1Desc: tDiag.step1Desc || (lang === 'es' ? "Analizan la atmósfera a gran escala para adelantar el tiempo a varios días vista. Son la base más fiable para conocer las tendencias generales en cualquier parte del planeta." : lang === 'en' ? "They analyze the atmosphere on a large scale to forecast the weather several days ahead. They are the most reliable baseline for general trends anywhere on the planet." : lang === 'fr' ? "Ils analysent l'atmosphère à grande échelle pour prévoir le temps à plusieurs jours. Ils constituent la base la plus fiable pour connaître les tendances générales partout dans le monde." : "Analitzen l'atmosfera a gran escala per avançar el temps a diversos dies vista. Són la base més fiable per conèixer les tendències generals a qualsevol part del planeta."),
-    step1WindLabel: tDiag.step1WindLabel || (lang === 'es' ? "Racha máx (Media Global):" : lang === 'en' ? "Max gust (Global Average):" : lang === 'fr' ? "Rafale max (Moyenne Globale) :" : "Ràfega màx (Mitjana Global):"),
     
     step2Title: tDiag.step2Title || (lang === 'es' ? "LOCAL" : lang === 'en' ? "LOCAL" : lang === 'fr' ? "LOCAL" : "LOCAL"),
     step2Header: tDiag.step2Header || (lang === 'es' ? "DETALLE DE PRECISIÓN" : lang === 'en' ? "PRECISION DETAIL" : lang === 'fr' ? "DÉTAIL DE PRÉCISION" : "DETALL DE PRECISIÓ"),
@@ -59,17 +54,16 @@ export default function DiagnosticsModal({
     step2CoverageTitle: tDiag.step2CoverageTitle || (lang === 'es' ? "Zona Cobertura:" : lang === 'en' ? "Coverage Zone:" : lang === 'fr' ? "Zone Couverture :" : "Zona Cobertura:"),
     step2CoverageText: tDiag.step2CoverageText || (lang === 'es' ? "Península Ibérica, Francia, Pirineos y Europa Occidental." : lang === 'en' ? "Iberian Peninsula, France, Pyrenees, and Western Europe." : lang === 'fr' ? "Péninsule Ibérique, France, Pyrénées et Europe Occidentale." : "Península Ibèrica, França, Pirineus i Europa Occidental."),
     step2CoverageNote: tDiag.step2CoverageNote || (lang === 'es' ? "*Fuera de esta región, la app utiliza el consenso de los modelos globales (Paso 1)." : lang === 'en' ? "*Outside this region, the app uses the consensus of global models (Step 1)." : lang === 'fr' ? "*En dehors de cette région, l'app utilise le consensus des modèles globaux (Étape 1)." : "*Fora d'aquesta regió, l'app utilitza el consens dels models globals (Pas 1)."),
-    step2WindLabel: tDiag.step2WindLabel || (lang === 'es' ? "Racha máx (Cálculo Local):" : lang === 'en' ? "Max gust (Local Calc):" : lang === 'fr' ? "Rafale max (Calcul Local) :" : "Ràfega màx (Càlcul Local):"),
     
     step3Title: tDiag.step3Title || (lang === 'es' ? "SÍNTESIS" : lang === 'en' ? "SYNTHESIS" : lang === 'fr' ? "SYNTHÈSE" : "SÍNTESI"),
     step3Header: tDiag.step3Header || (lang === 'es' ? "ASISTENTE METEOROLÓGICO" : lang === 'en' ? "WEATHER ASSISTANT" : lang === 'fr' ? "ASSISTANT MÉTÉO" : "ASSISTENT METEOROLÒGIC"),
-    aiFooter: tDiag.aiFooter || (lang === 'es' ? "MeteoToni AI analizará ambos modelos en tiempo real para avisarte de cualquier peligro en cuanto despliegues los sensores." : lang === 'en' ? "MeteoToni AI will analyze both models in real-time to warn you of any hazards as soon as you deploy sensors." : lang === 'fr' ? "MeteoToni AI analysera les deux modèles en temps réel pour vous avertir de tout danger dès le déploiement." : "MeteoToni AI analitzarà ambdós models en temps real per avisar-te de qualsevol perill tan bon punt despleguis els sensors."),
+    aiFooter: tDiag.aiFooter || (lang === 'es' ? "MeteoToni AI analizará ambos modelos en tiempo real para avisarte de cualquier peligro desde el primer momento." : lang === 'en' ? "MeteoToni AI will analyze both models in real-time to warn you of any hazards from the very first moment." : lang === 'fr' ? "MeteoToni AI analysera les deux modèles en temps réel pour vous avertir de tout danger dès le premier instant." : "MeteoToni AI analitzarà ambdós models en temps real per avisar-te de qualsevol perill des del primer moment."),
     
     transparencyTitle: tDiag.transparencyTitle || (lang === 'es' ? "Nota de transparencia:" : lang === 'en' ? "Transparency Note:" : lang === 'fr' ? "Note de transparence :" : "Nota de transparència:"),
     transparencyText: tDiag.transparencyText || (lang === 'es' ? "La meteorología es una ciencia probabilística. Esta comparativa te ayuda a tomar decisiones más informadas, pero te recomendamos observar siempre la evolución real del cielo y tu entorno." : lang === 'en' ? "Meteorology is a probabilistic science. This comparison helps you make informed decisions, but we always recommend observing the actual sky and your surroundings." : lang === 'fr' ? "La météorologie est une science probabiliste. Cette comparaison vous aide à prendre des décisions informées, mais nous recommandons toujours d'observer l'évolution réelle du ciel et de votre environnement." : "La meteorologia és una ciència probabilística. Aquesta comparativa t'ajuda a prendre decisions més informades, però et recomanem observar sempre l'evolució real del cel i el teu entorn."),
     
-    aligned: tDiag.aligned || (lang === 'es' ? "SISTEMA LISTO PARA CALIBRAR" : lang === 'en' ? "SYSTEM READY TO CALIBRATE" : lang === 'fr' ? "SYSTÈME PRÊT À CALIBRER" : "SISTEMA LLEST PER CALIBRAR"),
-    standbyReceiver: tDiag.standbyReceiver || (lang === 'es' ? "STANDBY (Esperando señal GPS)" : lang === 'en' ? "STANDBY (Awaiting GPS signal)" : lang === 'fr' ? "STANDBY (En attente de signal GPS)" : "STANDBY (Esperant senyal GPS)"),
+    aligned: tDiag.aligned || (lang === 'es' ? "TODO LISTO" : lang === 'en' ? "ALL SET" : lang === 'fr' ? "TOUT EST PRÊT" : "TOT A PUNT"),
+    standbyReceiver: tDiag.standbyReceiver || (lang === 'es' ? "Esperando tu ubicación..." : lang === 'en' ? "Waiting for your location..." : lang === 'fr' ? "En attente de votre position..." : "Esperant la teva ubicació..."),
     closeModal: tDiag.closeModal || (lang === 'es' ? "ENTENDIDO, VOLVER A LA APP" : lang === 'en' ? "GOT IT, BACK TO APP" : lang === 'fr' ? "COMPRIS, RETOUR À L'APP" : "ENTÈS, TORNA A L'APP"),
   };
 
@@ -242,11 +236,6 @@ export default function DiagnosticsModal({
               <p className="text-xs text-slate-300 leading-normal">
                 {dict.step1Desc}
               </p>
-              
-              <div className="mt-1 pt-2 border-t border-white/10 flex items-center justify-between font-mono text-[10px] sm:text-[11px]">
-                <span className="text-slate-400">{dict.step1WindLabel}</span>
-                <span className="font-bold text-sky-300 bg-sky-950/80 px-2.5 py-0.5 rounded border border-sky-500/30">{wrfWindFormatted}</span>
-              </div>
             </div>
           </div>
 
@@ -294,11 +283,6 @@ export default function DiagnosticsModal({
                     {dict.step2CoverageNote}
                   </span>
                 </div>
-              </div>
-              
-              <div className="mt-1 pt-2 border-t border-white/10 flex items-center justify-between font-mono text-[10px] sm:text-[11px]">
-                <span className="text-slate-400">{dict.step2WindLabel}</span>
-                <span className="font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded border border-emerald-500/30">{aromeWindFormatted}</span>
               </div>
             </div>
           </div>

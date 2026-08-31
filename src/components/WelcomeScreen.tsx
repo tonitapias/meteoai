@@ -6,7 +6,7 @@ import {
   HelpCircle, Crosshair, Sun, Fingerprint, AlertTriangle
 } from 'lucide-react';
 import { Language, TranslationType } from '../translations';
-import pkg from '../../package.json';
+import { APP_VERSION } from '../utils/appVersion';
 import DiagnosticsModal from './DiagnosticsModal';
 
 interface WelcomeScreenProps {
@@ -22,6 +22,27 @@ interface Particle { id: number; left: string; top: string; size: string; durati
 interface Drop { id: number; left: string; delay: string; z: string; }
 interface Cloud { id: number; y: string; delay: string; z: string; }
 
+// Claus tàctiques que aquest component pot rebre via t.welcome (mateix patró que
+// HeaderTranslations a Header.tsx). Totes opcionals: cap encara existeix a
+// ca/es/en/fr.ts, així que ara mateix sempre s'utilitza el fallback per idioma
+// de systemText; si algun dia s'afegeixen a les traduccions, un typo aquí sota
+// (a l'accés tWelcome.xxx) ja el detectaria el compilador.
+interface WelcomeTacticalTranslations {
+  loading?: string;
+  systemStatus?: string;
+  secure?: string;
+  tapWarning?: string;
+  deployed?: string;
+  ariaDescription?: string;
+  sysTagline?: string;
+  sysStart?: string;
+  sysManual?: string;
+}
+
+// Geometria de l'anell de progrés del botó (constants de mòdul, no depenen de cap prop/estat)
+const RING_RADIUS = 15.5;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS; // Longitud total del traç de l'anell de progrés
+
 /**
  * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v8.60 ZERO-RISK UPDATE)
  * Arquitectura: Spatial UI, Modal Desacoblat i18n, Puresa React garantida.
@@ -31,34 +52,45 @@ interface Cloud { id: number; y: string; delay: string; z: string; }
 export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: WelcomeScreenProps) {
   const year = new Date().getFullYear();
 
-  // DOCTRINA RISC ZERO: Tipatge estricte
-  const tRecord = (t && typeof t === 'object') ? (t as Record<string, unknown>) : {};
-  const tWelcome = (tRecord.welcome && typeof tRecord.welcome === 'object') ? (tRecord.welcome as Record<string, string>) : {};
-  const safeVersion = pkg && pkg.version ? pkg.version : '6.2.0-PRO';
+  // DOCTRINA RISC ZERO: Tipatge estricte contra TranslationType (sense cast a Record<string, unknown>)
+  // Cast via `unknown` necessari només aquí: welcome.* real (tagline/desc/connecting/start/manual)
+  // i WelcomeTacticalTranslations no comparteixen cap clau (són tàctiques, encara no traduïdes),
+  // així que TypeScript el marca com "weak type" sense el pas intermedi. `t` en si es manté
+  // tipat com TranslationType a la resta del component.
+  const tWelcome: WelcomeTacticalTranslations =
+    ((t && typeof t === 'object' && t.welcome && typeof t.welcome === 'object') ? t.welcome : {}) as unknown as WelcomeTacticalTranslations;
 
   // DICCIONARI MULTILINGÜE ESTRICTE
   const systemText = {
-    loading: tWelcome.loading || (lang === 'es' ? "SINTETIZANDO ATMÓSFERA..." : lang === 'en' ? "SYNTHESIZING ATMOSPHERE..." : lang === 'fr' ? "SYNTHÈSE ATMOSPHÉRIQUE..." : "SINTETITZANT ATMOSFERA..."),
-    tagline: tWelcome.tagline || (lang === 'es' ? "TELEMETRÍA TÁCTICA PARA TERRENO TÉCNICO" : lang === 'en' ? "TACTICAL TELEMETRY FOR TECHNICAL TERRAIN" : lang === 'fr' ? "TÉLÉMÉTRIE TACTIQUE POUR TERRAIN TECHNIQUE" : "TELEMETRIA TÀCTICA PER A TERRENY TÈCNIC"),
-    start: tWelcome.start || (lang === 'es' ? "DESPLEGAR SENSORES" : lang === 'en' ? "DEPLOY SENSORS" : lang === 'fr' ? "DÉPLOYER CAPTEURS" : "DESPLEGAR SENSORS"),
-    manual: tWelcome.manual || (lang === 'es' ? "MANUAL IA" : lang === 'en' ? "AI MANUAL" : lang === 'fr' ? "MANUEL IA" : "MANUAL IA"),
-    systemStatus: tWelcome.systemStatus || (lang === 'es' ? "SISTEMA ÓPTIMO" : lang === 'en' ? "SYSTEM OPTIMAL" : lang === 'fr' ? "SYSTÈME OPTIMAL" : "SISTEMA ÒPTIM"),
+    loading: tWelcome.loading || (lang === 'es' ? "CARGANDO PREVISIÓN..." : lang === 'en' ? "LOADING FORECAST..." : lang === 'fr' ? "CHARGEMENT DES PRÉVISIONS..." : "CARREGANT PREVISIÓ..."),
+    // NOTA: es consulta sysTagline/sysStart/sysManual (no tagline/start/manual) perquè
+    // welcome.tagline/start/manual ja existeixen a ca/es/en/fr.ts amb un altre contingut
+    // (disseny anterior); si es consultés el nom real, sempre serien truthy i el text
+    // d'aquí sota no s'arribaria a mostrar mai.
+    tagline: tWelcome.sysTagline || (lang === 'es' ? "PREVISIÓN DE ALTA PRECISIÓN, IMPULSADA POR IA" : lang === 'en' ? "HIGH-PRECISION FORECASTS, POWERED BY AI" : lang === 'fr' ? "PRÉVISIONS DE HAUTE PRÉCISION, PAR IA" : "PREVISIÓ D'ALTA PRECISIÓ, IMPULSADA PER IA"),
+    start: tWelcome.sysStart || (lang === 'es' ? "VER EL TIEMPO" : lang === 'en' ? "VIEW WEATHER" : lang === 'fr' ? "VOIR LA MÉTÉO" : "VEURE EL TEMPS"),
+    manual: tWelcome.sysManual || (lang === 'es' ? "CÓMO FUNCIONA" : lang === 'en' ? "HOW IT WORKS" : lang === 'fr' ? "COMMENT ÇA MARCHE" : "COM FUNCIONA"),
+    systemStatus: tWelcome.systemStatus || (lang === 'es' ? "EN LÍNEA" : lang === 'en' ? "ONLINE" : lang === 'fr' ? "EN LIGNE" : "EN LÍNIA"),
     secure: tWelcome.secure || (lang === 'es' ? "CONEXIÓN SEGURA" : lang === 'en' ? "SECURE CONNECTION" : lang === 'fr' ? "CONNEXION SÉCURISÉE" : "CONNEXIÓ SEGURA"),
-    modelArome: tWelcome.modelArome || (lang === 'es' ? "AROME HD (COBERTURA TÁCTICA)" : lang === 'en' ? "AROME HD (TACTICAL COVERAGE)" : lang === 'fr' ? "AROME HD (COUVERTURE TACTIQUE)" : "AROME HD (COBERTURA TÀCTICA)"),
-    modelFallback: tWelcome.modelFallback || (lang === 'es' ? "MULTI-MODELO GLOBAL" : lang === 'en' ? "GLOBAL MULTI-MODEL" : lang === 'fr' ? "MULTI-MODÈLE GLOBAL" : "MULTI-MODEL GLOBAL"),
-    sysActive: tWelcome.sysActive || (lang === 'es' ? "[ PRIORIDAD ]" : lang === 'en' ? "[ PRIORITY ]" : lang === 'fr' ? "[ PRIORITÉ ]" : "[ PRIORITAT ]"),
-    sysAuto: tWelcome.sysAuto || (lang === 'es' ? "[ AUTO-SWITCH ]" : lang === 'en' ? "[ AUTO-SWITCH ]" : lang === 'fr' ? "[ AUTO-SWITCH ]" : "[ AUTO-SWITCH ]"),
     
-    // Noves cadenes Hold-to-Arm 
-    tapWarning: lang === 'es' ? "⚠️ ¡MANTÉN PULSADO!" : lang === 'en' ? "⚠️ HOLD TO ARM!" : lang === 'fr' ? "⚠️ MAINTENEZ APPUYÉ !" : "⚠️ MANTÉN PREMUT!",
-    deployed: lang === 'es' ? "[ SENSORES DESPLEGADOS ]" : lang === 'en' ? "[ SENSORS DEPLOYED ]" : lang === 'fr' ? "[ CAPTEURS DÉPLOYÉS ]" : "[ SENSORS DESPLEGATS ]",
-    ariaDescription: lang === 'es' ? "Botón de arranque táctico. Requiere mantener pulsado 1.5 segundos." : lang === 'en' ? "Tactical deployment button. Requires holding for 1.5 seconds." : lang === 'fr' ? "Bouton de démarrage tactique. Nécessite de maintenir appuyé 1,5 secondes." : "Botó d'arrencada tàctica. Requereix mantenir premut 1.5 segons.",
+    // Cadenes Hold-to-Arm (retextualitzades: to professional, sense vocabulari tàctic)
+    tapWarning: tWelcome.tapWarning || (lang === 'es' ? "MANTENLO PULSADO" : lang === 'en' ? "PRESS AND HOLD" : lang === 'fr' ? "MAINTIENS APPUYÉ" : "MANTÉN-LO PREMUT"),
+    deployed: tWelcome.deployed || (lang === 'es' ? "LISTO" : lang === 'en' ? "READY" : lang === 'fr' ? "PRÊT" : "LLEST"),
+    ariaDescription: tWelcome.ariaDescription || (lang === 'es' ? "Botón de inicio. Mantén pulsado 1,5 segundos para empezar." : lang === 'en' ? "Start button. Hold for 1.5 seconds to begin." : lang === 'fr' ? "Bouton de démarrage. Maintenez appuyé 1,5 seconde pour commencer." : "Botó d'inici. Mantén-lo premut 1,5 segons per començar."),
   };
 
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
+  // Ref pròpia per saber si tenim una entrada d'historial pendent de consumir,
+  // en comptes de llegir window.history.state (mutable i compartit amb la resta
+  // de l'app: si alguna altra part fes push/replace mentre el modal està obert,
+  // window.history.state?.modal podria deixar de coincidir i l'entrada nostra
+  // quedaria òrfena a la pila sense que closeDiagnosticsModal la consumís).
+  const diagnosticsHistoryPushedRef = useRef(false);
+
   const closeDiagnosticsModal = useCallback(() => {
-    if (typeof window !== 'undefined' && window.history.state?.modal === 'meteo_diagnostics') {
+    if (typeof window !== 'undefined' && diagnosticsHistoryPushedRef.current) {
+      diagnosticsHistoryPushedRef.current = false;
       window.history.back();
     } else {
       setShowDiagnostics(false);
@@ -68,12 +100,16 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
   const openDiagnosticsModal = () => {
     if (typeof window !== 'undefined') {
       window.history.pushState({ modal: 'meteo_diagnostics' }, '');
+      diagnosticsHistoryPushedRef.current = true;
       setShowDiagnostics(true);
     }
   };
 
   useEffect(() => {
-    const handlePopState = () => { if (showDiagnostics) setShowDiagnostics(false); };
+    const handlePopState = () => {
+      diagnosticsHistoryPushedRef.current = false;
+      if (showDiagnostics) setShowDiagnostics(false);
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [showDiagnostics]);
@@ -96,12 +132,13 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
   const [isArmed, setIsArmed] = useState(false);
   
   // Refs per manipular el DOM directament evitant 60 re-renders de React per segon
-  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progressRingRef = useRef<SVGCircleElement>(null);
   const progressTextRef = useRef<HTMLSpanElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const warningTimerRef = useRef<number | null>(null);
   
   const startTimeRef = useRef<number>(0);
+  const lastHapticCheckpointRef = useRef<number>(0); // Últim llindar de 25/50/75% ja vibrat
   const HOLD_DURATION = 1500; // 1.5 segons de retenció exigida
 
   const startHold = useCallback((e?: React.SyntheticEvent | Event) => {
@@ -117,6 +154,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     setIsHolding(true);
     setTapWarning(false);
     startTimeRef.current = Date.now();
+    lastHapticCheckpointRef.current = 0;
 
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     if (warningTimerRef.current) window.clearTimeout(warningTimerRef.current);
@@ -127,15 +165,20 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
       const progress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
 
       // Mutacions directes al DOM (Estalvi de Bateria extrem)
-      if (progressBarRef.current) {
-        progressBarRef.current.style.width = `${progress}%`;
+      if (progressRingRef.current) {
+        progressRingRef.current.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - progress / 100)}`;
       }
       if (progressTextRef.current) {
         progressTextRef.current.innerText = Math.floor(progress).toString();
       }
 
-      // Micro-batecs tàptics espaiats per evitar col·lapse de l'API de vibració
-      if (progress % 25 < 1.5 && progress > 5 && progress < 95) {
+      // Micro-batecs tàptics als llindars de 25/50/75%: un únic tap per llindar,
+      // independent del framerate (abans `progress % 25 < 1.5` podia disparar-se
+      // diverses vegades seguides a pantalles d'alta taxa de refresc, o saltar-se
+      // el llindar si el framerate era baix).
+      const hapticCheckpoint = Math.floor(progress / 25);
+      if (hapticCheckpoint > lastHapticCheckpointRef.current && hapticCheckpoint >= 1 && hapticCheckpoint <= 3) {
+        lastHapticCheckpointRef.current = hapticCheckpoint;
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
       }
 
@@ -153,8 +196,8 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
       }
     };
 
-    // Reseteig inicial de la barra abans de començar el cicle visual
-    if (progressBarRef.current) progressBarRef.current.style.width = '0%';
+    // Reseteig inicial de l'anell abans de començar el cicle visual
+    if (progressRingRef.current) progressRingRef.current.style.strokeDashoffset = `${RING_CIRCUMFERENCE}`;
     if (progressTextRef.current) progressTextRef.current.innerText = '0';
     
     animationFrameRef.current = requestAnimationFrame(animate);
@@ -442,10 +485,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
         <div className="relative flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-[420px] lg:max-w-[420px] xl:max-w-[460px] shrink-0 z-30 gap-5 lg:gap-7">
             
             <div className="flex flex-col items-center lg:items-start w-full gap-2 lg:gap-3 relative z-10">
-              <div className="flex items-center gap-2 opacity-80 mb-[-6px] lg:mb-[-10px] ml-1">
-                <div className="w-5 h-[2px] bg-sky-500"></div>
-                <span className="text-[8px] sm:text-[9px] font-mono font-black tracking-[0.3em] text-sky-400 uppercase">SYS.INIT // OMEGA</span>
-              </div>
               <h1 className="relative flex items-center text-[2.75rem] sm:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tighter">
                 <span className="text-white drop-shadow-[0_2px_10px_rgba(56,189,248,0.4)]">METEO<span className="text-sky-200">TONI</span></span>
                 <div className="relative ml-1.5 flex items-center justify-center">
@@ -499,15 +538,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                     <div className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-emerald-500/20 to-transparent animate-[ghost-tease-pulse_5s_ease-in-out_infinite] z-0"></div>
                   )}
 
-                  {/* Barra d'Ompliment Plasma controlada directament per DOM (Ref) */}
-                  {(!loading && !tapWarning) && (
-                    <div 
-                      ref={progressBarRef}
-                      className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r from-emerald-600/60 to-emerald-400/80 backdrop-blur-sm border-r-2 border-emerald-300 shadow-[0_0_30px_rgba(52,211,153,0.8)] transition-opacity duration-200 ease-linear z-10 ${isHolding ? 'opacity-100' : 'opacity-0'}`} 
-                      style={{ width: '0%' }}
-                    ></div>
-                  )}
-
                   {/* Línia d'Escaneig Ambre (Radar Sweep) */}
                   {!isHolding && !loading && !tapWarning && !isArmed && (
                     <div className="absolute inset-0 overflow-hidden rounded-xl opacity-[0.15] lg:opacity-30 z-0">
@@ -518,11 +548,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                   {/* Méskia de contenció Cantonades HUD */}
                   <div className={`absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 transition-colors duration-300 rounded-tr-xl z-20 ${tapWarning ? 'border-red-400' : isHolding ? 'border-emerald-400' : 'border-amber-500/80 group-hover:border-amber-400'}`}></div>
                   <div className={`absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 transition-colors duration-300 rounded-bl-xl z-20 ${tapWarning ? 'border-red-400' : isHolding ? 'border-emerald-400' : 'border-amber-500/80 group-hover:border-amber-400'}`}></div>
-
-                  {/* Comptador Digital de Càrrega (DOM Ref) */}
-                  <div className={`absolute right-4 sm:right-6 font-mono font-black text-emerald-300 text-base sm:text-lg drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] z-40 transition-opacity duration-200 ${isHolding && !isArmed ? 'opacity-100' : 'opacity-0'}`}>
-                    <span ref={progressTextRef}>0</span>%
-                  </div>
 
                   {/* Contingut Central (Símbol + Text) */}
                   <div className="relative flex items-center gap-3 lg:gap-4 z-30 preserve-3d w-full justify-center" style={{ transform: 'translateZ(10px)' }}>
@@ -536,7 +561,27 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                       ) : isArmed ? (
                           <><ShieldCheck className="w-6 h-6 text-white drop-shadow-[0_0_15px_white]" /><span className="font-sans font-black tracking-[0.25em] text-xl lg:text-2xl text-white uppercase drop-shadow-[0_0_15px_white]">{systemText.deployed}</span></>
                       ) : (
-                          <><Fingerprint className={`w-5 h-5 lg:w-6 lg:h-6 transition-colors duration-300 ${isHolding ? 'text-white drop-shadow-[0_0_10px_white]' : 'text-amber-400 group-hover:text-amber-300'}`} />
+                          <>
+                          <div className="relative w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center shrink-0">
+                            {/* Anell SVG: traç de fons fix + traç de progrés mutat per ref (mateix patró GPU que la resta del component) */}
+                            <svg
+                              viewBox="0 0 36 36"
+                              className={`absolute inset-0 w-full h-full -rotate-90 ${!isHolding ? 'animate-[radar-sweep_6s_linear_infinite]' : ''}`}
+                            >
+                              <circle cx="18" cy="18" r={RING_RADIUS} fill="none" strokeWidth="2" className="stroke-amber-400/25" />
+                              <circle
+                                ref={progressRingRef}
+                                cx="18" cy="18" r={RING_RADIUS} fill="none" strokeWidth="2.5" strokeLinecap="round"
+                                className={`transition-colors duration-300 ${isHolding ? 'stroke-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : 'stroke-transparent'}`}
+                                style={{ strokeDasharray: RING_CIRCUMFERENCE, strokeDashoffset: RING_CIRCUMFERENCE }}
+                              />
+                            </svg>
+                            {isHolding ? (
+                              <span ref={progressTextRef} className="relative font-mono font-black text-white text-[11px] lg:text-xs drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">0</span>
+                            ) : (
+                              <Fingerprint className="relative w-4 h-4 lg:w-[18px] lg:h-[18px] text-amber-400 group-hover:text-amber-300 transition-colors duration-300" />
+                            )}
+                          </div>
                           <span className={`font-sans font-black tracking-[0.2em] sm:tracking-[0.25em] text-lg sm:text-xl lg:text-2xl uppercase transition-colors duration-300 ${isHolding ? 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]' : 'text-amber-400 group-hover:text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]'}`}>
                             {systemText.start}
                           </span></>
@@ -566,7 +611,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
       {/* MODAL I18N */}
       {showDiagnostics && (
         <div className="absolute z-[99999]">
-          <DiagnosticsModal onClose={closeDiagnosticsModal} lang={lang} t={t} wrfWindFormatted={systemText.sysAuto} aromeWindFormatted={systemText.sysActive} />
+          <DiagnosticsModal onClose={closeDiagnosticsModal} lang={lang} t={t} />
         </div>
       )}
 
@@ -584,7 +629,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
                   <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {systemText.secure}
               </div>
               <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-mono font-black text-slate-500 tracking-widest uppercase">
-                  <span className="text-slate-400">© {year} MT-AI</span><span className="text-sky-500/90">v{safeVersion}</span>
+                  <span className="text-slate-400">© {year} MT-AI</span><span className="text-sky-500/90">v{APP_VERSION}</span>
               </div>
           </div>
       </footer>

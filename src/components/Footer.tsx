@@ -1,5 +1,5 @@
 // src/components/Footer.tsx
-import pkg from '../../package.json';
+import { APP_VERSION } from '../utils/appVersion';
 import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
 import { clear } from 'idb-keyval'; // NOU: Importem neteja d'IndexedDB
 
@@ -11,9 +11,6 @@ interface FooterProps {
 
 export default function Footer({ simple = false, transparent = false, className = "" }: FooterProps) {
   const year = new Date().getFullYear();
-  
-  // DOCTRINA RISC ZERO: Blindatge d'arxius externs (package.json pot ser ofuscat en producció)
-  const safeVersion = pkg && pkg.version ? pkg.version : '3.6.0';
 
   // --- FUNCIÓ DE MANTENIMENT TÀCTIC ---
   const handleSystemReset = async () => {
@@ -95,7 +92,7 @@ export default function Footer({ simple = false, transparent = false, className 
                     <span className="text-white/10" aria-hidden="true">|</span>
                     <div className="flex items-center gap-1.5" title="Versió del nucli">
                         <Cpu className="w-3.5 h-3.5 text-slate-600" aria-hidden="true" />
-                        <span>v{safeVersion}</span>
+                        <span>v{APP_VERSION}</span>
                     </div>
                 </>
             )}
