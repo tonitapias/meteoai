@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+// RadarMap.tsx
+import { useEffect, useState, useRef, useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTranslation } from 'react-i18next';
@@ -37,9 +38,15 @@ interface RadarMapProps {
   lat: number;
   lon: number;
   isActive: boolean;
+  // Elevat a RadarModal.tsx: cal que el modal sàpiga si el menú està obert
+  // per gestionar correctament Esc / botó enrere sense sortir del modal.
+  // Tipat igual que el `useState` real de RadarModal (Dispatch<SetStateAction<boolean>>),
+  // no una simple (show: boolean) => void, perquè useMapLifecycle ho exigeix.
+  showLayerMenu: boolean;
+  setShowLayerMenu: Dispatch<SetStateAction<boolean>>;
 }
 
-export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
+export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLayerMenu }: RadarMapProps) {
   const { t } = useTranslation();
 
   const { loading, error, radarData, fetchRadarData } = useRadarData();
@@ -54,7 +61,6 @@ export default function RadarMap({ lat, lon, isActive }: RadarMapProps) {
 
   // Estats UI Locals
   const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
-  const [showLayerMenu, setShowLayerMenu] = useState(false);
   // CORRECCIÓ (Fase 3): tipat explícitament amb la interfície Overlays
   // (font única de veritat a radarPhysics.ts) en lloc de deixar que
   // TypeScript l'infereixi de l'objecte literal.
