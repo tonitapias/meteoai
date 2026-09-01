@@ -1,6 +1,8 @@
 // src/components/current-weather/WeatherStatsGrid.tsx
 import { Droplets, Activity, Navigation, Wind, CloudOff } from 'lucide-react';
 import { Language } from '../../translations';
+import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from '../widgets/widgetStyles';
+import { safeVal } from '../widgets/widgetHelpers';
 
 interface WeatherStatsGridProps {
   windSpeed: number | null;
@@ -69,11 +71,6 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
   const isValidHum = typeof humidity === 'number' && !isNaN(humidity);
   const isValidTemp = typeof apparentTemp === 'number' && !isNaN(apparentTemp);
 
-  // Escut visual per a valors nuls
-  const formatValue = (val: number | null | undefined, isValid: boolean) => {
-    return isValid && val !== null && val !== undefined ? Math.round(val) : '--';
-  };
-
   // Funció auxiliar matemàticament segura per traduir graus a punts cardinals
   const getCardinal = (angle: number | null | undefined) => {
     if (!isValidDir || angle === null || angle === undefined) return '--';
@@ -84,7 +81,6 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
   };
 
   // SPATIAL UI BASE (Bateria optimitzada per a mòbil)
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px] md:bg-[size:16px_16px]`;
   const BASE_CARD = "relative overflow-hidden backdrop-blur-md bg-gradient-to-br border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-500";
 
   return (
@@ -108,14 +104,14 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           
           <div className="flex items-baseline gap-1.5">
             <span className={`text-3xl sm:text-4xl md:text-5xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidWind ? 'text-white' : 'text-slate-500'}`}>
-              {formatValue(windSpeed, isValidWind)}
+              {safeVal(windSpeed)}
             </span>
             <span className={`text-[11px] sm:text-xs font-bold uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>km/h</span>
           </div>
           
           <div className={`text-[11px] sm:text-xs font-mono font-medium mt-1 sm:mt-1.5 uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>
             {t.gusts}: <span className={`font-black tabular-nums drop-shadow-md ${isValidGusts ? 'text-indigo-300' : 'text-slate-500'}`}>
-              {formatValue(windGusts, isValidGusts)}
+              {safeVal(windGusts)}
             </span> <span className={isValidGusts ? 'text-slate-500' : 'text-slate-600'}>km/h</span>
           </div>
         </div>
@@ -160,7 +156,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           </div>
           <div className="flex items-baseline gap-1 mt-auto z-10 relative">
             <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidHum ? 'text-white' : 'text-slate-500'}`}>
-              {formatValue(humidity, isValidHum)}
+              {safeVal(humidity)}
             </span>
             <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidHum ? 'text-slate-400' : 'text-slate-500'}`}>%</span>
           </div>
@@ -181,7 +177,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           </div>
           <div className="flex items-baseline gap-1 mt-auto z-10 relative">
             <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>
-              {formatValue(apparentTemp, isValidTemp)}
+              {safeVal(apparentTemp)}
             </span>
             <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidTemp ? 'text-slate-400' : 'text-slate-500'}`}>°</span>
           </div>

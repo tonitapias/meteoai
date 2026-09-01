@@ -2,6 +2,7 @@
 import React from 'react';
 import { Sun, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Language } from '../../translations';
+import { MATRIX_BG } from './widgetStyles';
 
 interface UVIndexWidgetProps {
   uvIndex?: number | null;
@@ -74,7 +75,6 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
   const fillPercentage = isDataMissing ? 0 : (clampedUV / maxGaugeUV);
   const strokeDashoffset = GAUGE_LENGTH - (fillPercentage * GAUGE_LENGTH);
 
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   return (
     <div className={`flex flex-col h-full p-4 md:p-5 relative group overflow-hidden backdrop-blur-md rounded-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700 ${isDataMissing ? 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50' : 'bg-gradient-to-br from-black/60 to-[#0f111a]/80 border-white/5'}`}>

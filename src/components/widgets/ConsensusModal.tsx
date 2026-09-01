@@ -3,7 +3,7 @@ import React from 'react';
 import { Language } from '../../translations';
 import { Thermometer, CloudRain, Wind, X, ArrowUpRight, ArrowDownRight, MoveRight } from 'lucide-react';
 import { ModalType } from './ConsensusWidget';
-import { resolveHourlyEpoch } from '../../utils/weatherMath';
+import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
 
 interface ConsensusModalProps {
   activeModal: ModalType;
@@ -13,8 +13,8 @@ interface ConsensusModalProps {
   nowTimestamp: number;
   hourlyTimes: string[];
   hourlyGlobalTimes: string[];
-  hourlyLocal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
-  hourlyGlobal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
+  hourlyLocal: HourlySeriesBundle;
+  hourlyGlobal: HourlySeriesBundle;
 }
 
 const translations = {
@@ -81,48 +81,9 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
     return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
   };
 
-  const getMappedData = () => {
-     let startIndex = hourlyTimes.findIndex(timeStr => {
-        const epoch = resolveHourlyEpoch(timeStr, utcOffset);
-        return !isNaN(epoch) && epoch >= nowTimestamp - (60 * 60 * 1000); 
-     });
-     if (startIndex === -1) startIndex = 0;
-     const displayTimes = hourlyTimes.slice(startIndex, startIndex + 24);
-
-     const mapGlobalArr = (arr: (number|null)[] = []) => {
-        const dict = new Map<number, number | null>();
-        arr.forEach((val, idx) => {
-           const ep = resolveHourlyEpoch(hourlyGlobalTimes[idx], utcOffset);
-           if (!isNaN(ep)) dict.set(ep, val);
-        });
-        return displayTimes.map(timeStr => dict.get(resolveHourlyEpoch(timeStr, utcOffset)) ?? null);
-     };
-
-     const getAlignedLocal = (arr: (number|null|undefined)[] | undefined) => {
-        if (!arr) return displayTimes.map(() => null);
-        const sliced = arr.slice(startIndex, startIndex + 24);
-        return displayTimes.map((_, i) => {
-           const val = sliced[i];
-           return (typeof val === 'number' && !isNaN(val)) ? val : null;
-        });
-     };
-
-     return {
-        displayTimes,
-        tempLoc: getAlignedLocal(hourlyLocal.temp),
-        tempGlo: mapGlobalArr(hourlyGlobal.temp),
-        rainLoc: getAlignedLocal(hourlyLocal.rain),
-        rainGlo: mapGlobalArr(hourlyGlobal.rain),
-        windLoc: getAlignedLocal(hourlyLocal.wind),
-        windGlo: mapGlobalArr(hourlyGlobal.wind),
-        gustsLoc: getAlignedLocal(hourlyLocal.gusts),
-        gustsGlo: mapGlobalArr(hourlyGlobal.gusts)
-     };
-  };
-
   const renderListContent = () => {
     if (hourlyTimes.length === 0) return <div className="text-slate-400 text-center py-12 font-mono text-[10px] sm:text-xs tracking-widest uppercase animate-pulse">{t.sync}</div>;
-    const { displayTimes, ...mapped } = getMappedData();
+    const { displayTimes, ...mapped } = getMappedConsensusSeries(hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal, utcOffset, nowTimestamp);
     
     const locArr = activeModal === 'temp' ? mapped.tempLoc : activeModal === 'rain' ? mapped.rainLoc : mapped.windLoc;
     const gloArr = activeModal === 'temp' ? mapped.tempGlo : activeModal === 'rain' ? mapped.rainGlo : mapped.windGlo;

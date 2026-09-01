@@ -6,6 +6,7 @@ import { Language } from '../translations';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { MATRIX_BG } from './widgets/widgetStyles';
 
 interface AromeModalProps {
   lat: number;
@@ -29,11 +30,6 @@ interface HourlyRow {
   isDay: boolean;
   cloudCover: number;
 }
-
-const getLocalYYYYMMDD = (d: Date) => {
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
-};
 
 // DOCTRINA RISC ZERO: Diccionari tàctic intern segur
 const aromeTranslations: Record<string, Record<string, string>> = {
@@ -121,7 +117,12 @@ const localeMap: Record<string, string> = {
 export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
   const listRef = useRef<HTMLDivElement>(null);
-  
+
+  // [FIX PRECISIÓ] "Avui"/"Demà" i el tall d'hores passades han de calcular-se
+  // amb l'hora local de la ubicació consultada, no la del dispositiu de qui mira
+  // la pantalla (que pot ser a un altre fus horari).
+  const utcOffsetSeconds = typeof aromeData?.utc_offset_seconds === 'number' ? aromeData.utc_offset_seconds : 0;
+
   // Garantim un fallback segur si s'introdueix un idioma no mapejat (Risc Zero)
   const safeLang = aromeTranslations[lang] ? lang : 'ca';
   const t = aromeTranslations[safeLang];
@@ -185,10 +186,10 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
     const h = aromeData?.hourly;
     if (!h || !Array.isArray(h.time) || h.time.length === 0) return [];
 
-    const now = new Date();
-    const todayDateStr = getLocalYYYYMMDD(now);
-    const nowHour = now.getHours();
-    
+    const locationNow = new Date(new Date().getTime() + utcOffsetSeconds * 1000);
+    const todayDateStr = locationNow.toISOString().split('T')[0];
+    const nowHour = locationNow.getUTCHours();
+
     const rows: HourlyRow[] = [];
     const timeLength = h.time.length;
     const elevation = (typeof aromeData?.elevation === 'number' && !isNaN(aromeData.elevation)) ? aromeData.elevation : 0;
@@ -302,7 +303,7 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
     }
 
     return rows;
-  }, [aromeData]);
+  }, [aromeData, utcOffsetSeconds]);
 
   // DOCTRINA RISC ZERO: Lògica immutabilitzada i segura contra arrays buits que provocarien Infinity o -Infinity
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);
@@ -329,8 +330,6 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
     return 'bg-transparent';
   };
 
-  // SPATIAL UI BASE
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-[#02040A]/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
@@ -484,11 +483,13 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                                             <div className="bg-black/80 py-2 md:py-3 px-4 sm:px-6 text-[10px] md:text-xs font-black uppercase text-cyan-400 tracking-[0.2em] border-y border-white/5 flex items-center gap-3 sticky top-[95px] sm:top-[120px] md:top-[150px] z-20 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
                                                 {(() => {
-                                                    const today = getLocalYYYYMMDD(new Date());
-                                                    const tomorrowDate = new Date();
-                                                    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-                                                    const tomorrowStr = getLocalYYYYMMDD(tomorrowDate);
-                                                    
+                                                    // [FIX PRECISIÓ] Mateix fix que a l'extracció d'hourlyRows: "avui"/"demà"
+                                                    // amb l'hora local de la ubicació, no la del dispositiu.
+                                                    const locationNow = new Date(new Date().getTime() + utcOffsetSeconds * 1000);
+                                                    const today = locationNow.toISOString().split('T')[0];
+                                                    const tomorrowDate = new Date(locationNow.getTime() + 86400000);
+                                                    const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+
                                                     if (row.date === today) return t.today;
                                                     if (row.date === tomorrowStr) return t.tomorrow;
                                                     

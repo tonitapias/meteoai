@@ -49,14 +49,25 @@ const injectCurrent = (target: ExtendedWeatherData, source: CleanedSource) => {
     ];
 
     const targetCurrent = target.current as Record<string, unknown>;
-    
+
+    // [FIX PRECISIÓ] Abans es marcava 'AROME HD' encara que cap camp de sota
+    // fos vàlid (p.ex. AROME retorna 'current' estructuralment però amb tots
+    // els valors nuls per una fallada parcial puntual). Això feia que la UI
+    // mostrés la insígnia d'alta resolució amb dades que en realitat venien
+    // íntegrament del model global de reserva — procedència enganyosa que
+    // contradiu la doctrina Risc Zero. Ara només marquem la font com AROME si
+    // com a mínim un camp real s'ha sobreescrit de debò.
+    let anyFieldOverwritten = false;
     CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
             const val = (source.current as Record<string, unknown>)[k];
             if (val != null && !isNaN(Number(val))) {
                 targetCurrent[k] = val;
+                anyFieldOverwritten = true;
             }
     });
-    target.current.source = 'AROME HD'; 
+    if (anyFieldOverwritten) {
+        target.current.source = 'AROME HD';
+    }
 };
 
 const injectMinutely = (target: ExtendedWeatherData, source: CleanedSource) => {

@@ -1,5 +1,5 @@
 // src/hooks/useGlobalModel.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { z } from 'zod';
 
 // 1. ESQUEMES DE VALIDACIÓ ZOD (MUR DE CONTENCIÓ)
@@ -36,25 +36,37 @@ export function useGlobalModel() {
   const [globalData, setGlobalData] = useState<GlobalModelData | null>(null);
   const [loadingGlobalModel, setLoadingGlobalModel] = useState<boolean>(false);
 
+  // [FIX PRECISIÓ] Mateix "últim guanyador" que useWeather.ts: sense això, canviar
+  // ràpid entre dues ubicacions AROME podia deixar el widget de consens comparant
+  // amb el model global d'una ciutat diferent de la que es mostra al tauler.
+  const requestIdRef = useRef(0);
+
   const fetchGlobalModelByCoords = useCallback(async (lat: number, lon: number) => {
+    const requestId = ++requestIdRef.current;
+    const isStale = () => requestIdRef.current !== requestId;
+
     setLoadingGlobalModel(true);
-    
+
     try {
       // SOLUCIÓ TÀCTICA: Hem afegit 'wind_gusts_10m' a la query de l'API
       const GLOBAL_MODEL_URL = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m&models=best_match&timeformat=unixtime`;
       
       const response = await fetch(GLOBAL_MODEL_URL);
-      
+
       if (!response.ok) {
         // Fallada de xarxa o HTTP
-        setGlobalData(null);
-        return; 
+        if (!isStale()) setGlobalData(null);
+        return;
       }
 
       const rawJson = await response.json();
 
       // VALIDACIÓ SEGURA: Risc Zero
       const parsed = globalModelResponseSchema.safeParse(rawJson);
+
+      // Una petició més nova ja ha començat: descartem aquest resultat obsolet
+      // en lloc de mostrar la comparativa de model global d'una altra ubicació.
+      if (isStale()) return;
 
       if (parsed.success) {
         setGlobalData(parsed.data);
@@ -66,9 +78,9 @@ export function useGlobalModel() {
 
     } catch  {
       // Qualsevol altre error inesperat es captura i se silencia
-      setGlobalData(null);
+      if (!isStale()) setGlobalData(null);
     } finally {
-      setLoadingGlobalModel(false);
+      if (!isStale()) setLoadingGlobalModel(false);
     }
   }, []);
 

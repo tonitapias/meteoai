@@ -1,6 +1,6 @@
 import { Layers, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
+import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 
 export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
@@ -43,7 +43,6 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
 
   // Dark Dashboard Spatial UI
   const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br from-indigo-950/20 to-black/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col p-3 sm:p-4 transition-colors duration-700`;
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   return (
     <div className={SPATIAL_WIDGET_STYLE}>

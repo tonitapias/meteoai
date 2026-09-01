@@ -5,6 +5,7 @@ import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
 import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getSafeLatitude } from '../utils/weatherMath';
 
 const getStatusColor = (code: number) => {
     if (code <= 1) return 'bg-emerald-500 shadow-[0_0_10px_#10b981]';
@@ -41,7 +42,9 @@ export const useCurrentWeatherLogic = ({
         // 2. NOVA IMPLEMENTACIÓ: Calculem la temperatura corregida aquí, a la vista.
         // Convertim 'current' a StrictCurrentWeather per satisfer el tipatge.
         // (Això és segur perquè getInversionCorrectedTemp fa servir safeNum internament)
-        const realTemp = getInversionCorrectedTemp(current as unknown as StrictCurrentWeather);
+        // [FIX PRECISIÓ] Passem la latitud perquè la correcció d'inversió sàpiga en
+        // quin hemisferi és realment hivern (vegeu inversionRules.ts).
+        const realTemp = getInversionCorrectedTemp(current as unknown as StrictCurrentWeather, new Date().getMonth(), getSafeLatitude(location));
 
         const renderTemp = (t: number | null | undefined) => {
             const val = formatTemp(t, unit);

@@ -31,17 +31,27 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   // Ref per evitar duplicitat de crides (Debounce/Throttle manual)
   const lastFetchRef = useRef<{ lat: number; lon: number; unit: WeatherUnit; time: number } | null>(null);
 
+  // [FIX PRECISIÓ] Ref d'"últim guanyador": si l'usuari canvia d'ubicació abans
+  // que respongui la petició anterior (més lenta, o amb reintents), i aquesta
+  // arriba després que la de la ubicació nova, aplicar-la en silenci mostraria
+  // el temps de la ciutat vella sota el nom de la nova. Cada crida es numera;
+  // només s'aplica el resultat si encara és la petició més recent en arribar.
+  const requestIdRef = useRef(0);
+
   const fetchWeatherByCoords = async (lat: number, lon: number, locationName: string, country?: string): Promise<WeatherFetchResult> => {
     const now = Date.now();
 
     // Evitem crides repetides en menys de 3 segons
-    if (lastFetchRef.current && 
-        lastFetchRef.current.lat === lat && 
+    if (lastFetchRef.current &&
+        lastFetchRef.current.lat === lat &&
         lastFetchRef.current.lon === lon &&
         lastFetchRef.current.unit === unit &&
         (now - lastFetchRef.current.time) < 3000) {
-        return { success: true }; 
+        return { success: true };
     }
+
+    const requestId = ++requestIdRef.current;
+    const isStale = () => requestIdRef.current !== requestId;
 
     setLoading(true);
     setError(null);
@@ -49,37 +59,43 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
     try {
       const response = await WeatherRepository.get(
-          lat, 
-          lon, 
-          unit, 
-          lang, 
-          locationName, 
+          lat,
+          lon,
+          unit,
+          lang,
+          locationName,
           country,
           runAromeWorker
       );
 
+      // Una petició més nova ja ha començat: descartem aquest resultat obsolet
+      // en lloc de sobreescriure la pantalla amb dades d'una ubicació antiga.
+      if (isStale()) return { success: true };
+
       setWeatherData(response.data);
       setAqiData(response.aqi);
-      
+
       return { success: true };
 
     } catch (err: unknown) {
+      if (isStale()) return { success: true };
+
       const errorMessage = err instanceof Error ? err.message : String(err);
-      
-      Sentry.captureException(err, { 
+
+      Sentry.captureException(err, {
           tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API },
           extra: { lat, lon, unit }
       });
 
-      setError(t.fetchError || "Error obtenint dades"); 
-      
-      return { 
-          success: false, 
-          error: errorMessage, 
-          type: FETCH_ERROR_TYPES.NETWORK 
+      setError(t.fetchError || "Error obtenint dades");
+
+      return {
+          success: false,
+          error: errorMessage,
+          type: FETCH_ERROR_TYPES.NETWORK
       };
     } finally {
-      setLoading(false);
+      if (!isStale()) setLoading(false);
     }
   };
 

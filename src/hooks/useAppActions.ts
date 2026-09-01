@@ -6,7 +6,7 @@ import { WeatherFetchResult } from './useWeather';
 
 // SOLUCIÓ 1 i 3: Imports directes de l'arquitectura de tipus de l'App
 import { TranslationType } from '../translations';
-import { LocationData } from '../context/PreferencesContext';
+import { LocationData } from './usePreferences';
 
 // SOLUCIÓ 2: Alineem el tipatge estricte del sistema de notificacions de la UI
 type NotificationLevel = 'error' | 'success' | 'info';

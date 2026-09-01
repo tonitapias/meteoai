@@ -32,28 +32,33 @@ export const getUnitLabel = (unit: WeatherUnit): string => {
   return unit === 'F' ? '°F' : '°C';
 };
 
+// [NETEJA] Abans hi havia 3 còpies locals idèntiques d'aquesta mateixa taula
+// (ForecastSection.tsx, DayDetailModal.tsx, i el mapa inline aquí sota).
+export const getSafeLocale = (lang: Language): string => {
+  switch (lang) {
+    case 'es': return 'es-ES';
+    case 'fr': return 'fr-FR';
+    case 'en': return 'en-US';
+    case 'ca':
+    default: return 'ca-ES';
+  }
+};
+
 export const formatDate = (
-  dateString: string | undefined, 
-  lang: Language, 
+  dateString: string | undefined,
+  lang: Language,
   options?: Intl.DateTimeFormatOptions
 ): string => {
-  if (!dateString) return ""; 
+  if (!dateString) return "";
 
-  const locales: Record<Language, string> = { 
-    ca: 'ca-ES', 
-    es: 'es-ES', 
-    en: 'en-US', 
-    fr: 'fr-FR' 
-  };
-  
   try {
-      const date = dateString.includes('T') 
-        ? new Date(dateString) 
+      const date = dateString.includes('T')
+        ? new Date(dateString)
         : new Date(`${dateString}T00:00:00`);
-        
-      if (isNaN(date.getTime())) return ""; 
 
-      return new Intl.DateTimeFormat(locales[lang], options).format(date);
+      if (isNaN(date.getTime())) return "";
+
+      return new Intl.DateTimeFormat(getSafeLocale(lang), options).format(date);
   } catch {
       return "";
   }
@@ -62,19 +67,12 @@ export const formatDate = (
 export const formatTime = (dateString: string | undefined, lang: Language): string => {
   if (!dateString) return "--:--";
 
-  const locales: Record<Language, string> = { 
-    ca: 'ca-ES', 
-    es: 'es-ES', 
-    en: 'en-US', 
-    fr: 'fr-FR' 
-  };
-  
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "--:--";
 
-    return date.toLocaleTimeString(locales[lang], {
-        hour: '2-digit', 
+    return date.toLocaleTimeString(getSafeLocale(lang), {
+        hour: '2-digit',
         minute: '2-digit'
     });
   } catch {

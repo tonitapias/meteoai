@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { RainViewerResponseSchema } from '../utils/radarPhysics';
+import { fetchWithTimeout } from '../utils/networkUtils';
 
 type RadarData = z.infer<typeof RainViewerResponseSchema>;
 
@@ -15,21 +16,6 @@ const ENDPOINTS = [
   'https://api.librewxr.net/public/weather-maps.json', // Principal
   'https://api.rainviewer.com/public/weather-maps.json' // Fallback d'emergència
 ];
-
-// Helper per a fer un Fetch amb Timeout dur
-const fetchWithTimeout = async (url: string, timeoutMs: number): Promise<Response> => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(id);
-    return response;
-  } catch (err: unknown) {
-    clearTimeout(id);
-    throw err;
-  }
-};
 
 export function useRadarData() {
   const [loading, setLoading] = useState(true);

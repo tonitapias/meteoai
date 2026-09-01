@@ -13,10 +13,14 @@ import { calculateEffectiveCloudCover } from './cloudRules';
  * comportament anterior (mes real d'avui) perquè les crides existents ("ara mateix")
  * no calgui tocar-les. Per a hores futures d'un dia de previsió, el cridant ha de
  * passar el mes de l'hora en qüestió, no el d'avui.
+ *
+ * [FIX PRECISIÓ] 'latitude' (opcional) determina l'hemisferi per a checkInversionRisk:
+ * sense latitud coneguda, es manté el comportament anterior (assumeix Hemisferi Nord).
  */
 export const getInversionCorrectedTemp = (
     current: StrictCurrentWeather,
-    referenceMonth: number = new Date().getMonth()
+    referenceMonth: number = new Date().getMonth(),
+    latitude?: number
 ): number => {
     const rawTemp = safeNum(current.temperature_2m);
     
@@ -35,7 +39,8 @@ export const getInversionCorrectedTemp = (
         current.is_day,
         wind,
         cloudCover,
-        referenceMonth
+        referenceMonth,
+        latitude
     );
 
     // Si no hi ha risc, retornem la temperatura original de l'API

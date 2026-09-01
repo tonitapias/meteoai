@@ -15,8 +15,11 @@ interface CacheItem<T> {
 
 export const cacheService = {
     // Generadors de claus
-    generateWeatherKey: (lat: number, lon: number, unit: string): string => {
-        return `${CACHE_PREFIX}weather_${lat.toFixed(4)}_${lon.toFixed(4)}_${unit}`;
+    // [FIX PRECISIÓ] La clau incloïa lat/lon/unitat però no l'idioma, tot i que
+    // el paquet cachejat porta el nom de lloc ja traduït (geoData.city): canviar
+    // d'idioma dins del TTL retornava el nom de ciutat en l'idioma antic.
+    generateWeatherKey: (lat: number, lon: number, unit: string, lang: string): string => {
+        return `${CACHE_PREFIX}weather_${lat.toFixed(4)}_${lon.toFixed(4)}_${unit}_${lang}`;
     },
 
     generateAiKey: (elevation: string, lat: number, lon: number, lang: string): string => {

@@ -1,6 +1,6 @@
 import { Zap, AlertTriangle, Activity, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
+import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 
@@ -63,7 +63,6 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
 
     // SPATIAL UI BASE AMB MATRIU DE FONS
     const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br ${bgGlow} border ${borderColor} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700`;
-    const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (
       <div className={SPATIAL_WIDGET_STYLE}>

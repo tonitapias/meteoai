@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/react";
 import { ZodType, ZodTypeDef } from "zod"; 
 import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchema";
 import { WeatherData, AirQualityData } from "../types/weather";
+import { fetchWithTimeout } from "../utils/networkUtils";
 
 import { 
     API_TIMEOUT_DEFAULT, 
@@ -24,23 +25,10 @@ const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-qualit
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || API_TIMEOUT_DEFAULT;
 const MAX_RETRIES = API_MAX_RETRIES;
 
-const fetchWithTimeout = async (url: string): Promise<Response> => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(id);
-        return response;
-    } catch (error: unknown) {
-        clearTimeout(id);
-        throw error;
-    }
-};
-
 const fetchWithRetry = async (url: string, contextTag: string, retries = MAX_RETRIES): Promise<Response> => {
     for (let i = 0; i <= retries; i++) {
         try {
-            const response = await fetchWithTimeout(url);
+            const response = await fetchWithTimeout(url, TIMEOUT_MS);
             
             if (!response.ok) {
                  Sentry.addBreadcrumb({

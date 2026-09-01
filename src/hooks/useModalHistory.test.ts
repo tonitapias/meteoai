@@ -90,4 +90,26 @@ describe('useModalHistory Hook', () => {
     // el hook NO ha de cridar back() una altra vegada.
     expect(backSpy).not.toHaveBeenCalled();
   });
+
+  it('amb dos modals oberts alhora, un sol "enrere" només ha de tancar el de dalt de tot', () => {
+    // Regressió: abans, dues instàncies d'aquest hook obertes simultàniament
+    // (p.ex. AROME obert sobre el detall del dia) es tancaven totes dues amb
+    // un únic esdeveniment 'popstate', perquè cada instància reaccionava a
+    // QUALSEVOL 'popstate' sense mirar si n'hi havia una altra de més recent.
+    const onCloseBottom = vi.fn();
+    const onCloseTop = vi.fn();
+
+    // 1. S'obre primer el modal "de sota" (p.ex. detall del dia)
+    renderHook(() => useModalHistory(true, onCloseBottom));
+
+    // 2. Després s'obre el modal "de dalt" (p.ex. AROME)
+    renderHook(() => useModalHistory(true, onCloseTop));
+
+    // 3. Una sola pulsació física d'"enrere"
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    // 4. Només s'ha de tancar el modal de dalt de tot
+    expect(onCloseTop).toHaveBeenCalledTimes(1);
+    expect(onCloseBottom).not.toHaveBeenCalled();
+  });
 });

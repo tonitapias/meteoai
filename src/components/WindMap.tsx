@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Wind, Activity, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { MATRIX_BG } from './widgets/widgetStyles';
 
 interface WindMapProps {
   lat: number;
@@ -43,7 +44,6 @@ export default function WindMap({ lat, lon }: WindMapProps) {
       setRetryCount(prev => prev + 1);
   };
 
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   if (!isValidCoords) {
       return (

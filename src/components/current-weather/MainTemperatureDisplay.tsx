@@ -1,4 +1,5 @@
 import { ArrowUp, ArrowDown } from 'lucide-react';
+import { safeVal } from '../widgets/widgetHelpers';
 
 interface MainTemperatureDisplayProps {
   temp: number | null;
@@ -14,23 +15,18 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
   const isValidMax = typeof max === 'number' && !isNaN(max);
   const isValidMin = typeof min === 'number' && !isNaN(min);
 
-  // Escut de renderitzat amb arrodoniment per evitar decimals llargs de l'API
-  const formatTemp = (val: number | null, isValid: boolean) => {
-    return isValid && val !== null ? Math.round(val) : '--';
-  };
-
   return (
     <div className="mt-8 md:mt-12 flex flex-col md:flex-row items-baseline md:items-end gap-6 relative z-10">
         
         {/* TEMPERATURA PRINCIPAL */}
         <div className="relative leading-none">
             <h1 className={`text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
-                {formatTemp(temp, isValidTemp)}°
+                {safeVal(temp)}°
             </h1>
             
             {/* SPATIAL UI: Aura atmosfèrica de la temperatura (S'apaga si perdem senyal) */}
             <div className={`absolute inset-0 text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium blur-[40px] opacity-20 select-none pointer-events-none tracking-tighter tabular-nums transition-colors duration-1000 ${isValidTemp ? 'text-indigo-400' : 'text-transparent'}`}>
-                {formatTemp(temp, isValidTemp)}°
+                {safeVal(temp)}°
             </div>
         </div>
 
@@ -50,7 +46,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
                 <div className="flex items-center gap-1">
                     <ArrowUp className={`w-3.5 h-3.5 transition-colors duration-500 ${isValidMax ? 'text-rose-400' : 'text-slate-600'}`} />
                     <span className={`tabular-nums transition-colors duration-500 ${isValidMax ? 'text-white' : 'text-slate-500'}`}>
-                        {formatTemp(max, isValidMax)}°
+                        {safeVal(max)}°
                     </span>
                 </div>
                 
@@ -60,7 +56,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
                 <div className="flex items-center gap-1">
                     <ArrowDown className={`w-3.5 h-3.5 transition-colors duration-500 ${isValidMin ? 'text-cyan-400' : 'text-slate-600'}`} />
                     <span className={`tabular-nums transition-colors duration-500 ${isValidMin ? 'text-white' : 'text-slate-500'}`}>
-                        {formatTemp(min, isValidMin)}°
+                        {safeVal(min)}°
                     </span>
                 </div>
             </div>

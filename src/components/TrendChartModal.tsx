@@ -5,6 +5,7 @@ import { getWeatherIcon } from './WeatherIcons';
 import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
 import { Language } from '../translations';
 import { StrictDailyWeather } from '../types/weatherLogicTypes';
+import { MATRIX_BG } from './widgets/widgetStyles';
 
 export interface ChartDataPoint {
   time: string;
@@ -66,7 +67,6 @@ const I18N_ARIA_CLOSE = {
   en: "Close modal"
 };
 
-const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
 const TrendChartModal = memo(function TrendChartModal({ 
   isOpen, onClose, dailyData, chartData, lang 
@@ -120,7 +120,9 @@ const TrendChartModal = memo(function TrendChartModal({
     let code = rawCode;
 
     if (typeof rawDate === 'string') {
-      const date = new Date(rawDate);
+      // [FIX PRECISIÓ] Vegeu el mateix fix a ForecastSection.tsx: forcem hora local
+      // perquè "YYYY-MM-DD" no es llegeixi com a mitjanit UTC.
+      const date = new Date(rawDate + 'T12:00:00');
       if (!isNaN(date.getTime())) {
         dayInitial = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'short' })
           .replace(/\./g, '')

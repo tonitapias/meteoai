@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Sunrise, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
+import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans, timeStringToSeconds, secondsToTime } from './widgetHelpers';
 
 export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) => {
@@ -106,7 +106,6 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
         
     // Injecció de [perspective:1200px] i [transform-style:preserve-3d] per crear la "càmera"
     const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br transition-colors duration-1000 ${bgGlow} border ${hasValidData ? 'border-white/5' : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu select-none [perspective:1200px] [transform-style:preserve-3d]`;
-    const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>

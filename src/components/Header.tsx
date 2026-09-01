@@ -133,6 +133,9 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLocating, setIsLocating] = useState(false); 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  // [FIX PRECISIÓ] "Últim guanyador": evita que una cerca anterior i més lenta
+  // sobreescrigui els suggeriments d'una de posterior i més ràpida.
+  const searchRequestIdRef = useRef(0);
 
   // --- LÒGICA DEBUG MODE (5 CLICS) ---
   const [debugClicks, setDebugClicks] = useState(0);
@@ -200,16 +203,22 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
         return;
       }
 
+      const requestId = ++searchRequestIdRef.current;
       setIsSearching(true);
       try {
         const results = await searchCity(cleanQuery);
+        // Una cerca més recent ja ha començat mentrestant: descartem aquest
+        // resultat obsolet en lloc de sobreescriure els suggeriments actuals.
+        if (searchRequestIdRef.current !== requestId) return;
         setSuggestions(results || []);
       } catch (err) {
         console.error("Error en la cerca de ciutat:", err);
-        setSuggestions([]);
+        if (searchRequestIdRef.current === requestId) setSuggestions([]);
       } finally {
-        setSelectedIndex(-1); 
-        setIsSearching(false);
+        if (searchRequestIdRef.current === requestId) {
+          setSelectedIndex(-1);
+          setIsSearching(false);
+        }
       }
     }, 300);
     return () => clearTimeout(timer);

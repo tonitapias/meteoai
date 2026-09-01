@@ -1,22 +1,23 @@
 // src/components/widgets/ConsensusWidget.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { ConsensusMetrics } from '../../utils/consensusMath';
+import { ConsensusMetrics, HourlySeriesBundle } from '../../utils/consensusMath';
 import { Language } from '../../translations';
 import { ConsensusModal } from './ConsensusModal';
 import { ConsensusChartsModal } from './ConsensusChartsModal';
-import { 
-  CheckCircle2, 
-  Activity, 
-  GitBranch, 
-  Thermometer, 
-  CloudRain, 
-  CloudSnow, 
+import {
+  CheckCircle2,
+  Activity,
+  GitBranch,
+  Thermometer,
+  CloudRain,
+  CloudSnow,
   Wind,
   ArrowUpRight,
   ArrowDownRight,
   MoveRight,
   Cpu,
-  LineChart
+  LineChart,
+  AlertTriangle
 } from 'lucide-react';
 
 export type ModalType = 'temp' | 'rain' | 'wind' | 'charts';
@@ -30,8 +31,8 @@ interface ConsensusWidgetProps {
   utcOffset?: number; 
   hourlyTimes?: string[];
   hourlyGlobalTimes?: string[];
-  hourlyLocal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
-  hourlyGlobal?: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
+  hourlyLocal?: HourlySeriesBundle;
+  hourlyGlobal?: HourlySeriesBundle;
 }
 
 // [FIX PRECISIÓ] La comparació és amb Open-Meteo "best_match" (el mateix motor de selecció
@@ -43,28 +44,32 @@ const translations = {
     affinity: 'Precisió',
     temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Telemetria Gràfica Completa',
-    status: { sync: 'Alineat', discrepancy: 'Discrepància', alert: 'Divergència' }
+    status: { sync: 'Alineat', discrepancy: 'Discrepància', alert: 'Divergència' },
+    futureDivergence: 'Possible canvi brusc en 3h (pluja forta o vent fort)'
   },
   es: {
     title: 'Motor de Consenso',
     affinity: 'Precisión',
     temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Telemetría Gráfica Completa',
-    status: { sync: 'Alineado', discrepancy: 'Discrepancia', alert: 'Divergencia' }
+    status: { sync: 'Alineado', discrepancy: 'Discrepancia', alert: 'Divergencia' },
+    futureDivergence: 'Posible cambio brusco en 3h (lluvia o viento fuerte)'
   },
   en: {
     title: 'Consensus Engine',
     affinity: 'Accuracy',
     temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Full Graphical Telemetry',
-    status: { sync: 'Aligned', discrepancy: 'Variance', alert: 'Divergence' }
+    status: { sync: 'Aligned', discrepancy: 'Variance', alert: 'Divergence' },
+    futureDivergence: 'Possible sudden shift in 3h (heavy rain or strong wind)'
   },
   fr: {
     title: 'Moteur de Consensus',
     affinity: 'Précision',
     temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Télémétrie Graphique Complète',
-    status: { sync: 'Aligné', discrepancy: 'Écart', alert: 'Divergence' }
+    status: { sync: 'Aligné', discrepancy: 'Écart', alert: 'Divergence' },
+    futureDivergence: 'Changement brusque possible en 3h (pluie ou vent fort)'
   }
 };
 
@@ -195,6 +200,13 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
               </div>
+
+              {metrics.futureDivergence && (
+                <div className="flex items-center gap-2 md:gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-2.5 [transform:translateZ(35px)] shadow-[0_8px_20px_rgba(245,158,11,0.15)]">
+                   <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-amber-400 shrink-0 drop-shadow-md animate-pulse" />
+                   <span className="text-[10px] sm:text-[11px] md:text-xs font-bold text-amber-200 tracking-wide">{t.futureDivergence}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 w-full preserve-3d [transform:translateZ(40px)]">
                  {/* MIDES DE TEXT I CONTRAST MILLORATS PER A LECTURA EXTERIOR */}

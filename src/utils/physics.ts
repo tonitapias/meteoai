@@ -8,5 +8,8 @@ export {
     getShiftedDate,
     calculateDewPoint,
     getMoonPhase,
-    isAromeSupported
+    isAromeSupported,
+    getSafeLatitude,
+    getSafeArrayNum,
+    getSafeMonthFromIso
 } from './weatherMath';

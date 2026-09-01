@@ -7,7 +7,6 @@ import App from './App';
 import './index.css';
 
 // Contexts
-import { PreferencesProvider } from './context/PreferencesContext';
 import { GeoLocationProvider } from './context/GeoLocationContext';
 
 // --- 1. CONFIGURACIÓ DE SENTRY ---
@@ -31,10 +30,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <PreferencesProvider>
-      <GeoLocationProvider>
-        <App />
-      </GeoLocationProvider>
-    </PreferencesProvider>
+    <GeoLocationProvider>
+      <App />
+    </GeoLocationProvider>
   </React.StrictMode>,
 );

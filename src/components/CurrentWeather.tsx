@@ -11,6 +11,7 @@ import { CurrentWeatherHeader } from './current-weather/CurrentWeatherHeader';
 import { MainTemperatureDisplay } from './current-weather/MainTemperatureDisplay';
 import { WeatherStatsGrid } from './current-weather/WeatherStatsGrid';
 import { WeatherActionButtons } from './current-weather/WeatherActionButtons';
+import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from './widgets/widgetStyles';
 
 interface CurrentWeatherProps {
   data: ExtendedWeatherData;
@@ -83,7 +84,6 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
   const currentPrecip = parseMetric(currentData.precipitation) ?? 0;
 
   // SPATIAL UI BASE AMB MATRIU DE FONS (Optimitzat per baix consum)
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px] md:bg-[size:16px_16px]`;
 
   return (
     <div className="w-full relative group perspective-[1000px]">

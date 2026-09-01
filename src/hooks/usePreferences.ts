@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
@@ -42,20 +42,24 @@ export function usePreferences() {
   useEffect(() => { localStorage.setItem('meteoai_view_mode', viewMode); }, [viewMode]); 
   useEffect(() => { localStorage.setItem('meteoai_favorites', JSON.stringify(favorites)); }, [favorites]);
 
-  const addFavorite = (location: LocationData) => {
+  // [FIX PRECISIÓ] Memoitzades amb useCallback (com ja feia la versió antiga de
+  // PreferencesContext.tsx): sense això, cada render en creava funcions noves,
+  // fent que qualsevol useCallback aigües avall (p.ex. handleToggleFavorite a
+  // useAppActions.ts) mai tingués unes dependències estables.
+  const addFavorite = useCallback((location: LocationData) => {
     setFavorites(prev => {
       if (prev.some(f => f.name === location.name)) return prev;
       return [...prev, location];
     });
-  };
+  }, []);
 
-  const removeFavorite = (name: string) => {
+  const removeFavorite = useCallback((name: string) => {
     setFavorites(prev => prev.filter(f => f.name !== name));
-  };
+  }, []);
 
-  const isFavorite = (name: string) => {
+  const isFavorite = useCallback((name: string) => {
     return favorites.some(f => f.name === name);
-  };
+  }, [favorites]);
 
   return {
     lang, setLang,

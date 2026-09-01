@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUpRight, AlertTriangle } from 'lucide-react';
+import { MATRIX_BG } from './widgetStyles';
 
 interface CircularGaugeProps {
     icon: React.ReactNode;
@@ -111,8 +112,6 @@ export const CircularGauge = ({
 
     // SPATIAL UI BASE AMB MATRIU DE FONS
     const SPATIAL_WIDGET_STYLE = `w-full h-full transform-gpu p-3 sm:p-4 flex flex-col rounded-2xl relative overflow-hidden backdrop-blur-md bg-gradient-to-br from-indigo-950/40 to-black/60 border border-indigo-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]`;
-    
-    const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>

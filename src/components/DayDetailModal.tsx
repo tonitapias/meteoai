@@ -3,11 +3,13 @@ import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, A
 import { SmartForecastCharts } from './WeatherCharts'; 
 import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
+import { WeatherUnit, formatPrecipitation, getSafeLocale } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, getSafeMonthFromIso } from '../utils/weatherMath';
+import { MATRIX_BG } from './widgets/widgetStyles';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -46,24 +48,6 @@ interface TableRowData {
     isDay: boolean;
 }
 
-// HELPER RISC ZERO
-const getSafeLocale = (lang: Language): string => {
-    switch (lang) {
-        case 'es': return 'es-ES';
-        case 'fr': return 'fr-FR';
-        case 'en': return 'en-US';
-        case 'ca':
-        default: return 'ca-ES';
-    }
-};
-
-// HELPER RISC ZERO LOCAL (Extracció d'arrays iteratius)
-const getSafeArrNum = (arr: unknown, index: number, fallback: number = 0): number => {
-    if (!Array.isArray(arr)) return fallback;
-    const val = arr[index];
-    return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
-};
-
 // HELPER RISC ZERO: Extreu l'hora d'un ISO string sense passar per Date/fus horari del navegador
 const getSafeHourFromIso = (isoString: string | undefined): number | null => {
     if (!isoString || !isoString.includes('T')) return null;
@@ -71,13 +55,6 @@ const getSafeHourFromIso = (isoString: string | undefined): number | null => {
     if (!timePart) return null;
     const hour = parseInt(timePart.slice(0, 2), 10);
     return isNaN(hour) ? null : hour;
-};
-
-// HELPER RISC ZERO: Mes (0-indexat) extret de l'string ISO, per a getInversionCorrectedTemp
-const getSafeMonthFromIso = (isoString: string | undefined): number => {
-    if (!isoString || isoString.length < 7) return new Date().getMonth();
-    const monthNum = parseInt(isoString.slice(5, 7), 10);
-    return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
 };
 
 interface DayDetailModalProps {
@@ -243,7 +220,8 @@ export default function DayDetailModal({
                 wind_speed_10m: windSpeed,
                 is_day: isDayNum
             } as unknown as StrictCurrentWeather,
-            getSafeMonthFromIso(time)
+            getSafeMonthFromIso(time),
+            getSafeLatitude(weatherData?.location)
         );
 
         rows.push({
@@ -271,7 +249,11 @@ export default function DayDetailModal({
 
   const formatDate = (isoString: string) => {
       try {
-          return new Date(isoString).toLocaleDateString(getSafeLocale(lang), {
+          // [FIX PRECISIÓ] Forcem hora local (T12:00:00) perquè una data bare
+          // "YYYY-MM-DD" no es llegeixi com a mitjanit UTC i mostri el dia anterior
+          // en fusos horaris darrere d'UTC. Mateix fix que ForecastSection.tsx.
+          const datePart = isoString.includes('T') ? isoString.split('T')[0] : isoString;
+          return new Date(datePart + 'T12:00:00').toLocaleDateString(getSafeLocale(lang), {
               weekday: 'long', day: 'numeric', month: 'long'
           });
       } catch { return isoString; }
@@ -285,7 +267,6 @@ export default function DayDetailModal({
   const safeSnowLevel = snowLevelText;
   const snowLevelUnit = '';
 
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   return (
     <div 

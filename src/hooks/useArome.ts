@@ -49,6 +49,9 @@ const aromeDataSchema = z.object({
   minutely_15: aromeMinutely15Schema,
   hourly_units: z.record(z.string()).optional(),
   elevation: z.number().optional().default(0),
+  // [FIX PRECISIÓ] Calia per saber quines hores són "avui"/"demà" a la ubicació
+  // consultada (que no és necessàriament l'hora de qui mira la pantalla).
+  utc_offset_seconds: z.number().optional(),
 }).passthrough();
 
 // Inferència de tipatge estrictament segur
@@ -87,7 +90,8 @@ export function useArome() {
         hourly: cleanData(rawData.hourly),
         minutely_15: cleanData(rawData.minutely_15),
         hourly_units: cleanData(rawData.hourly_units),
-        elevation: typeof rawData.elevation === 'number' ? rawData.elevation : 0
+        elevation: typeof rawData.elevation === 'number' ? rawData.elevation : 0,
+        utc_offset_seconds: typeof rawData.utc_offset_seconds === 'number' ? rawData.utc_offset_seconds : undefined
       };
 
       // VALIDACIÓ SEGURA: Passem l'objecte pel sedàs de Zod

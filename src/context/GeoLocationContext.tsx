@@ -38,23 +38,15 @@ export const GeoLocationProvider: React.FC<{ children: React.ReactNode }> = ({ c
             throw err;
         });
 
-        // Traduïm les coordenades al nom del poble
+        // [FIX PRECISIÓ] Abans es traduïen aquí mateix les coordenades a un nom de
+        // poble amb una crida pròpia i `localityLanguage=ca` fixat, ignorant
+        // l'idioma real de l'app. En lloc de duplicar-ho, retornem el sentinel
+        // "La Meva Ubicació": fetchAllWeatherData (weatherService.ts) ja detecta
+        // aquest valor i fa la seva pròpia geocodificació inversa amb `reverseGeocode`
+        // passant l'idioma correcte i retornant també el país (que aquí no
+        // s'arribava mai a proporcionar).
         const { latitude, longitude } = pos.coords;
-        let finalName = "Ubicació detectada";
-
-        try {
-            const resp = await fetch(
-                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ca`
-            );
-            if (resp.ok) {
-                const data = await resp.json();
-                finalName = data.locality || data.city || data.town || data.village || "La Meva Ubicació";
-            }
-        } catch (e) {
-            console.warn("No s'ha pogut traduir el nom de la ciutat", e);
-        }
-
-        return { lat: latitude, lon: longitude, name: finalName }; // Substituïm resolve per return
+        return { lat: latitude, lon: longitude, name: "La Meva Ubicació" };
 
       } catch (err: unknown) {
          // 3. Eliminem l'ús de "any" aplicant Type Narrowing estricte

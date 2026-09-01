@@ -1,6 +1,7 @@
 // src/components/dashboard/DashboardContent.tsx
 import { lazy, Suspense } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { getSafeLatitude } from '../../utils/weatherMath';
 
 // Components estàtics
 import CurrentWeather from '../CurrentWeather';
@@ -98,12 +99,13 @@ export const DashboardContent = () => {
 
                     {/* 6. PREVISIÓ SETMANAL */}
                     <Suspense fallback={<SectionSkeleton />}>
-                        <ForecastSection 
-                            chartData={calculations.chartDataFull || []} 
+                        <ForecastSection
+                            chartData={calculations.chartDataFull || []}
                             dailyData={weatherData.daily}
-                            weeklyExtremes={calculations.weeklyExtremes} 
-                            lang={flags.lang} 
+                            weeklyExtremes={calculations.weeklyExtremes}
+                            lang={flags.lang}
                             onDayClick={actions.setSelectedDayIndex}
+                            latitude={getSafeLatitude(weatherData.location)}
                         />
                     </Suspense>
 

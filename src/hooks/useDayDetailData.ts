@@ -4,12 +4,7 @@ import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogic
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { calculateSnowLevel } from '../utils/rules/winterRules';
-
-const getSafeMonthFromIso = (isoString: string | undefined): number => {
-    if (!isoString || isoString.length < 7) return new Date().getMonth();
-    const monthNum = parseInt(isoString.slice(5, 7), 10);
-    return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
-};
+import { getSafeLatitude, getSafeMonthFromIso } from '../utils/weatherMath';
 
 export const useDayDetailData = (
   weatherData: ExtendedWeatherData | null, 
@@ -90,7 +85,8 @@ export const useDayDetailData = (
                     wind_speed_10m: weatherData.hourly.wind_speed_10m[idx],
                     is_day: hRaw.is_day?.[idx] ?? 1
                 } as unknown as StrictCurrentWeather,
-                getSafeMonthFromIso(time)
+                getSafeMonthFromIso(time),
+                getSafeLatitude(weatherData.location)
               )
             : rawTemp;
 

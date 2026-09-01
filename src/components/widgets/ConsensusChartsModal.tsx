@@ -2,7 +2,7 @@
 import React, { useId } from 'react';
 import { Language } from '../../translations';
 import { X, LineChart } from 'lucide-react';
-import { resolveHourlyEpoch } from '../../utils/weatherMath';
+import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
 
 interface ConsensusChartsModalProps {
   closeModal: () => void;
@@ -11,8 +11,8 @@ interface ConsensusChartsModalProps {
   nowTimestamp: number;
   hourlyTimes: string[];
   hourlyGlobalTimes: string[];
-  hourlyLocal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
-  hourlyGlobal: { temp?: (number | null)[]; rain?: (number | null)[]; wind?: (number | null)[]; gusts?: (number | null)[] };
+  hourlyLocal: HourlySeriesBundle;
+  hourlyGlobal: HourlySeriesBundle;
 }
 
 // DICCIONARI i18n INTERN
@@ -343,46 +343,7 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
 
-  const getMappedData = () => {
-     let startIndex = hourlyTimes.findIndex(time => {
-        const epoch = resolveHourlyEpoch(time, utcOffset);
-        return !isNaN(epoch) && epoch >= nowTimestamp - (60 * 60 * 1000); 
-     });
-     if (startIndex === -1) startIndex = 0;
-     const displayTimes = hourlyTimes.slice(startIndex, startIndex + 24);
-
-     const mapGlobalArr = (arr: (number|null)[] = []) => {
-        const dict = new Map<number, number | null>();
-        arr.forEach((val, idx) => {
-           const ep = resolveHourlyEpoch(hourlyGlobalTimes[idx], utcOffset);
-           if (!isNaN(ep)) dict.set(ep, val);
-        });
-        return displayTimes.map(time => dict.get(resolveHourlyEpoch(time, utcOffset)) ?? null);
-     };
-
-     const getAlignedLocal = (arr: (number|null|undefined)[] | undefined) => {
-        if (!arr) return displayTimes.map(() => null);
-        const sliced = arr.slice(startIndex, startIndex + 24);
-        return displayTimes.map((_, i) => {
-           const val = sliced[i];
-           return (typeof val === 'number' && !isNaN(val)) ? val : null;
-        });
-     };
-
-     return {
-        displayTimes,
-        tempLoc: getAlignedLocal(hourlyLocal.temp),
-        tempGlo: mapGlobalArr(hourlyGlobal.temp),
-        rainLoc: getAlignedLocal(hourlyLocal.rain),
-        rainGlo: mapGlobalArr(hourlyGlobal.rain),
-        windLoc: getAlignedLocal(hourlyLocal.wind),
-        windGlo: mapGlobalArr(hourlyGlobal.wind),
-        gustsLoc: getAlignedLocal(hourlyLocal.gusts),
-        gustsGlo: mapGlobalArr(hourlyGlobal.gusts)
-     };
-  };
-
-  const data = getMappedData();
+  const data = getMappedConsensusSeries(hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal, utcOffset, nowTimestamp);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">

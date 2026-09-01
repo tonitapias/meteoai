@@ -272,12 +272,12 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20 grid-flow-dense">
           <WidgetCard>
-              <CompassGauge 
-                degrees={currentWindDir ?? 0} 
-                speed={currentWindSpeed ?? 0} 
-                gusts={currentWindGusts ?? 0} 
-                label={lang === 'ca' ? "Vent" : "Wind"} 
-                lang={lang} 
+              <CompassGauge
+                degrees={currentWindDir}
+                speed={currentWindSpeed}
+                gusts={currentWindGusts}
+                label={lang === 'ca' ? "Vent" : "Wind"}
+                lang={lang}
               />
           </WidgetCard>
 
@@ -286,19 +286,19 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard>
-              <VisibilityWidget visibility={currentVisibility ?? 10000} lang={lang} />
+              <VisibilityWidget visibility={currentVisibility} lang={lang} />
           </WidgetCard>
 
           <WidgetCard>
-              <CloudLayersWidget low={currentCloudLow ?? 0} mid={currentCloudMid ?? 0} high={currentCloudHigh ?? 0} lang={lang} />
+              <CloudLayersWidget low={currentCloudLow} mid={currentCloudMid} high={currentCloudHigh} lang={lang} />
           </WidgetCard>
 
           <WidgetCard>
-              <CircularGauge 
-                  icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>} 
-                  label={lang === 'ca' ? "Pressió" : "Pressure"} 
-                  value={Math.round(currentPressure ?? 1013)} 
-                  max={1050} 
+              <CircularGauge
+                  icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>}
+                  label={lang === 'ca' ? "Pressió" : "Pressure"}
+                  value={currentPressure}
+                  max={1050}
                   subText="hPa" 
                   color="text-indigo-400" 
                   trendValue={pressureTrend}

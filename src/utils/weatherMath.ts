@@ -14,6 +14,30 @@ export const extractValidNum = (val: unknown): number | null => {
 };
 
 /**
+ * Extreu un número vàlid d'un array en un índex donat, o retorna el fallback.
+ * [NETEJA] Abans hi havia 3 còpies locals idèntiques d'aquesta mateixa funció
+ * (ForecastSection.tsx, DayDetailModal.tsx, Forecast24h.tsx) amb noms diferents
+ * (getSafeArrayNum/getSafeArrNum/getSafeNum).
+ */
+export const getSafeArrayNum = (arr: unknown, index: number, fallback: number = 0): number => {
+    if (!Array.isArray(arr)) return fallback;
+    const val = arr[index];
+    return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
+};
+
+/**
+ * Extreu el mes (0-indexat, com Date.getMonth()) directament d'un string ISO
+ * per slicing, sense passar per `new Date()` i el fus horari del navegador.
+ * [NETEJA] Abans hi havia 3 còpies locals idèntiques (ForecastSection.tsx,
+ * DayDetailModal.tsx, useDayDetailData.ts).
+ */
+export const getSafeMonthFromIso = (isoString: string | undefined): number => {
+    if (!isoString || isoString.length < 7) return new Date().getMonth();
+    const monthNum = parseInt(isoString.slice(5, 7), 10);
+    return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
+};
+
+/**
  * @deprecated Utilitzeu extractValidNum per a nous desenvolupaments.
  * PONT TÀCTIC: Es manté per evitar la caiguda dels 14 arxius del motor de regles antic.
  */
@@ -25,14 +49,21 @@ export const safeNum = (val: unknown, fallback: number = 0): number => {
 /**
  * Calcula la data/hora real aplicant el desplaçament horari (timezone).
  */
-export const getShiftedDate = (baseDate: Date, timezoneOrOffset: number | string): Date => {
-  if (typeof timezoneOrOffset === 'number') {
-      const utcTimestamp = baseDate.getTime(); 
-      return new Date(utcTimestamp + (timezoneOrOffset * 1000));
-  }
-  if (!timezoneOrOffset) return baseDate;
+/**
+ * [FIX PRECISIÓ] Aquesta funció acceptava antigament un offset numèric (segons)
+ * a més d'un nom de fus IANA, però cap crida real n'ha fet mai ús — l'únic
+ * consumidor (useWeatherCalculations.ts) sempre passa un string. S'ha retirat
+ * la branca numèrica perquè era una trampa llatent: el resultat de la branca
+ * de string està pensat per llegir-se amb getters *locals* (getHours...), però
+ * el de la branca numèrica (basat en sumar l'offset a l'època UTC) només és
+ * correcte llegit amb getters *UTC* (getUTCHours...) — si algú l'hagués cridat
+ * i llegit igual que l'altra branca (com fa tot el codi existent), l'hora
+ * hauria sortit desplaçada.
+ */
+export const getShiftedDate = (baseDate: Date, timezone: string): Date => {
+  if (!timezone) return baseDate;
   try {
-      return new Date(baseDate.toLocaleString("en-US", { timeZone: timezoneOrOffset as string }));
+      return new Date(baseDate.toLocaleString("en-US", { timeZone: timezone }));
   } catch {
       return baseDate;
   }
@@ -77,6 +108,19 @@ export const getMoonPhase = (date: Date): number => {
 };
 
 /**
+ * Extreu la latitud d'un objecte 'location' de tipatge feble. Necessari perquè
+ * `ExtendedWeatherData['location']` es perd com a `{}` en algun punt de la
+ * cadena de tipus (Omit/mapped types), com ja evidenciaven els casts locals
+ * a `as LocationMeta`/`as Record<string, unknown>` repetits a diversos
+ * components abans d'aquest helper.
+ */
+export const getSafeLatitude = (location: unknown): number | undefined => {
+    if (!location || typeof location !== 'object') return undefined;
+    const lat = (location as Record<string, unknown>).latitude;
+    return typeof lat === 'number' && !isNaN(lat) ? lat : undefined;
+};
+
+/**
  * Comprova si les coordenades són dins de l'àrea de cobertura AROME (Europa Occidental)
  */
 export const isAromeSupported = (lat: number | null | undefined, lon: number | null | undefined): boolean => {
@@ -86,6 +130,6 @@ export const isAromeSupported = (lat: number | null | undefined, lon: number | n
 };
 
 // [NETEJA] calculateReliability s'ha retirat d'aquí: la comparació ECMWF/GFS/ICON
-// viu ara a utils/rules/reliabilityRules.ts, que és la que fan servir
-// useAIAnalysis.ts i useCurrentConditions.ts. Aquesta còpia no tenia cap referència
+// viu ara a utils/rules/reliabilityRules.ts, que és la que fa servir
+// useCurrentConditions.ts. Aquesta còpia no tenia cap referència
 // real (confirmat via weatherLogic.test.ts, que ja importa la de rules/).

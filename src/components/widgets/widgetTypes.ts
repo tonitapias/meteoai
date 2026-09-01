@@ -19,21 +19,12 @@ export interface ChartDataPoint {
   isNow?: boolean;
 }
 
-export interface CircularGaugeProps {
-    icon: React.ReactNode;
-    label: string;
-    value: number;
-    max: number;
-    subText?: string;
-    color?: string;
-}
-
 export interface HourlyWidgetProps {
   data: ChartDataPoint[];
   lang: Language;
 }
 
 export interface VisibilityWidgetProps {
-  visibility: number; // Valor en metres
+  visibility?: number | null; // Valor en metres. DOCTRINA RISC ZERO: pot faltar.
   lang: string;
 }

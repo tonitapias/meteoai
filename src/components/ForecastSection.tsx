@@ -3,10 +3,12 @@ import { Calendar, Umbrella, ArrowRight } from 'lucide-react';
 import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
-import { formatPrecipitation } from '../utils/formatters';
+import { formatPrecipitation, getSafeLocale } from '../utils/formatters';
+import { getSafeArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
+import { MATRIX_BG } from './widgets/widgetStyles';
 
 import { useTacticalModal } from '../hooks/useTacticalModal';
 import TrendChartModal from './TrendChartModal';
@@ -29,39 +31,16 @@ export interface ComparisonData {
 }
 
 interface ForecastSectionProps {
-  chartData: ChartDataPoint[]; 
-  dailyData: StrictDailyWeather; 
+  chartData: ChartDataPoint[];
+  dailyData: StrictDailyWeather;
   weeklyExtremes: { min: number; max: number };
-  lang: Language; 
+  lang: Language;
   onDayClick: (index: number) => void;
+  // [FIX PRECISIÓ] Latitud opcional per a getInversionCorrectedTemp: sense ella,
+  // la correcció d'inversió tèrmica assumeix Hemisferi Nord (vegeu inversionRules.ts).
+  latitude?: number;
 }
 
-// HELPER RISC ZERO
-const getSafeArrayNum = (arr: unknown, index: number, fallback: number = 0): number => {
-  if (!Array.isArray(arr)) return fallback;
-  const val = arr[index];
-  return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
-};
-
-// HELPER RISC ZERO
-const getSafeLocale = (lang: Language): string => {
-  switch (lang) {
-    case 'es': return 'es-ES';
-    case 'fr': return 'fr-FR';
-    case 'en': return 'en-US';
-    case 'ca':
-    default: return 'ca-ES';
-  }
-};
-
-// HELPER RISC ZERO — mateix patró que useDayDetailData.ts: mes extret directe de
-// l'ISO string, mai via `new Date().getMonth()`, per no dependre del fus horari
-// del navegador.
-const getSafeMonthFromIso = (isoString: string | undefined): number => {
-  if (!isoString || isoString.length < 7) return new Date().getMonth();
-  const monthNum = parseInt(isoString.slice(5, 7), 10);
-  return (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) ? monthNum - 1 : new Date().getMonth();
-};
 
 // DICCIONARI TÀCTIC INTERN PEL BOTÓ
 const I18N_BTN = {
@@ -80,8 +59,8 @@ const I18N_ARIA_CHART_BTN = {
   en: "Open temperature chart"
 };
 
-const ForecastSection = memo(function ForecastSection({ 
-  chartData, dailyData, weeklyExtremes, lang, onDayClick 
+const ForecastSection = memo(function ForecastSection({
+  chartData, dailyData, weeklyExtremes, lang, onDayClick, latitude
 }: ForecastSectionProps) {
   
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
@@ -98,7 +77,6 @@ const ForecastSection = memo(function ForecastSection({
 
   const NO_PRECIP_LABEL = lang === 'en' ? 'NONE' : lang === 'fr' ? 'AUCUN' : lang === 'es' ? 'NADA' : 'CAP';
 
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
   const PANEL_STYLE = `p-4 md:p-8 bg-gradient-to-br from-[#0f111a]/95 to-black/90 border border-white/5 rounded-[2rem] relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md transform-gpu transition-colors duration-700`;
 
   return (
@@ -140,7 +118,11 @@ const ForecastSection = memo(function ForecastSection({
         <div className="grid grid-cols-1 gap-2.5 relative z-10">
           {dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
             if (typeof rawDate !== 'string') return null;
-            const date = new Date(rawDate);
+            // [FIX PRECISIÓ] "YYYY-MM-DD" sol es parseja com mitjanit UTC; sumant una
+            // hora local (T12:00:00, sense 'Z') forcem que JS l'interpreti com a hora
+            // local del navegador, evitant que getDate()/toLocaleDateString() mostrin
+            // el dia anterior en fusos horaris darrere d'UTC.
+            const date = new Date(rawDate + 'T12:00:00');
             if (isNaN(date.getTime())) return null;
 
             const i = index + 1; 
@@ -188,8 +170,8 @@ const ForecastSection = memo(function ForecastSection({
                 is_day: h.isDay
               } as unknown as StrictCurrentWeather);
 
-              maxTemp = getInversionCorrectedTemp(toStrictCurrent(hottestHour), getSafeMonthFromIso(hottestHour.time));
-              minTemp = getInversionCorrectedTemp(toStrictCurrent(coldestHour), getSafeMonthFromIso(coldestHour.time));
+              maxTemp = getInversionCorrectedTemp(toStrictCurrent(hottestHour), getSafeMonthFromIso(hottestHour.time), latitude);
+              minTemp = getInversionCorrectedTemp(toStrictCurrent(coldestHour), getSafeMonthFromIso(coldestHour.time), latitude);
             }
 
             // MOTOR VISUAL INTEL·LIGENT — mateixa regla oficial que la resta de l'app

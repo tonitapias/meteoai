@@ -11,4 +11,4 @@ Aquest projecte ha estat concebut, desenvolupat i mantingut gràcies a la combin
   Suport en l'arquitectura de software (React, TypeScript, Tailwind CSS), generació i refactorització de codi a mida, implementació de components i resolució d'errors d'integració d'APIs meteorològiques.
 
 * **Claude (Anthropic)** – *Col·laborador d'Intel·ligència Artificial i Auditor de Codi*  
-  Auditories de precisió meteorològica i de qualitat de codi component a component (pipeline AROME, models de consens, widgets del mode expert, pantalla de benvinguda), depuració de bugs, neteja de codi mort i duplicat, i disseny d'interfície i redacció de textos.
+  Auditories de precisió meteorològica i de qualitat de codi component a component (pipeline AROME, models de consens, geolocalització i cache, widgets del mode expert, pantalla de benvinguda), depuració de bugs de correcció (fusos horaris, hemisferi, condicions de cursa, gestió de l'historial de modals), neteja de codi mort i duplicat, i disseny d'interfície i redacció de textos.

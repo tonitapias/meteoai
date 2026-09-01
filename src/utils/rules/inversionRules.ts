@@ -8,12 +8,19 @@ export const checkInversionRisk = (
     isDay: number,
     windSpeed: number,
     cloudCover: number,
-    month: number // 0-11 (Gen-Des)
+    month: number, // 0-11 (Gen-Des)
+    latitude?: number
 ): boolean => {
-    // 1. Només passa a l'hivern (Novembre a Març aprox)
-    // Mesos: 0=Gen, 1=Feb, 2=Mar, 10=Nov, 11=Des
-    const isWinter = month <= 2 || month >= 10;
-    
+    // 1. Només passa a l'hivern (Novembre a Març aprox a l'Hemisferi Nord).
+    // [FIX PRECISIÓ] L'app permet cercar qualsevol ciutat del món (sense
+    // restricció geogràfica), així que per a l'Hemisferi Sud (latitude < 0)
+    // "hivern" cau 6 mesos desplaçat (Maig a Setembre), no Nov-Mar. Sense
+    // latitud coneguda, mantenim el comportament anterior (Hemisferi Nord).
+    const isSouthernHemisphere = typeof latitude === 'number' && latitude < 0;
+    const isWinter = isSouthernHemisphere
+        ? (month >= 4 && month <= 8)
+        : (month <= 2 || month >= 10);
+
     if (!isWinter) return false;
 
     // 2. Ha de ser de nit (refredament radiatiu)

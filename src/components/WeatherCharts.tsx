@@ -8,6 +8,7 @@ import {
     generateSmoothPath, 
     ChartDataPoint
 } from '../utils/chartUtils';
+import { MATRIX_BG } from './widgets/widgetStyles';
 
 interface SingleHourlyChartProps {
     data: ChartDataPoint[];
@@ -153,8 +154,6 @@ export const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hove
   const showComparison = (hoverEcmwf && hoverEcmwf.value !== null) || (hoverGfs && hoverGfs.value !== null) || (hoverIcon && hoverIcon.value !== null);
   const fmtVal = (val: number | null | undefined): string => (val == null) ? "-" : (layer === 'precip' ? val.toFixed(1) : Math.round(val).toString());
 
-  // SPATIAL UI BASE
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   return (
     <div ref={containerRef} className="relative w-full h-full group select-none overflow-hidden rounded-xl border border-white/5 bg-black/60 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-md" style={{ transform: 'translateZ(0)' }}>
@@ -408,7 +407,6 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPreci
         return 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.8)]';                     
     };
 
-    const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
     return (
         <div className="w-full mt-3 bg-[#0a0b10]/90 rounded-2xl p-4 border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-md animate-in fade-in relative transform-gpu overflow-hidden">

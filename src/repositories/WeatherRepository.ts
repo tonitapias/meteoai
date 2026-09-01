@@ -38,7 +38,7 @@ export const WeatherRepository = {
         runAromeWorker?: AromeWorkerFn
     ): Promise<WeatherRepositoryResponse> {
         
-        const cacheKey = cacheService.generateWeatherKey(lat, lon, unit);
+        const cacheKey = cacheService.generateWeatherKey(lat, lon, unit, lang);
 
         // 1. Intentar Cache Local
         try {
@@ -54,26 +54,46 @@ export const WeatherRepository = {
             console.warn("Cache read error", e);
         }
 
-        // 2. Petició de Xarxa (API)
-        const { weatherRaw, geoData, aqiData: fetchedAqi } = await fetchAllWeatherData(
-            lat, lon, unit, lang, locationName, country
-        );
-
-        let processedData = normalizeModelData(weatherRaw);
-        
-        // 3. Integració AROME (Si està suportat i tenim el worker disponible)
-        if (isAromeSupported(lat, lon) && runAromeWorker) {
-            try {
-                const aromeRaw = await getAromeData(lat, lon);
-                // Executem el worker injectat
-                processedData = await runAromeWorker(processedData, aromeRaw);
-            } catch (aromeErr) { 
-                Sentry.captureException(aromeErr, { 
-                    tags: { 
+        // 2. Peticions de Xarxa (API)
+        // [FIX PRECISIÓ] AROME no depèn de cap resultat de fetchAllWeatherData
+        // (només necessita lat/lon), així que abans s'esperava seqüencialment
+        // sense cap motiu — una llatència extra sencera a cada consulta dins la
+        // zona de cobertura (França/Catalunya, el públic principal de l'app).
+        // L'iniciem en paral·lel; capturem la seva fallada aquí mateix (no dins
+        // el Promise.all) perquè un error d'AROME mai faci caure la petició
+        // principal de meteo.
+        const shouldFetchArome = isAromeSupported(lat, lon) && !!runAromeWorker;
+        const aromePromise: Promise<WeatherData | null> = shouldFetchArome
+            ? getAromeData(lat, lon).catch((aromeErr) => {
+                Sentry.captureException(aromeErr, {
+                    tags: {
                         service: SENTRY_TAGS.SERVICE_AROME_WORKER,
                         type: SENTRY_TAGS.TYPE_FALLBACK
                     },
-                    level: 'warning' 
+                    level: 'warning'
+                });
+                return null;
+            })
+            : Promise.resolve(null);
+
+        const [{ weatherRaw, geoData, aqiData: fetchedAqi }, aromeRaw] = await Promise.all([
+            fetchAllWeatherData(lat, lon, unit, lang, locationName, country),
+            aromePromise
+        ]);
+
+        let processedData = normalizeModelData(weatherRaw);
+
+        // 3. Integració AROME (si la petició ha tingut èxit)
+        if (aromeRaw && runAromeWorker) {
+            try {
+                processedData = await runAromeWorker(processedData, aromeRaw);
+            } catch (aromeErr) {
+                Sentry.captureException(aromeErr, {
+                    tags: {
+                        service: SENTRY_TAGS.SERVICE_AROME_WORKER,
+                        type: SENTRY_TAGS.TYPE_FALLBACK
+                    },
+                    level: 'warning'
                 });
             }
         }

@@ -8,21 +8,15 @@ import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-
-// HELPER DE DOCTRINA RISC ZERO: Extracció matemàticament segura d'arrays dinàmics
-const getSafeNum = (arr: unknown, index: number, fallback: number = 0): number => {
-    if (!Array.isArray(arr)) return fallback;
-    if (index < 0 || index >= arr.length) return fallback;
-    const val = arr[index];
-    return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
-};
+import { getSafeLatitude, getSafeArrayNum as getSafeNum } from '../utils/weatherMath';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
     const { hourly, current, utc_offset_seconds, hourlyComparison } = data;
     
     // EXTRACCIÓ TÀCTICA DE SEGURETAT (Solució TS2345 / TS18046)
     const safeElevation = typeof data.elevation === 'number' && !isNaN(data.elevation) ? data.elevation : 0;
-    
+    const safeLatitude = getSafeLatitude(data.location);
+
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
     const isArome = current?.source === 'AROME HD';
     const sourceLabel = isArome ? 'AROME HD' : 'MODEL GLOBAL';
@@ -103,7 +97,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                     cloud_cover_mid: cloudMid,
                     cloud_cover_high: cloudHigh,
                 } as unknown as StrictCurrentWeather,
-                dateObj.getMonth()
+                dateObj.getMonth(),
+                safeLatitude
             );
 
             let freezingLevel = getSafeNum(hourly.freezing_level_height, targetIndex, -1);
@@ -175,7 +170,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         }
         
         return rows;
-    }, [hourly, lang, utc_offset_seconds, safeElevation, hourlyComparison]);
+    }, [hourly, lang, utc_offset_seconds, safeElevation, hourlyComparison, safeLatitude]);
 
     if (hourlyChartData.length === 0) return null;
 

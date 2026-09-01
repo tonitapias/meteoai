@@ -1,6 +1,7 @@
 import { Clock, CloudOff } from 'lucide-react';
 import { HourlyWidgetProps } from './widgetTypes';
 import { getTrans } from './widgetHelpers';
+import { MATRIX_BG } from './widgetStyles';
 
 export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
   // DOCTRINA RISC ZERO: Forcem el tipatge global de les traduccions sense usar 'any'
@@ -17,7 +18,6 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
 
   // SPATIAL UI BASE AMB MATRIU DE FONS
   const SPATIAL_WIDGET_STYLE = `w-full h-full flex flex-col rounded-[2rem] border overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative transform-gpu transition-colors duration-700 ${hasValidData ? 'bg-gradient-to-br from-[#0f111a]/90 to-black/80 border-white/5' : 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50'}`;
-  const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]`;
 
   return (
     <div className={SPATIAL_WIDGET_STYLE}>
