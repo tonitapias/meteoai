@@ -14,7 +14,6 @@ export default defineConfig({
         manualChunks: {
           // Separem les llibreries grans per optimitzar la càrrega i la persistència a la memòria cau
           'vendor-react': ['react', 'react-dom'], //[cite: 3]
-          'vendor-leaflet': ['leaflet', 'react-leaflet'], //[cite: 3]
           'vendor-utils': ['lucide-react', 'zod'], //[cite: 3]
           'vendor-mapbox': ['mapbox-gl'] // NOU: Aïllament estratègic de la llibreria WebGL
         }

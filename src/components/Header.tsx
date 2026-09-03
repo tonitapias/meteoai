@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, Activity } from 'lucide-react';
 import { usePreferences, LocationData } from '../hooks/usePreferences';
-import { searchCity, GeoSearchResult } from '../services/geocodingService';
-import * as Sentry from "@sentry/react";
+import { searchCity, reverseGeocode, GeoSearchResult } from '../services/geocodingService';
 import { useAppContext } from '../context/AppContext';
+import { useGeoLocation } from '../context/GeoLocationContext';
 import { Language, TranslationType } from '../translations';
 
 // DOCTRINA RISC ZERO: Regex de llista negra per sanitejar inputs
@@ -111,6 +111,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const { actions, state, flags, t: contextT } = useAppContext();
   
   const onSearch = actions.fetchWeatherByCoords;
+  const { getCoordinates } = useGeoLocation();
   const loading = state.loading;
   const viewMode = flags.viewMode;
   const setViewMode = actions.setViewMode;
@@ -225,88 +226,35 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   }, [query]);
 
   // --- LÒGICA DE GEOLOCALITZACIÓ ---
-  const handleLocationClick = () => {
+  // Delega la localització GPS a GeoLocationContext (retries alta/baixa precisió +
+  // Sentry ja inclosos) i la geocodificació inversa a geocodingService, en lloc de
+  // mantenir-ne una còpia pròpia sense timeout.
+  const handleLocationClick = async () => {
     if (isLocating || loading) return;
     setIsLocating(true);
-    
-    if (!navigator.geolocation) {
-      alert(dict.geoNotSupported);
+
+    try {
+      const { lat, lon } = await getCoordinates();
+      const { city, country } = await reverseGeocode(lat, lon, safeLang);
+      onSearch(lat, lon, city, country);
+    } catch (err) {
+      reportGeoError(err);
+    } finally {
       setIsLocating(false);
-      return;
     }
-
-    const getPosition = (highAccuracy: boolean): Promise<GeolocationPosition> => {
-        return new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-                resolve, 
-                reject, 
-                {
-                    enableHighAccuracy: highAccuracy,
-                    timeout: highAccuracy ? 5000 : 10000,
-                    maximumAge: 60000 
-                }
-            );
-        });
-    };
-
-    getPosition(true)
-        .then((pos) => {
-            handleLocationFound(pos);
-        })
-        .catch(async (err: GeolocationPositionError) => {
-            if (err.code === 3) {
-                console.warn("⚠️ GPS Timeout. Reintentant amb baixa precisió...");
-                try {
-                    const fallbackPos = await getPosition(false);
-                    handleLocationFound(fallbackPos);
-                    
-                    Sentry.addBreadcrumb({
-                        category: "geolocation",
-                        message: "Recovered from GPS Timeout using Low Accuracy",
-                        level: "info"
-                    });
-                } catch (fallbackErr) {
-                    reportGeoError(fallbackErr as GeolocationPositionError);
-                }
-            } else {
-                reportGeoError(err);
-            }
-        });
   };
 
-  const handleLocationFound = async (pos: GeolocationPosition) => {
-      const { latitude, longitude } = pos.coords;
-      let finalName = dict.detectedLocation;
-      let finalCountry = "";
+  const reportGeoError = (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
 
-      try {
-          const resp = await fetch(
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${safeLang}`
-          );
-          
-          if (resp.ok) {
-              const data = await resp.json();
-              finalName = data.locality || data.city || data.town || data.village || dict.currentLocation;
-              finalCountry = data.countryName || "";
-          }
-      } catch (e) {
-          console.warn("Error obtenint nom de la ciutat:", e);
+      if (message === 'PERMISSION_DENIED') return; // Denegació explícita: no cal molestar amb un alert
+      if (message === 'GEOLOCATION_NOT_SUPPORTED') {
+          alert(dict.geoNotSupported);
+          return;
       }
 
-      onSearch(latitude, longitude, finalName, finalCountry);
-      setIsLocating(false);
-  };
-
-  const reportGeoError = (err: GeolocationPositionError) => {
-      setIsLocating(false);
-      if (err.code !== 1) { 
-          console.error("❌ Error Geolocalització:", err.message);
-          Sentry.captureException(new Error(`Geolocation Failed: ${err.message}`), { 
-              tags: { service: 'Geolocation', strategy: 'fallback_implemented' },
-              extra: { code: err.code }
-          });
-          alert(dict.geoError);
-      }
+      console.error("❌ Error Geolocalització:", message);
+      alert(dict.geoError);
   };
 
   const processSelection = (lat: number, lon: number, name: string, country?: string) => {

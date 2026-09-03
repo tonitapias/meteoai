@@ -8,17 +8,23 @@ import './index.css';
 
 // Contexts
 import { GeoLocationProvider } from './context/GeoLocationContext';
+import { APP_VERSION } from './utils/appVersion';
 
 // --- 1. CONFIGURACIÓ DE SENTRY ---
+// environment/release separen el trànsit de `npm run dev` de producció i permeten
+// atribuir errors a una versió concreta. tracesSampleRate baix en producció evita
+// esgotar la quota amb trànsit real (en dev mantenim 100% per depurar còmodament).
 Sentry.init({
   dsn: "https://5d21e95a14abe6e5779f825cd519765c@o4510759217856512.ingest.de.sentry.io/4510759236075600",
+  environment: import.meta.env.MODE,
+  release: `meteoai@${APP_VERSION}`,
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration(),
   ],
-  tracesSampleRate: 1.0, 
-  replaysSessionSampleRate: 0.1, 
-  replaysOnErrorSampleRate: 1.0, 
+  tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
 });
 
 // --- 2. RENDERITZACIÓ SEGURA ---
