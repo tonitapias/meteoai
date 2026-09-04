@@ -135,11 +135,7 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
   }, [onClose]);
 
   const handleTacticalClose = useCallback(() => {
-    if (window.history.state?.modalId === 'aromeLive') {
-      window.history.back();
-    } else {
-      onCloseRef.current();
-    }
+    onCloseRef.current();
   }, []);
 
   useEffect(() => {
@@ -150,29 +146,14 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
     };
   }, []);
 
+  // L'historial del navegador (botó "enrere") ja el gestiona useModalHistory,
+  // registrat des de useViewState.ts — aquí només cal l'atall de teclat Escape.
   useEffect(() => {
-    // Es registra l'entrada al modal de forma immutable
-    window.history.pushState({ modalId: 'aromeLive' }, '');
-    
-    const handlePopState = () => {
-      onCloseRef.current();
-    };
-    
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleTacticalClose();
     };
-    
-    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
-
-    // Array de dependències BUIT per evitar que un redibuixat del pare expulsi a l'usuari
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('keydown', handleKeyDown);
-      if (window.history.state?.modalId === 'aromeLive') {
-        window.history.back();
-      }
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTacticalClose]);
 
   useEffect(() => {

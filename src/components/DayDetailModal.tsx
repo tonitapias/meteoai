@@ -87,30 +87,19 @@ export default function DayDetailModal({
 
   const { dayData, hourlyData, comparisonData, snowLevelText, dayIndices } = useDayDetailData(weatherData, selectedDayIndex);
 
-  const handleClose = useCallback(() => {
-      window.history.back();
-  }, []);
-
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target === e.currentTarget) {
-          handleClose();
+          onClose();
       }
-  }, [handleClose]);
+  }, [onClose]);
 
+  // L'historial del navegador (botó "enrere") ja el gestiona useModalHistory,
+  // registrat des de useViewState.ts — aquí només cal l'atall de teclat Escape.
   useEffect(() => {
-      window.history.pushState({ modal: 'dayDetail' }, '');
-      
-      const handlePopState = () => onClose(); 
-      const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
-      
-      window.addEventListener('popstate', handlePopState);
+      const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
       window.addEventListener('keydown', handleKeyDown);
-      
-      return () => {
-          window.removeEventListener('popstate', handlePopState);
-          window.removeEventListener('keydown', handleKeyDown);
-      };
-  }, [onClose, handleClose]);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const formattedPrecipitation = useMemo(() => {
     if (!dayData || !weatherData || selectedDayIndex === null) return { val: "--", unit: "" };
@@ -276,7 +265,7 @@ export default function DayDetailModal({
       <div className="bg-[#050608] sm:border border-white/10 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[95vh] overflow-y-auto custom-scrollbar sm:rounded-[2rem] shadow-2xl relative sm:ring-1 sm:ring-white/5">
           
           <button 
-            onClick={handleClose}
+            onClick={onClose}
             className="fixed sm:absolute top-4 right-4 md:top-5 md:right-5 p-3 sm:p-2 bg-black/50 sm:bg-slate-900 rounded-full text-slate-400 hover:text-cyan-400 border border-white/10 sm:border-slate-700 hover:border-cyan-500/50 backdrop-blur-md transition-all z-50 hover:rotate-90 duration-300 shadow-md active:scale-95"
             aria-label="Tancar"
           >
