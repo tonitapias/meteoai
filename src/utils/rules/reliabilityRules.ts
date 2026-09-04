@@ -1,6 +1,6 @@
 // src/utils/rules/reliabilityRules.ts
 import { StrictDailyWeather, ReliabilityResult } from '../../types/weatherLogicTypes';
-import { safeNum } from '../physics';
+import { extractValidNum } from '../weatherMath';
 
 // Constants locals de fiabilitat 
 const RELIABILITY_THRESHOLDS = {
@@ -28,30 +28,43 @@ export const calculateReliability = (
   const gfs = dailyGFS as StrictDailyWeather;
   const icon = dailyICON as StrictDailyWeather;
   
-  const tempBest = safeNum(dailyBest.temperature_2m_max?.[dayIndex]);
-  const tempGFS = safeNum(gfs.temperature_2m_max?.[dayIndex]);
-  const tempICON = safeNum(icon.temperature_2m_max?.[dayIndex]);
-  
-  const temps = [tempBest, tempGFS, tempICON];
-  const diffTemp = Math.max(...temps) - Math.min(...temps);
-  
-  const precipBest = safeNum(dailyBest.precipitation_sum?.[dayIndex]);
-  const precipGFS = safeNum(gfs.precipitation_sum?.[dayIndex]);
-  const precipICON = safeNum(icon.precipitation_sum?.[dayIndex]);
-  
-  const precips = [precipBest, precipGFS, precipICON];
-  const diffPrecip = Math.max(...precips) - Math.min(...precips);
+  // DOCTRINA RISC ZERO: un camp absent en un dels 3 models NO és un 0ºC/0mm
+  // real — abans safeNum el convertia en 0, i comparar-lo amb un model que sí
+  // tenia dades reals (p.ex. 25ºC) disparava un "diffTemp" de 25 graus fals,
+  // marcant "baixa fiabilitat" per una dada que simplement no hi era.
+  const tempBest = extractValidNum(dailyBest.temperature_2m_max?.[dayIndex]);
+  const tempGFS = extractValidNum(gfs.temperature_2m_max?.[dayIndex]);
+  const tempICON = extractValidNum(icon.temperature_2m_max?.[dayIndex]);
 
-  if (diffTemp > RELIABILITY_THRESHOLDS.TEMP_HIGH_DIFF) {
+  const temps = [tempBest, tempGFS, tempICON].filter((t): t is number => t !== null);
+  // Amb només 1 valor real, max-min sempre dona 0 — semblaria "acord perfecte"
+  // sense haver comparat res de debò. Calen almenys 2 models amb dada.
+  const diffTemp = temps.length >= 2 ? Math.max(...temps) - Math.min(...temps) : null;
+
+  const precipBest = extractValidNum(dailyBest.precipitation_sum?.[dayIndex]);
+  const precipGFS = extractValidNum(gfs.precipitation_sum?.[dayIndex]);
+  const precipICON = extractValidNum(icon.precipitation_sum?.[dayIndex]);
+
+  const precips = [precipBest, precipGFS, precipICON].filter((p): p is number => p !== null);
+  const diffPrecip = precips.length >= 2 ? Math.max(...precips) - Math.min(...precips) : null;
+
+  // Ni temperatura ni pluja es poden comparar: no sabem si els models
+  // coincideixen o no, així que ho tractem igual que quan falta un model
+  // sencer (línia 23) — fiabilitat "mitjana" per defecte, mai "alta" fingida.
+  if (diffTemp === null && diffPrecip === null) {
+      return { level: 'medium', type: 'general', value: 0 };
+  }
+
+  if (diffTemp !== null && diffTemp > RELIABILITY_THRESHOLDS.TEMP_HIGH_DIFF) {
       return { level: 'low', type: 'temp', value: Number(diffTemp.toFixed(1)) };
   }
-  if (diffPrecip > RELIABILITY_THRESHOLDS.PRECIP_HIGH_DIFF) {
+  if (diffPrecip !== null && diffPrecip > RELIABILITY_THRESHOLDS.PRECIP_HIGH_DIFF) {
       return { level: 'low', type: 'precip', value: Number(diffPrecip.toFixed(1)) };
   }
-  
-  if (diffTemp > RELIABILITY_THRESHOLDS.TEMP_MED_DIFF || diffPrecip > RELIABILITY_THRESHOLDS.PRECIP_MED_DIFF) {
+
+  if ((diffTemp !== null && diffTemp > RELIABILITY_THRESHOLDS.TEMP_MED_DIFF) || (diffPrecip !== null && diffPrecip > RELIABILITY_THRESHOLDS.PRECIP_MED_DIFF)) {
       return { level: 'medium', type: 'divergent', value: 0 };
   }
-  
+
   return { level: 'high', type: 'ok', value: 0 };
 };

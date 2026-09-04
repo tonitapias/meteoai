@@ -147,4 +147,28 @@ describe('Càlcul de Fiabilitat (Reliability)', () => {
      );
      expect(result.level).toBe('high');
    });
+
+   it('DOCTRINA RISC ZERO: una dada absent d\'un model no s\'ha de fingir com un 0ºC real', () => {
+     // GFS no té dada per a aquest dia (array buit). Best=20, ICON=19 coincideixen bé.
+     // Abans del fix, l'absència de GFS es convertia en un fals 0ºC via safeNum,
+     // disparant un diffTemp fals de 20 graus i una fiabilitat BAIXA fictícia.
+     const result = calculateReliability(
+       { temperature_2m_max: [20] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [19] } as unknown as StrictDailyWeather,
+       0
+     );
+     expect(result.level).toBe('high');
+   });
+
+   it('hauria de marcar fiabilitat MITJANA (no ALTA ni BAIXA) si cap model té dada comparable', () => {
+     const result = calculateReliability(
+       { temperature_2m_max: [] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [] } as unknown as StrictDailyWeather,
+       0
+     );
+     expect(result.level).toBe('medium');
+     expect(result.type).toBe('general');
+   });
 });
