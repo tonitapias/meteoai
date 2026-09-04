@@ -8,7 +8,7 @@ import { adjustBaseSkyCode, calculateEffectiveCloudCover } from './rules/cloudRu
 import { getInstantaneousPrecipitation, checkForVirga, adjustRainIntensity } from './rules/precipitationRules';
 import { checkForFog, checkCriticalVisibility } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
-import { determineSnowCode } from './rules/winterRules';
+import { determineSnowCode, isSnowPossible } from './rules/winterRules';
 
 // ==========================================
 // TALLAFOCS DE LA DOCTRINA DE RISC ZERO
@@ -34,12 +34,15 @@ const applyTelemetrySync = (code: number, precipAmt: number = 0): number => {
     return syncedCode;
 };
 
-const applyThermalLock = (code: number, temp: number): number => {
-    if (temp <= 0) return code;
-    
+const applyThermalLock = (code: number, temp: number, freezingLevel: number, elevation: number): number => {
+    // Si les condicions tèrmiques (temperatura o cota de gel) permeten neu/aiguaneu,
+    // determineSnowCode ja ha tingut l'última paraula — no li desfem la feina aquí.
+    if (isSnowPossible(temp, freezingLevel, elevation)) return code;
+
     let safeCode = code;
-    // Si estem a +0ºC, el gel/neu és un error físic del model i la rebaixem a aigua
-    if (safeCode === 48) safeCode = 45; 
+    // Aquí no hi ha base tèrmica per a neu/gel (ni temperatura ni cota de gel ho justifiquen):
+    // és un error físic del model, i el rebaixem a la seva versió líquida
+    if (safeCode === 48) safeCode = 45;
     if (safeCode === 56) safeCode = 51; 
     if (safeCode === 57) safeCode = 53; 
     if (safeCode === 66) safeCode = 61; 
@@ -114,8 +117,9 @@ export const getRealTimeWeatherCode = (
     code = determineSnowCode(code, temp, freezingLevel, elevation, precipInstantanea);
 
     // --- G. SEGELLAT DEFINITIU (DOCTRINA RISC ZERO) ---
-    // Bloqueig Tèrmic (Erradica icones de neu/gel en temperatures positives)
-    code = applyThermalLock(code, temp);
+    // Bloqueig Tèrmic (Erradica icones de neu/gel només on ni la temperatura
+    // ni la cota de gel ho justifiquen — vegeu isSnowPossible)
+    code = applyThermalLock(code, temp, freezingLevel, elevation);
 
     return code;
 };

@@ -2,18 +2,29 @@ import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 
 const { SNOW, PRECIPITATION } = WEATHER_THRESHOLDS;
 
+/**
+ * Determina si les condicions tèrmiques permeten neu/aiguaneu: temperatura
+ * de superfície prou baixa, o cota de gel prou a prop de la superfície.
+ * Font única d'aquest criteri — l'usen tant determineSnowCode (per decidir
+ * si transforma un codi de pluja en neu) com applyThermalLock a
+ * weatherLogic.ts (per NO esborrar el codi de neu que aquesta funció acaba
+ * de produir; abans usava un llindar propi de temp<=0 que desfeia sempre
+ * la franja d'aiguaneu 0–4°C que aquesta funció construeix més avall).
+ */
+export const isSnowPossible = (temp: number, freezingLevel: number, elevation: number): boolean => {
+    const freezingDist = freezingLevel - elevation;
+    return temp <= SNOW.TEMP_SNOW || (temp <= SNOW.TEMP_MIX && freezingDist < SNOW.FREEZING_BUFFER);
+};
+
 /** Determina si la pluja s'ha de convertir en neu per temperatura */
 export const determineSnowCode = (
-    code: number, 
-    temp: number, 
-    freezingLevel: number, 
-    elevation: number, 
+    code: number,
+    temp: number,
+    freezingLevel: number,
+    elevation: number,
     precipAmount: number
 ): number => {
-    const freezingDist = freezingLevel - elevation;
-    const isColdEnough = temp <= SNOW.TEMP_SNOW || (temp <= SNOW.TEMP_MIX && freezingDist < SNOW.FREEZING_BUFFER);
-
-    if (!isColdEnough) return code;
+    if (!isSnowPossible(temp, freezingLevel, elevation)) return code;
 
     const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
 
