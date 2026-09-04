@@ -8,6 +8,8 @@ import {
 import { Language, TranslationType } from '../translations';
 import { APP_VERSION } from '../utils/appVersion';
 import DiagnosticsModal from './DiagnosticsModal';
+import { useHoldGesture } from '../hooks/welcome/useHoldGesture';
+import { useWeatherParticles } from '../hooks/welcome/useWeatherParticles';
 
 interface WelcomeScreenProps {
   lang: Language;
@@ -16,11 +18,6 @@ interface WelcomeScreenProps {
   onLocate: () => void;
   loading: boolean;
 }
-
-// Interfícies estrictes per a telemetria atmosfèrica
-interface Particle { id: number; left: string; top: string; size: string; duration: string; delay: string; drift: string; }
-interface Drop { id: number; left: string; delay: string; z: string; }
-interface Cloud { id: number; y: string; delay: string; z: string; }
 
 // Claus tàctiques que aquest component pot rebre via t.welcome (mateix patró que
 // HeaderTranslations a Header.tsx). Totes opcionals: cap encara existeix a
@@ -114,170 +111,15 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
     return () => window.removeEventListener('popstate', handlePopState);
   }, [showDiagnostics]);
 
-  // ESTATS PURS DINS DE COORDENADES FIXES
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [precipDrops, setPrecipDrops] = useState<Drop[]>([]);
-  const [clouds, setClouds] = useState<Cloud[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
-  
-  // Cicle Atmosfèric Dinàmic
-  const [weatherPhase, setWeatherPhase] = useState<'storm' | 'sun'>('storm');
-  const isStorm = weatherPhase === 'storm';
+  // FONS ATMOSFÈRIC (partícules, pluja, núvols, cicle tempesta/sol)
+  const { particles, precipDrops, clouds, isMounted, isStorm } = useWeatherParticles();
 
-  // =========================================================================
   // SISTEMA D'ENGEGADA TÀCTICA (GPU ACCELERATED HOLD-TO-BOOT)
-  // =========================================================================
-  const [isHolding, setIsHolding] = useState(false);
-  const [tapWarning, setTapWarning] = useState(false);
-  const [isArmed, setIsArmed] = useState(false);
-  
-  // Refs per manipular el DOM directament evitant 60 re-renders de React per segon
-  const progressRingRef = useRef<SVGCircleElement>(null);
-  const progressTextRef = useRef<HTMLSpanElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const warningTimerRef = useRef<number | null>(null);
-  
-  const startTimeRef = useRef<number>(0);
-  const lastHapticCheckpointRef = useRef<number>(0); // Últim llindar de 25/50/75% ja vibrat
-  const HOLD_DURATION = 1500; // 1.5 segons de retenció exigida
-
-  const startHold = useCallback((e?: React.SyntheticEvent | Event) => {
-    if (loading || isArmed) return;
-    
-    // Evitem menús i text-selection en dispositius mòbils, bloqueig de botó dret al PC
-    if (e && 'touches' in e && e.cancelable) e.preventDefault(); 
-    if (e && 'button' in e && (e as React.MouseEvent).button !== 0) return; 
-    
-    // Motor tàptic: Confirmació inicial
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15);
-
-    setIsHolding(true);
-    setTapWarning(false);
-    startTimeRef.current = Date.now();
-    lastHapticCheckpointRef.current = 0;
-
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (warningTimerRef.current) window.clearTimeout(warningTimerRef.current);
-
-    // Bucle d'animació per GPU
-    const animate = () => {
-      const elapsed = Date.now() - startTimeRef.current;
-      const progress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
-
-      // Mutacions directes al DOM (Estalvi de Bateria extrem)
-      if (progressRingRef.current) {
-        progressRingRef.current.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - progress / 100)}`;
-      }
-      if (progressTextRef.current) {
-        progressTextRef.current.innerText = Math.floor(progress).toString();
-      }
-
-      // Micro-batecs tàptics als llindars de 25/50/75%: un únic tap per llindar,
-      // independent del framerate (abans `progress % 25 < 1.5` podia disparar-se
-      // diverses vegades seguides a pantalles d'alta taxa de refresc, o saltar-se
-      // el llindar si el framerate era baix).
-      const hapticCheckpoint = Math.floor(progress / 25);
-      if (hapticCheckpoint > lastHapticCheckpointRef.current && hapticCheckpoint >= 1 && hapticCheckpoint <= 3) {
-        lastHapticCheckpointRef.current = hapticCheckpoint;
-        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-      }
-
-      // Èxit total
-      if (progress >= 100) {
-        setIsHolding(false);
-        setIsArmed(true); 
-        
-        // Patró vibració èxit i salt de pantalla
-        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        setTimeout(() => { onLocate(); }, 600);
-      } else {
-        // Continuar el bucle a 60fps
-        animationFrameRef.current = requestAnimationFrame(animate);
-      }
-    };
-
-    // Reseteig inicial de l'anell abans de començar el cicle visual
-    if (progressRingRef.current) progressRingRef.current.style.strokeDashoffset = `${RING_CIRCUMFERENCE}`;
-    if (progressTextRef.current) progressTextRef.current.innerText = '0';
-    
-    animationFrameRef.current = requestAnimationFrame(animate);
-  }, [loading, isArmed, onLocate]);
-
-  const cancelHold = useCallback(() => {
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (isArmed) return;
-
-    const elapsed = Date.now() - startTimeRef.current;
-    setIsHolding(false);
-
-    // Sistema Educatiu "Anti-Tap": si deixen anar ràpid (<350ms) salta l'error
-    if (elapsed > 0 && elapsed < 350) {
-      setTapWarning(true);
-      // Vibració seca d'error
-      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([40, 40, 40]);
-      
-      warningTimerRef.current = window.setTimeout(() => {
-        setTapWarning(false);
-      }, 1500); 
-    }
-  }, [isArmed]);
-
-  // Gestió d'accessibilitat: Suport de Teclat per a PC (Paritat de plataformes)
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === ' ' || e.key === 'Enter') {
-      if (!e.repeat) startHold(e); // El preventDefault evitarà fer scroll amb l'Espai
-      e.preventDefault();
-    }
-  }, [startHold]);
-
-  const handleKeyUp = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === ' ' || e.key === 'Enter') {
-      cancelHold();
-    }
-  }, [cancelHold]);
-
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (warningTimerRef.current) window.clearTimeout(warningTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMounted(true);
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-      
-      setParticles(Array.from({ length: isMobile ? 12 : 30 }).map((_, i) => ({
-        id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-        size: `${Math.random() * 2 + 1}px`, duration: `${5 + Math.random() * 15}s`,
-        delay: `-${Math.random() * 15}s`, drift: `${(Math.random() - 0.5) * 80}px`
-      })));
-
-      setPrecipDrops(Array.from({ length: isMobile ? 15 : 40 }).map((_, i) => ({
-        id: i,
-        left: `${Math.random() * 140 + 10}px`,
-        delay: `-${Math.random() * 5}s`,
-        z: `${Math.random() * 140 - 70}px`
-      })));
-
-      setClouds(Array.from({ length: isMobile ? 3 : 8 }).map((_, i) => ({
-        id: i,
-        y: `${Math.random() * 120 + 20}px`,
-        delay: `-${Math.random() * 15}s`,
-        z: `${Math.random() * 140 - 70}px`
-      })));
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setWeatherPhase(prev => prev === 'storm' ? 'sun' : 'storm');
-    }, 8000);
-    return () => clearInterval(interval);
-  }, []);
+  const {
+    isHolding, tapWarning, isArmed,
+    progressRingRef, progressTextRef,
+    startHold, cancelHold, handleKeyDown, handleKeyUp
+  } = useHoldGesture({ loading, onLocate, ringCircumference: RING_CIRCUMFERENCE });
 
   const orbitingSensors = useMemo(() => [
     { Icon: CloudRain, color: 'text-sky-300', angle: 0, label: 'PRECIP', width: '75%', val: '0.0 mm' },
