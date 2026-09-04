@@ -133,13 +133,20 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   }, [supportsArome, safeLat, safeLon, fetchGlobalModelByCoords, clearGlobalModel]);
 
   const consensusMetrics = useMemo(() => {
+    // [FIX PRECISIÓ] Passem la sèrie horària local (AROME) perquè el "Radar a
+    // 3 Hores" pugui detectar convecció local pròpia, no només la del model
+    // global — vegeu la nota a calculateModelConsensus.
     return calculateModelConsensus(
-        currentTemp, 
+        currentTemp,
         currentPrecip,
-        currentWindSpeed, 
-        globalData
+        currentWindSpeed,
+        globalData,
+        Array.isArray(hourly?.time) ? hourly.time : [],
+        Array.isArray(hourly?.precipitation) ? hourly.precipitation : [],
+        Array.isArray(hourly?.wind_speed_10m) ? hourly.wind_speed_10m : [],
+        typeof utc_offset_seconds === 'number' ? utc_offset_seconds : 0
     );
-  }, [currentTemp, currentPrecip, currentWindSpeed, globalData]);
+  }, [currentTemp, currentPrecip, currentWindSpeed, globalData, hourly, utc_offset_seconds]);
   
   const localOffsetSeconds = new Date().getTimezoneOffset() * -60;
   const hasKnownOffset = typeof utc_offset_seconds === 'number';

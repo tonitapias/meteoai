@@ -99,10 +99,18 @@ export interface ConsensusMetrics {
 const MAX_GLOBAL_TIME_DRIFT_MS = 90 * 60 * 1000;
 
 export function calculateModelConsensus(
-  aromeTemp: number | undefined, 
-  aromePrecip: number | undefined, 
+  aromeTemp: number | undefined,
+  aromePrecip: number | undefined,
   aromeWind: number | undefined,
-  globalData: GlobalModelData | null
+  globalData: GlobalModelData | null,
+  // [FIX PRECISIÓ] Sèrie horària AROME per al "Radar a 3 Hores" (futureDivergence,
+  // pas 6 més avall). Abans aquell avís només mirava la sèrie global contra ella
+  // mateixa — exactament el model de baixa resolució, ignorant AROME, el model
+  // pensat per detectar convecció local ràpida que el global sol allisar.
+  aromeHourlyTimes: string[] = [],
+  aromeHourlyPrecip: (number | null)[] = [],
+  aromeHourlyWind: (number | null)[] = [],
+  utcOffset: number = 0
 ): ConsensusMetrics {
 
   if (!globalData || typeof aromeTemp !== 'number') {
@@ -227,18 +235,47 @@ export function calculateModelConsensus(
         }
     }
 
-    // 6. RADAR A 3 HORES
+    // 6. RADAR A 3 HORES — Model Global
     let futureDivergence = false;
     for (let i = 1; i <= 3; i++) {
       const futureIndex = currentHourIndex + i;
       if (safeHourly.temperature_2m && safeHourly.temperature_2m.length > futureIndex) {
          const futurePrecip = safeHourly.precipitation?.[futureIndex];
          const futureWind = safeHourly.wind_speed_10m?.[futureIndex];
-         
+
          const isHeavyRain = typeof futurePrecip === 'number' && futurePrecip > 2;
          const isStrongWind = typeof futureWind === 'number' && futureWind > 40;
 
          if (isHeavyRain || isStrongWind) { futureDivergence = true; break; }
+      }
+    }
+
+    // 6b. RADAR A 3 HORES — AROME (alta resolució, 1.3km)
+    // Mateixos llindars que el radar global (pas 6), però sobre la sèrie AROME:
+    // és el model amb prou detall per detectar un xàfec o ràfega convectiva
+    // local que el model global sol suavitzar fins a fer-lo invisible.
+    if (!futureDivergence && aromeHourlyTimes.length > 0) {
+      let aromeNowIndex = -1;
+      let aromeMinDiff = Infinity;
+      for (let i = 0; i < aromeHourlyTimes.length; i++) {
+        const ep = resolveHourlyEpoch(aromeHourlyTimes[i], utcOffset);
+        if (!isNaN(ep)) {
+          const diff = Math.abs(ep - nowTimestamp);
+          if (diff < aromeMinDiff) { aromeMinDiff = diff; aromeNowIndex = i; }
+        }
+      }
+
+      if (aromeNowIndex !== -1 && aromeMinDiff <= MAX_GLOBAL_TIME_DRIFT_MS) {
+        for (let i = 1; i <= 3; i++) {
+          const futureIndex = aromeNowIndex + i;
+          const futurePrecip = aromeHourlyPrecip[futureIndex];
+          const futureWind = aromeHourlyWind[futureIndex];
+
+          const isHeavyRain = typeof futurePrecip === 'number' && futurePrecip > 2;
+          const isStrongWind = typeof futureWind === 'number' && futureWind > 40;
+
+          if (isHeavyRain || isStrongWind) { futureDivergence = true; break; }
+        }
       }
     }
 
