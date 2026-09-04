@@ -122,6 +122,23 @@ export interface StrictDailyWeather {
   [key: string]: unknown;
 }
 
+/**
+ * [NETEJA] Forma real de `WeatherData['location']` (veure weather.ts), reafirmada
+ * aquí perquè `ExtendedWeatherData['location']` es perd com a `{}` en algun punt
+ * de la cadena `Omit`/mapped-type — vegeu el comentari de `getSafeLatitude` a
+ * weatherMath.ts. Abans d'aquest tipus compartit, 5 fitxers (DashboardContent.tsx,
+ * DashboardModals.tsx, DebugPanel.tsx, useDataController.ts, useCurrentWeatherLogic.ts)
+ * es declaraven cadascun la seva pròpia interfície local `LocationMeta`, ja
+ * divergents entre elles (algunes amb latitude/longitude opcionals, altres no).
+ */
+export interface LocationMeta {
+  name: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  [key: string]: unknown;
+}
+
 export interface ExtendedWeatherData extends Omit<WeatherData, 'current' | 'hourly' | 'daily'> {
   current: StrictCurrentWeather;
   hourly: StrictHourlyWeather;

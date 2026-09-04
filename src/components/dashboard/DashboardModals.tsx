@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'; // NOU: Importem el hook d'idiom
 
 // 1. IMPORTEM EL CONTEXT
 import { useAppContext } from '../../context/AppContext';
+import type { LocationMeta } from '../../types/weatherLogicTypes';
 
 // Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
@@ -10,13 +11,6 @@ const RadarModal = lazy(() => import('../RadarModal'));
 const AromeModal = lazy(() => import('../AromeModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
-
-// Definim el tipus exacte de location per evitar el fallback a {} de TS (Risc Zero)
-interface LocationMeta {
-    latitude: number;
-    longitude: number;
-    [key: string]: unknown;
-}
 
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT

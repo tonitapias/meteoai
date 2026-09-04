@@ -7,18 +7,12 @@ import { useGeoLocation } from '../../context/GeoLocationContext';
 import { isAromeSupported } from '../../utils/weatherMath';
 import type { Language } from '../../translations';
 import type { WeatherUnit } from '../../utils/formatters';
+import type { LocationMeta } from '../../types/weatherLogicTypes';
 
 interface DataControllerProps {
   lang: Language;
   unit: WeatherUnit;
   now: Date;
-}
-
-// Definim el tipus exacte de location per evitar el fallback a {} de TS (Risc Zero)
-interface LocationMeta {
-    latitude: number;
-    longitude: number;
-    [key: string]: unknown;
 }
 
 export function useDataController({ lang, unit, now }: DataControllerProps) {

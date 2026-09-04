@@ -1,19 +1,12 @@
 // src/components/DebugPanel.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Move } from 'lucide-react';
-import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 
 interface DebugPanelProps {
     weatherData: ExtendedWeatherData | null;
     supportsArome: boolean;
     error: string | null;
-}
-
-// Definim el tipus exacte de location per evitar el fallback a {} de TS
-interface LocationMeta {
-    latitude?: number;
-    longitude?: number;
-    [key: string]: unknown;
 }
 
 const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, error }) => {

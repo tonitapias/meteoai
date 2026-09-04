@@ -2,6 +2,7 @@
 import { lazy, Suspense } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { getSafeLatitude } from '../../utils/weatherMath';
+import type { LocationMeta } from '../../types/weatherLogicTypes';
 
 // Components estàtics
 import CurrentWeather from '../CurrentWeather';
@@ -20,11 +21,6 @@ const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 const SectionSkeleton = () => (
     <div className="w-full h-48 bg-[#0B0C15]/50 animate-pulse rounded-[2rem] border border-white/5 my-4 shadow-inner" />
 );
-
-interface LocationMeta {
-    name: string;
-    [key: string]: unknown;
-}
 
 export const DashboardContent = () => {
     // OBTENIM TOT DIRECTAMENT DEL CONTEXT

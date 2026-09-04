@@ -1,6 +1,6 @@
 // src/hooks/useCurrentWeatherLogic.ts
 import { useMemo } from 'react';
-import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData, StrictCurrentWeather, LocationMeta } from '../types/weatherLogicTypes';
 import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
 import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
@@ -24,14 +24,7 @@ interface UseCurrentWeatherLogicProps {
     effectiveCode: number | null;
 }
 
-// Definim el tipus exacte de location per evitar el fallback a {} de TypeScript
-interface LocationMeta {
-    name: string;
-    country?: string;
-    [key: string]: unknown;
-}
-
-export const useCurrentWeatherLogic = ({ 
+export const useCurrentWeatherLogic = ({
     data, unit, lang, shiftedNow, effectiveCode 
 }: UseCurrentWeatherLogicProps) => {
     
