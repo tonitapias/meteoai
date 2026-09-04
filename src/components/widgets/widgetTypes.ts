@@ -12,8 +12,10 @@ export interface WidgetProps {
 
 export interface ChartDataPoint {
   time: string;
-  temp: number;
-  icon: React.ReactNode; 
+  // DOCTRINA RISC ZERO: null quan la dada real falta — HourlyForecastWidget
+  // ja renderitza "--°" per a qualsevol valor que no sigui un number vàlid.
+  temp: number | null;
+  icon: React.ReactNode;
   precip?: number;
   precipText?: string;
   isNow?: boolean;

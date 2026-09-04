@@ -8,7 +8,7 @@ import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { getSafeLatitude, getSafeArrayNum as getSafeNum } from '../utils/weatherMath';
+import { getSafeLatitude, getSafeArrayNum as getSafeNum, extractValidArrayNum } from '../utils/weatherMath';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
     const { hourly, current, utc_offset_seconds, hourlyComparison } = data;
@@ -61,7 +61,12 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const hours = String(dateObj.getHours()).padStart(2, '0');
             
             // EXTRACCIÓ BLINDADA: Evitem trencaments si l'API de Meteo omet capes
-            const rawTemp = getSafeNum(hourly.temperature_2m, targetIndex);
+            // DOCTRINA RISC ZERO: la temperatura mostrada a cada targeta no pot
+            // ser un 0°C fals — si falta, null (HourlyForecastWidget ja en sap
+            // mostrar "--°"). rawTempForCalc només alimenta l'extrapolació de
+            // cota de gel de més avall quan cap model de comparació en té.
+            const rawTemp = extractValidArrayNum(hourly.temperature_2m, targetIndex);
+            const rawTempForCalc = rawTemp ?? 0;
             const pProb = getSafeNum(hourly.precipitation_probability, targetIndex);
             const pAmt = getSafeNum(hourly.precipitation, targetIndex);
             const windSpeed = getSafeNum(hourly.wind_speed_10m, targetIndex);
@@ -88,18 +93,21 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             // temperatura de superfície real i no amb la del model en brut.
             // Passem el mes de CADA hora (no el d'avui), tal com exigeix la firma
             // actualitzada de getInversionCorrectedTemp per a hores futures.
-            const temp = getInversionCorrectedTemp(
-                {
-                    temperature_2m: rawTemp,
-                    is_day: isDayNum,
-                    wind_speed_10m: windSpeed,
-                    cloud_cover_low: cloudLow,
-                    cloud_cover_mid: cloudMid,
-                    cloud_cover_high: cloudHigh,
-                } as unknown as StrictCurrentWeather,
-                dateObj.getMonth(),
-                safeLatitude
-            );
+            const temp = rawTemp !== null
+                ? getInversionCorrectedTemp(
+                    {
+                        temperature_2m: rawTemp,
+                        is_day: isDayNum,
+                        wind_speed_10m: windSpeed,
+                        cloud_cover_low: cloudLow,
+                        cloud_cover_mid: cloudMid,
+                        cloud_cover_high: cloudHigh,
+                    } as unknown as StrictCurrentWeather,
+                    dateObj.getMonth(),
+                    safeLatitude
+                )
+                : null;
+            const tempForCalc = temp ?? 0;
 
             let freezingLevel = getSafeNum(hourly.freezing_level_height, targetIndex, -1);
             if (freezingLevel === -1) {
@@ -121,7 +129,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 } else {
                     // Últim recurs: extrapolació pròpia amb rawTemp (temperatura de model,
                     // no corregida per inversió — vegeu nota de dalt).
-                    freezingLevel = Math.max(safeElevation, safeElevation + (rawTemp / 0.0065));
+                    freezingLevel = Math.max(safeElevation, safeElevation + (rawTempForCalc / 0.0065));
                 }
             }
 
@@ -129,8 +137,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             const simulatedCurrent = {
                 time: timeStr,
                 weather_code: rawCode,
-                temperature_2m: temp,
-                apparent_temperature: temp, 
+                temperature_2m: tempForCalc,
+                apparent_temperature: tempForCalc,
                 wind_speed_10m: windSpeed,  
                 visibility: visibility,
                 relative_humidity_2m: humidity,

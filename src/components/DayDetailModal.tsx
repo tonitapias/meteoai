@@ -8,7 +8,7 @@ import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, getSafeMonthFromIso } from '../utils/weatherMath';
+import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { MATRIX_BG } from './widgets/widgetStyles';
 
 interface StatCardProps {
@@ -41,9 +41,9 @@ interface TableRowData {
     hour: string;
     temp: number | null;
     code: number;
-    precipProb: number;
-    precipSum: number;
-    snowfall: number;
+    precipProb: number | null;
+    precipSum: number | null;
+    snowfall: number | null;
     windSpeed: number | null;
     isDay: boolean;
 }
@@ -146,13 +146,23 @@ export default function DayDetailModal({
         const time = weatherData.hourly.time[idx];
         if (typeof time !== 'string') continue;
 
-        const temp = getSafeArrNum(hRaw.temperature_2m, idx, 0);
+        // DOCTRINA RISC ZERO: temp/pluja/vent es mostren directament a la taula —
+        // si falten, null (i "--" a la UI, ja implementat més avall), mai un 0
+        // fals. Les variables "ForCalc" de sota alimenten només l'orquestrador
+        // de codi/icona (getRealTimeWeatherCode / getInversionCorrectedTemp),
+        // que és fora d'abast d'aquest fix i encara necessita un número.
+        const rawTemp = extractValidArrayNum(hRaw.temperature_2m, idx);
         const rawCode = getSafeArrNum(hRaw.weather_code ?? hRaw.weathercode, idx, 0);
-        const precipProb = getSafeArrNum(hRaw.precipitation_probability, idx, 0);
-        const precipSum = getSafeArrNum(hRaw.precipitation, idx, 0);
-        const snowfall = getSafeArrNum(hRaw.snowfall, idx, 0);
-        const windSpeed = getSafeArrNum(hRaw.wind_speed_10m, idx, 0);
-        
+        const precipProb = extractValidArrayNum(hRaw.precipitation_probability, idx);
+        const precipSum = extractValidArrayNum(hRaw.precipitation, idx);
+        const snowfall = extractValidArrayNum(hRaw.snowfall, idx);
+        const windSpeed = extractValidArrayNum(hRaw.wind_speed_10m, idx);
+
+        const tempForCalc = rawTemp ?? 0;
+        const windForCalc = windSpeed ?? 0;
+        const precipSumForCalc = precipSum ?? 0;
+        const precipProbForCalc = precipProb ?? 0;
+
         // Extracció expandida per al motor físic unificat
         const humidity = getSafeArrNum(hRaw.relative_humidity_2m, idx, 70);
         const cloudCover = getSafeArrNum(hRaw.cloud_cover, idx, 0);
@@ -168,7 +178,7 @@ export default function DayDetailModal({
 
         let freezingLevel = getSafeArrNum(hRaw.freezing_level_height, idx, -1);
         if (freezingLevel === -1) {
-            freezingLevel = Math.max(elevation, elevation + (temp / 0.0065));
+            freezingLevel = Math.max(elevation, elevation + (tempForCalc / 0.0065));
         }
 
         // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb validació creuada
@@ -177,16 +187,16 @@ export default function DayDetailModal({
         const simulatedCurrent = {
             time: time,
             weather_code: rawCode,
-            temperature_2m: temp,
-            apparent_temperature: temp,
-            wind_speed_10m: windSpeed,
+            temperature_2m: tempForCalc,
+            apparent_temperature: tempForCalc,
+            wind_speed_10m: windForCalc,
             visibility: visibility,
             relative_humidity_2m: humidity,
             cloud_cover_low: cloudLow,
             cloud_cover_mid: cloudMid,
             cloud_cover_high: cloudHigh,
             cloud_cover: cloudCover,
-            precipitation: precipSum,
+            precipitation: precipSumForCalc,
             cape: cape,
             is_day: isDayNum
         } as unknown as StrictCurrentWeather;
@@ -194,24 +204,28 @@ export default function DayDetailModal({
 
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
-            [precipSum],
-            precipProb,
+            [precipSumForCalc],
+            precipProbForCalc,
             freezingLevel,
             elevation
         );
 
-        const displayTemp = getInversionCorrectedTemp(
-            {
-                temperature_2m: temp,
-                cloud_cover_low: cloudLow,
-                cloud_cover_mid: cloudMid,
-                cloud_cover_high: cloudHigh,
-                wind_speed_10m: windSpeed,
-                is_day: isDayNum
-            } as unknown as StrictCurrentWeather,
-            getSafeMonthFromIso(time),
-            getSafeLatitude(weatherData?.location)
-        );
+        // Sense temperatura real d'aquesta hora, no té sentit "corregir-la" —
+        // es manté null i la UI ja sap mostrar "--°" (vegeu hasTemp més avall).
+        const displayTemp = rawTemp !== null
+            ? getInversionCorrectedTemp(
+                {
+                    temperature_2m: rawTemp,
+                    cloud_cover_low: cloudLow,
+                    cloud_cover_mid: cloudMid,
+                    cloud_cover_high: cloudHigh,
+                    wind_speed_10m: windForCalc,
+                    is_day: isDayNum
+                } as unknown as StrictCurrentWeather,
+                getSafeMonthFromIso(time),
+                getSafeLatitude(weatherData?.location)
+            )
+            : null;
 
         rows.push({
             hour: time.split('T')[1]?.slice(0, 5) || "--:--",
@@ -403,7 +417,7 @@ export default function DayDetailModal({
                         </div>
                         
                         {tableRows.map((row: TableRowData, idx: number) => {
-                            const showPrecip = row.precipProb > 0 || row.precipSum > 0;
+                            const showPrecip = (row.precipProb !== null && row.precipProb > 0) || (row.precipSum !== null && row.precipSum > 0);
                             const hasTemp = row.temp !== null;
                             const hasWind = row.windSpeed !== null;
                             
@@ -415,7 +429,7 @@ export default function DayDetailModal({
                                 
                                 <div className="col-span-2 flex justify-center">
                                     <div className="scale-[0.6] md:scale-75 origin-center filter drop-shadow-md group-hover:scale-90 transition-transform duration-300">
-                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb, row.windSpeed || 0, row.temp, row.precipSum)}
+                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb ?? 0, row.windSpeed || 0, row.temp, row.precipSum ?? 0)}
                                     </div>
                                 </div>
                                 
@@ -430,10 +444,12 @@ export default function DayDetailModal({
                                 <div className="col-span-3 flex flex-col md:flex-row justify-end items-end md:items-center gap-0.5 md:gap-1.5">
                                     {showPrecip ? (
                                         <>
-                                            <span className="text-[10px] md:text-[11px] font-black text-blue-400 tabular-nums">
-                                                {row.precipProb}%
-                                            </span>
-                                            {row.precipSum > 0 && (
+                                            {row.precipProb !== null && (
+                                                <span className="text-[10px] md:text-[11px] font-black text-blue-400 tabular-nums">
+                                                    {row.precipProb}%
+                                                </span>
+                                            )}
+                                            {row.precipSum !== null && row.precipSum > 0 && (
                                                 <span className="text-[9px] text-slate-400 font-mono font-bold bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-inner">
                                                     {formatPrecipitation(row.precipSum, row.snowfall)}
                                                 </span>
