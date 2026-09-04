@@ -13,6 +13,7 @@ export interface TranslationMap {
   aiIntroAfternoon: string;
   aiIntroNight: string;
   aiSummaryClear: string;
+  aiNoData: string;
   aiSummaryVariable: string;
   aiSummaryVariableNight: string;
   aiSummaryOvercast: string;

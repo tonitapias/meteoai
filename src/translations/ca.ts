@@ -161,7 +161,8 @@ export const ca = {
   aiIntroEvening: "Bon vespre. Previsió immediata: ",
   aiIntroNight: "Bona nit. Situació nocturna: ",
   
-  aiSummaryClear: "Cel serè i ambient tranquil. ", 
+  aiSummaryClear: "Cel serè i ambient tranquil. ",
+  aiNoData: "No hi ha prou dades fiables de temperatura o cel per descriure el temps ara mateix.",
   aiSummaryVariable: "Cel variable amb sol i núvols alternant-se. ", 
   aiSummaryVariableNight: "Nit variable amb pas d'intervals de núvols. ", 
   aiSummaryCloudy: "Pas de nuvolositat variable. Ambient estable però humit. ",

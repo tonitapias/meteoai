@@ -163,7 +163,8 @@ export const fr = {
   aiIntroEvening: "Bonsoir. Prévisions immédiates : ",
   aiIntroNight: "Bonne nuit. Situation nocturne : ",
   
-  aiSummaryClear: "Ciel dégagé et ambiance calme. ", 
+  aiSummaryClear: "Ciel dégagé et ambiance calme. ",
+  aiNoData: "Pas assez de données fiables de température ou de ciel pour décrire le temps actuel.",
   aiSummaryVariable: "Ciel variable avec soleil et nuages alternés. ",
   aiSummaryVariableNight: "Ciel variable avec passage de nuages. ", 
   aiSummaryCloudy: "Passage nuageux variable. Ambiance stable mais humide. ",

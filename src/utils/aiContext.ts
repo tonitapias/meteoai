@@ -10,7 +10,7 @@ import {
     AIPredictionResult, 
     ReliabilityResult 
 } from '../types/weatherLogicTypes';
-import { safeNum } from './physics';
+import { safeNum, extractValidNum } from './weatherMath';
 
 const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
@@ -182,8 +182,24 @@ export const generateAIPrediction = (
     try {
         // CORRECCIÓ: Usem l'hora de la ubicació, no la del sistema
         const currentHour = getLocationHour(current.time);
-        const code = safeNum(effectiveCode !== null ? effectiveCode : current.weather_code, 0);
-        
+
+        // DOCTRINA RISC ZERO: codi de temps i temperatura no són inputs neutres
+        // per a aquest text — decideixen si diem "cel serè" o "fred intens".
+        // Sense cap dels dos, no fingim una predicció completa a partir d'un
+        // 0 fals: ho diem clarament en lloc d'inventar-la.
+        const validCode = extractValidNum(effectiveCode !== null ? effectiveCode : current.weather_code);
+        const validTemp = extractValidNum(current.temperature_2m);
+        if (validCode === null || validTemp === null) {
+            return {
+                text: tr.aiNoData,
+                tips: [],
+                alerts: [],
+                confidence: tr.aiConfidenceLow,
+                confidenceLevel: 'low'
+            };
+        }
+        const code = validCode;
+
         const minutely15 = current.minutely15 || [];
         const precipInstantanea = safeNum(minutely15[0]);
         const precipNext15 = safeNum(minutely15[1]);
@@ -221,10 +237,12 @@ export const generateAIPrediction = (
         if (windText) summaryParts.push(windText);
 
         const tempParts = analyzeTemperature(
-            safeNum(current.apparent_temperature), 
-            safeNum(current.temperature_2m), 
-            safeNum(current.relative_humidity_2m), 
-            safeNum(daily.temperature_2m_min?.[0]), 
+            // Sense sensació tèrmica pròpia, la temperatura real (ja validada
+            // més amunt) és una substituta raonable — no una xifra inventada.
+            extractValidNum(current.apparent_temperature) ?? validTemp,
+            validTemp,
+            safeNum(current.relative_humidity_2m),
+            safeNum(daily.temperature_2m_min?.[0]),
             currentHour, unit, tr
         );
         summaryParts = [...summaryParts, ...tempParts];
@@ -234,8 +252,8 @@ export const generateAIPrediction = (
         const uvMax = daily.uv_index_max ? safeNum(daily.uv_index_max[0]) : 0;
 
         const alertsAndTips = generateAlertsAndTips({
-            code, windSpeed, windGusts, temp: safeNum(current.temperature_2m), 
-            rainProb: futureRainProb, isRaining, uvMax, 
+            code, windSpeed, windGusts, temp: validTemp,
+            rainProb: futureRainProb, isRaining, uvMax,
             isDay, aqiValue: safeNum(aqiValue), 
             currentCape, precipSum
         }, tr);

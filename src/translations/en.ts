@@ -163,7 +163,8 @@ export const en = {
   aiIntroEvening: "Good evening. Immediate forecast: ",
   aiIntroNight: "Good night. Nocturnal situation: ",
   
-  aiSummaryClear: "Clear skies and calm atmosphere. ", 
+  aiSummaryClear: "Clear skies and calm atmosphere. ",
+  aiNoData: "Not enough reliable temperature or sky data to describe the weather right now.",
   aiSummaryVariable: "Variable skies with sun and clouds mixing. ",
   aiSummaryVariableNight: "Variable skies with passing clouds. ",
   aiSummaryCloudy: "Variable cloudiness. Stable but humid atmosphere. ",

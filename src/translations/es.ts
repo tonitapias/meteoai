@@ -162,7 +162,8 @@ export const es = {
   aiIntroEvening: "Buenas tardes-noche. Previsión inmediata: ", 
   aiIntroNight: "Buenas noches. Situación nocturna: ",
   
-  aiSummaryClear: "Cielo despejado y ambiente tranquilo. ", 
+  aiSummaryClear: "Cielo despejado y ambiente tranquilo. ",
+  aiNoData: "No hay datos fiables suficientes de temperatura o cielo para describir el tiempo ahora mismo.",
   aiSummaryVariable: "Cielo variable con sol y nubes alternándose. ",
   aiSummaryVariableNight: "Noche variable con paso de intervalos nubosos. ",
   aiSummaryCloudy: "Paso de nubosidad variable. Ambiente estable pero húmedo. ",
