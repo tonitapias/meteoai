@@ -7,7 +7,8 @@ import type { Language } from '../translations';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude } from '../utils/weatherMath';
 
-const getStatusColor = (code: number) => {
+const getStatusColor = (code: number | null) => {
+    if (code === null) return 'bg-slate-600';
     if (code <= 1) return 'bg-emerald-500 shadow-[0_0_10px_#10b981]';
     if (code <= 3) return 'bg-blue-400 shadow-[0_0_10px_#60a5fa]';
     if (code >= 95) return 'bg-rose-500 shadow-[0_0_10px_#f43f5e] animate-pulse';
@@ -20,7 +21,7 @@ interface UseCurrentWeatherLogicProps {
     unit: WeatherUnit;
     lang: Language;
     shiftedNow?: Date;
-    effectiveCode: number;
+    effectiveCode: number | null;
 }
 
 // Definim el tipus exacte de location per evitar el fallback a {} de TypeScript
@@ -86,7 +87,12 @@ export const useCurrentWeatherLogic = ({
             },
             visuals: {
                 statusColor: getStatusColor(effectiveCode),
-                weatherLabel: getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)
+                // DOCTRINA RISC ZERO: sense codi fiable, "---" (mateix marcador
+                // que getWeatherLabel ja usa per a un codi desconegut), mai
+                // l'etiqueta d'un 0 fals ("Cel serè").
+                weatherLabel: effectiveCode !== null
+                    ? getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)
+                    : "---"
             }
         };
     }, [current, location, daily, unit, lang, shiftedNow, effectiveCode]);

@@ -46,7 +46,7 @@ export const DashboardContent = () => {
             {/* 1. SECCIÓ PRINCIPAL */}
             <CurrentWeather 
                 data={weatherData} 
-                effectiveCode={calculations.effectiveWeatherCode ?? 0} 
+                effectiveCode={calculations.effectiveWeatherCode}
                 unit={flags.unit} 
                 lang={flags.lang} 
                 shiftedNow={calculations.shiftedNow}

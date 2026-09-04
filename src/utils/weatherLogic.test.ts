@@ -48,10 +48,24 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
     it('hauria de detectar BOIRA per saturació (Dew Point Spread)', () => {
         const current = createCurrent(3, 10, 0, 100);
         current.relative_humidity_2m = 100;
-        
+
         const minutelyPrecip = [0];
         const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
         expect(result).toBe(45);
+    });
+
+    it('DOCTRINA RISC ZERO: sense temperatura real, ha de tornar null (mai un 0ºC fals)', () => {
+        // Un 0ºC fals aquí podria fer que determineSnowCode/applyThermalLock
+        // mostressin neu en ple estiu si la temperatura real fos, per exemple, 30ºC.
+        const current = {
+            weather_code: 61,
+            precipitation: 1,
+            relative_humidity_2m: 80,
+            cloud_cover_low: 50,
+        } as unknown as StrictCurrentWeather;
+
+        const result = getRealTimeWeatherCode(current, [1], 80, 3000, 0);
+        expect(result).toBe(null);
     });
 });
 
@@ -73,6 +87,7 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
      it('hauria de ponderar correctament els núvols ALTS (Cirrus)', () => {
          const current = {
              weather_code: 0,
+             temperature_2m: 20,
              cloud_cover_low: 0,
              cloud_cover_mid: 0,
              cloud_cover_high: 100,

@@ -272,7 +272,10 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
             date: dateStr,
             temp: tempActual,
             precip: precipActual,
-            code: finalCode,
+            // finalCode només pot ser null si tempActual és invàlida, i ja hem
+            // fet `continue` uns quants línies amunt en aquest cas — el ?? 0 és
+            // defensiu per al tipatge, no un camí realment accessible.
+            code: finalCode ?? 0,
             wind: wind,
             gust: Math.max(wind, gust),
             windDir: windDir,

@@ -56,7 +56,7 @@ export function useCurrentConditions(
   const currentCape = useMemo(() => getComparisonVal(weatherData?.hourly, 'cape', currentHourlyIndex) || 0, [weatherData, currentHourlyIndex]);
 
   const effectiveWeatherCode = useMemo(() => {
-      if (!weatherData?.current || !weatherData?.hourly) return 0;
+      if (!weatherData?.current || !weatherData?.hourly) return null;
       const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
       
       // DOCTRINA RISC ZERO: Enriquiment de la telemetria

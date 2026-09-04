@@ -1,7 +1,7 @@
 // src/utils/weatherLogic.ts
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import type { StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { safeNum } from './physics';
+import { safeNum, extractValidNum } from './weatherMath';
 
 // --- IMPORTS DE REGLES (Mòduls especialitzats) ---
 import { adjustBaseSkyCode, calculateEffectiveCloudCover } from './rules/cloudRules';
@@ -62,16 +62,23 @@ const applyThermalLock = (code: number, temp: number, freezingLevel: number, ele
  * Ara actua com la Única Font de Veritat absoluta per a tota l'App.
  */
 export const getRealTimeWeatherCode = (
-    current: StrictCurrentWeather, 
-    minutelyPrecipData: number[], 
+    current: StrictCurrentWeather,
+    minutelyPrecipData: number[],
     _rainProb: number, // [FIX] Guió baix per ometre l'error
     freezingLevel: number,
     elevation: number
-): number => {
-    
+): number | null => {
+
     // 0. Estat Inicial
+    // DOCTRINA RISC ZERO: la temperatura no és un input neutre com núvols/CAPE/
+    // visibilitat — decideix pluja-vs-neu (determineSnowCode) i el bloqueig
+    // tèrmic. Un 0ºC fals hi podria fer aparèixer una icona de neu enmig d'una
+    // onada de calor. Sense temperatura real, no fingim cap codi: aturem aquí.
+    const validTemp = extractValidNum(current.temperature_2m);
+    if (validTemp === null) return null;
+
     let code = safeNum(current.weather_code, 0);
-    const temp = safeNum(current.temperature_2m, 0);
+    const temp = validTemp;
     const humidity = safeNum(current.relative_humidity_2m, 50);
     const cape = safeNum(current.cape, 0); 
     

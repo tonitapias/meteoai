@@ -40,7 +40,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses }: StatCar
 interface TableRowData {
     hour: string;
     temp: number | null;
-    code: number;
+    code: number | null;
     precipProb: number | null;
     precipSum: number | null;
     snowfall: number | null;
@@ -182,13 +182,16 @@ export default function DayDetailModal({
         }
 
         // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb validació creuada
-        // [NOTA] temperature_2m aquí es manté CRUA a propòsit: la correcció d'inversió
-        // només s'aplica a la temperatura MOSTRADA (displayTemp, més avall).
+        // [NOTA] temperature_2m aquí és rawTemp (CRUA, no tempForCalc ni la corregida
+        // per inversió): la correcció d'inversió només s'aplica a la temperatura
+        // MOSTRADA (displayTemp, més avall), i getRealTimeWeatherCode ja sap tornar
+        // null quan rawTemp falta, en lloc de fingir un 0ºC que podria fer aparèixer
+        // neu en ple estiu (determineSnowCode/applyThermalLock).
         const simulatedCurrent = {
             time: time,
             weather_code: rawCode,
-            temperature_2m: tempForCalc,
-            apparent_temperature: tempForCalc,
+            temperature_2m: rawTemp,
+            apparent_temperature: rawTemp,
             wind_speed_10m: windForCalc,
             visibility: visibility,
             relative_humidity_2m: humidity,

@@ -15,7 +15,7 @@ import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from './widgets/widgetStyles';
 
 interface CurrentWeatherProps {
   data: ExtendedWeatherData;
-  effectiveCode: number;
+  effectiveCode: number | null;
   unit: WeatherUnit;
   lang: Language;
   isFavorite: boolean;

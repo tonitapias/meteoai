@@ -107,7 +107,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                     safeLatitude
                 )
                 : null;
-            const tempForCalc = temp ?? 0;
 
             let freezingLevel = getSafeNum(hourly.freezing_level_height, targetIndex, -1);
             if (freezingLevel === -1) {
@@ -134,12 +133,15 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             }
 
             // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb l'estructura que demana TS2352
+            // [NOTA] temperature_2m aquí és rawTemp (CRUA, no tempForCalc): getRealTimeWeatherCode
+            // ja sap tornar null quan rawTemp falta, en lloc de fingir un 0ºC que podria
+            // fer aparèixer neu en ple estiu (determineSnowCode/applyThermalLock).
             const simulatedCurrent = {
                 time: timeStr,
                 weather_code: rawCode,
-                temperature_2m: tempForCalc,
-                apparent_temperature: tempForCalc,
-                wind_speed_10m: windSpeed,  
+                temperature_2m: rawTemp,
+                apparent_temperature: rawTemp,
+                wind_speed_10m: windSpeed,
                 visibility: visibility,
                 relative_humidity_2m: humidity,
                 cloud_cover_low: cloudLow,

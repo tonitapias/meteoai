@@ -1,8 +1,8 @@
 // src/components/WeatherIcons.tsx
 import React, { useState, useEffect, memo } from 'react';
-import { 
-  Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon, 
-  Cloud, CloudFog, Snowflake, CloudSnow 
+import {
+  Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon,
+  Cloud, CloudFog, Snowflake, CloudSnow, CloudOff
 } from 'lucide-react';
 
 interface CommonIconProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -109,26 +109,31 @@ WeatherParticles.displayName = 'WeatherParticles';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const getWeatherIcon = (
-    code: number, 
-    className: string = "w-6 h-6", 
-    isDay: number | boolean = 1, 
-    _rainProb: number = 0, 
+    code: number | null,
+    className: string = "w-6 h-6",
+    isDay: number | boolean = 1,
+    _rainProb: number = 0,
     windSpeed: number = 0,
-    _temp?: number | null, 
-    _precipAmt: number = 0 
+    _temp?: number | null,
+    _precipAmt: number = 0
 ): React.ReactNode => {
     const isDaylight = checkIsDaylight(isDay);
-    
-    // L'Orquestrador dicta sentència. Single Source of Truth tancat.
-    const safeCode = code;
-    
+
     // SPATIAL UI: Base compartida amb drop-shadow genèric per volumetria
     const commonProps = {
-      strokeWidth: 2, 
-      className: `${className} drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] transition-all duration-500 transform-gpu` 
+      strokeWidth: 2,
+      className: `${className} drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] transition-all duration-500 transform-gpu`
     };
 
-    if (safeCode === 0) return isDaylight 
+    // DOCTRINA RISC ZERO: sense codi real (p.ex. temperatura absent a
+    // l'Orquestrador), mostrem un estat explícit de "sense dades" en lloc
+    // d'una icona de sol/núvol que fingiria una lectura que no tenim.
+    if (code === null) return <CloudOff {...commonProps} className={`${commonProps.className} text-slate-600 opacity-60`} />;
+
+    // L'Orquestrador dicta sentència. Single Source of Truth tancat.
+    const safeCode = code;
+
+    if (safeCode === 0) return isDaylight
       ? <Sun {...commonProps} className={`${commonProps.className} text-amber-400 fill-amber-400/30 animate-[pulse_4s_ease-in-out_infinite] drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]`} /> 
       : <Moon {...commonProps} className={`${commonProps.className} text-slate-300 fill-slate-300/30 drop-shadow-[0_0_15px_rgba(203,213,225,0.4)]`} />;
     

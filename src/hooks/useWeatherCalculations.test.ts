@@ -68,7 +68,9 @@ describe('useWeatherCalculations', () => {
             useWeatherCalculations(null, 'C', new Date())
         );
 
-        expect(result.current.effectiveWeatherCode).toBe(0);
+        // DOCTRINA RISC ZERO: sense weatherData no hi ha temperatura real per
+        // validar — null (mai un 0 fals de "cel serè").
+        expect(result.current.effectiveWeatherCode).toBe(null);
         expect(result.current.chartData24h).toEqual([]);
         expect(result.current.weeklyExtremes).toEqual({ min: 0, max: 40 }); // Valors per defecte segurs
     });
