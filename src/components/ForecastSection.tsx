@@ -4,7 +4,7 @@ import { TempRangeBar } from './WeatherWidgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
 import { formatPrecipitation, getSafeLocale } from '../utils/formatters';
-import { getSafeArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
+import { getSafeArrayNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
@@ -76,6 +76,9 @@ const ForecastSection = memo(function ForecastSection({
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length === 0) return null;
 
   const NO_PRECIP_LABEL = lang === 'en' ? 'NONE' : lang === 'fr' ? 'AUCUN' : lang === 'es' ? 'NADA' : 'CAP';
+  // DOCTRINA RISC ZERO: "CAP" afirma 0mm confirmats — quan la dada simplement
+  // no hi és, cal distingir-ho amb "--" en lloc de fer-ho passar per un 0 real.
+  const NO_DATA_LABEL = '--';
 
   const PANEL_STYLE = `p-4 md:p-8 bg-gradient-to-br from-[#0f111a]/95 to-black/90 border border-white/5 rounded-[2rem] relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md transform-gpu transition-colors duration-700`;
 
@@ -129,12 +132,14 @@ const ForecastSection = memo(function ForecastSection({
             const dayName = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'long' });
             const dateNum = date.getDate();
             
-            const rawMaxTemp = getSafeArrayNum(dailyData.temperature_2m_max, i);
-            const rawMinTemp = getSafeArrayNum(dailyData.temperature_2m_min, i);
+            // DOCTRINA RISC ZERO: temperatura i pluja es mostren a l'usuari com a
+            // xifres explícites — si falten, null (i "--" a la UI), mai un 0 fals.
+            const rawMaxTemp = extractValidArrayNum(dailyData.temperature_2m_max, i);
+            const rawMinTemp = extractValidArrayNum(dailyData.temperature_2m_min, i);
             const rawCode = getSafeArrayNum(dailyData.weather_code, i);
-            const precipProb = getSafeArrayNum(dailyData.precipitation_probability_max, i);
-            const precipSum = getSafeArrayNum(dailyData.precipitation_sum, i);
-            const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i); 
+            const precipProb = extractValidArrayNum(dailyData.precipitation_probability_max, i);
+            const precipSum = extractValidArrayNum(dailyData.precipitation_sum, i);
+            const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i);
             const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
 
             // Hores d'aquest dia dins el chart horari complet (reutilitzat per la
@@ -189,6 +194,9 @@ const ForecastSection = memo(function ForecastSection({
               }
             }
 
+            const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
+            const minTempLabel = minTemp !== null ? `${Math.round(minTemp)}°` : '--°';
+
             return (
               <button 
                 key={`daily-row-${rawDate}`}
@@ -203,7 +211,7 @@ const ForecastSection = memo(function ForecastSection({
                     <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[70px] md:max-w-none transition-colors duration-300">
                       {dayName}
                     </span>
-                    {precipProb > 0 && (
+                    {precipProb !== null && precipProb > 0 && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <Umbrella className="w-2.5 h-2.5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.5)]" />
                         <span className="text-[9px] md:text-[10px] font-black text-cyan-400 tabular-nums">{precipProb}%</span>
@@ -220,31 +228,35 @@ const ForecastSection = memo(function ForecastSection({
 
                 <div className="hidden md:flex flex-col items-center justify-center w-[130px] px-2">
                   <div className="w-full flex justify-between text-[11px] font-bold text-slate-400 mb-1.5">
-                    <span className="group-hover:text-cyan-300 transition-colors duration-300">{Math.round(minTemp)}°</span>
-                    <span className="group-hover:text-red-300 transition-colors duration-300">{Math.round(maxTemp)}°</span>
+                    <span className="group-hover:text-cyan-300 transition-colors duration-300">{minTempLabel}</span>
+                    <span className="group-hover:text-red-300 transition-colors duration-300">{maxTempLabel}</span>
                   </div>
                   <div className="opacity-80 group-hover:opacity-100 transition-opacity duration-300 w-full">
-                    <TempRangeBar min={minTemp} max={maxTemp} globalMin={weeklyExtremes.min} globalMax={weeklyExtremes.max} />
+                    {minTemp !== null && maxTemp !== null ? (
+                      <TempRangeBar min={minTemp} max={maxTemp} globalMin={weeklyExtremes.min} globalMax={weeklyExtremes.max} />
+                    ) : (
+                      <div className="w-full h-2.5 bg-[#0f111a] rounded-full border border-white/10" />
+                    )}
                   </div>
                 </div>
 
                 <div className="md:hidden flex flex-col items-end justify-center mr-3">
                   <span className="text-[15px] font-black text-slate-200 group-hover:text-white tabular-nums leading-none mb-1 transition-colors duration-300">
-                    {Math.round(maxTemp)}°
+                    {maxTempLabel}
                   </span>
                   <span className="text-[11px] font-bold text-slate-500 group-hover:text-cyan-400 tabular-nums leading-none transition-colors duration-300">
-                    {Math.round(minTemp)}°
+                    {minTempLabel}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 md:gap-3 w-[80px] md:w-[130px]">
-                  {precipSum > 0 ? (
+                  {precipSum !== null && precipSum > 0 ? (
                     <span className="text-[9px] md:text-[10px] text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
                       {formatPrecipitation(precipSum, snowSum)}
                     </span>
                   ) : (
                     <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
-                      {NO_PRECIP_LABEL}
+                      {precipSum === 0 ? NO_PRECIP_LABEL : NO_DATA_LABEL}
                     </span>
                   )}
                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#050608] flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500 border border-white/10 group-hover:border-indigo-400 shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_10px_rgba(99,102,241,0.8)]">

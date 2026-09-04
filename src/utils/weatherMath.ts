@@ -14,6 +14,15 @@ export const extractValidNum = (val: unknown): number | null => {
 };
 
 /**
+ * Com extractValidNum, però per a un índex d'un array: null si l'array no
+ * existeix, l'índex és fora de rang, o el valor no és un número vàlid.
+ */
+export const extractValidArrayNum = (arr: unknown, index: number): number | null => {
+    if (!Array.isArray(arr)) return null;
+    return extractValidNum(arr[index]);
+};
+
+/**
  * Extreu un número vàlid d'un array en un índex donat, o retorna el fallback.
  * [NETEJA] Abans hi havia 3 còpies locals idèntiques d'aquesta mateixa funció
  * (ForecastSection.tsx, DayDetailModal.tsx, Forecast24h.tsx) amb noms diferents
