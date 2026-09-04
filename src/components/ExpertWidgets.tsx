@@ -1,7 +1,7 @@
 // src/components/ExpertWidgets.tsx
 import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
-import { getMoonPhase, calculateDewPoint, isAromeSupported } from '../utils/physics';
+import { getMoonPhase, calculateDewPoint, isAromeSupported } from '../utils/weatherMath';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { resolveHourlyEpoch } from '../utils/weatherMath';
@@ -14,18 +14,18 @@ import { calculateModelConsensus } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
-import { 
-  CompassGauge, 
-  SnowLevelWidget, 
-  CloudLayersWidget, 
+import {
+  CompassGauge,
+  SnowLevelWidget,
+  CloudLayersWidget,
   CircularGauge,
-  DewPointWidget, 
-  CapeWidget, 
-  SunArcWidget, 
-  MoonWidget, 
+  DewPointWidget,
+  CapeWidget,
+  SunArcWidget,
+  MoonWidget,
   AqiWidget,
-  VisibilityWidget 
-} from './WeatherWidgets';
+  VisibilityWidget
+} from './widgets';
 
 interface WidgetCardProps { children: React.ReactNode; cols?: number; }
 

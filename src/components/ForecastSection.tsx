@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Calendar, Umbrella, ArrowRight } from 'lucide-react'; 
-import { TempRangeBar } from './WeatherWidgets';
+import { TempRangeBar } from './widgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
 import { formatPrecipitation, getSafeLocale } from '../utils/formatters';

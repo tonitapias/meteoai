@@ -1,6 +1,6 @@
 // src/utils/rules/temperatureCorrections.ts
 import { StrictCurrentWeather } from '../../types/weatherLogicTypes';
-import { safeNum } from '../physics';
+import { safeNum } from '../weatherMath';
 import { checkInversionRisk } from './inversionRules';
 import { calculateEffectiveCloudCover } from './cloudRules';
 

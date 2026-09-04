@@ -1,7 +1,7 @@
 // src/hooks/useCurrentConditions.ts
 import { useMemo } from 'react';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
-import { calculateDewPoint, getMoonPhase } from '../utils/physics';
+import { calculateDewPoint, getMoonPhase } from '../utils/weatherMath';
 import { calculateReliability } from '../utils/rules/reliabilityRules';
 import { ExtendedWeatherData, StrictCurrentWeather, StrictDailyWeather } from '../types/weatherLogicTypes';
 import { getComparisonVal } from '../utils/weatherMappers';

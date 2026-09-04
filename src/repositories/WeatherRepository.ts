@@ -2,7 +2,7 @@
 import * as Sentry from "@sentry/react";
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
 import { normalizeModelData } from '../utils/normData'; 
-import { isAromeSupported } from '../utils/physics';
+import { isAromeSupported } from '../utils/weatherMath';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import { getAromeData } from '../services/weatherApi'; 
 import { fetchAllWeatherData } from '../services/weatherService'; 

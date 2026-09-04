@@ -13,7 +13,7 @@ import {
     Wind, 
     Zap 
 } from 'lucide-react';
-import { TypewriterText } from './WeatherUI';
+import { TypewriterText } from './TypewriterText';
 import { TRANSLATIONS, Language } from '../translations';
 import { AICacheData, TacticalTip, TacticalRiskLevel, TacticalHazardType } from '../services/geminiService';
 

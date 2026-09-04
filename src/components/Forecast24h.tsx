@@ -4,7 +4,7 @@ import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
-import { HourlyForecastWidget, ChartDataPoint } from './WeatherWidgets';
+import { HourlyForecastWidget, ChartDataPoint } from './widgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';

@@ -1,4 +1,4 @@
-import { calculateDewPoint } from '../physics';
+import { calculateDewPoint } from '../weatherMath';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 
 const { HUMIDITY, VISIBILITY, PRECIPITATION } = WEATHER_THRESHOLDS;

@@ -1,6 +1,6 @@
 // src/hooks/useWeatherCalculations.ts
 import { useMemo } from 'react';
-import { getShiftedDate } from '../utils/physics';
+import { getShiftedDate } from '../utils/weatherMath';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
 

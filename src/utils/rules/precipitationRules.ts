@@ -1,4 +1,4 @@
-import { safeNum } from '../physics';
+import { safeNum } from '../weatherMath';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 
 const { PRECIPITATION } = WEATHER_THRESHOLDS;

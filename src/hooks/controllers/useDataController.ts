@@ -4,7 +4,7 @@ import { useWeatherCalculations } from '../useWeatherCalculations';
 import { useWeatherTheme } from '../useWeatherTheme';
 import { useWeatherAI } from '../useWeatherAI';
 import { useGeoLocation } from '../../context/GeoLocationContext';
-import { isAromeSupported } from '../../utils/physics';
+import { isAromeSupported } from '../../utils/weatherMath';
 import type { Language } from '../../translations';
 import type { WeatherUnit } from '../../utils/formatters';
 

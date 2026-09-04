@@ -1,7 +1,7 @@
 // src/utils/formatters.ts
 import { TRANSLATIONS, Language } from '../translations';
 import { TranslationMap, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { safeNum } from './physics';
+import { safeNum } from './weatherMath';
 
 // Re-exportem tipus si cal, però preferim usar els importats
 export type WeatherUnit = 'C' | 'F';
