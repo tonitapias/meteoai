@@ -96,7 +96,9 @@ export function useCurrentConditions(
   
   const reliability = useMemo(() => {
       if (!weatherData?.daily) return { level: 'high', type: 'ok', value: 0 } as const;
-      return calculateReliability(weatherData.daily as StrictDailyWeather, weatherData.dailyComparison?.gfs, weatherData.dailyComparison?.icon, 0);
+      // [FIX PRECISIÓ] ECMWF ja es baixa (dailyComparison.ecmwf) però abans no
+      // s'incloïa en aquesta comparació — vegeu la nota a reliabilityRules.ts.
+      return calculateReliability(weatherData.daily as StrictDailyWeather, weatherData.dailyComparison?.gfs, weatherData.dailyComparison?.icon, 0, weatherData.dailyComparison?.ecmwf);
   }, [weatherData]);
   
   const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); 

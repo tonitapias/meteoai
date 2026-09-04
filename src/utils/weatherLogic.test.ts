@@ -163,6 +163,31 @@ describe('Càlcul de Fiabilitat (Reliability)', () => {
      expect(result.level).toBe('high');
    });
 
+   it('DOCTRINA RISC ZERO: ECMWF (5è paràmetre) participa de debò a la comparació, no es descarta', () => {
+     // Best/GFS/ICON coincideixen bé (com al test anterior, que dona ALTA
+     // sense ECMWF), però ECMWF discrepa molt — abans es baixava però mai
+     // s'incloïa aquí, així que aquest cas hauria donat ALTA fals.
+     const result = calculateReliability(
+       { temperature_2m_max: [20] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [20.5] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [19.5] } as unknown as StrictDailyWeather,
+       0,
+       { temperature_2m_max: [30] } as unknown as StrictDailyWeather
+     );
+     expect(result.level).toBe('low');
+   });
+
+   it('sense ECMWF disponible, el comportament és idèntic al d\'abans (3 models)', () => {
+     const result = calculateReliability(
+       { temperature_2m_max: [20], precipitation_probability_max: [0] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [20.5], precipitation_probability_max: [0] } as unknown as StrictDailyWeather,
+       { temperature_2m_max: [19.5], precipitation_probability_max: [0] } as unknown as StrictDailyWeather,
+       0,
+       null
+     );
+     expect(result.level).toBe('high');
+   });
+
    it('DOCTRINA RISC ZERO: una dada absent d\'un model no s\'ha de fingir com un 0ºC real', () => {
      // GFS no té dada per a aquest dia (array buit). Best=20, ICON=19 coincideixen bé.
      // Abans del fix, l'absència de GFS es convertia en un fals 0ºC via safeNum,
