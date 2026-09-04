@@ -50,7 +50,7 @@ Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. 
 * **Models Globals (ECMWF, GFS, ICON):** Analitzen l'atmosfera a gran escala per definir tendències i el pas de grans sistemes frontals; Open-Meteo selecciona automàticament el "Best Match" més fiable per a cada zona del planeta.
 * **Model d'Alta Resolució (AROME):** Aplica un zoom extrem (fins a 1.3km) per entendre com l'orografia alterarà el flux de vent i la precipitació al punt exacte on ets. Disponible a la Península Ibèrica, França, els Pirineus i Europa Occidental; fora d'aquesta zona, l'app utilitza el consens dels models globals.
 * **Consensus Widget:** Compara el model local amb el consens dels models globals i indica el nivell de fiabilitat de la previsió —consens, divergència o incertesa— per a temperatura, vent i pluja.
-* **Avís de Canvi Sobtat (3h):** Si el model global preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la.
+* **Avís de Canvi Sobtat (3h):** Si el model global o el model d'alta resolució AROME preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — AROME hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
 
 ### 3. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
