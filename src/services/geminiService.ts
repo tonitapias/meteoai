@@ -251,6 +251,10 @@ const getTacticalComfortDescription = (
 /**
  * --- TALLAFOCS DETERMINISTA (DOCTRINA RISC ZERO) ---
  */
+// Compartida entre la intervenció normal (resposta fresca de la IA) i la
+// revalidació sobre una resposta servida des de cache — vegeu getGeminiAnalysis.
+const RISK_HIERARCHY: Record<TacticalRiskLevel, number> = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
+
 const evaluateDeterministicRisk = (
     weatherData: ExtendedWeatherData, 
     startIndex: number, 
@@ -367,23 +371,20 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             ? getTacticalHourStr(currentTimeRaw, tz, utcOffset) 
             : getTacticalHourStr(Math.floor(Date.now() / 1000), tz, utcOffset);
 
-        const elevationKey = context.location.elevation.toString(); 
+        const elevationKey = context.location.elevation.toString();
         const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}`, lat, lon, language);
-        
-        try {
-            const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
-            if (cachedData) {
-                return cachedData;
-            }
-        } catch (dbError) {
-            console.warn("⚠️ Error llegint Cache IA:", dbError);
-        }
 
-        let finestraPrevista = "Sense dades horàries.";
-        let evalStartIndex = 0;
-        let evalEndIndex = 0;
-        
-        if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
+        // [FIX PRECISIÓ] Finestra d'avaluació (properes ~6h) calculada ABANS de
+        // consultar la cache, perquè el tallafocs determinista pugui revalidar-se
+        // també en un cache hit (vegeu més avall) — abans només s'executava en
+        // una resposta fresca de la IA. La cache d'IA dura fins a 60 min mentre
+        // que les dades meteo es refresquen cada 15 min: sense això, un perill
+        // que apareix als últims ~45 min d'una finestra de cache no activava mai
+        // el tallafocs fins que la pròpia cache expirava.
+        const computeEvalWindow = (): { start: number; end: number } => {
+            if (!weatherData.hourly || !Array.isArray(weatherData.hourly.time) || weatherData.hourly.time.length === 0) {
+                return { start: 0, end: 0 };
+            }
             const times = weatherData.hourly.time;
             let startIndex = -1;
 
@@ -397,7 +398,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
             if (startIndex === -1) {
                 const nowMs = Date.now();
                 const utcOffsetMs = (utcOffset || 0) * 1000;
-                
+
                 startIndex = times.findIndex(t => {
                     if (typeof t === 'number') {
                         return (t * 1000) >= nowMs - (30 * 60 * 1000);
@@ -417,9 +418,44 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
 
             if (startIndex === -1) startIndex = 0;
             const endIndex = Math.min(startIndex + 6, times.length);
-            
-            evalStartIndex = startIndex;
-            evalEndIndex = endIndex;
+            return { start: startIndex, end: endIndex };
+        };
+
+        const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow();
+
+        try {
+            const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
+            if (cachedData) {
+                // Revalidem el tallafocs contra les dades ACTUALS (no les que hi
+                // havia quan es va generar la resposta en cache). És un simple
+                // escombratge d'arrays, barat, i és exactament el que garanteix
+                // que "les dades crues sempre guanyen" també dins la finestra
+                // de cache, no només en una crida fresca a la IA.
+                try {
+                    const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex);
+                    if (RISK_HIERARCHY[deterministicEval.risk] > RISK_HIERARCHY[cachedData.risk_level]) {
+                        console.warn(`🛡️ TALLAFOCS (revalidat sobre cache): les dades actuals forcen '${deterministicEval.risk}' per '${deterministicEval.hazard}' — la cache encara deia '${cachedData.risk_level}'.`);
+                        return {
+                            ...cachedData,
+                            risk_level: deterministicEval.risk,
+                            hazard_type: deterministicEval.hazard ?? cachedData.hazard_type
+                        };
+                    }
+                } catch (evalError) {
+                    console.warn("⚠️ Error revalidant el tallafocs sobre la resposta en cache:", evalError);
+                }
+                return cachedData;
+            }
+        } catch (dbError) {
+            console.warn("⚠️ Error llegint Cache IA:", dbError);
+        }
+
+        let finestraPrevista = "Sense dades horàries.";
+
+        if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
+            const times = weatherData.hourly.time;
+            const startIndex = evalStartIndex;
+            const endIndex = evalEndIndex;
 
             const tableRows: string[] = [
                 "| HORA | ESTAT DEL CEL | TEMP | SENSACIÓ | HUMITAT | PLUJA (PROB%) | VENT (RÀFEGUES) | UV | AQI |",
@@ -551,11 +587,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                     const safeHazardType: TacticalHazardType = validHazards.includes(rawHazard) ? rawHazard : 'NONE';
 
                     // --- INTERVENCIÓ DE SEGURETAT TÀCTICA (TALLAFOCS) ---
-                    const riskHierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
                     let finalRiskLevel = safeRiskLevel;
                     let finalHazardType = safeHazardType;
 
-                    if (riskHierarchy[deterministicEval.risk] > riskHierarchy[safeRiskLevel]) {
+                    if (RISK_HIERARCHY[deterministicEval.risk] > RISK_HIERARCHY[safeRiskLevel]) {
                         console.warn(`🛡️ TALLAFOCS DE SEGURETAT ACTIVAT: La IA ha avaluat '${safeRiskLevel}', però les dades crues forcen '${deterministicEval.risk}' a causa de '${deterministicEval.hazard}'.`);
                         finalRiskLevel = deterministicEval.risk;
                         finalHazardType = deterministicEval.hazard ?? safeHazardType;
