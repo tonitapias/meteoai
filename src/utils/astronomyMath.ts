@@ -206,21 +206,6 @@ export function getMoonAgeDays(phase: number): number {
   return Math.round(phase * 29.53);
 }
 
-// --- Angle del limbe il·luminat (orientació real de la falç) ---
-// Únic a SunCalc — getMoonPhase no ho calcula. angleDeg ja ve en graus a la v2 instal·lada.
-
-export interface MoonLimbInfo { angleDeg: number; waxing: boolean; }
-
-export function getMoonLimbInfo(instant: Date): MoonLimbInfo | null {
-  if (isNaN(instant.getTime())) return null;
-  try {
-    const ill = SunCalc.getMoonIllumination(instant);
-    return { angleDeg: ill.angle, waxing: ill.waxing };
-  } catch {
-    return null;
-  }
-}
-
 // --- Pròxima lluna plena / nova (escaneig dia a dia, granularitat diària només) ---
 
 export interface NextMoonEvent { type: 'full' | 'new'; date: Date; daysAhead: number; }

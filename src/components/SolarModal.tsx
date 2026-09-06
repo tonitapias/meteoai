@@ -8,6 +8,7 @@ import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { getUVCategory } from '../utils/uvIndexUtils';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
+import { SunOrb } from './SunOrb';
 import {
   getSunDayTimesSafe,
   getSunCompassPosition,
@@ -30,7 +31,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Durada del Dia', vsTomorrow: 'vs. demà', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
     uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
     sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 8 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
-    timeline: 'Cronologia del Dia', astroDawn: 'Crep. Astronòmic', nauticalDawn: 'Crep. Nàutic', civilDawn: 'Crep. Civil',
+    timeline: 'Cronologia del Dia', trajectory: 'Trajectòria d\'Avui', astroDawn: 'Crep. Astronòmic', nauticalDawn: 'Crep. Nàutic', civilDawn: 'Crep. Civil',
     goldenHour: 'Hora Daurada', astroDusk: 'Crep. Astronòmic', nextEvent: 'Proper esdeveniment', in_: 'en',
     lengthening: 'Els dies s\'allarguen', shortening: 'Els dies s\'escurcen', elevAbbr: 'ELEV',
   },
@@ -40,7 +41,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Duración del Día', vsTomorrow: 'vs. mañana', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
     uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
     sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 8 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
-    timeline: 'Cronología del Día', astroDawn: 'Crep. Astronómico', nauticalDawn: 'Crep. Náutico', civilDawn: 'Crep. Civil',
+    timeline: 'Cronología del Día', trajectory: 'Trayectoria de Hoy', astroDawn: 'Crep. Astronómico', nauticalDawn: 'Crep. Náutico', civilDawn: 'Crep. Civil',
     goldenHour: 'Hora Dorada', astroDusk: 'Crep. Astronómico', nextEvent: 'Próximo evento', in_: 'en',
     lengthening: 'Los días se alargan', shortening: 'Los días se acortan', elevAbbr: 'ELEV',
   },
@@ -50,7 +51,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Day Length', vsTomorrow: 'vs. tomorrow', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
     uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
     sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 8 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
-    timeline: 'Day Timeline', astroDawn: 'Astro. Twilight', nauticalDawn: 'Nautical Twilight', civilDawn: 'Civil Twilight',
+    timeline: 'Day Timeline', trajectory: "Today's Trajectory", astroDawn: 'Astro. Twilight', nauticalDawn: 'Nautical Twilight', civilDawn: 'Civil Twilight',
     goldenHour: 'Golden Hour', astroDusk: 'Astro. Twilight', nextEvent: 'Next event', in_: 'in',
     lengthening: 'Days are getting longer', shortening: 'Days are getting shorter', elevAbbr: 'ELEV',
   },
@@ -60,7 +61,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Durée du Jour', vsTomorrow: 'vs. demain', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
     uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
     sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '8 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
-    timeline: 'Chronologie du Jour', astroDawn: 'Crép. Astronomique', nauticalDawn: 'Crép. Nautique', civilDawn: 'Crép. Civil',
+    timeline: 'Chronologie du Jour', trajectory: "Trajectoire du Jour", astroDawn: 'Crép. Astronomique', nauticalDawn: 'Crép. Nautique', civilDawn: 'Crép. Civil',
     goldenHour: 'Heure Dorée', astroDusk: 'Crép. Astronomique', nextEvent: 'Prochain événement', in_: 'dans',
     lengthening: 'Les jours rallongent', shortening: 'Les jours raccourcissent', elevAbbr: 'ELEV',
   },
@@ -281,10 +282,12 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
       <style>{`
+        .astro-scrollbar { -webkit-overflow-scrolling: touch; }
         .astro-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .astro-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .astro-scrollbar::-webkit-scrollbar-thumb { background: rgba(251,191,36,0.2); border-radius: 8px; }
         .astro-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(251,191,36,0.4); }
+        .astro-hscroll { overscroll-behavior-x: contain; touch-action: pan-x; }
       `}</style>
 
       <div className={`w-full h-[96dvh] sm:h-auto sm:max-h-[90dvh] landscape:h-[100dvh] landscape:sm:h-auto max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b ${bgGradient} rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-amber-500/10 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300`}>
@@ -318,15 +321,32 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain astro-scrollbar relative z-10 p-4 md:p-6 space-y-6">
 
-            {/* HEROI: Arc real + posició en viu */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4 overflow-hidden">
-              <div className="flex items-center justify-between mb-1 relative z-10">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{isDaytime ? t.day : t.night}</span>
+            {/* HEROI: El Sol, protagonista */}
+            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
+              <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative">
+                <div className={`absolute inset-0 rounded-full blur-[50px] pointer-events-none transition-colors duration-1000 ${isDaytime ? 'bg-amber-500/25' : 'bg-indigo-500/10'}`}></div>
+                <SunOrb elevationDeg={sunNowPos?.altitudeDeg ?? -90} className="w-full h-full relative z-10" />
+              </div>
+              <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
+                <span className="text-3xl font-black text-white tracking-tight leading-none">{isDaytime ? t.day : t.night}</span>
                 {sunNowPos && (
-                  <span className="text-[11px] font-mono font-bold text-amber-300/90">
+                  <span className="text-sm font-bold text-amber-300">
                     {Math.round(sunNowPos.azimuthDeg)}° {getCardinalLabel(sunNowPos.azimuthDeg, safeLang)} · {sunNowPos.altitudeDeg >= 0 ? '+' : ''}{Math.round(sunNowPos.altitudeDeg)}°
                   </span>
                 )}
+                {nextEvent && (
+                  <div className="flex items-center gap-3 mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{nextEvent.label}</span>
+                    <span className="text-xs font-mono font-bold text-amber-200">{t.in_} {countdownStr}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Trajectòria real d'avui */}
+            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4 overflow-hidden">
+              <div className="flex items-center justify-between mb-1 relative z-10">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.trajectory}</span>
               </div>
               <svg viewBox="0 0 400 160" className="w-full h-40 overflow-visible">
                 <defs>
@@ -355,9 +375,6 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
             <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.timeline}</span>
-                {nextEvent && (
-                  <span className="text-[11px] font-mono font-bold text-amber-300">{t.nextEvent}: {nextEvent.label} {t.in_} {countdownStr}</span>
-                )}
               </div>
               <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-indigo-950 via-amber-400 to-indigo-950">
                 {timelineEvents.length > 0 && (
@@ -414,9 +431,9 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
             {/* Tira de 8 dies */}
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{t.week}</span>
-              <div className="flex gap-2 overflow-x-auto astro-scrollbar snap-x pb-2">
+              <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
                 {weekDays.map((d, i) => (
-                  <div key={d.dateStr + i} className="flex-shrink-0 snap-start w-28 rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col items-center gap-1.5">
+                  <div key={d.dateStr + i} className="flex-shrink-0 w-28 rounded-xl border border-white/5 bg-[#0c0a08] p-3 flex flex-col items-center gap-1.5">
                     <span className="text-[10px] font-black uppercase text-slate-400">{d.weekdayLabel} {d.dayNum}</span>
                     <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300"><Sunrise className="w-3 h-3" />{d.sunrise}</div>
                     <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-300"><Sunset className="w-3 h-3" />{d.sunset}</div>

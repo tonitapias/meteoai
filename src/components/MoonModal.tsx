@@ -13,7 +13,6 @@ import { getMoonPhase } from '../utils/weatherMath';
 import {
   getMoonCompassPosition,
   getMoonRiseSetForDate,
-  getMoonLimbInfo,
   getMoonIlluminationPercent,
   getMoonAgeDays,
   getNextMoonEvent,
@@ -137,8 +136,6 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   const ageDays = getMoonAgeDays(phase);
   const phaseName = getPhaseName(phase, safeLang);
 
-  const limbInfo = useMemo(() => getMoonLimbInfo(now), [now]);
-
   const livePos = useMemo(
     () => hasValidCoords ? getMoonCompassPosition(now, lat, lon) : null,
     [now, hasValidCoords, lat, lon]
@@ -191,10 +188,12 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
       <style>{`
+        .astro-scrollbar { -webkit-overflow-scrolling: touch; }
         .astro-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .astro-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .astro-scrollbar::-webkit-scrollbar-thumb { background: rgba(129,140,248,0.25); border-radius: 8px; }
         .astro-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(129,140,248,0.45); }
+        .astro-hscroll { overscroll-behavior-x: contain; touch-action: pan-x; }
         @keyframes moon-hero-levitate {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-8px); }
@@ -231,9 +230,11 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
 
           {/* HEROI: icona de fase gran + lectura en viu */}
           <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 moon-hero-float relative">
-              <div className="absolute inset-0 rounded-full blur-[50px] bg-indigo-500/20 pointer-events-none"></div>
-              <MoonPhaseIcon phase={phase} limbAngleDeg={limbInfo?.angleDeg ?? 0} className="w-full h-full relative z-10" />
+            <div className={`w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative ${isSouth ? 'scale-x-[-1]' : ''}`}>
+              <div className="moon-hero-float relative w-full h-full">
+                <div className="absolute inset-0 rounded-full blur-[50px] bg-indigo-500/20 pointer-events-none"></div>
+                <MoonPhaseIcon phase={phase} className="w-full h-full relative z-10" />
+              </div>
             </div>
             <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
               <span className="text-3xl font-black text-white tracking-tight leading-none">{phaseName}</span>
@@ -296,11 +297,11 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
           {/* Tira de 8 dies */}
           <div>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{t.week}</span>
-            <div className="flex gap-2 overflow-x-auto astro-scrollbar snap-x pb-2">
+            <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
               {weekDays.map(d => (
-                <div key={d.dateStr + d.i} className="flex-shrink-0 snap-start w-28 rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col items-center gap-1.5">
+                <div key={d.dateStr + d.i} className="flex-shrink-0 w-28 rounded-xl border border-white/5 bg-[#0a0a14] p-3 flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-black uppercase text-slate-400">{d.weekdayLabel} {d.dayNum}</span>
-                  <div className="w-10 h-10"><MoonPhaseIcon phase={d.phase} className="w-full h-full" /></div>
+                  <div className={`w-10 h-10 ${isSouth ? 'scale-x-[-1]' : ''}`}><MoonPhaseIcon phase={d.phase} className="w-full h-full" /></div>
                   <span className="text-[10px] font-bold text-indigo-200">{d.illumination}%</span>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-cyan-300"><ArrowUpCircle className="w-3 h-3" />{d.rise}</div>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-amber-300"><ArrowDownCircle className="w-3 h-3" />{d.set}</div>

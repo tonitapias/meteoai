@@ -3,13 +3,9 @@
 interface MoonPhaseIconProps {
   phase: number; // 0..1
   className?: string;
-  // Angle real del limbe il·luminat (graus, SunCalc.getMoonIllumination().angle). Per defecte 0
-  // (orientació actual, sense canvis) — els nous modals hi passen el valor real per orientar
-  // la falç correctament segons la data/ubicació real.
-  limbAngleDeg?: number;
 }
 
-export const MoonPhaseIcon = ({ phase, className = "w-16 h-16", limbAngleDeg = 0 }: MoonPhaseIconProps) => {
+export const MoonPhaseIcon = ({ phase, className = "w-16 h-16" }: MoonPhaseIconProps) => {
   // Risc Zero: Protegim contra valors nuls, indefinits o fora de rang
   const safePhase = typeof phase === 'number' && !isNaN(phase) ? Math.max(0, Math.min(1, phase)) : 0;
   const illumination = (1 - Math.cos(safePhase * 2 * Math.PI)) / 2;
@@ -46,11 +42,7 @@ export const MoonPhaseIcon = ({ phase, className = "w-16 h-16", limbAngleDeg = 0
       className={`relative ${className} flex items-center justify-center transition-transform duration-700 ease-out hover:scale-105`} 
       title={`Il·luminació: ${(illumination * 100).toFixed(0)}%`}
     >
-       <svg
-         viewBox="0 0 100 100"
-         className="w-full h-full filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-transform duration-700 ease-out"
-         style={limbAngleDeg ? { transform: `rotate(${limbAngleDeg}deg)` } : undefined}
-       >
+       <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">
           <defs>
               {/* Gradient esfèric per a la part il·luminada (Volum lluminós) */}
               <radialGradient id="litGradient" cx="35%" cy="35%" r="65%">
