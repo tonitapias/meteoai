@@ -83,10 +83,21 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
 
   const renderListContent = () => {
     if (hourlyTimes.length === 0) return <div className="text-slate-400 text-center py-12 font-mono text-[10px] sm:text-xs tracking-widest uppercase animate-pulse">{t.sync}</div>;
-    const { displayTimes, ...mapped } = getMappedConsensusSeries(hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal, utcOffset, nowTimestamp);
-    
-    const locArr = activeModal === 'temp' ? mapped.tempLoc : activeModal === 'rain' ? mapped.rainLoc : mapped.windLoc;
-    const gloArr = activeModal === 'temp' ? mapped.tempGlo : activeModal === 'rain' ? mapped.rainGlo : mapped.windGlo;
+    const { displayTimes, series } = getMappedConsensusSeries(
+      hourlyTimes,
+      [{ id: 'loc', label: t.local, data: hourlyLocal }],
+      [{ id: 'glo', label: t.global, times: hourlyGlobalTimes, data: hourlyGlobal }],
+      utcOffset,
+      nowTimestamp
+    );
+    const emptyArr = displayTimes.map(() => null);
+    const locSeries = series.find(s => s.id === 'loc');
+    const gloSeries = series.find(s => s.id === 'glo');
+
+    const locArr = (activeModal === 'temp' ? locSeries?.temp : activeModal === 'rain' ? locSeries?.rain : locSeries?.wind) ?? emptyArr;
+    const gloArr = (activeModal === 'temp' ? gloSeries?.temp : activeModal === 'rain' ? gloSeries?.rain : gloSeries?.wind) ?? emptyArr;
+    const locGusts = locSeries?.gusts ?? emptyArr;
+    const gloGusts = gloSeries?.gusts ?? emptyArr;
     const unit = activeModal === 'temp' ? '°' : activeModal === 'rain' ? 'mm' : 'km/h';
     
     let minVal = Infinity; let maxVal = -Infinity; let hasValidData = false;
@@ -106,8 +117,8 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
         {displayTimes.map((timeKey, i) => {
           const locVal = locArr[i];
           const gloVal = gloArr[i];
-          const locGustVal = mapped.gustsLoc[i];
-          const gloGustVal = mapped.gustsGlo[i];
+          const locGustVal = locGusts[i];
+          const gloGustVal = gloGusts[i];
           
           const isValidLoc = typeof locVal === 'number' && !isNaN(locVal);
           const isValidGlo = typeof gloVal === 'number' && !isNaN(gloVal);

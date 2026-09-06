@@ -11,18 +11,30 @@ interface ConsensusChartsModalProps {
   nowTimestamp: number;
   hourlyTimes: string[];
   hourlyGlobalTimes: string[];
+  regionalModelLabel: string;
   hourlyLocal: HourlySeriesBundle;
   hourlyGlobal: HourlySeriesBundle;
+  hourlyEcmwf: HourlySeriesBundle;
+  hourlyGfs: HourlySeriesBundle;
+  hourlyIcon: HourlySeriesBundle;
 }
 
+// Paleta fixa per a les sèries de referència (constant en tots els gràfics i
+// idiomes); el model regional actiu (LOC) fa servir el color propi de cada
+// mètrica (definit a la crida de cada <TacticalSvgChart>), com ja passava
+// abans amb 2 sèries.
+const SERIES_COLORS = {
+  glo: '#94a3b8',
+  ecmwf: '#a78bfa',
+  gfs: '#22d3ee',
+  icon: '#4ade80'
+} as const;
+
 // DICCIONARI i18n INTERN
-// [FIX PRECISIÓ] "WRF" -> "GLOBAL": la comparació és amb Open-Meteo best_match, no amb cap
-// model WRF real (veure ConsensusWidget.tsx). "GLOBAL" es manté invariant als 4 idiomes,
-// igual que ja fèiem amb l'etiqueta "GLO".
 const translations = {
   ca: {
     modalTitle: 'Telemetria Gràfica Avançada',
-    subtitle: 'SÍNTESI GLOBAL vs AROME / HARMONIE',
+    subtitle: 'SÍNTESI MULTIMODEL',
     sync: 'SINCRONITZANT MATRIUS VECTORS...',
     temp: 'Temperatura',
     rain: 'Precipitació',
@@ -31,7 +43,7 @@ const translations = {
   },
   es: {
     modalTitle: 'Telemetría Gráfica Avanzada',
-    subtitle: 'SÍNTESIS GLOBAL vs AROME / HARMONIE',
+    subtitle: 'SÍNTESIS MULTIMODELO',
     sync: 'SINCRONIZANDO MATRICES DE VECTORES...',
     temp: 'Temperatura',
     rain: 'Precipitación',
@@ -40,7 +52,7 @@ const translations = {
   },
   en: {
     modalTitle: 'Advanced Graphical Telemetry',
-    subtitle: 'GLOBAL vs AROME / HARMONIE SYNTHESIS',
+    subtitle: 'MULTI-MODEL SYNTHESIS',
     sync: 'SYNCHRONIZING VECTOR MATRICES...',
     temp: 'Temperature',
     rain: 'Precipitation',
@@ -49,7 +61,7 @@ const translations = {
   },
   fr: {
     modalTitle: 'Télémétrie Graphique Avancée',
-    subtitle: 'SYNTHÈSE GLOBAL vs AROME / HARMONIE',
+    subtitle: 'SYNTHÈSE MULTI-MODÈLES',
     sync: 'SYNCHRONISATION DES MATRICES VECTORIELLES...',
     temp: 'Température',
     rain: 'Précipitations',
@@ -58,26 +70,41 @@ const translations = {
   }
 };
 
+interface ChartSeriesInput {
+  id: string;
+  label: string;
+  data: (number | null)[];
+  colorHex: string;
+}
+
 // DOCTRINA RISC ZERO & SPATIAL UI: Renderitzat SVG Segur i Ultra-Estètic
+// [NETEJA] Generalitzat de 2 sèries fixes (Loc/Glo) a N: `series[0]` és
+// sempre la sèrie primària (el model regional actiu) i rep el tractament
+// complet (àrea, línia gruixuda, punts amb etiqueta numèrica); la resta
+// ('series.slice(1)': GLO/ECMWF/GFS/ICON) es dibuixen com a línies fines de
+// referència sense etiquetes per evitar el caos de N textos superposats.
 const TacticalSvgChart = ({
-  title, unit, times, locData, gloData, type, zeroBased = false, locColorHex, gloColorHex
+  title, unit, times, series, type, zeroBased = false
 }: {
-  title: string; unit: string; times: string[]; 
-  locData: (number | null)[]; gloData: (number | null)[];
-  type: 'line' | 'bar'; zeroBased?: boolean; locColorHex: string; gloColorHex: string;
+  title: string; unit: string; times: string[];
+  series: ChartSeriesInput[];
+  type: 'line' | 'bar'; zeroBased?: boolean;
 }) => {
-  const chartW = 1000; 
-  const chartH = 220; 
-  const padX = 35; 
-  const padY = 45; 
-  const padBottom = 30; 
+  const chartW = 1000;
+  const chartH = 220;
+  const padX = 35;
+  const padY = 45;
+  const padBottom = 30;
   const drawW = chartW - padX * 2;
   const drawH = chartH - padY - padBottom;
-  
-  const merged = [...locData, ...gloData].filter((v): v is number => typeof v === 'number' && !isNaN(v));
+
+  const primary = series[0];
+  const secondary = series.slice(1);
+
+  const merged = series.flatMap(s => s.data).filter((v): v is number => typeof v === 'number' && !isNaN(v));
   let min = merged.length > 0 ? Math.min(...merged) : 0;
   let max = merged.length > 0 ? Math.max(...merged) : 1;
-  
+
   if (min === max) max = min + 1;
   
   // [FIX PRECISIÓ] Abans es detectava "és un gràfic de vent?" mirant si el títol ja
@@ -137,47 +164,40 @@ const TacticalSvgChart = ({
      } catch { return '--:--'; }
   };
 
-  const baseId = useId().replace(/:/g, ''); 
-  const gradLocId = `gradLoc-${baseId}`;
-  const gradGloId = `gradGlo-${baseId}`;
+  const baseId = useId().replace(/:/g, '');
+  const gradPrimaryId = `gradPrimary-${baseId}`;
 
   return (
      <div className="w-full shrink-0 bg-[#070b14] border border-white/10 rounded-[20px] p-4 sm:p-5 flex flex-col shadow-[0_15px_40px_rgba(0,0,0,0.6)] relative overflow-hidden group">
-        
+
         {/* Fons Tàctic */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px] opacity-20 pointer-events-none"></div>
 
         {/* Capçalera del Giny */}
-        <div className="flex items-center justify-between mb-4 shrink-0 relative z-10">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-4 shrink-0 relative z-10">
            <div className="flex items-baseline gap-2">
                <span className="text-sm md:text-base font-black text-white uppercase tracking-widest">{title}</span>
                <span className="text-[10px] md:text-xs text-slate-500 font-bold">({unit})</span>
            </div>
-           <div className="flex gap-3 md:gap-4 text-[9px] md:text-[10px] font-black tracking-widest uppercase bg-black/60 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
-              <span className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ backgroundColor: locColorHex, color: locColorHex }}></div>
-                  <span className="text-slate-100 drop-shadow-md">LOC</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 border-2 border-dashed rounded-full" style={{ borderColor: gloColorHex }}></div>
-                  <span className="text-slate-500">GLO</span>
-              </span>
+           <div className="flex flex-wrap gap-2 md:gap-3 text-[9px] md:text-[10px] font-black tracking-widest uppercase bg-black/60 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
+              {series.map((s, idx) => (
+                 <span key={s.id} className="flex items-center gap-1.5">
+                     <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ backgroundColor: s.colorHex, color: s.colorHex }}></div>
+                     <span className={idx === 0 ? 'text-slate-100 drop-shadow-md' : 'text-slate-500'}>{s.label}</span>
+                 </span>
+              ))}
            </div>
         </div>
-        
+
         {/* Contenidor Scrollable */}
         <div className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar bg-[#020308] rounded-xl border border-white/5 relative z-10 shadow-inner">
            <div style={{ width: `${chartW}px`, height: `${chartH}px` }} className="relative shrink-0">
               <svg xmlns="http://www.w3.org/2000/svg" width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="block absolute inset-0">
-                 
+
                  <defs>
-                    <linearGradient id={gradLocId} x1="0" y1="0" x2="0" y2="1">
-                       <stop offset="0%" stopColor={locColorHex} stopOpacity="0.35" />
-                       <stop offset="100%" stopColor={locColorHex} stopOpacity="0.0" />
-                    </linearGradient>
-                    <linearGradient id={gradGloId} x1="0" y1="0" x2="0" y2="1">
-                       <stop offset="0%" stopColor={gloColorHex} stopOpacity="0.15" />
-                       <stop offset="100%" stopColor={gloColorHex} stopOpacity="0.0" />
+                    <linearGradient id={gradPrimaryId} x1="0" y1="0" x2="0" y2="1">
+                       <stop offset="0%" stopColor={primary?.colorHex} stopOpacity="0.35" />
+                       <stop offset="100%" stopColor={primary?.colorHex} stopOpacity="0.0" />
                     </linearGradient>
                  </defs>
 
@@ -213,117 +233,71 @@ const TacticalSvgChart = ({
                  {/* Dibuix Gràfic */}
                  {type === 'line' ? (
                     <>
-                       {/* -- MODEL GLOBAL (Fons) -- */}
-                       <path d={buildAreaPath(gloData)} fill={`url(#${gradGloId})`} />
-                       <path d={buildLinePath(gloData)} fill="none" stroke={gloColorHex} strokeWidth="2.5" strokeDasharray="5 5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-                       
-                       {/* -- MODEL LOCAL (Primer Pla) -- */}
-                       <path d={buildAreaPath(locData)} fill={`url(#${gradLocId})`} />
-                       <path d={buildLinePath(locData)} fill="none" stroke={locColorHex} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" opacity="0.15" />
-                       <path d={buildLinePath(locData)} fill="none" stroke={locColorHex} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
-                       <path d={buildLinePath(locData)} fill="none" stroke={locColorHex} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
-                       
-                       {/* Punts de Dades i Textos (Motor Anti-Col·lisió) */}
-                       {times.map((_, i) => {
-                          const valLoc = locData[i];
-                          const valGlo = gloData[i];
-                          
-                          const isValidLoc = typeof valLoc === 'number' && !isNaN(valLoc);
-                          const isValidGlo = typeof valGlo === 'number' && !isNaN(valGlo);
-                          
-                          if (!isValidLoc && !isValidGlo) return null;
-                          const x = padX + i * xStep;
-                          
-                          // CORRECCIÓ ESLINT: Ús de const en lloc de let per les posicions base
-                          const yLoc = isValidLoc ? getY(valLoc) : 0;
-                          const yGlo = isValidGlo ? getY(valGlo) : 0;
-                          
-                          let locTextY = yLoc - 10;
-                          let gloTextY = yGlo + 14;
+                       {/* -- SÈRIES SECUNDÀRIES (Fons, línies fines de referència) -- */}
+                       {secondary.map(s => (
+                          <path key={`line-${s.id}`} d={buildLinePath(s.data)} fill="none" stroke={s.colorHex} strokeWidth="2.5" strokeDasharray="5 5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+                       ))}
 
-                          // Algorisme Anti-Overlap
-                          if (isValidLoc && isValidGlo && Math.abs(yLoc - yGlo) < 18) {
-                              if (yLoc <= yGlo) { 
-                                  locTextY = yLoc - 10;
-                                  gloTextY = yGlo + 15;
-                              } else { 
-                                  locTextY = yLoc + 15;
-                                  gloTextY = yGlo - 10;
-                              }
-                          }
+                       {/* -- MODEL REGIONAL ACTIU (Primer Pla) -- */}
+                       {primary && (
+                          <>
+                             <path d={buildAreaPath(primary.data)} fill={`url(#${gradPrimaryId})`} />
+                             <path d={buildLinePath(primary.data)} fill="none" stroke={primary.colorHex} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" opacity="0.15" />
+                             <path d={buildLinePath(primary.data)} fill="none" stroke={primary.colorHex} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+                             <path d={buildLinePath(primary.data)} fill="none" stroke={primary.colorHex} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
+                          </>
+                       )}
+
+                       {/* Punts i etiqueta numèrica: només per a la sèrie primària (amb N sèries,
+                           etiquetar-les totes seria il·legible; les secundàries només es llegeixen
+                           per la seva posició relativa a la línia primària, com un meteograma real). */}
+                       {primary && times.map((_, i) => {
+                          const val = primary.data[i];
+                          const isValid = typeof val === 'number' && !isNaN(val);
+                          if (!isValid) return null;
+                          const x = padX + i * xStep;
+                          const y = getY(val);
 
                           return (
                              <g key={`nodes-${i}`}>
-                                {isValidGlo && (
-                                   <>
-                                      <circle cx={x} cy={yGlo} r="3" fill="#020308" stroke={gloColorHex} strokeWidth="1.5" opacity="0.9" />
-                                      <text x={x} y={gloTextY} fill={gloColorHex} fontSize="10" fontWeight="700" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 1px 3px rgba(0,0,0,1)` }}>
-                                         {valGlo.toFixed(1)}
-                                      </text>
-                                   </>
-                                )}
-                                {isValidLoc && (
-                                   <>
-                                      <circle cx={x} cy={yLoc} r="5" fill="#000000" stroke={locColorHex} strokeWidth="1" opacity="0.5" />
-                                      <circle cx={x} cy={yLoc} r="2.5" fill={locColorHex} />
-                                      <text x={x} y={locTextY} fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 2px 4px rgba(0,0,0,1)` }}>
-                                         {valLoc.toFixed(1)}
-                                      </text>
-                                   </>
-                                )}
+                                <circle cx={x} cy={y} r="5" fill="#000000" stroke={primary.colorHex} strokeWidth="1" opacity="0.5" />
+                                <circle cx={x} cy={y} r="2.5" fill={primary.colorHex} />
+                                <text x={x} y={y - 10} fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 2px 4px rgba(0,0,0,1)` }}>
+                                   {val.toFixed(1)}
+                                </text>
                              </g>
                           );
                        })}
                     </>
                  ) : (
                     <g>
-                       {/* -- GRÀFICA DE BARRES (Precipitació/Neu) -- */}
+                       {/* -- GRÀFICA DE BARRES (Precipitació/Neu): barra només per a la sèrie
+                           primària; les secundàries com a punts petits sobre la mateixa escala -- */}
                        {times.map((_, i) => {
-                          const valLoc = locData[i];
-                          const valGlo = gloData[i];
                           const xBase = padX + i * xStep;
-                          const yBase = padY + drawH; 
-                          
-                          const isValidGlo = typeof valGlo === 'number' && !isNaN(valGlo);
-                          const yGlo = isValidGlo ? getY(valGlo) : yBase;
-                          const hGlo = isValidGlo ? yBase - yGlo : 0;
-                          
-                          const isValidLoc = typeof valLoc === 'number' && !isNaN(valLoc);
-                          const yLoc = isValidLoc ? getY(valLoc) : yBase;
-                          const hLoc = isValidLoc ? yBase - yLoc : 0;
+                          const yBase = padY + drawH;
 
-                          let locTextY = yLoc - 6;
-                          let gloTextY = yGlo - 6;
-
-                          if (isValidLoc && isValidGlo && Math.abs(yLoc - yGlo) < 16) {
-                              if (valGlo > valLoc) {
-                                  gloTextY = yGlo + 12; 
-                                  locTextY = yLoc - 6;
-                              } else {
-                                  locTextY = yLoc - 6;
-                                  gloTextY = yGlo + 12;
-                              }
-                          }
+                          const valPrimary = primary?.data[i];
+                          const isValidPrimary = typeof valPrimary === 'number' && !isNaN(valPrimary);
+                          const yPrimary = isValidPrimary ? getY(valPrimary as number) : yBase;
+                          const hPrimary = isValidPrimary ? yBase - yPrimary : 0;
 
                           return (
                              <g key={`bar-${i}`}>
-                                {isValidGlo && valGlo > 0 && (
+                                {isValidPrimary && (valPrimary as number) > 0 && primary && (
                                     <>
-                                       <rect x={xBase - 10} y={yGlo} width={20} height={hGlo} fill={gloColorHex} opacity="0.2" rx="4" />
-                                       <text x={xBase} y={gloTextY} fill={gloColorHex} fontSize="9" fontWeight="800" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 1px 3px rgba(0,0,0,1)` }}>
-                                          {valGlo.toFixed(1)}
-                                       </text>
-                                    </>
-                                )}
-                                {isValidLoc && valLoc > 0 && (
-                                    <>
-                                        <rect x={xBase - 6} y={yLoc} width={12} height={hLoc} fill={locColorHex} opacity="0.3" rx="4" />
-                                        <rect x={xBase - 3} y={yLoc} width={6} height={hLoc} fill={locColorHex} rx="3" />
-                                        <text x={xBase} y={locTextY} fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 2px 4px rgba(0,0,0,1)` }}>
-                                           {valLoc.toFixed(1)}
+                                        <rect x={xBase - 6} y={yPrimary} width={12} height={hPrimary} fill={primary.colorHex} opacity="0.3" rx="4" />
+                                        <rect x={xBase - 3} y={yPrimary} width={6} height={hPrimary} fill={primary.colorHex} rx="3" />
+                                        <text x={xBase} y={yPrimary - 6} fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 2px 4px rgba(0,0,0,1)` }}>
+                                           {(valPrimary as number).toFixed(1)}
                                         </text>
                                     </>
                                 )}
+                                {secondary.map(s => {
+                                   const v = s.data[i];
+                                   if (typeof v !== 'number' || isNaN(v) || v <= 0) return null;
+                                   return <circle key={`dot-${s.id}-${i}`} cx={xBase} cy={getY(v)} r="2.5" fill={s.colorHex} opacity="0.85" />;
+                                })}
                              </g>
                           );
                        })}
@@ -338,12 +312,27 @@ const TacticalSvgChart = ({
 
 export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
   closeModal, lang, utcOffset, nowTimestamp,
-  hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal
+  hourlyTimes, hourlyGlobalTimes, regionalModelLabel,
+  hourlyLocal, hourlyGlobal, hourlyEcmwf, hourlyGfs, hourlyIcon
 }) => {
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
 
-  const data = getMappedConsensusSeries(hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal, utcOffset, nowTimestamp);
+  const { displayTimes, series } = getMappedConsensusSeries(
+    hourlyTimes,
+    [
+      { id: 'loc', label: regionalModelLabel, data: hourlyLocal },
+      { id: 'ecmwf', label: 'ECMWF', data: hourlyEcmwf },
+      { id: 'gfs', label: 'GFS', data: hourlyGfs },
+      { id: 'icon', label: 'ICON', data: hourlyIcon }
+    ],
+    [{ id: 'glo', label: 'GLOBAL', times: hourlyGlobalTimes, data: hourlyGlobal }],
+    utcOffset,
+    nowTimestamp
+  );
+
+  const seriesFor = (field: 'temp' | 'rain' | 'wind' | 'gusts', colors: Record<string, string>): ChartSeriesInput[] =>
+    series.map(s => ({ id: s.id, label: s.label, data: s[field], colorHex: colors[s.id] ?? SERIES_COLORS.glo }));
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
@@ -376,10 +365,10 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
              </div>
           ) : (
              <div className="flex flex-col gap-6 md:gap-8 pb-10 max-w-full">
-                <TacticalSvgChart title={t.temp} unit="°C" times={data.displayTimes} locData={data.tempLoc} gloData={data.tempGlo} type="line" locColorHex="#f43f5e" gloColorHex="#94a3b8" />
-                <TacticalSvgChart title={t.rain} unit="mm" times={data.displayTimes} locData={data.rainLoc} gloData={data.rainGlo} type="bar" locColorHex="#38bdf8" gloColorHex="#94a3b8" />
-                <TacticalSvgChart title={t.wind} unit="km/h" times={data.displayTimes} locData={data.windLoc} gloData={data.windGlo} type="line" zeroBased locColorHex="#fbbf24" gloColorHex="#94a3b8" />
-                <TacticalSvgChart title={t.gusts} unit="km/h" times={data.displayTimes} locData={data.gustsLoc} gloData={data.gustsGlo} type="line" zeroBased locColorHex="#f97316" gloColorHex="#94a3b8" />
+                <TacticalSvgChart title={t.temp} unit="°C" times={displayTimes} type="line" series={seriesFor('temp', { loc: '#f43f5e', ...SERIES_COLORS })} />
+                <TacticalSvgChart title={t.rain} unit="mm" times={displayTimes} type="bar" series={seriesFor('rain', { loc: '#38bdf8', ...SERIES_COLORS })} />
+                <TacticalSvgChart title={t.wind} unit="km/h" times={displayTimes} type="line" zeroBased series={seriesFor('wind', { loc: '#fbbf24', ...SERIES_COLORS })} />
+                <TacticalSvgChart title={t.gusts} unit="km/h" times={displayTimes} type="line" zeroBased series={seriesFor('gusts', { loc: '#f97316', ...SERIES_COLORS })} />
              </div>
           )}
         </div>

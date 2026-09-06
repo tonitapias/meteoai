@@ -28,11 +28,15 @@ interface ConsensusWidgetProps {
   aromePrecip: number | undefined;
   aromeWind: number | undefined;
   lang: Language | string;
-  utcOffset?: number; 
+  utcOffset?: number;
+  regionalModelLabel?: string;
   hourlyTimes?: string[];
   hourlyGlobalTimes?: string[];
   hourlyLocal?: HourlySeriesBundle;
   hourlyGlobal?: HourlySeriesBundle;
+  hourlyEcmwf?: HourlySeriesBundle;
+  hourlyGfs?: HourlySeriesBundle;
+  hourlyIcon?: HourlySeriesBundle;
 }
 
 // [FIX PRECISIÓ] La comparació és amb Open-Meteo "best_match" (el mateix motor de selecció
@@ -75,8 +79,9 @@ const translations = {
 
 export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   metrics, aromeTemp, aromePrecip, aromeWind, lang,
-  utcOffset = 0,
-  hourlyTimes = [], hourlyGlobalTimes = [], hourlyLocal = {}, hourlyGlobal = {}
+  utcOffset = 0, regionalModelLabel = 'LOC',
+  hourlyTimes = [], hourlyGlobalTimes = [], hourlyLocal = {}, hourlyGlobal = {},
+  hourlyEcmwf = {}, hourlyGfs = {}, hourlyIcon = {}
 }) => {
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
@@ -295,8 +300,12 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           nowTimestamp={nowTimestamp}
           hourlyTimes={hourlyTimes}
           hourlyGlobalTimes={hourlyGlobalTimes}
+          regionalModelLabel={regionalModelLabel}
           hourlyLocal={hourlyLocal}
           hourlyGlobal={hourlyGlobal}
+          hourlyEcmwf={hourlyEcmwf}
+          hourlyGfs={hourlyGfs}
+          hourlyIcon={hourlyIcon}
         />
       )}
     </>

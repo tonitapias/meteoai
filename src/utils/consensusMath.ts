@@ -9,53 +9,80 @@ export interface HourlySeriesBundle {
   gusts?: (number | null)[];
 }
 
+// Sèrie que comparteix índex 1:1 amb les `baseTimes` (el model regional actiu
+// i ECMWF/GFS/ICON, que Open-Meteo ja retorna a la MATEIXA crida i per tant
+// al mateix array `hourly.time` — vegeu normData.ts).
+export interface AlignedNamedSeries {
+  id: string;
+  label: string;
+  data: HourlySeriesBundle;
+}
+
+// Sèrie que ve d'una crida de xarxa independent amb el seu propi array de
+// temps (avui només GLO/best_match, via useGlobalModel) i que cal remapejar
+// per timestamp absolut en lloc de per índex.
+export interface RemappedNamedSeries {
+  id: string;
+  label: string;
+  times: string[];
+  data: HourlySeriesBundle;
+}
+
+export interface MappedSeries {
+  id: string;
+  label: string;
+  temp: (number | null)[];
+  rain: (number | null)[];
+  wind: (number | null)[];
+  gusts: (number | null)[];
+}
+
 export interface MappedConsensusSeries {
   displayTimes: string[];
-  tempLoc: (number | null)[];
-  tempGlo: (number | null)[];
-  rainLoc: (number | null)[];
-  rainGlo: (number | null)[];
-  windLoc: (number | null)[];
-  windGlo: (number | null)[];
-  gustsLoc: (number | null)[];
-  gustsGlo: (number | null)[];
+  series: MappedSeries[];
 }
 
 /**
- * Alinea les sèries horàries local (AROME) i global (best_match) sobre una
- * finestra comuna de 24 hores començant a l'hora actual, per als modals de
- * telemetria del Motor de Consens.
- * [NETEJA] Abans hi havia dues còpies idèntiques d'aquesta mateixa funció
- * (ConsensusModal.tsx i ConsensusChartsModal.tsx) — exactament el mateix
- * tipus de duplicació que ja es va consolidar una vegada per a
- * resolveHourlyEpoch (vegeu weatherMath.ts), però només per a l'helper petit,
- * no per a la funció que l'embolcalla.
+ * Extreu una `HourlySeriesBundle` (arrays per camp) a partir de
+ * `hourlyComparison.ecmwf/gfs/icon` (arrays d'objectes per hora, vegeu
+ * normData.ts). Comparteixen índex amb `hourly.time` per construcció, així
+ * que no calen remapejar per timestamp.
+ */
+export function extractComparisonSeries(rows: Record<string, unknown>[] | undefined): HourlySeriesBundle {
+  if (!Array.isArray(rows)) return {};
+  const num = (v: unknown): number | null => (typeof v === 'number' && !isNaN(v)) ? v : null;
+  return {
+    temp: rows.map(r => num(r?.temperature_2m)),
+    rain: rows.map(r => num(r?.precipitation)),
+    wind: rows.map(r => num(r?.wind_speed_10m)),
+    gusts: rows.map(r => num(r?.wind_gusts_10m))
+  };
+}
+
+/**
+ * Alinea N sèries horàries (el model regional actiu, ECMWF/GFS/ICON i el
+ * blend global GLO/best_match) sobre una finestra comuna de 24 hores
+ * començant a l'hora actual, per als modals de telemetria del Motor de
+ * Consens. Generalitza l'antiga versió fixa a 2 sèries (Loc/Glo): les
+ * sèries "alineades" comparteixen índex amb `baseTimes` i només cal
+ * retallar-les; les "remapejades" (GLO, d'una crida de xarxa independent)
+ * es busquen per timestamp absolut via `resolveHourlyEpoch`.
  */
 export function getMappedConsensusSeries(
-  hourlyTimes: string[],
-  hourlyGlobalTimes: string[],
-  hourlyLocal: HourlySeriesBundle,
-  hourlyGlobal: HourlySeriesBundle,
+  baseTimes: string[],
+  alignedSeries: AlignedNamedSeries[],
+  remappedSeries: RemappedNamedSeries[],
   utcOffset: number,
   nowTimestamp: number
 ): MappedConsensusSeries {
-  let startIndex = hourlyTimes.findIndex(timeStr => {
+  let startIndex = baseTimes.findIndex(timeStr => {
     const epoch = resolveHourlyEpoch(timeStr, utcOffset);
     return !isNaN(epoch) && epoch >= nowTimestamp - (60 * 60 * 1000);
   });
   if (startIndex === -1) startIndex = 0;
-  const displayTimes = hourlyTimes.slice(startIndex, startIndex + 24);
+  const displayTimes = baseTimes.slice(startIndex, startIndex + 24);
 
-  const mapGlobalArr = (arr: (number | null)[] = []) => {
-    const dict = new Map<number, number | null>();
-    arr.forEach((val, idx) => {
-      const ep = resolveHourlyEpoch(hourlyGlobalTimes[idx], utcOffset);
-      if (!isNaN(ep)) dict.set(ep, val);
-    });
-    return displayTimes.map(timeStr => dict.get(resolveHourlyEpoch(timeStr, utcOffset)) ?? null);
-  };
-
-  const getAlignedLocal = (arr: (number | null | undefined)[] | undefined) => {
+  const sliceAligned = (arr: (number | null | undefined)[] | undefined): (number | null)[] => {
     if (!arr) return displayTimes.map(() => null);
     const sliced = arr.slice(startIndex, startIndex + 24);
     return displayTimes.map((_, i) => {
@@ -64,17 +91,35 @@ export function getMappedConsensusSeries(
     });
   };
 
-  return {
-    displayTimes,
-    tempLoc: getAlignedLocal(hourlyLocal.temp),
-    tempGlo: mapGlobalArr(hourlyGlobal.temp),
-    rainLoc: getAlignedLocal(hourlyLocal.rain),
-    rainGlo: mapGlobalArr(hourlyGlobal.rain),
-    windLoc: getAlignedLocal(hourlyLocal.wind),
-    windGlo: mapGlobalArr(hourlyGlobal.wind),
-    gustsLoc: getAlignedLocal(hourlyLocal.gusts),
-    gustsGlo: mapGlobalArr(hourlyGlobal.gusts)
+  const mapRemapped = (times: string[], arr: (number | null)[] = []): (number | null)[] => {
+    const dict = new Map<number, number | null>();
+    arr.forEach((val, idx) => {
+      const ep = resolveHourlyEpoch(times[idx], utcOffset);
+      if (!isNaN(ep)) dict.set(ep, val);
+    });
+    return displayTimes.map(timeStr => dict.get(resolveHourlyEpoch(timeStr, utcOffset)) ?? null);
   };
+
+  const series: MappedSeries[] = [
+    ...alignedSeries.map(s => ({
+      id: s.id,
+      label: s.label,
+      temp: sliceAligned(s.data.temp),
+      rain: sliceAligned(s.data.rain),
+      wind: sliceAligned(s.data.wind),
+      gusts: sliceAligned(s.data.gusts)
+    })),
+    ...remappedSeries.map(s => ({
+      id: s.id,
+      label: s.label,
+      temp: mapRemapped(s.times, s.data.temp),
+      rain: mapRemapped(s.times, s.data.rain),
+      wind: mapRemapped(s.times, s.data.wind),
+      gusts: mapRemapped(s.times, s.data.gusts)
+    }))
+  ];
+
+  return { displayTimes, series };
 }
 
 export interface ConsensusMetrics {

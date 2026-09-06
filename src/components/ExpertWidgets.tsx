@@ -11,7 +11,7 @@ import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
 import { useGlobalModel } from '../hooks/useGlobalModel';
-import { calculateModelConsensus } from '../utils/consensusMath';
+import { calculateModelConsensus, extractComparisonSeries } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
@@ -124,7 +124,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   // "global" acaben sent el mateix best_match d'Open-Meteo demanat dues vegades (ho
   // detecta isGlobalFallback més avall), així que evitem la crida de xarxa sencera
   // quan ja sabem que no pot aportar cap comparació real.
-  const hasRegionalModel = safeLat !== undefined && safeLon !== undefined && !!selectRegionalModel(safeLat, safeLon);
+  const activeRegionalModel = safeLat !== undefined && safeLon !== undefined ? selectRegionalModel(safeLat, safeLon) : null;
+  const hasRegionalModel = !!activeRegionalModel;
 
   useEffect(() => {
     if (hasRegionalModel && safeLat !== undefined && safeLon !== undefined) {
@@ -243,6 +244,13 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const rawGloGusts = (globalData?.hourly as Record<string, unknown> | undefined)?.wind_gusts_10m;
   const safeGloGusts = Array.isArray(rawGloGusts) ? rawGloGusts : undefined;
 
+  // ECMWF/GFS/ICON: ja arriben a la mateixa crida base (API_MODELS_LIST) i
+  // normData.ts ja els separa a `hourlyComparison`, alineats índex a índex
+  // amb `hourly.time` — cap crida de xarxa addicional per al meteograma.
+  const hourlyEcmwf = extractComparisonSeries(weatherData.hourlyComparison?.ecmwf);
+  const hourlyGfs = extractComparisonSeries(weatherData.hourlyComparison?.gfs);
+  const hourlyIcon = extractComparisonSeries(weatherData.hourlyComparison?.icon);
+
   const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';
   const safeSunset = Array.isArray(daily?.sunset) && typeof daily.sunset[0] === 'string' ? daily.sunset[0] : '';
 
@@ -260,21 +268,25 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
                aromePrecip={currentPrecip}
                aromeWind={currentWindSpeed} 
                lang={lang}
-               utcOffset={targetOffsetSeconds} 
+               utcOffset={targetOffsetSeconds}
+               regionalModelLabel={activeRegionalModel?.label ?? 'LOC'}
                hourlyTimes={safeHourlyTimes}
                hourlyGlobalTimes={safeGloTimes}
-               hourlyLocal={{ 
-                 temp: safeHourlyTemp as (number | null)[] | undefined, 
-                 rain: safeHourlyRain as (number | null)[] | undefined, 
+               hourlyLocal={{
+                 temp: safeHourlyTemp as (number | null)[] | undefined,
+                 rain: safeHourlyRain as (number | null)[] | undefined,
                  wind: safeHourlyWind as (number | null)[] | undefined,
                  gusts: safeHourlyGusts as (number | null)[] | undefined
                }}
-               hourlyGlobal={{ 
-                 temp: safeGloTemp as (number | null)[] | undefined, 
-                 rain: safeGloRain as (number | null)[] | undefined, 
+               hourlyGlobal={{
+                 temp: safeGloTemp as (number | null)[] | undefined,
+                 rain: safeGloRain as (number | null)[] | undefined,
                  wind: safeGloWind as (number | null)[] | undefined,
                  gusts: safeGloGusts as (number | null)[] | undefined
                }}
+               hourlyEcmwf={hourlyEcmwf}
+               hourlyGfs={hourlyGfs}
+               hourlyIcon={hourlyIcon}
             />
          )}
       </div>
