@@ -6,12 +6,12 @@ import { Cpu, AlertTriangle } from 'lucide-react';
 interface ConsensusInactiveWidgetProps {
   lang?: Language | string;
   // 'no-coverage': cap model regional actiu (fora de les 13 malles HD, ECMWF global pur).
-  // 'redundant': hi ha un model regional actiu però encara no hi ha dades
-  // comparables (petició del model global en curs, o ha fallat) — NO vol dir
-  // "els valors coincideixen", ja veure ExpertWidgets.tsx: des que es va deixar
-  // de suspendre el widget només perquè local i global coincidissin, aquest
-  // motiu només apareix en aquesta finestra transitòria de càrrega/error.
-  reason?: 'no-coverage' | 'redundant';
+  // 'unavailable': hi ha un model regional actiu però la petició del model
+  // global (best_match) ha fallat — sense dades no hi ha res a comparar.
+  // Mentre la petició encara està EN CURS (cas normal, sub-segon) es mostra
+  // ConsensusLoadingWidget en lloc d'aquest component — 'unavailable' només
+  // apareix si la petició ha acabat i ha fallat de debò.
+  reason?: 'no-coverage' | 'unavailable';
 }
 
 // [NETEJA] Abans tenia dos motius ('timezone'/'fallback'): el motiu 'timezone'
@@ -27,45 +27,49 @@ interface ConsensusInactiveWidgetProps {
 // d'Open-Meteo ja escull el model regional com a font — els valors hi
 // coincideixen gairebé exacte. Inicialment això també suspenia el widget
 // ('redundant'), però l'usuari va preferir que es mantingués actiu i mostrés
-// la comparació igualment (Δ0, "Alineat") en lloc d'amagar-lo — així sempre
-// es pot obrir el modal complet i veure les gràfiques ECMWF/GFS/ICON. El
-// motiu 'redundant' es manté només per a la finestra real de càrrega/error.
+// la comparació igualment (Δ0, "Alineat") en lloc d'amagar-lo.
+// [NETEJA] El motiu 'redundant' es va mantenir després d'això només per a la
+// finestra de càrrega/error del model global — però durant la càrrega normal
+// (sub-segon, cada canvi d'ubicació) dir "redundant" hi era directament fals,
+// ja que encara no hi havia cap dada per comparar. Ara aquesta finestra de
+// càrrega la cobreix ConsensusLoadingWidget, i aquest component només tracta
+// el cas real restant: la petició ha fallat de debò ('unavailable').
 const translations = {
   ca: {
     title: 'Motor de Consens Suspès',
-    badge: { 'no-coverage': 'Cobertura Global', redundant: 'Redundància Detectada' },
+    badge: { 'no-coverage': 'Cobertura Global', unavailable: 'Comparació No Disponible' },
     description: {
       'no-coverage': "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base.",
-      redundant: "El model regional és actiu, però ara mateix coincideix amb el blend global d'Open-Meteo. No hi ha cap divergència real a mostrar."
+      unavailable: "No s'ha pogut obtenir la comparació amb el model global en aquest moment. Torna-ho a provar més tard."
     },
-    action: { 'no-coverage': 'Mode global en ús', redundant: 'Sense divergència' }
+    action: { 'no-coverage': 'Mode global en ús', unavailable: 'Sense comparació' }
   },
   es: {
     title: 'Motor de Consenso Suspendido',
-    badge: { 'no-coverage': 'Cobertura Global', redundant: 'Redundancia Detectada' },
+    badge: { 'no-coverage': 'Cobertura Global', unavailable: 'Comparación No Disponible' },
     description: {
       'no-coverage': "Ubicación fuera de la malla de alta resolución. El análisis de divergencias se ha suspendido temporalmente para evitar redundancia matemática con modelos globales base.",
-      redundant: "El modelo regional está activo, pero ahora mismo coincide con el blend global de Open-Meteo. No hay ninguna divergencia real que mostrar."
+      unavailable: "No se ha podido obtener la comparación con el modelo global en este momento. Vuelve a intentarlo más tarde."
     },
-    action: { 'no-coverage': 'Modo global en uso', redundant: 'Sin divergencia' }
+    action: { 'no-coverage': 'Modo global en uso', unavailable: 'Sin comparación' }
   },
   en: {
     title: 'Consensus Engine Suspended',
-    badge: { 'no-coverage': 'Global Coverage', redundant: 'Redundancy Detected' },
+    badge: { 'no-coverage': 'Global Coverage', unavailable: 'Comparison Unavailable' },
     description: {
       'no-coverage': "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models.",
-      redundant: "The regional model is active, but it currently matches Open-Meteo's global blend exactly. There is no real divergence to show."
+      unavailable: "Could not retrieve the global model comparison right now. Please try again later."
     },
-    action: { 'no-coverage': 'Global mode in use', redundant: 'No divergence' }
+    action: { 'no-coverage': 'Global mode in use', unavailable: 'No comparison' }
   },
   fr: {
     title: 'Moteur de Consensus Suspendu',
-    badge: { 'no-coverage': 'Couverture Globale', redundant: 'Redondance Détectée' },
+    badge: { 'no-coverage': 'Couverture Globale', unavailable: 'Comparaison Indisponible' },
     description: {
       'no-coverage': "Emplacement hors de la maille haute résolution. L'analyse des divergences est temporairement suspendue pour éviter une redondance mathématique avec les modèles globaux de base.",
-      redundant: "Le modèle régional est actif, mais il correspond actuellement exactement au blend global d'Open-Meteo. Il n'y a aucune divergence réelle à afficher."
+      unavailable: "Impossible d'obtenir la comparaison avec le modèle global pour le moment. Réessayez plus tard."
     },
-    action: { 'no-coverage': 'Mode global en cours', redundant: 'Aucune divergence' }
+    action: { 'no-coverage': 'Mode global en cours', unavailable: 'Aucune comparaison' }
   }
 };
 

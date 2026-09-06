@@ -13,6 +13,7 @@ import { useGlobalModel } from '../hooks/useGlobalModel';
 import { calculateModelConsensus, extractComparisonSeries } from '../utils/consensusMath';
 import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
+import { ConsensusLoadingWidget } from './widgets/ConsensusLoadingWidget';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
 import {
   CompassGauge,
@@ -109,7 +110,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
         ? calculateDewPoint(currentTemp, currentHumidity)
         : undefined;
 
-  const { globalData, fetchGlobalModelByCoords, clearGlobalModel } = useGlobalModel();
+  const { globalData, loadingGlobalModel, fetchGlobalModelByCoords, clearGlobalModel } = useGlobalModel();
   
   const safeLat = location && typeof (location as Record<string, unknown>).latitude === 'number' 
     ? (location as Record<string, unknown>).latitude as number 
@@ -160,6 +161,12 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   // gràfiques ECMWF/GFS/ICON del modal complet. Ara el widget només es
   // suspèn quan realment no hi ha dades comparables (`isConsensusActive`);
   // si coincideix de debò, es mostra igualment amb Δ0 i "Alineat".
+  // [NETEJA] `forceFallback` també és true durant la finestra normal de
+  // càrrega (abans que `fetchGlobalModelByCoords` resolgui) — per això, més
+  // avall, es comprova `loadingGlobalModel` ABANS que `forceFallback`: mentre
+  // encara no hi ha resposta es mostra ConsensusLoadingWidget (neutre), no
+  // ConsensusInactiveWidget (que abans deia "redundant" fins i tot quan
+  // encara no s'havia rebut cap dada per comparar-hi).
   const forceFallback = !consensusMetrics.isConsensusActive;
 
   const currentHourIndex = useMemo(() => {
@@ -223,8 +230,10 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   return (
     <>
       <div className="w-full mb-6">
-         {forceFallback ? (
-            <ConsensusInactiveWidget lang={lang} reason={activeRegionalModel ? 'redundant' : 'no-coverage'} />
+         {hasRegionalModel && loadingGlobalModel ? (
+            <ConsensusLoadingWidget lang={lang} />
+         ) : forceFallback ? (
+            <ConsensusInactiveWidget lang={lang} reason={activeRegionalModel ? 'unavailable' : 'no-coverage'} />
          ) : (
             <ConsensusWidget
                metrics={consensusMetrics}
