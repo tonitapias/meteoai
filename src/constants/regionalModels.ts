@@ -14,7 +14,7 @@ export interface RegionalModelBBox {
 }
 
 export interface RegionalModel {
-    id: 'UKMO' | 'METEOSWISS' | 'KNMI' | 'ITALIA' | 'METNO' | 'DMI' | 'AROME_HD' | 'ICON_D2' | 'HRDPS' | 'HRRR' | 'JMA';
+    id: 'UKMO' | 'METEOSWISS' | 'KNMI' | 'ITALIA' | 'CHMI' | 'GEOSPHERE_AT' | 'METNO' | 'DMI' | 'AROME_HD' | 'ICON_D2' | 'HRDPS' | 'HRRR' | 'JMA';
     apiModelId: string;
     label: string;
     resolutionKm: number;
@@ -40,6 +40,14 @@ const pointInModelBBox = (lat: number, lon: number, m: RegionalModel): boolean =
 //   Baixos/Bèlgica cauen dins de tots dos.
 // - ItaliaMeteo abans d'ICON_D2 (nord d'Itàlia) i abans d'AROME_HD (Alps
 //   occidentals italians toquen el seu bbox).
+// - CHMI i GeoSphere Àustria abans d'ICON_D2: Txèquia i Àustria cauen
+//   senceres dins del seu bbox. Entre elles, CHMI es comprova primer perquè
+//   el seu domini real és estrictament Txèquia (fora d'aquesta zona l'API
+//   torna una resposta degenerada sense camp `hourly`, capturada pel mateix
+//   "mode paracaigudes" que ja gestiona qualsevol fallada de model regional),
+//   mentre que `geosphere_arome_austria` és més generós del que el seu nom
+//   suggereix (verificat retornant dades reals fins i tot a Munic, DE) —
+//   posar-lo primer robaria la franja fronterera txeca-austríaca a CHMI.
 // - MetNo abans d'ICON_D2: el sud de Dinamarca (~54,5-55°N) toca el límit
 //   superior del bbox d'ICON_D2.
 // - DMI és el més ampli d'aquest grup nòrdic (domini "Centreeuropa i Nòrdics
@@ -86,6 +94,20 @@ export const REGIONAL_MODELS: RegionalModel[] = [
         label: 'ItaliaMeteo',
         resolutionKm: 2.0,
         bbox: { minLat: 36.0, maxLat: 47.2, minLon: 6.5, maxLon: 18.6 }
+    },
+    {
+        id: 'CHMI',
+        apiModelId: 'chmi_aladin_cz_1km',
+        label: 'CHMI',
+        resolutionKm: 1.0,
+        bbox: { minLat: 48.5, maxLat: 51.1, minLon: 12.0, maxLon: 18.9 }
+    },
+    {
+        id: 'GEOSPHERE_AT',
+        apiModelId: 'geosphere_arome_austria',
+        label: 'GeoSphere AT',
+        resolutionKm: 2.5,
+        bbox: { minLat: 46.3, maxLat: 49.1, minLon: 9.4, maxLon: 17.3 }
     },
     {
         id: 'METNO',
