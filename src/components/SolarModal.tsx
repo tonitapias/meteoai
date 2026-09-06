@@ -27,43 +27,51 @@ interface SolarModalProps {
 const T: Record<Language, Record<string, string>> = {
   ca: {
     title: 'SISTEMA SOLAR', subtitle: 'Observatori de Cicle Solar', noData: 'SENSE DADES SUFICIENTS',
-    day: 'DIA', night: 'NIT', now: 'ARA', solarNoon: 'Migdia Solar', maxElevation: 'Elevació Màx.',
-    dayLength: 'Durada del Dia', vsTomorrow: 'vs. demà', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
+    day: 'DIA', night: 'NIT', solarNoon: 'Migdia Solar', maxElevation: 'Elevació Màx.',
+    dayLength: 'Durada del Dia', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
     uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
     sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 7 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
-    timeline: 'Cronologia del Dia', trajectory: 'Trajectòria d\'Avui', astroDawn: 'Crep. Astronòmic', nauticalDawn: 'Crep. Nàutic', civilDawn: 'Crep. Civil',
-    goldenHour: 'Hora Daurada', astroDusk: 'Crep. Astronòmic', nextEvent: 'Proper esdeveniment', in_: 'en',
-    lengthening: 'Els dies s\'allarguen', shortening: 'Els dies s\'escurcen', elevAbbr: 'ELEV',
+    timeline: 'Cronologia del Dia', trajectory: 'Trajectòria d\'Avui',
+    astroDawn: 'Crep. Astronòmic (sortida)', nauticalDawn: 'Crep. Nàutic (sortida)', civilDawn: 'Crep. Civil (sortida)',
+    goldenHourMorning: 'Hora Daurada (matí)', goldenHourEvening: 'Hora Daurada (tarda)',
+    civilDusk: 'Crep. Civil (posta)', nauticalDusk: 'Crep. Nàutic (posta)', astroDusk: 'Crep. Astronòmic (posta)',
+    in_: 'en', lengthening: 'Els dies s\'allarguen', shortening: 'Els dies s\'escurcen',
   },
   es: {
     title: 'SISTEMA SOLAR', subtitle: 'Observatorio de Ciclo Solar', noData: 'DATOS INSUFICIENTES',
-    day: 'DÍA', night: 'NOCHE', now: 'AHORA', solarNoon: 'Mediodía Solar', maxElevation: 'Elevación Máx.',
-    dayLength: 'Duración del Día', vsTomorrow: 'vs. mañana', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
+    day: 'DÍA', night: 'NOCHE', solarNoon: 'Mediodía Solar', maxElevation: 'Elevación Máx.',
+    dayLength: 'Duración del Día', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
     uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
     sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 7 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
-    timeline: 'Cronología del Día', trajectory: 'Trayectoria de Hoy', astroDawn: 'Crep. Astronómico', nauticalDawn: 'Crep. Náutico', civilDawn: 'Crep. Civil',
-    goldenHour: 'Hora Dorada', astroDusk: 'Crep. Astronómico', nextEvent: 'Próximo evento', in_: 'en',
-    lengthening: 'Los días se alargan', shortening: 'Los días se acortan', elevAbbr: 'ELEV',
+    timeline: 'Cronología del Día', trajectory: 'Trayectoria de Hoy',
+    astroDawn: 'Crep. Astronómico (salida)', nauticalDawn: 'Crep. Náutico (salida)', civilDawn: 'Crep. Civil (salida)',
+    goldenHourMorning: 'Hora Dorada (mañana)', goldenHourEvening: 'Hora Dorada (tarde)',
+    civilDusk: 'Crep. Civil (puesta)', nauticalDusk: 'Crep. Náutico (puesta)', astroDusk: 'Crep. Astronómico (puesta)',
+    in_: 'en', lengthening: 'Los días se alargan', shortening: 'Los días se acortan',
   },
   en: {
     title: 'SOLAR SYSTEM', subtitle: 'Solar Cycle Observatory', noData: 'INSUFFICIENT DATA',
-    day: 'DAY', night: 'NIGHT', now: 'NOW', solarNoon: 'Solar Noon', maxElevation: 'Max. Elevation',
-    dayLength: 'Day Length', vsTomorrow: 'vs. tomorrow', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
+    day: 'DAY', night: 'NIGHT', solarNoon: 'Solar Noon', maxElevation: 'Max. Elevation',
+    dayLength: 'Day Length', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
     uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
     sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 7 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
-    timeline: 'Day Timeline', trajectory: "Today's Trajectory", astroDawn: 'Astro. Twilight', nauticalDawn: 'Nautical Twilight', civilDawn: 'Civil Twilight',
-    goldenHour: 'Golden Hour', astroDusk: 'Astro. Twilight', nextEvent: 'Next event', in_: 'in',
-    lengthening: 'Days are getting longer', shortening: 'Days are getting shorter', elevAbbr: 'ELEV',
+    timeline: 'Day Timeline', trajectory: "Today's Trajectory",
+    astroDawn: 'Astronomical Dawn', nauticalDawn: 'Nautical Dawn', civilDawn: 'Civil Dawn',
+    goldenHourMorning: 'Golden Hour (AM)', goldenHourEvening: 'Golden Hour (PM)',
+    civilDusk: 'Civil Dusk', nauticalDusk: 'Nautical Dusk', astroDusk: 'Astronomical Dusk',
+    in_: 'in', lengthening: 'Days are getting longer', shortening: 'Days are getting shorter',
   },
   fr: {
     title: 'SYSTÈME SOLAIRE', subtitle: 'Observatoire du Cycle Solaire', noData: 'DONNÉES INSUFFISANTES',
-    day: 'JOUR', night: 'NUIT', now: 'MAINTENANT', solarNoon: 'Midi Solaire', maxElevation: 'Élévation Max.',
-    dayLength: 'Durée du Jour', vsTomorrow: 'vs. demain', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
+    day: 'JOUR', night: 'NUIT', solarNoon: 'Midi Solaire', maxElevation: 'Élévation Max.',
+    dayLength: 'Durée du Jour', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
     uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
     sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '7 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
-    timeline: 'Chronologie du Jour', trajectory: "Trajectoire du Jour", astroDawn: 'Crép. Astronomique', nauticalDawn: 'Crép. Nautique', civilDawn: 'Crép. Civil',
-    goldenHour: 'Heure Dorée', astroDusk: 'Crép. Astronomique', nextEvent: 'Prochain événement', in_: 'dans',
-    lengthening: 'Les jours rallongent', shortening: 'Les jours raccourcissent', elevAbbr: 'ELEV',
+    timeline: 'Chronologie du Jour', trajectory: "Trajectoire du Jour",
+    astroDawn: 'Crép. Astro. (matin)', nauticalDawn: 'Crép. Nautique (matin)', civilDawn: 'Crép. Civil (matin)',
+    goldenHourMorning: 'Heure Dorée (matin)', goldenHourEvening: 'Heure Dorée (soir)',
+    civilDusk: 'Crép. Civil (soir)', nauticalDusk: 'Crép. Nautique (soir)', astroDusk: 'Crép. Astro. (soir)',
+    in_: 'dans', lengthening: 'Les jours rallongent', shortening: 'Les jours raccourcissent',
   },
 };
 
@@ -161,28 +169,54 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     return localSeconds / 86400;
   }, [now, utcOffsetSeconds]);
 
+  // Cronologia de demà, només per poder oferir un "proper esdeveniment" honest durant
+  // les hores de nit posteriors al crepuscle astronòmic d'avui (que altrament quedarien
+  // sense cap esdeveniment futur conegut fins que l'usuari tornés a obrir el modal demà).
+  const tomorrowStr = Array.isArray(daily?.time) ? daily.time[1] : undefined;
+  const tomorrowSunTimes = useMemo(
+    () => hasValidCoords && tomorrowStr ? getSunDayTimesSafe(tomorrowStr, lat, lon) : null,
+    [hasValidCoords, tomorrowStr, lat, lon]
+  );
+
   // --- Cronologia d'esdeveniments (per al comptador i la barra segmentada) ---
   const timelineEvents = useMemo(() => {
-    const raw: { key: keyof SunDayTimes; label: string }[] = [
+    const raw: { key: string; label: string }[] = [
       { key: 'astronomicalDawn', label: t.astroDawn },
       { key: 'nauticalDawn', label: t.nauticalDawn },
       { key: 'civilDawn', label: t.civilDawn },
       { key: 'sunrise', label: t.sunrise },
+      { key: 'goldenHourEndMorning', label: t.goldenHourMorning },
       { key: 'solarNoon', label: t.solarNoon },
+      { key: 'goldenHourStartEvening', label: t.goldenHourEvening },
       { key: 'sunset', label: t.sunset },
-      { key: 'civilDusk', label: t.civilDawn },
-      { key: 'nauticalDusk', label: t.nauticalDawn },
+      { key: 'civilDusk', label: t.civilDusk },
+      { key: 'nauticalDusk', label: t.nauticalDusk },
       { key: 'astronomicalDusk', label: t.astroDusk },
     ];
     return raw
-      .map(r => ({ ...r, date: sunDayTimes[r.key] as Date | null }))
-      .filter((r): r is { key: keyof SunDayTimes; label: string; date: Date } => r.date instanceof Date);
+      .map(r => ({ ...r, date: sunDayTimes[r.key as keyof SunDayTimes] as Date | null }))
+      .filter((r): r is { key: string; label: string; date: Date } => r.date instanceof Date);
   }, [sunDayTimes, t]);
+
+  // Primer esdeveniment de demà disponible (normalment l'alba astronòmica, però a
+  // latituds altes pot no existir-hi — provem en cascada fins a la sortida de sol).
+  const tomorrowFirstEvent = useMemo(() => {
+    if (!tomorrowSunTimes) return null;
+    const candidates: { key: string; label: string; date: Date | null }[] = [
+      { key: 'astronomicalDawn', label: t.astroDawn, date: tomorrowSunTimes.astronomicalDawn },
+      { key: 'nauticalDawn', label: t.nauticalDawn, date: tomorrowSunTimes.nauticalDawn },
+      { key: 'civilDawn', label: t.civilDawn, date: tomorrowSunTimes.civilDawn },
+      { key: 'sunrise', label: t.sunrise, date: tomorrowSunTimes.sunrise },
+    ];
+    const found = candidates.find((c): c is { key: string; label: string; date: Date } => c.date instanceof Date);
+    return found ?? null;
+  }, [tomorrowSunTimes, t]);
 
   const nextEvent = useMemo(() => {
     const upcoming = timelineEvents.filter(e => e.date.getTime() > now.getTime());
-    return upcoming.length > 0 ? upcoming[0] : null;
-  }, [timelineEvents, now]);
+    if (upcoming.length > 0) return upcoming[0];
+    return tomorrowFirstEvent;
+  }, [timelineEvents, now, tomorrowFirstEvent]);
 
   const countdownStr = useMemo(() => {
     if (!nextEvent) return '--';

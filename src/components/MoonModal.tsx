@@ -33,7 +33,7 @@ const T: Record<Language, Record<string, string>> = {
     illumination: 'Il·luminació', age: 'Edat', days: 'dies', rise: 'SORTIDA', set: 'POSTA',
     distance: 'Distància', supermoon: 'SUPERLLUNA', micromoon: 'MICRO LLUNA', nextFull: 'Pròxima Lluna Plena',
     nextNew: 'Pròxima Lluna Nova', inDays: 'en {n} dies', today: 'avui', tomorrow: 'demà', week: 'Pròxims 7 Dies',
-    livePosition: 'Posició Actual', azimuth: 'Azimut', altitude: 'Altitud', folkName: 'Nom Tradicional (curiositat)',
+    livePosition: 'Posició Actual', folkName: 'Nom Tradicional (curiositat)',
     perigee: 'Perigeu', apogee: 'Apogeu',
   },
   es: {
@@ -41,7 +41,7 @@ const T: Record<Language, Record<string, string>> = {
     illumination: 'Iluminación', age: 'Edad', days: 'días', rise: 'SALIDA', set: 'PUESTA',
     distance: 'Distancia', supermoon: 'SUPERLUNA', micromoon: 'MICRO LUNA', nextFull: 'Próxima Luna Llena',
     nextNew: 'Próxima Luna Nueva', inDays: 'en {n} días', today: 'hoy', tomorrow: 'mañana', week: 'Próximos 7 Días',
-    livePosition: 'Posición Actual', azimuth: 'Azimut', altitude: 'Altitud', folkName: 'Nombre Tradicional (curiosidad)',
+    livePosition: 'Posición Actual', folkName: 'Nombre Tradicional (curiosidad)',
     perigee: 'Perigeo', apogee: 'Apogeo',
   },
   en: {
@@ -49,7 +49,7 @@ const T: Record<Language, Record<string, string>> = {
     illumination: 'Illumination', age: 'Age', days: 'days', rise: 'RISE', set: 'SET',
     distance: 'Distance', supermoon: 'SUPERMOON', micromoon: 'MICROMOON', nextFull: 'Next Full Moon',
     nextNew: 'Next New Moon', inDays: 'in {n} days', today: 'today', tomorrow: 'tomorrow', week: 'Next 7 Days',
-    livePosition: 'Live Position', azimuth: 'Azimuth', altitude: 'Altitude', folkName: 'Traditional Name (folklore)',
+    livePosition: 'Live Position', folkName: 'Traditional Name (folklore)',
     perigee: 'Perigee', apogee: 'Apogee',
   },
   fr: {
@@ -57,7 +57,7 @@ const T: Record<Language, Record<string, string>> = {
     illumination: 'Illumination', age: 'Âge', days: 'jours', rise: 'LEVER', set: 'COUCHER',
     distance: 'Distance', supermoon: 'SUPERLUNE', micromoon: 'MICRO LUNE', nextFull: 'Prochaine Pleine Lune',
     nextNew: 'Prochaine Nouvelle Lune', inDays: 'dans {n} jours', today: "aujourd'hui", tomorrow: 'demain', week: '7 Prochains Jours',
-    livePosition: 'Position Actuelle', azimuth: 'Azimut', altitude: 'Altitude', folkName: 'Nom Traditionnel (folklore)',
+    livePosition: 'Position Actuelle', folkName: 'Nom Traditionnel (folklore)',
     perigee: 'Périgée', apogee: 'Apogée',
   },
 };
