@@ -115,6 +115,10 @@ export interface StrictDailyWeather {
   precipitation_sum?: (number | null)[];
   snowfall_sum?: (number | null)[]; // AFEGIT: Tipatge estricte per neu
   uv_index_max?: (number | null)[];
+  uv_index_clear_sky_max?: (number | null)[];
+  daylight_duration?: (number | null)[];
+  sunshine_duration?: (number | null)[];
+  shortwave_radiation_sum?: (number | null)[];
   wind_speed_10m_max?: (number | null)[];
   sunrise?: string[];
   sunset?: string[];

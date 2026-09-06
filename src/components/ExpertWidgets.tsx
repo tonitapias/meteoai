@@ -28,23 +28,31 @@ import {
   VisibilityWidget
 } from './widgets';
 
-interface WidgetCardProps { children: React.ReactNode; cols?: number; }
+interface WidgetCardProps { children: React.ReactNode; cols?: number; onClick?: () => void; }
 
-const WidgetCard = ({ children, cols = 1 }: WidgetCardProps) => (
-  <div className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg`}>
+const WidgetCard = ({ children, cols = 1, onClick }: WidgetCardProps) => (
+  <div
+    className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
+    onClick={onClick}
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
+    onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+  >
     {children}
   </div>
 );
 
 interface ExpertWidgetsProps {
-  weatherData: ExtendedWeatherData; 
-  aqiData: Record<string, unknown> | null; 
-  lang: Language; 
-  unit: WeatherUnit; 
+  weatherData: ExtendedWeatherData;
+  aqiData: Record<string, unknown> | null;
+  lang: Language;
+  unit: WeatherUnit;
   freezingLevel: number | null;
+  onShowSolarModal: () => void;
+  onShowMoonModal: () => void;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -318,17 +326,17 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
           </WidgetCard>
 
-          <WidgetCard>
-              <MoonWidget 
-                  phase={moonPhaseVal} 
-                  lat={safeLat ?? 41.728} 
-                  lon={safeLon ?? 1.824} 
+          <WidgetCard onClick={onShowMoonModal}>
+              <MoonWidget
+                  phase={moonPhaseVal}
+                  lat={safeLat ?? 41.728}
+                  lon={safeLon ?? 1.824}
                   timezone={typeof timezone === 'string' ? timezone : undefined}
-                  lang={lang} 
+                  lang={lang}
               />
           </WidgetCard>
 
-          <WidgetCard cols={2}>
+          <WidgetCard cols={2} onClick={onShowSolarModal}>
               <SunArcWidget sunrise={safeSunrise} sunset={safeSunset} lang={lang} utcOffset={targetOffsetSeconds} />
           </WidgetCard>
 

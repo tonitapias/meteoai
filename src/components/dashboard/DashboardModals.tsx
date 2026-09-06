@@ -9,6 +9,8 @@ import type { LocationMeta } from '../../types/weatherLogicTypes';
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
 const RadarModal = lazy(() => import('../RadarModal'));
 const RegionalModelModal = lazy(() => import('../RegionalModelModal'));
+const SolarModal = lazy(() => import('../SolarModal'));
+const MoonModal = lazy(() => import('../MoonModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -58,6 +60,20 @@ export const DashboardModals = () => {
                     lon={loc?.longitude || 0}
                     model={flags.activeRegionalModel}
                     onClose={() => actions.setShowRegionalModel(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showSolarModal && (
+                <SolarModal
+                    weatherData={weatherData}
+                    onClose={() => actions.setShowSolarModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showMoonModal && (
+                <MoonModal
+                    weatherData={weatherData}
+                    onClose={() => actions.setShowMoonModal(false)}
                     lang={flags.lang}
                 />
             )}

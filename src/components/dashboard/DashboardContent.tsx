@@ -78,12 +78,14 @@ export const DashboardContent = () => {
                     {/* 4. GINYS EXPERTS */}
                     {isExpert && (
                         <Suspense fallback={<SectionSkeleton />}>
-                            <ExpertWidgets 
-                                weatherData={weatherData} 
-                                aqiData={state.aqiData} 
-                                lang={flags.lang} 
-                                unit={flags.unit} 
+                            <ExpertWidgets
+                                weatherData={weatherData}
+                                aqiData={state.aqiData}
+                                lang={flags.lang}
+                                unit={flags.unit}
                                 freezingLevel={calculations.currentFreezingLevel ?? null}
+                                onShowSolarModal={() => actions.setShowSolarModal(true)}
+                                onShowMoonModal={() => actions.setShowMoonModal(true)}
                             />
                         </Suspense>
                     )}
