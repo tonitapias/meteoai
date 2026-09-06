@@ -1,5 +1,5 @@
 // src/components/widgets/ConsensusChartsModal.tsx
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 import { Language } from '../../translations';
 import { X, LineChart } from 'lucide-react';
 import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
@@ -103,6 +103,23 @@ const TacticalSvgChart = ({
   const primary = series[0];
   const secondary = series.slice(1);
 
+  // TOOLTIP INTERACTIU: amb 6 sèries, llegir el valor exacte d'una en concret
+  // directament del gràfic és difícil (línies fines superposades). En lloc de
+  // redissenyar les línies, es mostren tots els valors d'una hora concreta a
+  // demanda en passar-hi el ratolí (o tocant-hi al mòbil, sense arrossegar per
+  // no interferir amb el scroll horitzontal natiu del contenidor).
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const indexFromClientX = (clientX: number, target: SVGSVGElement): number | null => {
+    if (xStep <= 0) return null;
+    const rect = target.getBoundingClientRect();
+    if (rect.width === 0) return null;
+    const scaleX = chartW / rect.width;
+    const localX = (clientX - rect.left) * scaleX;
+    const idx = Math.round((localX - padX) / xStep);
+    return Math.max(0, Math.min(times.length - 1, idx));
+  };
+
   const merged = series.flatMap(s => s.data).filter((v): v is number => typeof v === 'number' && !isNaN(v));
   let min = merged.length > 0 ? Math.min(...merged) : 0;
   let max = merged.length > 0 ? Math.max(...merged) : 1;
@@ -194,7 +211,14 @@ const TacticalSvgChart = ({
         {/* Contenidor Scrollable */}
         <div className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar bg-[#020308] rounded-xl border border-white/5 relative z-10 shadow-inner">
            <div style={{ width: `${chartW}px`, height: `${chartH}px` }} className="relative shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="block absolute inset-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="block absolute inset-0 cursor-crosshair"
+                 onMouseMove={(e) => setHoverIndex(indexFromClientX(e.clientX, e.currentTarget))}
+                 onMouseLeave={() => setHoverIndex(null)}
+                 onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    if (touch) setHoverIndex(indexFromClientX(touch.clientX, e.currentTarget));
+                 }}
+              >
 
                  <defs>
                     <linearGradient id={gradPrimaryId} x1="0" y1="0" x2="0" y2="1">
@@ -305,6 +329,47 @@ const TacticalSvgChart = ({
                        })}
                     </g>
                  )}
+
+                 {/* CROSSHAIR + TOOLTIP: valors de les 6 sèries a l'hora sobre la qual
+                     es passa el ratolí (o es toca al mòbil), perquè no calgui desxifrar-los
+                     directament de línies fines superposades. */}
+                 {hoverIndex !== null && (() => {
+                    const hx = padX + hoverIndex * xStep;
+                    const rows = series.map(s => ({ s, val: s.data[hoverIndex] }));
+                    const tooltipW = 168;
+                    const tooltipH = 22 + rows.length * 16;
+                    const flip = hx + 14 + tooltipW > chartW - 4;
+                    const tipX = flip ? hx - 14 - tooltipW : hx + 14;
+                    const tipY = padY;
+
+                    return (
+                       <g pointerEvents="none">
+                          <line x1={hx} y1={padY} x2={hx} y2={padY + drawH} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1.5" strokeDasharray="3 3" />
+
+                          {series.map(s => {
+                             const val = s.data[hoverIndex];
+                             if (typeof val !== 'number' || isNaN(val)) return null;
+                             return <circle key={`hover-dot-${s.id}`} cx={hx} cy={getY(val)} r={s.id === primary?.id ? 5 : 3.5} fill={s.colorHex} stroke="#000000" strokeOpacity="0.5" strokeWidth="1" />;
+                          })}
+
+                          <rect x={tipX} y={tipY} width={tooltipW} height={tooltipH} rx="8" fill="#05070e" fillOpacity="0.94" stroke="#ffffff" strokeOpacity="0.15" />
+                          <text x={tipX + 10} y={tipY + 15} fill="#94a3b8" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                             {formatTimeStr(times[hoverIndex])}
+                          </text>
+                          {rows.map((r, i) => {
+                             const rowY = tipY + 15 + (i + 1) * 16;
+                             const displayVal = typeof r.val === 'number' && !isNaN(r.val) ? `${r.val.toFixed(1)} ${unit}` : '—';
+                             return (
+                                <g key={`tip-row-${r.s.id}`}>
+                                   <circle cx={tipX + 12} cy={rowY - 4} r="3.5" fill={r.s.colorHex} />
+                                   <text x={tipX + 22} y={rowY} fill="#e2e8f0" fontSize="10" fontWeight="bold" fontFamily="monospace">{r.s.label}</text>
+                                   <text x={tipX + tooltipW - 10} y={rowY} fill="#ffffff" fontSize="10" fontWeight="900" fontFamily="monospace" textAnchor="end">{displayVal}</text>
+                                </g>
+                             );
+                          })}
+                       </g>
+                    );
+                 })()}
               </svg>
            </div>
         </div>
