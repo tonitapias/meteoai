@@ -8,7 +8,7 @@ import type { LocationMeta } from '../../types/weatherLogicTypes';
 // Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
 const RadarModal = lazy(() => import('../RadarModal'));
-const AromeModal = lazy(() => import('../AromeModal'));
+const RegionalModelModal = lazy(() => import('../RegionalModelModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -52,12 +52,12 @@ export const DashboardModals = () => {
                     onClose={() => actions.setShowRadar(false)} 
                 />
             )}
-            {modals.showArome && flags.activeRegionalModel && (
-                <AromeModal
+            {modals.showRegionalModel && flags.activeRegionalModel && (
+                <RegionalModelModal
                     lat={loc?.latitude || 0}
                     lon={loc?.longitude || 0}
                     model={flags.activeRegionalModel}
-                    onClose={() => actions.setShowArome(false)}
+                    onClose={() => actions.setShowRegionalModel(false)}
                     lang={flags.lang}
                 />
             )}

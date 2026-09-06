@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { useArome } from '../hooks/useArome';
+import { useRegionalModel } from '../hooks/useRegionalModel';
 import { X, Wind, Droplets, Snowflake, Activity, Zap, AlertOctagon, ShieldCheck, Mountain, ArrowUp } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../translations';
@@ -9,7 +9,7 @@ import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import type { RegionalModel } from '../constants/regionalModels';
 
-interface AromeModalProps {
+interface RegionalModelModalProps {
   lat: number;
   lon: number;
   model: RegionalModel;
@@ -34,7 +34,7 @@ interface HourlyRow {
 }
 
 // DOCTRINA RISC ZERO: Diccionari tàctic intern segur
-const aromeTranslations: Record<string, Record<string, string>> = {
+const modalTranslations: Record<string, Record<string, string>> = {
   ca: {
     highRes: "Alta Resolució",
     elev: "ELEV",
@@ -105,27 +105,27 @@ const aromeTranslations: Record<string, Record<string, string>> = {
   }
 };
 
-const localeMap: Record<string, string> = { 
-  ca: 'ca-ES', 
-  es: 'es-ES', 
-  en: 'en-US', 
-  fr: 'fr-FR' 
+const localeMap: Record<string, string> = {
+  ca: 'ca-ES',
+  es: 'es-ES',
+  en: 'en-US',
+  fr: 'fr-FR'
 };
 
-export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: AromeModalProps) {
-  const { aromeData, loading, error, fetchArome, clearArome } = useArome();
+export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'ca' }: RegionalModelModalProps) {
+  const { regionalData, loading, error, fetchRegionalModel, clearRegionalModel } = useRegionalModel();
   const listRef = useRef<HTMLDivElement>(null);
 
   // [FIX PRECISIÓ] "Avui"/"Demà" i el tall d'hores passades han de calcular-se
   // amb l'hora local de la ubicació consultada, no la del dispositiu de qui mira
   // la pantalla (que pot ser a un altre fus horari).
-  const utcOffsetSeconds = typeof aromeData?.utc_offset_seconds === 'number' ? aromeData.utc_offset_seconds : 0;
+  const utcOffsetSeconds = typeof regionalData?.utc_offset_seconds === 'number' ? regionalData.utc_offset_seconds : 0;
 
   // Garantim un fallback segur si s'introdueix un idioma no mapejat (Risc Zero)
-  const safeLang = aromeTranslations[lang] ? lang : 'ca';
-  const t = aromeTranslations[safeLang];
+  const safeLang = modalTranslations[lang] ? lang : 'ca';
+  const t = modalTranslations[safeLang];
   const dateLocale = localeMap[safeLang] || 'ca-ES';
-  
+
   // DOCTRINA RISC ZERO: Blindem la referència del tancament per evitar el parany del useEffect
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -156,13 +156,13 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
   useEffect(() => {
     if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon)) {
-        fetchArome(lat, lon, model);
+        fetchRegionalModel(lat, lon, model);
     }
-    return () => clearArome();
-  }, [lat, lon, model, fetchArome, clearArome]);
+    return () => clearRegionalModel();
+  }, [lat, lon, model, fetchRegionalModel, clearRegionalModel]);
 
   const hourlyRows = useMemo<HourlyRow[]>(() => {
-    const h = aromeData?.hourly;
+    const h = regionalData?.hourly;
     if (!h || !Array.isArray(h.time) || h.time.length === 0) return [];
 
     const locationNow = new Date(new Date().getTime() + utcOffsetSeconds * 1000);
@@ -171,15 +171,15 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
     const rows: HourlyRow[] = [];
     const timeLength = h.time.length;
-    const elevation = (typeof aromeData?.elevation === 'number' && !isNaN(aromeData.elevation)) ? aromeData.elevation : 0;
+    const elevation = (typeof regionalData?.elevation === 'number' && !isNaN(regionalData.elevation)) ? regionalData.elevation : 0;
 
     // Agrupem la precipitació minutal (15 min) per hora ("YYYY-MM-DDTHH") una
     // sola vegada, en lloc de fingir una mostra horària única més avall.
     // Això dona a getRealTimeWeatherCode mostres sub-horàries de veritat per
     // detectar virga/intensitat real, en lloc d'un array d'1 element.
     const minutelyByHour = new Map<string, number[]>();
-    const minutelyTime = aromeData?.minutely_15?.time;
-    const minutelyPrecip = aromeData?.minutely_15?.precipitation;
+    const minutelyTime = regionalData?.minutely_15?.time;
+    const minutelyPrecip = regionalData?.minutely_15?.precipitation;
     if (Array.isArray(minutelyTime)) {
         minutelyTime.forEach((mTime, idx) => {
             if (typeof mTime !== 'string') return;
@@ -194,7 +194,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
     for (let i = 0; i < timeLength; i++) {
         const timeStr = h.time[i];
-        if (!timeStr || typeof timeStr !== 'string') continue; 
+        if (!timeStr || typeof timeStr !== 'string') continue;
 
         const dateStr = timeStr.slice(0, 10);
         const hour = parseInt(timeStr.slice(11, 13), 10);
@@ -207,7 +207,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
         const isDayValue = h.is_day?.[i];
         const isDay = isDayValue !== undefined && isDayValue !== null
-            ? isDayValue === 1 
+            ? isDayValue === 1
             : (hour >= 7 && hour <= 21);
 
         const precipActual = h.precipitation?.[i] ?? 0;
@@ -233,9 +233,9 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
         const simulatedCurrent = {
             source: model.label,
             time: timeStr,
-            weather_code: h.weather_code?.[i] ?? 0, 
+            weather_code: h.weather_code?.[i] ?? 0,
             temperature_2m: tempActual,
-            apparent_temperature: tempActual, 
+            apparent_temperature: tempActual,
             wind_speed_10m: wind,
             visibility: h.visibility?.[i] ?? 10000,
             relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
@@ -245,7 +245,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
             cloud_cover: effectiveCloudCover,
             precipitation: precipActual, // Injectat per sincronització de telemetria d'icones
             cape: cape,                  // Injectat per detecció de tempestes convectives
-            is_day: isDay ? 1 : 0 
+            is_day: isDay ? 1 : 0
         } as StrictCurrentWeather;
 
         // Mostres sub-horàries de veritat si n'hi ha (fins a 4, cada 15 min);
@@ -258,8 +258,8 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
         // Ara la crida està totalment homologada als 5 paràmetres de l'Orquestrador purificat
         const finalCode = getRealTimeWeatherCode(
             simulatedCurrent,
-            precipSamplesForCode, 
-            precipActual > 0 ? 100 : 0, 
+            precipSamplesForCode,
+            precipActual > 0 ? 100 : 0,
             freezingLevel,
             elevation
         );
@@ -279,13 +279,13 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
             windDir: windDir,
             cape: cape,
             freezingLevel: freezingLevel,
-            isDay: isDay, 
+            isDay: isDay,
             cloudCover: effectiveCloudCover
         });
     }
 
     return rows;
-  }, [aromeData, utcOffsetSeconds, model]);
+  }, [regionalData, utcOffsetSeconds, model]);
 
   // DOCTRINA RISC ZERO: Lògica immutabilitzada i segura contra arrays buits que provocarien Infinity o -Infinity
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);
@@ -315,7 +315,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-[#02040A]/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
-      
+
       <style>
         {`
           .custom-scrollbar-spatial::-webkit-scrollbar { width: 5px; }
@@ -328,7 +328,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
       {/* TÀCTICA DVH + LANDSCAPE + PROTECCIÓ MIN-H-0 per evitar overflow a iOS/Safari */}
       <div className="w-full h-[96dvh] sm:h-auto sm:max-h-[88dvh] landscape:h-[100dvh] landscape:max-h-[100dvh] landscape:sm:h-auto landscape:rounded-none landscape:sm:rounded-[32px] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-br from-[#0f111a]/90 to-black/80 rounded-t-[24px] sm:rounded-[32px] border-t landscape:border-t-0 sm:border border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
-        
+
         {/* Matriu de fons espacial */}
         <div className={MATRIX_BG}></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-48 bg-gradient-to-b from-fuchsia-900/15 via-cyan-900/5 to-transparent blur-[80px] pointer-events-none z-0"></div>
@@ -348,12 +348,12 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                             {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">
-                            {model.resolutionKm}KM GRID <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(aromeData?.elevation || 0)}m
+                            {model.resolutionKm}KM GRID <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
                         </span>
                     </div>
                 </div>
             </div>
-            
+
             <button onClick={handleTacticalClose} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md shadow-inner">
                 <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                 <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
@@ -384,11 +384,11 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                 </div>
             )}
 
-            {aromeData && !loading && (
+            {regionalData && !loading && (
                 <div className="animate-in fade-in duration-500 flex flex-col relative z-10">
-                    
+
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 p-3 md:p-6 landscape:p-2 landscape:px-4 landscape:sm:p-6 bg-black/60 border-b border-white/5 sticky top-0 z-30 backdrop-blur-xl shadow-md">
-                         
+
                          {/* PRECIPITACIÓ (Amb glow si hi ha pluja) */}
                          <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${totalRain > 0 ? 'bg-cyan-950/20 border-cyan-900/40 shadow-[inset_0_1px_4px_rgba(6,182,212,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
@@ -401,7 +401,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                                 {totalRain.toFixed(1)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>mm</span>
                             </div>
                          </div>
-                         
+
                          {/* RATXA MÀXIMA (Amb colors de perill si se superen llindars) */}
                          <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'bg-rose-950/20 border-rose-900/40 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'bg-amber-950/20 border-amber-900/40 shadow-[inset_0_1px_4px_rgba(251,191,36,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
@@ -427,7 +427,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                                 {Math.round(minIso)}<span className="text-[9px] md:text-xs font-bold ml-1 text-slate-500">m</span>
                             </div>
                          </div>
-                         
+
                          {/* INESTABILITAT (CAPE amb colors de perill) */}
                          <div className={`flex flex-col p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border backdrop-blur-sm relative overflow-hidden group transition-colors duration-500 ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'bg-rose-950/20 border-rose-900/40 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'bg-amber-950/20 border-amber-900/40 shadow-[inset_0_1px_4px_rgba(251,191,36,0.1)]' : 'bg-white/[0.02] border-white/5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]'}`}>
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
@@ -451,10 +451,10 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                         ) : (
                             hourlyRows.map((row, index) => {
                                 const isNewDay = index === 0 || (index > 0 && hourlyRows[index-1].date !== row.date);
-                                const isRaining = row.precip >= 0.05; 
+                                const isRaining = row.precip >= 0.05;
                                 const isSnow = (row.code >= 71 && row.code <= 77) || row.code === 85 || row.code === 86;
                                 const stormRisk = row.cape > WEATHER_THRESHOLDS.CAPE.MIN_STORM;
-                                
+
                                 const maxWindScale = 120;
                                 const windWidth = Math.min(100, (row.wind / maxWindScale) * 100);
                                 const gustWidth = Math.min(100 - windWidth, Math.max(0, ((row.gust - row.wind) / maxWindScale) * 100));
@@ -474,14 +474,14 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
                                                     if (row.date === today) return t.today;
                                                     if (row.date === tomorrowStr) return t.tomorrow;
-                                                    
+
                                                     return new Intl.DateTimeFormat(dateLocale, { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(row.date + 'T12:00:00'));
                                                 })()}
                                             </div>
                                         )}
-                                        
+
                                         <div className={`flex items-center justify-between p-3.5 sm:p-4 px-4 sm:px-6 border-b border-white/[0.02] transition-colors ${getRowDangerBg(row.gust, row.cape)} ${isRaining ? 'bg-cyan-900/[0.05]' : ''} hover:bg-white/[0.04] group`}>
-                                            
+
                                             <div className="flex items-center gap-3 sm:gap-4 w-[25%] md:w-1/4">
                                                 <div className="flex flex-col">
                                                     <div className="text-sm sm:text-base md:text-lg font-bold text-slate-300 tabular-nums tracking-tighter">
@@ -505,13 +505,13 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                                                         <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tabular-nums tracking-tighter drop-shadow-sm w-12 sm:w-14 text-right sm:text-center">
                                                             {Math.round(row.temp)}<span className="text-xs md:text-sm text-slate-500 font-bold ml-[1px]">°</span>
                                                         </div>
-                                                        
+
                                                         <div className="flex md:hidden items-center gap-1 mt-[-2px]">
                                                             <span className="text-[7px] text-slate-500 font-mono uppercase tracking-widest">{t.isoShort}</span>
                                                             <span className="text-[9px] font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div className="hidden md:flex flex-col items-center justify-center w-14">
                                                         <span className="text-[8px] text-slate-500 font-mono font-bold mb-0.5 uppercase">{t.iso0}</span>
                                                         <span className="text-xs font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
@@ -533,9 +533,9 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
 
                                             <div className="w-[30%] sm:w-1/4 flex flex-col items-end justify-center">
                                                 <div className="flex items-center justify-end gap-1.5 md:gap-2 text-sm md:text-base font-bold text-slate-200 tabular-nums">
-                                                    <ArrowUp 
-                                                        className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan-500/60 transition-transform duration-500" 
-                                                        style={{ transform: `rotate(${row.windDir + 180}deg)` }} 
+                                                    <ArrowUp
+                                                        className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan-500/60 transition-transform duration-500"
+                                                        style={{ transform: `rotate(${row.windDir + 180}deg)` }}
                                                     />
                                                     <span className={getGustColor(row.wind)}>{Math.round(row.wind)}</span>
                                                     {row.gust > row.wind + 5 && (
@@ -544,7 +544,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                                                         </span>
                                                     )}
                                                 </div>
-                                                
+
                                                 <div className="w-14 sm:w-24 h-1.5 bg-black/60 rounded-full mt-1.5 flex overflow-hidden border border-white/5 shadow-[inset_0_1px_4px_rgba(0,0,0,0.8)]">
                                                     <div className="h-full bg-slate-500/80 rounded-l-full transition-all duration-500" style={{ width: `${windWidth}%` }}></div>
                                                     {row.gust > row.wind && (
@@ -552,7 +552,7 @@ export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: Ar
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                         </div>
                                     </div>
                                 );

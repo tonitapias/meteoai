@@ -20,7 +20,7 @@ export function useViewState() {
     // --- 2. Estat de Modals ---
     const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
     const [showRadar, setShowRadar] = useState(false);
-    const [showArome, setShowArome] = useState(false);
+    const [showRegionalModel, setShowRegionalModel] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
     useEffect(() => { 
@@ -37,7 +37,7 @@ export function useViewState() {
     // showRadar incondicionalment davant de qualsevol "enrere", encara que
     // RadarModal només volgués baixar un nivell intern (el menú de capes).
     useModalHistory(selectedDayIndex !== null, useCallback(() => setSelectedDayIndex(null), []));
-    useModalHistory(showArome, useCallback(() => setShowArome(false), []));
+    useModalHistory(showRegionalModel, useCallback(() => setShowRegionalModel(false), []));
 
     // --- 5. Helpers d'Acció UI ---
     const toggleDebug = useCallback(() => {
@@ -58,7 +58,7 @@ export function useViewState() {
             modals: {
                 selectedDayIndex,
                 showRadar,
-                showArome
+                showRegionalModel
             }
         },
         actions: {
@@ -70,7 +70,7 @@ export function useViewState() {
             // Setters de modals
             setSelectedDayIndex,
             setShowRadar,
-            setShowArome
+            setShowRegionalModel
         }
     };
 }

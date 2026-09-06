@@ -187,13 +187,6 @@ export const es = {
     start: "INICIAR SISTEMA",
     manual: "O Búsqueda Manual"
   },
-  arome: {
-    subtitle: "Previsión de alta resolución (Precisión Física)",
-    loading: "Calculando física atmosférica...",
-    end: "Fin de la previsión de alta resolución.",
-    error: "Error de datos",
-    close: "Cerrar"
-  },
   dayDetail: {
     uv: "Índice UV",
     precip: "PRECIPITACIÓN",
@@ -377,15 +370,6 @@ export const es = {
     precip: "Precipitación"
   },
 
-  arome_details: {
-    title: "Modo Alta Resolución",
-    resolution: "Resolución espacial: 1.3km (HD)",
-    update: "Última actualización modelo:",
-    source: "Fuente: Météo-France (AROME)",
-    zoom_hint: "Haz zoom para ver detalle local máximo",
-    legend: "Intensidad de precipitación (mm/h)"
-  },
-  
   units: {
     km: "km",
     hPa: "hPa",

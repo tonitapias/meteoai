@@ -188,13 +188,6 @@ export const fr = {
     start: "LANCER SYSTÈME",
     manual: "Ou Recherche Manuelle"
   },
-  arome: {
-    subtitle: "Prévisions haute résolution (Précision Physique)",
-    loading: "Calcul de la physique atmosphérique...",
-    end: "Fin des prévisions haute résolution.",
-    error: "Erreur de données",
-    close: "Fermer"
-  },
   dayDetail: {
     uv: "Indice UV",
     precip: "PRÉCIPITATION",
@@ -378,15 +371,6 @@ export const fr = {
     precip: "Précipitations"
   },
 
-  arome_details: {
-    title: "Mode Haute Résolution",
-    resolution: "Résolution spatiale : 1.3km (HD)",
-    update: "Dernière mise à jour modèle :",
-    source: "Source : Météo-France (AROME)",
-    zoom_hint: "Zoomez pour voir le détail local max",
-    legend: "Intensité des précipitations (mm/h)"
-  },
-  
   units: {
     km: "km",
     hPa: "hPa",

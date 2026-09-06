@@ -258,11 +258,11 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
          {forceFallback ? (
             <ConsensusInactiveWidget lang={lang} reason={activeRegionalModel ? 'redundant' : 'no-coverage'} />
          ) : (
-            <ConsensusWidget 
-               metrics={consensusMetrics} 
-               aromeTemp={currentTemp} 
-               aromePrecip={currentPrecip}
-               aromeWind={currentWindSpeed} 
+            <ConsensusWidget
+               metrics={consensusMetrics}
+               localTemp={currentTemp}
+               localPrecip={currentPrecip}
+               localWind={currentWindSpeed}
                lang={lang}
                utcOffset={targetOffsetSeconds}
                regionalModelLabel={activeRegionalModel?.label ?? 'LOC'}

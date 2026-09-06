@@ -48,8 +48,8 @@ export const DashboardContent = () => {
                 shiftedNow={calculations.shiftedNow}
                 isFavorite={flags.isFavorite(loc?.name || "")} 
                 onToggleFavorite={actions.handleToggleFavorite}
-                onShowRadar={() => actions.setShowRadar(true)} 
-                onShowArome={() => actions.setShowArome(true)}
+                onShowRadar={() => actions.setShowRadar(true)}
+                onShowRegionalModel={() => actions.setShowRegionalModel(true)}
                 aqiData={state.aqiData}
                 activeRegionalModel={flags.activeRegionalModel}
             />

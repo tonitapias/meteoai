@@ -97,9 +97,9 @@ describe('CurrentWeather Component', () => {
         lang="ca" 
         isFavorite={false} 
         onToggleFavorite={() => {}} 
-        onShowRadar={() => {}} 
-        onShowArome={() => {}} 
-        aqiData={null} 
+        onShowRadar={() => {}}
+        onShowRegionalModel={() => {}}
+        aqiData={null}
       />
     );
 
@@ -131,8 +131,8 @@ describe('CurrentWeather Component', () => {
         lang="ca" 
         isFavorite={false} 
         onToggleFavorite={() => {}} 
-        onShowRadar={() => {}} 
-        onShowArome={() => {}} 
+        onShowRadar={() => {}}
+        onShowRegionalModel={() => {}}
         aqiData={null}
         activeRegionalModel={AROME_MODEL}
       />
@@ -159,9 +159,9 @@ describe('CurrentWeather Component', () => {
         lang="ca" 
         isFavorite={false} 
         onToggleFavorite={() => {}} 
-        onShowRadar={() => {}} 
-        onShowArome={() => {}} 
-        aqiData={null} 
+        onShowRadar={() => {}}
+        onShowRegionalModel={() => {}}
+        aqiData={null}
       />
     );
 

@@ -29,6 +29,6 @@ export const NOTIFICATION_TYPES = {
 // Etiquetes per a Sentry (Monitorització)
 export const SENTRY_TAGS = {
     SERVICE_WEATHER_API: 'WeatherAPI',
-    SERVICE_AROME_WORKER: 'AromeWorker',
+    SERVICE_REGIONAL_MODEL_WORKER: 'RegionalModelWorker',
     TYPE_FALLBACK: 'FallbackToBase'
 } as const;

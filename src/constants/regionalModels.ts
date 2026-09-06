@@ -183,8 +183,8 @@ const REGIONAL_MODEL_LABELS = new Set(REGIONAL_MODELS.map(m => m.label));
 
 /**
  * `current.source` només es marca amb l'etiqueta d'un model regional quan
- * `injectHighResModelsV2` ha sobreescrit de debò com a mínim un camp real
- * (vegeu aromeEngineV2.ts) — mai per a dades del blend global. Per tant,
+ * `injectHighResModels` ha sobreescrit de debò com a mínim un camp real
+ * (vegeu regionalModelEngine.ts) — mai per a dades del blend global. Per tant,
  * comprovar pertinença a aquest conjunt equival a "hi ha un model regional
  * actiu", sense dependre d'una etiqueta fixa com abans ('AROME HD').
  */
@@ -194,7 +194,7 @@ export const isRegionalModelActive = (source: string | null | undefined): boolea
 /**
  * Regex compartida per netejar els sufixos de model que Open-Meteo afegeix
  * a les claus quan es demanen múltiples `models=` (p.ex. `temperature_2m_icon_d2`).
- * Es genera a partir del registre perquè aromeEngineV2.ts i useRegionalModel.ts
+ * Es genera a partir del registre perquè regionalModelEngine.ts i useRegionalModel.ts
  * no mantinguin cadascun la seva pròpia llista hardcodejada.
  */
 export const buildModelSuffixRegex = (): RegExp => {

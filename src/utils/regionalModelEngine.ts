@@ -1,11 +1,11 @@
-// src/utils/aromeEngineV2.ts
+// src/utils/regionalModelEngine.ts
 import { z } from 'zod';
 import type { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { HourlyDataSchema, CurrentDataSchema } from '../schemas/weatherSchema';
 import { buildModelSuffixRegex, type RegionalModel } from '../constants/regionalModels';
 
 // --- 1. SCHEMAS & TIPUS INTERNS (Idèntic a l'original per seguretat) ---
-const AromeCleanedSchema = z.object({
+const RegionalModelCleanedSchema = z.object({
     current: CurrentDataSchema.optional(),
     hourly: HourlyDataSchema.optional(),
     minutely_15: z.object({
@@ -14,7 +14,7 @@ const AromeCleanedSchema = z.object({
     }).passthrough().optional()
 });
 
-type CleanedSource = z.infer<typeof AromeCleanedSchema>;
+type CleanedSource = z.infer<typeof RegionalModelCleanedSchema>;
 
 // --- 2. HELPERS UTILS (Funcions pures) ---
 
@@ -119,10 +119,10 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
             });
 
             // Reforç de probabilitat de pluja
-            const precipArr = source.hourly?.precipitation as number[] | undefined; 
-            const aromePrecip = precipArr?.[sourceIndex];
-            
-            if (aromePrecip != null && aromePrecip >= 0.1) {
+            const precipArr = source.hourly?.precipitation as number[] | undefined;
+            const regionalPrecip = precipArr?.[sourceIndex];
+
+            if (regionalPrecip != null && regionalPrecip >= 0.1) {
                 if (!tH.precipitation_probability) tH.precipitation_probability = new Array(masterTimeLength).fill(0);
                 const currentProb = tH.precipitation_probability[globalIndex] || 0;
                 if (currentProb < 50) {
@@ -135,7 +135,7 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
 
 // --- 4. FUNCIÓ PRINCIPAL (Clean Code) ---
 
-export const injectHighResModelsV2 = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null, model: RegionalModel): ExtendedWeatherData => {
+export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null, model: RegionalModel): ExtendedWeatherData => {
     if (!baseData) return baseData;
     if (!highResData) return baseData;
 
@@ -160,10 +160,10 @@ export const injectHighResModelsV2 = (baseData: ExtendedWeatherData, highResData
         minutely_15: highResData.minutely_15 ? cleanKeys(highResData.minutely_15 as Record<string, unknown>) : undefined
     };
 
-    const validation = AromeCleanedSchema.safeParse(rawCleaned);
-    
+    const validation = RegionalModelCleanedSchema.safeParse(rawCleaned);
+
     if (!validation.success) {
-        console.warn(`⚠️ AROME Engine V2: Invalid structure.`);
+        console.warn(`⚠️ Regional Model Engine: Invalid structure.`);
         return baseData;
     }
 

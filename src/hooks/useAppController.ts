@@ -72,7 +72,7 @@ export function useAppController() {
           dismissNotification: ui.actions.dismissNotification,
           setSelectedDayIndex: ui.actions.setSelectedDayIndex,
           setShowRadar: ui.actions.setShowRadar,
-          setShowArome: ui.actions.setShowArome
+          setShowRegionalModel: ui.actions.setShowRegionalModel
       },
       flags: {
           // Fusionem flags

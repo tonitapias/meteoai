@@ -3,7 +3,7 @@ import { useState, useRef } from 'react'; // <-- FIX: Eliminat useEffect
 import * as Sentry from "@sentry/react"; 
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; // [FIX] Import correcte
 import type { AirQualityData } from '../types/weather';
-import { useAromeWorker } from './useAromeWorker'; 
+import { useRegionalModelWorker } from './useRegionalModelWorker';
 import { WeatherUnit } from '../utils/formatters';
 import { Language, TRANSLATIONS } from '../translations';
 import { WeatherRepository } from '../repositories/WeatherRepository';
@@ -24,7 +24,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   const [error, setError] = useState<string | null>(null);
 
   // Mantenim el hook del worker aquí per respectar el cicle de vida de React
-  const { runAromeWorker } = useAromeWorker();
+  const { runRegionalModelWorker } = useRegionalModelWorker();
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
@@ -65,7 +65,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           lang,
           locationName,
           country,
-          runAromeWorker
+          runRegionalModelWorker
       );
 
       // Una petició més nova ja ha començat: descartem aquest resultat obsolet

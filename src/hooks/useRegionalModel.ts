@@ -1,4 +1,4 @@
-// src/hooks/useArome.ts
+// src/hooks/useRegionalModel.ts
 import { useState, useCallback } from 'react';
 import { z } from 'zod';
 import { getRegionalHDData } from '../services/weatherApi';
@@ -17,9 +17,9 @@ const MODEL_SUFFIX_REGEX = buildModelSuffixRegex();
 // arrays de mides incoherents. Per això mantenim un esquema propi.
 
 // Validem les matrius amb suport total per valors nuls i buits (Doctrina Risc Zero)
-const aromeHourlySchema = z.object({
+const regionalModelHourlySchema = z.object({
   // Acceptem tant timestamps (números) com strings ISO, i ho unifiquem tot a ISO.
-  time: z.array(z.union([z.number(), z.string()])).transform((times) => 
+  time: z.array(z.union([z.number(), z.string()])).transform((times) =>
     times.map((t) => typeof t === 'number' ? new Date(t * 1000).toISOString() : t)
   ),
   temperature_2m: z.array(z.number().nullable()).optional(),
@@ -39,17 +39,17 @@ const aromeHourlySchema = z.object({
   is_day: z.array(z.number().nullable()).optional(),
 }).passthrough();
 
-const aromeMinutely15Schema = z.object({
-  time: z.array(z.union([z.number(), z.string()])).transform((times) => 
+const minutely15Schema = z.object({
+  time: z.array(z.union([z.number(), z.string()])).transform((times) =>
     times.map((t) => typeof t === 'number' ? new Date(t * 1000).toISOString() : t)
   ),
   precipitation: z.array(z.number().nullable()).optional(),
 }).passthrough().optional();
 
 // L'esquema principal netejat
-const aromeDataSchema = z.object({
-  hourly: aromeHourlySchema,
-  minutely_15: aromeMinutely15Schema,
+const regionalModelDataSchema = z.object({
+  hourly: regionalModelHourlySchema,
+  minutely_15: minutely15Schema,
   hourly_units: z.record(z.string()).optional(),
   elevation: z.number().optional().default(0),
   // [FIX PRECISIÓ] Calia per saber quines hores són "avui"/"demà" a la ubicació
@@ -58,17 +58,17 @@ const aromeDataSchema = z.object({
 }).passthrough();
 
 // Inferència de tipatge estrictament segur
-export type AromeData = z.infer<typeof aromeDataSchema>;
+export type RegionalModelData = z.infer<typeof regionalModelDataSchema>;
 
 // ==========================================
 // HOOK INDEPENDENT FAIL-SAFE
 // ==========================================
-export function useArome() {
-  const [aromeData, setAromeData] = useState<AromeData | null>(null);
+export function useRegionalModel() {
+  const [regionalData, setRegionalData] = useState<RegionalModelData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchArome = useCallback(async (lat: number, lon: number, model: RegionalModel) => {
+  const fetchRegionalModel = useCallback(async (lat: number, lon: number, model: RegionalModel) => {
     setLoading(true);
     setError(null);
 
@@ -98,32 +98,32 @@ export function useArome() {
       };
 
       // VALIDACIÓ SEGURA: Passem l'objecte pel sedàs de Zod
-      const parsed = aromeDataSchema.safeParse(preProcessedData);
+      const parsed = regionalModelDataSchema.safeParse(preProcessedData);
 
       if (parsed.success) {
-        setAromeData(parsed.data);
+        setRegionalData(parsed.data);
       } else {
         // Mode Paracaigudes: Si el model regional ve corrupte, forcem null perquè la
         // resta de l'app faci servir el model base/global (best_match) com a reserva
         console.warn(`${model.label} validation failed (Out of Bounds or Bad Data):`, parsed.error);
         setError(`Fallada de telemetria ${model.label}: Dades fora de paràmetres.`);
-        setAromeData(null);
+        setRegionalData(null);
       }
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`Error fetching ${model.label}:`, msg);
       setError(msg || `Error connectant amb el clúster ${model.label}`);
-      setAromeData(null);
+      setRegionalData(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const clearArome = useCallback(() => {
-    setAromeData(null);
+  const clearRegionalModel = useCallback(() => {
+    setRegionalData(null);
     setError(null);
   }, []);
 
-  return { aromeData, loading, error, fetchArome, clearArome };
+  return { regionalData, loading, error, fetchRegionalModel, clearRegionalModel };
 }

@@ -144,21 +144,22 @@ export interface ConsensusMetrics {
 const MAX_GLOBAL_TIME_DRIFT_MS = 90 * 60 * 1000;
 
 export function calculateModelConsensus(
-  aromeTemp: number | undefined,
-  aromePrecip: number | undefined,
-  aromeWind: number | undefined,
+  localTemp: number | undefined,
+  localPrecip: number | undefined,
+  localWind: number | undefined,
   globalData: GlobalModelData | null,
-  // [FIX PRECISIÓ] Sèrie horària AROME per al "Radar a 3 Hores" (futureDivergence,
-  // pas 6 més avall). Abans aquell avís només mirava la sèrie global contra ella
-  // mateixa — exactament el model de baixa resolució, ignorant AROME, el model
-  // pensat per detectar convecció local ràpida que el global sol allisar.
-  aromeHourlyTimes: string[] = [],
-  aromeHourlyPrecip: (number | null)[] = [],
-  aromeHourlyWind: (number | null)[] = [],
+  // [FIX PRECISIÓ] Sèrie horària del model local (AROME/ICON-D2/HRRR/...) per al
+  // "Radar a 3 Hores" (futureDivergence, pas 6 més avall). Abans aquell avís
+  // només mirava la sèrie global contra ella mateixa — exactament el model de
+  // baixa resolució, ignorant el model local pensat per detectar convecció
+  // local ràpida que el global sol allisar.
+  localHourlyTimes: string[] = [],
+  localHourlyPrecip: (number | null)[] = [],
+  localHourlyWind: (number | null)[] = [],
   utcOffset: number = 0
 ): ConsensusMetrics {
 
-  if (!globalData || typeof aromeTemp !== 'number') {
+  if (!globalData || typeof localTemp !== 'number') {
     return {
       isConsensusActive: false,
       tempDiff: null, precipDiff: null, windDiff: null, 
@@ -212,21 +213,21 @@ export function calculateModelConsensus(
     // en lloc de simular "0 km/h"/coincidència, que falsejaria l'acord entre models i inflaria el score.
     const rawGlobalWind = safeHourly.wind_speed_10m?.[currentHourIndex];
     const globalWindValid = typeof rawGlobalWind === 'number' && !Number.isNaN(rawGlobalWind);
-    const aromeWindValid = typeof aromeWind === 'number' && !Number.isNaN(aromeWind);
-    const hasValidWind = globalWindValid && aromeWindValid;
+    const localWindValid = typeof localWind === 'number' && !Number.isNaN(localWind);
+    const hasValidWind = globalWindValid && localWindValid;
 
     const globalWind: number | null = globalWindValid ? (rawGlobalWind as number) : null;
-    const safeAromeWind: number | null = aromeWindValid ? (aromeWind as number) : null;
+    const safeLocalWind: number | null = localWindValid ? (localWind as number) : null;
 
-    const aromePrecipValid = typeof aromePrecip === 'number' && !Number.isNaN(aromePrecip);
+    const localPrecipValid = typeof localPrecip === 'number' && !Number.isNaN(localPrecip);
 
     // 3. CÀLCUL DE DESVIACIONS
-    const tempDiff = Number(Math.abs(aromeTemp - globalTemp).toFixed(1));
-    const precipDiff = aromePrecipValid 
-        ? Number(Math.abs((aromePrecip as number) - globalPrecip).toFixed(1)) 
+    const tempDiff = Number(Math.abs(localTemp - globalTemp).toFixed(1));
+    const precipDiff = localPrecipValid
+        ? Number(Math.abs((localPrecip as number) - globalPrecip).toFixed(1))
         : null;
-    const windDiff = hasValidWind 
-        ? Number(Math.abs((safeAromeWind as number) - (globalWind as number)).toFixed(1)) 
+    const windDiff = hasValidWind
+        ? Number(Math.abs((safeLocalWind as number) - (globalWind as number)).toFixed(1))
         : null;
 
     // 4. MOTOR DE PUNTUACIÓ (CONTÍNUU I SENSE ZONES MORTES)
@@ -245,7 +246,7 @@ export function calculateModelConsensus(
         scorePenalty += (precipDiff - 1.0) * 10;
     }
     if (windDiff !== null) {
-        const maxWind = Math.max(safeAromeWind as number, globalWind as number);
+        const maxWind = Math.max(safeLocalWind as number, globalWind as number);
         if (maxWind > 15 && windDiff > 5) {
             scorePenalty += (windDiff - 5) * 1.5;
         }
@@ -295,26 +296,26 @@ export function calculateModelConsensus(
       }
     }
 
-    // 6b. RADAR A 3 HORES — AROME (alta resolució, 1.3km)
-    // Mateixos llindars que el radar global (pas 6), però sobre la sèrie AROME:
+    // 6b. RADAR A 3 HORES — Model Local (alta resolució, p.ex. 1.3km AROME)
+    // Mateixos llindars que el radar global (pas 6), però sobre la sèrie local:
     // és el model amb prou detall per detectar un xàfec o ràfega convectiva
     // local que el model global sol suavitzar fins a fer-lo invisible.
-    if (!futureDivergence && aromeHourlyTimes.length > 0) {
-      let aromeNowIndex = -1;
-      let aromeMinDiff = Infinity;
-      for (let i = 0; i < aromeHourlyTimes.length; i++) {
-        const ep = resolveHourlyEpoch(aromeHourlyTimes[i], utcOffset);
+    if (!futureDivergence && localHourlyTimes.length > 0) {
+      let localNowIndex = -1;
+      let localMinDiff = Infinity;
+      for (let i = 0; i < localHourlyTimes.length; i++) {
+        const ep = resolveHourlyEpoch(localHourlyTimes[i], utcOffset);
         if (!isNaN(ep)) {
           const diff = Math.abs(ep - nowTimestamp);
-          if (diff < aromeMinDiff) { aromeMinDiff = diff; aromeNowIndex = i; }
+          if (diff < localMinDiff) { localMinDiff = diff; localNowIndex = i; }
         }
       }
 
-      if (aromeNowIndex !== -1 && aromeMinDiff <= MAX_GLOBAL_TIME_DRIFT_MS) {
+      if (localNowIndex !== -1 && localMinDiff <= MAX_GLOBAL_TIME_DRIFT_MS) {
         for (let i = 1; i <= 3; i++) {
-          const futureIndex = aromeNowIndex + i;
-          const futurePrecip = aromeHourlyPrecip[futureIndex];
-          const futureWind = aromeHourlyWind[futureIndex];
+          const futureIndex = localNowIndex + i;
+          const futurePrecip = localHourlyPrecip[futureIndex];
+          const futureWind = localHourlyWind[futureIndex];
 
           const isHeavyRain = typeof futurePrecip === 'number' && futurePrecip > 2;
           const isStrongWind = typeof futureWind === 'number' && futureWind > 40;

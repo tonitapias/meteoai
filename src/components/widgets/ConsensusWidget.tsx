@@ -24,9 +24,9 @@ export type ModalType = 'temp' | 'rain' | 'wind' | 'charts';
 
 interface ConsensusWidgetProps {
   metrics: ConsensusMetrics;
-  aromeTemp: number | undefined;
-  aromePrecip: number | undefined;
-  aromeWind: number | undefined;
+  localTemp: number | undefined;
+  localPrecip: number | undefined;
+  localWind: number | undefined;
   lang: Language | string;
   utcOffset?: number;
   regionalModelLabel?: string;
@@ -78,7 +78,7 @@ const translations = {
 };
 
 export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
-  metrics, aromeTemp, aromePrecip, aromeWind, lang,
+  metrics, localTemp, localPrecip, localWind, lang,
   utcOffset = 0, regionalModelLabel = 'LOC',
   hourlyTimes = [], hourlyGlobalTimes = [], hourlyLocal = {}, hourlyGlobal = {},
   hourlyEcmwf = {}, hourlyGfs = {}, hourlyIcon = {}
@@ -92,9 +92,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   // DOCTRINA RISC ZERO: Validació estricta de números
   const isValidNum = (val: unknown): val is number => typeof val === 'number' && !Number.isNaN(val);
   
-  const safeAromeTemp = isValidNum(aromeTemp) ? aromeTemp : undefined;
+  const safeLocalTemp = isValidNum(localTemp) ? localTemp : undefined;
   const safeGlobalTemp = isValidNum(metrics.globalTemp) ? metrics.globalTemp : null;
-  const isSnowRisk = (safeAromeTemp !== undefined && safeAromeTemp <= 2) || (safeGlobalTemp !== null && safeGlobalTemp <= 2);
+  const isSnowRisk = (safeLocalTemp !== undefined && safeLocalTemp <= 2) || (safeGlobalTemp !== null && safeGlobalTemp <= 2);
 
   const safeScore = Math.max(0, Math.min(100, isValidNum(metrics.score) ? metrics.score : 0));
 
@@ -221,12 +221,12 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.temp}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{formatVal(aromeTemp)}<span className="text-xs sm:text-sm text-slate-400 font-bold ml-0.5">°</span></div>
+                        <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{formatVal(localTemp)}<span className="text-xs sm:text-sm text-slate-400 font-bold ml-0.5">°</span></div>
                         <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(aromeTemp, metrics.globalTemp, 'temp')}</div>
+                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(localTemp, metrics.globalTemp, 'temp')}</div>
                     </div>
                  </div>
 
@@ -237,12 +237,12 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{isSnowRisk ? t.snow : t.rain}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(aromePrecip)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localPrecip)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
                         <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-[9px] font-normal text-slate-400 ml-[1px]">mm</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(aromePrecip, metrics.globalPrecip, 'rain')}</div>
+                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(localPrecip, metrics.globalPrecip, 'rain')}</div>
                     </div>
                  </div>
 
@@ -252,12 +252,12 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.wind}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(aromeWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">kmh</span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">kmh</span></div>
                         <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[9px] font-normal text-slate-400 ml-[1px]">km</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(aromeWind, metrics.globalWind, 'wind')}</div>
+                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(localWind, metrics.globalWind, 'wind')}</div>
                     </div>
                  </div>
               </div>

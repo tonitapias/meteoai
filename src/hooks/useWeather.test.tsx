@@ -17,10 +17,10 @@ vi.mock('../services/cacheService', () => ({
     }
 }));
 
-// 2. AromeWorker (S'injecta des del hook)
-vi.mock('./useAromeWorker', () => ({
-    useAromeWorker: () => ({
-        runAromeWorker: vi.fn((data) => Promise.resolve(data)) 
+// 2. RegionalModelWorker (S'injecta des del hook)
+vi.mock('./useRegionalModelWorker', () => ({
+    useRegionalModelWorker: () => ({
+        runRegionalModelWorker: vi.fn((data) => Promise.resolve(data))
     })
 }));
 

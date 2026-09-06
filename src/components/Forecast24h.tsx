@@ -19,8 +19,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
     const safeLatitude = getSafeLatitude(data.location);
 
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
-    const isArome = isRegionalModelActive(current?.source);
-    const sourceLabel = isArome ? (current?.source as string) : 'MODEL GLOBAL';
+    const isRegionalModel = isRegionalModelActive(current?.source);
+    const sourceLabel = isRegionalModel ? (current?.source as string) : 'MODEL GLOBAL';
 
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time) || hourly.time.length === 0) return [];
@@ -192,11 +192,11 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             <div className={`
                 absolute -top-3.5 right-4 md:right-6 z-30 flex items-center gap-1.5 px-3 py-1 rounded-md backdrop-blur-md 
                 shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] transition-colors duration-500
-                ${isArome 
-                    ? 'bg-emerald-950/90 border border-emerald-500/30' 
+                ${isRegionalModel
+                    ? 'bg-emerald-950/90 border border-emerald-500/30'
                     : 'bg-indigo-950/90 border border-indigo-500/30'}
             `}>
-                {isArome ? (
+                {isRegionalModel ? (
                     <>
                         <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20 animate-pulse drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
                         <span className="text-[10px] font-mono font-black text-emerald-400 tracking-widest drop-shadow-md">{sourceLabel}</span>

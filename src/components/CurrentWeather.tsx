@@ -22,7 +22,7 @@ interface CurrentWeatherProps {
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onShowRadar: () => void;
-  onShowArome: () => void;
+  onShowRegionalModel: () => void;
   aqiData: AirQualityData | null;
   activeRegionalModel?: RegionalModel | null;
   shiftedNow?: Date;
@@ -159,7 +159,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
           <div className="mt-2 md:mt-0">
             <WeatherActionButtons
               onShowRadar={props.onShowRadar}
-              onShowArome={props.onShowArome}
+              onShowRegionalModel={props.onShowRegionalModel}
               regionalModelLabel={props.activeRegionalModel?.label ?? null}
               isFavorite={props.isFavorite}
               onToggleFavorite={props.onToggleFavorite}

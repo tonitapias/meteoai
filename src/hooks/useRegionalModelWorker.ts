@@ -1,53 +1,52 @@
-// src/hooks/useAromeWorker.ts
+// src/hooks/useRegionalModelWorker.ts
 import { useCallback } from 'react';
 import * as Sentry from "@sentry/react";
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
-import type { WeatherData } from '../types/weather'; // 1. NOU IMPORT
+import type { WeatherData } from '../types/weather';
 import type { RegionalModel } from '../constants/regionalModels';
 
-const AROME_TIMEOUT_MS = 4000; // 4 segons màxim per al càlcul físic
+const REGIONAL_MODEL_TIMEOUT_MS = 4000; // 4 segons màxim per al càlcul físic
 
-export function useAromeWorker() {
-  // 2. CORRECCIÓ: 'highRes' ara accepta 'WeatherData' brut de l'API
-  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: WeatherData, model: RegionalModel) => {
+export function useRegionalModelWorker() {
+  const runRegionalModelWorker = useCallback((base: ExtendedWeatherData, highRes: WeatherData, model: RegionalModel) => {
       return new Promise<ExtendedWeatherData>((resolve, reject) => {
           const startTime = performance.now();
-          
+
           // 1. Monitoratge: Inici del Worker
           Sentry.addBreadcrumb({
-              category: 'arome-worker',
-              message: 'Starting AROME High-Res Calculation',
+              category: 'regional-model-worker',
+              message: `Starting ${model.label} High-Res Calculation`,
               level: 'info'
           });
 
           // Importem el worker dinàmicament
-          const worker = new Worker(new URL('../workers/arome.worker.ts', import.meta.url), { type: 'module' });
-          
+          const worker = new Worker(new URL('../workers/regionalModel.worker.ts', import.meta.url), { type: 'module' });
+
           // 2. Kill Switch: Timeout de seguretat
           const timeoutId = setTimeout(() => {
               worker.terminate();
-              const msg = `AROME Worker Timeout (${AROME_TIMEOUT_MS}ms) - Aborting`;
+              const msg = `${model.label} Worker Timeout (${REGIONAL_MODEL_TIMEOUT_MS}ms) - Aborting`;
               console.warn(`⚠️ ${msg}`);
-              
+
               Sentry.addBreadcrumb({
-                  category: 'arome-worker',
+                  category: 'regional-model-worker',
                   message: 'Worker Timed Out - Fallback to Standard Model',
                   level: 'warning'
               });
-              
+
               // No fem reject, sinó que resolem amb les dades base per no mostrar error a l'usuari
               // Simplement perdem l'alta resolució, però l'app funciona.
-              resolve(base); 
-          }, AROME_TIMEOUT_MS);
+              resolve(base);
+          }, REGIONAL_MODEL_TIMEOUT_MS);
 
           worker.onmessage = (e) => {
               clearTimeout(timeoutId); // Cancelem el timeout si ha acabat a temps
-              
+
               if (e.data.success) {
                   const duration = Math.round(performance.now() - startTime);
                   // Monitoratge: Èxit i rendiment
                   Sentry.addBreadcrumb({
-                      category: 'arome-worker',
+                      category: 'regional-model-worker',
                       message: `Calculation Success in ${duration}ms`,
                       level: 'info'
                   });
@@ -57,19 +56,19 @@ export function useAromeWorker() {
                   console.error("Worker Calculation Error:", e.data.error);
                   reject(new Error(e.data.error));
               }
-              worker.terminate(); 
+              worker.terminate();
           };
-          
+
           worker.onerror = (err) => {
               clearTimeout(timeoutId);
               console.error("Worker Critical Error:", err);
               reject(err);
               worker.terminate();
           };
-          
+
           worker.postMessage({ baseData: base, highResData: highRes, model });
       });
   }, []);
 
-  return { runAromeWorker };
+  return { runRegionalModelWorker };
 }

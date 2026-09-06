@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 
 // Imports directes als fitxers on viuen ara les funcions
 import { getRealTimeWeatherCode } from './weatherLogic';
-import { injectHighResModelsV2 } from './aromeEngineV2';
+import { injectHighResModels } from './regionalModelEngine';
 import { calculateReliability } from './rules/reliabilityRules';
 import { ExtendedWeatherData, StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { REGIONAL_MODELS } from '../constants/regionalModels';
@@ -119,19 +119,19 @@ describe('Noves Millores Físiques (AROME i Boira)', () => {
      });
 });
 
-describe('injectHighResModelsV2 - Fusió AROME', () => {
+describe('injectHighResModels - Fusió AROME', () => {
      it('hauria de sobreescriure dades "Current" amb AROME', () => {
          const baseData = {
              current: { temperature_2m: 10, weather_code: 3 },
              hourly: { temperature_2m: [10, 10] }
          } as unknown as ExtendedWeatherData;
 
-         const aromeData = {
-             current: { temperature_2m: 12, weather_code: 61 }, 
+         const regionalData = {
+             current: { temperature_2m: 12, weather_code: 61 },
              hourly: { temperature_2m: [12, 12] }
          } as unknown as ExtendedWeatherData;
 
-         const result = injectHighResModelsV2(baseData, aromeData, AROME_MODEL);
+         const result = injectHighResModels(baseData, regionalData, AROME_MODEL);
 
          expect(result.current.temperature_2m).toBe(12);
          expect(result.current.weather_code).toBe(61);
@@ -140,7 +140,7 @@ describe('injectHighResModelsV2 - Fusió AROME', () => {
 
      it('hauria de gestionar correctament si falten dades AROME', () => {
          const baseData = { current: { temperature_2m: 10 } } as unknown as ExtendedWeatherData;
-         const result = injectHighResModelsV2(baseData, null as unknown as ExtendedWeatherData, AROME_MODEL);
+         const result = injectHighResModels(baseData, null as unknown as ExtendedWeatherData, AROME_MODEL);
          expect(result).toEqual(baseData);
      });
 });

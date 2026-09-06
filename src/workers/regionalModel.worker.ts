@@ -1,7 +1,5 @@
-// src/workers/arome.worker.ts
-
-// --- CANVI: Importem la V2 (Clean Code) en lloc de la V1 ---
-import { injectHighResModelsV2 } from '../utils/aromeEngineV2';
+// src/workers/regionalModel.worker.ts
+import { injectHighResModels } from '../utils/regionalModelEngine';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import type { RegionalModel } from '../constants/regionalModels';
 
@@ -16,19 +14,17 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
   const { baseData, highResData, model } = e.data;
 
   try {
-    // --- CANVI: Executem el nou motor optimitzat ---
-    // Com que els tests han demostrat paritat, això és segur.
-    const result = injectHighResModelsV2(baseData, highResData, model);
-    
+    const result = injectHighResModels(baseData, highResData, model);
+
     // Retornem el resultat al fil principal
     self.postMessage({ success: true, data: result });
 
   } catch (error) {
     // XARXA DE SEGURETAT FINAL:
-    // Si la V2 peta, capturem l'error aquí.
+    // Si el motor peta, capturem l'error aquí.
     // El 'WeatherRepository' rebrà success:false i farà fallback a les dades base.
     // L'usuari NO veurà cap pantalla blanca.
-    console.error("⚠️ AROME Worker V2 Error:", error);
+    console.error("⚠️ Regional Model Worker Error:", error);
     
     self.postMessage({ 
       success: false, 

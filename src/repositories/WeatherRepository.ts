@@ -26,7 +26,7 @@ const CACHE_TTL = 15 * 60 * 1000;
 
 export const WeatherRepository = {
     /**
-     * Obté les dades meteorològiques (Cache -> API -> Arome Worker)
+     * Obté les dades meteorològiques (Cache -> API -> Regional Model Worker)
      */
     async get(
         lat: number, 
@@ -68,7 +68,7 @@ export const WeatherRepository = {
             ? getRegionalHDData(lat, lon, regionalModel).catch((regionalErr) => {
                 Sentry.captureException(regionalErr, {
                     tags: {
-                        service: SENTRY_TAGS.SERVICE_AROME_WORKER,
+                        service: SENTRY_TAGS.SERVICE_REGIONAL_MODEL_WORKER,
                         type: SENTRY_TAGS.TYPE_FALLBACK
                     },
                     level: 'warning'
@@ -91,7 +91,7 @@ export const WeatherRepository = {
             } catch (regionalErr) {
                 Sentry.captureException(regionalErr, {
                     tags: {
-                        service: SENTRY_TAGS.SERVICE_AROME_WORKER,
+                        service: SENTRY_TAGS.SERVICE_REGIONAL_MODEL_WORKER,
                         type: SENTRY_TAGS.TYPE_FALLBACK
                     },
                     level: 'warning'

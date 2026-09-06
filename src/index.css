@@ -43,7 +43,7 @@
     @apply text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300/90 mb-3 ml-1;
   }
 
-  /* --- SCROLLBARS (Necessari per AromeModal i llistes) --- */
+  /* --- SCROLLBARS (Necessari per RegionalModelModal i llistes) --- */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
