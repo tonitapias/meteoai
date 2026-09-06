@@ -37,6 +37,7 @@ interface ConsensusWidgetProps {
   hourlyEcmwf?: HourlySeriesBundle;
   hourlyGfs?: HourlySeriesBundle;
   hourlyIcon?: HourlySeriesBundle;
+  hourlyAifs?: HourlySeriesBundle;
 }
 
 // [FIX PRECISIÓ] La comparació és amb Open-Meteo "best_match" (el mateix motor de selecció
@@ -81,7 +82,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   metrics, localTemp, localPrecip, localWind, lang,
   utcOffset = 0, regionalModelLabel = 'LOC',
   hourlyTimes = [], hourlyGlobalTimes = [], hourlyLocal = {}, hourlyGlobal = {},
-  hourlyEcmwf = {}, hourlyGfs = {}, hourlyIcon = {}
+  hourlyEcmwf = {}, hourlyGfs = {}, hourlyIcon = {}, hourlyAifs = {}
 }) => {
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
@@ -306,6 +307,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           hourlyEcmwf={hourlyEcmwf}
           hourlyGfs={hourlyGfs}
           hourlyIcon={hourlyIcon}
+          hourlyAifs={hourlyAifs}
         />
       )}
     </>

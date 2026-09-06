@@ -147,6 +147,7 @@ export interface ExtendedWeatherData extends Omit<WeatherData, 'current' | 'hour
     ecmwf: Record<string, unknown>[];
     gfs: Record<string, unknown>[];
     icon: Record<string, unknown>[];
+    aifs: Record<string, unknown>[];
   };
   dailyComparison?: {
     ecmwf: Record<string, unknown>;

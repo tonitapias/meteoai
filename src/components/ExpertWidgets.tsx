@@ -215,6 +215,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const hourlyEcmwf = extractComparisonSeries(weatherData.hourlyComparison?.ecmwf);
   const hourlyGfs = extractComparisonSeries(weatherData.hourlyComparison?.gfs);
   const hourlyIcon = extractComparisonSeries(weatherData.hourlyComparison?.icon);
+  const hourlyAifs = extractComparisonSeries(weatherData.hourlyComparison?.aifs);
 
   const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';
   const safeSunset = Array.isArray(daily?.sunset) && typeof daily.sunset[0] === 'string' ? daily.sunset[0] : '';
@@ -250,6 +251,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
                hourlyEcmwf={hourlyEcmwf}
                hourlyGfs={hourlyGfs}
                hourlyIcon={hourlyIcon}
+               hourlyAifs={hourlyAifs}
             />
          )}
       </div>

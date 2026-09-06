@@ -17,6 +17,7 @@ interface ConsensusChartsModalProps {
   hourlyEcmwf: HourlySeriesBundle;
   hourlyGfs: HourlySeriesBundle;
   hourlyIcon: HourlySeriesBundle;
+  hourlyAifs: HourlySeriesBundle;
 }
 
 // Paleta fixa per a les sèries de referència (constant en tots els gràfics i
@@ -27,7 +28,8 @@ const SERIES_COLORS = {
   glo: '#94a3b8',
   ecmwf: '#a78bfa',
   gfs: '#22d3ee',
-  icon: '#4ade80'
+  icon: '#4ade80',
+  aifs: '#facc15'
 } as const;
 
 // DICCIONARI i18n INTERN
@@ -81,8 +83,8 @@ interface ChartSeriesInput {
 // [NETEJA] Generalitzat de 2 sèries fixes (Loc/Glo) a N: `series[0]` és
 // sempre la sèrie primària (el model regional actiu) i rep el tractament
 // complet (àrea, línia gruixuda, punts amb etiqueta numèrica); la resta
-// ('series.slice(1)': GLO/ECMWF/GFS/ICON) es dibuixen com a línies fines de
-// referència sense etiquetes per evitar el caos de N textos superposats.
+// ('series.slice(1)': GLO/ECMWF/AIFS/GFS/ICON) es dibuixen com a línies fines
+// de referència sense etiquetes per evitar el caos de N textos superposats.
 const TacticalSvgChart = ({
   title, unit, times, series, type, zeroBased = false
 }: {
@@ -313,7 +315,7 @@ const TacticalSvgChart = ({
 export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
   closeModal, lang, utcOffset, nowTimestamp,
   hourlyTimes, hourlyGlobalTimes, regionalModelLabel,
-  hourlyLocal, hourlyGlobal, hourlyEcmwf, hourlyGfs, hourlyIcon
+  hourlyLocal, hourlyGlobal, hourlyEcmwf, hourlyGfs, hourlyIcon, hourlyAifs
 }) => {
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
@@ -323,6 +325,7 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
     [
       { id: 'loc', label: regionalModelLabel, data: hourlyLocal },
       { id: 'ecmwf', label: 'ECMWF', data: hourlyEcmwf },
+      { id: 'aifs', label: 'AIFS', data: hourlyAifs },
       { id: 'gfs', label: 'GFS', data: hourlyGfs },
       { id: 'icon', label: 'ICON', data: hourlyIcon }
     ],

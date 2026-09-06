@@ -8,7 +8,10 @@ export const API_FORECAST_DAYS = "8"; // Dies de previsió
 // [FIX PRECISIÓ] 'ecmwf_ifs04' és l'identificador antic (0.4°), retirat per Open-Meteo
 // en favor de 'ecmwf_ifs025' (0.25°). Amb l'antic, Open-Meteo no retornava mai
 // dades ECMWF (per això hourlyComparison.ecmwf sempre quedava buit).
-export const API_MODELS_LIST = "best_match,ecmwf_ifs025,gfs_seamless,icon_seamless"; // Models base
+// 'ecmwf_aifs025_single' és el model d'IA de l'ECMWF (AIFS) — verificat en viu que
+// és l'ID correcte; 'ecmwf_aifs025' (sense '_single') existeix però retorna sempre
+// hores nul·les, el mateix parany silenciós que amb l'antic 'ecmwf_ifs04'.
+export const API_MODELS_LIST = "best_match,ecmwf_ifs025,ecmwf_aifs025_single,gfs_seamless,icon_seamless"; // Models base
 
 // --- CONFIGURACIÓ DE VARIABLES METEOROLÒGIQUES ---
 // MILLORA DE SEGURETAT: Afegim 'as const' per fer les llistes de lectura exclusiva (Read-Only).

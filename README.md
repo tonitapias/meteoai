@@ -47,10 +47,10 @@ Aquest concepte s'aplica estrictament a l'**estabilitat del software**. En entor
 
 ### 2. Motor de Consens Multi-Model
 Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. Creua en temps real:
-* **Models Globals (ECMWF, GFS, ICON):** Analitzen l'atmosfera a gran escala per definir tendències i el pas de grans sistemes frontals; Open-Meteo selecciona automàticament el "Best Match" més fiable per a cada zona del planeta.
+* **Models Globals (ECMWF, AIFS, GFS, ICON):** Analitzen l'atmosfera a gran escala per definir tendències i el pas de grans sistemes frontals — inclòs AIFS, el model d'intel·ligència artificial de l'ECMWF; Open-Meteo selecciona automàticament el "Best Match" més fiable per a cada zona del planeta.
 * **13 Models Regionals d'Alta Resolució:** Segons la ubicació consultada, l'app selecciona automàticament el model nacional de més resolució disponible — AROME HD i ICON-D2 a Europa central i occidental, UKMO al Regne Unit i Irlanda, MET Norway i DMI als Nòrdics i Islàndia, MeteoSwiss a Suïssa, KNMI als Països Baixos, ItaliaMeteo a Itàlia, CHMI i GeoSphere a Txèquia i Àustria, HRRR als EUA, HRDPS al Canadà i JMA al Japó i Corea (entre 1 i 5km segons el model). Fora d'aquestes zones, l'app utilitza honestament el consens dels models globals.
 * **Consensus Widget:** Compara el model regional actiu amb el consens dels models globals i indica el nivell de fiabilitat de la previsió —consens, divergència, incertesa o redundància (quan el "best match" global ja coincideix amb el model regional)— per a temperatura, vent i pluja.
-* **Meteograma Multimodel:** La "Telemetria Gràfica Completa" del Consensus Widget mostra 5 sèries alhora (el model regional actiu, ECMWF, GFS, ICON i el blend global) per visualitzar la incertesa real entre models en un sol gràfic.
+* **Meteograma Multimodel:** La "Telemetria Gràfica Completa" del Consensus Widget mostra 6 sèries alhora (el model regional actiu, ECMWF, AIFS, GFS, ICON i el blend global) per visualitzar la incertesa real entre models en un sol gràfic.
 * **Avís de Canvi Sobtat (3h):** Si el model global o el model regional actiu preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — el model regional hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
 
 ### 3. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
@@ -72,7 +72,7 @@ Una mirada ràpida a l'auditoria de producció:
 | **Estils** | Tailwind CSS | Sistema utilitari (*Glassmorphism*, animacions CSS natives, mobile-first). |
 | **Protecció API** | Zod + Sentry | Interceptors tipats (Mur de Contenció) per evitar caigudes de UI per dades corruptes. |
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`) per a funcionament offline-first. |
-| **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, GFS, ICON, Best Match) i de 13 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
+| **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, AIFS, GFS, ICON, Best Match) i de 13 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
 | **Radar i Satèl·lit** | RainViewer + EUMETSAT | Radar Doppler i imatge satèl·lit (Meteosat, GOES, Himawari), servits per un proxy propi en Cloudflare Workers amb caché. |
 | **Intel·ligència** | Gemini AI (amb Groq de reserva) | Anàlisi de risc meteorològic via un Worker propi a Cloudflare; un tallafocs determinista sobreescriu la IA si les dades brutes indiquen més risc del que reporta. |
 
