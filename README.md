@@ -53,7 +53,12 @@ Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. 
 * **Meteograma Multimodel:** La "Telemetria Gràfica Completa" del Consensus Widget mostra 6 sèries alhora (el model regional actiu, ECMWF, AIFS, GFS, ICON i el blend global) per visualitzar la incertesa real entre models en un sol gràfic.
 * **Avís de Canvi Sobtat (3h):** Si el model global o el model regional actiu preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — el model regional hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
 
-### 3. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 3. Observatoris Solar i Lunar
+Dos modals de detall, accessibles tocant els ginys compactes de Cicle Solar i Fase Lunar, amb una direcció visual pròpia més cinematogràfica (fons estelat, herois a gran escala) i previsió a 8 dies vista:
+* **Cicle Solar:** cronologia completa del dia (crepuscle astronòmic, nàutic i civil, hora daurada, migdia solar amb elevació màxima), posició real del sol en temps real (azimut i altitud), hores de sol reals vs. teòriques, índex UV màxim i en cel clar, radiació solar acumulada i azimut exacte de sortida i posta.
+* **Cicle Lunar:** fase, il·luminació i edat, sortida i posta amb l'azimut exacte de cada esdeveniment, distància Terra-Lluna amb detecció de Superlluna/Micro lluna, pròxima lluna plena i nova, i calendari lunar dia a dia.
+
+### 4. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.
