@@ -6,9 +6,11 @@ import { Cpu, AlertTriangle } from 'lucide-react';
 interface ConsensusInactiveWidgetProps {
   lang?: Language | string;
   // 'no-coverage': cap model regional actiu (fora de les 13 malles HD, ECMWF global pur).
-  // 'redundant': hi ha un model regional actiu, però ara mateix els seus valors
-  // coincideixen amb el blend global (isGlobalFallback a ExpertWidgets.tsx) —
-  // comparar-los no aportaria cap divergència real.
+  // 'redundant': hi ha un model regional actiu però encara no hi ha dades
+  // comparables (petició del model global en curs, o ha fallat) — NO vol dir
+  // "els valors coincideixen", ja veure ExpertWidgets.tsx: des que es va deixar
+  // de suspendre el widget només perquè local i global coincidissin, aquest
+  // motiu només apareix en aquesta finestra transitòria de càrrega/error.
   reason?: 'no-coverage' | 'redundant';
 }
 
@@ -21,11 +23,13 @@ interface ConsensusInactiveWidgetProps {
 // consens gairebé sempre que es consultava una ubicació fora de la teva
 // pròpia zona horària, encara que hi hagués un model HD real actiu.
 // [FIX PRECISIÓ] Un cop eliminat aquell gate, va sortir a la llum un segon
-// motiu real i diferent, verificat contra l'API en viu: per a moltes zones
-// (EUA/HRRR, Japó/JMA...) el propi "best_match" d'Open-Meteo ja escull el
-// model regional com a font — els valors són literalment idèntics. Mostrar
-// "fora de la malla d'alta resolució" en aquest cas seria fals (el model HD
-// SÍ està actiu); per això ara hi ha dos motius diferenciats.
+// motiu real: per a moltes zones (EUA/HRRR, Japó/JMA...) el propi "best_match"
+// d'Open-Meteo ja escull el model regional com a font — els valors hi
+// coincideixen gairebé exacte. Inicialment això també suspenia el widget
+// ('redundant'), però l'usuari va preferir que es mantingués actiu i mostrés
+// la comparació igualment (Δ0, "Alineat") en lloc d'amagar-lo — així sempre
+// es pot obrir el modal complet i veure les gràfiques ECMWF/GFS/ICON. El
+// motiu 'redundant' es manté només per a la finestra real de càrrega/error.
 const translations = {
   ca: {
     title: 'Motor de Consens Suspès',

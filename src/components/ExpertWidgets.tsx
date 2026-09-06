@@ -5,7 +5,6 @@ import { getMoonPhase, calculateDewPoint } from '../utils/weatherMath';
 import { selectRegionalModel } from '../constants/regionalModels';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
-import { resolveHourlyEpoch } from '../utils/weatherMath';
 
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
@@ -120,10 +119,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     : undefined;
 
   // [FIX PRECISIÓ] Només demanem el model global si la població té un model regional
-  // d'alta resolució (AROME/ICON-D2/HRRR/HRDPS): fora d'aquestes zones, "local" i
-  // "global" acaben sent el mateix best_match d'Open-Meteo demanat dues vegades (ho
-  // detecta isGlobalFallback més avall), així que evitem la crida de xarxa sencera
-  // quan ja sabem que no pot aportar cap comparació real.
+  // d'alta resolució (AROME/ICON-D2/HRRR/HRDPS...): fora d'aquestes zones no hi ha
+  // res a comparar (no hi ha "local" diferenciat del global), així que evitem la
+  // crida de xarxa sencera quan ja sabem que no pot aportar cap comparació.
   const activeRegionalModel = safeLat !== undefined && safeLon !== undefined ? selectRegionalModel(safeLat, safeLon) : null;
   const hasRegionalModel = !!activeRegionalModel;
 
@@ -154,46 +152,15 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const hasKnownOffset = typeof utc_offset_seconds === 'number';
   const targetOffsetSeconds = hasKnownOffset ? utc_offset_seconds : 0;
 
-  const isGlobalFallback = useMemo(() => {
-    const locTemp = Array.isArray(hourly?.temperature_2m) ? hourly.temperature_2m : [];
-    const gloTemp = Array.isArray(globalData?.hourly?.temperature_2m) ? globalData.hourly.temperature_2m : [];
-    
-    if (locTemp.length === 0 || locTemp.every(v => v === null)) return true;
-    if (gloTemp.length === 0 || gloTemp.every(v => v === null)) return true;
-    
-    const locTimes = Array.isArray(hourly?.time) ? hourly.time : [];
-    const gloTimes = Array.isArray(globalData?.hourly?.time) ? globalData.hourly.time : [];
-
-    const globalDict = new Map<number, number | null>();
-    gloTemp.forEach((val, idx) => {
-        const tStr = gloTimes[idx];
-        if (typeof tStr === 'string') {
-            const epoch = resolveHourlyEpoch(tStr, targetOffsetSeconds);
-            if (!isNaN(epoch)) globalDict.set(epoch, typeof val === 'number' ? val : null);
-        }
-    });
-
-    let exactMatches = 0;
-    let validPairs = 0;
-    
-    for(let i = 0; i < Math.min(24, locTemp.length); i++) {
-        const l = locTemp[i];
-        const tStr = locTimes[i];
-        if (typeof tStr !== 'string') continue;
-
-        const epochKey = resolveHourlyEpoch(tStr, targetOffsetSeconds);
-        const g = !isNaN(epochKey) ? (globalDict.get(epochKey) ?? null) : null;
-
-        if (typeof l === 'number' && typeof g === 'number') {
-            validPairs++;
-            if (Math.abs(l - g) < 0.1) exactMatches++;
-        }
-    }
-    
-    return validPairs > 10 && (exactMatches / validPairs) > 0.85;
-  }, [hourly?.temperature_2m, hourly?.time, globalData?.hourly?.temperature_2m, globalData?.hourly?.time, targetOffsetSeconds]);
-
-  const forceFallback = isGlobalFallback || !consensusMetrics.isConsensusActive;
+  // [FIX PRECISIÓ] Abans hi havia aquí un heurístic `isGlobalFallback` que
+  // suspenia tot el widget quan el model regional coincidia gairebé exacte
+  // amb el "best_match" (p.ex. HRRR/JMA, on Open-Meteo ja tria el mateix
+  // model nacional per defecte). Però "coincidir" no vol dir "no hi ha res a
+  // mostrar": l'usuari encara pot voler veure el desglossament i les
+  // gràfiques ECMWF/GFS/ICON del modal complet. Ara el widget només es
+  // suspèn quan realment no hi ha dades comparables (`isConsensusActive`);
+  // si coincideix de debò, es mostra igualment amb Δ0 i "Alineat".
+  const forceFallback = !consensusMetrics.isConsensusActive;
 
   const currentHourIndex = useMemo(() => {
     if (!hourly || !current || !Array.isArray(hourly.time) || typeof current.time !== 'string') return -1;
