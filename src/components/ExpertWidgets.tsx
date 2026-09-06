@@ -151,11 +151,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     );
   }, [currentTemp, currentPrecip, currentWindSpeed, globalData, hourly, utc_offset_seconds]);
   
-  const localOffsetSeconds = new Date().getTimezoneOffset() * -60;
   const hasKnownOffset = typeof utc_offset_seconds === 'number';
   const targetOffsetSeconds = hasKnownOffset ? utc_offset_seconds : 0;
-  const isSameTimezone = hasKnownOffset && localOffsetSeconds === targetOffsetSeconds;
-  
+
   const isGlobalFallback = useMemo(() => {
     const locTemp = Array.isArray(hourly?.temperature_2m) ? hourly.temperature_2m : [];
     const gloTemp = Array.isArray(globalData?.hourly?.temperature_2m) ? globalData.hourly.temperature_2m : [];
@@ -257,10 +255,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   return (
     <>
       <div className="w-full mb-6">
-         {!isSameTimezone ? (
-            <ConsensusInactiveWidget reason="timezone" lang={lang} />
-         ) : forceFallback ? (
-            <ConsensusInactiveWidget reason="fallback" lang={lang} />
+         {forceFallback ? (
+            <ConsensusInactiveWidget lang={lang} reason={activeRegionalModel ? 'redundant' : 'no-coverage'} />
          ) : (
             <ConsensusWidget 
                metrics={consensusMetrics} 

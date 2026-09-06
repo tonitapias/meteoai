@@ -1,107 +1,82 @@
 // src/components/widgets/ConsensusInactiveWidget.tsx
 import React from 'react';
 import { Language } from '../../translations';
-import { Globe, Cpu, AlertTriangle } from 'lucide-react';
+import { Cpu, AlertTriangle } from 'lucide-react';
 
 interface ConsensusInactiveWidgetProps {
   lang?: Language | string;
-  reason?: 'timezone' | 'fallback'; 
+  // 'no-coverage': cap model regional actiu (fora de les 13 malles HD, ECMWF global pur).
+  // 'redundant': hi ha un model regional actiu, però ara mateix els seus valors
+  // coincideixen amb el blend global (isGlobalFallback a ExpertWidgets.tsx) —
+  // comparar-los no aportaria cap divergència real.
+  reason?: 'no-coverage' | 'redundant';
 }
 
-// [FIX I18N] Abans només distingia ca/en (lang.includes('ca')); es i fr queien silenciosament
-// a l'anglès. Reestructurat amb el mateix patró de 4 idiomes que ja fan servir
-// ConsensusWidget.tsx i ConsensusModal.tsx.
+// [NETEJA] Abans tenia dos motius ('timezone'/'fallback'): el motiu 'timezone'
+// desactivava tot el widget quan el fus horari del dispositiu no coincidia amb
+// el de la ubicació consultada, independentment de si hi havia un model
+// regional actiu. Era una cautela obsoleta — consensusMath.ts ja alinea totes
+// les sèries per timestamp absolut (resolveHourlyEpoch), no per fus horari
+// del dispositiu — i amb 13 models arreu del món desactivava el motor de
+// consens gairebé sempre que es consultava una ubicació fora de la teva
+// pròpia zona horària, encara que hi hagués un model HD real actiu.
+// [FIX PRECISIÓ] Un cop eliminat aquell gate, va sortir a la llum un segon
+// motiu real i diferent, verificat contra l'API en viu: per a moltes zones
+// (EUA/HRRR, Japó/JMA...) el propi "best_match" d'Open-Meteo ja escull el
+// model regional com a font — els valors són literalment idèntics. Mostrar
+// "fora de la malla d'alta resolució" en aquest cas seria fals (el model HD
+// SÍ està actiu); per això ara hi ha dos motius diferenciats.
 const translations = {
   ca: {
-    title: { timezone: 'Matriu Global Inactiva', fallback: 'Motor de Consens Suspès' },
-    badge: { timezone: 'Telemetria Remota', fallback: 'Cobertura Global' },
+    title: 'Motor de Consens Suspès',
+    badge: { 'no-coverage': 'Cobertura Global', redundant: 'Redundància Detectada' },
     description: {
-      timezone: "S'ha detectat una coordenada fora del sector local. El motor de consens s'ha posat en mode d'espera per evitar col·lisions de fusos horaris.",
-      fallback: "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base."
+      'no-coverage': "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base.",
+      redundant: "El model regional és actiu, però ara mateix coincideix amb el blend global d'Open-Meteo. No hi ha cap divergència real a mostrar."
     },
-    action: { timezone: 'Mode observació activat', fallback: 'Mode global en ús' }
+    action: { 'no-coverage': 'Mode global en ús', redundant: 'Sense divergència' }
   },
   es: {
-    title: { timezone: 'Matriz Global Inactiva', fallback: 'Motor de Consenso Suspendido' },
-    badge: { timezone: 'Telemetría Remota', fallback: 'Cobertura Global' },
+    title: 'Motor de Consenso Suspendido',
+    badge: { 'no-coverage': 'Cobertura Global', redundant: 'Redundancia Detectada' },
     description: {
-      timezone: "Se ha detectado una coordenada fuera del sector local. El motor de consenso se ha puesto en modo de espera para evitar colisiones de husos horarios.",
-      fallback: "Ubicación fuera de la malla de alta resolución. El análisis de divergencias se ha suspendido temporalmente para evitar redundancia matemática con modelos globales base."
+      'no-coverage': "Ubicación fuera de la malla de alta resolución. El análisis de divergencias se ha suspendido temporalmente para evitar redundancia matemática con modelos globales base.",
+      redundant: "El modelo regional está activo, pero ahora mismo coincide con el blend global de Open-Meteo. No hay ninguna divergencia real que mostrar."
     },
-    action: { timezone: 'Modo observación activado', fallback: 'Modo global en uso' }
+    action: { 'no-coverage': 'Modo global en uso', redundant: 'Sin divergencia' }
   },
   en: {
-    title: { timezone: 'Global Matrix Inactive', fallback: 'Consensus Engine Suspended' },
-    badge: { timezone: 'Remote Telemetry', fallback: 'Global Coverage' },
+    title: 'Consensus Engine Suspended',
+    badge: { 'no-coverage': 'Global Coverage', redundant: 'Redundancy Detected' },
     description: {
-      timezone: "Coordinate detected outside local sector. Consensus engine is in standby mode to prevent timezone data collisions.",
-      fallback: "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models."
+      'no-coverage': "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models.",
+      redundant: "The regional model is active, but it currently matches Open-Meteo's global blend exactly. There is no real divergence to show."
     },
-    action: { timezone: 'Observation mode engaged', fallback: 'Global mode in use' }
+    action: { 'no-coverage': 'Global mode in use', redundant: 'No divergence' }
   },
   fr: {
-    title: { timezone: 'Matrice Globale Inactive', fallback: 'Moteur de Consensus Suspendu' },
-    badge: { timezone: 'Télémétrie Distante', fallback: 'Couverture Globale' },
+    title: 'Moteur de Consensus Suspendu',
+    badge: { 'no-coverage': 'Couverture Globale', redundant: 'Redondance Détectée' },
     description: {
-      timezone: "Une coordonnée hors du secteur local a été détectée. Le moteur de consensus est en mode veille pour éviter les collisions de fuseaux horaires.",
-      fallback: "Emplacement hors de la maille haute résolution. L'analyse des divergences est temporairement suspendue pour éviter une redondance mathématique avec les modèles globaux de base."
+      'no-coverage': "Emplacement hors de la maille haute résolution. L'analyse des divergences est temporairement suspendue pour éviter une redondance mathématique avec les modèles globaux de base.",
+      redundant: "Le modèle régional est actif, mais il correspond actuellement exactement au blend global d'Open-Meteo. Il n'y a aucune divergence réelle à afficher."
     },
-    action: { timezone: 'Mode observation activé', fallback: 'Mode global en cours' }
+    action: { 'no-coverage': 'Mode global en cours', redundant: 'Aucune divergence' }
   }
 };
 
-export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = ({ 
-    lang = 'ca', 
-    reason = 'timezone' 
+export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = ({
+    lang = 'ca',
+    reason = 'no-coverage'
 }) => {
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const langT = translations[safeLang];
-
   const t = {
-    title: langT.title[reason],
+    title: langT.title,
     badge: langT.badge[reason],
     description: langT.description[reason],
     action: langT.action[reason]
   };
-
-  // ARQUITECTURA NETA: Diccionari de temes per evitar el "Ternary Hell" al JSX
-  // Totes les classes arbitràries estan definides senceres perquè Tailwind les compili correctament.
-  const themeConfig = {
-    timezone: {
-      borderBase: 'border-cyan-900/40',
-      boxShadow: 'shadow-[0_20px_50px_rgba(8,145,178,0.15)]',
-      coreGlow: 'bg-cyan-400/40 shadow-[0_-20px_40px_rgba(6,182,212,0.6)]',
-      coreGradient: 'from-cyan-500/20',
-      ringGlow: 'border-cyan-400/80 shadow-[0_0_15px_rgba(6,182,212,0.5)]',
-      ringBase: 'border-cyan-500/40',
-      dot: 'bg-white shadow-[0_0_20px_10px_rgba(255,255,255,0.8)]',
-      title: 'text-cyan-100 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]',
-      badge: 'border-cyan-500/30 bg-cyan-950/40 text-cyan-300',
-      desc: 'text-cyan-100/60',
-      actionBorder: 'border-cyan-900/50',
-      actionText: 'text-cyan-500',
-      pulse: 'bg-cyan-600',
-      icon: <Globe className="w-3.5 h-3.5" />
-    },
-    fallback: {
-      borderBase: 'border-amber-900/40',
-      boxShadow: 'shadow-[0_20px_50px_rgba(245,158,11,0.15)]',
-      coreGlow: 'bg-amber-400/30 shadow-[0_-20px_40px_rgba(251,191,36,0.5)]',
-      coreGradient: 'from-amber-500/10',
-      ringGlow: 'border-amber-500/60 shadow-[0_0_15px_rgba(251,191,36,0.3)]',
-      ringBase: 'border-amber-500/30',
-      dot: 'bg-amber-100 shadow-[0_0_20px_10px_rgba(251,191,36,0.5)]',
-      title: 'text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]',
-      badge: 'border-amber-500/30 bg-amber-950/40 text-amber-300',
-      desc: 'text-amber-100/60',
-      actionBorder: 'border-amber-900/50',
-      actionText: 'text-amber-500',
-      pulse: 'bg-amber-600',
-      icon: <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-    }
-  };
-
-  const theme = themeConfig[reason];
 
   return (
     <div className="w-full relative perspective-[1000px]">
@@ -119,53 +94,53 @@ export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = (
         `}
       </style>
 
-      <div className={`w-full bg-[#030712]/80 backdrop-blur-xl border ${theme.borderBase} rounded-[24px] p-6 ${theme.boxShadow} relative overflow-hidden flex flex-col sm:flex-row items-center gap-8 preserve-3d animate-[float3d_6s_ease-in-out_infinite]`}>
-         
+      <div className="w-full bg-[#030712]/80 backdrop-blur-xl border border-amber-900/40 rounded-[24px] p-6 shadow-[0_20px_50px_rgba(245,158,11,0.15)] relative overflow-hidden flex flex-col sm:flex-row items-center gap-8 preserve-3d animate-[float3d_6s_ease-in-out_infinite]">
+
          <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.03)_1px,transparent_1px)] bg-[size:24px_24px] opacity-40 [transform:translateZ(-50px)]"></div>
-         
+
          <div className="relative flex items-center justify-center shrink-0 w-32 h-32 preserve-3d">
-            <div className={`absolute -bottom-4 w-20 h-4 ${theme.coreGlow} rounded-[100%] blur-md`}></div>
-            <div className={`absolute bottom-0 w-24 h-32 bg-gradient-to-t ${theme.coreGradient} to-transparent blur-sm [transform:rotateX(45deg)] opacity-70`}></div>
+            <div className="absolute -bottom-4 w-20 h-4 bg-amber-400/30 shadow-[0_-20px_40px_rgba(251,191,36,0.5)] rounded-[100%] blur-md"></div>
+            <div className="absolute bottom-0 w-24 h-32 bg-gradient-to-t from-amber-500/10 to-transparent blur-sm [transform:rotateX(45deg)] opacity-70"></div>
 
             <div className="relative w-20 h-20 preserve-3d animate-[spin3d_12s_linear_infinite]">
-               <div className={`absolute inset-0 rounded-full border-[1.5px] ${theme.ringGlow} [transform:rotateX(90deg)]`}></div>
-               <div className={`absolute inset-0 rounded-full border ${theme.ringBase}`}></div>
-               <div className={`absolute inset-0 rounded-full border ${theme.ringBase} [transform:rotateY(45deg)]`}></div>
-               <div className={`absolute inset-0 rounded-full border ${theme.ringBase} [transform:rotateY(90deg)]`}></div>
-               <div className={`absolute inset-0 rounded-full border ${theme.ringBase} [transform:rotateY(135deg)]`}></div>
-               
+               <div className="absolute inset-0 rounded-full border-[1.5px] border-amber-500/60 shadow-[0_0_15px_rgba(251,191,36,0.3)] [transform:rotateX(90deg)]"></div>
+               <div className="absolute inset-0 rounded-full border border-amber-500/30"></div>
+               <div className="absolute inset-0 rounded-full border border-amber-500/30 [transform:rotateY(45deg)]"></div>
+               <div className="absolute inset-0 rounded-full border border-amber-500/30 [transform:rotateY(90deg)]"></div>
+               <div className="absolute inset-0 rounded-full border border-amber-500/30 [transform:rotateY(135deg)]"></div>
+
                <div className="absolute inset-0 flex items-center justify-center [transform:rotateY(-90deg)]">
-                  <div className={`w-2 h-2 rounded-full ${theme.dot}`}></div>
+                  <div className="w-2 h-2 rounded-full bg-amber-100 shadow-[0_0_20px_10px_rgba(251,191,36,0.5)]"></div>
                </div>
             </div>
          </div>
 
          <div className="flex flex-col text-center sm:text-left z-10 w-full [transform:translateZ(30px)]">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-3 gap-3">
-               <h2 className={`text-[11px] sm:text-xs font-bold ${theme.title} uppercase tracking-[0.2em]`}>
+               <h2 className="text-[11px] sm:text-xs font-bold text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] uppercase tracking-[0.2em]">
                  {t.title}
                </h2>
-               <div className={`inline-flex items-center self-center sm:self-auto gap-1.5 text-[9px] font-black uppercase px-3 py-1.5 rounded-full border ${theme.badge} tracking-widest backdrop-blur-md`}>
-                 {theme.icon}
+               <div className="inline-flex items-center self-center sm:self-auto gap-1.5 text-[9px] font-black uppercase px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 tracking-widest backdrop-blur-md">
+                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                  {t.badge}
                </div>
             </div>
-            
-            <p className={`text-[11px] sm:text-[13px] ${theme.desc} leading-relaxed font-light mb-4`}>
+
+            <p className="text-[11px] sm:text-[13px] text-amber-100/60 leading-relaxed font-light mb-4">
                {t.description}
             </p>
-            
-            <div className={`mt-auto flex items-center justify-between border-t ${theme.actionBorder} pt-3`}>
-               <div className={`flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest ${theme.actionText}`}>
+
+            <div className="mt-auto flex items-center justify-between border-t border-amber-900/50 pt-3">
+               <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-amber-500">
                   <Cpu className="w-3.5 h-3.5 animate-pulse" />
                   <span>{t.action}</span>
                </div>
-               
+
                <div className="flex items-end gap-0.5 h-3 opacity-60">
-                  <div className={`w-1 h-full ${theme.pulse} animate-[bounce_1s_infinite]`}></div>
-                  <div className={`w-1 h-2/3 ${theme.pulse} animate-[bounce_1.5s_infinite]`}></div>
-                  <div className={`w-1 h-1 ${theme.pulse} animate-[bounce_0.8s_infinite]`}></div>
-                  <div className={`w-1 h-3/4 ${theme.pulse} animate-[bounce_1.2s_infinite]`}></div>
+                  <div className="w-1 h-full bg-amber-600 animate-[bounce_1s_infinite]"></div>
+                  <div className="w-1 h-2/3 bg-amber-600 animate-[bounce_1.5s_infinite]"></div>
+                  <div className="w-1 h-1 bg-amber-600 animate-[bounce_0.8s_infinite]"></div>
+                  <div className="w-1 h-3/4 bg-amber-600 animate-[bounce_1.2s_infinite]"></div>
                </div>
             </div>
          </div>
