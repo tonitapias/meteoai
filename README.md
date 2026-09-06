@@ -10,7 +10,7 @@
 
 > **Previsió meteorològica d'alta precisió, combinant models globals, model d'alta resolució i intel·ligència artificial.**
 
-MeteoToni AI combina la potència predictiva dels models meteorològics globals amb la precisió topogràfica del model d'alta resolució AROME (fins a 1.3km), tot processat per un motor d'intel·ligència artificial en temps real per oferir-te la previsió més precisa possible allà on siguis.
+MeteoToni AI combina la potència predictiva dels models meteorològics globals amb la precisió topogràfica de 13 models nacionals d'alta resolució (AROME, ICON-D2, HRRR, JMA i altres, fins a 1km), seleccionats automàticament segons la teva ubicació, tot processat per un motor d'intel·ligència artificial en temps real per oferir-te la previsió més precisa possible allà on siguis.
 
 ### ⚠️ Propòsit i Limitacions
 MeteoToni AI és exclusivament una eina d'informació analítica. Proporciona dades basades en models matemàtics, **però les matemàtiques no eviten els riscos físics**. Aquesta aplicació no és un sistema de prevenció d'accidents, no detecta perills objectius sobre el terreny i no garanteix la seguretat en cap ruta. L'avaluació final de les condicions i la presa de decisions recau sempre, i de manera innegociable, en la formació, l'experiència visual i el criteri de l'usuari sobre el terreny.
@@ -48,9 +48,10 @@ Aquest concepte s'aplica estrictament a l'**estabilitat del software**. En entor
 ### 2. Motor de Consens Multi-Model
 Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. Creua en temps real:
 * **Models Globals (ECMWF, GFS, ICON):** Analitzen l'atmosfera a gran escala per definir tendències i el pas de grans sistemes frontals; Open-Meteo selecciona automàticament el "Best Match" més fiable per a cada zona del planeta.
-* **Model d'Alta Resolució (AROME):** Aplica un zoom extrem (fins a 1.3km) per entendre com l'orografia alterarà el flux de vent i la precipitació al punt exacte on ets. Disponible a la Península Ibèrica, França, els Pirineus i Europa Occidental; fora d'aquesta zona, l'app utilitza el consens dels models globals.
-* **Consensus Widget:** Compara el model local amb el consens dels models globals i indica el nivell de fiabilitat de la previsió —consens, divergència o incertesa— per a temperatura, vent i pluja.
-* **Avís de Canvi Sobtat (3h):** Si el model global o el model d'alta resolució AROME preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — AROME hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
+* **13 Models Regionals d'Alta Resolució:** Segons la ubicació consultada, l'app selecciona automàticament el model nacional de més resolució disponible — AROME HD i ICON-D2 a Europa central i occidental, UKMO al Regne Unit i Irlanda, MET Norway i DMI als Nòrdics i Islàndia, MeteoSwiss a Suïssa, KNMI als Països Baixos, ItaliaMeteo a Itàlia, CHMI i GeoSphere a Txèquia i Àustria, HRRR als EUA, HRDPS al Canadà i JMA al Japó i Corea (entre 1 i 5km segons el model). Fora d'aquestes zones, l'app utilitza honestament el consens dels models globals.
+* **Consensus Widget:** Compara el model regional actiu amb el consens dels models globals i indica el nivell de fiabilitat de la previsió —consens, divergència, incertesa o redundància (quan el "best match" global ja coincideix amb el model regional)— per a temperatura, vent i pluja.
+* **Meteograma Multimodel:** La "Telemetria Gràfica Completa" del Consensus Widget mostra 5 sèries alhora (el model regional actiu, ECMWF, GFS, ICON i el blend global) per visualitzar la incertesa real entre models en un sol gràfic.
+* **Avís de Canvi Sobtat (3h):** Si el model global o el model regional actiu preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — el model regional hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
 
 ### 3. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
@@ -71,7 +72,7 @@ Una mirada ràpida a l'auditoria de producció:
 | **Estils** | Tailwind CSS | Sistema utilitari (*Glassmorphism*, animacions CSS natives, mobile-first). |
 | **Protecció API** | Zod + Sentry | Interceptors tipats (Mur de Contenció) per evitar caigudes de UI per dades corruptes. |
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`) per a funcionament offline-first. |
-| **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, GFS, ICON, Best Match) i del model d'alta resolució AROME. |
+| **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, GFS, ICON, Best Match) i de 13 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
 | **Radar i Satèl·lit** | RainViewer + EUMETSAT | Radar Doppler i imatge satèl·lit (Meteosat, GOES, Himawari), servits per un proxy propi en Cloudflare Workers amb caché. |
 | **Intel·ligència** | Gemini AI (amb Groq de reserva) | Anàlisi de risc meteorològic via un Worker propi a Cloudflare; un tallafocs determinista sobreescriu la IA si les dades brutes indiquen més risc del que reporta. |
 
