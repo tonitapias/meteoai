@@ -32,7 +32,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'OBSERVATORI LUNAR', subtitle: 'Cicle i Posició de la Lluna', noData: 'SENSE DADES SUFICIENTS',
     illumination: 'Il·luminació', age: 'Edat', days: 'dies', rise: 'SORTIDA', set: 'POSTA',
     distance: 'Distància', supermoon: 'SUPERLLUNA', micromoon: 'MICRO LLUNA', nextFull: 'Pròxima Lluna Plena',
-    nextNew: 'Pròxima Lluna Nova', inDays: 'en {n} dies', today: 'avui', tomorrow: 'demà', week: 'Pròxims 8 Dies',
+    nextNew: 'Pròxima Lluna Nova', inDays: 'en {n} dies', today: 'avui', tomorrow: 'demà', week: 'Pròxims 7 Dies',
     livePosition: 'Posició Actual', azimuth: 'Azimut', altitude: 'Altitud', folkName: 'Nom Tradicional (curiositat)',
     perigee: 'Perigeu', apogee: 'Apogeu',
   },
@@ -40,7 +40,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'OBSERVATORIO LUNAR', subtitle: 'Ciclo y Posición de la Luna', noData: 'DATOS INSUFICIENTES',
     illumination: 'Iluminación', age: 'Edad', days: 'días', rise: 'SALIDA', set: 'PUESTA',
     distance: 'Distancia', supermoon: 'SUPERLUNA', micromoon: 'MICRO LUNA', nextFull: 'Próxima Luna Llena',
-    nextNew: 'Próxima Luna Nueva', inDays: 'en {n} días', today: 'hoy', tomorrow: 'mañana', week: 'Próximos 8 Días',
+    nextNew: 'Próxima Luna Nueva', inDays: 'en {n} días', today: 'hoy', tomorrow: 'mañana', week: 'Próximos 7 Días',
     livePosition: 'Posición Actual', azimuth: 'Azimut', altitude: 'Altitud', folkName: 'Nombre Tradicional (curiosidad)',
     perigee: 'Perigeo', apogee: 'Apogeo',
   },
@@ -48,7 +48,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'LUNAR OBSERVATORY', subtitle: 'Moon Cycle & Position', noData: 'INSUFFICIENT DATA',
     illumination: 'Illumination', age: 'Age', days: 'days', rise: 'RISE', set: 'SET',
     distance: 'Distance', supermoon: 'SUPERMOON', micromoon: 'MICROMOON', nextFull: 'Next Full Moon',
-    nextNew: 'Next New Moon', inDays: 'in {n} days', today: 'today', tomorrow: 'tomorrow', week: 'Next 8 Days',
+    nextNew: 'Next New Moon', inDays: 'in {n} days', today: 'today', tomorrow: 'tomorrow', week: 'Next 7 Days',
     livePosition: 'Live Position', azimuth: 'Azimuth', altitude: 'Altitude', folkName: 'Traditional Name (folklore)',
     perigee: 'Perigee', apogee: 'Apogee',
   },
@@ -56,7 +56,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'OBSERVATOIRE LUNAIRE', subtitle: 'Cycle et Position de la Lune', noData: 'DONNÉES INSUFFISANTES',
     illumination: 'Illumination', age: 'Âge', days: 'jours', rise: 'LEVER', set: 'COUCHER',
     distance: 'Distance', supermoon: 'SUPERLUNE', micromoon: 'MICRO LUNE', nextFull: 'Prochaine Pleine Lune',
-    nextNew: 'Prochaine Nouvelle Lune', inDays: 'dans {n} jours', today: "aujourd'hui", tomorrow: 'demain', week: '8 Prochains Jours',
+    nextNew: 'Prochaine Nouvelle Lune', inDays: 'dans {n} jours', today: "aujourd'hui", tomorrow: 'demain', week: '7 Prochains Jours',
     livePosition: 'Position Actuelle', azimuth: 'Azimut', altitude: 'Altitude', folkName: 'Nom Traditionnel (folklore)',
     perigee: 'Périgée', apogee: 'Apogée',
   },
@@ -182,7 +182,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
         set: riseSet.set.formatted || '--:--',
         i,
       };
-    });
+    }).slice(1); // Avui ja es mostra a l'heroi i a les targetes — la tira comença demà, com fa ForecastSection.tsx
   }, [daily, hasValidCoords, lat, lon, timezone, dateLocale]);
 
   return (

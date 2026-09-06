@@ -30,7 +30,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'DIA', night: 'NIT', now: 'ARA', solarNoon: 'Migdia Solar', maxElevation: 'Elevació Màx.',
     dayLength: 'Durada del Dia', vsTomorrow: 'vs. demà', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
     uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
-    sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 8 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
+    sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 7 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
     timeline: 'Cronologia del Dia', trajectory: 'Trajectòria d\'Avui', astroDawn: 'Crep. Astronòmic', nauticalDawn: 'Crep. Nàutic', civilDawn: 'Crep. Civil',
     goldenHour: 'Hora Daurada', astroDusk: 'Crep. Astronòmic', nextEvent: 'Proper esdeveniment', in_: 'en',
     lengthening: 'Els dies s\'allarguen', shortening: 'Els dies s\'escurcen', elevAbbr: 'ELEV',
@@ -40,7 +40,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'DÍA', night: 'NOCHE', now: 'AHORA', solarNoon: 'Mediodía Solar', maxElevation: 'Elevación Máx.',
     dayLength: 'Duración del Día', vsTomorrow: 'vs. mañana', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
     uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
-    sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 8 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
+    sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 7 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
     timeline: 'Cronología del Día', trajectory: 'Trayectoria de Hoy', astroDawn: 'Crep. Astronómico', nauticalDawn: 'Crep. Náutico', civilDawn: 'Crep. Civil',
     goldenHour: 'Hora Dorada', astroDusk: 'Crep. Astronómico', nextEvent: 'Próximo evento', in_: 'en',
     lengthening: 'Los días se alargan', shortening: 'Los días se acortan', elevAbbr: 'ELEV',
@@ -50,7 +50,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'DAY', night: 'NIGHT', now: 'NOW', solarNoon: 'Solar Noon', maxElevation: 'Max. Elevation',
     dayLength: 'Day Length', vsTomorrow: 'vs. tomorrow', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
     uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
-    sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 8 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
+    sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 7 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
     timeline: 'Day Timeline', trajectory: "Today's Trajectory", astroDawn: 'Astro. Twilight', nauticalDawn: 'Nautical Twilight', civilDawn: 'Civil Twilight',
     goldenHour: 'Golden Hour', astroDusk: 'Astro. Twilight', nextEvent: 'Next event', in_: 'in',
     lengthening: 'Days are getting longer', shortening: 'Days are getting shorter', elevAbbr: 'ELEV',
@@ -60,7 +60,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'JOUR', night: 'NUIT', now: 'MAINTENANT', solarNoon: 'Midi Solaire', maxElevation: 'Élévation Max.',
     dayLength: 'Durée du Jour', vsTomorrow: 'vs. demain', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
     uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
-    sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '8 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
+    sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '7 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
     timeline: 'Chronologie du Jour', trajectory: "Trajectoire du Jour", astroDawn: 'Crép. Astronomique', nauticalDawn: 'Crép. Nautique', civilDawn: 'Crép. Civil',
     goldenHour: 'Heure Dorée', astroDusk: 'Crép. Astronomique', nextEvent: 'Prochain événement', in_: 'dans',
     lengthening: 'Les jours rallongent', shortening: 'Les jours raccourcissent', elevAbbr: 'ELEV',
@@ -267,7 +267,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
         uvMax: typeof uvArr?.[i] === 'number' ? Math.round(uvArr[i] as number) : null,
         trend,
       };
-    });
+    }).slice(1); // Avui ja es mostra a l'heroi i a les targetes — la tira comença demà, com fa ForecastSection.tsx
   }, [daily, dateLocale]);
 
   const overallTrend = (() => {
