@@ -4,7 +4,7 @@ import { useWeatherCalculations } from '../useWeatherCalculations';
 import { useWeatherTheme } from '../useWeatherTheme';
 import { useWeatherAI } from '../useWeatherAI';
 import { useGeoLocation } from '../../context/GeoLocationContext';
-import { isAromeSupported } from '../../utils/weatherMath';
+import { selectRegionalModel } from '../../constants/regionalModels';
 import type { Language } from '../../translations';
 import type { WeatherUnit } from '../../utils/formatters';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
@@ -39,9 +39,9 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
   // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
   const loc = weatherData?.location as LocationMeta | undefined;
 
-  const supportsArome = loc 
-    ? isAromeSupported(loc.latitude, loc.longitude) 
-    : false;
+  const activeRegionalModel = loc
+    ? selectRegionalModel(loc.latitude, loc.longitude)
+    : null;
 
   return {
     state: {
@@ -57,7 +57,7 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
       getCoordinates
     },
     flags: {
-      supportsArome
+      activeRegionalModel
     }
   };
 }

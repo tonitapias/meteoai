@@ -129,14 +129,10 @@ export const getSafeLatitude = (location: unknown): number | undefined => {
     return typeof lat === 'number' && !isNaN(lat) ? lat : undefined;
 };
 
-/**
- * Comprova si les coordenades són dins de l'àrea de cobertura AROME (Europa Occidental)
- */
-export const isAromeSupported = (lat: number | null | undefined, lon: number | null | undefined): boolean => {
-    if (!lat || !lon) return false;
-    const MIN_LAT = 38.0, MAX_LAT = 53.0, MIN_LON = -8.0, MAX_LON = 12.0; 
-    return (lat >= MIN_LAT && lat <= MAX_LAT && lon >= MIN_LON && lon <= MAX_LON);
-};
+// [NETEJA] isAromeSupported s'ha retirat d'aquí: generalitzat a
+// selectRegionalModel a constants/regionalModels.ts, que cobreix AROME_HD +
+// ICON_D2 + HRRR + HRDPS amb un registre ordenat per prioritat en lloc d'un
+// únic bounding-box fix.
 
 // [NETEJA] calculateReliability s'ha retirat d'aquí: la comparació ECMWF/GFS/ICON
 // viu ara a utils/rules/reliabilityRules.ts, que és la que fa servir

@@ -3,20 +3,22 @@
 // --- CANVI: Importem la V2 (Clean Code) en lloc de la V1 ---
 import { injectHighResModelsV2 } from '../utils/aromeEngineV2';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { RegionalModel } from '../constants/regionalModels';
 
 // Definim el tipus del missatge d'entrada
 interface WorkerMessage {
   baseData: ExtendedWeatherData;
   highResData: ExtendedWeatherData | null;
+  model: RegionalModel;
 }
 
 self.onmessage = (e: MessageEvent<WorkerMessage>) => {
-  const { baseData, highResData } = e.data;
-  
+  const { baseData, highResData, model } = e.data;
+
   try {
     // --- CANVI: Executem el nou motor optimitzat ---
     // Com que els tests han demostrat paritat, això és segur.
-    const result = injectHighResModelsV2(baseData, highResData);
+    const result = injectHighResModelsV2(baseData, highResData, model);
     
     // Retornem el resultat al fil principal
     self.postMessage({ success: true, data: result });

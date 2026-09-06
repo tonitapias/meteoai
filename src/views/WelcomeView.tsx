@@ -28,10 +28,10 @@ export default function WelcomeView({ controller }: WelcomeViewProps) {
        />
 
        {flags.showDebug && (
-          <DebugPanel 
-              weatherData={state.weatherData} 
-              supportsArome={flags.supportsArome} 
-              error={state.error} 
+          <DebugPanel
+              weatherData={state.weatherData}
+              regionalModelLabel={flags.activeRegionalModel?.label ?? null}
+              error={state.error}
           />
        )}
 

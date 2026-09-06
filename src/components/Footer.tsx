@@ -78,9 +78,9 @@ export default function Footer({ simple = false, transparent = false, className 
                 <span>DATA: OPEN-METEO</span>
             </div>
             {!simple && <span className="hidden md:inline text-white/10" aria-hidden="true">|</span>}
-            <div className="flex items-center gap-2 group cursor-help transition-all duration-300 hover:text-emerald-400 select-none" title="Model d'alta resolució (Europa)">
+            <div className="flex items-center gap-2 group cursor-help transition-all duration-300 hover:text-emerald-400 select-none" title="Model d'alta resolució regional (AROME / ICON-D2 / HRRR / HRDPS segons ubicació)">
                 <ShieldCheck className="w-3.5 h-3.5 group-hover:drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] transition-all" aria-hidden="true" />
-                <span>MODEL: AROME HD</span>
+                <span>MODEL: HD REGIONAL</span>
             </div>
         </div>
 

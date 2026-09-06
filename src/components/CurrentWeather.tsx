@@ -5,6 +5,7 @@ import { WeatherUnit } from '../utils/formatters';
 import { Language } from '../translations';
 import { AirQualityData } from '../types/weather';
 import { useCurrentWeatherLogic } from '../hooks/useCurrentWeatherLogic';
+import type { RegionalModel } from '../constants/regionalModels';
 
 // Sub-components "Building Blocks"
 import { CurrentWeatherHeader } from './current-weather/CurrentWeatherHeader';
@@ -23,7 +24,7 @@ interface CurrentWeatherProps {
   onShowRadar: () => void;
   onShowArome: () => void;
   aqiData: AirQualityData | null;
-  showAromeBtn?: boolean;
+  activeRegionalModel?: RegionalModel | null;
   shiftedNow?: Date;
 }
 
@@ -113,7 +114,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             country={weather.meta.country as string | undefined}
             time={weather.meta.time as string}
             date={weather.meta.date as string}
-            isUsingArome={Boolean(weather.meta.isUsingArome)}
+            modelLabel={weather.meta.regionalModelLabel as string | null}
             elevation={parseMetric(rawData.elevation) ?? parseMetric(weatherMeta.elevation)}
           />
 
@@ -159,7 +160,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             <WeatherActionButtons
               onShowRadar={props.onShowRadar}
               onShowArome={props.onShowArome}
-              showAromeBtn={props.showAromeBtn}
+              regionalModelLabel={props.activeRegionalModel?.label ?? null}
               isFavorite={props.isFavorite}
               onToggleFavorite={props.onToggleFavorite}
             />

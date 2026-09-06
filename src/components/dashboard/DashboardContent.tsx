@@ -50,8 +50,8 @@ export const DashboardContent = () => {
                 onToggleFavorite={actions.handleToggleFavorite}
                 onShowRadar={() => actions.setShowRadar(true)} 
                 onShowArome={() => actions.setShowArome(true)}
-                aqiData={state.aqiData} 
-                showAromeBtn={flags.supportsArome}
+                aqiData={state.aqiData}
+                activeRegionalModel={flags.activeRegionalModel}
             />
 
             {/* 2. GRÀFIC PRECIPITACIÓ MINUTAL */}

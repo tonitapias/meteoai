@@ -6,6 +6,7 @@ import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude } from '../utils/weatherMath';
+import { isRegionalModelActive } from '../constants/regionalModels';
 
 const getStatusColor = (code: number | null) => {
     if (code === null) return 'bg-slate-600';
@@ -69,7 +70,7 @@ export const useCurrentWeatherLogic = ({
             meta: {
                 locationName: loc?.name,
                 country: loc?.country,
-                isUsingArome: current.source === 'AROME HD',
+                regionalModelLabel: isRegionalModelActive(current.source) ? (current.source as string) : null,
                 time: displayTimeStr,
                 date: dateStr,
                 isDay: current.is_day

@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import type { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { HourlyDataSchema, CurrentDataSchema } from '../schemas/weatherSchema';
+import { buildModelSuffixRegex, type RegionalModel } from '../constants/regionalModels';
 
 // --- 1. SCHEMAS & TIPUS INTERNS (Idèntic a l'original per seguretat) ---
 const AromeCleanedSchema = z.object({
@@ -17,11 +18,16 @@ type CleanedSource = z.infer<typeof AromeCleanedSchema>;
 
 // --- 2. HELPERS UTILS (Funcions pures) ---
 
+// [NETEJA] Abans hardcodejava només el sufix d'AROME; ara la regex es genera
+// a partir del registre de models regionals (regionalModels.ts) perquè cobreixi
+// també ICON-D2/HRRR/HRDPS sense mantenir una còpia local de la llista.
+const MODEL_SUFFIX_REGEX = buildModelSuffixRegex();
+
 const cleanKeys = (obj: Record<string, unknown> | undefined): Record<string, unknown> => {
     if (!obj) return {};
     const clean: Record<string, unknown> = {};
     Object.keys(obj).forEach(key => {
-        const cleanKey = key.replace(/_meteofrance_arome_france_hd|_best_match|_ecmwf|_gfs|_icon/g, '');
+        const cleanKey = key.replace(MODEL_SUFFIX_REGEX, '');
         clean[cleanKey] = obj[key];
     });
     return clean;
@@ -37,7 +43,7 @@ const normalizeTime = (t: unknown): number => {
 
 // --- 3. SUB-INJECTORS (Modularització de la lògica) ---
 
-const injectCurrent = (target: ExtendedWeatherData, source: CleanedSource) => {
+const injectCurrent = (target: ExtendedWeatherData, source: CleanedSource, model: RegionalModel) => {
     if (!source.current || !target.current) return;
 
     const CURRENT_FIELDS_TO_OVERWRITE: (keyof StrictCurrentWeather)[] = [
@@ -55,8 +61,8 @@ const injectCurrent = (target: ExtendedWeatherData, source: CleanedSource) => {
     // els valors nuls per una fallada parcial puntual). Això feia que la UI
     // mostrés la insígnia d'alta resolució amb dades que en realitat venien
     // íntegrament del model global de reserva — procedència enganyosa que
-    // contradiu la doctrina Risc Zero. Ara només marquem la font com AROME si
-    // com a mínim un camp real s'ha sobreescrit de debò.
+    // contradiu la doctrina Risc Zero. Ara només marquem la font com a model
+    // regional si com a mínim un camp real s'ha sobreescrit de debò.
     let anyFieldOverwritten = false;
     CURRENT_FIELDS_TO_OVERWRITE.forEach(k => {
             const val = (source.current as Record<string, unknown>)[k];
@@ -66,7 +72,7 @@ const injectCurrent = (target: ExtendedWeatherData, source: CleanedSource) => {
             }
     });
     if (anyFieldOverwritten) {
-        target.current.source = 'AROME HD';
+        target.current.source = model.label;
     }
 };
 
@@ -129,7 +135,7 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
 
 // --- 4. FUNCIÓ PRINCIPAL (Clean Code) ---
 
-export const injectHighResModelsV2 = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null): ExtendedWeatherData => {
+export const injectHighResModelsV2 = (baseData: ExtendedWeatherData, highResData: ExtendedWeatherData | null, model: RegionalModel): ExtendedWeatherData => {
     if (!baseData) return baseData;
     if (!highResData) return baseData;
 
@@ -176,7 +182,7 @@ export const injectHighResModelsV2 = (baseData: ExtendedWeatherData, highResData
     }
 
     // 4. Execució modular
-    injectCurrent(target, source);
+    injectCurrent(target, source, model);
     injectMinutely(target, source);
     injectHourly(target, source, masterTimeLength);
 

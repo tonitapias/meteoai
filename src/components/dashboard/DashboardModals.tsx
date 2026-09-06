@@ -52,12 +52,13 @@ export const DashboardModals = () => {
                     onClose={() => actions.setShowRadar(false)} 
                 />
             )}
-            {modals.showArome && (
-                <AromeModal 
-                    lat={loc?.latitude || 0} 
-                    lon={loc?.longitude || 0} 
-                    onClose={() => actions.setShowArome(false)} 
-                    lang={flags.lang} 
+            {modals.showArome && flags.activeRegionalModel && (
+                <AromeModal
+                    lat={loc?.latitude || 0}
+                    lon={loc?.longitude || 0}
+                    model={flags.activeRegionalModel}
+                    onClose={() => actions.setShowArome(false)}
+                    lang={flags.lang}
                 />
             )}
         </Suspense>

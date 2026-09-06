@@ -9,6 +9,7 @@ import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeNum, extractValidArrayNum } from '../utils/weatherMath';
+import { isRegionalModelActive } from '../constants/regionalModels';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
     const { hourly, current, utc_offset_seconds, hourlyComparison } = data;
@@ -18,8 +19,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
     const safeLatitude = getSafeLatitude(data.location);
 
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
-    const isArome = current?.source === 'AROME HD';
-    const sourceLabel = isArome ? 'AROME HD' : 'MODEL GLOBAL';
+    const isArome = isRegionalModelActive(current?.source);
+    const sourceLabel = isArome ? (current?.source as string) : 'MODEL GLOBAL';
 
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time) || hourly.time.length === 0) return [];
@@ -198,7 +199,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 {isArome ? (
                     <>
                         <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20 animate-pulse drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
-                        <span className="text-[10px] font-mono font-black text-emerald-400 tracking-widest drop-shadow-md">AROME HD</span>
+                        <span className="text-[10px] font-mono font-black text-emerald-400 tracking-widest drop-shadow-md">{sourceLabel}</span>
                     </>
                 ) : (
                     <>

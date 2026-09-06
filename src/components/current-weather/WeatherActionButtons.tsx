@@ -3,7 +3,7 @@ import { Map, Zap, Star } from 'lucide-react';
 interface WeatherActionButtonsProps {
   onShowRadar: () => void;
   onShowArome: () => void;
-  showAromeBtn?: boolean;
+  regionalModelLabel?: string | null;
   isFavorite: boolean;
   onToggleFavorite: () => void;
 }
@@ -11,10 +11,11 @@ interface WeatherActionButtonsProps {
 export const WeatherActionButtons = ({
   onShowRadar,
   onShowArome,
-  showAromeBtn = false, // DOCTRINA RISC ZERO: Valor per defecte segur
+  regionalModelLabel = null, // DOCTRINA RISC ZERO: Valor per defecte segur
   isFavorite,
   onToggleFavorite,
 }: WeatherActionButtonsProps) => {
+  const showAromeBtn = Boolean(regionalModelLabel);
   
   // SPATIAL UI: Classes base per crear l'efecte de botó físic de panell de control
   const BUTTON_BASE = "relative overflow-hidden flex-1 py-3 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] group";
@@ -33,15 +34,15 @@ export const WeatherActionButtons = ({
         <span className="relative z-10">RADAR</span>
       </button>
 
-      {/* BOTÓ AROME HD (Model Localitzat) */}
+      {/* BOTÓ MODEL REGIONAL HD (AROME / ICON-D2 / HRRR / HRDPS) */}
       {showAromeBtn && (
         <button
           onClick={onShowArome}
           className={`${BUTTON_BASE} bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:text-emerald-100 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]`}
         >
           <div className={MATRIX_BG}></div>
-          <Zap className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" /> 
-          <span className="relative z-10">AROME HD</span>
+          <Zap className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
+          <span className="relative z-10">{regionalModelLabel}</span>
         </button>
       )}
 

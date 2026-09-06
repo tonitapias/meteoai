@@ -1,7 +1,10 @@
 // src/hooks/useArome.ts
 import { useState, useCallback } from 'react';
 import { z } from 'zod';
-import { getAromeData } from '../services/weatherApi';
+import { getRegionalHDData } from '../services/weatherApi';
+import { buildModelSuffixRegex, type RegionalModel } from '../constants/regionalModels';
+
+const MODEL_SUFFIX_REGEX = buildModelSuffixRegex();
 
 // ==========================================
 // ESQUEMES DE VALIDACIÓ ZOD (MUR DE CONTENCIÓ)
@@ -65,23 +68,23 @@ export function useArome() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchArome = useCallback(async (lat: number, lon: number) => {
+  const fetchArome = useCallback(async (lat: number, lon: number, model: RegionalModel) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const rawData = await getAromeData(lat, lon);
-      
-      // SANITITZACIÓ ESTRICTA: Eliminem sufixos de l'API de MeteoFrance
+      const rawData = await getRegionalHDData(lat, lon, model);
+
+      // SANITITZACIÓ ESTRICTA: Eliminem sufixos de model que Open-Meteo afegeix
       const cleanData = (obj: unknown): Record<string, unknown> => {
         if (!obj || typeof obj !== 'object') return {};
         const cleanObj: Record<string, unknown> = {};
-        
+
         Object.entries(obj as Record<string, unknown>).forEach(([key, value]) => {
-          const cleanKey = key.replace(/_meteofrance_arome_france_hd|_best_match|_ecmwf|_gfs|_icon/g, '');
+          const cleanKey = key.replace(MODEL_SUFFIX_REGEX, '');
           cleanObj[cleanKey] = value;
         });
-        
+
         return cleanObj;
       };
 
@@ -100,17 +103,17 @@ export function useArome() {
       if (parsed.success) {
         setAromeData(parsed.data);
       } else {
-        // Mode Paracaigudes: Si AROME ve corrupte, forcem null perquè la resta de l'app
-        // faci servir el model base/global (best_match) com a reserva
-        console.warn("AROME validation failed (Out of Bounds or Bad Data):", parsed.error);
-        setError("Fallada de telemetria AROME HD: Dades fora de paràmetres.");
+        // Mode Paracaigudes: Si el model regional ve corrupte, forcem null perquè la
+        // resta de l'app faci servir el model base/global (best_match) com a reserva
+        console.warn(`${model.label} validation failed (Out of Bounds or Bad Data):`, parsed.error);
+        setError(`Fallada de telemetria ${model.label}: Dades fora de paràmetres.`);
         setAromeData(null);
       }
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("Error fetching AROME:", msg);
-      setError(msg || "Error connectant amb el clúster AROME HD");
+      console.error(`Error fetching ${model.label}:`, msg);
+      setError(msg || `Error connectant amb el clúster ${model.label}`);
       setAromeData(null);
     } finally {
       setLoading(false);

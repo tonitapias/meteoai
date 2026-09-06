@@ -3,12 +3,13 @@ import { useCallback } from 'react';
 import * as Sentry from "@sentry/react";
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import type { WeatherData } from '../types/weather'; // 1. NOU IMPORT
+import type { RegionalModel } from '../constants/regionalModels';
 
 const AROME_TIMEOUT_MS = 4000; // 4 segons màxim per al càlcul físic
 
 export function useAromeWorker() {
   // 2. CORRECCIÓ: 'highRes' ara accepta 'WeatherData' brut de l'API
-  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: WeatherData) => {
+  const runAromeWorker = useCallback((base: ExtendedWeatherData, highRes: WeatherData, model: RegionalModel) => {
       return new Promise<ExtendedWeatherData>((resolve, reject) => {
           const startTime = performance.now();
           
@@ -66,7 +67,7 @@ export function useAromeWorker() {
               worker.terminate();
           };
           
-          worker.postMessage({ baseData: base, highResData: highRes });
+          worker.postMessage({ baseData: base, highResData: highRes, model });
       });
   }, []);
 

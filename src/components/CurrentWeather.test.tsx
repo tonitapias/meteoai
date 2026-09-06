@@ -7,6 +7,9 @@ import * as usePreferencesHook from '../hooks/usePreferences';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
+import { REGIONAL_MODELS } from '../constants/regionalModels';
+
+const AROME_MODEL = REGIONAL_MODELS.find(m => m.id === 'AROME_HD')!;
 
 // Mocks
 vi.mock('./WeatherIcons', () => ({
@@ -130,8 +133,8 @@ describe('CurrentWeather Component', () => {
         onToggleFavorite={() => {}} 
         onShowRadar={() => {}} 
         onShowArome={() => {}} 
-        aqiData={null} 
-        showAromeBtn={true} 
+        aqiData={null}
+        activeRegionalModel={AROME_MODEL}
       />
     );
 

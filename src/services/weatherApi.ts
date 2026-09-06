@@ -5,20 +5,20 @@ import { WeatherResponseSchema, AirQualitySchema } from "../schemas/weatherSchem
 import { WeatherData, AirQualityData } from "../types/weather";
 import { fetchWithTimeout } from "../utils/networkUtils";
 
-import { 
-    API_TIMEOUT_DEFAULT, 
+import {
+    API_TIMEOUT_DEFAULT,
     API_MAX_RETRIES,
-    API_FORECAST_DAYS, 
-    API_MODELS_LIST,   
-    AROME_MODELS_LIST, 
+    API_FORECAST_DAYS,
+    API_MODELS_LIST,
     PARAMS_CURRENT,
     PARAMS_HOURLY,
     PARAMS_DAILY,
     PARAMS_AQI_CURRENT,
     PARAMS_AQI_HOURLY,
-    AROME_CURRENT,
-    AROME_HOURLY
+    REGIONAL_HD_CURRENT,
+    REGIONAL_HD_HOURLY
 } from "../constants/apiConfig";
+import type { RegionalModel } from "../constants/regionalModels";
 
 const BASE_URL = import.meta.env.VITE_API_WEATHER_BASE || "https://api.open-meteo.com/v1/forecast";
 const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-quality-api.open-meteo.com/v1/air-quality";
@@ -197,34 +197,36 @@ export const getAirQualityData = async (lat: number, lon: number): Promise<AirQu
     return validateData<AirQualityData>(AirQualitySchema, rawData, 'getAirQualityData');
 };
 
-// 3. Funció AROME
+// 3. Funció Model Regional d'Alta Resolució (AROME / ICON-D2 / HRRR / HRDPS)
+// [NETEJA] Abans nomia's getAromeData i cridava sempre AROME_MODELS_LIST: generalitzat
+// per acceptar qualsevol RegionalModel del registre (constants/regionalModels.ts).
 // [FIX PRECISIÓ] Abans confiàvem en els valors per defecte d'Open-Meteo per a
 // wind_speed_unit/precipitation_unit (que avui coincideixen amb "kmh"/"mm"). Ara els
 // fixem explícitament, igual que a getWeatherData, perquè si Open-Meteo canvia mai el seu
-// valor per defecte, AROME ("local") no acabi en unitats diferents de la resta de fonts
-// sense que cap tipus ni Zod ho detecti. Temperatura ja era Celsius per defecte, sense canvis.
-export const getAromeData = async (lat: number, lon: number): Promise<WeatherData> => {
+// valor per defecte, el model regional ("local") no acabi en unitats diferents de la resta
+// de fonts sense que cap tipus ni Zod ho detecti. Temperatura ja era Celsius per defecte.
+export const getRegionalHDData = async (lat: number, lon: number, model: RegionalModel): Promise<WeatherData> => {
     Sentry.addBreadcrumb({
         category: 'api-call',
-        message: 'Requesting AROME HD Data',
+        message: `Requesting Regional HD Data (${model.label})`,
         level: 'info',
-        data: { lat, lon }
+        data: { lat, lon, model: model.id }
     });
 
     const params = new URLSearchParams({
         latitude: lat.toString(),
         longitude: lon.toString(),
-        current: AROME_CURRENT.join(','),
-        hourly: AROME_HOURLY.join(','),
-        minutely_15: "precipitation", 
+        current: REGIONAL_HD_CURRENT.join(','),
+        hourly: REGIONAL_HD_HOURLY.join(','),
+        minutely_15: "precipitation",
         timezone: "auto",
         wind_speed_unit: "kmh",
         precipitation_unit: "mm",
-        models: AROME_MODELS_LIST 
+        models: model.apiModelId
     });
 
-    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, 'getAromeData');
+    const response = await fetchWithRetry(`${BASE_URL}?${params.toString()}`, `getRegionalHDData:${model.id}`);
     const rawData: unknown = await response.json();
 
-    return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getAromeData');
+    return validateData<WeatherData>(WeatherResponseSchema, rawData, 'getRegionalHDData');
 };

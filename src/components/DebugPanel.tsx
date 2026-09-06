@@ -5,11 +5,11 @@ import type { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTyp
 
 interface DebugPanelProps {
     weatherData: ExtendedWeatherData | null;
-    supportsArome: boolean;
+    regionalModelLabel: string | null;
     error: string | null;
 }
 
-const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, error }) => {
+const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, regionalModelLabel, error }) => {
     // Estat per la posició (inicialment fixat a dalt a l'esquerra)
     const [position, setPosition] = useState({ x: 20, y: 100 });
     const [isDragging, setIsDragging] = useState(false);
@@ -95,7 +95,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, supportsArome, err
             <div className="space-y-1.5 opacity-90 pointer-events-none">
                 <div className="flex justify-between"><span>LAT:</span> <span className="text-white">{loc?.latitude?.toFixed(6) || "N/A"}</span></div>
                 <div className="flex justify-between"><span>LON:</span> <span className="text-white">{loc?.longitude?.toFixed(6) || "N/A"}</span></div>
-                <div className="flex justify-between"><span>MODEL:</span> <span className="text-white">{supportsArome ? "AROME HD" : "ECMWF STD"}</span></div>
+                <div className="flex justify-between"><span>MODEL:</span> <span className="text-white">{regionalModelLabel || "ECMWF STD"}</span></div>
                 <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{memory ? (memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB' : 'N/A'}</span></div>
                 <div className="flex justify-between"><span>CACHE:</span> <span className="text-white">{localStorage.getItem('weatherCache') ? 'HIT' : 'MISS'}</span></div>
                 <div className="flex justify-between"><span>ERRORS:</span> <span className={error ? "text-red-400" : "text-green-400"}>{error ? "YES" : "NO"}</span></div>

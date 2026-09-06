@@ -5,13 +5,16 @@ import { useArome } from './useArome';
 import type { AromeData } from './useArome'; // Importem el nou tipus validat per Zod
 import * as weatherApi from '../services/weatherApi';
 import type { WeatherData } from '../types/weather';
+import { REGIONAL_MODELS } from '../constants/regionalModels';
+
+const AROME_MODEL = REGIONAL_MODELS.find(m => m.id === 'AROME_HD')!;
 
 // 1. MOCK DE L'API (Simulació)
 vi.mock('../services/weatherApi', () => ({
-  getAromeData: vi.fn()
+  getRegionalHDData: vi.fn()
 }));
 
-const mockedGetAromeData = weatherApi.getAromeData as unknown as MockedFunction<typeof weatherApi.getAromeData>;
+const mockedGetRegionalHDData = weatherApi.getRegionalHDData as unknown as MockedFunction<typeof weatherApi.getRegionalHDData>;
 
 describe('useArome Hook', () => {
   
@@ -47,13 +50,13 @@ describe('useArome Hook', () => {
         daily: {}
     };
 
-    mockedGetAromeData.mockResolvedValue(mockRawData as unknown as WeatherData);
+    mockedGetRegionalHDData.mockResolvedValue(mockRawData as unknown as WeatherData);
 
     // EXECUCIÓ
     const { result } = renderHook(() => useArome());
 
     act(() => {
-        result.current.fetchArome(41.38, 2.17);
+        result.current.fetchArome(41.38, 2.17, AROME_MODEL);
     });
 
     // VERIFICACIÓ
@@ -83,12 +86,12 @@ describe('useArome Hook', () => {
         hourly: { temperature_2m: [15] } // Sense array de 'time', Zod petarà
     };
     
-    mockedGetAromeData.mockResolvedValue(badData as unknown as WeatherData);
+    mockedGetRegionalHDData.mockResolvedValue(badData as unknown as WeatherData);
 
     const { result } = renderHook(() => useArome());
 
     act(() => {
-        result.current.fetchArome(41.38, 2.17);
+        result.current.fetchArome(41.38, 2.17, AROME_MODEL);
     });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -110,12 +113,12 @@ describe('useArome Hook', () => {
         minutely_15: { time: ['2023-01-01T12:00Z'] }
     };
 
-    mockedGetAromeData.mockResolvedValue(validData as unknown as WeatherData);
+    mockedGetRegionalHDData.mockResolvedValue(validData as unknown as WeatherData);
     
     const { result } = renderHook(() => useArome());
     
     await act(async () => {
-        await result.current.fetchArome(41, 2);
+        await result.current.fetchArome(41, 2, AROME_MODEL);
     });
     
     // Comprovem que efectivament Zod l'ha empassat

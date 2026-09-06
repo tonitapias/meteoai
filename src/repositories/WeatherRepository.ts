@@ -1,11 +1,11 @@
 // src/repositories/WeatherRepository.ts
 import * as Sentry from "@sentry/react";
-import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; 
-import { normalizeModelData } from '../utils/normData'; 
-import { isAromeSupported } from '../utils/weatherMath';
+import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { normalizeModelData } from '../utils/normData';
+import { selectRegionalModel, type RegionalModel } from '../constants/regionalModels';
 import type { AirQualityData, WeatherData } from '../types/weather';
-import { getAromeData } from '../services/weatherApi'; 
-import { fetchAllWeatherData } from '../services/weatherService'; 
+import { getRegionalHDData } from '../services/weatherApi';
+import { fetchAllWeatherData } from '../services/weatherService';
 import type { WeatherUnit } from '../utils/formatters';
 import { cacheService } from '../services/cacheService'; 
 import { SENTRY_TAGS } from '../constants/errorConstants';
@@ -20,7 +20,7 @@ interface WeatherRepositoryResponse {
 
 // Tipus per a la funció del Worker (per injectar-la)
 // [CORRECCIÓ] Substituït 'any' per 'WeatherData' (Tipatge estricte)
-type AromeWorkerFn = (currentData: ExtendedWeatherData, aromeData: WeatherData) => Promise<ExtendedWeatherData>;
+type RegionalModelWorkerFn = (currentData: ExtendedWeatherData, regionalData: WeatherData, model: RegionalModel) => Promise<ExtendedWeatherData>;
 
 const CACHE_TTL = 15 * 60 * 1000; 
 
@@ -33,9 +33,9 @@ export const WeatherRepository = {
         lon: number, 
         unit: WeatherUnit, 
         lang: Language, 
-        locationName?: string, 
+        locationName?: string,
         country?: string,
-        runAromeWorker?: AromeWorkerFn
+        runRegionalModelWorker?: RegionalModelWorkerFn
     ): Promise<WeatherRepositoryResponse> {
         
         const cacheKey = cacheService.generateWeatherKey(lat, lon, unit, lang);
@@ -55,17 +55,18 @@ export const WeatherRepository = {
         }
 
         // 2. Peticions de Xarxa (API)
-        // [FIX PRECISIÓ] AROME no depèn de cap resultat de fetchAllWeatherData
+        // [FIX PRECISIÓ] El model regional no depèn de cap resultat de fetchAllWeatherData
         // (només necessita lat/lon), així que abans s'esperava seqüencialment
         // sense cap motiu — una llatència extra sencera a cada consulta dins la
         // zona de cobertura (França/Catalunya, el públic principal de l'app).
         // L'iniciem en paral·lel; capturem la seva fallada aquí mateix (no dins
-        // el Promise.all) perquè un error d'AROME mai faci caure la petició
-        // principal de meteo.
-        const shouldFetchArome = isAromeSupported(lat, lon) && !!runAromeWorker;
-        const aromePromise: Promise<WeatherData | null> = shouldFetchArome
-            ? getAromeData(lat, lon).catch((aromeErr) => {
-                Sentry.captureException(aromeErr, {
+        // el Promise.all) perquè un error del model regional mai faci caure la
+        // petició principal de meteo.
+        const regionalModel = selectRegionalModel(lat, lon);
+        const shouldFetchRegional = !!regionalModel && !!runRegionalModelWorker;
+        const regionalPromise: Promise<WeatherData | null> = shouldFetchRegional
+            ? getRegionalHDData(lat, lon, regionalModel).catch((regionalErr) => {
+                Sentry.captureException(regionalErr, {
                     tags: {
                         service: SENTRY_TAGS.SERVICE_AROME_WORKER,
                         type: SENTRY_TAGS.TYPE_FALLBACK
@@ -76,19 +77,19 @@ export const WeatherRepository = {
             })
             : Promise.resolve(null);
 
-        const [{ weatherRaw, geoData, aqiData: fetchedAqi }, aromeRaw] = await Promise.all([
+        const [{ weatherRaw, geoData, aqiData: fetchedAqi }, regionalRaw] = await Promise.all([
             fetchAllWeatherData(lat, lon, unit, lang, locationName, country),
-            aromePromise
+            regionalPromise
         ]);
 
         let processedData = normalizeModelData(weatherRaw);
 
-        // 3. Integració AROME (si la petició ha tingut èxit)
-        if (aromeRaw && runAromeWorker) {
+        // 3. Integració del model regional (si la petició ha tingut èxit)
+        if (regionalRaw && regionalModel && runRegionalModelWorker) {
             try {
-                processedData = await runAromeWorker(processedData, aromeRaw);
-            } catch (aromeErr) {
-                Sentry.captureException(aromeErr, {
+                processedData = await runRegionalModelWorker(processedData, regionalRaw, regionalModel);
+            } catch (regionalErr) {
+                Sentry.captureException(regionalErr, {
                     tags: {
                         service: SENTRY_TAGS.SERVICE_AROME_WORKER,
                         type: SENTRY_TAGS.TYPE_FALLBACK

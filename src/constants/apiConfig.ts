@@ -9,7 +9,6 @@ export const API_FORECAST_DAYS = "8"; // Dies de previsió
 // en favor de 'ecmwf_ifs025' (0.25°). Amb l'antic, Open-Meteo no retornava mai
 // dades ECMWF (per això hourlyComparison.ecmwf sempre quedava buit).
 export const API_MODELS_LIST = "best_match,ecmwf_ifs025,gfs_seamless,icon_seamless"; // Models base
-export const AROME_MODELS_LIST = "meteofrance_arome_france_hd"; // Model alta resolució
 
 // --- CONFIGURACIÓ DE VARIABLES METEOROLÒGIQUES ---
 // MILLORA DE SEGURETAT: Afegim 'as const' per fer les llistes de lectura exclusiva (Read-Only).
@@ -52,19 +51,24 @@ export const PARAMS_AQI_HOURLY = [
     "european_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone", "sulphur_dioxide"
 ] as const;
 
-// --- MODEL AROME (METEO FRANCE) ---
+// --- MODELS REGIONALS D'ALTA RESOLUCIÓ (AROME / ICON-D2 / HRRR / HRDPS) ---
+// [NETEJA] Abans nomia's AROME_CURRENT/AROME_HOURLY perquè AROME era l'únic
+// model regional. La llista de camps és vàlida per als 4 (verificat en viu
+// contra Open-Meteo: HRRR i ICON-D2 la suporten al 100%; HRDPS no té
+// 'visibility' ni 'freezing_level_height', però el motor de merge ja ignora
+// els camps null — vegeu regionalModels.ts).
 
-export const AROME_CURRENT = [
-    "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", 
-    "precipitation", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure", 
-    "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "cloud_cover_low", 
+export const REGIONAL_HD_CURRENT = [
+    "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day",
+    "precipitation", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure",
+    "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "cloud_cover_low",
     "cloud_cover_mid", "cloud_cover_high"
 ] as const;
 
-export const AROME_HOURLY = [
-    "temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature", 
-    "precipitation", "weather_code", "pressure_msl", "surface_pressure", "cloud_cover", 
-    "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility", 
-    "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "cape", 
+export const REGIONAL_HD_HOURLY = [
+    "temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature",
+    "precipitation", "weather_code", "pressure_msl", "surface_pressure", "cloud_cover",
+    "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility",
+    "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "cape",
     "freezing_level_height", "is_day"
 ] as const;

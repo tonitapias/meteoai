@@ -7,10 +7,12 @@ import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import type { RegionalModel } from '../constants/regionalModels';
 
 interface AromeModalProps {
   lat: number;
   lon: number;
+  model: RegionalModel;
   onClose: () => void;
   lang?: Language;
 }
@@ -35,7 +37,6 @@ interface HourlyRow {
 const aromeTranslations: Record<string, Record<string, string>> = {
   ca: {
     highRes: "Alta Resolució",
-    grid: "Malla 1.3km",
     elev: "ELEV",
     decoding: "Descodificant Model...",
     signalLost: "Senyal Perduda",
@@ -53,7 +54,6 @@ const aromeTranslations: Record<string, Record<string, string>> = {
   },
   es: {
     highRes: "Alta Resolución",
-    grid: "Malla 1.3km",
     elev: "ELEV",
     decoding: "Decodificando Modelo...",
     signalLost: "Señal Perdida",
@@ -71,7 +71,6 @@ const aromeTranslations: Record<string, Record<string, string>> = {
   },
   en: {
     highRes: "High Resolution",
-    grid: "1.3km Grid",
     elev: "ELEV",
     decoding: "Decoding Model...",
     signalLost: "Signal Lost",
@@ -89,7 +88,6 @@ const aromeTranslations: Record<string, Record<string, string>> = {
   },
   fr: {
     highRes: "Haute Résolution",
-    grid: "Grille 1.3km",
     elev: "ELEV",
     decoding: "Décodage Modèle...",
     signalLost: "Signal Perdu",
@@ -114,7 +112,7 @@ const localeMap: Record<string, string> = {
   fr: 'fr-FR' 
 };
 
-export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModalProps) {
+export default function AromeModal({ lat, lon, model, onClose, lang = 'ca' }: AromeModalProps) {
   const { aromeData, loading, error, fetchArome, clearArome } = useArome();
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -158,10 +156,10 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
 
   useEffect(() => {
     if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon)) {
-        fetchArome(lat, lon);
+        fetchArome(lat, lon, model);
     }
     return () => clearArome();
-  }, [lat, lon, fetchArome, clearArome]);
+  }, [lat, lon, model, fetchArome, clearArome]);
 
   const hourlyRows = useMemo<HourlyRow[]>(() => {
     const h = aromeData?.hourly;
@@ -233,7 +231,7 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
 
         // DOCTRINA RISC ZERO: Injecció completa de telemetria per a l'Orquestrador
         const simulatedCurrent = {
-            source: 'AROME HD',
+            source: model.label,
             time: timeStr,
             weather_code: h.weather_code?.[i] ?? 0, 
             temperature_2m: tempActual,
@@ -287,7 +285,7 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
     }
 
     return rows;
-  }, [aromeData, utcOffsetSeconds]);
+  }, [aromeData, utcOffsetSeconds, model]);
 
   // DOCTRINA RISC ZERO: Lògica immutabilitzada i segura contra arrays buits que provocarien Infinity o -Infinity
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);
@@ -343,14 +341,14 @@ export default function AromeModal({ lat, lon, onClose, lang = 'ca' }: AromeModa
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-fuchsia-500 shadow-[0_0_8px_#d946ef]"></span>
                         </span>
-                        AROME
+                        {model.label}
                     </div>
                     <div className="flex flex-col">
                         <h2 className="text-xl md:text-2xl font-black text-white tracking-tighter drop-shadow-md flex items-center gap-2 leading-none">
                             {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">
-                            {t.grid} <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(aromeData?.elevation || 0)}m
+                            {model.resolutionKm}KM GRID <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(aromeData?.elevation || 0)}m
                         </span>
                     </div>
                 </div>

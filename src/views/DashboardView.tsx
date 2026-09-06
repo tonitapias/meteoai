@@ -47,10 +47,10 @@ export default function DashboardView() {
       // Debug protegit
       debugPanel={
         flags?.showDebug && weatherData && (
-            <DebugPanel 
-                weatherData={weatherData} 
-                supportsArome={flags?.supportsArome ?? false} 
-                error={error} 
+            <DebugPanel
+                weatherData={weatherData}
+                regionalModelLabel={flags?.activeRegionalModel?.label ?? null}
+                error={error}
             />
         )
       }

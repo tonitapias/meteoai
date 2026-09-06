@@ -1,7 +1,8 @@
 // src/components/ExpertWidgets.tsx
 import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
-import { getMoonPhase, calculateDewPoint, isAromeSupported } from '../utils/weatherMath';
+import { getMoonPhase, calculateDewPoint } from '../utils/weatherMath';
+import { selectRegionalModel } from '../constants/regionalModels';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { resolveHourlyEpoch } from '../utils/weatherMath';
@@ -118,19 +119,20 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
     ? (location as Record<string, unknown>).longitude as number 
     : undefined;
 
-  // [FIX PRECISIÓ] Només demanem el model global si la població és dins la cobertura AROME:
-  // fora d'aquesta zona, "local" i "global" acaben sent el mateix best_match d'Open-Meteo
-  // demanat dues vegades (ho detecta isGlobalFallback més avall), així que evitem la crida
-  // de xarxa sencera quan ja sabem que no pot aportar cap comparació real.
-  const supportsArome = safeLat !== undefined && safeLon !== undefined && isAromeSupported(safeLat, safeLon);
+  // [FIX PRECISIÓ] Només demanem el model global si la població té un model regional
+  // d'alta resolució (AROME/ICON-D2/HRRR/HRDPS): fora d'aquestes zones, "local" i
+  // "global" acaben sent el mateix best_match d'Open-Meteo demanat dues vegades (ho
+  // detecta isGlobalFallback més avall), així que evitem la crida de xarxa sencera
+  // quan ja sabem que no pot aportar cap comparació real.
+  const hasRegionalModel = safeLat !== undefined && safeLon !== undefined && !!selectRegionalModel(safeLat, safeLon);
 
   useEffect(() => {
-    if (supportsArome && safeLat !== undefined && safeLon !== undefined) {
+    if (hasRegionalModel && safeLat !== undefined && safeLon !== undefined) {
       fetchGlobalModelByCoords(safeLat, safeLon);
     } else {
       clearGlobalModel();
     }
-  }, [supportsArome, safeLat, safeLon, fetchGlobalModelByCoords, clearGlobalModel]);
+  }, [hasRegionalModel, safeLat, safeLon, fetchGlobalModelByCoords, clearGlobalModel]);
 
   const consensusMetrics = useMemo(() => {
     // [FIX PRECISIÓ] Passem la sèrie horària local (AROME) perquè el "Radar a

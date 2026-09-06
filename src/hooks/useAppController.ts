@@ -76,7 +76,7 @@ export function useAppController() {
       },
       flags: {
           // Fusionem flags
-          supportsArome: data.flags.supportsArome,
+          activeRegionalModel: data.flags.activeRegionalModel,
           showDebug: ui.state.showDebug,
           isFavorite: (name: string) => isFavorite(name),
           unit,

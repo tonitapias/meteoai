@@ -6,6 +6,9 @@ import { getRealTimeWeatherCode } from './weatherLogic';
 import { injectHighResModelsV2 } from './aromeEngineV2';
 import { calculateReliability } from './rules/reliabilityRules';
 import { ExtendedWeatherData, StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { REGIONAL_MODELS } from '../constants/regionalModels';
+
+const AROME_MODEL = REGIONAL_MODELS.find(m => m.id === 'AROME_HD')!;
 
 describe('weatherLogic - getRealTimeWeatherCode', () => {
     
@@ -128,7 +131,7 @@ describe('injectHighResModelsV2 - Fusió AROME', () => {
              hourly: { temperature_2m: [12, 12] }
          } as unknown as ExtendedWeatherData;
 
-         const result = injectHighResModelsV2(baseData, aromeData);
+         const result = injectHighResModelsV2(baseData, aromeData, AROME_MODEL);
 
          expect(result.current.temperature_2m).toBe(12);
          expect(result.current.weather_code).toBe(61);
@@ -137,7 +140,7 @@ describe('injectHighResModelsV2 - Fusió AROME', () => {
 
      it('hauria de gestionar correctament si falten dades AROME', () => {
          const baseData = { current: { temperature_2m: 10 } } as unknown as ExtendedWeatherData;
-         const result = injectHighResModelsV2(baseData, null as unknown as ExtendedWeatherData);
+         const result = injectHighResModelsV2(baseData, null as unknown as ExtendedWeatherData, AROME_MODEL);
          expect(result).toEqual(baseData);
      });
 });

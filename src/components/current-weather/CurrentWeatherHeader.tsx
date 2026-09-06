@@ -5,8 +5,8 @@ interface CurrentWeatherHeaderProps {
   country?: string;
   time?: string;
   date?: string;
-  isUsingArome: boolean;
-  elevation?: number | null; 
+  modelLabel: string | null;
+  elevation?: number | null;
 }
 
 export const CurrentWeatherHeader = ({
@@ -14,7 +14,7 @@ export const CurrentWeatherHeader = ({
   country,
   time,
   date,
-  isUsingArome,
+  modelLabel,
   elevation,
 }: CurrentWeatherHeaderProps) => {
   
@@ -43,9 +43,9 @@ export const CurrentWeatherHeader = ({
             </span>
           </div>
           
-          {isUsingArome ? (
+          {modelLabel ? (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 shadow-[inset_0_1px_4px_rgba(16,185,129,0.2)] text-[9px] font-mono font-black text-emerald-400 tracking-widest uppercase transition-all duration-300">
-              <Zap className="w-3 h-3 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" /> AROME HD
+              <Zap className="w-3 h-3 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" /> {modelLabel}
             </span>
           ) : (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/30 shadow-[inset_0_1px_4px_rgba(99,102,241,0.2)] text-[9px] font-mono font-black text-indigo-400 tracking-widest uppercase transition-all duration-300">
