@@ -14,7 +14,7 @@ export interface RegionalModelBBox {
 }
 
 export interface RegionalModel {
-    id: 'AROME_HD' | 'ICON_D2' | 'HRDPS' | 'HRRR';
+    id: 'UKMO' | 'METEOSWISS' | 'KNMI' | 'ITALIA' | 'METNO' | 'DMI' | 'AROME_HD' | 'ICON_D2' | 'HRDPS' | 'HRRR' | 'JMA';
     apiModelId: string;
     label: string;
     resolutionKm: number;
@@ -30,18 +30,77 @@ const pointInModelBBox = (lat: number, lon: number, m: RegionalModel): boolean =
     Array.isArray(m.bbox) ? m.bbox.some(b => pointInBBox(lat, lon, b)) : pointInBBox(lat, lon, m.bbox);
 
 // ORDRE DE PRIORITAT: el primer bbox que conté el punt guanya. Això resol
-// els solapaments a les vores sense ambigüitat:
+// els solapaments a les vores sense ambigüitat. Diversos models nacionals
+// compactes cauen NUMÈRICAMENT dins dels rectangles amplis d'AROME_HD i
+// ICON_D2 (Suïssa, Països Baixos/Bèlgica, sud d'Anglaterra, nord d'Itàlia),
+// així que es comproven ABANS perquè guanyin a la seva pròpia zona:
+// - UKMO abans d'AROME_HD: el sud d'Anglaterra (p.ex. Dover, ~51°N 1.3°E) cau
+//   dins del bbox d'AROME_HD.
+// - MeteoSwiss i KNMI abans d'AROME_HD i ICON_D2: Suïssa i els Països
+//   Baixos/Bèlgica cauen dins de tots dos.
+// - ItaliaMeteo abans d'ICON_D2 (nord d'Itàlia) i abans d'AROME_HD (Alps
+//   occidentals italians toquen el seu bbox).
+// - MetNo abans d'ICON_D2: el sud de Dinamarca (~54,5-55°N) toca el límit
+//   superior del bbox d'ICON_D2.
+// - DMI és el més ampli d'aquest grup nòrdic (domini "Centreeuropa i Nòrdics
+//   fins a Islàndia"): es comprova després de MetNo perquè Islàndia és el
+//   seu valor diferencial real (MetNo no la cobreix) — mateix patró que el
+//   bbox ampli d'HRDPS després del corredor específic, vegeu sota.
 // - ICON_D2 se solapa amb AROME_HD a l'oest (Alsàcia/Benelux) -> es queda amb AROME_HD.
-// - HRDPS es comprova ABANS que HRRR (vegeu nota sota) perquè la frontera
-//   EUA-Canadà NO és una línia de latitud: als Grans Llacs baixa fins a ~43°N
-//   (Toronto), molt per sota de ciutats nord-americanes com Minneapolis (45°N)
-//   o Seattle (47.6°N). Amb un únic rectangle per model, prioritzar HRRR
-//   etiquetava Toronto com a "HRRR" (model dels EUA) — per això HRDPS té un
-//   segon bbox només per al corredor Grans Llacs/Sant Llorenç i es comprova
-//   primer. Detroit/Windsor (ciutats bessones, una a cada país, pràcticament
-//   a les mateixes coordenades) són irresolubles amb rectangles: es queden
-//   com a HRDPS, una imprecisió coneguda i acceptada.
+// - HRDPS es comprova ABANS que HRRR perquè la frontera EUA-Canadà NO és una
+//   línia de latitud: als Grans Llacs baixa fins a ~43°N (Toronto), molt per
+//   sota de ciutats nord-americanes com Minneapolis (45°N) o Seattle
+//   (47.6°N). Amb un únic rectangle per model, prioritzar HRRR etiquetava
+//   Toronto com a "HRRR" (model dels EUA) — per això HRDPS té un segon bbox
+//   només per al corredor Grans Llacs/Sant Llorenç i es comprova primer.
+//   Detroit/Windsor (ciutats bessones, una a cada país, pràcticament a les
+//   mateixes coordenades) són irresolubles amb rectangles: es queden com a
+//   HRDPS, una imprecisió coneguda i acceptada.
+// - JMA no se solapa amb res (primer model no-europeu/nord-americà) —
+//   posició irrellevant, es deixa al final per claredat.
 export const REGIONAL_MODELS: RegionalModel[] = [
+    {
+        id: 'UKMO',
+        apiModelId: 'ukmo_uk_deterministic_2km',
+        label: 'UKMO',
+        resolutionKm: 2.0,
+        bbox: { minLat: 49.8, maxLat: 61.0, minLon: -11.0, maxLon: 2.0 }
+    },
+    {
+        id: 'METEOSWISS',
+        apiModelId: 'meteoswiss_icon_ch2',
+        label: 'MeteoSwiss',
+        resolutionKm: 2.0,
+        bbox: { minLat: 45.5, maxLat: 48.0, minLon: 5.5, maxLon: 10.8 }
+    },
+    {
+        id: 'KNMI',
+        apiModelId: 'knmi_harmonie_arome_netherlands',
+        label: 'KNMI',
+        resolutionKm: 2.0,
+        bbox: { minLat: 49.4, maxLat: 53.6, minLon: 2.5, maxLon: 7.3 }
+    },
+    {
+        id: 'ITALIA',
+        apiModelId: 'italia_meteo_arpae_icon_2i',
+        label: 'ItaliaMeteo',
+        resolutionKm: 2.0,
+        bbox: { minLat: 36.0, maxLat: 47.2, minLon: 6.5, maxLon: 18.6 }
+    },
+    {
+        id: 'METNO',
+        apiModelId: 'metno_nordic',
+        label: 'MET Norway',
+        resolutionKm: 1.0,
+        bbox: { minLat: 54.5, maxLat: 71.5, minLon: 4.0, maxLon: 31.5 }
+    },
+    {
+        id: 'DMI',
+        apiModelId: 'dmi_harmonie_arome_europe',
+        label: 'DMI',
+        resolutionKm: 2.0,
+        bbox: { minLat: 54.0, maxLat: 67.0, minLon: -25.0, maxLon: 31.0 }
+    },
     {
         id: 'AROME_HD',
         apiModelId: 'meteofrance_arome_france_hd',
@@ -74,6 +133,13 @@ export const REGIONAL_MODELS: RegionalModel[] = [
         label: 'HRRR',
         resolutionKm: 3.0,
         bbox: { minLat: 21.0, maxLat: 49.0, minLon: -125.0, maxLon: -66.0 }
+    },
+    {
+        id: 'JMA',
+        apiModelId: 'jma_msm',
+        label: 'JMA',
+        resolutionKm: 5.0,
+        bbox: { minLat: 24.0, maxLat: 46.0, minLon: 122.0, maxLon: 146.0 }
     }
 ];
 
