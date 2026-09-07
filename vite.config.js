@@ -33,6 +33,7 @@ export default defineConfig({
         name: 'MeteoToni AI', //[cite: 3]
         short_name: 'MeteoToni', //[cite: 3]
         description: 'Previsió meteorològica intel·ligent amb models ECMWF i AROME.', //[cite: 3]
+        lang: 'ca',
         theme_color: '#05060A', //[cite: 3]
         background_color: '#05060A', //[cite: 3]
         display: 'standalone', //[cite: 3]
