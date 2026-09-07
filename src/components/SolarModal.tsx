@@ -1,6 +1,7 @@
 // src/components/SolarModal.tsx
 // Modal de detall del cicle solar — direcció visual "planetari/astronòmic": starfield,
-// arc real d'altitud/azimut, cronologia completa de crepuscles i hora daurada, 8 dies vista.
+// arc real d'altitud/azimut amb scrubbing horari, cronologia completa de crepuscles i hora
+// daurada, selecció de dia i 14 dies vista.
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { X, Sunrise, Sunset, Gauge, Zap, CloudSun, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';

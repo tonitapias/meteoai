@@ -1,7 +1,7 @@
 // src/components/MoonModal.tsx
 // Modal de detall del cicle lunar — direcció visual "planetari/astronòmic": starfield dens,
-// icona de fase gran amb orientació real del limbe, azimut de sortida/posta, distància i
-// insígnia de superlluna, pròxima lluna plena/nova, 8 dies vista.
+// icona de fase gran (mirall per a l'hemisferi sud), azimut de sortida/posta, distància i
+// insígnia de superlluna, pròxima lluna plena/nova, selecció de dia i 14 dies vista.
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { X, ArrowUpCircle, ArrowDownCircle, Orbit, Sparkles, CalendarClock } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
@@ -269,6 +269,9 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
           </button>
         </div>
 
+        {!hasValidCoords ? (
+          <div className="flex-1 flex items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center">{t.noData}</div>
+        ) : (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain astro-scrollbar relative z-10 p-4 md:p-6 space-y-6">
 
           {/* HEROI: icona de fase gran + lectura en viu */}
@@ -372,6 +375,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
