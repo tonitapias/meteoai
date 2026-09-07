@@ -495,7 +495,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                     flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest cursor-pointer transition-all duration-300
                     ${viewMode === 'basic'
                         ? 'bg-gradient-to-b from-sky-600 to-sky-900 text-white border border-sky-400/50 physical-btn-active ring-1 ring-sky-500/30'
-                        : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
+                        : 'text-slate-400 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
                 `}
                 aria-pressed={viewMode === 'basic'}
               >
@@ -512,7 +512,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                     flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest cursor-pointer transition-all duration-300
                     ${viewMode === 'expert'
                         ? 'bg-gradient-to-b from-indigo-600 to-indigo-900 text-white border border-indigo-400/50 physical-btn-active ring-1 ring-indigo-500/30'
-                        : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
+                        : 'text-slate-400 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
                 `}
                 aria-pressed={viewMode === 'expert'}
               >
