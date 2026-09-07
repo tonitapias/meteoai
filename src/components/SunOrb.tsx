@@ -27,9 +27,9 @@ export const SunOrb = ({ elevationDeg, className = 'w-16 h-16' }: SunOrbProps) =
       <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
         <defs>
           <radialGradient id="sunOrbCore" cx="38%" cy="34%" r="70%">
-            <stop offset="0%" stopColor={coreColor} />
-            <stop offset="75%" stopColor={midColor} />
-            <stop offset="100%" stopColor={isDaytime ? midColor : '#0f172a'} />
+            <stop offset="0%" stopColor={coreColor} style={{ transition: 'stop-color 0.25s ease-out' }} />
+            <stop offset="75%" stopColor={midColor} style={{ transition: 'stop-color 0.25s ease-out' }} />
+            <stop offset="100%" stopColor={isDaytime ? midColor : '#0f172a'} style={{ transition: 'stop-color 0.25s ease-out' }} />
           </radialGradient>
           <filter id="sunOrbGlow" x="-120%" y="-120%" width="340%" height="340%">
             <feGaussianBlur stdDeviation="5" result="b" />
@@ -46,6 +46,7 @@ export const SunOrb = ({ elevationDeg, className = 'w-16 h-16' }: SunOrbProps) =
             strokeLinecap="round"
             opacity={0.55 + warmth * 0.35}
             transform={`rotate(${angle} 50 50)`}
+            style={{ transition: 'stroke 0.25s ease-out, opacity 0.25s ease-out' }}
           />
         ))}
 
@@ -54,7 +55,7 @@ export const SunOrb = ({ elevationDeg, className = 'w-16 h-16' }: SunOrbProps) =
           fill="url(#sunOrbCore)"
           filter="url(#sunOrbGlow)"
           className={isDaytime ? 'animate-pulse' : ''}
-          style={{ animationDuration: '4s' }}
+          style={{ animationDuration: '4s', transition: 'stroke 0.25s ease-out' }}
           stroke={isDaytime ? 'none' : '#475569'}
           strokeWidth={isDaytime ? 0 : 1}
         />

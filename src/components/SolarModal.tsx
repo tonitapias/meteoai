@@ -203,6 +203,17 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     return arcSamples.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.fraction * 400} ${altToY(p.altitude)}`).join(' ');
   }, [arcSamples]);
 
+  // Fracció del dia (0-1) en què cauen la sortida i la posta — per marcar-les clarament
+  // sobre la corba (degradat nit/dia + punts) en lloc de deixar que es confonguin amb la resta.
+  const sunriseFraction = useMemo(() => {
+    if (!sunDayTimes.sunrise || dayMidnightUtcMs === null) return null;
+    return (sunDayTimes.sunrise.getTime() - dayMidnightUtcMs) / 86400000;
+  }, [sunDayTimes.sunrise, dayMidnightUtcMs]);
+  const sunsetFraction = useMemo(() => {
+    if (!sunDayTimes.sunset || dayMidnightUtcMs === null) return null;
+    return (sunDayTimes.sunset.getTime() - dayMidnightUtcMs) / 86400000;
+  }, [sunDayTimes.sunset, dayMidnightUtcMs]);
+
   const nowFraction = useMemo(() => {
     const localSeconds = ((Math.floor(now.getTime() / 1000) + utcOffsetSeconds) % 86400 + 86400) % 86400;
     return localSeconds / 86400;
@@ -230,12 +241,32 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
 
   const isScrubbing = scrubFraction !== null;
 
+  // El ratolí genera onPointerMove a una freqüència molt més alta que el dit (que l'engavatxa
+  // sol al ritme de fotogrames) — sense llindar, cada moviment de ratolí força un re-render
+  // complet del modal i es percep a batzegades a PC. Agrupem les actualitzacions a com a molt
+  // una per fotograma amb requestAnimationFrame, igual de fluid a PC que al mòbil.
+  const scrubRafRef = useRef<number | null>(null);
+  const latestPointerRef = useRef<{ clientX: number; rect: DOMRect } | null>(null);
   const handleArcPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setScrubFraction(fraction);
+    // Sempre desem la posició MÉS RECENT — el fotograma pot trigar a arribar, però quan ho
+    // fa ha de reflectir on és el punter ara, no on era quan es va rebre el primer event.
+    latestPointerRef.current = { clientX: e.clientX, rect: e.currentTarget.getBoundingClientRect() };
+    if (scrubRafRef.current !== null) return;
+    scrubRafRef.current = requestAnimationFrame(() => {
+      scrubRafRef.current = null;
+      const latest = latestPointerRef.current;
+      if (!latest) return;
+      const fraction = Math.max(0, Math.min(1, (latest.clientX - latest.rect.left) / latest.rect.width));
+      setScrubFraction(fraction);
+    });
   };
-  const clearScrub = () => setScrubFraction(null);
+  const clearScrub = () => {
+    if (scrubRafRef.current !== null) {
+      cancelAnimationFrame(scrubRafRef.current);
+      scrubRafRef.current = null;
+    }
+    setScrubFraction(null);
+  };
 
   // Un scrub d'un dia no té sentit conservat en canviar de dia consultat
   const selectDay = (offset: number) => {
@@ -463,7 +494,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
             <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative">
                 <div className={`absolute inset-0 rounded-full blur-[50px] pointer-events-none transition-colors duration-1000 ${isDaytime ? 'bg-amber-500/25' : 'bg-indigo-500/10'}`}></div>
-                <SunOrb elevationDeg={isToday ? (sunNowPos?.altitudeDeg ?? -90) : (solarNoonAlt ?? -90)} className="w-full h-full relative z-10" />
+                <SunOrb elevationDeg={activeSample ? activeSample.altitude : (isToday ? (sunNowPos?.altitudeDeg ?? -90) : (solarNoonAlt ?? -90))} className="w-full h-full relative z-10" />
               </div>
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
                 <span className="text-3xl font-black text-white tracking-tight leading-none">
@@ -522,9 +553,40 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                     <feGaussianBlur stdDeviation="4" result="b" />
                     <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
+                  <linearGradient id="dayNightStroke" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="0">
+                    {sunriseFraction !== null && sunsetFraction !== null ? (() => {
+                      // Marges petits al voltant de sortida/posta perquè el degradat es vegi
+                      // com una transició de crepuscle, no un tall sec — amb guàrdia per si
+                      // mai queden desordenats (dies polars extrems, marges massa junts).
+                      const m = 0.01;
+                      const rise0 = Math.max(0, sunriseFraction - m);
+                      const rise1 = Math.min(1, Math.max(rise0, sunriseFraction + m));
+                      const set0 = Math.max(rise1, sunsetFraction - m);
+                      const set1 = Math.min(1, Math.max(set0, sunsetFraction + m));
+                      return (
+                        <>
+                          <stop offset={0} stopColor="#818cf8" />
+                          <stop offset={rise0} stopColor="#818cf8" />
+                          <stop offset={rise1} stopColor="#fbbf24" />
+                          <stop offset={set0} stopColor="#fbbf24" />
+                          <stop offset={set1} stopColor="#818cf8" />
+                          <stop offset={1} stopColor="#818cf8" />
+                        </>
+                      );
+                    })() : (
+                      <stop offset={0} stopColor={isDaytime ? '#fbbf24' : '#818cf8'} />
+                    )}
+                  </linearGradient>
                 </defs>
                 <line x1="0" y1={HORIZON_Y} x2="400" y2={HORIZON_Y} stroke="#1e293b" strokeWidth="1" strokeDasharray="2 3" />
-                {arcPath && <path d={arcPath} fill="none" stroke={isDaytime ? '#fbbf24' : '#818cf8'} strokeWidth="2" strokeLinecap="round" opacity="0.8" />}
+                {arcPath && <path d={arcPath} fill="none" stroke="url(#dayNightStroke)" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />}
+                {/* Punts de sortida i posta: marquen exactament on la corba creua l'horitzó */}
+                {sunriseFraction !== null && (
+                  <circle cx={sunriseFraction * 400} cy={HORIZON_Y} r="3.5" fill="#fbbf24" stroke="#1a1206" strokeWidth="1.5" />
+                )}
+                {sunsetFraction !== null && (
+                  <circle cx={sunsetFraction * 400} cy={HORIZON_Y} r="3.5" fill="#fbbf24" stroke="#1a1206" strokeWidth="1.5" />
+                )}
                 {activeSample && (() => {
                   const p = activeSample;
                   const isLive = isScrubbing || isToday;
@@ -533,8 +595,8 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                       {isScrubbing && (
                         <line x1={p.fraction * 400} y1="10" x2={p.fraction * 400} y2="150" stroke="#fbbf24" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
                       )}
-                      <g style={{ transform: `translate(${p.fraction * 400}px, ${altToY(p.altitude)}px)` }}>
-                        <circle r="8" fill={isDaytime ? '#fbbf24' : '#818cf8'} opacity={isLive ? 0.25 : 0.15} />
+                      <g style={{ transform: `translate(${p.fraction * 400}px, ${altToY(p.altitude)}px)`, transition: isScrubbing ? 'none' : 'transform 0.6s ease-out' }}>
+                        <circle r="8" fill={p.altitude > 0 ? '#fbbf24' : '#818cf8'} opacity={isLive ? 0.25 : 0.15} />
                         <circle r="4" fill="#fff" filter="url(#solarGlow)" opacity={isLive ? 1 : 0.8} />
                       </g>
                     </g>
