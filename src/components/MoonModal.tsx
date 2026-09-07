@@ -39,7 +39,7 @@ const T: Record<Language, Record<string, string>> = {
     distance: 'Distància', supermoon: 'SUPERLLUNA', micromoon: 'MICRO LLUNA', nextFull: 'Pròxima Lluna Plena',
     nextNew: 'Pròxima Lluna Nova', inDays: 'en {n} dies', today: 'avui', tomorrow: 'demà', week: 'Pròxims 14 Dies',
     livePosition: 'Posició Actual', folkName: 'Nom Tradicional (curiositat)',
-    perigee: 'Perigeu', apogee: 'Apogeu',
+    perigee: 'Perigeu', apogee: 'Apogeu', todayCard: 'Avui', backToToday: 'Torna a avui',
   },
   es: {
     title: 'OBSERVATORIO LUNAR', subtitle: 'Ciclo y Posición de la Luna', noData: 'DATOS INSUFICIENTES',
@@ -47,7 +47,7 @@ const T: Record<Language, Record<string, string>> = {
     distance: 'Distancia', supermoon: 'SUPERLUNA', micromoon: 'MICRO LUNA', nextFull: 'Próxima Luna Llena',
     nextNew: 'Próxima Luna Nueva', inDays: 'en {n} días', today: 'hoy', tomorrow: 'mañana', week: 'Próximos 14 Días',
     livePosition: 'Posición Actual', folkName: 'Nombre Tradicional (curiosidad)',
-    perigee: 'Perigeo', apogee: 'Apogeo',
+    perigee: 'Perigeo', apogee: 'Apogeo', todayCard: 'Hoy', backToToday: 'Volver a hoy',
   },
   en: {
     title: 'LUNAR OBSERVATORY', subtitle: 'Moon Cycle & Position', noData: 'INSUFFICIENT DATA',
@@ -55,7 +55,7 @@ const T: Record<Language, Record<string, string>> = {
     distance: 'Distance', supermoon: 'SUPERMOON', micromoon: 'MICROMOON', nextFull: 'Next Full Moon',
     nextNew: 'Next New Moon', inDays: 'in {n} days', today: 'today', tomorrow: 'tomorrow', week: 'Next 14 Days',
     livePosition: 'Live Position', folkName: 'Traditional Name (folklore)',
-    perigee: 'Perigee', apogee: 'Apogee',
+    perigee: 'Perigee', apogee: 'Apogee', todayCard: 'Today', backToToday: 'Back to today',
   },
   fr: {
     title: 'OBSERVATOIRE LUNAIRE', subtitle: 'Cycle et Position de la Lune', noData: 'DONNÉES INSUFFISANTES',
@@ -63,7 +63,7 @@ const T: Record<Language, Record<string, string>> = {
     distance: 'Distance', supermoon: 'SUPERLUNE', micromoon: 'MICRO LUNE', nextFull: 'Prochaine Pleine Lune',
     nextNew: 'Prochaine Nouvelle Lune', inDays: 'dans {n} jours', today: "aujourd'hui", tomorrow: 'demain', week: '14 Prochains Jours',
     livePosition: 'Position Actuelle', folkName: 'Nom Traditionnel (folklore)',
-    perigee: 'Périgée', apogee: 'Apogée',
+    perigee: 'Périgée', apogee: 'Apogée', todayCard: "Aujourd'hui", backToToday: "Retour à aujourd'hui",
   },
 };
 
@@ -136,33 +136,66 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
     return () => clearInterval(timer);
   }, []);
 
-  const phase = useMemo(() => getMoonPhase(now), [now]);
+  // --- Selecció de dia: la tira de 14 dies és un selector real, no només informativa ---
+  const [selectedDayOffset, setSelectedDayOffset] = useState(0); // 0 = avui
+  const isToday = selectedDayOffset === 0;
+
+  const todayStr = Array.isArray(daily?.time) ? daily.time[0] : undefined;
+  const viewDateStr = isToday ? todayStr : addDaysToDateStr(todayStr, selectedDayOffset);
+
+  const viewedDayLabel = useMemo(() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(viewDateStr || '');
+    if (!m) return '';
+    const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    return `${weekday} ${Number(m[3])}`;
+  }, [viewDateStr, dateLocale]);
+
+  // Migdia (UTC) del dia consultat — instant de referència per a fase/distància quan no es
+  // mira avui (cap "posició en viu" té sentit per a un dia que encara no s'ha viscut).
+  const viewAnchor = useMemo(() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(viewDateStr || '');
+    return m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0)) : null;
+  }, [viewDateStr]);
+
+  const phase = useMemo(
+    () => isToday ? getMoonPhase(now) : (viewAnchor ? getMoonPhase(viewAnchor) : 0),
+    [isToday, now, viewAnchor]
+  );
   const illumination = getMoonIlluminationPercent(phase);
   const ageDays = getMoonAgeDays(phase);
   const phaseName = getPhaseName(phase, safeLang);
 
+  // Posició real "ara mateix" — només es mostra a l'heroi quan es consulta avui.
   const livePos = useMemo(
     () => hasValidCoords ? getMoonCompassPosition(now, lat, lon) : null,
     [now, hasValidCoords, lat, lon]
   );
 
-  const distanceCategory = livePos ? getMoonDistanceCategory(livePos.distanceKm) : 'normal';
-  const gaugePercent = livePos ? getMoonDistanceGaugePercent(livePos.distanceKm) : 50;
+  // Distància del dia consultat (avui: en viu; un altre dia: al migdia d'aquell dia) — la
+  // insígnia de Superlluna/Micro lluna és útil per a qualsevol dels 14 dies, no només avui.
+  const viewMoonPos = useMemo(() => {
+    if (!hasValidCoords) return null;
+    return isToday ? livePos : (viewAnchor ? getMoonCompassPosition(viewAnchor, lat, lon) : null);
+  }, [hasValidCoords, isToday, livePos, viewAnchor, lat, lon]);
 
-  const todayStr = Array.isArray(daily?.time) ? daily.time[0] : undefined;
-  const riseSetToday = useMemo(
-    () => hasValidCoords ? getMoonRiseSetForDate(todayStr, lat, lon, timezone) : { rise: { date: null, formatted: null, isNextDay: false }, set: { date: null, formatted: null, isNextDay: false } },
-    [hasValidCoords, todayStr, lat, lon, timezone]
+  const distanceCategory = viewMoonPos ? getMoonDistanceCategory(viewMoonPos.distanceKm) : 'normal';
+  const gaugePercent = viewMoonPos ? getMoonDistanceGaugePercent(viewMoonPos.distanceKm) : 50;
+
+  const riseSetView = useMemo(
+    () => hasValidCoords ? getMoonRiseSetForDate(viewDateStr, lat, lon, timezone) : { rise: { date: null, formatted: null, isNextDay: false }, set: { date: null, formatted: null, isNextDay: false } },
+    [hasValidCoords, viewDateStr, lat, lon, timezone]
   );
   const riseAz = useMemo(
-    () => riseSetToday.rise.date && hasValidCoords ? getMoonCompassPosition(riseSetToday.rise.date, lat, lon) : null,
-    [riseSetToday.rise.date, hasValidCoords, lat, lon]
+    () => riseSetView.rise.date && hasValidCoords ? getMoonCompassPosition(riseSetView.rise.date, lat, lon) : null,
+    [riseSetView.rise.date, hasValidCoords, lat, lon]
   );
   const setAz = useMemo(
-    () => riseSetToday.set.date && hasValidCoords ? getMoonCompassPosition(riseSetToday.set.date, lat, lon) : null,
-    [riseSetToday.set.date, hasValidCoords, lat, lon]
+    () => riseSetView.set.date && hasValidCoords ? getMoonCompassPosition(riseSetView.set.date, lat, lon) : null,
+    [riseSetView.set.date, hasValidCoords, lat, lon]
   );
 
+  // Sempre ancorades a "ara" real, independent del dia consultat — "pròxima lluna plena/nova"
+  // vol dir la pròxima de veritat, no la relativa al dia que s'estigui prevvisualitzant.
   const nextFull = useMemo(() => getNextMoonEvent('full', now, 45), [now]);
   const nextNew = useMemo(() => getNextMoonEvent('new', now, 45), [now]);
 
@@ -172,11 +205,14 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   }, [isSouth, nextFull, safeLang]);
 
   // Calculada íntegrament amb astronomia local (suncalc) per als propers STRIP_DAYS dies —
-  // no depèn de daily.time.length, així que no cal ampliar cap fetch d'Open-Meteo.
+  // no depèn de daily.time.length, així que no cal ampliar cap fetch d'Open-Meteo. Sempre
+  // ancorada a avui, no al dia seleccionat — la tira no canvia de contingut en seleccionar,
+  // només es ressalta la targeta triada.
   const weekDays = useMemo(() => {
     if (!todayStr || !hasValidCoords) return [];
     return Array.from({ length: STRIP_DAYS }, (_, idx) => {
-      const dateStr = addDaysToDateStr(todayStr, idx + 1); // comença demà
+      const offset = idx + 1; // comença demà
+      const dateStr = addDaysToDateStr(todayStr, offset);
       const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
       const weekdayLabel = m ? new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : '--';
       const dayNum = m ? Number(m[3]) : null;
@@ -184,11 +220,10 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
       const dayPhase = anchor ? getMoonPhase(anchor) : 0;
       const riseSet = getMoonRiseSetForDate(dateStr, lat, lon, timezone);
       return {
-        dateStr: dateStr || '', weekdayLabel, dayNum, phase: dayPhase,
+        dateStr: dateStr || '', offset, weekdayLabel, dayNum, phase: dayPhase,
         illumination: getMoonIlluminationPercent(dayPhase),
         rise: riseSet.rise.formatted || '--:--',
         set: riseSet.set.formatted || '--:--',
-        i: idx,
       };
     });
   }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale]);
@@ -245,18 +280,27 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
               </div>
             </div>
             <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400/70">{isToday ? t.todayCard : viewedDayLabel}</span>
               <span className="text-3xl font-black text-white tracking-tight leading-none">{phaseName}</span>
               <span className="text-sm font-bold text-indigo-300">{illumination}% {t.illumination} · {t.age} {ageDays} {t.days}</span>
               {folkName && (
                 <span className="text-[10px] font-bold text-amber-300/80 uppercase tracking-wide mt-1">✨ {folkName} <span className="text-slate-500 normal-case">({t.folkName})</span></span>
               )}
-              {hasValidCoords && livePos && (
+              {isToday && hasValidCoords && livePos && (
                 <div className="flex items-center gap-3 mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{t.livePosition}</span>
                   <span className="text-xs font-mono font-bold text-indigo-200">
                     {Math.round(livePos.azimuthDeg)}° {getCardinalLabel(livePos.azimuthDeg, safeLang)} · {livePos.altitudeDeg >= 0 ? '+' : ''}{Math.round(livePos.altitudeDeg)}°
                   </span>
                 </div>
+              )}
+              {!isToday && (
+                <button
+                  onClick={() => setSelectedDayOffset(0)}
+                  className="mt-1 text-[10px] font-black uppercase tracking-widest text-indigo-400/80 hover:text-indigo-300 underline underline-offset-2 transition-colors"
+                >
+                  ← {t.backToToday}
+                </button>
               )}
             </div>
           </div>
@@ -265,21 +309,21 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard
               label={t.rise}
-              value={riseSetToday.rise.formatted || '--:--'}
-              sub={riseAz ? `${Math.round(riseAz.azimuthDeg)}° ${getCardinalLabel(riseAz.azimuthDeg, safeLang)}${riseSetToday.rise.isNextDay ? ' +1d' : ''}` : undefined}
+              value={riseSetView.rise.formatted || '--:--'}
+              sub={riseAz ? `${Math.round(riseAz.azimuthDeg)}° ${getCardinalLabel(riseAz.azimuthDeg, safeLang)}${riseSetView.rise.isNextDay ? ' +1d' : ''}` : undefined}
               icon={<ArrowUpCircle className="w-3.5 h-3.5" />}
               valueClassName="text-cyan-300"
             />
             <StatCard
               label={t.set}
-              value={riseSetToday.set.formatted || '--:--'}
-              sub={setAz ? `${Math.round(setAz.azimuthDeg)}° ${getCardinalLabel(setAz.azimuthDeg, safeLang)}${riseSetToday.set.isNextDay ? ' +1d' : ''}` : undefined}
+              value={riseSetView.set.formatted || '--:--'}
+              sub={setAz ? `${Math.round(setAz.azimuthDeg)}° ${getCardinalLabel(setAz.azimuthDeg, safeLang)}${riseSetView.set.isNextDay ? ' +1d' : ''}` : undefined}
               icon={<ArrowDownCircle className="w-3.5 h-3.5" />}
               valueClassName="text-amber-300"
             />
             <div className="rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col gap-1.5 col-span-2 sm:col-span-1">
               <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><Orbit className="w-3.5 h-3.5" />{t.distance}</span>
-              <span className="text-lg font-black tabular-nums text-white leading-none">{livePos ? `${Math.round(livePos.distanceKm).toLocaleString(dateLocale)} km` : '--'}</span>
+              <span className="text-lg font-black tabular-nums text-white leading-none">{viewMoonPos ? `${Math.round(viewMoonPos.distanceKm).toLocaleString(dateLocale)} km` : '--'}</span>
               <div className="relative h-1.5 rounded-full bg-gradient-to-r from-cyan-500/40 via-slate-600/40 to-violet-500/40 mt-1">
                 <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_6px_white]" style={{ left: `${gaugePercent}%`, transform: `translate(-50%, -50%)` }} />
               </div>
@@ -302,18 +346,28 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
             />
           </div>
 
-          {/* Tira de 8 dies */}
+          {/* Tira de 14 dies — clicable: selecciona el dia consultat a tot el modal */}
           <div>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{t.week}</span>
             <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
+              <button
+                onClick={() => setSelectedDayOffset(0)}
+                className={`flex-shrink-0 w-20 rounded-xl border p-3 flex flex-col items-center justify-center gap-1 transition-colors ${isToday ? 'border-indigo-400/60 bg-indigo-950/40 ring-1 ring-indigo-400/40' : 'border-white/5 bg-[#0a0a14] hover:border-white/20'}`}
+              >
+                <span className={`text-[11px] font-black uppercase ${isToday ? 'text-indigo-300' : 'text-slate-400'}`}>{t.todayCard}</span>
+              </button>
               {weekDays.map(d => (
-                <div key={d.dateStr + d.i} className="flex-shrink-0 w-28 rounded-xl border border-white/5 bg-[#0a0a14] p-3 flex flex-col items-center gap-1.5">
-                  <span className="text-[10px] font-black uppercase text-slate-400">{d.weekdayLabel} {d.dayNum}</span>
+                <button
+                  key={d.dateStr}
+                  onClick={() => setSelectedDayOffset(d.offset)}
+                  className={`flex-shrink-0 w-28 rounded-xl border p-3 flex flex-col items-center gap-1.5 text-left transition-colors ${selectedDayOffset === d.offset ? 'border-indigo-400/60 bg-indigo-950/40 ring-1 ring-indigo-400/40' : 'border-white/5 bg-[#0a0a14] hover:border-white/20'}`}
+                >
+                  <span className={`text-[10px] font-black uppercase ${selectedDayOffset === d.offset ? 'text-indigo-300' : 'text-slate-400'}`}>{d.weekdayLabel} {d.dayNum}</span>
                   <div className={`w-10 h-10 ${isSouth ? 'scale-x-[-1]' : ''}`}><MoonPhaseIcon phase={d.phase} className="w-full h-full" /></div>
                   <span className="text-[10px] font-bold text-indigo-200">{d.illumination}%</span>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-cyan-300"><ArrowUpCircle className="w-3 h-3" />{d.rise}</div>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-amber-300"><ArrowDownCircle className="w-3 h-3" />{d.set}</div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

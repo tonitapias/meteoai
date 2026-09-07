@@ -37,7 +37,8 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Durada del Dia', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
     uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
     sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 14 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
-    timeline: 'Cronologia del Dia', trajectory: 'Trajectòria d\'Avui',
+    todayCard: 'Avui', backToToday: 'Torna a avui',
+    timeline: 'Cronologia', trajectory: 'Trajectòria Solar',
     astroDawn: 'Crep. Astronòmic (sortida)', nauticalDawn: 'Crep. Nàutic (sortida)', civilDawn: 'Crep. Civil (sortida)',
     goldenHourMorning: 'Hora Daurada (matí)', goldenHourEvening: 'Hora Daurada (tarda)',
     civilDusk: 'Crep. Civil (posta)', nauticalDusk: 'Crep. Nàutic (posta)', astroDusk: 'Crep. Astronòmic (posta)',
@@ -49,7 +50,8 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Duración del Día', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
     uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
     sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 14 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
-    timeline: 'Cronología del Día', trajectory: 'Trayectoria de Hoy',
+    todayCard: 'Hoy', backToToday: 'Volver a hoy',
+    timeline: 'Cronología', trajectory: 'Trayectoria Solar',
     astroDawn: 'Crep. Astronómico (salida)', nauticalDawn: 'Crep. Náutico (salida)', civilDawn: 'Crep. Civil (salida)',
     goldenHourMorning: 'Hora Dorada (mañana)', goldenHourEvening: 'Hora Dorada (tarde)',
     civilDusk: 'Crep. Civil (puesta)', nauticalDusk: 'Crep. Náutico (puesta)', astroDusk: 'Crep. Astronómico (puesta)',
@@ -61,7 +63,8 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Day Length', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
     uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
     sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 14 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
-    timeline: 'Day Timeline', trajectory: "Today's Trajectory",
+    todayCard: 'Today', backToToday: 'Back to today',
+    timeline: 'Timeline', trajectory: 'Solar Trajectory',
     astroDawn: 'Astronomical Dawn', nauticalDawn: 'Nautical Dawn', civilDawn: 'Civil Dawn',
     goldenHourMorning: 'Golden Hour (AM)', goldenHourEvening: 'Golden Hour (PM)',
     civilDusk: 'Civil Dusk', nauticalDusk: 'Nautical Dusk', astroDusk: 'Astronomical Dusk',
@@ -73,7 +76,8 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Durée du Jour', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
     uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
     sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '14 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
-    timeline: 'Chronologie du Jour', trajectory: "Trajectoire du Jour",
+    todayCard: "Aujourd'hui", backToToday: "Retour à aujourd'hui",
+    timeline: 'Chronologie', trajectory: 'Trajectoire Solaire',
     astroDawn: 'Crép. Astro. (matin)', nauticalDawn: 'Crép. Nautique (matin)', civilDawn: 'Crép. Civil (matin)',
     goldenHourMorning: 'Heure Dorée (matin)', goldenHourEvening: 'Heure Dorée (soir)',
     civilDusk: 'Crép. Civil (soir)', nauticalDusk: 'Crép. Nautique (soir)', astroDusk: 'Crép. Astro. (soir)',
@@ -136,13 +140,29 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     return () => clearInterval(timer);
   }, []);
 
-  const todayStr = Array.isArray(daily?.time) ? daily.time[0] : undefined;
+  // --- Selecció de dia: la tira de 14 dies és un selector real, no només informativa ---
+  const [selectedDayOffset, setSelectedDayOffset] = useState(0); // 0 = avui
+  const isToday = selectedDayOffset === 0;
 
-  const sunDayTimes: SunDayTimes = useMemo(
+  const todayStr = Array.isArray(daily?.time) ? daily.time[0] : undefined;
+  const viewDateStr = isToday ? todayStr : addDaysToDateStr(todayStr, selectedDayOffset);
+
+  // Sempre avui de veritat — independent de la selecció — per llavors la tendència de la
+  // tira (cada dia comparat amb l'anterior) i per la lectura "ara mateix" del fons visual.
+  const todaySunTimes: SunDayTimes = useMemo(
     () => hasValidCoords ? getSunDayTimesSafe(todayStr, lat, lon) : getSunDayTimesSafe(undefined, 0, 0),
     [todayStr, lat, lon, hasValidCoords]
   );
 
+  // El dia que s'està consultant (avui o el seleccionat a la tira) — determina l'heroi,
+  // la trajectòria, la cronologia i les targetes d'estadístiques.
+  const sunDayTimes: SunDayTimes = useMemo(
+    () => hasValidCoords ? getSunDayTimesSafe(viewDateStr, lat, lon) : getSunDayTimesSafe(undefined, 0, 0),
+    [viewDateStr, lat, lon, hasValidCoords]
+  );
+
+  // Posició real "ara mateix" — sempre en temps real, mai depèn del dia consultat. Defineix
+  // el tema visual dia/nit i només es mostra a l'heroi quan s'està consultant avui.
   const sunNowPos = useMemo(
     () => hasValidCoords ? getSunCompassPosition(now, lat, lon) : null,
     [now, lat, lon, hasValidCoords]
@@ -150,10 +170,17 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
 
   const isDaytime = (sunNowPos?.altitudeDeg ?? -1) > 0;
 
-  // --- Mostreig de l'arc real (cada 15 min, dia local complet) ---
+  const viewedDayLabel = useMemo(() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(viewDateStr || '');
+    if (!m) return '';
+    const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    return `${weekday} ${Number(m[3])}`;
+  }, [viewDateStr, dateLocale]);
+
+  // --- Mostreig de l'arc real (cada 15 min, dia complet del dia consultat) ---
   const arcSamples = useMemo(() => {
-    if (!hasValidCoords || !todayStr) return [];
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(todayStr);
+    if (!hasValidCoords || !viewDateStr) return [];
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(viewDateStr);
     if (!m) return [];
     const localMidnightUtcMs = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0) - utcOffsetSeconds * 1000;
     const points: { fraction: number; altitude: number; azimuth: number }[] = [];
@@ -163,7 +190,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
       if (pos) points.push({ fraction: i / 96, altitude: pos.altitudeDeg, azimuth: pos.azimuthDeg });
     }
     return points;
-  }, [hasValidCoords, todayStr, lat, lon, utcOffsetSeconds]);
+  }, [hasValidCoords, viewDateStr, lat, lon, utcOffsetSeconds]);
 
   const arcPath = useMemo(() => {
     if (arcSamples.length === 0) return '';
@@ -175,16 +202,17 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     return localSeconds / 86400;
   }, [now, utcOffsetSeconds]);
 
-  // Cronologia de demà, només per poder oferir un "proper esdeveniment" honest durant
-  // les hores de nit posteriors al crepuscle astronòmic d'avui (que altrament quedarien
-  // sense cap esdeveniment futur conegut fins que l'usuari tornés a obrir el modal demà).
+  // Cronologia de demà (real, no la del dia consultat), només per poder oferir un "proper
+  // esdeveniment" honest durant les hores de nit posteriors al crepuscle astronòmic d'avui
+  // quan s'està consultant avui mateix (a un dia futur seleccionat, tots els seus
+  // esdeveniments ja són posteriors a "ara" per definició, així que mai cal aquest fallback).
   const tomorrowStr = Array.isArray(daily?.time) ? daily.time[1] : undefined;
   const tomorrowSunTimes = useMemo(
     () => hasValidCoords && tomorrowStr ? getSunDayTimesSafe(tomorrowStr, lat, lon) : null,
     [hasValidCoords, tomorrowStr, lat, lon]
   );
 
-  // --- Cronologia d'esdeveniments (per al comptador i la barra segmentada) ---
+  // --- Cronologia d'esdeveniments del dia consultat (per al comptador i la barra segmentada) ---
   const timelineEvents = useMemo(() => {
     const raw: { key: string; label: string }[] = [
       { key: 'astronomicalDawn', label: t.astroDawn },
@@ -221,8 +249,8 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   const nextEvent = useMemo(() => {
     const upcoming = timelineEvents.filter(e => e.date.getTime() > now.getTime());
     if (upcoming.length > 0) return upcoming[0];
-    return tomorrowFirstEvent;
-  }, [timelineEvents, now, tomorrowFirstEvent]);
+    return isToday ? tomorrowFirstEvent : null;
+  }, [timelineEvents, now, tomorrowFirstEvent, isToday]);
 
   const countdownStr = useMemo(() => {
     if (!nextEvent) return '--';
@@ -233,26 +261,26 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     return `${h}h ${m}m`;
   }, [nextEvent, now]);
 
-  // --- Estadístiques del dia (índex 0 de daily) ---
-  const dailyIdx = 0;
-  const getDailyNum = (key: string): number | null => {
+  // --- Estadístiques del dia consultat (índex = selectedDayOffset dins els arrays d'Open-Meteo) ---
+  const getDailyNum = (key: string, idx: number = selectedDayOffset): number | null => {
     const arr = (daily as unknown as Record<string, (number | null)[] | undefined>)?.[key];
-    const v = Array.isArray(arr) ? arr[dailyIdx] : undefined;
+    const v = Array.isArray(arr) ? arr[idx] : undefined;
     return typeof v === 'number' && !isNaN(v) ? v : null;
   };
 
   const uvMax = getDailyNum('uv_index_max');
   const uvClear = getDailyNum('uv_index_clear_sky_max');
-  const daylightSec = getDailyNum('daylight_duration');
   const sunshineSec = getDailyNum('sunshine_duration');
   const radiationSum = getDailyNum('shortwave_radiation_sum');
-  const daylightTomorrow = (() => {
-    const arr = (daily as unknown as Record<string, (number | null)[] | undefined>)?.daylight_duration;
-    const v = Array.isArray(arr) ? arr[1] : undefined;
-    return typeof v === 'number' && !isNaN(v) ? v : null;
-  })();
 
-  const realSunPct = (daylightSec && sunshineSec !== null) ? Math.round((sunshineSec / daylightSec) * 100) : null;
+  // Durada del dia real (astronomia local, no Open-Meteo) — disponible per als 14 dies,
+  // no només pels ~7 que l'API arriba a cobrir.
+  const viewDaylightSec = useMemo(
+    () => (sunDayTimes.sunrise && sunDayTimes.sunset) ? (sunDayTimes.sunset.getTime() - sunDayTimes.sunrise.getTime()) / 1000 : null,
+    [sunDayTimes]
+  );
+
+  const realSunPct = (viewDaylightSec && sunshineSec !== null) ? Math.round((sunshineSec / viewDaylightSec) * 100) : null;
   const uvCategory = uvMax !== null ? getUVCategory(uvMax) : null;
 
   const solarNoonAlt = useMemo(
@@ -268,30 +296,32 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     [sunDayTimes.sunset, hasValidCoords, lat, lon]
   );
 
-  // --- Heurística experimental de qualitat de posta (a partir de l'hora horària més propera a la posta) ---
+  // --- Heurística experimental de qualitat de posta del dia consultat ---
   const sunsetQuality = useMemo(() => {
     const hourly = weatherData.hourly;
-    const sunsetStr = Array.isArray(daily?.sunset) ? daily.sunset[0] : undefined;
+    const sunsetStr = Array.isArray(daily?.sunset) ? daily.sunset[selectedDayOffset] : undefined;
     if (!hourly || !Array.isArray(hourly.time) || !sunsetStr) return null;
     const targetHourKey = sunsetStr.slice(0, 13); // "YYYY-MM-DDTHH"
     const idx = hourly.time.findIndex(ts => typeof ts === 'string' && ts.slice(0, 13) === targetHourKey);
     if (idx === -1) return null;
     const hourlyAny = hourly as unknown as Record<string, (number | null)[] | undefined>;
     return estimateSunsetQuality(hourlyAny.cloud_cover_mid?.[idx], hourlyAny.cloud_cover_high?.[idx], hourlyAny.relative_humidity_2m?.[idx]);
-  }, [weatherData.hourly, daily]);
+  }, [weatherData.hourly, daily, selectedDayOffset]);
 
-  // --- Tira de 14 dies ---
+  // --- Tira de 14 dies (a partir de demà) ---
   // Sortida/posta/durada calculades amb astronomia local (suncalc) per a cada dia, no amb
   // daily.time.length — així no cal ampliar el fetch d'Open-Meteo per allargar la tira.
   // L'UV manté la font real d'Open-Meteo i només es mostra on l'API l'ha donat de veritat.
+  // Sempre ancorada a avui (todaySunTimes), no al dia seleccionat — la tira no canvia de
+  // contingut quan es tria un dia, només es ressalta la targeta triada.
   const weekDays = useMemo(() => {
     if (!todayStr || !hasValidCoords) return [];
     const dailyAny = daily as unknown as Record<string, (number | null)[] | string[] | undefined>;
     const uvArr = dailyAny.uv_index_max as (number | null)[] | undefined;
     const openMeteoDayCount = Array.isArray(daily?.time) ? daily.time.length : 0;
 
-    let prevDaylightSec = (sunDayTimes.sunrise && sunDayTimes.sunset)
-      ? (sunDayTimes.sunset.getTime() - sunDayTimes.sunrise.getTime()) / 1000
+    let prevDaylightSec = (todaySunTimes.sunrise && todaySunTimes.sunset)
+      ? (todaySunTimes.sunset.getTime() - todaySunTimes.sunrise.getTime()) / 1000
       : null;
 
     return Array.from({ length: STRIP_DAYS }, (_, idx) => {
@@ -317,7 +347,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
       const uvMaxForDay = i < openMeteoDayCount && typeof uvArr?.[i] === 'number' ? Math.round(uvArr[i] as number) : null;
 
       return {
-        dateStr: dateStr || '', weekdayLabel, dayNum,
+        dateStr: dateStr || '', offset: i, weekdayLabel, dayNum,
         sunrise: formatClockTime(dayTimes.sunrise, timezone) || '--:--',
         sunset: formatClockTime(dayTimes.sunset, timezone) || '--:--',
         dayLength: minutesToHM(daylightSecForDay),
@@ -325,12 +355,22 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
         trend,
       };
     });
-  }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale, daily, sunDayTimes]);
+  }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale, daily, todaySunTimes]);
 
-  const overallTrend = (() => {
-    if (daylightSec === null || daylightTomorrow === null) return null;
-    return daylightTomorrow > daylightSec ? t.lengthening : daylightTomorrow < daylightSec ? t.shortening : null;
-  })();
+  // "Durada del dia" a la targeta d'estadístiques: per avui, compara amb demà (Open-Meteo,
+  // com sempre); per un dia seleccionat, reutilitza la tendència ja calculada a la tira
+  // (aquell dia comparat amb l'anterior).
+  const displayTrend = useMemo(() => {
+    if (isToday) {
+      const arr = (daily as unknown as Record<string, (number | null)[] | undefined>)?.daylight_duration;
+      const todayOM = Array.isArray(arr) && typeof arr[0] === 'number' ? arr[0] : null;
+      const tomorrowOM = Array.isArray(arr) && typeof arr[1] === 'number' ? arr[1] : null;
+      if (todayOM === null || tomorrowOM === null) return null;
+      return tomorrowOM > todayOM ? t.lengthening : tomorrowOM < todayOM ? t.shortening : null;
+    }
+    const dayTrend = weekDays[selectedDayOffset - 1]?.trend;
+    return dayTrend === 'up' ? t.lengthening : dayTrend === 'down' ? t.shortening : null;
+  }, [isToday, daily, weekDays, selectedDayOffset, t]);
 
   const bgGradient = isDaytime
     ? 'from-[#241708] via-[#120b03] to-black'
@@ -382,28 +422,42 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
             <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative">
                 <div className={`absolute inset-0 rounded-full blur-[50px] pointer-events-none transition-colors duration-1000 ${isDaytime ? 'bg-amber-500/25' : 'bg-indigo-500/10'}`}></div>
-                <SunOrb elevationDeg={sunNowPos?.altitudeDeg ?? -90} className="w-full h-full relative z-10" />
+                <SunOrb elevationDeg={isToday ? (sunNowPos?.altitudeDeg ?? -90) : (solarNoonAlt ?? -90)} className="w-full h-full relative z-10" />
               </div>
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
-                <span className="text-3xl font-black text-white tracking-tight leading-none">{isDaytime ? t.day : t.night}</span>
-                {sunNowPos && (
+                <span className="text-3xl font-black text-white tracking-tight leading-none">
+                  {isToday ? (isDaytime ? t.day : t.night) : viewedDayLabel}
+                </span>
+                {isToday && sunNowPos ? (
                   <span className="text-sm font-bold text-amber-300">
                     {Math.round(sunNowPos.azimuthDeg)}° {getCardinalLabel(sunNowPos.azimuthDeg, safeLang)} · {sunNowPos.altitudeDeg >= 0 ? '+' : ''}{Math.round(sunNowPos.altitudeDeg)}°
                   </span>
-                )}
+                ) : !isToday && solarNoonAlt !== null ? (
+                  <span className="text-sm font-bold text-amber-300">{t.maxElevation} {Math.round(solarNoonAlt)}°</span>
+                ) : null}
                 {nextEvent && (
                   <div className="flex items-center gap-3 mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{nextEvent.label}</span>
                     <span className="text-xs font-mono font-bold text-amber-200">{t.in_} {countdownStr}</span>
                   </div>
                 )}
+                {!isToday && (
+                  <button
+                    onClick={() => setSelectedDayOffset(0)}
+                    className="mt-1 text-[10px] font-black uppercase tracking-widest text-amber-400/80 hover:text-amber-300 underline underline-offset-2 transition-colors"
+                  >
+                    ← {t.backToToday}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Trajectòria real d'avui */}
+            {/* Trajectòria del dia consultat */}
             <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4 overflow-hidden">
               <div className="flex items-center justify-between mb-1 relative z-10">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.trajectory}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {t.trajectory} · {isToday ? t.todayCard : viewedDayLabel}
+                </span>
               </div>
               <svg viewBox="0 0 400 160" className="w-full h-40 overflow-visible">
                 <defs>
@@ -415,13 +469,16 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                 <line x1="0" y1={HORIZON_Y} x2="400" y2={HORIZON_Y} stroke="#1e293b" strokeWidth="1" strokeDasharray="2 3" />
                 {arcPath && <path d={arcPath} fill="none" stroke={isDaytime ? '#fbbf24' : '#818cf8'} strokeWidth="2" strokeLinecap="round" opacity="0.8" />}
                 {arcSamples.length > 0 && (() => {
-                  const idx = Math.round(nowFraction * 96);
-                  const p = arcSamples[Math.min(96, idx)];
+                  // Avui: marcador viu a la posició real "ara". Un altre dia: marcador estàtic
+                  // al punt més alt de la corba (migdia solar), com a referència visual.
+                  const p = isToday
+                    ? arcSamples[Math.min(96, Math.round(nowFraction * 96))]
+                    : arcSamples.reduce((max, s) => s.altitude > max.altitude ? s : max, arcSamples[0]);
                   if (!p) return null;
                   return (
                     <g style={{ transform: `translate(${p.fraction * 400}px, ${altToY(p.altitude)}px)` }}>
-                      <circle r="8" fill={isDaytime ? '#fbbf24' : '#818cf8'} opacity="0.25" />
-                      <circle r="4" fill="#fff" filter="url(#solarGlow)" />
+                      <circle r="8" fill={isDaytime ? '#fbbf24' : '#818cf8'} opacity={isToday ? 0.25 : 0.15} />
+                      <circle r="4" fill="#fff" filter="url(#solarGlow)" opacity={isToday ? 1 : 0.8} />
                     </g>
                   );
                 })()}
@@ -431,7 +488,9 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
             {/* Barra de cronologia segmentada */}
             <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.timeline}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {t.timeline} · {isToday ? t.todayCard : viewedDayLabel}
+                </span>
               </div>
               <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-indigo-950 via-amber-400 to-indigo-950">
                 {timelineEvents.length > 0 && (
@@ -456,9 +515,9 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
               <StatCard label={t.solarNoon} value={formatClockTime(sunDayTimes.solarNoon, timezone) || '--:--'} sub={solarNoonAlt !== null ? `${t.maxElevation} ${Math.round(solarNoonAlt)}°` : undefined} icon={<Sunrise className="w-3.5 h-3.5" />} />
               <StatCard
                 label={t.dayLength}
-                value={minutesToHM(daylightSec)}
-                sub={overallTrend || undefined}
-                trendIcon={overallTrend === t.lengthening ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : overallTrend === t.shortening ? <TrendingDown className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3 text-slate-500" />}
+                value={minutesToHM(viewDaylightSec)}
+                sub={displayTrend || undefined}
+                trendIcon={displayTrend === t.lengthening ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : displayTrend === t.shortening ? <TrendingDown className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3 text-slate-500" />}
                 icon={<Gauge className="w-3.5 h-3.5" />}
               />
               <StatCard label={t.realSun} value={realSunPct !== null ? `${realSunPct}%` : '--'} icon={<CloudSun className="w-3.5 h-3.5" />} />
@@ -486,13 +545,23 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
               )}
             </div>
 
-            {/* Tira de 8 dies */}
+            {/* Tira de 14 dies — clicable: selecciona el dia consultat a tot el modal */}
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{t.week}</span>
               <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
-                {weekDays.map((d, i) => (
-                  <div key={d.dateStr + i} className="flex-shrink-0 w-28 rounded-xl border border-white/5 bg-[#0c0a08] p-3 flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-black uppercase text-slate-400">{d.weekdayLabel} {d.dayNum}</span>
+                <button
+                  onClick={() => setSelectedDayOffset(0)}
+                  className={`flex-shrink-0 w-20 rounded-xl border p-3 flex flex-col items-center justify-center gap-1 transition-colors ${isToday ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
+                >
+                  <span className={`text-[11px] font-black uppercase ${isToday ? 'text-amber-300' : 'text-slate-400'}`}>{t.todayCard}</span>
+                </button>
+                {weekDays.map((d) => (
+                  <button
+                    key={d.dateStr}
+                    onClick={() => setSelectedDayOffset(d.offset)}
+                    className={`flex-shrink-0 w-28 rounded-xl border p-3 flex flex-col items-center gap-1.5 text-left transition-colors ${selectedDayOffset === d.offset ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
+                  >
+                    <span className={`text-[10px] font-black uppercase ${selectedDayOffset === d.offset ? 'text-amber-300' : 'text-slate-400'}`}>{d.weekdayLabel} {d.dayNum}</span>
                     <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300"><Sunrise className="w-3 h-3" />{d.sunrise}</div>
                     <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-300"><Sunset className="w-3 h-3" />{d.sunset}</div>
                     <div className="flex items-center gap-1 text-[10px] font-bold text-slate-300">
@@ -501,7 +570,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                       {d.trend === 'down' && <TrendingDown className="w-3 h-3 text-rose-400" />}
                     </div>
                     {d.uvMax !== null && <span className="text-[9px] font-bold text-slate-500">UV {d.uvMax}</span>}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
