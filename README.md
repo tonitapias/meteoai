@@ -54,9 +54,10 @@ Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. 
 * **Avís de Canvi Sobtat (3h):** Si el model global o el model regional actiu preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — el model regional hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
 
 ### 3. Observatoris Solar i Lunar
-Dos modals de detall, accessibles tocant els ginys compactes de Cicle Solar i Fase Lunar, amb una direcció visual pròpia més cinematogràfica (fons estelat, herois a gran escala) i previsió a 8 dies vista:
-* **Cicle Solar:** cronologia completa del dia (crepuscle astronòmic, nàutic i civil, hora daurada, migdia solar amb elevació màxima), posició real del sol en temps real (azimut i altitud), hores de sol reals vs. teòriques, índex UV màxim i en cel clar, radiació solar acumulada i azimut exacte de sortida i posta.
-* **Cicle Lunar:** fase, il·luminació i edat, sortida i posta amb l'azimut exacte de cada esdeveniment, distància Terra-Lluna amb detecció de Superlluna/Micro lluna, pròxima lluna plena i nova, i calendari lunar dia a dia.
+Dos modals de detall interactius, accessibles tocant els ginys compactes de Cicle Solar i Fase Lunar, amb una direcció visual pròpia més cinematogràfica (fons estelat, herois a gran escala) i selecció real de qualsevol dels 14 dies següents — tot el modal (heroi, trajectòria, cronologia, estadístiques) es recalcula per al dia triat:
+* **Cicle Solar:** cronologia completa del dia (crepuscle astronòmic, nàutic i civil, hora daurada, migdia solar amb elevació màxima), posició real del sol en temps real (azimut i altitud), *scrubbing* horari a la trajectòria (arrossega per veure la posició exacta a qualsevol hora), hores de sol reals vs. teòriques, índex UV màxim i en cel clar, radiació solar acumulada i azimut exacte de sortida i posta.
+* **Cicle Lunar:** fase, il·luminació i edat (amb orientació correcta per a l'hemisferi sud), sortida i posta amb l'azimut exacte de cada esdeveniment, distància Terra-Lluna amb detecció de Superlluna/Micro lluna, pròxima lluna plena i nova, i calendari lunar dia a dia.
+* Sortida, posta, durada del dia i fase lunar es calculen amb astronomia local (sense dependre del model meteorològic), així que són precises per als 14 dies; els valors que sí depenen del temps (UV, radiació) es mostren honestament només on Open-Meteo té dades reals, sense extrapolar-los.
 
 ### 4. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
