@@ -19,7 +19,12 @@ import {
   getMoonDistanceCategory,
   getMoonDistanceGaugePercent,
   getCardinalLabel,
+  addDaysToDateStr,
 } from '../utils/astronomyMath';
+
+// Pura astronomia (suncalc) — no depèn de cap dada d'Open-Meteo, així que la tira pot anar
+// tan lluny com calgui sense perdre precisió ni fer cap crida de xarxa addicional.
+const STRIP_DAYS = 14;
 
 interface MoonModalProps {
   weatherData: ExtendedWeatherData;
@@ -32,7 +37,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'OBSERVATORI LUNAR', subtitle: 'Cicle i Posició de la Lluna', noData: 'SENSE DADES SUFICIENTS',
     illumination: 'Il·luminació', age: 'Edat', days: 'dies', rise: 'SORTIDA', set: 'POSTA',
     distance: 'Distància', supermoon: 'SUPERLLUNA', micromoon: 'MICRO LLUNA', nextFull: 'Pròxima Lluna Plena',
-    nextNew: 'Pròxima Lluna Nova', inDays: 'en {n} dies', today: 'avui', tomorrow: 'demà', week: 'Pròxims 7 Dies',
+    nextNew: 'Pròxima Lluna Nova', inDays: 'en {n} dies', today: 'avui', tomorrow: 'demà', week: 'Pròxims 14 Dies',
     livePosition: 'Posició Actual', folkName: 'Nom Tradicional (curiositat)',
     perigee: 'Perigeu', apogee: 'Apogeu',
   },
@@ -40,7 +45,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'OBSERVATORIO LUNAR', subtitle: 'Ciclo y Posición de la Luna', noData: 'DATOS INSUFICIENTES',
     illumination: 'Iluminación', age: 'Edad', days: 'días', rise: 'SALIDA', set: 'PUESTA',
     distance: 'Distancia', supermoon: 'SUPERLUNA', micromoon: 'MICRO LUNA', nextFull: 'Próxima Luna Llena',
-    nextNew: 'Próxima Luna Nueva', inDays: 'en {n} días', today: 'hoy', tomorrow: 'mañana', week: 'Próximos 7 Días',
+    nextNew: 'Próxima Luna Nueva', inDays: 'en {n} días', today: 'hoy', tomorrow: 'mañana', week: 'Próximos 14 Días',
     livePosition: 'Posición Actual', folkName: 'Nombre Tradicional (curiosidad)',
     perigee: 'Perigeo', apogee: 'Apogeo',
   },
@@ -48,7 +53,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'LUNAR OBSERVATORY', subtitle: 'Moon Cycle & Position', noData: 'INSUFFICIENT DATA',
     illumination: 'Illumination', age: 'Age', days: 'days', rise: 'RISE', set: 'SET',
     distance: 'Distance', supermoon: 'SUPERMOON', micromoon: 'MICROMOON', nextFull: 'Next Full Moon',
-    nextNew: 'Next New Moon', inDays: 'in {n} days', today: 'today', tomorrow: 'tomorrow', week: 'Next 7 Days',
+    nextNew: 'Next New Moon', inDays: 'in {n} days', today: 'today', tomorrow: 'tomorrow', week: 'Next 14 Days',
     livePosition: 'Live Position', folkName: 'Traditional Name (folklore)',
     perigee: 'Perigee', apogee: 'Apogee',
   },
@@ -56,7 +61,7 @@ const T: Record<Language, Record<string, string>> = {
     title: 'OBSERVATOIRE LUNAIRE', subtitle: 'Cycle et Position de la Lune', noData: 'DONNÉES INSUFFISANTES',
     illumination: 'Illumination', age: 'Âge', days: 'jours', rise: 'LEVER', set: 'COUCHER',
     distance: 'Distance', supermoon: 'SUPERLUNE', micromoon: 'MICRO LUNE', nextFull: 'Prochaine Pleine Lune',
-    nextNew: 'Prochaine Nouvelle Lune', inDays: 'dans {n} jours', today: "aujourd'hui", tomorrow: 'demain', week: '7 Prochains Jours',
+    nextNew: 'Prochaine Nouvelle Lune', inDays: 'dans {n} jours', today: "aujourd'hui", tomorrow: 'demain', week: '14 Prochains Jours',
     livePosition: 'Position Actuelle', folkName: 'Nom Traditionnel (folklore)',
     perigee: 'Périgée', apogee: 'Apogée',
   },
@@ -166,9 +171,12 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
     return FOLK_FULL_MOON_NAMES[safeLang][nextFull.date.getUTCMonth()];
   }, [isSouth, nextFull, safeLang]);
 
+  // Calculada íntegrament amb astronomia local (suncalc) per als propers STRIP_DAYS dies —
+  // no depèn de daily.time.length, així que no cal ampliar cap fetch d'Open-Meteo.
   const weekDays = useMemo(() => {
-    if (!Array.isArray(daily?.time) || !hasValidCoords) return [];
-    return daily.time.map((dateStr, i) => {
+    if (!todayStr || !hasValidCoords) return [];
+    return Array.from({ length: STRIP_DAYS }, (_, idx) => {
+      const dateStr = addDaysToDateStr(todayStr, idx + 1); // comença demà
       const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
       const weekdayLabel = m ? new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : '--';
       const dayNum = m ? Number(m[3]) : null;
@@ -176,14 +184,14 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
       const dayPhase = anchor ? getMoonPhase(anchor) : 0;
       const riseSet = getMoonRiseSetForDate(dateStr, lat, lon, timezone);
       return {
-        dateStr, weekdayLabel, dayNum, phase: dayPhase,
+        dateStr: dateStr || '', weekdayLabel, dayNum, phase: dayPhase,
         illumination: getMoonIlluminationPercent(dayPhase),
         rise: riseSet.rise.formatted || '--:--',
         set: riseSet.set.formatted || '--:--',
-        i,
+        i: idx,
       };
-    }).slice(1); // Avui ja es mostra a l'heroi i a les targetes — la tira comença demà, com fa ForecastSection.tsx
-  }, [daily, hasValidCoords, lat, lon, timezone, dateLocale]);
+    });
+  }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">

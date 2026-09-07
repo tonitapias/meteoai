@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  addDaysToDateStr,
   getCardinalLabel,
   getMoonDistanceCategory,
   getMoonDistanceGaugePercent,
@@ -10,6 +11,28 @@ import {
   getMoonCompassPosition,
   getSunDayTimesSafe,
 } from './astronomyMath';
+
+describe('addDaysToDateStr', () => {
+  it('adds days within the same month', () => {
+    expect(addDaysToDateStr('2026-09-06', 1)).toBe('2026-09-07');
+    expect(addDaysToDateStr('2026-09-06', 14)).toBe('2026-09-20');
+  });
+
+  it('rolls over month and year boundaries', () => {
+    expect(addDaysToDateStr('2026-09-28', 5)).toBe('2026-10-03');
+    expect(addDaysToDateStr('2026-12-30', 5)).toBe('2027-01-04');
+  });
+
+  it('handles a leap-year February correctly', () => {
+    expect(addDaysToDateStr('2028-02-27', 2)).toBe('2028-02-29');
+    expect(addDaysToDateStr('2028-02-27', 3)).toBe('2028-03-01');
+  });
+
+  it('returns undefined for invalid input instead of throwing', () => {
+    expect(addDaysToDateStr(undefined, 1)).toBeUndefined();
+    expect(addDaysToDateStr('not-a-date', 1)).toBeUndefined();
+  });
+});
 
 describe('getCardinalLabel', () => {
   it('maps known azimuths to the correct 16-point label', () => {

@@ -15,6 +15,7 @@ import {
   getCardinalLabel,
   formatClockTime,
   estimateSunsetQuality,
+  addDaysToDateStr,
   SunDayTimes,
 } from '../utils/astronomyMath';
 
@@ -24,13 +25,18 @@ interface SolarModalProps {
   lang?: Language;
 }
 
+// Sortida/posta/durada del dia són pura astronomia (suncalc) i van a 14 dies sense perdre
+// precisió ni fer cap crida de xarxa addicional. L'UV, en canvi, depèn del núvol previst per
+// Open-Meteo — només es mostra als dies pels quals l'API realment ha retornat una dada.
+const STRIP_DAYS = 14;
+
 const T: Record<Language, Record<string, string>> = {
   ca: {
     title: 'SISTEMA SOLAR', subtitle: 'Observatori de Cicle Solar', noData: 'SENSE DADES SUFICIENTS',
     day: 'DIA', night: 'NIT', solarNoon: 'Migdia Solar', maxElevation: 'Elevació Màx.',
     dayLength: 'Durada del Dia', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
     uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
-    sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 7 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
+    sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 14 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
     timeline: 'Cronologia del Dia', trajectory: 'Trajectòria d\'Avui',
     astroDawn: 'Crep. Astronòmic (sortida)', nauticalDawn: 'Crep. Nàutic (sortida)', civilDawn: 'Crep. Civil (sortida)',
     goldenHourMorning: 'Hora Daurada (matí)', goldenHourEvening: 'Hora Daurada (tarda)',
@@ -42,7 +48,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'DÍA', night: 'NOCHE', solarNoon: 'Mediodía Solar', maxElevation: 'Elevación Máx.',
     dayLength: 'Duración del Día', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
     uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
-    sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 7 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
+    sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 14 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
     timeline: 'Cronología del Día', trajectory: 'Trayectoria de Hoy',
     astroDawn: 'Crep. Astronómico (salida)', nauticalDawn: 'Crep. Náutico (salida)', civilDawn: 'Crep. Civil (salida)',
     goldenHourMorning: 'Hora Dorada (mañana)', goldenHourEvening: 'Hora Dorada (tarde)',
@@ -54,7 +60,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'DAY', night: 'NIGHT', solarNoon: 'Solar Noon', maxElevation: 'Max. Elevation',
     dayLength: 'Day Length', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
     uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
-    sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 7 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
+    sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 14 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
     timeline: 'Day Timeline', trajectory: "Today's Trajectory",
     astroDawn: 'Astronomical Dawn', nauticalDawn: 'Nautical Dawn', civilDawn: 'Civil Dawn',
     goldenHourMorning: 'Golden Hour (AM)', goldenHourEvening: 'Golden Hour (PM)',
@@ -66,7 +72,7 @@ const T: Record<Language, Record<string, string>> = {
     day: 'JOUR', night: 'NUIT', solarNoon: 'Midi Solaire', maxElevation: 'Élévation Max.',
     dayLength: 'Durée du Jour', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
     uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
-    sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '7 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
+    sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '14 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
     timeline: 'Chronologie du Jour', trajectory: "Trajectoire du Jour",
     astroDawn: 'Crép. Astro. (matin)', nauticalDawn: 'Crép. Nautique (matin)', civilDawn: 'Crép. Civil (matin)',
     goldenHourMorning: 'Heure Dorée (matin)', goldenHourEvening: 'Heure Dorée (soir)',
@@ -274,35 +280,52 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     return estimateSunsetQuality(hourlyAny.cloud_cover_mid?.[idx], hourlyAny.cloud_cover_high?.[idx], hourlyAny.relative_humidity_2m?.[idx]);
   }, [weatherData.hourly, daily]);
 
-  // --- Tira de 8 dies ---
+  // --- Tira de 14 dies ---
+  // Sortida/posta/durada calculades amb astronomia local (suncalc) per a cada dia, no amb
+  // daily.time.length — així no cal ampliar el fetch d'Open-Meteo per allargar la tira.
+  // L'UV manté la font real d'Open-Meteo i només es mostra on l'API l'ha donat de veritat.
   const weekDays = useMemo(() => {
-    if (!Array.isArray(daily?.time)) return [];
+    if (!todayStr || !hasValidCoords) return [];
     const dailyAny = daily as unknown as Record<string, (number | null)[] | string[] | undefined>;
-    return daily.time.map((dateStr, i) => {
+    const uvArr = dailyAny.uv_index_max as (number | null)[] | undefined;
+    const openMeteoDayCount = Array.isArray(daily?.time) ? daily.time.length : 0;
+
+    let prevDaylightSec = (sunDayTimes.sunrise && sunDayTimes.sunset)
+      ? (sunDayTimes.sunset.getTime() - sunDayTimes.sunrise.getTime()) / 1000
+      : null;
+
+    return Array.from({ length: STRIP_DAYS }, (_, idx) => {
+      const i = idx + 1; // comença demà
+      const dateStr = addDaysToDateStr(todayStr, i);
       const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
       const weekdayLabel = m ? new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : '--';
       const dayNum = m ? Number(m[3]) : null;
-      const sunriseArr = dailyAny.sunrise as string[] | undefined;
-      const sunsetArr = dailyAny.sunset as string[] | undefined;
-      const daylightArr = dailyAny.daylight_duration as (number | null)[] | undefined;
-      const uvArr = dailyAny.uv_index_max as (number | null)[] | undefined;
-      const todayDaylight = daylightArr?.[i];
-      const prevDaylight = i > 0 ? daylightArr?.[i - 1] : null;
+
+      const dayTimes = getSunDayTimesSafe(dateStr, lat, lon);
+      const daylightSecForDay = (dayTimes.sunrise && dayTimes.sunset)
+        ? (dayTimes.sunset.getTime() - dayTimes.sunrise.getTime()) / 1000
+        : null;
+
       let trend: 'up' | 'down' | 'flat' | null = null;
-      if (typeof todayDaylight === 'number' && typeof prevDaylight === 'number') {
-        const diffMin = Math.round((todayDaylight - prevDaylight) / 60);
+      if (typeof daylightSecForDay === 'number' && typeof prevDaylightSec === 'number') {
+        const diffMin = Math.round((daylightSecForDay - prevDaylightSec) / 60);
         trend = diffMin > 0 ? 'up' : diffMin < 0 ? 'down' : 'flat';
       }
+      prevDaylightSec = daylightSecForDay;
+
+      // Risc Zero: mai extrapolem l'UV més enllà del que Open-Meteo ha retornat de veritat
+      const uvMaxForDay = i < openMeteoDayCount && typeof uvArr?.[i] === 'number' ? Math.round(uvArr[i] as number) : null;
+
       return {
-        dateStr, weekdayLabel, dayNum,
-        sunrise: sunriseArr?.[i]?.slice(11, 16) || '--:--',
-        sunset: sunsetArr?.[i]?.slice(11, 16) || '--:--',
-        dayLength: minutesToHM(typeof todayDaylight === 'number' ? todayDaylight : null),
-        uvMax: typeof uvArr?.[i] === 'number' ? Math.round(uvArr[i] as number) : null,
+        dateStr: dateStr || '', weekdayLabel, dayNum,
+        sunrise: formatClockTime(dayTimes.sunrise, timezone) || '--:--',
+        sunset: formatClockTime(dayTimes.sunset, timezone) || '--:--',
+        dayLength: minutesToHM(daylightSecForDay),
+        uvMax: uvMaxForDay,
         trend,
       };
-    }).slice(1); // Avui ja es mostra a l'heroi i a les targetes — la tira comença demà, com fa ForecastSection.tsx
-  }, [daily, dateLocale]);
+    });
+  }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale, daily, sunDayTimes]);
 
   const overallTrend = (() => {
     if (daylightSec === null || daylightTomorrow === null) return null;
@@ -370,7 +393,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                 )}
                 {nextEvent && (
                   <div className="flex items-center gap-3 mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{nextEvent.label}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{nextEvent.label}</span>
                     <span className="text-xs font-mono font-bold text-amber-200">{t.in_} {countdownStr}</span>
                   </div>
                 )}
@@ -418,11 +441,12 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                   />
                 )}
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
                 {timelineEvents.map(e => (
-                  <span key={e.key} className="text-[9px] text-slate-500 font-mono">
-                    {e.label} <span className="text-slate-300">{formatClockTime(e.date, timezone)}</span>
-                  </span>
+                  <div key={e.key} className="rounded-lg border border-white/5 bg-black/25 px-2.5 py-2 flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wide leading-tight">{e.label}</span>
+                    <span className="text-sm font-mono font-bold text-slate-100">{formatClockTime(e.date, timezone)}</span>
+                  </div>
                 ))}
               </div>
             </div>

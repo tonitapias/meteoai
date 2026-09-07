@@ -11,6 +11,20 @@ import * as SunCalc from 'suncalc';
 import { getMoonPhase } from './weatherMath';
 import { Language } from '../translations';
 
+// --- Aritmètica de dates locals ("YYYY-MM-DD" -> "YYYY-MM-DD" + N dies) ---
+// Ancoratge a migdia UTC (mateixa tècnica que la resta del fitxer) per evitar que sumar
+// dies caigui just a la vora d'un canvi de dia per l'efecte d'un desplaçament horari.
+export function addDaysToDateStr(dateStr: string | undefined, days: number): string | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
+  if (!m) return undefined;
+  const anchor = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0));
+  const shifted = new Date(anchor.getTime() + days * 86400000);
+  const yyyy = shifted.getUTCFullYear();
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(shifted.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // --- Posició (azimut/altitud) ---
 
 export interface CompassReading {
