@@ -20,12 +20,26 @@ Sentry.init({
   release: `meteoai@${APP_VERSION}`,
   integrations: [
     Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration(),
   ],
   tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 });
+
+// Replay s'afegeix un cop el navegador ha respirat (idle) o, com a màxim, als 3s —
+// el seu propi arrencament (observadors DOM, snapshot inicial) és treball síncron que
+// Lighthouse marcava com el gruix del Total Blocking Time durant la càrrega inicial.
+// Els sampling rates de dalt ja decideixen quines sessions es graven; ajornar l'inici
+// uns instants no en perd cap de real, només deixa sense repetició els errors dels
+// primers instants de vida de la pàgina (abans que aquest callback s'executi).
+const startReplay = () => { Sentry.addIntegration(Sentry.replayIntegration()); };
+if (typeof window !== 'undefined') {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(startReplay, { timeout: 3000 });
+  } else {
+    setTimeout(startReplay, 1500);
+  }
+}
 
 // --- 2. RENDERITZACIÓ SEGURA ---
 const rootElement = document.getElementById('root');

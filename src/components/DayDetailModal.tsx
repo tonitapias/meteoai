@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, ArrowDown, ArrowUp } from 'lucide-react';
-import { SmartForecastCharts } from './WeatherCharts'; 
+import SmartForecastCharts from './SmartForecastCharts';
 import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { WeatherUnit, formatPrecipitation, getSafeLocale } from '../utils/formatters';

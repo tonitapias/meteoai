@@ -9,13 +9,18 @@ import CurrentWeather from '../CurrentWeather';
 import LoadingSkeleton from '../LoadingSkeleton';
 import ErrorBanner from '../ErrorBanner';
 import ErrorBoundary from '../ErrorBoundary';
-import { MinutelyPreciseChart, SmartForecastCharts } from '../WeatherCharts';
+import { MinutelyPreciseChart } from '../WeatherCharts';
 
 // Lazy loading
 const Forecast24h = lazy(() => import('../Forecast24h'));
 const AIInsights = lazy(() => import('../AIInsights'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
+// Només es mostra en Mode Expert — mateix cas que ExpertWidgets de dalt. Viu en un
+// fitxer propi (SmartForecastCharts.tsx) en lloc de WeatherCharts.tsx perquè aquest
+// últim també l'importa MinutelyPreciseChart de manera estàtica (necessari en Mode
+// Bàsic): compartir fitxer feia que Rollup mantingués tot el mòdul al chunk principal.
+const SmartForecastCharts = lazy(() => import('../SmartForecastCharts'));
 
 // SPATIAL UI: Skeleton amb estètica Dark Dashboard (baix contrast, sense colors estridents)
 const SectionSkeleton = () => (
@@ -110,12 +115,14 @@ export const DashboardContent = () => {
                     {/* 7. GRÀFICS AVANÇATS (MODE EXPERT) */}
                     {isExpert && (
                         <div className="bento-card p-4 sm:p-6 md:p-8 bg-[#0B0C15]/90 border border-white/10 shadow-2xl backdrop-blur-xl">
-                            <SmartForecastCharts 
-                                data={calculations.chartData24h || []} 
-                                comparisonData={calculations.comparisonData || null} 
-                                unit={flags.unit === 'F' ? '°F' : '°C'} 
-                                lang={flags.lang} 
-                            />
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <SmartForecastCharts
+                                    data={calculations.chartData24h || []}
+                                    comparisonData={calculations.comparisonData || null}
+                                    unit={flags.unit === 'F' ? '°F' : '°C'}
+                                    lang={flags.lang}
+                                />
+                            </Suspense>
                         </div>
                     )}
                 </div>

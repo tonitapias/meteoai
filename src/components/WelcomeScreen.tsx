@@ -1,13 +1,17 @@
 // src/components/WelcomeScreen.tsx
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { 
-  Loader2, CloudRain, Wind, 
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import {
+  Loader2, CloudRain, Wind,
   ShieldCheck, CloudLightning, ThermometerSun,
   HelpCircle, Crosshair, Sun, Fingerprint, AlertTriangle
 } from 'lucide-react';
 import { Language, TranslationType } from '../translations';
 import { APP_VERSION } from '../utils/appVersion';
-import DiagnosticsModal from './DiagnosticsModal';
+
+// Carregat de manera diferida: és un modal de diagnòstic tècnic que la immensa majoria
+// de visites mai obren, però abans s'important estàticament i inflava el bundle crític
+// que bloqueja el primer pintat (LCP) de la pantalla de benvinguda — confirmat per Lighthouse.
+const DiagnosticsModal = lazy(() => import('./DiagnosticsModal'));
 import { useHoldGesture } from '../hooks/welcome/useHoldGesture';
 import { useWeatherParticles } from '../hooks/welcome/useWeatherParticles';
 
@@ -452,9 +456,11 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
 
       {/* MODAL I18N */}
       {showDiagnostics && (
-        <div className="absolute z-[99999]">
-          <DiagnosticsModal onClose={closeDiagnosticsModal} lang={lang} t={t} />
-        </div>
+        <Suspense fallback={null}>
+          <div className="absolute z-[99999]">
+            <DiagnosticsModal onClose={closeDiagnosticsModal} lang={lang} t={t} />
+          </div>
+        </Suspense>
       )}
 
       {/* FOOTER */}
