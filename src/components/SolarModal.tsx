@@ -2,12 +2,12 @@
 // Modal de detall del cicle solar — direcció visual "planetari/astronòmic": starfield,
 // arc real d'altitud/azimut amb scrubbing horari, cronologia completa de crepuscles i hora
 // daurada, selecció de dia i 14 dies vista.
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { X, Sunrise, Sunset, Gauge, Zap, CloudSun, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
-import { getUVCategory } from '../utils/uvIndexUtils';
+import { getUVCategory, UVCategory } from '../utils/uvIndexUtils';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { SunOrb } from './SunOrb';
 import {
@@ -18,6 +18,7 @@ import {
   estimateSunsetQuality,
   addDaysToDateStr,
   SunDayTimes,
+  CompassReading,
 } from '../utils/astronomyMath';
 
 interface SolarModalProps {
@@ -268,11 +269,13 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     setScrubFraction(null);
   };
 
-  // Un scrub d'un dia no té sentit conservat en canviar de dia consultat
-  const selectDay = (offset: number) => {
+  // Un scrub d'un dia no té sentit conservat en canviar de dia consultat. Memoitzada (deps
+  // buides, els setters de useState són estables) perquè WeekStripSection (React.memo) no es
+  // torni a renderitzar només perquè aquesta funció canviaria de referència cada render.
+  const selectDay = useCallback((offset: number) => {
     setSelectedDayOffset(offset);
     setScrubFraction(null);
-  };
+  }, []);
 
   // Cronologia de demà (real, no la del dia consultat), només per poder oferir un "proper
   // esdeveniment" honest durant les hores de nit posteriors al crepuscle astronòmic d'avui
@@ -353,7 +356,9 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   );
 
   const realSunPct = (viewDaylightSec && sunshineSec !== null) ? Math.round((sunshineSec / viewDaylightSec) * 100) : null;
-  const uvCategory = uvMax !== null ? getUVCategory(uvMax) : null;
+  // Memoitzat perquè és un objecte (referència nova cada render si no) que StatsSection
+  // (React.memo) rep com a prop — sense memoitzar, trencaria la memoització durant l'scrub.
+  const uvCategory = useMemo(() => uvMax !== null ? getUVCategory(uvMax) : null, [uvMax]);
 
   const solarNoonAlt = useMemo(
     () => sunDayTimes.solarNoon && hasValidCoords ? getSunCompassPosition(sunDayTimes.solarNoon, lat, lon)?.altitudeDeg ?? null : null,
@@ -605,101 +610,207 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
               </svg>
             </div>
 
-            {/* Barra de cronologia segmentada */}
-            <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {t.timeline} · {isToday ? t.todayCard : viewedDayLabel}
-                </span>
-              </div>
-              <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-indigo-950 via-amber-400 to-indigo-950">
-                {timelineEvents.length > 0 && (
-                  <div
-                    className="absolute top-[-3px] w-[2px] h-[18px] bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]"
-                    style={{ left: `${nowFraction * 100}%` }}
-                  />
-                )}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-                {timelineEvents.map(e => (
-                  <div key={e.key} className="rounded-lg border border-white/5 bg-black/25 px-2.5 py-2 flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wide leading-tight">{e.label}</span>
-                    <span className="text-sm font-mono font-bold text-slate-100">{formatClockTime(e.date, timezone)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Barra de cronologia segmentada — extreta i memoitzada: no depèn de l'scrub */}
+            <TimelineSection
+              label={t.timeline}
+              dayLabel={isToday ? t.todayCard : viewedDayLabel}
+              timelineEvents={timelineEvents}
+              nowFraction={nowFraction}
+              timezone={timezone}
+            />
 
-            {/* Targetes d'estadístiques */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard label={t.solarNoon} value={formatClockTime(sunDayTimes.solarNoon, timezone) || '--:--'} sub={solarNoonAlt !== null ? `${t.maxElevation} ${Math.round(solarNoonAlt)}°` : undefined} icon={<Sunrise className="w-3.5 h-3.5" />} />
-              <StatCard
-                label={t.dayLength}
-                value={minutesToHM(viewDaylightSec)}
-                sub={displayTrend || undefined}
-                trendIcon={displayTrend === t.lengthening ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : displayTrend === t.shortening ? <TrendingDown className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3 text-slate-500" />}
-                icon={<Gauge className="w-3.5 h-3.5" />}
-              />
-              <StatCard label={t.realSun} value={realSunPct !== null ? `${realSunPct}%` : '--'} icon={<CloudSun className="w-3.5 h-3.5" />} />
-              <StatCard
-                label={t.uvMax}
-                value={uvMax !== null ? uvMax.toFixed(1) : '--'}
-                sub={uvCategory ? uvCategory.label[safeLang] : undefined}
-                valueClassName={uvCategory?.color}
-                icon={<Zap className="w-3.5 h-3.5" />}
-              />
-              <StatCard label={t.uvClear} value={uvClear !== null ? uvClear.toFixed(1) : '--'} icon={<Zap className="w-3.5 h-3.5" />} />
-              <StatCard label={t.radiation} value={radiationSum !== null ? `${radiationSum.toFixed(1)} MJ/m²` : '--'} icon={<Zap className="w-3.5 h-3.5" />} />
-              <StatCard
-                label={t.sunriseAz}
-                value={sunriseAz ? `${Math.round(sunriseAz.azimuthDeg)}° ${getCardinalLabel(sunriseAz.azimuthDeg, safeLang)}` : '--'}
-                icon={<Sunrise className="w-3.5 h-3.5" />}
-              />
-              <StatCard
-                label={t.sunsetAz}
-                value={sunsetAz ? `${Math.round(sunsetAz.azimuthDeg)}° ${getCardinalLabel(sunsetAz.azimuthDeg, safeLang)}` : '--'}
-                icon={<Sunset className="w-3.5 h-3.5" />}
-              />
-              {sunsetQuality !== null && (
-                <StatCard label={t.sunsetQuality} value={`${sunsetQuality}%`} sub={t.estimate} icon={<Sunset className="w-3.5 h-3.5" />} />
-              )}
-            </div>
+            {/* Targetes d'estadístiques — extretes i memoitzades: no depenen de l'scrub */}
+            <StatsSection
+              t={t}
+              safeLang={safeLang}
+              solarNoon={sunDayTimes.solarNoon}
+              timezone={timezone}
+              solarNoonAlt={solarNoonAlt}
+              viewDaylightSec={viewDaylightSec}
+              displayTrend={displayTrend}
+              realSunPct={realSunPct}
+              uvMax={uvMax}
+              uvClear={uvClear}
+              uvCategory={uvCategory}
+              radiationSum={radiationSum}
+              sunriseAz={sunriseAz}
+              sunsetAz={sunsetAz}
+              sunsetQuality={sunsetQuality}
+            />
 
-            {/* Tira de 14 dies — clicable: selecciona el dia consultat a tot el modal */}
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{t.week}</span>
-              <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
-                <button
-                  onClick={() => selectDay(0)}
-                  className={`flex-shrink-0 w-20 rounded-xl border p-3 flex flex-col items-center justify-center gap-1 transition-colors ${isToday ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
-                >
-                  <span className={`text-[11px] font-black uppercase ${isToday ? 'text-amber-300' : 'text-slate-400'}`}>{t.todayCard}</span>
-                </button>
-                {weekDays.map((d) => (
-                  <button
-                    key={d.dateStr}
-                    onClick={() => selectDay(d.offset)}
-                    className={`flex-shrink-0 w-28 rounded-xl border p-3 flex flex-col items-center gap-1.5 text-left transition-colors ${selectedDayOffset === d.offset ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
-                  >
-                    <span className={`text-[10px] font-black uppercase ${selectedDayOffset === d.offset ? 'text-amber-300' : 'text-slate-400'}`}>{d.weekdayLabel} {d.dayNum}</span>
-                    <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300"><Sunrise className="w-3 h-3" />{d.sunrise}</div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-300"><Sunset className="w-3 h-3" />{d.sunset}</div>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-300">
-                      {d.dayLength}
-                      {d.trend === 'up' && <TrendingUp className="w-3 h-3 text-emerald-400" />}
-                      {d.trend === 'down' && <TrendingDown className="w-3 h-3 text-rose-400" />}
-                    </div>
-                    {d.uvMax !== null && <span className="text-[9px] font-bold text-slate-500">UV {d.uvMax}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Tira de 14 dies — extreta i memoitzada: no depèn de l'scrub, només es re-renderitza
+                quan canvia el dia seleccionat */}
+            <WeekStripSection
+              label={t.week}
+              todayLabel={t.todayCard}
+              isToday={isToday}
+              weekDays={weekDays}
+              selectedDayOffset={selectedDayOffset}
+              onSelectDay={selectDay}
+            />
           </div>
         )}
       </div>
     </div>
   );
 }
+
+// --- Seccions pesades extretes i memoitzades (React.memo) ---
+// Cap d'aquestes tres depèn de l'scrub — sense aquesta separació, cada moviment de l'arc
+// (fins a 60 cops/segon) forçava React a re-renderitzar també la tira de 14 dies, les ~9
+// targetes d'estadístiques i els 11 esdeveniments de la cronologia, cosa que es notava a
+// batzegades en mòbils de gamma baixa. Amb React.memo, mentre les seves props es mantinguin
+// amb la mateixa referència (garantit perquè totes venen de useMemo/useCallback o de l'objecte
+// estàtic `t`), React salta per complet el seu re-render durant l'scrub.
+
+interface TimelineSectionProps {
+  label: string;
+  dayLabel: string;
+  timelineEvents: { key: string; label: string; date: Date }[];
+  nowFraction: number;
+  timezone?: string;
+}
+
+const TimelineSection = memo(function TimelineSection({ label, dayLabel, timelineEvents, nowFraction, timezone }: TimelineSectionProps) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          {label} · {dayLabel}
+        </span>
+      </div>
+      <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-indigo-950 via-amber-400 to-indigo-950">
+        {timelineEvents.length > 0 && (
+          <div
+            className="absolute top-[-3px] w-[2px] h-[18px] bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]"
+            style={{ left: `${nowFraction * 100}%` }}
+          />
+        )}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+        {timelineEvents.map(e => (
+          <div key={e.key} className="rounded-lg border border-white/5 bg-black/25 px-2.5 py-2 flex flex-col gap-0.5">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wide leading-tight">{e.label}</span>
+            <span className="text-sm font-mono font-bold text-slate-100">{formatClockTime(e.date, timezone)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+interface StatsSectionProps {
+  t: Record<string, string>;
+  safeLang: Language;
+  solarNoon: Date | null;
+  timezone?: string;
+  solarNoonAlt: number | null;
+  viewDaylightSec: number | null;
+  displayTrend: string | null;
+  realSunPct: number | null;
+  uvMax: number | null;
+  uvClear: number | null;
+  uvCategory: UVCategory | null;
+  radiationSum: number | null;
+  sunriseAz: CompassReading | null;
+  sunsetAz: CompassReading | null;
+  sunsetQuality: number | null;
+}
+
+const StatsSection = memo(function StatsSection({
+  t, safeLang, solarNoon, timezone, solarNoonAlt, viewDaylightSec, displayTrend,
+  realSunPct, uvMax, uvClear, uvCategory, radiationSum, sunriseAz, sunsetAz, sunsetQuality,
+}: StatsSectionProps) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StatCard label={t.solarNoon} value={formatClockTime(solarNoon, timezone) || '--:--'} sub={solarNoonAlt !== null ? `${t.maxElevation} ${Math.round(solarNoonAlt)}°` : undefined} icon={<Sunrise className="w-3.5 h-3.5" />} />
+      <StatCard
+        label={t.dayLength}
+        value={minutesToHM(viewDaylightSec)}
+        sub={displayTrend || undefined}
+        trendIcon={displayTrend === t.lengthening ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : displayTrend === t.shortening ? <TrendingDown className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3 text-slate-500" />}
+        icon={<Gauge className="w-3.5 h-3.5" />}
+      />
+      <StatCard label={t.realSun} value={realSunPct !== null ? `${realSunPct}%` : '--'} icon={<CloudSun className="w-3.5 h-3.5" />} />
+      <StatCard
+        label={t.uvMax}
+        value={uvMax !== null ? uvMax.toFixed(1) : '--'}
+        sub={uvCategory ? uvCategory.label[safeLang] : undefined}
+        valueClassName={uvCategory?.color}
+        icon={<Zap className="w-3.5 h-3.5" />}
+      />
+      <StatCard label={t.uvClear} value={uvClear !== null ? uvClear.toFixed(1) : '--'} icon={<Zap className="w-3.5 h-3.5" />} />
+      <StatCard label={t.radiation} value={radiationSum !== null ? `${radiationSum.toFixed(1)} MJ/m²` : '--'} icon={<Zap className="w-3.5 h-3.5" />} />
+      <StatCard
+        label={t.sunriseAz}
+        value={sunriseAz ? `${Math.round(sunriseAz.azimuthDeg)}° ${getCardinalLabel(sunriseAz.azimuthDeg, safeLang)}` : '--'}
+        icon={<Sunrise className="w-3.5 h-3.5" />}
+      />
+      <StatCard
+        label={t.sunsetAz}
+        value={sunsetAz ? `${Math.round(sunsetAz.azimuthDeg)}° ${getCardinalLabel(sunsetAz.azimuthDeg, safeLang)}` : '--'}
+        icon={<Sunset className="w-3.5 h-3.5" />}
+      />
+      {sunsetQuality !== null && (
+        <StatCard label={t.sunsetQuality} value={`${sunsetQuality}%`} sub={t.estimate} icon={<Sunset className="w-3.5 h-3.5" />} />
+      )}
+    </div>
+  );
+});
+
+interface WeekDayEntry {
+  dateStr: string;
+  offset: number;
+  weekdayLabel: string;
+  dayNum: number | null;
+  sunrise: string;
+  sunset: string;
+  dayLength: string;
+  uvMax: number | null;
+  trend: 'up' | 'down' | 'flat' | null;
+}
+
+interface WeekStripSectionProps {
+  label: string;
+  todayLabel: string;
+  isToday: boolean;
+  weekDays: WeekDayEntry[];
+  selectedDayOffset: number;
+  onSelectDay: (offset: number) => void;
+}
+
+const WeekStripSection = memo(function WeekStripSection({ label, todayLabel, isToday, weekDays, selectedDayOffset, onSelectDay }: WeekStripSectionProps) {
+  return (
+    <div>
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{label}</span>
+      <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
+        <button
+          onClick={() => onSelectDay(0)}
+          className={`flex-shrink-0 w-20 rounded-xl border p-3 flex flex-col items-center justify-center gap-1 transition-colors ${isToday ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
+        >
+          <span className={`text-[11px] font-black uppercase ${isToday ? 'text-amber-300' : 'text-slate-400'}`}>{todayLabel}</span>
+        </button>
+        {weekDays.map((d) => (
+          <button
+            key={d.dateStr}
+            onClick={() => onSelectDay(d.offset)}
+            className={`flex-shrink-0 w-28 rounded-xl border p-3 flex flex-col items-center gap-1.5 text-left transition-colors ${selectedDayOffset === d.offset ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
+          >
+            <span className={`text-[10px] font-black uppercase ${selectedDayOffset === d.offset ? 'text-amber-300' : 'text-slate-400'}`}>{d.weekdayLabel} {d.dayNum}</span>
+            <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300"><Sunrise className="w-3 h-3" />{d.sunrise}</div>
+            <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-300"><Sunset className="w-3 h-3" />{d.sunset}</div>
+            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-300">
+              {d.dayLength}
+              {d.trend === 'up' && <TrendingUp className="w-3 h-3 text-emerald-400" />}
+              {d.trend === 'down' && <TrendingDown className="w-3 h-3 text-rose-400" />}
+            </div>
+            {d.uvMax !== null && <span className="text-[9px] font-bold text-slate-500">UV {d.uvMax}</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 interface StatCardProps {
   label: string;
