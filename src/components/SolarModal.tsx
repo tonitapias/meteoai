@@ -499,7 +499,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
             <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative">
                 <div className={`absolute inset-0 rounded-full blur-[50px] pointer-events-none transition-colors duration-1000 ${isDaytime ? 'bg-amber-500/25' : 'bg-indigo-500/10'}`}></div>
-                <SunOrb elevationDeg={activeSample ? activeSample.altitude : (isToday ? (sunNowPos?.altitudeDeg ?? -90) : (solarNoonAlt ?? -90))} className="w-full h-full relative z-10" />
+                <SunOrb elevationDeg={activeSample ? activeSample.altitude : (isToday ? (sunNowPos?.altitudeDeg ?? -90) : (solarNoonAlt ?? -90))} className="w-full h-full relative z-10" isScrubbing={isScrubbing} />
               </div>
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
                 <span className="text-3xl font-black text-white tracking-tight leading-none">
