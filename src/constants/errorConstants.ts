@@ -30,5 +30,6 @@ export const NOTIFICATION_TYPES = {
 export const SENTRY_TAGS = {
     SERVICE_WEATHER_API: 'WeatherAPI',
     SERVICE_REGIONAL_MODEL_WORKER: 'RegionalModelWorker',
+    SERVICE_ALERTS_API: 'AlertsAPI',
     TYPE_FALLBACK: 'FallbackToBase'
 } as const;

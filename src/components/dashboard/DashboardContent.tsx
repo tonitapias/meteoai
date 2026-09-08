@@ -14,6 +14,7 @@ import { MinutelyPreciseChart } from '../WeatherCharts';
 // Lazy loading
 const Forecast24h = lazy(() => import('../Forecast24h'));
 const AIInsights = lazy(() => import('../AIInsights'));
+const OfficialAlertBanner = lazy(() => import('../OfficialAlertBanner'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 // Només es mostra en Mode Expert — mateix cas que ExpertWidgets de dalt. Viu en un
@@ -72,6 +73,11 @@ export const DashboardContent = () => {
                     </div>
                 </div>
             )}
+
+            {/* 2b. ALERTA METEOROLÒGICA OFICIAL (font: servei meteorològic nacional) */}
+            <Suspense fallback={null}>
+                <OfficialAlertBanner lat={loc?.latitude} lon={loc?.longitude} lang={flags.lang} />
+            </Suspense>
 
             {/* 3. INTEL·LIGÈNCIA ARTIFICIAL */}
             <Suspense fallback={<SectionSkeleton />}>
