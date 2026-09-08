@@ -2,7 +2,7 @@
 // Modal de detall del cicle solar — direcció visual "planetari/astronòmic": starfield,
 // arc real d'altitud/azimut amb scrubbing horari, cronologia completa de crepuscles i hora
 // daurada, selecció de dia i 14 dies vista.
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useState, useRef, useCallback, useMemo, memo } from 'react';
 import { X, Sunrise, Sunset, Gauge, Zap, CloudSun, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
@@ -10,6 +10,8 @@ import { MATRIX_BG } from './widgets/widgetStyles';
 import { getUVCategory, UVCategory } from '../utils/uvIndexUtils';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { SunOrb } from './SunOrb';
+import { StatCard } from './AstroStatCard';
+import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import {
   getSunDayTimesSafe,
   getSunCompassPosition,
@@ -118,29 +120,8 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   const utcOffsetSeconds = typeof weatherData.utc_offset_seconds === 'number' ? weatherData.utc_offset_seconds : 0;
   const daily = weatherData.daily;
 
-  // --- Tancament: Escape + bloqueig de scroll (l'historial "enrere" ja el gestiona useModalHistory) ---
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-  const handleClose = useCallback(() => onCloseRef.current(), []);
-
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = original; };
-  }, []);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleClose]);
-
-  // --- Rellotge viu ---
-  const [now, setNow] = useState<Date>(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(timer);
-  }, []);
+  // --- Tancament (Escape + bloqueig de scroll) i rellotge viu de 30s ---
+  const { handleClose, now } = useAstroModalShell(onClose);
 
   // --- Selecció de dia: la tira de 14 dies és un selector real, no només informativa ---
   const [selectedDayOffset, setSelectedDayOffset] = useState(0); // 0 = avui
@@ -454,7 +435,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     : 'from-[#0d1120] via-[#080a14] to-black';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-labelledby="solar-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
       <style>{`
         .astro-scrollbar { -webkit-overflow-scrolling: touch; }
         .astro-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -480,7 +461,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
               </span>
             </div>
             <div className="flex flex-col">
-              <h2 className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
+              <h2 id="solar-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
               <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t.subtitle}</span>
             </div>
           </div>
@@ -811,24 +792,3 @@ const WeekStripSection = memo(function WeekStripSection({ label, todayLabel, isT
     </div>
   );
 });
-
-interface StatCardProps {
-  label: string;
-  value: string;
-  sub?: string;
-  icon?: React.ReactNode;
-  valueClassName?: string;
-  trendIcon?: React.ReactNode;
-}
-
-const StatCard = ({ label, value, sub, icon, valueClassName, trendIcon }: StatCardProps) => (
-  <div className="rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col gap-1">
-    <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
-      {icon}{label}
-    </span>
-    <span className={`text-lg font-black tabular-nums leading-none flex items-center gap-1.5 ${valueClassName || 'text-white'}`}>
-      {value}{trendIcon}
-    </span>
-    {sub && <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{sub}</span>}
-  </div>
-);

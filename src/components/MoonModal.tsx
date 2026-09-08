@@ -2,13 +2,15 @@
 // Modal de detall del cicle lunar — direcció visual "planetari/astronòmic": starfield dens,
 // icona de fase gran (mirall per a l'hemisferi sud), azimut de sortida/posta, distància i
 // insígnia de superlluna, pròxima lluna plena/nova, selecció de dia i 14 dies vista.
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { X, ArrowUpCircle, ArrowDownCircle, Orbit, Sparkles, CalendarClock } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { MoonPhaseIcon } from './MoonPhaseIcon';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
+import { StatCard } from './AstroStatCard';
+import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { getMoonPhase } from '../utils/weatherMath';
 import {
   getMoonCompassPosition,
@@ -114,27 +116,8 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   const daily = weatherData.daily;
   const isSouth = hasValidCoords && lat < 0;
 
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-  const handleClose = useCallback(() => onCloseRef.current(), []);
-
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = original; };
-  }, []);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleClose]);
-
-  const [now, setNow] = useState<Date>(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(timer);
-  }, []);
+  // --- Tancament (Escape + bloqueig de scroll) i rellotge viu de 30s ---
+  const { handleClose, now } = useAstroModalShell(onClose);
 
   // --- Selecció de dia: la tira de 14 dies és un selector real, no només informativa ---
   const [selectedDayOffset, setSelectedDayOffset] = useState(0); // 0 = avui
@@ -229,7 +212,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-labelledby="moon-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
       <style>{`
         .astro-scrollbar { -webkit-overflow-scrolling: touch; }
         .astro-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -259,7 +242,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
               </span>
             </div>
             <div className="flex flex-col">
-              <h2 className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
+              <h2 id="moon-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
               <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t.subtitle}</span>
             </div>
           </div>
@@ -380,21 +363,3 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
     </div>
   );
 }
-
-interface StatCardProps {
-  label: string;
-  value: string;
-  sub?: string;
-  icon?: React.ReactNode;
-  valueClassName?: string;
-}
-
-const StatCard = ({ label, value, sub, icon, valueClassName }: StatCardProps) => (
-  <div className="rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col gap-1">
-    <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
-      {icon}{label}
-    </span>
-    <span className={`text-lg font-black tabular-nums leading-none ${valueClassName || 'text-white'}`}>{value}</span>
-    {sub && <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{sub}</span>}
-  </div>
-);
