@@ -41,7 +41,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Durada del Dia', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
     uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
     sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 14 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
-    todayCard: 'Avui', backToToday: 'Torna a avui', scrubHint: 'Toca o arrossega l\'arc',
+    todayCard: 'Avui', backToToday: 'Torna a avui', scrubHint: 'Toca, arrossega o usa les fletxes',
     timeline: 'Cronologia', trajectory: 'Trajectòria Solar',
     astroDawn: 'Crep. Astronòmic (sortida)', nauticalDawn: 'Crep. Nàutic (sortida)', civilDawn: 'Crep. Civil (sortida)',
     goldenHourMorning: 'Hora Daurada (matí)', goldenHourEvening: 'Hora Daurada (tarda)',
@@ -54,7 +54,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Duración del Día', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
     uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
     sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 14 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
-    todayCard: 'Hoy', backToToday: 'Volver a hoy', scrubHint: 'Toca o arrastra el arco',
+    todayCard: 'Hoy', backToToday: 'Volver a hoy', scrubHint: 'Toca, arrastra o usa las flechas',
     timeline: 'Cronología', trajectory: 'Trayectoria Solar',
     astroDawn: 'Crep. Astronómico (salida)', nauticalDawn: 'Crep. Náutico (salida)', civilDawn: 'Crep. Civil (salida)',
     goldenHourMorning: 'Hora Dorada (mañana)', goldenHourEvening: 'Hora Dorada (tarde)',
@@ -67,7 +67,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Day Length', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
     uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
     sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 14 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
-    todayCard: 'Today', backToToday: 'Back to today', scrubHint: 'Tap or drag the arc',
+    todayCard: 'Today', backToToday: 'Back to today', scrubHint: 'Tap, drag, or use the arrow keys',
     timeline: 'Timeline', trajectory: 'Solar Trajectory',
     astroDawn: 'Astronomical Dawn', nauticalDawn: 'Nautical Dawn', civilDawn: 'Civil Dawn',
     goldenHourMorning: 'Golden Hour (AM)', goldenHourEvening: 'Golden Hour (PM)',
@@ -80,7 +80,7 @@ const T: Record<Language, Record<string, string>> = {
     dayLength: 'Durée du Jour', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
     uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
     sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '14 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
-    todayCard: "Aujourd'hui", backToToday: "Retour à aujourd'hui", scrubHint: "Touchez ou glissez l'arc",
+    todayCard: "Aujourd'hui", backToToday: "Retour à aujourd'hui", scrubHint: "Touchez, glissez ou utilisez les flèches",
     timeline: 'Chronologie', trajectory: 'Trajectoire Solaire',
     astroDawn: 'Crép. Astro. (matin)', nauticalDawn: 'Crép. Nautique (matin)', civilDawn: 'Crép. Civil (matin)',
     goldenHourMorning: 'Heure Dorée (matin)', goldenHourEvening: 'Heure Dorée (soir)',
@@ -250,6 +250,41 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     setScrubFraction(null);
   };
 
+  // Alternativa de teclat a l'scrub de punter: mateix estat (scrubFraction), així que l'orbe,
+  // el marcador i la lectura reaccionen exactament igual que arrossegant. Convenció estàndard
+  // ARIA d'slider horitzontal: Dreta/Amunt avancen, Esquerra/Avall retrocedeixen.
+  const ARC_STEP = 1 / 96; // 15 minuts, un mostreig
+  const handleArcKeyDown = (e: React.KeyboardEvent<SVGSVGElement>) => {
+    const current = scrubFraction ?? (activeSample ? activeSample.fraction : (isToday ? nowFraction : 0.5));
+    let next: number | null = null;
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowUp':
+        next = Math.min(1, current + ARC_STEP);
+        break;
+      case 'ArrowLeft':
+      case 'ArrowDown':
+        next = Math.max(0, current - ARC_STEP);
+        break;
+      case 'PageUp':
+        next = Math.min(1, current + ARC_STEP * 4); // 1 hora
+        break;
+      case 'PageDown':
+        next = Math.max(0, current - ARC_STEP * 4);
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = 1;
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    setScrubFraction(next);
+  };
+
   // Un scrub d'un dia no té sentit conservat en canviar de dia consultat. Memoitzada (deps
   // buides, els setters de useState són estables) perquè WeekStripSection (React.memo) no es
   // torni a renderitzar només perquè aquesta funció canviaria de referència cada render.
@@ -318,16 +353,15 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   }, [nextEvent, now]);
 
   // --- Estadístiques del dia consultat (índex = selectedDayOffset dins els arrays d'Open-Meteo) ---
-  const getDailyNum = (key: string, idx: number = selectedDayOffset): number | null => {
-    const arr = (daily as unknown as Record<string, (number | null)[] | undefined>)?.[key];
+  const getDailyNum = (arr: (number | null)[] | undefined, idx: number = selectedDayOffset): number | null => {
     const v = Array.isArray(arr) ? arr[idx] : undefined;
     return typeof v === 'number' && !isNaN(v) ? v : null;
   };
 
-  const uvMax = getDailyNum('uv_index_max');
-  const uvClear = getDailyNum('uv_index_clear_sky_max');
-  const sunshineSec = getDailyNum('sunshine_duration');
-  const radiationSum = getDailyNum('shortwave_radiation_sum');
+  const uvMax = getDailyNum(daily?.uv_index_max);
+  const uvClear = getDailyNum(daily?.uv_index_clear_sky_max);
+  const sunshineSec = getDailyNum(daily?.sunshine_duration);
+  const radiationSum = getDailyNum(daily?.shortwave_radiation_sum);
 
   // Durada del dia real (astronomia local, no Open-Meteo) — disponible per als 14 dies,
   // no només pels ~7 que l'API arriba a cobrir.
@@ -362,8 +396,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
     const targetHourKey = sunsetStr.slice(0, 13); // "YYYY-MM-DDTHH"
     const idx = hourly.time.findIndex(ts => typeof ts === 'string' && ts.slice(0, 13) === targetHourKey);
     if (idx === -1) return null;
-    const hourlyAny = hourly as unknown as Record<string, (number | null)[] | undefined>;
-    return estimateSunsetQuality(hourlyAny.cloud_cover_mid?.[idx], hourlyAny.cloud_cover_high?.[idx], hourlyAny.relative_humidity_2m?.[idx]);
+    return estimateSunsetQuality(hourly.cloud_cover_mid?.[idx], hourly.cloud_cover_high?.[idx], hourly.relative_humidity_2m?.[idx]);
   }, [weatherData.hourly, daily, selectedDayOffset]);
 
   // --- Tira de 14 dies (a partir de demà) ---
@@ -374,8 +407,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   // contingut quan es tria un dia, només es ressalta la targeta triada.
   const weekDays = useMemo(() => {
     if (!todayStr || !hasValidCoords) return [];
-    const dailyAny = daily as unknown as Record<string, (number | null)[] | string[] | undefined>;
-    const uvArr = dailyAny.uv_index_max as (number | null)[] | undefined;
+    const uvArr = daily?.uv_index_max;
     const openMeteoDayCount = Array.isArray(daily?.time) ? daily.time.length : 0;
 
     let prevDaylightSec = (todaySunTimes.sunrise && todaySunTimes.sunset)
@@ -420,7 +452,7 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
   // (aquell dia comparat amb l'anterior).
   const displayTrend = useMemo(() => {
     if (isToday) {
-      const arr = (daily as unknown as Record<string, (number | null)[] | undefined>)?.daylight_duration;
+      const arr = daily?.daylight_duration;
       const todayOM = Array.isArray(arr) && typeof arr[0] === 'number' ? arr[0] : null;
       const tomorrowOM = Array.isArray(arr) && typeof arr[1] === 'number' ? arr[1] : null;
       if (todayOM === null || tomorrowOM === null) return null;
@@ -526,13 +558,21 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
               </div>
               <svg
                 viewBox="0 0 400 160"
-                className="w-full h-40 overflow-visible cursor-crosshair"
+                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                 style={{ touchAction: 'none' }}
                 onPointerMove={handleArcPointerMove}
                 onPointerDown={handleArcPointerMove}
                 onPointerUp={clearScrub}
                 onPointerLeave={clearScrub}
                 onPointerCancel={clearScrub}
+                tabIndex={0}
+                role="slider"
+                aria-label={`${t.trajectory} · ${isToday ? t.todayCard : viewedDayLabel}`}
+                aria-valuemin={0}
+                aria-valuemax={96}
+                aria-valuenow={activeSample ? Math.round(activeSample.fraction * 96) : undefined}
+                aria-valuetext={activeSample && activeTimeStr ? `${activeTimeStr} · ${Math.round(activeSample.azimuth)}° ${getCardinalLabel(activeSample.azimuth, safeLang)} · ${activeSample.altitude >= 0 ? '+' : ''}${Math.round(activeSample.altitude)}°` : undefined}
+                onKeyDown={handleArcKeyDown}
               >
                 <defs>
                   <filter id="solarGlow" x="-60%" y="-60%" width="220%" height="220%">
