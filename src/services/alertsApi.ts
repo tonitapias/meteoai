@@ -5,12 +5,13 @@ import { SENTRY_TAGS } from "../constants/errorConstants";
 import { GEMINI_PROXY_URL } from "../constants/aiConfig";
 import type { Language } from "../translations";
 
-// Fonts actives: NWS (EUA, sense clau, JSON directe) i AEMET (Espanya, via
-// el proxy existent — cal clau d'AEMET i parsing de CAP-XML/tar.gz, massa
-// feina i massa sensible per fer-ho directament des del navegador).
-// Météo-França i altres serveis nacionals: pendents.
+// Fonts actives: NWS (EUA, sense clau, JSON directe), AEMET (Espanya, via
+// el proxy — cal clau d'AEMET i parsing de CAP-XML/tar.gz) i Météo-França
+// (via el proxy també, però sense clau: mirall públic Opendatasoft + l'API
+// geogràfica oficial del govern francès, cap de les dues exigeix compte).
 const NWS_ALERTS_URL = "https://api.weather.gov/alerts/active";
 const AEMET_PROXY_URL = `${GEMINI_PROXY_URL}/aemet-alerts`;
+const METEOFRANCE_PROXY_URL = `${GEMINI_PROXY_URL}/meteofrance-alerts`;
 const TRANSLATE_PROXY_URL = `${GEMINI_PROXY_URL}/translate-alert`;
 const TIMEOUT_MS = 6000;
 const TRANSLATE_TIMEOUT_MS = 10000;
@@ -19,6 +20,12 @@ const TRANSLATE_TIMEOUT_MS = 10000;
 // evita cridar el proxy (i gastar quota d'AEMET) per a la resta del món.
 const isWithinSpainBoundingBox = (lat: number, lon: number): boolean =>
     (lat >= 27 && lat <= 44 && lon >= -19 && lon <= 5);
+
+// Capsa aproximada de la França metropolitana + Còrsega. Els territoris
+// d'ultramar (Guadalupe, Reunió...) també tenen vigilància de Météo-França
+// però queden fora d'aquesta capsa — pendents si mai calen.
+const isWithinFranceBoundingBox = (lat: number, lon: number): boolean =>
+    (lat >= 41 && lat <= 51.5 && lon >= -5.5 && lon <= 9.7);
 
 export type AlertSeverity = 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
 
@@ -33,9 +40,10 @@ export interface OfficialAlert {
     expires: string | null;
     sourceName: string;
     sourceUrl: string;
-    // Idioma real del text (font nativa): NWS sempre 'en', AEMET 'es' o 'en'.
-    // Cap font cobreix ca/fr natívament — es tradueix a getAllOfficialAlerts.
-    textLang: 'es' | 'en';
+    // Idioma real del text (font nativa): NWS sempre 'en', AEMET 'es'/'en',
+    // Météo-França sempre 'fr'. Cap font cobreix els 4 idiomes de l'app —
+    // es tradueix el que calgui a getAllOfficialAlerts.
+    textLang: 'es' | 'en' | 'fr';
 }
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = {
@@ -100,9 +108,10 @@ export const getOfficialAlerts = async (lat: number, lon: number): Promise<Offic
     }
 };
 
-// L'AEMET ja ve pre-parsada i filtrada pel proxy (Worker): la resposta té
-// exactament la mateixa forma que OfficialAlert, no cal cap mapeig aquí.
-const parseAemetResponse = (data: unknown): OfficialAlert[] => {
+// AEMET i Météo-França ja venen pre-parsades i filtrades pel proxy (Worker):
+// la resposta té exactament la mateixa forma que OfficialAlert, no cal cap
+// mapeig aquí — compartit per totes dues fonts.
+const parseProxyAlertResponse = (data: unknown): OfficialAlert[] => {
     if (!Array.isArray(data)) return [];
 
     return data.filter((item): item is OfficialAlert =>
@@ -122,13 +131,40 @@ export const getAemetAlerts = async (lat: number, lon: number, lang: Language): 
         if (!response.ok) throw new Error(`AEMET Proxy Error: ${response.status}`);
 
         const data: unknown = await response.json();
-        return parseAemetResponse(data).sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+        return parseProxyAlertResponse(data).sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 
     } catch (err: unknown) {
         const isTimeout = err instanceof Error && err.name === 'AbortError';
         if (!isTimeout) {
             Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
                 tags: { service: SENTRY_TAGS.SERVICE_ALERTS_API, source: 'aemet' },
+                extra: { lat, lon }
+            });
+        }
+        return [];
+    }
+};
+
+// Météo-França sempre respon en francès natiu (el mirall de vigilància no
+// dona text lliure traduït): el proxy ja fa el filtratge geogràfic (via
+// l'API de departaments del govern francès), no cal 'lang' aquí.
+export const getMeteoFranceAlerts = async (lat: number, lon: number): Promise<OfficialAlert[]> => {
+    if (!isWithinFranceBoundingBox(lat, lon)) return [];
+
+    const url = `${METEOFRANCE_PROXY_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+
+    try {
+        const response = await fetchWithTimeout(url, TIMEOUT_MS);
+        if (!response.ok) throw new Error(`Météo-France Proxy Error: ${response.status}`);
+
+        const data: unknown = await response.json();
+        return parseProxyAlertResponse(data).sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+
+    } catch (err: unknown) {
+        const isTimeout = err instanceof Error && err.name === 'AbortError';
+        if (!isTimeout) {
+            Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+                tags: { service: SENTRY_TAGS.SERVICE_ALERTS_API, source: 'meteofrance' },
                 extra: { lat, lon }
             });
         }
@@ -180,12 +216,13 @@ const translateAlert = async (alert: OfficialAlert, targetLang: Language): Promi
 // geografia (NWS respon 400 fora dels EUA, AEMET es descarta abans de
 // trucar si no som a Espanya), així que sempre és segur cridar-les totes.
 export const getAllOfficialAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {
-    const [nws, aemet] = await Promise.all([
+    const [nws, aemet, meteofrance] = await Promise.all([
         getOfficialAlerts(lat, lon),
-        getAemetAlerts(lat, lon, lang)
+        getAemetAlerts(lat, lon, lang),
+        getMeteoFranceAlerts(lat, lon)
     ]);
 
-    const merged = [...aemet, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+    const merged = [...aemet, ...meteofrance, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 
     return Promise.all(merged.map((alert) =>
         alert.textLang === lang ? alert : translateAlert(alert, lang)
