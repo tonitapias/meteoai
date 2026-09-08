@@ -48,7 +48,7 @@ const LOCAL_UI_TEXTS: Record<Language, LocalUIText> = {
 const LOCALE_MAP: Record<Language, string> = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
 
 const OfficialAlertBanner = ({ lat, lon, lang }: OfficialAlertBannerProps) => {
-    const { alerts } = useOfficialAlerts(lat, lon);
+    const { alerts } = useOfficialAlerts(lat, lon, lang);
     const ui = LOCAL_UI_TEXTS[lang] || LOCAL_UI_TEXTS.ca;
 
     if (alerts.length === 0) return null;

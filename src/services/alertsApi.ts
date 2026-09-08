@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/react";
 import { fetchWithTimeout } from "../utils/networkUtils";
 import { SENTRY_TAGS } from "../constants/errorConstants";
 import { GEMINI_PROXY_URL } from "../constants/aiConfig";
+import type { Language } from "../translations";
 
 // Fonts actives: NWS (EUA, sense clau, JSON directe) i AEMET (Espanya, via
 // el proxy existent — cal clau d'AEMET i parsing de CAP-XML/tar.gz, massa
@@ -10,7 +11,9 @@ import { GEMINI_PROXY_URL } from "../constants/aiConfig";
 // Météo-França i altres serveis nacionals: pendents.
 const NWS_ALERTS_URL = "https://api.weather.gov/alerts/active";
 const AEMET_PROXY_URL = `${GEMINI_PROXY_URL}/aemet-alerts`;
+const TRANSLATE_PROXY_URL = `${GEMINI_PROXY_URL}/translate-alert`;
 const TIMEOUT_MS = 6000;
+const TRANSLATE_TIMEOUT_MS = 10000;
 
 // Capsa aproximada d'Espanya (península + Balears + Canàries + Ceuta/Melilla):
 // evita cridar el proxy (i gastar quota d'AEMET) per a la resta del món.
@@ -30,6 +33,9 @@ export interface OfficialAlert {
     expires: string | null;
     sourceName: string;
     sourceUrl: string;
+    // Idioma real del text (font nativa): NWS sempre 'en', AEMET 'es' o 'en'.
+    // Cap font cobreix ca/fr natívament — es tradueix a getAllOfficialAlerts.
+    textLang: 'es' | 'en';
 }
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = {
@@ -54,7 +60,8 @@ const parseFeature = (feature: unknown): OfficialAlert | null => {
         senderName: typeof props.senderName === 'string' ? props.senderName : 'National Weather Service',
         expires: typeof props.expires === 'string' ? props.expires : null,
         sourceName: 'National Weather Service (NOAA)',
-        sourceUrl: 'https://alerts.weather.gov'
+        sourceUrl: 'https://alerts.weather.gov',
+        textLang: 'en'
     };
 };
 
@@ -105,10 +112,10 @@ const parseAemetResponse = (data: unknown): OfficialAlert[] => {
     );
 };
 
-export const getAemetAlerts = async (lat: number, lon: number): Promise<OfficialAlert[]> => {
+export const getAemetAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {
     if (!isWithinSpainBoundingBox(lat, lon)) return [];
 
-    const url = `${AEMET_PROXY_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+    const url = `${AEMET_PROXY_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&lang=${lang}`;
 
     try {
         const response = await fetchWithTimeout(url, TIMEOUT_MS);
@@ -129,15 +136,58 @@ export const getAemetAlerts = async (lat: number, lon: number): Promise<Official
     }
 };
 
+// Tradueix els 4 camps de text d'una alerta amb el mateix motor IA (Gemini/Groq)
+// que l'anàlisi tàctica, via el proxy (mai clau exposada al client). Cachejat
+// per alerta+idioma al worker, així que el cost real només el paga el primer
+// usuari que demana aquesta combinació. Fail-open: si falla, retorna l'alerta
+// original sense traduir (mai trenca el banner per un error de traducció).
+const translateAlert = async (alert: OfficialAlert, targetLang: Language): Promise<OfficialAlert> => {
+    try {
+        const response = await fetchWithTimeout(TRANSLATE_PROXY_URL, TRANSLATE_TIMEOUT_MS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: alert.id,
+                targetLang,
+                event: alert.event,
+                headline: alert.headline,
+                description: alert.description,
+                instruction: alert.instruction
+            })
+        });
+        if (!response.ok) throw new Error(`Translate Proxy Error: ${response.status}`);
+
+        const translated: unknown = await response.json();
+        if (!translated || typeof translated !== 'object') return alert;
+
+        const t = translated as Record<string, unknown>;
+        return {
+            ...alert,
+            event: typeof t.event === 'string' ? t.event : alert.event,
+            headline: typeof t.headline === 'string' ? t.headline : alert.headline,
+            description: typeof t.description === 'string' ? t.description : alert.description,
+            instruction: typeof t.instruction === 'string' ? t.instruction : (t.instruction === null ? null : alert.instruction)
+        };
+    } catch {
+        return alert;
+    }
+};
+
 // Punt d'entrada únic per a la UI: consulta totes les fonts rellevants per a
-// la ubicació (en paral·lel) i les fusiona per severitat. Cada font ja es
-// filtra sola per geografia (NWS respon 400 fora dels EUA, AEMET es descarta
-// abans de trucar si no som a Espanya), així que sempre és segur cridar-les totes.
-export const getAllOfficialAlerts = async (lat: number, lon: number): Promise<OfficialAlert[]> => {
+// la ubicació (en paral·lel), les fusiona per severitat, i tradueix les que
+// no tinguin text natiu en l'idioma demanat (ca/fr sempre; es/en només si
+// per alguna raó la font no els oferís). Cada font ja es filtra sola per
+// geografia (NWS respon 400 fora dels EUA, AEMET es descarta abans de
+// trucar si no som a Espanya), així que sempre és segur cridar-les totes.
+export const getAllOfficialAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {
     const [nws, aemet] = await Promise.all([
         getOfficialAlerts(lat, lon),
-        getAemetAlerts(lat, lon)
+        getAemetAlerts(lat, lon, lang)
     ]);
 
-    return [...aemet, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+    const merged = [...aemet, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+
+    return Promise.all(merged.map((alert) =>
+        alert.textLang === lang ? alert : translateAlert(alert, lang)
+    ));
 };

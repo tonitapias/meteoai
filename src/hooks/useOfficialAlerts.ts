@@ -1,8 +1,9 @@
 // src/hooks/useOfficialAlerts.ts
 import { useState, useEffect } from 'react';
 import { getAllOfficialAlerts, OfficialAlert } from '../services/alertsApi';
+import type { Language } from '../translations';
 
-export function useOfficialAlerts(lat: number | undefined, lon: number | undefined) {
+export function useOfficialAlerts(lat: number | undefined, lon: number | undefined, lang: Language) {
     const [alerts, setAlerts] = useState<OfficialAlert[]>([]);
 
     useEffect(() => {
@@ -10,7 +11,7 @@ export function useOfficialAlerts(lat: number | undefined, lon: number | undefin
 
         let cancelled = false;
         const timer = setTimeout(async () => {
-            const result = await getAllOfficialAlerts(lat, lon);
+            const result = await getAllOfficialAlerts(lat, lon, lang);
             if (!cancelled) setAlerts(result);
         }, 500);
 
@@ -18,7 +19,7 @@ export function useOfficialAlerts(lat: number | undefined, lon: number | undefin
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [lat, lon]);
+    }, [lat, lon, lang]);
 
     return { alerts };
 }
