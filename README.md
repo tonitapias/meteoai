@@ -59,7 +59,13 @@ Dos modals de detall interactius, accessibles tocant els ginys compactes de Cicl
 * **Cicle Lunar:** fase, il·luminació i edat (amb orientació correcta per a l'hemisferi sud), sortida i posta amb l'azimut exacte de cada esdeveniment, distància Terra-Lluna amb detecció de Superlluna/Micro lluna, pròxima lluna plena i nova, i calendari lunar dia a dia.
 * Sortida, posta, durada del dia i fase lunar es calculen amb astronomia local (sense dependre del model meteorològic), així que són precises per als 14 dies; els valors que sí depenen del temps (UV, radiació) es mostren honestament només on Open-Meteo té dades reals, sense extrapolar-los.
 
-### 4. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 4. Alertes Meteorològiques Oficials
+Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
+* **Tres fonts nacionals, seleccionades automàticament per ubicació:** NWS (Servei Meteorològic Nacional dels EUA), AEMET (Agència Estatal de Meteorologia, Espanya) i Météo-França (Vigilància).
+* **Traducció automàtica:** cap font cobreix nativament els 4 idiomes de l'app; quan cal, el mateix motor d'IA (Gemini/Groq) tradueix l'avís al vol, amb memòria cau per evitar cost repetit entre usuaris.
+* **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
+
+### 5. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.
@@ -80,6 +86,7 @@ Una mirada ràpida a l'auditoria de producció:
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`) per a funcionament offline-first. |
 | **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, AIFS, GFS, ICON, Best Match) i de 13 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
 | **Radar i Satèl·lit** | RainViewer + EUMETSAT | Radar Doppler i imatge satèl·lit (Meteosat, GOES, Himawari), servits per un proxy propi en Cloudflare Workers amb caché. |
+| **Alertes Oficials** | NWS + AEMET + Météo-França | Consulta automàtica per ubicació via el mateix Worker de Cloudflare, amb traducció IA i memòria cau quan la font no cobreix l'idioma de l'app. |
 | **Intel·ligència** | Gemini AI (amb Groq de reserva) | Anàlisi de risc meteorològic via un Worker propi a Cloudflare; un tallafocs determinista sobreescriu la IA si les dades brutes indiquen més risc del que reporta. |
 
 ---
