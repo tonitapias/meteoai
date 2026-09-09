@@ -6,12 +6,13 @@ import { GEMINI_PROXY_URL } from "../constants/aiConfig";
 import type { Language } from "../translations";
 
 // Fonts actives: NWS (EUA, sense clau, JSON directe), AEMET (Espanya, via
-// el proxy — cal clau d'AEMET i parsing de CAP-XML/tar.gz) i Météo-França
-// (via el proxy també, però sense clau: mirall públic Opendatasoft + l'API
-// geogràfica oficial del govern francès, cap de les dues exigeix compte).
+// el proxy — cal clau), Météo-França (via el proxy, sense clau: mirall
+// públic Opendatasoft + l'API geogràfica oficial del govern francès) i
+// Meteocat (Catalunya, via el proxy — cal clau de la Generalitat).
 const NWS_ALERTS_URL = "https://api.weather.gov/alerts/active";
 const AEMET_PROXY_URL = `${GEMINI_PROXY_URL}/aemet-alerts`;
 const METEOFRANCE_PROXY_URL = `${GEMINI_PROXY_URL}/meteofrance-alerts`;
+const METEOCAT_PROXY_URL = `${GEMINI_PROXY_URL}/meteocat-alerts`;
 const TRANSLATE_PROXY_URL = `${GEMINI_PROXY_URL}/translate-alert`;
 const TIMEOUT_MS = 6000;
 const TRANSLATE_TIMEOUT_MS = 10000;
@@ -27,6 +28,13 @@ const isWithinSpainBoundingBox = (lat: number, lon: number): boolean =>
 const isWithinFranceBoundingBox = (lat: number, lon: number): boolean =>
     (lat >= 41 && lat <= 51.5 && lon >= -5.5 && lon <= 9.7);
 
+// Capsa aproximada de Catalunya. Dins d'aquesta capsa, Meteocat substitueix
+// AEMET (mai els dos alhora): és la font regional més precisa i evita
+// mostrar el mateix fenomen duplicat amb dues redaccions diferents — ho hem
+// vist en viu (pluja a Barcelona: taronja a AEMET i groc a Meteocat, alhora).
+const isWithinCataloniaBoundingBox = (lat: number, lon: number): boolean =>
+    (lat >= 40.5 && lat <= 42.9 && lon >= 0.1 && lon <= 3.4);
+
 export type AlertSeverity = 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
 
 export interface OfficialAlert {
@@ -41,9 +49,9 @@ export interface OfficialAlert {
     sourceName: string;
     sourceUrl: string;
     // Idioma real del text (font nativa): NWS sempre 'en', AEMET 'es'/'en',
-    // Météo-França sempre 'fr'. Cap font cobreix els 4 idiomes de l'app —
-    // es tradueix el que calgui a getAllOfficialAlerts.
-    textLang: 'es' | 'en' | 'fr';
+    // Météo-França sempre 'fr', Meteocat sempre 'ca'. Cap font cobreix els 4
+    // idiomes de l'app — es tradueix el que calgui a getAllOfficialAlerts.
+    textLang: 'es' | 'en' | 'fr' | 'ca';
 }
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = {
@@ -172,6 +180,33 @@ export const getMeteoFranceAlerts = async (lat: number, lon: number): Promise<Of
     }
 };
 
+// Meteocat sempre respon en català natiu (SMP no dona text lliure traduït):
+// el proxy ja fa tot el filtratge geogràfic (municipi més proper -> comarca),
+// no cal 'lang' aquí.
+export const getMeteocatAlerts = async (lat: number, lon: number): Promise<OfficialAlert[]> => {
+    if (!isWithinCataloniaBoundingBox(lat, lon)) return [];
+
+    const url = `${METEOCAT_PROXY_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+
+    try {
+        const response = await fetchWithTimeout(url, TIMEOUT_MS);
+        if (!response.ok) throw new Error(`Meteocat Proxy Error: ${response.status}`);
+
+        const data: unknown = await response.json();
+        return parseProxyAlertResponse(data).sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+
+    } catch (err: unknown) {
+        const isTimeout = err instanceof Error && err.name === 'AbortError';
+        if (!isTimeout) {
+            Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+                tags: { service: SENTRY_TAGS.SERVICE_ALERTS_API, source: 'meteocat' },
+                extra: { lat, lon }
+            });
+        }
+        return [];
+    }
+};
+
 // Tradueix els 4 camps de text d'una alerta amb el mateix motor IA (Gemini/Groq)
 // que l'anàlisi tàctica, via el proxy (mai clau exposada al client). Cachejat
 // per alerta+idioma al worker, així que el cost real només el paga el primer
@@ -211,18 +246,22 @@ const translateAlert = async (alert: OfficialAlert, targetLang: Language): Promi
 
 // Punt d'entrada únic per a la UI: consulta totes les fonts rellevants per a
 // la ubicació (en paral·lel), les fusiona per severitat, i tradueix les que
-// no tinguin text natiu en l'idioma demanat (ca/fr sempre; es/en només si
-// per alguna raó la font no els oferís). Cada font ja es filtra sola per
-// geografia (NWS respon 400 fora dels EUA, AEMET es descarta abans de
-// trucar si no som a Espanya), així que sempre és segur cridar-les totes.
+// no tinguin text natiu en l'idioma demanat. Cada font ja es filtra sola per
+// geografia (NWS respon 400 fora dels EUA, la resta es descarten abans de
+// trucar si la ubicació cau fora de la seva capsa), així que en general és
+// segur cridar-les totes — EXCEPTE AEMET dins de Catalunya, on Meteocat el
+// substitueix expressament per evitar el mateix avís duplicat amb dues fonts.
 export const getAllOfficialAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {
-    const [nws, aemet, meteofrance] = await Promise.all([
+    const inCatalonia = isWithinCataloniaBoundingBox(lat, lon);
+
+    const [nws, aemet, meteocat, meteofrance] = await Promise.all([
         getOfficialAlerts(lat, lon),
-        getAemetAlerts(lat, lon, lang),
+        inCatalonia ? Promise.resolve([]) : getAemetAlerts(lat, lon, lang),
+        inCatalonia ? getMeteocatAlerts(lat, lon) : Promise.resolve([]),
         getMeteoFranceAlerts(lat, lon)
     ]);
 
-    const merged = [...aemet, ...meteofrance, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+    const merged = [...meteocat, ...aemet, ...meteofrance, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 
     return Promise.all(merged.map((alert) =>
         alert.textLang === lang ? alert : translateAlert(alert, lang)
