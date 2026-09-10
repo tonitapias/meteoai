@@ -29,7 +29,19 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # 4. EXECUTAR EL TEST DE CONTRACTE
+      # 4. EXECUTAR EL TEST DE CONTRACTE (Open-Meteo)
       # Si aquest pas falla, GitHub marcarà el workflow com a "Failed" i t'enviarà un correu.
       - name: Run API Contract Test
         run: npx vitest run src/test/api-contract.test.ts
+
+      # 5. EXECUTAR EL TEST DE CONTRACTE DE LES 7 FONTS D'ALERTES OFICIALS
+      # Prova cada font OFICIAL directament (no només el worker, que sempre
+      # respon 200+[] encara que la font estigui trencada — "fail-open").
+      # AEMET i Meteocat necessiten les claus com a secrets del repositori
+      # (Settings → Secrets and variables → Actions); si no hi són, els seus
+      # tests se salten automàticament en lloc de fallar.
+      - name: Run Official Alerts API Contract Test
+        env:
+          AEMET_API_KEY: ${{ secrets.AEMET_API_KEY }}
+          METEOCAT_API_KEY: ${{ secrets.METEOCAT_API_KEY }}
+        run: npx vitest run src/test/alerts-api-contract.test.ts
