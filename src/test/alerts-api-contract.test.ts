@@ -6,6 +6,11 @@ import { describe, it, expect } from 'vitest';
 // estigui trencada (disseny "fail-open" per no petar l'app a l'usuari), així
 // que provar només el worker no detectaria mai un trencament real.
 
+// El projecte és 100% navegador (sense @types/node); aquest test corre sota
+// Node/Vitest i necessita llegir les claus d'entorn, així que declarem
+// l'ambient mínim en lloc d'afegir tipus globals de Node a tot el projecte.
+declare const process: { env: Record<string, string | undefined> };
+
 const TIMEOUT_MS = 15000;
 
 describe('NWS (EUA) Contract Check', () => {

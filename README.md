@@ -61,11 +61,12 @@ Dos modals de detall interactius, accessibles tocant els ginys compactes de Cicl
 
 ### 4. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
-* **Cinc fonts oficials, seleccionades automàticament per ubicació:** NWS (Servei Meteorològic Nacional dels EUA), AEMET (Agència Estatal de Meteorologia, Espanya), Meteocat (Servei Meteorològic de Catalunya), Météo-França (Vigilància) i IPMA (Instituto Português do Mar e da Atmosfera).
+* **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
 * **Totes les alertes visibles:** el banner permet desplegar-les totes, no només la més greu — cadascuna amb el seu esdeveniment, venciment i font.
 * **Traducció automàtica:** cap font cobreix nativament els 4 idiomes de l'app; quan cal, el mateix motor d'IA (Gemini/Groq) tradueix l'avís al vol, amb memòria cau per evitar cost repetit entre usuaris.
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
+* **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
 ### 5. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
@@ -88,7 +89,7 @@ Una mirada ràpida a l'auditoria de producció:
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`) per a funcionament offline-first. |
 | **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, AIFS, GFS, ICON, Best Match) i de 13 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
 | **Radar i Satèl·lit** | RainViewer + EUMETSAT | Radar Doppler i imatge satèl·lit (Meteosat, GOES, Himawari), servits per un proxy propi en Cloudflare Workers amb caché. |
-| **Alertes Oficials** | NWS + AEMET + Meteocat + Météo-França + IPMA | Consulta automàtica per ubicació via el mateix Worker de Cloudflare (Meteocat substitueix AEMET dins de Catalunya, mai els dos alhora), amb traducció IA i memòria cau quan la font no cobreix l'idioma de l'app. |
+| **Alertes Oficials** | NWS + AEMET + Meteocat + Météo-França + IPMA + DWD + Protezione Civile | Consulta automàtica per ubicació via el mateix Worker de Cloudflare (Meteocat substitueix AEMET dins de Catalunya, mai els dos alhora), amb traducció IA i memòria cau quan la font no cobreix l'idioma de l'app. Salut comprovada diàriament contra les 7 fonts oficials. |
 | **Intel·ligència** | Gemini AI (amb Groq de reserva) | Anàlisi de risc meteorològic via un Worker propi a Cloudflare; un tallafocs determinista sobreescriu la IA si les dades brutes indiquen més risc del que reporta. |
 
 ---
