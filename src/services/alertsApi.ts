@@ -7,12 +7,15 @@ import type { Language } from "../translations";
 
 // Fonts actives: NWS (EUA, sense clau, JSON directe), AEMET (Espanya, via
 // el proxy — cal clau), Météo-França (via el proxy, sense clau: mirall
-// públic Opendatasoft + l'API geogràfica oficial del govern francès) i
-// Meteocat (Catalunya, via el proxy — cal clau de la Generalitat).
+// públic Opendatasoft + l'API geogràfica oficial del govern francès),
+// Meteocat (Catalunya, via el proxy — cal clau de la Generalitat) i IPMA
+// (Portugal, via el proxy, sense clau: JSON obert amb la seva pròpia
+// referència geogràfica — la font més senzilla de totes).
 const NWS_ALERTS_URL = "https://api.weather.gov/alerts/active";
 const AEMET_PROXY_URL = `${GEMINI_PROXY_URL}/aemet-alerts`;
 const METEOFRANCE_PROXY_URL = `${GEMINI_PROXY_URL}/meteofrance-alerts`;
 const METEOCAT_PROXY_URL = `${GEMINI_PROXY_URL}/meteocat-alerts`;
+const IPMA_PROXY_URL = `${GEMINI_PROXY_URL}/ipma-alerts`;
 const TRANSLATE_PROXY_URL = `${GEMINI_PROXY_URL}/translate-alert`;
 const TIMEOUT_MS = 6000;
 const TRANSLATE_TIMEOUT_MS = 10000;
@@ -35,6 +38,11 @@ const isWithinFranceBoundingBox = (lat: number, lon: number): boolean =>
 const isWithinCataloniaBoundingBox = (lat: number, lon: number): boolean =>
     (lat >= 40.5 && lat <= 42.9 && lon >= 0.1 && lon <= 3.4);
 
+// Capsa de Portugal continental. Madeira i Açores (molt disperses
+// geogràficament) queden pendents — vegeu la mateixa nota al Worker.
+const isWithinPortugalBoundingBox = (lat: number, lon: number): boolean =>
+    (lat >= 36.8 && lat <= 42.2 && lon >= -9.6 && lon <= -6.1);
+
 export type AlertSeverity = 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
 
 export interface OfficialAlert {
@@ -49,9 +57,10 @@ export interface OfficialAlert {
     sourceName: string;
     sourceUrl: string;
     // Idioma real del text (font nativa): NWS sempre 'en', AEMET 'es'/'en',
-    // Météo-França sempre 'fr', Meteocat sempre 'ca'. Cap font cobreix els 4
-    // idiomes de l'app — es tradueix el que calgui a getAllOfficialAlerts.
-    textLang: 'es' | 'en' | 'fr' | 'ca';
+    // Météo-França sempre 'fr', Meteocat sempre 'ca', IPMA sempre 'pt'. Cap
+    // font cobreix els 4 idiomes de l'app — es tradueix el que calgui a
+    // getAllOfficialAlerts.
+    textLang: 'es' | 'en' | 'fr' | 'ca' | 'pt';
 }
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = {
@@ -207,6 +216,33 @@ export const getMeteocatAlerts = async (lat: number, lon: number): Promise<Offic
     }
 };
 
+// IPMA sempre respon en portuguès natiu (el JSON d'avisos no dona text
+// lliure traduït): el proxy ja fa tot el filtratge geogràfic (localitat més
+// propera -> idAreaAviso), no cal 'lang' aquí.
+export const getIpmaAlerts = async (lat: number, lon: number): Promise<OfficialAlert[]> => {
+    if (!isWithinPortugalBoundingBox(lat, lon)) return [];
+
+    const url = `${IPMA_PROXY_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+
+    try {
+        const response = await fetchWithTimeout(url, TIMEOUT_MS);
+        if (!response.ok) throw new Error(`IPMA Proxy Error: ${response.status}`);
+
+        const data: unknown = await response.json();
+        return parseProxyAlertResponse(data).sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+
+    } catch (err: unknown) {
+        const isTimeout = err instanceof Error && err.name === 'AbortError';
+        if (!isTimeout) {
+            Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+                tags: { service: SENTRY_TAGS.SERVICE_ALERTS_API, source: 'ipma' },
+                extra: { lat, lon }
+            });
+        }
+        return [];
+    }
+};
+
 // Tradueix els 4 camps de text d'una alerta amb el mateix motor IA (Gemini/Groq)
 // que l'anàlisi tàctica, via el proxy (mai clau exposada al client). Cachejat
 // per alerta+idioma al worker, així que el cost real només el paga el primer
@@ -254,14 +290,15 @@ const translateAlert = async (alert: OfficialAlert, targetLang: Language): Promi
 export const getAllOfficialAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {
     const inCatalonia = isWithinCataloniaBoundingBox(lat, lon);
 
-    const [nws, aemet, meteocat, meteofrance] = await Promise.all([
+    const [nws, aemet, meteocat, meteofrance, ipma] = await Promise.all([
         getOfficialAlerts(lat, lon),
         inCatalonia ? Promise.resolve([]) : getAemetAlerts(lat, lon, lang),
         inCatalonia ? getMeteocatAlerts(lat, lon) : Promise.resolve([]),
-        getMeteoFranceAlerts(lat, lon)
+        getMeteoFranceAlerts(lat, lon),
+        getIpmaAlerts(lat, lon)
     ]);
 
-    const merged = [...meteocat, ...aemet, ...meteofrance, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+    const merged = [...meteocat, ...aemet, ...meteofrance, ...ipma, ...nws].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 
     return Promise.all(merged.map((alert) =>
         alert.textLang === lang ? alert : translateAlert(alert, lang)
