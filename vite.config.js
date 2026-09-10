@@ -24,7 +24,19 @@ export default defineConfig({
   plugins: [
     react(), //[cite: 3]
     VitePWA({
-      registerType: 'autoUpdate', //[cite: 3]
+      // 'prompt' (no 'autoUpdate') + workbox.skipWaiting/clientsClaim a false:
+      // un SW nou NO pren el control sol — es queda "waiting" fins que
+      // UpdatePrompt.tsx crida updateServiceWorker(). Sense els dos flags de
+      // workbox, la GENERATED SW crida self.skipWaiting() igualment encara
+      // que registerType sigui 'prompt' (registerType només controla el
+      // client, no el SW generat), i el nou SW pren el control mentre la
+      // pestanya ja oberta segueix executant el JS antic en memòria — que és
+      // precisament el que feia penjar l'app en desplegar.
+      registerType: 'prompt',
+      workbox: {
+        skipWaiting: false,
+        clientsClaim: false
+      },
       devOptions: {
         enabled: true //[cite: 3]
       },

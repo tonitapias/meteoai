@@ -2,6 +2,10 @@ export const es = {
    // --- Modals & Headers ---
   liveBadge: "EN DIRECTO",
 
+  // Aviso de actualización (PWA)
+  updateAvailable: "Hay una versión nueva disponible",
+  updateAction: "Actualizar",
+
   // --- Menú de capes ---
   layerControl: "Control de Capas",
   baseMapTitle: "MAPA BASE",

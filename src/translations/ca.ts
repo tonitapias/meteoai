@@ -1,6 +1,10 @@
 export const ca = {
   liveBadge: "EN DIRECTE",
 
+  // Avís d'actualització (PWA)
+  updateAvailable: "Hi ha una versió nova disponible",
+  updateAction: "Actualitza",
+
   // Menú de capes
   layerControl: "Control de Capes",
   baseMapTitle: "MAPA BASE",

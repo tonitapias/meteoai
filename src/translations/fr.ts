@@ -3,6 +3,10 @@ export const fr = {
   // --- Modals & Headers ---
   liveBadge: "EN DIRECT",
 
+  // Avis de mise à jour (PWA)
+  updateAvailable: "Une nouvelle version est disponible",
+  updateAction: "Mettre à jour",
+
   // --- Menú de capes ---
   layerControl: "Contrôle des Couches",
   baseMapTitle: "CARTE DE BASE",

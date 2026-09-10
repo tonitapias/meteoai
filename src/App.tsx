@@ -5,6 +5,7 @@ import { AppProvider } from './context/AppContext'; // Importem el nou Provider
 // Vistes
 import WelcomeView from './views/WelcomeView';
 import DashboardView from './views/DashboardView';
+import UpdatePrompt from './components/UpdatePrompt';
 
 export default function MeteoIA() {
   // 1. INICIALITZACIÓ
@@ -19,6 +20,7 @@ export default function MeteoIA() {
       ) : (
          <DashboardView />
       )}
+      <UpdatePrompt />
     </AppProvider>
   );
 }
