@@ -83,7 +83,7 @@ Una mirada ràpida a l'auditoria de producció:
 | Capa | Tecnologia | Detalls d'Implementació Clau |
 | :--- | :--- | :--- |
 | **Frontend Core** | React 19 + TypeScript | Tipat estricte (sense `any`), Hooks personalitzats i protecció de nuls. |
-| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA i compilació ultraràpida. |
+| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA i compilació ultraràpida; en desplegar una versió nova, l'app avisa amb un banner en lloc de penjar-se amb codi obsolet. |
 | **Estils** | Tailwind CSS | Sistema utilitari (*Glassmorphism*, animacions CSS natives, mobile-first). |
 | **Protecció API** | Zod + Sentry | Interceptors tipats (Mur de Contenció) per evitar caigudes de UI per dades corruptes. |
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`) per a funcionament offline-first. |
