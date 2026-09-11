@@ -14,7 +14,7 @@ export interface RegionalModelBBox {
 }
 
 export interface RegionalModel {
-    id: 'UKMO' | 'METEOSWISS' | 'KNMI' | 'ITALIA' | 'CHMI' | 'GEOSPHERE_AT' | 'METNO' | 'DMI' | 'AROME_HD' | 'ICON_D2' | 'HRDPS' | 'HRRR' | 'JMA';
+    id: 'UKMO' | 'METEOSWISS' | 'KNMI' | 'ITALIA' | 'CHMI' | 'GEOSPHERE_AT' | 'METNO' | 'DMI' | 'AROME_HD' | 'ICON_D2' | 'ALADIN_CE' | 'HRDPS' | 'HRRR' | 'JMA';
     apiModelId: string;
     label: string;
     resolutionKm: number;
@@ -55,6 +55,17 @@ const pointInModelBBox = (lat: number, lon: number, m: RegionalModel): boolean =
 //   seu valor diferencial real (MetNo no la cobreix) — mateix patró que el
 //   bbox ampli d'HRDPS després del corredor específic, vegeu sota.
 // - ICON_D2 se solapa amb AROME_HD a l'oest (Alsàcia/Benelux) -> es queda amb AROME_HD.
+// - ALADIN_CE (CHMI ALADIN Central Europe, consorci LACE) es comprova DESPRÉS
+//   de tots els models nacionals europeus anteriors: el seu bbox és
+//   deliberadament ampli (Polònia, Hongria, Eslovàquia, Romania, Bulgària,
+//   Bàltics, Moldàvia, oest d'Ucraïna) i se solapa amb els dominis ja
+//   verificats de CHMI/GeoSphere AT/ICON_D2/DMI a les vores — perquè aquests
+//   guanyin sempre a la seva zona ja coberta i ALADIN_CE només ompli el buit
+//   real (abans, tot aquest territori queia directament al consens global).
+//   Domini real no rectangular (LACE és un consorci de serveis meteorològics,
+//   no un únic país): el bbox és una aproximació generosa i intencionadament
+//   conservadora als extrems (verificat en viu ciutat a ciutat — Grècia,
+//   Turquia, Rússia i la resta d'Escandinàvia en queden fora expressament).
 // - HRDPS es comprova ABANS que HRRR perquè la frontera EUA-Canadà NO és una
 //   línia de latitud: als Grans Llacs baixa fins a ~43°N (Toronto), molt per
 //   sota de ciutats nord-americanes com Minneapolis (45°N) o Seattle
@@ -136,6 +147,17 @@ export const REGIONAL_MODELS: RegionalModel[] = [
         label: 'ICON-D2',
         resolutionKm: 2.2,
         bbox: { minLat: 42.0, maxLat: 55.0, minLon: 1.0, maxLon: 19.0 }
+    },
+    {
+        // [NOU] Polònia, Hongria, Eslovàquia, Romania, Bulgària, Bàltics i
+        // Moldàvia no tenien cap model regional (queien directament al
+        // consens global) — IDs i domini real verificats en viu contra
+        // l'API (ciutat a ciutat) abans d'afegir-lo.
+        id: 'ALADIN_CE',
+        apiModelId: 'chmi_aladin_central_europe_2km',
+        label: 'ALADIN-CE',
+        resolutionKm: 2.0,
+        bbox: { minLat: 42.0, maxLat: 58.5, minLon: 12.0, maxLon: 31.5 }
     },
     {
         id: 'HRDPS',
