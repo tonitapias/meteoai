@@ -314,7 +314,12 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
 
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-[#02040A]/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="regional-model-modal-title"
+        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-[#02040A]/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200"
+    >
 
       <style>
         {`
@@ -344,7 +349,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                         {model.label}
                     </div>
                     <div className="flex flex-col">
-                        <h2 className="text-xl md:text-2xl font-black text-white tracking-tighter drop-shadow-md flex items-center gap-2 leading-none">
+                        <h2 id="regional-model-modal-title" className="text-xl md:text-2xl font-black text-white tracking-tighter drop-shadow-md flex items-center gap-2 leading-none">
                             {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">
@@ -354,7 +359,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                 </div>
             </div>
 
-            <button onClick={handleTacticalClose} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md shadow-inner">
+            <button onClick={handleTacticalClose} aria-label={t.closeConsole} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md shadow-inner">
                 <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                 <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
             </button>

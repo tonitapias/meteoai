@@ -1,4 +1,5 @@
 // src/hooks/useAppController.ts
+import { useMemo } from 'react';
 import { usePreferences } from './usePreferences';
 import { TRANSLATIONS } from '../translations';
 import { useAppActions } from './useAppActions';
@@ -42,9 +43,17 @@ export function useAppController() {
     removeFavorite
   });
 
-  // 5. RETORN RETRO-COMPATIBLE
+  // 5. RETORN RETRO-COMPATIBLE (memoitzat)
   // Reconstruïm l'objecte gegant original perquè les Vistes no es trenquin.
-  return {
+  // [FIX] Sense useMemo, aquest objecte —i per tant el `value` del Context—
+  // es recreava en CADA render (incloent-hi el tick de rellotge de 60s
+  // d'useUIController), forçant tots els consumidors de useAppContext a
+  // re-renderitzar encara que no els afectés res del que havia canviat. Amb
+  // les dependències llistades sota, només es recrea quan un valor real ha
+  // canviat (weatherData nou, canvi de llengua, etc.) — 'now'/'calculations'
+  // seguint canviant cada 60s per disseny (calen per refrescar la posició
+  // solar i similars).
+  return useMemo(() => ({
       state: {
           // Fusionem estats de Dades i UI, afegint 'favorites' per centralitzar la font de veritat
           weatherData: data.state.weatherData,
@@ -61,12 +70,12 @@ export function useAppController() {
           // Accions de Dades
           fetchWeatherByCoords: data.actions.fetchWeatherByCoords,
           handleGetCurrentLocation: appActions.handleGetCurrentLocation,
-          
+
           // Accions de Preferències
           handleToggleFavorite: appActions.handleToggleFavorite,
           setLang,
           setViewMode,
-          
+
           // Accions d'UI
           toggleDebug: ui.actions.toggleDebug,
           dismissNotification: ui.actions.dismissNotification,
@@ -87,5 +96,14 @@ export function useAppController() {
       },
       modals: ui.modals, // Pas directe
       t
-  };
+  }), [
+      data.state.weatherData, data.state.aqiData, data.state.loading, data.state.error,
+      data.state.aiAnalysis, data.state.calculations, favorites, ui.state.notification, ui.state.now,
+      data.actions.fetchWeatherByCoords, appActions.handleGetCurrentLocation, appActions.handleToggleFavorite,
+      setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,
+      ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
+      ui.actions.setShowSolarModal, ui.actions.setShowMoonModal,
+      data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang, viewMode,
+      ui.modals, t
+  ]);
 }

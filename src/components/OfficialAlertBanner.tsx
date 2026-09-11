@@ -59,6 +59,14 @@ const formatExpires = (expires: string | null, lang: Language): string | null =>
         ? new Intl.DateTimeFormat(LOCALE_MAP[lang] || 'ca-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(expires))
         : null;
 
+// [FIX] `sourceUrl` ve d'una font oficial externa (7 fonts + pas de traducció
+// IA pel mig) i es renderitzava directament com a `href` sense comprovar
+// l'esquema: un `javascript:`/`data:` maliciós hi executaria codi en clic. Si
+// la font o el Worker es veiessin compromesos, o un bug de normalització
+// mangés el camp, no hi havia cap defensa. Només acceptem http(s).
+const isSafeExternalUrl = (url: string | null | undefined): boolean =>
+    typeof url === 'string' && /^https:\/\//i.test(url);
+
 // Fila compacta per a les alertes que no són la principal (severitat menor):
 // mateixa informació (esdeveniment, venciment, font), format reduït.
 const CompactAlertRow = ({ alert, lang, ui }: { alert: OfficialAlert; lang: Language; ui: LocalUIText }) => {
@@ -77,14 +85,20 @@ const CompactAlertRow = ({ alert, lang, ui }: { alert: OfficialAlert; lang: Lang
                     {expiresStr && (
                         <span className="text-[10px] font-mono opacity-60">{ui.validUntil}: {expiresStr}</span>
                     )}
-                    <a
-                        href={alert.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[10px] font-mono uppercase opacity-60 hover:opacity-100 transition-opacity underline decoration-dotted underline-offset-2"
-                    >
-                        {ui.source}: {alert.senderName} <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
+                    {isSafeExternalUrl(alert.sourceUrl) ? (
+                        <a
+                            href={alert.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] font-mono uppercase opacity-60 hover:opacity-100 transition-opacity underline decoration-dotted underline-offset-2"
+                        >
+                            {ui.source}: {alert.senderName} <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                    ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase opacity-60">
+                            {ui.source}: {alert.senderName}
+                        </span>
+                    )}
                 </div>
             </div>
         </div>
@@ -126,14 +140,20 @@ const OfficialAlertBanner = ({ lat, lon, lang }: OfficialAlertBannerProps) => {
             </div>
 
             <div className="flex items-center justify-between gap-3 relative z-10 pl-9 sm:pl-[2.375rem]">
-                <a
-                    href={top.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase tracking-wide underline decoration-dotted underline-offset-2 opacity-80 hover:opacity-100 transition-opacity"
-                >
-                    {ui.source}: {top.senderName} <ExternalLink className="w-3 h-3" />
-                </a>
+                {isSafeExternalUrl(top.sourceUrl) ? (
+                    <a
+                        href={top.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase tracking-wide underline decoration-dotted underline-offset-2 opacity-80 hover:opacity-100 transition-opacity"
+                    >
+                        {ui.source}: {top.senderName} <ExternalLink className="w-3 h-3" />
+                    </a>
+                ) : (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase tracking-wide opacity-80">
+                        {ui.source}: {top.senderName}
+                    </span>
+                )}
                 {rest.length > 0 && (
                     <button
                         type="button"

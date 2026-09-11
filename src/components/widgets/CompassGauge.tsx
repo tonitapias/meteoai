@@ -20,13 +20,16 @@ const describeArc = (x: number, y: number, radius: number, startAngle: number, e
 };
 
 // Avaluació de risc ràpida (Escala Beaufort simplificada)
-const getTacticalLabel = (speed: number, isValid: boolean, lang: string) => {
-    if (!isValid) return lang === 'ca' ? 'SENSE DADES' : 'NO DATA';
-    if (speed < 5) return lang === 'ca' ? 'CALMA' : 'CALM';
-    if (speed < 20) return lang === 'ca' ? 'MODERAT' : 'MODERATE';
-    if (speed < 40) return lang === 'ca' ? 'FORT' : 'STRONG';
-    if (speed < 70) return lang === 'ca' ? 'VENTADA' : 'GALE';
-    return lang === 'ca' ? 'TEMPORAL' : 'STORM';
+// [FIX] Abans només distingia 'ca' vs. resta: es/fr veien les etiquetes en
+// anglès en brut, a diferència de tots els altres widgets d'aquest directori.
+const getTacticalLabel = (speed: number, isValid: boolean, t: Record<string, unknown>) => {
+    const label = (key: string, fallback: string) => String(t[key] ?? fallback);
+    if (!isValid) return label('windNoData', 'NO DATA');
+    if (speed < 5) return label('windCalm', 'CALM');
+    if (speed < 20) return label('windModerate', 'MODERATE');
+    if (speed < 40) return label('windStrong', 'STRONG');
+    if (speed < 70) return label('windGale', 'GALE');
+    return label('windStorm', 'STORM');
 };
 
 export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
@@ -61,7 +64,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
   const speedArcAngle = isValidSpeed ? Math.min(359.9, (safeSpeed / maxSpeedScale) * 360) : 0;
   const gustArcAngle = isValidGusts ? Math.min(359.9, (safeGusts / maxSpeedScale) * 360) : 0;
   
-  const tacticalLabel = getTacticalLabel(safeSpeed, isValidSpeed, lang || 'ca');
+  const tacticalLabel = getTacticalLabel(safeSpeed, isValidSpeed, t);
 
   // SPATIAL UI BASE
   const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-[#0c0e15]/95 to-[#05060a]/95 border border-white/10 shadow-[0_16px_32px_rgba(0,0,0,0.6)] transform-gpu flex flex-col transition-colors duration-700`;
@@ -198,7 +201,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
                     <div className={`mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 border border-white/10 shadow-inner ${gustColorText} backdrop-blur-sm`}>
                         {isDanger ? <AlertTriangle className="w-3.5 h-3.5 fill-current" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
                         <span className="text-[10px] font-black uppercase tracking-widest">
-                            {lang === 'ca' ? 'Ratxes' : 'Gusts'}:
+                            {String(t.gustsLabel || 'Gusts')}:
                         </span>
                         <span className="text-sm font-mono font-black tabular-nums">
                             {displayGusts}

@@ -9,6 +9,7 @@ export const fr = {
 
   // --- Menú de capes ---
   layerControl: "Contrôle des Couches",
+  closeLayerMenu: "Fermer le menu des couches",
   baseMapTitle: "CARTE DE BASE",
   baseDark: "Sombre (Tactique)",
   baseLight: "Clair (Blanc)",
@@ -77,6 +78,13 @@ export const fr = {
   temp: "Température",
   rain: "Pluie",
   wind: "Vent",
+  windNoData: "AUCUNE DONNÉE",
+  windCalm: "CALME",
+  windModerate: "MODÉRÉ",
+  windStrong: "FORT",
+  windGale: "TEMPÊTE",
+  windStorm: "OURAGAN",
+  gustsLabel: "Rafales",
   cloud: "Couverture",
   humidity: "Humidité",
   dewPoint: "Point de Rosée",

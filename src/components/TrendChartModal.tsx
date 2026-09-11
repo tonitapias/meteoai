@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { LineChart, X, Droplets } from 'lucide-react'; 
 import { getWeatherIcon } from './WeatherIcons';
@@ -100,57 +100,65 @@ const TrendChartModal = memo(function TrendChartModal({
     };
   }, [isOpen, onClose]);
 
+  // [FIX] Aquest càlcul (map + filtre de chartData per dia + ajust de núvols)
+  // corria directament al cos del render, sense useMemo. Encara que ja estava
+  // protegit per `isOpen` (no corre si el modal és tancat), un cop obert
+  // qualsevol re-render el tornava a recalcular sencer encara que dailyData/
+  // chartData/lang no haguessin canviat. Cal situar-lo ABANS dels `return null`
+  // condicionals de sota (regles dels Hooks).
+  const trendData = useMemo(() => {
+    if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return [];
+
+    return dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
+      const i = index + 1;
+      const max = getSafeArrayNum(dailyData.temperature_2m_max, i);
+      const min = getSafeArrayNum(dailyData.temperature_2m_min, i);
+      const rawCode = getSafeArrayNum(dailyData.weather_code, i);
+      const wind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
+      const precipProb = getSafeArrayNum(dailyData.precipitation_probability_max, i);
+
+      let dayInitial = '';
+      let code = rawCode;
+
+      if (typeof rawDate === 'string') {
+        // [FIX PRECISIÓ] Vegeu el mateix fix a ForecastSection.tsx: forcem hora local
+        // perquè "YYYY-MM-DD" no es llegeixi com a mitjanit UTC.
+        const date = new Date(rawDate + 'T12:00:00');
+        if (!isNaN(date.getTime())) {
+          dayInitial = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'short' })
+            .replace(/\./g, '')
+            .toUpperCase();
+        }
+
+        // Filtre de núvols diürns — mateixa regla oficial que la resta de l'app
+        // (adjustBaseSkyCode, cloudRules.ts).
+        if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
+          const dateOnly = rawDate.slice(0, 10);
+          const dayHours = chartData.filter(d =>
+            typeof d.time === 'string' && d.time.startsWith(dateOnly) && d.isDay === 1
+          );
+          if (dayHours.length > 0) {
+            const totalClouds = dayHours.reduce((acc, curr) => {
+              const c = Number(curr.cloud);
+              return acc + (isNaN(c) ? 0 : c);
+            }, 0);
+            const avgClouds = totalClouds / dayHours.length;
+            code = adjustBaseSkyCode(rawCode, avgClouds);
+          }
+        }
+      }
+
+      return { max, min, code, wind, precipProb, dayInitial };
+    });
+  }, [dailyData, chartData, lang]);
+
   if (!isOpen) return null;
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return null;
   if (typeof document === 'undefined') return null;
+  if (trendData.length === 0) return null;
 
   const mDict = I18N_MODAL[lang] || I18N_MODAL['ca'];
   const closeAriaLabel = I18N_ARIA_CLOSE[lang] || I18N_ARIA_CLOSE['ca'];
-
-  // 1. EXTRACCIÓ TÀCTICA DE DADES I MOTOR VISUAL INTEL·LIGENT
-  const trendData = dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
-    const i = index + 1;
-    const max = getSafeArrayNum(dailyData.temperature_2m_max, i);
-    const min = getSafeArrayNum(dailyData.temperature_2m_min, i);
-    const rawCode = getSafeArrayNum(dailyData.weather_code, i);
-    const wind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
-    const precipProb = getSafeArrayNum(dailyData.precipitation_probability_max, i);
-    
-    let dayInitial = '';
-    let code = rawCode;
-
-    if (typeof rawDate === 'string') {
-      // [FIX PRECISIÓ] Vegeu el mateix fix a ForecastSection.tsx: forcem hora local
-      // perquè "YYYY-MM-DD" no es llegeixi com a mitjanit UTC.
-      const date = new Date(rawDate + 'T12:00:00');
-      if (!isNaN(date.getTime())) {
-        dayInitial = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'short' })
-          .replace(/\./g, '')
-          .toUpperCase();
-      }
-
-      // Filtre de núvols diürns — mateixa regla oficial que la resta de l'app
-      // (adjustBaseSkyCode, cloudRules.ts).
-      if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
-        const dateOnly = rawDate.slice(0, 10); 
-        const dayHours = chartData.filter(d => 
-          typeof d.time === 'string' && d.time.startsWith(dateOnly) && d.isDay === 1
-        );
-        if (dayHours.length > 0) {
-          const totalClouds = dayHours.reduce((acc, curr) => {
-            const c = Number(curr.cloud);
-            return acc + (isNaN(c) ? 0 : c);
-          }, 0);
-          const avgClouds = totalClouds / dayHours.length;
-          code = adjustBaseSkyCode(rawCode, avgClouds);
-        }
-      }
-    }
-    
-    return { max, min, code, wind, precipProb, dayInitial };
-  });
-
-  if (trendData.length === 0) return null;
 
   // 2. MOTOR MATEMÀTIC DE COLUMNES DE RANG (Candlestick)
   const maxTemps = trendData.map(d => d.max);
@@ -172,7 +180,12 @@ const TrendChartModal = memo(function TrendChartModal({
 
   // 3. RENDERITZAT SPATIAL UI PORTAL
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 bg-black/80 backdrop-blur-xl transition-opacity overflow-y-auto">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="trend-chart-modal-title"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 bg-black/80 backdrop-blur-xl transition-opacity overflow-y-auto"
+    >
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} aria-label={closeAriaLabel}></div>
       
       <div className="w-full max-w-5xl bg-gradient-to-br from-[#0f111a] to-black border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden transform-gpu flex flex-col my-auto max-h-[95vh] pointer-events-auto">
@@ -186,7 +199,7 @@ const TrendChartModal = memo(function TrendChartModal({
               <LineChart className="w-5 h-5 md:w-7 md:h-7 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-sm md:text-xl font-black uppercase tracking-widest text-white leading-none mb-1 md:mb-2">
+              <h2 id="trend-chart-modal-title" className="text-sm md:text-xl font-black uppercase tracking-widest text-white leading-none mb-1 md:mb-2">
                 {mDict.title}
               </h2>
               <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">

@@ -9,6 +9,7 @@ export const en = {
 
   // --- Menú de capes ---
   layerControl: "Layer Control",
+  closeLayerMenu: "Close layer menu",
   baseMapTitle: "BASE MAP",
   baseDark: "Dark (Tactical)",
   baseLight: "Light",
@@ -77,6 +78,13 @@ export const en = {
   temp: "Temperature",
   rain: "Rain",
   wind: "Wind",
+  windNoData: "NO DATA",
+  windCalm: "CALM",
+  windModerate: "MODERATE",
+  windStrong: "STRONG",
+  windGale: "GALE",
+  windStorm: "STORM",
+  gustsLabel: "Gusts",
   cloud: "Cloud Cover",
   humidity: "Humidity",
   dewPoint: "Dew Point",

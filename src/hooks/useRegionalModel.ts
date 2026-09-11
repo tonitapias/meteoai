@@ -1,5 +1,5 @@
 // src/hooks/useRegionalModel.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { z } from 'zod';
 import { getRegionalHDData } from '../services/weatherApi';
 import { buildModelSuffixRegex, type RegionalModel } from '../constants/regionalModels';
@@ -40,9 +40,13 @@ const regionalModelHourlySchema = z.object({
 }).passthrough();
 
 const minutely15Schema = z.object({
+  // No tots els 13 models retornen minutely_15 (és nowcasting d'AROME, no
+  // pas de tots) — un `time` absent o corrupte aquí NOMÉS ha de buidar
+  // aquest bloc secundari, mai tombar tot el modal (a diferència de
+  // `regionalModelHourlySchema`, on `time` sí és crític).
   time: z.array(z.union([z.number(), z.string()])).transform((times) =>
     times.map((t) => typeof t === 'number' ? new Date(t * 1000).toISOString() : t)
-  ),
+  ).catch(() => []),
   precipitation: z.array(z.number().nullable()).optional(),
 }).passthrough().optional();
 
@@ -68,12 +72,24 @@ export function useRegionalModel() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Ref d'"últim guanyador" (mateix patró que useWeather.ts/useGlobalModel.ts):
+  // si l'usuari canvia d'ubicació o de model abans que respongui la petició
+  // anterior, aquesta pot arribar més tard i sobreescriure en silenci el
+  // panell amb dades d'un altre lloc/model. Cada crida es numera; només
+  // s'aplica el resultat si encara és la petició més recent en arribar.
+  const requestIdRef = useRef(0);
+
   const fetchRegionalModel = useCallback(async (lat: number, lon: number, model: RegionalModel) => {
+    const requestId = ++requestIdRef.current;
+    const isStale = () => requestIdRef.current !== requestId;
+
     setLoading(true);
     setError(null);
 
     try {
       const rawData = await getRegionalHDData(lat, lon, model);
+
+      if (isStale()) return;
 
       // SANITITZACIÓ ESTRICTA: Eliminem sufixos de model que Open-Meteo afegeix
       const cleanData = (obj: unknown): Record<string, unknown> => {
@@ -89,9 +105,14 @@ export function useRegionalModel() {
       };
 
       // Pre-processament abans de la validació
+      // [FIX] `minutely_15` és opcional (no tots els models el retornen): si
+      // rawData no el porta, cal deixar `undefined` perquè l'esquema
+      // `.optional()` l'accepti. Abans `cleanData(undefined)` retornava `{}`,
+      // que sí xoca contra el `time` de dins i tombava TOT el parse — el
+      // modal sencer marcava "Senyal Perduda" encara que `hourly` fos vàlid.
       const preProcessedData = {
         hourly: cleanData(rawData.hourly),
-        minutely_15: cleanData(rawData.minutely_15),
+        minutely_15: rawData.minutely_15 ? cleanData(rawData.minutely_15) : undefined,
         hourly_units: cleanData(rawData.hourly_units),
         elevation: typeof rawData.elevation === 'number' ? rawData.elevation : 0,
         utc_offset_seconds: typeof rawData.utc_offset_seconds === 'number' ? rawData.utc_offset_seconds : undefined
@@ -111,12 +132,14 @@ export function useRegionalModel() {
       }
 
     } catch (err: unknown) {
+      if (isStale()) return;
+
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`Error fetching ${model.label}:`, msg);
       setError(msg || `Error connectant amb el clúster ${model.label}`);
       setRegionalData(null);
     } finally {
-      setLoading(false);
+      if (!isStale()) setLoading(false);
     }
   }, []);
 

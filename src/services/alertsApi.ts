@@ -139,17 +139,34 @@ export const getOfficialAlerts = async (lat: number, lon: number): Promise<Offic
     }
 };
 
-// AEMET i Météo-França ja venen pre-parsades i filtrades pel proxy (Worker):
-// la resposta té exactament la mateixa forma que OfficialAlert, no cal cap
-// mapeig aquí — compartit per totes dues fonts.
+// AEMET, Meteocat, Météo-França, IPMA, DWD i Protezione Civile ja venen
+// pre-parsades i filtrades pel proxy (Worker): la resposta té la mateixa
+// forma que OfficialAlert, no cal cap mapeig complet aquí — compartit per
+// totes les fonts basades en proxy.
 const parseProxyAlertResponse = (data: unknown): OfficialAlert[] => {
     if (!Array.isArray(data)) return [];
 
-    return data.filter((item): item is OfficialAlert =>
-        !!item && typeof item === 'object' &&
-        typeof (item as OfficialAlert).event === 'string' &&
-        typeof (item as OfficialAlert).headline === 'string'
-    );
+    return data
+        .filter((item): item is Record<string, unknown> =>
+            !!item && typeof item === 'object' &&
+            typeof (item as Record<string, unknown>).event === 'string' &&
+            typeof (item as Record<string, unknown>).headline === 'string'
+        )
+        .map((item): OfficialAlert => {
+            // [FIX] A diferència de parseFeature (NWS), aquí es confiava cegament
+            // en `severity` del Worker via cast de tipus, sense comprovar-ne el
+            // valor en temps d'execució. Un `severity` fora de SEVERITY_ORDER
+            // trenca el comparador d'ordenació (resta amb `undefined`) i fa que
+            // `severity === 'Extreme' || 'Severe'` a OfficialAlertBanner avaluï
+            // fals — una alerta genuïnament greu perdria l'estil d'urgència en
+            // silenci. Degradem a 'Unknown' en lloc d'assumir que el Worker
+            // sempre envia un dels 5 valors vàlids.
+            const severity = (typeof item.severity === 'string' && item.severity in SEVERITY_ORDER)
+                ? item.severity as AlertSeverity
+                : 'Unknown';
+
+            return { ...(item as unknown as OfficialAlert), severity };
+        });
 };
 
 export const getAemetAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {

@@ -1,7 +1,7 @@
 // src/components/Footer.tsx
 import { APP_VERSION } from '../utils/appVersion';
 import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
-import { clear } from 'idb-keyval'; // NOU: Importem neteja d'IndexedDB
+import { cacheService } from '../services/cacheService';
 
 interface FooterProps {
   simple?: boolean;
@@ -18,19 +18,14 @@ export default function Footer({ simple = false, transparent = false, className 
     if (window.confirm("⚠️ DIAGNÒSTIC DEL SISTEMA\n\nVols reiniciar la memòria cau local i recarregar l'aplicació?\nAixò pot resoldre problemes de dades antigues.")) {
         try {
             console.warn("System Reset: Clearing Cache...");
-            
-            // 1. Neteja de la nova base de dades (IndexedDB)
-            await clear();
-            
-            // 2. Neteja del LocalStorage (Preferències i restes antigues)
-            localStorage.clear();
-            
-            // 3. Recàrrega
-            window.location.reload();
+
+            // Neteja d'àmbit segur (IndexedDB + LocalStorage), només claus
+            // pròpies d'aquesta app — mai un clear() global de l'origen
+            // (GitHub Pages hi allotja altres apps de l'usuari sota el mateix domini).
+            await cacheService.clearAppStorage();
         } catch (e) {
             console.error("Error esborrant cache:", e);
-            // Fallback: Si falla IndexedDB, almenys neteja LocalStorage i recarrega
-            localStorage.clear();
+        } finally {
             window.location.reload();
         }
     }

@@ -1,6 +1,7 @@
 // src/services/geocodingService.ts
 import * as Sentry from "@sentry/react";
 import { Language } from '../translations';
+import { fetchWithTimeout } from '../utils/networkUtils';
 
 // TIPUS EXPORTABLES (Per usar al Header)
 export interface GeoSearchResult {
@@ -61,22 +62,30 @@ export const reverseGeocode = async (
  */
 export const searchCity = async (query: string): Promise<GeoSearchResult[]> => {
     try {
-        const response = await fetch(
-          `${SEARCH_API_URL}?name=${encodeURIComponent(query)}&count=5&language=ca&format=json`
+        // [FIX] Abans era l'única crida de xarxa de tota l'app sense timeout: si
+        // l'API es penjava, la cerca de Header.tsx es quedava en isSearching=true
+        // per sempre, sense error ni possibilitat de reintent.
+        const response = await fetchWithTimeout(
+          `${SEARCH_API_URL}?name=${encodeURIComponent(query)}&count=5&language=ca&format=json`,
+          GEO_TIMEOUT_MS
         );
-        
+
         if (!response.ok) throw new Error(`Geocoding Search Error: ${response.status}`);
         
         const data = await response.json();
         return data.results || [];
 
     } catch (error) {
-        // Monitoratge d'errors centralitzat
+        // Monitoratge d'errors centralitzat (excepte timeouts: com a alertsApi.ts,
+        // un timeout de xarxa mentre l'usuari escriu és esperat, no un error a vigilar)
+        const isTimeout = error instanceof Error && error.name === 'AbortError';
         console.error("Geocoding Search Error:", error);
-        Sentry.captureException(error, {
-            tags: { service: 'GeocodingAPI', type: 'search_failed' },
-            extra: { query } 
-        });
+        if (!isTimeout) {
+            Sentry.captureException(error, {
+                tags: { service: 'GeocodingAPI', type: 'search_failed' },
+                extra: { query }
+            });
+        }
         return []; // Retorn segur: array buit en lloc de petar
     }
 };

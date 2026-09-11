@@ -1,5 +1,5 @@
 // src/hooks/useWeather.ts
-import { useState, useRef } from 'react'; // <-- FIX: Eliminat useEffect
+import { useState, useRef, useCallback } from 'react';
 import * as Sentry from "@sentry/react"; 
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; // [FIX] Import correcte
 import type { AirQualityData } from '../types/weather';
@@ -38,7 +38,13 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   // només s'aplica el resultat si encara és la petició més recent en arribar.
   const requestIdRef = useRef(0);
 
-  const fetchWeatherByCoords = async (lat: number, lon: number, locationName: string, country?: string): Promise<WeatherFetchResult> => {
+  // [FIX] Embolcallat en useCallback: sense això, cada render d'aquest hook
+  // (p. ex. cada tick de rellotge de 60s que passa per useAppController)
+  // generava una nova referència de funció, que es propagava a
+  // useAppActions.handleGetCurrentLocation (que la té com a dependència) i
+  // d'allà a tot el que consumeix el context — trencant qualsevol intent de
+  // memoització aigües avall encara que res rellevant hagués canviat.
+  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName: string, country?: string): Promise<WeatherFetchResult> => {
     const now = Date.now();
 
     // Evitem crides repetides en menys de 3 segons
@@ -97,7 +103,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     } finally {
       if (!isStale()) setLoading(false);
     }
-  };
+  }, [lang, unit, t, runRegionalModelWorker]);
 
   return {
     weatherData,

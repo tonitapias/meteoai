@@ -7,6 +7,7 @@ export const ca = {
 
   // Menú de capes
   layerControl: "Control de Capes",
+  closeLayerMenu: "Tancar menú de capes",
   baseMapTitle: "MAPA BASE",
   baseDark: "Fosc (Tàctic)",
   baseLight: "Clar (Blanc)",
@@ -75,6 +76,13 @@ export const ca = {
   temp: "Temperatura",
   rain: "Pluja",
   wind: "Vent",
+  windNoData: "SENSE DADES",
+  windCalm: "CALMA",
+  windModerate: "MODERAT",
+  windStrong: "FORT",
+  windGale: "VENTADA",
+  windStorm: "TEMPORAL",
+  gustsLabel: "Ratxes",
   cloud: "Cobertura",
   humidity: "Humitat",
   dewPoint: "Punt de Rosada", 

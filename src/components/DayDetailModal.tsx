@@ -275,7 +275,10 @@ export default function DayDetailModal({
 
 
   return (
-    <div 
+    <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="day-detail-modal-title"
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-200"
         onClick={handleBackdropClick}
     >
@@ -299,7 +302,7 @@ export default function DayDetailModal({
                       <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || TACTICAL_I18N.detailHeader}
                   </div>
                   
-                  <h2 className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg">
+                  <h2 id="day-detail-modal-title" className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg">
                       {formatDate(dayData.date)}
                   </h2>
                   

@@ -38,6 +38,15 @@ export function usePreferences() {
 
   // 2. EFECTES NOMÉS PER GUARDAR (Quan l'usuari canvia alguna cosa)
   useEffect(() => { localStorage.setItem('meteoai_lang', lang); }, [lang]);
+
+  // [FIX] index.html porta `lang="ca"` fix. `lang` (no i18n.language — react-i18next
+  // només es sincronitza amb aquest valor un cop es munta DashboardModals, així que
+  // no és fiable abans d'això) és la font real de l'idioma actiu: TRANSLATIONS[lang]
+  // és qui pinta la interfície gairebé arreu. Sense sincronitzar-ho, un usuari en
+  // es/en/fr es queda amb l'atribut lang equivocat — afecta la pronunciació dels
+  // lectors de pantalla i la traducció automàtica del navegador, que es guien per
+  // aquest atribut, no pel que mostra la interfície.
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   useEffect(() => { localStorage.setItem('meteoai_unit', unit); }, [unit]);
   useEffect(() => { localStorage.setItem('meteoai_view_mode', viewMode); }, [viewMode]); 
   useEffect(() => { localStorage.setItem('meteoai_favorites', JSON.stringify(favorites)); }, [favorites]);

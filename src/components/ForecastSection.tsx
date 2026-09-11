@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Calendar, Umbrella, ArrowRight } from 'lucide-react'; 
 import { TempRangeBar } from './widgets';
 import { getWeatherIcon } from './WeatherIcons';
@@ -67,11 +67,104 @@ const ForecastSection = memo(function ForecastSection({
   const btnText = I18N_BTN[lang] || I18N_BTN['ca'];
   const btnAriaLabel = I18N_ARIA_CHART_BTN[lang] || I18N_ARIA_CHART_BTN['ca'];
   
-  const { 
-    isOpen: isTrendModalOpen, 
-    openModal: openTrendModal, 
-    closeModal: closeTrendModal 
+  const {
+    isOpen: isTrendModalOpen,
+    openModal: openTrendModal,
+    closeModal: closeTrendModal
   } = useTacticalModal('trendChart');
+
+  // [FIX] Aquest càlcul (filtratge de chartData x7, correcció d'inversió tèrmica,
+  // ajust de núvols...) corria directament al cos del render, sense useMemo —
+  // a diferència de DayDetailModal/RegionalModelModal. Com que ForecastSection
+  // viu permanentment al dashboard i useViewState hi injecta un tick de
+  // rellotge cada 60s, cada re-render (del rellotge o de qualsevol altre canvi
+  // no relacionat, com onDayClick canviant de referència) el tornava a
+  // executar sencer. Ara només es recalcula quan les seves pròpies dependències
+  // (dailyData, chartData, lang, latitude) realment canvien.
+  const days = useMemo(() => {
+    if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length === 0) return [];
+
+    return dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
+      if (typeof rawDate !== 'string') return null;
+      // [FIX PRECISIÓ] "YYYY-MM-DD" sol es parseja com mitjanit UTC; sumant una
+      // hora local (T12:00:00, sense 'Z') forcem que JS l'interpreti com a hora
+      // local del navegador, evitant que getDate()/toLocaleDateString() mostrin
+      // el dia anterior en fusos horaris darrere d'UTC.
+      const date = new Date(rawDate + 'T12:00:00');
+      if (isNaN(date.getTime())) return null;
+
+      const i = index + 1;
+      const dayName = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'long' });
+      const dateNum = date.getDate();
+
+      // DOCTRINA RISC ZERO: temperatura i pluja es mostren a l'usuari com a
+      // xifres explícites — si falten, null (i "--" a la UI), mai un 0 fals.
+      const rawMaxTemp = extractValidArrayNum(dailyData.temperature_2m_max, i);
+      const rawMinTemp = extractValidArrayNum(dailyData.temperature_2m_min, i);
+      const rawCode = getSafeArrayNum(dailyData.weather_code, i);
+      const precipProb = extractValidArrayNum(dailyData.precipitation_probability_max, i);
+      const precipSum = extractValidArrayNum(dailyData.precipitation_sum, i);
+      const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i);
+      const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
+
+      // Hores d'aquest dia dins el chart horari complet (reutilitzat per la
+      // correcció d'inversió i per la icona de núvols, més avall)
+      const dateOnly = rawDate.slice(0, 10);
+      const dayHours = (Array.isArray(chartData) && chartData.length > 0)
+        ? chartData.filter(d => typeof d.time === 'string' && d.time.startsWith(dateOnly))
+        : [];
+
+      // [FIX PRECISIÓ] dailyData.temperature_2m_max/min és un valor de model en
+      // brut. Busquem dins les hores reals d'aquest dia quina és la més freda i
+      // la més càlida i apliquem getInversionCorrectedTemp NOMÉS a aquestes
+      // hores concretes, amb el seu propi mes — mateix patró que Forecast24h.tsx
+      // i DayDetailModal.tsx. Sense dades horàries per aquest dia, es manté el
+      // valor cru com a fallback.
+      let maxTemp = rawMaxTemp;
+      let minTemp = rawMinTemp;
+
+      const numericDayHours = dayHours.filter(
+        (d): d is ChartDataPoint & { temp: number } => typeof d.temp === 'number' && !isNaN(d.temp)
+      );
+
+      if (numericDayHours.length > 0) {
+        const hottestHour = numericDayHours.reduce((a, b) => (b.temp > a.temp ? b : a));
+        const coldestHour = numericDayHours.reduce((a, b) => (b.temp < a.temp ? b : a));
+
+        const toStrictCurrent = (h: ChartDataPoint & { temp: number }) => ({
+          temperature_2m: h.temp,
+          cloud_cover_low: typeof h.cloudLow === 'number' ? h.cloudLow : 0,
+          cloud_cover_mid: typeof h.cloudMid === 'number' ? h.cloudMid : 0,
+          cloud_cover_high: typeof h.cloudHigh === 'number' ? h.cloudHigh : 0,
+          wind_speed_10m: typeof h.wind === 'number' ? h.wind : 0,
+          is_day: h.isDay
+        } as unknown as StrictCurrentWeather);
+
+        maxTemp = getInversionCorrectedTemp(toStrictCurrent(hottestHour), getSafeMonthFromIso(hottestHour.time), latitude);
+        minTemp = getInversionCorrectedTemp(toStrictCurrent(coldestHour), getSafeMonthFromIso(coldestHour.time), latitude);
+      }
+
+      // MOTOR VISUAL INTEL·LIGENT — mateixa regla oficial que la resta de l'app
+      // (adjustBaseSkyCode, cloudRules.ts), no uns llindars propis d'aquesta vista.
+      let code = rawCode;
+      if (rawCode <= 3) {
+        const daylightHours = dayHours.filter(d => d.isDay === 1);
+        if (daylightHours.length > 0) {
+          const totalClouds = daylightHours.reduce((acc, curr) => {
+            const c = Number(curr.cloud);
+            return acc + (isNaN(c) ? 0 : c);
+          }, 0);
+          const avgClouds = totalClouds / daylightHours.length;
+          code = adjustBaseSkyCode(rawCode, avgClouds);
+        }
+      }
+
+      const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
+      const minTempLabel = minTemp !== null ? `${Math.round(minTemp)}°` : '--°';
+
+      return { rawDate, i, dayName, dateNum, code, maxWind, precipProb, minTemp, maxTemp, minTempLabel, maxTempLabel, precipSum, snowSum };
+    }).filter((d): d is NonNullable<typeof d> => d !== null);
+  }, [dailyData, chartData, lang, latitude]);
 
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length === 0) return null;
 
@@ -119,102 +212,24 @@ const ForecastSection = memo(function ForecastSection({
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 relative z-10">
-          {dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
-            if (typeof rawDate !== 'string') return null;
-            // [FIX PRECISIÓ] "YYYY-MM-DD" sol es parseja com mitjanit UTC; sumant una
-            // hora local (T12:00:00, sense 'Z') forcem que JS l'interpreti com a hora
-            // local del navegador, evitant que getDate()/toLocaleDateString() mostrin
-            // el dia anterior en fusos horaris darrere d'UTC.
-            const date = new Date(rawDate + 'T12:00:00');
-            if (isNaN(date.getTime())) return null;
-
-            const i = index + 1; 
-            const dayName = date.toLocaleDateString(getSafeLocale(lang), { weekday: 'long' });
-            const dateNum = date.getDate();
-            
-            // DOCTRINA RISC ZERO: temperatura i pluja es mostren a l'usuari com a
-            // xifres explícites — si falten, null (i "--" a la UI), mai un 0 fals.
-            const rawMaxTemp = extractValidArrayNum(dailyData.temperature_2m_max, i);
-            const rawMinTemp = extractValidArrayNum(dailyData.temperature_2m_min, i);
-            const rawCode = getSafeArrayNum(dailyData.weather_code, i);
-            const precipProb = extractValidArrayNum(dailyData.precipitation_probability_max, i);
-            const precipSum = extractValidArrayNum(dailyData.precipitation_sum, i);
-            const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i);
-            const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
-
-            // Hores d'aquest dia dins el chart horari complet (reutilitzat per la
-            // correcció d'inversió i per la icona de núvols, més avall)
-            const dateOnly = rawDate.slice(0, 10);
-            const dayHours = (Array.isArray(chartData) && chartData.length > 0)
-              ? chartData.filter(d => typeof d.time === 'string' && d.time.startsWith(dateOnly))
-              : [];
-
-            // [FIX PRECISIÓ] dailyData.temperature_2m_max/min és un valor de model en
-            // brut. Busquem dins les hores reals d'aquest dia quina és la més freda i
-            // la més càlida i apliquem getInversionCorrectedTemp NOMÉS a aquestes
-            // hores concretes, amb el seu propi mes — mateix patró que Forecast24h.tsx
-            // i DayDetailModal.tsx. Sense dades horàries per aquest dia, es manté el
-            // valor cru com a fallback.
-            let maxTemp = rawMaxTemp;
-            let minTemp = rawMinTemp;
-
-            const numericDayHours = dayHours.filter(
-              (d): d is ChartDataPoint & { temp: number } => typeof d.temp === 'number' && !isNaN(d.temp)
-            );
-
-            if (numericDayHours.length > 0) {
-              const hottestHour = numericDayHours.reduce((a, b) => (b.temp > a.temp ? b : a));
-              const coldestHour = numericDayHours.reduce((a, b) => (b.temp < a.temp ? b : a));
-
-              const toStrictCurrent = (h: ChartDataPoint & { temp: number }) => ({
-                temperature_2m: h.temp,
-                cloud_cover_low: typeof h.cloudLow === 'number' ? h.cloudLow : 0,
-                cloud_cover_mid: typeof h.cloudMid === 'number' ? h.cloudMid : 0,
-                cloud_cover_high: typeof h.cloudHigh === 'number' ? h.cloudHigh : 0,
-                wind_speed_10m: typeof h.wind === 'number' ? h.wind : 0,
-                is_day: h.isDay
-              } as unknown as StrictCurrentWeather);
-
-              maxTemp = getInversionCorrectedTemp(toStrictCurrent(hottestHour), getSafeMonthFromIso(hottestHour.time), latitude);
-              minTemp = getInversionCorrectedTemp(toStrictCurrent(coldestHour), getSafeMonthFromIso(coldestHour.time), latitude);
-            }
-
-            // MOTOR VISUAL INTEL·LIGENT — mateixa regla oficial que la resta de l'app
-            // (adjustBaseSkyCode, cloudRules.ts), no uns llindars propis d'aquesta vista.
-            let code = rawCode;
-            if (rawCode <= 3) {
-              const daylightHours = dayHours.filter(d => d.isDay === 1);
-              if (daylightHours.length > 0) {
-                const totalClouds = daylightHours.reduce((acc, curr) => {
-                  const c = Number(curr.cloud);
-                  return acc + (isNaN(c) ? 0 : c);
-                }, 0);
-                const avgClouds = totalClouds / daylightHours.length;
-                code = adjustBaseSkyCode(rawCode, avgClouds);
-              }
-            }
-
-            const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
-            const minTempLabel = minTemp !== null ? `${Math.round(minTemp)}°` : '--°';
-
-            return (
-              <button 
-                key={`daily-row-${rawDate}`}
-                onClick={() => onDayClick(i)}
+          {days.map((day) => (
+              <button
+                key={`daily-row-${day.rawDate}`}
+                onClick={() => onDayClick(day.i)}
                 className="group flex items-center justify-between p-3 md:p-4 rounded-[1.25rem] bg-black/40 border border-white/5 hover:bg-white/[0.04] hover:border-indigo-500/40 hover:shadow-[0_4px_20px_rgba(99,102,241,0.15)] transition-all duration-300 w-full backdrop-blur-md"
               >
                 <div className="flex items-center gap-3 w-auto min-w-[100px] md:w-[180px]">
                   <div className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl bg-[#050608]/80 border border-white/5 text-slate-400 group-hover:bg-indigo-900/40 group-hover:border-indigo-500/40 group-hover:text-indigo-300 transition-all duration-300 shrink-0 shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)] group-hover:shadow-[inset_0_1px_4px_rgba(99,102,241,0.3)]">
-                    <span className="text-lg md:text-xl font-black tracking-tighter">{dateNum}</span>
+                    <span className="text-lg md:text-xl font-black tracking-tighter">{day.dateNum}</span>
                   </div>
                   <div className="flex flex-col items-start truncate">
                     <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[70px] md:max-w-none transition-colors duration-300">
-                      {dayName}
+                      {day.dayName}
                     </span>
-                    {precipProb !== null && precipProb > 0 && (
+                    {day.precipProb !== null && day.precipProb > 0 && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <Umbrella className="w-2.5 h-2.5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.5)]" />
-                        <span className="text-[9px] md:text-[10px] font-black text-cyan-400 tabular-nums">{precipProb}%</span>
+                        <span className="text-[9px] md:text-[10px] font-black text-cyan-400 tabular-nums">{day.precipProb}%</span>
                       </div>
                     )}
                   </div>
@@ -222,18 +237,18 @@ const ForecastSection = memo(function ForecastSection({
 
                 <div className="flex items-center justify-center flex-1 px-2 md:px-4">
                    <div className="scale-[0.8] md:scale-[1.1] transition-transform group-hover:scale-[1.25] duration-500 transform-gpu">
-                    {getWeatherIcon(code, "w-10 h-10 md:w-11 md:h-11", true, 0, maxWind)}
+                    {getWeatherIcon(day.code, "w-10 h-10 md:w-11 md:h-11", true, 0, day.maxWind)}
                    </div>
                 </div>
 
                 <div className="hidden md:flex flex-col items-center justify-center w-[130px] px-2">
                   <div className="w-full flex justify-between text-[11px] font-bold text-slate-400 mb-1.5">
-                    <span className="group-hover:text-cyan-300 transition-colors duration-300">{minTempLabel}</span>
-                    <span className="group-hover:text-red-300 transition-colors duration-300">{maxTempLabel}</span>
+                    <span className="group-hover:text-cyan-300 transition-colors duration-300">{day.minTempLabel}</span>
+                    <span className="group-hover:text-red-300 transition-colors duration-300">{day.maxTempLabel}</span>
                   </div>
                   <div className="opacity-80 group-hover:opacity-100 transition-opacity duration-300 w-full">
-                    {minTemp !== null && maxTemp !== null ? (
-                      <TempRangeBar min={minTemp} max={maxTemp} globalMin={weeklyExtremes.min} globalMax={weeklyExtremes.max} />
+                    {day.minTemp !== null && day.maxTemp !== null ? (
+                      <TempRangeBar min={day.minTemp} max={day.maxTemp} globalMin={weeklyExtremes.min} globalMax={weeklyExtremes.max} />
                     ) : (
                       <div className="w-full h-2.5 bg-[#0f111a] rounded-full border border-white/10" />
                     )}
@@ -242,21 +257,21 @@ const ForecastSection = memo(function ForecastSection({
 
                 <div className="md:hidden flex flex-col items-end justify-center mr-3">
                   <span className="text-[15px] font-black text-slate-200 group-hover:text-white tabular-nums leading-none mb-1 transition-colors duration-300">
-                    {maxTempLabel}
+                    {day.maxTempLabel}
                   </span>
                   <span className="text-[11px] font-bold text-slate-500 group-hover:text-cyan-400 tabular-nums leading-none transition-colors duration-300">
-                    {minTempLabel}
+                    {day.minTempLabel}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 md:gap-3 w-[80px] md:w-[130px]">
-                  {precipSum !== null && precipSum > 0 ? (
+                  {day.precipSum !== null && day.precipSum > 0 ? (
                     <span className="text-[9px] md:text-[10px] text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-                      {formatPrecipitation(precipSum, snowSum)}
+                      {formatPrecipitation(day.precipSum, day.snowSum)}
                     </span>
                   ) : (
                     <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
-                      {precipSum === 0 ? NO_PRECIP_LABEL : NO_DATA_LABEL}
+                      {day.precipSum === 0 ? NO_PRECIP_LABEL : NO_DATA_LABEL}
                     </span>
                   )}
                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#050608] flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500 border border-white/10 group-hover:border-indigo-400 shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_10px_rgba(99,102,241,0.8)]">
@@ -264,8 +279,7 @@ const ForecastSection = memo(function ForecastSection({
                   </div>
                 </div>
               </button>
-            );
-          })}
+          ))}
         </div>
       </div>
 

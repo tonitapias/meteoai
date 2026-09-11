@@ -101,7 +101,12 @@ export function useCurrentConditions(
       return calculateReliability(weatherData.daily as StrictDailyWeather, weatherData.dailyComparison?.gfs, weatherData.dailyComparison?.icon, 0, weatherData.dailyComparison?.ecmwf);
   }, [weatherData]);
   
-  const moonPhaseVal = useMemo(() => getMoonPhase(new Date()), []); 
+  // [FIX] Amb `[]` com a dependències, la fase lunar es calculava un cop a
+  // l'arrencada i mai més: si la PWA queda oberta passat el pas de mitjanit,
+  // es quedava congelada. `shiftedNow` ja és el "now" que la resta del hook
+  // fa servir i que es refresca periòdicament (useViewState), així que
+  // reutilitzar-lo aquí la manté al dia sense un rellotge nou.
+  const moonPhaseVal = useMemo(() => getMoonPhase(shiftedNow), [shiftedNow]);
   const barometricTrend = useMemo(() => ({ trend: 'steady', val: 0 }), []); 
 
   return {

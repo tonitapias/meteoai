@@ -129,7 +129,7 @@ export function RadarLayerMenu({
               <button
                 onClick={() => setShowLayerMenu(false)}
                 className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/20 border border-transparent hover:border-white/10 text-slate-400 hover:text-white transition-all shadow-sm active:scale-90 group"
-                aria-label="Tancar menú de capes"
+                aria-label={t('closeLayerMenu', 'Tancar menú de capes')}
               >
                 <CloseIcon className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
               </button>
