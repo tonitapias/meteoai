@@ -331,13 +331,17 @@ export function useMapLifecycle({
           let targetOpacity: number | mapboxgl.Expression = 0.000001;
 
           if (key === currentActiveBase) {
-            if (currentOverlays.nasaReal) {
-              targetOpacity = [
-                'interpolate', ['linear'], ['zoom'],
-                5.5, 0.000001,
-                8.0, 1
-              ];
-            } else if (key === 'black_marble') {
+            // CORRECCIÓ: abans, amb `nasaReal` actiu, la capa base es
+            // suprimia gairebé del tot (opacitat 0.000001) per sota de
+            // zoom 8, precisament la zona on la càmera vola en activar
+            // aquest overlay (useCameraFlight.ts). Com que els mosaics
+            // de NASA GIBS sovint tenen tessel·les absents (404) a les
+            // dates més recents, això deixava forats negres sense cap
+            // imatge de fons visible. Ara la capa base es manté sempre
+            // visible sota NASA: on la tessel·la de NASA carrega, la tapa
+            // igualment (opacitat 1 a sobre); on falta, es veu el mapa
+            // base en lloc d'un forat negre.
+            if (key === 'black_marble') {
               targetOpacity = getBlackMarbleOpacityExp(1);
             } else {
               targetOpacity = 1;
