@@ -15,6 +15,7 @@ import { MinutelyPreciseChart } from '../WeatherCharts';
 const Forecast24h = lazy(() => import('../Forecast24h'));
 const AIInsights = lazy(() => import('../AIInsights'));
 const OfficialAlertBanner = lazy(() => import('../OfficialAlertBanner'));
+const RadarRealityBanner = lazy(() => import('../RadarRealityBanner'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 // Només es mostra en Mode Expert — mateix cas que ExpertWidgets de dalt. Viu en un
@@ -73,6 +74,16 @@ export const DashboardContent = () => {
                     </div>
                 </div>
             )}
+
+            {/* 2a. REALITAT DE RADAR (el model preveu sec però el radar detecta pluja real) */}
+            <Suspense fallback={null}>
+                <RadarRealityBanner
+                    lat={loc?.latitude}
+                    lon={loc?.longitude}
+                    modelMmPerHourNow={(calculations.minutelyPreciseData?.[0] || 0) * 4}
+                    lang={flags.lang}
+                />
+            </Suspense>
 
             {/* 2b. ALERTA METEOROLÒGICA OFICIAL (font: servei meteorològic nacional) */}
             <Suspense fallback={null}>
