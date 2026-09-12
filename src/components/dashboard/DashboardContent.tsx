@@ -16,6 +16,7 @@ const Forecast24h = lazy(() => import('../Forecast24h'));
 const AIInsights = lazy(() => import('../AIInsights'));
 const OfficialAlertBanner = lazy(() => import('../OfficialAlertBanner'));
 const RadarRealityBanner = lazy(() => import('../RadarRealityBanner'));
+const RadarNowcastBanner = lazy(() => import('../RadarNowcastBanner'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 // Només es mostra en Mode Expert — mateix cas que ExpertWidgets de dalt. Viu en un
@@ -74,6 +75,11 @@ export const DashboardContent = () => {
                     </div>
                 </div>
             )}
+
+            {/* 2a-i. TEMPORITZACIÓ NOWCAST (quan començarà/acabarà la pluja segons el radar) */}
+            <Suspense fallback={null}>
+                <RadarNowcastBanner lat={loc?.latitude} lon={loc?.longitude} lang={flags.lang} />
+            </Suspense>
 
             {/* 2a. REALITAT DE RADAR (el model preveu sec però el radar detecta pluja real) */}
             <Suspense fallback={null}>

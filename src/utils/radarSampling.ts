@@ -94,19 +94,33 @@ export function dbzToMmPerHour(dbz: number): number {
   return (z / 200) ** (1 / 1.6);
 }
 
+// Marge de seguretat: en proves en directe s'ha observat que l'`Image` d'una
+// tessel·la pot no disparar mai `onload` ni `onerror` (penja la promesa
+// indefinidament). Sense aquest límit, el hook que la crida es quedaria
+// esperant per sempre en lloc de degradar-se a "sense dades".
+const TILE_FETCH_TIMEOUT_MS = 10000;
+
 /**
  * Descarrega una única tessel·la PNG i en llegeix el píxel (px, py). Els
  * hosts de radar (librewxr.net i rainviewer.com) envien
  * `Access-Control-Allow-Origin: *`, així que la lectura del canvas no queda
- * "tainted". Mai llença: qualsevol error (xarxa, CORS, 404) retorna `null`.
+ * "tainted". Mai llença ni queda penjada indefinidament: qualsevol error
+ * (xarxa, CORS, 404, timeout) retorna `null`.
  */
 export function fetchTilePixel(tileUrl: string, px: number, py: number): Promise<[number, number, number, number] | null> {
   return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value: [number, number, number, number] | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve(value);
+    };
+    const timeoutId = setTimeout(() => settle(null), TILE_FETCH_TIMEOUT_MS);
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
-
-    const fail = () => resolve(null);
-    img.onerror = fail;
+    img.onerror = () => settle(null);
 
     img.onload = () => {
       try {
@@ -114,13 +128,13 @@ export function fetchTilePixel(tileUrl: string, px: number, py: number): Promise
         canvas.width = 1;
         canvas.height = 1;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return fail();
+        if (!ctx) return settle(null);
 
         ctx.drawImage(img, -px, -py);
         const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-        resolve([r, g, b, a]);
+        settle([r, g, b, a]);
       } catch {
-        fail();
+        settle(null);
       }
     };
 
