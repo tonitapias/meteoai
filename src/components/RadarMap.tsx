@@ -194,6 +194,17 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
 
       <div key={`mapbox-phoenix-${webglKey}`} ref={mapContainerRef} className="w-full h-full" />
 
+      <a
+        href="https://www.rainviewer.com/weather-radar-map.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t('openBrowser')}
+        className="absolute bottom-[calc(max(env(safe-area-inset-bottom,24px),24px)+72px)] left-[max(env(safe-area-inset-left,10px),10px)] z-[999] flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto"
+      >
+        <span className="text-[9px] font-mono uppercase tracking-wider leading-none">{t('radarData')}</span>
+        <span className="text-[8px] font-mono opacity-70 leading-none">{t('radarFail')}</span>
+      </a>
+
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none z-10 flex items-center justify-center">
         <div className="absolute inset-0 bg-cyan-400/20 rounded-full animate-ping"></div>
         <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(6,182,212,1)]"></div>

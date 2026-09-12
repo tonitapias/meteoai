@@ -341,7 +341,7 @@ export const es = {
   myLocation: "Mi ubicación",
   openExternal: "Abrir fuera",
   openBrowser: "Abrir en navegador externo",
-  radarData: "Datos: RainViewer",
+  radarData: "Datos: LibreWXR",
   radarFail: "Si falla, pulsa \"Abrir fuera\" ↗",
   favAdded: "Añadido a favoritos",
   favRemoved: "Eliminado de favoritos",

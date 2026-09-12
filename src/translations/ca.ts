@@ -340,7 +340,7 @@ export const ca = {
   myLocation: "La meva ubicació",
   openExternal: "Obrir fora",
   openBrowser: "Obrir en navegador extern",
-  radarData: "Dades: RainViewer",
+  radarData: "Dades: LibreWXR",
   radarFail: "Si falla, prem \"Obrir fora\" ↗",
   favAdded: "Afegit als favorits",
   favRemoved: "Eliminat dels favorits",

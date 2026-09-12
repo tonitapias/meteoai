@@ -342,7 +342,7 @@ export const en = {
   myLocation: "My location",
   openExternal: "Open external",
   openBrowser: "Open in external browser",
-  radarData: "Data: RainViewer",
+  radarData: "Data: LibreWXR",
   radarFail: "If it fails, press \"Open external\" ↗",
   favAdded: "Added to favorites",
   favRemoved: "Removed from favorites",
