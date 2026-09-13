@@ -48,12 +48,17 @@ export function useRadarNowcastTiming(
     return () => clearInterval(id);
   }, [fetchRadarData]);
 
+  // [FIX] Mateix problema que useRadarRealityCheck.ts: `setTransition` no es
+  // pot cridar síncronament dins del cos de l'efecte (react-hooks/set-state-in-effect).
+  // Derivem el valor efectiu a `hasValidInputs` més avall.
+  const hasValidInputs = lat !== undefined && lon !== undefined
+    && !!radarData?.radar?.past?.length && !!radarData?.radar?.nowcast?.length;
+
   useEffect(() => {
     const pastFrames = radarData?.radar?.past;
     const nowcastFrames = radarData?.radar?.nowcast;
 
     if (lat === undefined || lon === undefined || !pastFrames?.length || !nowcastFrames?.length || !radarData) {
-      setTransition(null);
       return;
     }
 
@@ -84,5 +89,5 @@ export function useRadarNowcastTiming(
     return () => { cancelled = true; };
   }, [radarData, lat, lon]);
 
-  return { transition };
+  return { transition: hasValidInputs ? transition : null };
 }

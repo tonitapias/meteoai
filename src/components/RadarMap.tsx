@@ -199,7 +199,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
       <div className="absolute bottom-[calc(max(env(safe-area-inset-bottom,24px),24px)+72px)] left-[max(env(safe-area-inset-left,10px),10px)] z-[999] flex flex-col items-start gap-1.5 pointer-events-none">
         {showAttribution && (
           <a
-            href="https://www.rainviewer.com/weather-radar-map.html"
+            href="https://librewxr.net/"
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t('openBrowser')}

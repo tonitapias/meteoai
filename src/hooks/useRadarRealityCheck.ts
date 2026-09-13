@@ -48,9 +48,16 @@ export function useRadarRealityCheck(
     return () => clearInterval(id);
   }, [fetchRadarData]);
 
+  // [FIX] `setSample` es cridava síncronament dins del cos de l'efecte per al
+  // camí "sense dades vàlides" — eslint-plugin-react-hooks ho marca com a
+  // error (pot provocar un render en cascada). En lloc de reiniciar l'estat
+  // aquí, derivem el valor efectiu més avall a partir de `hasValidInputs`;
+  // `setSample` ara només es crida dins del callback asíncron de sota, el
+  // patró correcte segons la pròpia regla.
+  const hasValidInputs = lat !== undefined && lon !== undefined && !!radarData?.radar?.past?.length;
+
   useEffect(() => {
     if (lat === undefined || lon === undefined || !radarData?.radar?.past?.length) {
-      setSample(IDLE_SAMPLE);
       return;
     }
 
@@ -75,6 +82,7 @@ export function useRadarRealityCheck(
     return () => { cancelled = true; };
   }, [radarData, lat, lon]);
 
-  const hasDiscrepancy = sample.radarMmPerHour >= RADAR_MM_H_THRESHOLD && modelMmPerHourNow < MODEL_MM_H_THRESHOLD;
-  return { ...sample, hasDiscrepancy };
+  const effectiveSample = hasValidInputs ? sample : IDLE_SAMPLE;
+  const hasDiscrepancy = effectiveSample.radarMmPerHour >= RADAR_MM_H_THRESHOLD && modelMmPerHourNow < MODEL_MM_H_THRESHOLD;
+  return { ...effectiveSample, hasDiscrepancy };
 }
