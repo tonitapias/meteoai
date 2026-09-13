@@ -79,16 +79,6 @@ export const Z_LAYERS = {
 
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---
 
-export const getNASADate = (): string => {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  // NASA GIBS necessita uns dies per completar el mosaic "best available"
-  // del VIIRS True Color: amb -3 dies encara falta ~60% de les tessel·les
-  // (404), amb -5 dies el mosaic ja està complet de forma consistent.
-  d.setUTCDate(d.getUTCDate() - 5);
-  return d.toISOString().split('T')[0];
-};
-
 export const getNasaFiresDate = (): string => {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);

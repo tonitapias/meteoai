@@ -10,7 +10,6 @@ import {
   MAPBOX_DEM_URL,
   getNasaFiresWmsUrl,
   getNasaFiresOpacityExp,
-  getNASADate,
   Z_LAYERS
 } from '../../utils/radarPhysics';
 
@@ -259,12 +258,19 @@ export function useMapLifecycle({
       syncAtmosphere();
 
       // NASA REAL (Injecció asíncrona sota els núvols)
+      // CORRECCIÓ: abans es demanava una data fixa (avui-N) directament a
+      // NASA GIBS. El buit de processament del mosaic "best available"
+      // d'aquesta capa no és una funció suau de l'antiguitat: un dia
+      // concret pot faltar mentre dies més recents O més antics estan
+      // complets. Ara es passa pel worker meteo-sat-proxy, que prova una
+      // finestra de dates (la més recent primer) per a cada tessel·la
+      // concreta i cau a transparent si totes fallen — mateixa doctrina
+      // "Risc Zero" que ja s'usa per a GOES/Meteosat/Himawari.
       if (currentOverlays.nasaReal && !map.getSource('source-nasa-real')) {
-        const nasaDate = getNASADate();
         map.addSource('source-nasa-real', {
           type: 'raster',
           tiles: [
-            `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nasaDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+            'https://meteo-sat-proxy.tonitapias.workers.dev/nasa-truecolor/{z}/{x}/{y}.jpg'
           ],
           tileSize: 256,
           maxzoom: 8,
