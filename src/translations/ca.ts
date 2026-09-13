@@ -4,6 +4,7 @@ export const ca = {
   // Avís d'actualització (PWA)
   updateAvailable: "Hi ha una versió nova disponible",
   updateAction: "Actualitza",
+  closeWindow: "Tancar finestra",
 
   // Menú de capes
   layerControl: "Control de Capes",

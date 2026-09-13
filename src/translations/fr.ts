@@ -6,6 +6,7 @@ export const fr = {
   // Avis de mise à jour (PWA)
   updateAvailable: "Une nouvelle version est disponible",
   updateAction: "Mettre à jour",
+  closeWindow: "Fermer la fenêtre",
 
   // --- Menú de capes ---
   layerControl: "Contrôle des Couches",
