@@ -232,6 +232,19 @@ export function useRadarAnimation({
           meteosat: [-30, -60, 70, 60],
           himawari: [80, -60, 180, 60]
         };
+        // CORRECCIÓ (diagnòstic en producció, 2026-09-15): el producte GIBS
+        // "Band13_Clean_Infrared" de GOES i Himawari ve amb una paleta
+        // realçada (verd/blau/vermell per a tempestes fortes), a diferència
+        // del msg_fes:ir108 d'EUMETSAT (Meteosat), que ja és blanc i negre
+        // natiu. Forçar `raster-saturation: -1` per igual a les tres
+        // agències eliminava exactament el senyal visual que fa "HD" la
+        // capa de GOES/Himawari, deixant-la com un gris pla indistingible
+        // dels núvols IR normals (Meteosat no es notava perquè ja és B/N).
+        const HD_SATURATION: Record<HdAgency, number> = {
+          goes: 0,
+          meteosat: -1,
+          himawari: 0
+        };
 
         hdAgencies.forEach((agency) => {
           const hdSourceId = `hd-${agency}-src-${timestamp}`;
@@ -263,7 +276,7 @@ export function useRadarAnimation({
                 paint: {
                   'raster-opacity': getSatOpacityExp(hdTargetOpacity),
                   'raster-opacity-transition': { duration: 0, delay: 0 },
-                  'raster-saturation': -1.0,
+                  'raster-saturation': HD_SATURATION[agency],
                   'raster-contrast': 0.3,
                   'raster-fade-duration': 0
                 },
