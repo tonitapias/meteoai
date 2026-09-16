@@ -114,6 +114,7 @@ export const DashboardContent = () => {
                                 freezingLevel={calculations.currentFreezingLevel ?? null}
                                 onShowSolarModal={() => actions.setShowSolarModal(true)}
                                 onShowMoonModal={() => actions.setShowMoonModal(true)}
+                                onShowStormModal={() => actions.setShowStormModal(true)}
                             />
                         </Suspense>
                     )}

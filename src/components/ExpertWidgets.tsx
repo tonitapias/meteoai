@@ -50,9 +50,10 @@ interface ExpertWidgetsProps {
   freezingLevel: number | null;
   onShowSolarModal: () => void;
   onShowMoonModal: () => void;
+  onShowStormModal: () => void;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -318,7 +319,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               />
           </WidgetCard>
 
-          <WidgetCard>
+          <WidgetCard onClick={onShowStormModal}>
               <CapeWidget capeData={safeCapeData} currentHourIndex={currentHourIndex} lang={lang} />
           </WidgetCard>
 

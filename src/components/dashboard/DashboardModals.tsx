@@ -11,6 +11,7 @@ const RadarModal = lazy(() => import('../RadarModal'));
 const RegionalModelModal = lazy(() => import('../RegionalModelModal'));
 const SolarModal = lazy(() => import('../SolarModal'));
 const MoonModal = lazy(() => import('../MoonModal'));
+const StormModal = lazy(() => import('../StormModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -74,6 +75,13 @@ export const DashboardModals = () => {
                 <MoonModal
                     weatherData={weatherData}
                     onClose={() => actions.setShowMoonModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showStormModal && (
+                <StormModal
+                    weatherData={weatherData}
+                    onClose={() => actions.setShowStormModal(false)}
                     lang={flags.lang}
                 />
             )}

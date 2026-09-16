@@ -23,6 +23,7 @@ export function useViewState() {
     const [showRegionalModel, setShowRegionalModel] = useState(false);
     const [showSolarModal, setShowSolarModal] = useState(false);
     const [showMoonModal, setShowMoonModal] = useState(false);
+    const [showStormModal, setShowStormModal] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
     useEffect(() => { 
@@ -42,6 +43,7 @@ export function useViewState() {
     useModalHistory(showRegionalModel, useCallback(() => setShowRegionalModel(false), []));
     useModalHistory(showSolarModal, useCallback(() => setShowSolarModal(false), []));
     useModalHistory(showMoonModal, useCallback(() => setShowMoonModal(false), []));
+    useModalHistory(showStormModal, useCallback(() => setShowStormModal(false), []));
 
     // --- 5. Helpers d'Acció UI ---
     const toggleDebug = useCallback(() => {
@@ -64,7 +66,8 @@ export function useViewState() {
                 showRadar,
                 showRegionalModel,
                 showSolarModal,
-                showMoonModal
+                showMoonModal,
+                showStormModal
             }
         },
         actions: {
@@ -78,7 +81,8 @@ export function useViewState() {
             setShowRadar,
             setShowRegionalModel,
             setShowSolarModal,
-            setShowMoonModal
+            setShowMoonModal,
+            setShowStormModal
         }
     };
 }
