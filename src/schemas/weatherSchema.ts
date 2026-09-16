@@ -118,6 +118,17 @@ export const WeatherResponseSchema = z.object({
 }).passthrough();
 
 // --- ESQUEMA QUALITAT DE L'AIRE ---
+// Validador per a l'evolució horària (AqiModal): mateixos camps que PARAMS_AQI_HOURLY.
+export const AirQualityHourlySchema = z.object({
+  time: safeStringArray,
+  european_aqi: safeArray.optional(),
+  pm10: safeArray.optional(),
+  pm2_5: safeArray.optional(),
+  nitrogen_dioxide: safeArray.optional(),
+  ozone: safeArray.optional(),
+  sulphur_dioxide: safeArray.optional(),
+}).passthrough();
+
 export const AirQualitySchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
@@ -130,7 +141,18 @@ export const AirQualitySchema = z.object({
     nitrogen_dioxide: safeNumber.optional(),
     ozone: safeNumber.optional(),
     sulphur_dioxide: safeNumber.optional(),
-  }).passthrough().optional() // Fem el bloc sencer opcional per si falla
+    // Camps addicionals per al desglossament complet d'AqiModal (ja arribaven per
+    // .passthrough() però sense tipar — PARAMS_AQI_CURRENT ja els demanava).
+    dust: safeNumber.optional(),
+    ammonia: safeNumber.optional(),
+    alder_pollen: safeNumber.optional(),
+    birch_pollen: safeNumber.optional(),
+    grass_pollen: safeNumber.optional(),
+    mugwort_pollen: safeNumber.optional(),
+    olive_pollen: safeNumber.optional(),
+    ragweed_pollen: safeNumber.optional(),
+  }).passthrough().optional(), // Fem el bloc sencer opcional per si falla
+  hourly: AirQualityHourlySchema.optional(),
 }).passthrough();
 
 // EXPORTEM ELS TIPUS INFERITS (La màgia de Zod)

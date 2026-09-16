@@ -68,7 +68,14 @@ Un tercer modal de detall, accessible tocant el giny de CAPE en Mode Expert, per
 * **Estadístiques ràpides:** CAPE màxim a 24h i 48h, total d'hores en risc i nivell de congelació actual.
 * Reutilitza dades horàries que l'app ja demanava a Open-Meteo — cap crida de xarxa nova ni dependència externa.
 
-### 5. Alertes Meteorològiques Oficials
+### 5. Observatori de Qualitat de l'Aire
+Un quart modal de detall, accessible tocant el giny de Qualitat de l'Aire en Mode Expert, amb tot el desglossament que Open-Meteo ja proporcionava però que no es mostrava enlloc:
+* **Evolució horària (48h)** de l'Índex Europeu de Qualitat de l'Aire (EAQI), *scrubbable*, amb les bandes oficials de les 6 categories (Bona, Raonable, Moderada, Dolenta, Molt Dolenta, Extrema).
+* **Desglossament complet de contaminants:** PM2.5, PM10, NO2, O3 i SO2 amb el seu valor real en µg/m³ — sense inventar-hi cap codi de color per contaminant, ja que no hi ha una taula oficial de llindars prou fiable per a cadascun per separat; el color de severitat només s'aplica a l'índex global, que sí té bandes oficials verificades.
+* **Pol·len i pols en suspensió:** els 6 tipus de pol·len que Open-Meteo cobreix (vern, bedoll, gramínies, artemisa, olivera, ambrosia) i la pols en suspensió — rellevant per intrusions de pols saharianes, força habituals a la Mediterrània. Només es mostren els que realment es detecten, per no omplir la pantalla de zeros fora de temporada.
+* Reutilitza dades que l'app ja demanava a l'API de Qualitat de l'Aire d'Open-Meteo — cap crida de xarxa nova.
+
+### 6. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
 * **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
@@ -77,7 +84,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
 * **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
-### 6. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 7. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.

@@ -84,7 +84,8 @@ export function useAppController() {
           setShowRegionalModel: ui.actions.setShowRegionalModel,
           setShowSolarModal: ui.actions.setShowSolarModal,
           setShowMoonModal: ui.actions.setShowMoonModal,
-          setShowStormModal: ui.actions.setShowStormModal
+          setShowStormModal: ui.actions.setShowStormModal,
+          setShowAqiModal: ui.actions.setShowAqiModal
       },
       flags: {
           // Fusionem flags
@@ -104,6 +105,7 @@ export function useAppController() {
       setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,
       ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,
+      ui.actions.setShowAqiModal,
       data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang, viewMode,
       ui.modals, t
   ]);

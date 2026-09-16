@@ -12,13 +12,14 @@ const RegionalModelModal = lazy(() => import('../RegionalModelModal'));
 const SolarModal = lazy(() => import('../SolarModal'));
 const MoonModal = lazy(() => import('../MoonModal'));
 const StormModal = lazy(() => import('../StormModal'));
+const AqiModal = lazy(() => import('../AqiModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
     const { state, actions, flags, modals } = useAppContext();
-    const { weatherData } = state;
+    const { weatherData, aqiData } = state;
 
     // NOU: Instanciem el motor de traduccions
     const { i18n } = useTranslation();
@@ -82,6 +83,13 @@ export const DashboardModals = () => {
                 <StormModal
                     weatherData={weatherData}
                     onClose={() => actions.setShowStormModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showAqiModal && (
+                <AqiModal
+                    aqiData={aqiData}
+                    onClose={() => actions.setShowAqiModal(false)}
                     lang={flags.lang}
                 />
             )}
