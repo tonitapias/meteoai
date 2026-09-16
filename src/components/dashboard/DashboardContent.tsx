@@ -118,6 +118,7 @@ export const DashboardContent = () => {
                                 onShowAqiModal={() => actions.setShowAqiModal(true)}
                                 onShowUvModal={() => actions.setShowUvModal(true)}
                                 onShowPressureModal={() => actions.setShowPressureModal(true)}
+                                onShowComfortModal={() => actions.setShowComfortModal(true)}
                             />
                         </Suspense>
                     )}

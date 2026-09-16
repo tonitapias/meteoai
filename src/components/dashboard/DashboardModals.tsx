@@ -16,6 +16,7 @@ const StormModal = lazy(() => import('../StormModal'));
 const AqiModal = lazy(() => import('../AqiModal'));
 const UvModal = lazy(() => import('../UvModal'));
 const PressureModal = lazy(() => import('../PressureModal'));
+const ComfortModal = lazy(() => import('../ComfortModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -108,6 +109,13 @@ export const DashboardModals = () => {
                 <PressureModal
                     weatherData={weatherData}
                     onClose={() => actions.setShowPressureModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showComfortModal && (
+                <ComfortModal
+                    weatherData={weatherData}
+                    onClose={() => actions.setShowComfortModal(false)}
                     lang={flags.lang}
                 />
             )}

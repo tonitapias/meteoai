@@ -55,9 +55,10 @@ interface ExpertWidgetsProps {
   onShowAqiModal: () => void;
   onShowUvModal: () => void;
   onShowPressureModal: () => void;
+  onShowComfortModal: () => void;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -287,9 +288,9 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               />
           </WidgetCard>
 
-          <WidgetCard>
+          <WidgetCard onClick={onShowComfortModal}>
               {/* Risc Zero Aplicat: Evitem el "?? 0" en l'humitat i confiem en el tipatge natiu undefined */}
-              <DewPointWidget 
+              <DewPointWidget
                   value={dewPointValue} 
                   humidity={currentHumidity as number | undefined} 
                   lang={lang} 

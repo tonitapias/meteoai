@@ -43,6 +43,17 @@ export const WEATHER_THRESHOLDS = {
     RAPID: 6.0        // 3.6-6.0: ràpidament; >6.0: molt ràpidament
   },
 
+  // Confort del punt de rosada (°C) — escala del NWS (National Weather Service):
+  // ≤55°F (≈12.8°C) sec/còmode, 55-65°F (≈12.8-18.3°C) enganxós, >65°F (≈18.3°C) opressiu.
+  // El llindar de "molt opressiu" (>24°C) és àmpliament citat en fonts secundàries, no d'una
+  // taula NWS única — es documenta com a tal, no com a llindar oficial estricte.
+  DEW_POINT: {
+    DRY: 10,          // Per sota: sec
+    COMFORTABLE: 13,  // 10-13: còmode
+    STICKY: 18,       // 13-18: humit / enganxós
+    OPPRESSIVE: 24    // 18-24: opressiu; per sobre: molt opressiu
+  },
+
   // Vent (km/h)
   WIND: {
     LIGHT: 20,     // < 20 km/h

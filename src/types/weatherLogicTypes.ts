@@ -109,6 +109,7 @@ export interface StrictHourlyWeather {
   uv_index?: (number | null)[];
   uv_index_clear_sky?: (number | null)[];
   pressure_msl?: (number | null)[];
+  dew_point_2m?: (number | null)[];
   [key: string]: unknown;
 }
 
