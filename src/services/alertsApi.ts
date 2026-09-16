@@ -26,6 +26,16 @@ const TRANSLATE_PROXY_URL = `${GEMINI_PROXY_URL}/translate-alert`;
 const TIMEOUT_MS = 6000;
 const TRANSLATE_TIMEOUT_MS = 10000;
 
+// Capsa aproximada dels EUA (contigus + Alaska + Hawaii + Puerto Rico):
+// evita la crida (i el 400 "out of bounds" a la consola, encara que inofensiu
+// — vegeu getOfficialAlerts) per a la resta del món. Deliberadament generosa
+// als límits per no amagar mai una alerta real; Guam/Samoa Americana (a
+// l'altra banda de la línia de data, longitud positiva) queden fora, mateix
+// criteri que els territoris d'ultramar exclosos a les capses de França i
+// Portugal més avall.
+const isWithinUsaBoundingBox = (lat: number, lon: number): boolean =>
+    (lat >= 15 && lat <= 72 && lon >= -180 && lon <= -64);
+
 // Capsa aproximada d'Espanya (península + Balears + Canàries + Ceuta/Melilla):
 // evita cridar el proxy (i gastar quota d'AEMET) per a la resta del món.
 const isWithinSpainBoundingBox = (lat: number, lon: number): boolean =>
@@ -107,13 +117,16 @@ const parseFeature = (feature: unknown): OfficialAlert | null => {
 // Retorna sempre un array (mai llança): l'absència d'alertes, o de cobertura
 // en aquest punt del planeta, no és un error de l'aplicació.
 export const getOfficialAlerts = async (lat: number, lon: number): Promise<OfficialAlert[]> => {
+    if (!isWithinUsaBoundingBox(lat, lon)) return [];
+
     const url = `${NWS_ALERTS_URL}?point=${lat.toFixed(4)},${lon.toFixed(4)}`;
 
     try {
         const response = await fetchWithTimeout(url, TIMEOUT_MS);
 
-        // Punt fora de la zona de cobertura de NWS (tot el món excepte EUA/territoris):
-        // la pròpia API respon 400 "out of bounds". No és un error, és l'esperat.
+        // Per si la capsa deixa passar un punt just fora de la cobertura real
+        // (territoris no coberts dins la mateixa capsa, p.ex.): la pròpia API
+        // respon 400 "out of bounds". No és un error, és l'esperat.
         if (response.status === 400) return [];
         if (!response.ok) throw new Error(`NWS Alerts API Error: ${response.status}`);
 
@@ -368,10 +381,10 @@ const translateAlert = async (alert: OfficialAlert, targetLang: Language): Promi
 // Punt d'entrada únic per a la UI: consulta totes les fonts rellevants per a
 // la ubicació (en paral·lel), les fusiona per severitat, i tradueix les que
 // no tinguin text natiu en l'idioma demanat. Cada font ja es filtra sola per
-// geografia (NWS respon 400 fora dels EUA, la resta es descarten abans de
-// trucar si la ubicació cau fora de la seva capsa), així que en general és
-// segur cridar-les totes — EXCEPTE AEMET dins de Catalunya, on Meteocat el
-// substitueix expressament per evitar el mateix avís duplicat amb dues fonts.
+// geografia (totes, NWS inclosa, es descarten abans de trucar si la ubicació
+// cau fora de la seva capsa), així que en general és segur cridar-les totes
+// — EXCEPTE AEMET dins de Catalunya, on Meteocat el substitueix expressament
+// per evitar el mateix avís duplicat amb dues fonts.
 export const getAllOfficialAlerts = async (lat: number, lon: number, lang: Language): Promise<OfficialAlert[]> => {
     const inCatalonia = isWithinCataloniaBoundingBox(lat, lon);
 
