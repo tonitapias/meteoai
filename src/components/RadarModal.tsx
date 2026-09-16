@@ -194,9 +194,18 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
              />
           </div>
 
-          <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${!isRadar ? 'opacity-100 z-20 pointer-events-auto' : 'opacity-0 pointer-events-none z-0'}`}>
-             <WindMap lat={lat} lon={lon} />
-          </div>
+          {/* PERF (fluïdesa): a diferència de RadarMap (que ja es pausa sol via
+              `isActive` i és car de remuntar), l'iframe de Windy porta la seva
+              pròpia simulació WebGL de partícules de vent que NO té manera
+              d'aturar-se des de fora. Abans es deixava sempre muntat i només
+              s'amagava amb opacity-0, així que seguia consumint GPU en segon
+              pla mentre es mirava el radar. Ara es desmunta del tot quan la
+              pestanya de vent no és l'activa. */}
+          {!isRadar && (
+            <div className="absolute inset-0 z-20">
+              <WindMap lat={lat} lon={lon} />
+            </div>
+          )}
           
         </div>
 

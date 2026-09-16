@@ -22,6 +22,19 @@ interface UseRadarAnimationProps {
 
 type HdAgency = 'goes' | 'meteosat' | 'himawari';
 
+// PERF (fluïdesa): les capes HD ("Alta Resolució") no caduquen fins que
+// l'API de RainViewer rota el frame de satèl·lit sencer (minuts). Com que
+// el "Lazy Load Slider" precarrega frames a mesura que avança la
+// reproducció, deixar una agència HD activa durant un cicle complet de
+// loop acaba carregant una font+capa per a CADA frame de satèl·lit
+// disponible. Amb les 3 agències actives simultàniament això pot arribar a
+// desenes de tessel·les d'alta resolució vives alhora — exactament la
+// pressió de VRAM que fa que el WebGL context es perdi en dispositius
+// limitats (vegeu el listener 'webglcontextlost'). Limitem cada agència a
+// una finestra FIFO petita: en afegir-ne una de nova per sobre del límit,
+// expulsem la més antiga (mai la que és l'objectiu actual).
+const MAX_LIVE_HD_FRAMES_PER_AGENCY = 4;
+
 export function useRadarAnimation({
   mapRef,
   overlaysRef,
@@ -45,6 +58,14 @@ export function useRadarAnimation({
   const loadedRadarIdsRef = useRef<Record<number, string>>({});
   const loadedSatIdsRef = useRef<Record<number, string>>({});
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Ordre d'inserció dels timestamps HD carregats per agència (FIFO per al
+  // límit MAX_LIVE_HD_FRAMES_PER_AGENCY, vegeu ensureFrameLoaded).
+  const hdLoadOrderRef = useRef<Record<HdAgency, number[]>>({
+    goes: [],
+    meteosat: [],
+    himawari: []
+  });
 
   // CORRECCIÓ (Fase 3): abans les capes HD només es retiraven quan la
   // pròpia API de RainViewer feia caducar el timestamp (cicle de ~5 min).
@@ -91,6 +112,7 @@ export function useRadarAnimation({
       const sourceId = `hd-${agency}-src-${sFrame.time}`;
       safeRemoveLayerAndSource(map, layerId, sourceId);
     });
+    hdLoadOrderRef.current[agency] = [];
   }, [mapRef, safeRemoveLayerAndSource]);
 
   // Només destrueix frames quan la pròpia API ens diu que ja han caducat en el temps
@@ -123,6 +145,7 @@ export function useRadarAnimation({
              const hdLId = `hd-${agency}-layer-${timestampKey}`;
              const hdSId = `hd-${agency}-src-${timestampKey}`;
              safeRemoveLayerAndSource(map, hdLId, hdSId);
+             hdLoadOrderRef.current[agency] = hdLoadOrderRef.current[agency].filter(t => t !== timestampKey);
         });
 
         delete loadedSatIdsRef.current[timestampKey];
@@ -281,6 +304,18 @@ export function useRadarAnimation({
                   'raster-fade-duration': 0
                 },
               }, Z_LAYERS.PIS_4_FILTER);
+
+              // PERF: finestra FIFO — expulsa el frame HD més antic d'aquesta
+              // agència si ja hi ha MAX_LIVE_HD_FRAMES_PER_AGENCY vius (mai
+              // expulsem el que és l'objectiu actual).
+              const order = hdLoadOrderRef.current[agency];
+              order.push(timestamp);
+              while (order.length > MAX_LIVE_HD_FRAMES_PER_AGENCY) {
+                const oldestTs = order[0];
+                if (oldestTs === timestamp) break;
+                order.shift();
+                safeRemoveLayerAndSource(map, `hd-${agency}-layer-${oldestTs}`, `hd-${agency}-src-${oldestTs}`);
+              }
             } catch (e) {
               console.warn(`[Zero Risk] Error afegint HD satèl·lit ${hdLayerId}:`, e);
             }
@@ -288,9 +323,24 @@ export function useRadarAnimation({
         });
       }
     }
-  }, [mapRef, overlaysRef]);
+  }, [mapRef, overlaysRef, safeRemoveLayerAndSource]);
 
-  const applyFrameVisibility = useCallback((index: number) => {
+  // PERF (fluïdesa): durant la reproducció (cada 600ms) només UNA capa de
+  // radar i UNA de satèl·lit/HD deixen de ser el frame actiu i UNA altra ho
+  // passa a ser. Abans, cada tick recorria TOTES les capes acumulades
+  // (poden arribar a la trentena amb HD actiu) fent 2 mutacions d'estil GL
+  // per capa encara que gairebé cap hagués canviat. Aquest ref recorda quin
+  // era l'"objectiu" anterior perquè, en mode animació, només toquem els 2
+  // que realment canvien. Els canvis provocats per un toggle d'overlay (que
+  // sí afecten TOTES les capes d'un tipus, p.ex. mostrar/amagar precip)
+  // continuen fent el recorregut complet — vegeu el paràmetre `animationTick`.
+  const lastTargetIdsRef = useRef<{ radar: string | null; sat: string | null; hd: Record<HdAgency, string | null> }>({
+    radar: null,
+    sat: null,
+    hd: { goes: null, meteosat: null, himawari: null }
+  });
+
+  const applyFrameVisibility = useCallback((index: number, animationTick: boolean = false) => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
@@ -344,15 +394,28 @@ export function useRadarAnimation({
     const showSat = overlaysRef.current.satIR || hasAnyHdEnabled; // HD i IR van de la mà asíncrona
 
     // Aplicació d'Opacitats GPU sense desmuntar capes
-    Object.values(loadedRadarIdsRef.current).forEach((id) => {
-      if (id && map.getLayer(id)) {
-        const isTarget = id === targetRadarId;
-        const targetOpacity = isTarget ? 0.88 : 0.000001;
-
-        map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
-        map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
+    if (animationTick) {
+      // Mode lleuger: només l'objectiu anterior (s'apaga) i el nou (s'encén).
+      const prevRadarId = lastTargetIdsRef.current.radar;
+      if (prevRadarId && prevRadarId !== targetRadarId && map.getLayer(prevRadarId)) {
+        map.setPaintProperty(prevRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.000001) : 0);
       }
-    });
+      if (targetRadarId && map.getLayer(targetRadarId)) {
+        map.setLayoutProperty(targetRadarId, 'visibility', showPrecip ? 'visible' : 'none');
+        map.setPaintProperty(targetRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.88) : 0);
+      }
+    } else {
+      Object.values(loadedRadarIdsRef.current).forEach((id) => {
+        if (id && map.getLayer(id)) {
+          const isTarget = id === targetRadarId;
+          const targetOpacity = isTarget ? 0.88 : 0.000001;
+
+          map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
+          map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
+        }
+      });
+    }
+    lastTargetIdsRef.current.radar = targetRadarId ?? null;
 
     if (satFramesRef.current.length > 0 && currentRadarFrame && currentRadarFrame.time !== null) {
       let closestSatIdx = 0;
@@ -365,34 +428,79 @@ export function useRadarAnimation({
 
       const sFrame = satFramesRef.current[closestSatIdx];
       const targetSatId = sFrame?.time ? loadedSatIdsRef.current[sFrame.time] : undefined;
+      const hdAgencies: HdAgency[] = ['goes', 'meteosat', 'himawari'];
 
-      Object.values(loadedSatIdsRef.current).forEach((id) => {
-        if (!id) return;
-        const isTarget = id === targetSatId;
-        const timeStr = id.replace('sat-layer-', '');
-        const timestamp = Number(timeStr);
-
-        if (map.getLayer(id)) {
-          const targetOpacity = isTarget ? 0.85 : 0.000001;
-          map.setLayoutProperty(id, 'visibility', showSat ? 'visible' : 'none');
-          map.setPaintProperty(id, 'raster-opacity', showSat ? getSatOpacityExp(targetOpacity) : 0);
+      if (animationTick) {
+        const prevSatId = lastTargetIdsRef.current.sat;
+        if (prevSatId && prevSatId !== targetSatId && map.getLayer(prevSatId)) {
+          map.setPaintProperty(prevSatId, 'raster-opacity', showSat ? getSatOpacityExp(0.000001) : 0);
+        }
+        if (targetSatId && map.getLayer(targetSatId)) {
+          map.setLayoutProperty(targetSatId, 'visibility', showSat ? 'visible' : 'none');
+          map.setPaintProperty(targetSatId, 'raster-opacity', showSat ? getSatOpacityExp(0.85) : 0);
         }
 
-        const hdAgencies: HdAgency[] = ['goes', 'meteosat', 'himawari'];
         hdAgencies.forEach(agency => {
-          const hdLayerId = `hd-${agency}-layer-${timestamp}`;
-          if (map.getLayer(hdLayerId)) {
-            let isHdVisible = false;
-            if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
-            if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
-            if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
+          let isHdVisible = false;
+          if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+          if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+          if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
 
-            const hdTargetOpacity = isTarget ? 1.0 : 0.000001;
-            map.setLayoutProperty(hdLayerId, 'visibility', isHdVisible ? 'visible' : 'none');
-            map.setPaintProperty(hdLayerId, 'raster-opacity', isHdVisible ? getSatOpacityExp(hdTargetOpacity) : 0);
+          if (!isHdVisible) {
+            lastTargetIdsRef.current.hd[agency] = null;
+            return;
           }
+
+          const newHdId = sFrame?.time !== null && sFrame?.time !== undefined ? `hd-${agency}-layer-${sFrame.time}` : null;
+          const prevHdId = lastTargetIdsRef.current.hd[agency];
+          if (prevHdId && prevHdId !== newHdId && map.getLayer(prevHdId)) {
+            map.setPaintProperty(prevHdId, 'raster-opacity', getSatOpacityExp(0.000001));
+          }
+          if (newHdId && map.getLayer(newHdId)) {
+            map.setLayoutProperty(newHdId, 'visibility', 'visible');
+            map.setPaintProperty(newHdId, 'raster-opacity', getSatOpacityExp(1.0));
+          }
+          lastTargetIdsRef.current.hd[agency] = newHdId;
         });
-      });
+      } else {
+        Object.values(loadedSatIdsRef.current).forEach((id) => {
+          if (!id) return;
+          const isTarget = id === targetSatId;
+          const timeStr = id.replace('sat-layer-', '');
+          const timestamp = Number(timeStr);
+
+          if (map.getLayer(id)) {
+            const targetOpacity = isTarget ? 0.85 : 0.000001;
+            map.setLayoutProperty(id, 'visibility', showSat ? 'visible' : 'none');
+            map.setPaintProperty(id, 'raster-opacity', showSat ? getSatOpacityExp(targetOpacity) : 0);
+          }
+
+          hdAgencies.forEach(agency => {
+            const hdLayerId = `hd-${agency}-layer-${timestamp}`;
+            if (map.getLayer(hdLayerId)) {
+              let isHdVisible = false;
+              if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+              if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+              if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
+
+              const hdTargetOpacity = isTarget ? 1.0 : 0.000001;
+              map.setLayoutProperty(hdLayerId, 'visibility', isHdVisible ? 'visible' : 'none');
+              map.setPaintProperty(hdLayerId, 'raster-opacity', isHdVisible ? getSatOpacityExp(hdTargetOpacity) : 0);
+            }
+          });
+        });
+
+        hdAgencies.forEach(agency => {
+          let isHdVisible = false;
+          if (agency === 'goes') isHdVisible = overlaysRef.current.hdGoes;
+          if (agency === 'meteosat') isHdVisible = overlaysRef.current.hdMeteosat;
+          if (agency === 'himawari') isHdVisible = overlaysRef.current.hdHimawari;
+          lastTargetIdsRef.current.hd[agency] = (isHdVisible && sFrame?.time !== null && sFrame?.time !== undefined)
+            ? `hd-${agency}-layer-${sFrame.time}`
+            : null;
+        });
+      }
+      lastTargetIdsRef.current.sat = targetSatId ?? null;
     }
   }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency]);
 
@@ -456,7 +564,7 @@ export function useRadarAnimation({
         if (totalFrames === 0) return;
         const nextIndex = (currentFrameIndexRef.current + 1) % totalFrames;
         currentFrameIndexRef.current = nextIndex;
-        applyFrameVisibility(nextIndex);
+        applyFrameVisibility(nextIndex, true);
       }, 600);
     } else {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);

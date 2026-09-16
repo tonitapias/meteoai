@@ -142,7 +142,30 @@ export function useMapLifecycle({
     map.on('mousedown', handleTouchOrClick);
     map.on('touchstart', handleTouchOrClick);
 
-    map.on('move', syncAtmosphere);
+    // PERF (fluïdesa): 'move' dispara desenes de cops per segon durant
+    // qualsevol pan/zoom/rotació i durant els flyTo automàtics (satèl·lits
+    // HD, Terra de Nit, Relleu 3D...). syncAtmosphere() fa un map.setFog()
+    // real a cada crida, que obliga Mapbox a recalcular l'estil atmosfèric
+    // i repintar — sense throttle, arrossegar el mapa perdia framerate de
+    // forma perceptible. Throttle amb cua (leading + trailing) perquè la
+    // primera i la darrera posició d'un gest sempre quedin sincronitzades.
+    const ATMOSPHERE_THROTTLE_MS = 200;
+    const atmosphereThrottle = { last: 0, timer: null as ReturnType<typeof setTimeout> | null };
+    const throttledSyncAtmosphere = () => {
+      const now = Date.now();
+      const elapsed = now - atmosphereThrottle.last;
+      if (elapsed >= ATMOSPHERE_THROTTLE_MS) {
+        atmosphereThrottle.last = now;
+        syncAtmosphere();
+      } else if (!atmosphereThrottle.timer) {
+        atmosphereThrottle.timer = setTimeout(() => {
+          atmosphereThrottle.timer = null;
+          atmosphereThrottle.last = Date.now();
+          syncAtmosphere();
+        }, ATMOSPHERE_THROTTLE_MS - elapsed);
+      }
+    };
+    map.on('move', throttledSyncAtmosphere);
 
     map.on('webglcontextlost', (e) => {
       e.originalEvent?.preventDefault();
@@ -235,8 +258,9 @@ export function useMapLifecycle({
     });
 
     return () => {
+      if (atmosphereThrottle.timer) clearTimeout(atmosphereThrottle.timer);
       if (mapRef.current) {
-        mapRef.current.off('move', syncAtmosphere);
+        mapRef.current.off('move', throttledSyncAtmosphere);
         mapRef.current.remove();
         mapRef.current = null;
       }
