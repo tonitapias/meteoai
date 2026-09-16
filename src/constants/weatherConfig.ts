@@ -33,6 +33,16 @@ export const WEATHER_THRESHOLDS = {
     EXTREME: 3000      // Situació perillosa
   },
 
+  // Tendència baromètrica (hPa / 3h) — terminologia real dels butlletins marítims
+  // (Met Office i similars): "lentament" / "" / "ràpidament" / "molt ràpidament".
+  // >3 hPa/3h és el llindar operatiu clàssic que anuncia un front pertorbat en 6-12h.
+  PRESSURE: {
+    STABLE: 0.1,      // Per sota, es considera "estable" (soroll de mesura)
+    SLOW: 1.5,        // 0.1-1.5: lentament
+    MODERATE: 3.5,    // 1.6-3.5: sense qualificatiu ("pujant/baixant")
+    RAPID: 6.0        // 3.6-6.0: ràpidament; >6.0: molt ràpidament
+  },
+
   // Vent (km/h)
   WIND: {
     LIGHT: 20,     // < 20 km/h

@@ -87,6 +87,7 @@ export interface StrictCurrentWeather {
   cloud_cover_low?: number;
   cloud_cover_mid?: number;
   cloud_cover_high?: number;
+  pressure_msl?: number;
   source?: string;
   minutely15?: number[];
   [key: string]: unknown;
@@ -107,6 +108,7 @@ export interface StrictHourlyWeather {
   cloud_cover_high?: (number | null)[];
   uv_index?: (number | null)[];
   uv_index_clear_sky?: (number | null)[];
+  pressure_msl?: (number | null)[];
   [key: string]: unknown;
 }
 

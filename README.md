@@ -83,7 +83,14 @@ Un cinquè modal de detall, accessible tocant el giny d'Índex UV en Mode Expert
 * **Bandes oficials OMS:** reutilitza exactament el mateix sistema de 5 categories (Baix/Moderat/Alt/Molt Alt/Extrem) que ja fa servir el Cicle Solar per al UV màxim diari — cap llindar nou inventat.
 * Reutilitza `hourly.uv_index`/`uv_index_clear_sky`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
-### 7. Alertes Meteorològiques Oficials
+### 7. Observatori Baromètric (Pressió)
+Un sisè modal de detall, accessible tocant el giny de Pressió en Mode Expert:
+* **Evolució de 48h** de la pressió atmosfèrica (`pressure_msl`), *scrubbable*, sense un "zero" absolut artificial — l'eix s'escala al rang real de la finestra.
+* **Classificació real de la tendència:** reutilitza la terminologia dels butlletins marítims (estable / pujant-baixant lentament / pujant-baixant / ràpidament / molt ràpidament, llindars 1.5/3.5/6.0 hPa en 3h) — el mateix criteri que fan servir els avisos per a petites embarcacions, no un color inventat.
+* **Canvi més sobtat de la finestra:** escaneja les 48h amb una tendència mòbil de 3h i assenyala el moment en què la pressió puja o baixa més ràpid, amb la seva hora — una caiguda de més de 3 hPa en 3h és el senyal operatiu clàssic d'un front pertorbat en 6-12h.
+* Reutilitza `hourly.pressure_msl`, ja demanat a Open-Meteo — cap crida de xarxa nova.
+
+### 8. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
 * **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
@@ -92,7 +99,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
 * **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
-### 8. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 9. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.

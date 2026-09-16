@@ -54,9 +54,10 @@ interface ExpertWidgetsProps {
   onShowStormModal: () => void;
   onShowAqiModal: () => void;
   onShowUvModal: () => void;
+  onShowPressureModal: () => void;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -273,7 +274,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               <CloudLayersWidget low={currentCloudLow} mid={currentCloudMid} high={currentCloudHigh} lang={lang} />
           </WidgetCard>
 
-          <WidgetCard>
+          <WidgetCard onClick={onShowPressureModal}>
               <CircularGauge
                   icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>}
                   label={lang === 'ca' ? "Pressió" : "Pressure"}
