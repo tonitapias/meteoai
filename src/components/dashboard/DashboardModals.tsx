@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'; // NOU: Importem el hook d'idiom
 // 1. IMPORTEM EL CONTEXT
 import { useAppContext } from '../../context/AppContext';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
+import { getCurrentUV } from '../../utils/uvIndexUtils';
 
 // Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
@@ -13,6 +14,7 @@ const SolarModal = lazy(() => import('../SolarModal'));
 const MoonModal = lazy(() => import('../MoonModal'));
 const StormModal = lazy(() => import('../StormModal'));
 const AqiModal = lazy(() => import('../AqiModal'));
+const UvModal = lazy(() => import('../UvModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -90,6 +92,14 @@ export const DashboardModals = () => {
                 <AqiModal
                     aqiData={aqiData}
                     onClose={() => actions.setShowAqiModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showUvModal && (
+                <UvModal
+                    weatherData={weatherData}
+                    currentUV={getCurrentUV(weatherData)}
+                    onClose={() => actions.setShowUvModal(false)}
                     lang={flags.lang}
                 />
             )}

@@ -15,6 +15,7 @@ import { ConsensusWidget } from './widgets/ConsensusWidget';
 import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
 import { ConsensusLoadingWidget } from './widgets/ConsensusLoadingWidget';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
+import { getCurrentUV } from '../utils/uvIndexUtils';
 import {
   CompassGauge,
   SnowLevelWidget,
@@ -52,9 +53,10 @@ interface ExpertWidgetsProps {
   onShowMoonModal: () => void;
   onShowStormModal: () => void;
   onShowAqiModal: () => void;
+  onShowUvModal: () => void;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -85,34 +87,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : undefined;
   const currentHumidity = typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : undefined;
   
-  const currentUV = useMemo(() => {
-    if (current?.is_day === 0) return 0;
-    if (typeof current?.uv_index === 'number') return current.uv_index;
-    
-    if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time) && typeof current?.time === 'string') {
-      const hourPrefix = current.time.substring(0, 13);
-      const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
-      
-      if (idx !== -1 && typeof hourly.uv_index[idx] === 'number') {
-        return hourly.uv_index[idx];
-      }
-    }
-    
-    const locationHour = typeof current?.time === 'string'
-      ? Number(current.time.substring(11, 13))
-      : new Date().getHours();
-    const isLikelyNight = !Number.isNaN(locationHour) && (locationHour < 6 || locationHour > 21);
-
-    if (!isLikelyNight && current?.is_day !== 0) {
-      if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
-        return daily.uv_index_max[0];
-      }
-    } else if (isLikelyNight) {
-      return 0; 
-    }
-    
-    return undefined; 
-  }, [current, hourly, daily]);
+  const currentUV = useMemo(() => getCurrentUV(weatherData), [weatherData]);
 
   const dewPointValue = typeof current?.dew_point_2m === 'number'
     ? current.dew_point_2m
@@ -286,7 +261,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               />
           </WidgetCard>
 
-          <WidgetCard>
+          <WidgetCard onClick={onShowUvModal}>
               <UVIndexWidget uvIndex={currentUV} lang={lang} />
           </WidgetCard>
 

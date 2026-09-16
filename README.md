@@ -75,7 +75,15 @@ Un quart modal de detall, accessible tocant el giny de Qualitat de l'Aire en Mod
 * **Pol·len i pols en suspensió:** els 6 tipus de pol·len que Open-Meteo cobreix (vern, bedoll, gramínies, artemisa, olivera, ambrosia) i la pols en suspensió — rellevant per intrusions de pols saharianes, força habituals a la Mediterrània. Només es mostren els que realment es detecten, per no omplir la pantalla de zeros fora de temporada.
 * Reutilitza dades que l'app ja demanava a l'API de Qualitat de l'Aire d'Open-Meteo — cap crida de xarxa nova.
 
-### 6. Alertes Meteorològiques Oficials
+### 6. Observatori d'Exposició Solar (Índex UV)
+Un cinquè modal de detall, accessible tocant el giny d'Índex UV en Mode Expert, centrat en quan cal protegir-se avui, no només en el valor puntual d'ara:
+* **Corba horària d'avui:** a diferència del CAPE i l'AQI (finestra contínua de 48h), l'UV segueix el cicle diari del sol, així que el modal mostra la corba completa d'avui (00:00–23:00) en lloc de barrejar dos dies amb hores de nit sense sentit.
+* **Real vs. cel clar:** la corba real de `uv_index` es compara amb `uv_index_clear_sky` (què faria el sol sense núvols), per veure quant protegeix la cobertura núvolosa del dia.
+* **Finestra de protecció:** calcula i mostra l'hora d'inici i final en què cal protegir-se (llindar oficial OMS, UV≥3), amb un estat "actiu ara mateix" quan pertoca, o confirma honestament que avui no cal protecció.
+* **Bandes oficials OMS:** reutilitza exactament el mateix sistema de 5 categories (Baix/Moderat/Alt/Molt Alt/Extrem) que ja fa servir el Cicle Solar per al UV màxim diari — cap llindar nou inventat.
+* Reutilitza `hourly.uv_index`/`uv_index_clear_sky`, ja demanats a Open-Meteo — cap crida de xarxa nova.
+
+### 7. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
 * **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
@@ -84,7 +92,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
 * **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
-### 7. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 8. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.

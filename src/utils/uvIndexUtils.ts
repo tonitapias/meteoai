@@ -4,6 +4,7 @@
 // perquè SolarModal.tsx necessita reutilitzar exactament la mateixa font de veritat de colors
 // i llindars de risc UV, no duplicar-la.
 import { Language } from '../translations';
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 export interface UVCategory {
   label: Record<Language, string>;
@@ -39,4 +40,39 @@ export const getUVCategory = (uv: number): UVCategory => {
     action: { ca: 'RISC DE QUEMADURA', es: 'RIESGO QUEMADURA', en: 'BURN RISK', fr: 'RISQUE BRÛLURE' },
     color: 'text-purple-500', glow: 'drop-shadow-[0_0_20px_rgba(168,85,247,0.9)]'
   };
+};
+
+// Valor UV "ara mateix": prioritza current.uv_index real, després cerca l'hora exacta a
+// hourly.uv_index, i només cau a daily.uv_index_max (que no és horari) durant les hores de
+// dia si cap dels dos anteriors té dada. De nit, sempre 0 — l'UV real mai és negatiu ni fals
+// fora d'hores de sol. Extreta d'ExpertWidgets.tsx perquè UvModal.tsx necessita exactament el
+// mateix valor "ara" sense duplicar l'heurística.
+export const getCurrentUV = (weatherData: ExtendedWeatherData): number | undefined => {
+  const { current, hourly, daily } = weatherData;
+  if (current?.is_day === 0) return 0;
+  if (typeof current?.uv_index === 'number') return current.uv_index;
+
+  if (Array.isArray(hourly?.uv_index) && Array.isArray(hourly?.time) && typeof current?.time === 'string') {
+    const hourPrefix = current.time.substring(0, 13);
+    const idx = hourly.time.findIndex(t => typeof t === 'string' && t.startsWith(hourPrefix));
+
+    if (idx !== -1 && typeof hourly.uv_index[idx] === 'number') {
+      return hourly.uv_index[idx] as number;
+    }
+  }
+
+  const locationHour = typeof current?.time === 'string'
+    ? Number(current.time.substring(11, 13))
+    : new Date().getHours();
+  const isLikelyNight = !Number.isNaN(locationHour) && (locationHour < 6 || locationHour > 21);
+
+  if (!isLikelyNight && current?.is_day !== 0) {
+    if (Array.isArray(daily?.uv_index_max) && typeof daily.uv_index_max[0] === 'number') {
+      return daily.uv_index_max[0];
+    }
+  } else if (isLikelyNight) {
+    return 0;
+  }
+
+  return undefined;
 };

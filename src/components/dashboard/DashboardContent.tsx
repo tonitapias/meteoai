@@ -116,6 +116,7 @@ export const DashboardContent = () => {
                                 onShowMoonModal={() => actions.setShowMoonModal(true)}
                                 onShowStormModal={() => actions.setShowStormModal(true)}
                                 onShowAqiModal={() => actions.setShowAqiModal(true)}
+                                onShowUvModal={() => actions.setShowUvModal(true)}
                             />
                         </Suspense>
                     )}

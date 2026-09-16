@@ -25,6 +25,7 @@ export const HourlyDataSchema = z.object({
   wind_direction_10m: safeArray,
   wind_gusts_10m: safeArray.optional(),
   uv_index: safeArray.optional(),
+  uv_index_clear_sky: safeArray.optional(),
   is_day: safeArray.optional(),
   cape: safeArray.optional(),
   freezing_level_height: safeArray.optional(),
@@ -89,6 +90,7 @@ export const CurrentDataSchema = z.object({
   cloud_cover_low: safeNumber.optional(),
   cloud_cover_mid: safeNumber.optional(),
   cloud_cover_high: safeNumber.optional(),
+  uv_index: safeNumber.optional(),
 }).passthrough();
 
 // Validador Minut a Minut (AROME) - AFEGIT

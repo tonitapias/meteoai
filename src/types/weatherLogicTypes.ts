@@ -105,6 +105,8 @@ export interface StrictHourlyWeather {
   freezing_level_height?: (number | null)[];
   cloud_cover_mid?: (number | null)[];
   cloud_cover_high?: (number | null)[];
+  uv_index?: (number | null)[];
+  uv_index_clear_sky?: (number | null)[];
   [key: string]: unknown;
 }
 
