@@ -117,7 +117,15 @@ Un desè modal de detall, accessible tocant el giny de Cota de Neu en Mode Exper
 * **Avís de cota mínima:** quantes hores falten fins al moment en què la neu arribarà més avall, i a quina altitud.
 * A diferència de la resta de modals, no llegeix les dades horàries en cru: la cota de neu és un càlcul derivat amb una cadena de reserva entre models (ECMWF/GFS/ICON) quan AROME-HD no cobreix una hora concreta — reutilitza el mateix càlcul centralitzat que ja alimenta el giny, per no poder-se'n desincronitzar mai.
 
-### 12. Alertes Meteorològiques Oficials
+### 12. Vent: Velocitat, Direcció i Ratxes
+L'últim modal de detall dels ginys experts, accessible tocant el giny de Vent en Mode Expert — pensat com a complement de dades pures al mapa de vent (Windy), que ja és molt visual:
+* **Brúixola gran** amb la direcció exacta en graus i velocitat i ratxes actuals ben grans.
+* **Escala Beaufort oficial** (13 graus, 0-12), amb els llindars en km/h verificats contra el Servei Meteorològic de Catalunya i els noms en cada idioma verificats contra fonts de referència — no una escala inventada.
+* **Evolució de 48h**, *scrubbable*, amb velocitat i ratxes superposades, més una franja de fletxes que mostra com gira el vent al llarg del temps.
+* **Avís de pròxima ratxa forta** i tres estadístiques: ratxa màxima, velocitat mitjana i direcció dominant de la finestra.
+* Reutilitza `hourly.wind_speed_10m/wind_direction_10m/wind_gusts_10m`, ja demanats a Open-Meteo — cap crida de xarxa nova.
+
+### 13. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
 * **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
@@ -126,7 +134,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
 * **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
-### 13. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 14. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.
