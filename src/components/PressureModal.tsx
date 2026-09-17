@@ -117,7 +117,10 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
 
   const N = windowEntries.length;
 
-  const currentPressure = N > 0 ? windowEntries[0].pressure : (typeof current?.pressure_msl === 'number' ? current.pressure_msl : null);
+  // Prioritzem el valor "ara" del bloc current (lectura viva, mateix que CircularGauge al
+  // dashboard) — hourly[hora actual] és una mostra a hora en punt i pot diferir lleugerament,
+  // cosa que faria que el giny i el modal mostressin números diferents per al mateix "ara".
+  const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : (N > 0 ? windowEntries[0].pressure : null);
 
   const currentDelta3h = useMemo(() => {
     if (!hourly || currentHourIndex < 3) return null;
@@ -322,7 +325,7 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
                 {activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
-                    {' · '}{activeEntry.pressure !== null ? `${Math.round(activeEntry.pressure)} hPa` : '--'}
+                    {' · '}{(isScrubbing ? activeEntry.pressure : currentPressure) !== null ? `${Math.round((isScrubbing ? activeEntry.pressure : currentPressure) as number)} hPa` : '--'}
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>

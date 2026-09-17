@@ -314,7 +314,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                 {hasHourlyEaqi && activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
-                    {' · EAQI '}<span className={getAqiSeverity(activeEntry.eaqi, activeEntry.eaqi !== null ? 'EAQI' : null, t).color}>{activeEntry.eaqi !== null ? Math.round(activeEntry.eaqi) : '--'}</span>
+                    {' · EAQI '}<span className={getAqiSeverity(isScrubbing ? activeEntry.eaqi : currentValue, (isScrubbing ? activeEntry.eaqi : currentValue) !== null ? 'EAQI' : null, t).color}>{(isScrubbing ? activeEntry.eaqi : currentValue) !== null ? Math.round((isScrubbing ? activeEntry.eaqi : currentValue) as number) : '--'}</span>
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{hasHourlyEaqi ? t.scrubHint : t.noHourly}</span>

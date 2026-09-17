@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'; // NOU: Importem el hook d'idiom
 import { useAppContext } from '../../context/AppContext';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 import { getCurrentUV } from '../../utils/uvIndexUtils';
+import { getCurrentDewPoint } from '../../utils/weatherMath';
 
 // Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
@@ -115,6 +116,7 @@ export const DashboardModals = () => {
             {modals.showComfortModal && (
                 <ComfortModal
                     weatherData={weatherData}
+                    currentDewPoint={getCurrentDewPoint(weatherData.current?.temperature_2m, weatherData.current?.relative_humidity_2m)}
                     onClose={() => actions.setShowComfortModal(false)}
                     lang={flags.lang}
                 />

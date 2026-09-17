@@ -1,7 +1,7 @@
 // src/components/ExpertWidgets.tsx
 import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
-import { getMoonPhase, calculateDewPoint } from '../utils/weatherMath';
+import { getMoonPhase, getCurrentDewPoint } from '../utils/weatherMath';
 import { selectRegionalModel } from '../constants/regionalModels';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
@@ -91,11 +91,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   
   const currentUV = useMemo(() => getCurrentUV(weatherData), [weatherData]);
 
-  const dewPointValue = typeof current?.dew_point_2m === 'number'
-    ? current.dew_point_2m
-    : (currentTemp !== undefined && currentHumidity !== undefined)
-        ? calculateDewPoint(currentTemp, currentHumidity)
-        : undefined;
+  const dewPointValue = getCurrentDewPoint(currentTemp, currentHumidity);
 
   const { globalData, loadingGlobalModel, fetchGlobalModelByCoords, clearGlobalModel } = useGlobalModel();
   

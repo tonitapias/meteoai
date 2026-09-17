@@ -16,6 +16,7 @@ const { DEW_POINT } = WEATHER_THRESHOLDS;
 
 interface ComfortModalProps {
   weatherData: ExtendedWeatherData;
+  currentDewPoint: number | undefined;
   onClose: () => void;
   lang?: Language;
 }
@@ -79,7 +80,7 @@ function getComfortSeverity(dewPoint: number | null, t: Record<string, string>):
 
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 
-export default function ComfortModal({ weatherData, onClose, lang = 'ca' }: ComfortModalProps) {
+export default function ComfortModal({ weatherData, currentDewPoint: currentDewPointProp, onClose, lang = 'ca' }: ComfortModalProps) {
   const safeLang: Language = T[lang] ? lang : 'ca';
   const t = T[safeLang];
 
@@ -113,8 +114,11 @@ export default function ComfortModal({ weatherData, onClose, lang = 'ca' }: Comf
 
   const N = windowEntries.length;
 
-  const currentDewPoint = N > 0 ? windowEntries[0].dewPoint : null;
-  const currentHumidity = N > 0 ? windowEntries[0].humidity : (typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : null);
+  // Prioritzem el valor "ara" calculat des del bloc current (lectura viva, mateix que
+  // DewPointWidget al dashboard) — hourly[hora actual] és una mostra a hora en punt i pot
+  // diferir lleugerament, cosa que faria que el giny i el modal mostressin números diferents.
+  const currentDewPoint = typeof currentDewPointProp === 'number' ? currentDewPointProp : (N > 0 ? windowEntries[0].dewPoint : null);
+  const currentHumidity = typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : (N > 0 ? windowEntries[0].humidity : null);
   const severity = getComfortSeverity(currentDewPoint, t);
 
   const maxDewPoint = useMemo(() => {
@@ -308,8 +312,8 @@ export default function ComfortModal({ weatherData, onClose, lang = 'ca' }: Comf
                 {activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
-                    {' · '}<span className={getComfortSeverity(activeEntry.dewPoint, t).color}>{activeEntry.dewPoint !== null ? Math.round(activeEntry.dewPoint) : '--'}°</span>
-                    {activeEntry.humidity !== null && <> {' · '}{t.humidity} {Math.round(activeEntry.humidity)}%</>}
+                    {' · '}<span className={getComfortSeverity(isScrubbing ? activeEntry.dewPoint : currentDewPoint, t).color}>{(isScrubbing ? activeEntry.dewPoint : currentDewPoint) !== null ? Math.round((isScrubbing ? activeEntry.dewPoint : currentDewPoint) as number) : '--'}°</span>
+                    {(isScrubbing ? activeEntry.humidity : currentHumidity) !== null && <> {' · '}{t.humidity} {Math.round((isScrubbing ? activeEntry.humidity : currentHumidity) as number)}%</>}
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>

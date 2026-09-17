@@ -104,6 +104,18 @@ export const calculateDewPoint = (T: number, RH: number): number => {
   return (b * alpha) / (a - alpha);
 };
 
+// Punt de rosada "ara mateix": current.dew_point_2m mai arriba (no és a PARAMS_CURRENT), així
+// que sempre calculem des de la temperatura/humitat del bloc "current" — que a Open-Meteo és
+// una lectura viva (interval de 15 min), no el mateix valor que hourly.dew_point_2m[hora actual]
+// (una mostra a hora en punt). Barrejar totes dues fonts fa que el giny i el modal de detall
+// mostrin números diferents per al mateix "ara". Extreta d'ExpertWidgets.tsx perquè
+// ComfortModal.tsx necessita exactament el mateix valor.
+export const getCurrentDewPoint = (temperature: number | undefined, humidity: number | undefined): number | undefined => {
+  return temperature !== undefined && humidity !== undefined
+    ? calculateDewPoint(temperature, humidity)
+    : undefined;
+};
+
 /**
  * Calcula la fase lunar (0.0 a 1.0) amb precisió astronòmica.
  * Algoritme basat en Julian Date (JD) i cicle sinòdic mitjà.
