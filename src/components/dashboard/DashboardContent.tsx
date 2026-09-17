@@ -121,6 +121,7 @@ export const DashboardContent = () => {
                                 onShowComfortModal={() => actions.setShowComfortModal(true)}
                                 onShowVisibilityModal={() => actions.setShowVisibilityModal(true)}
                                 onShowCloudLayersModal={() => actions.setShowCloudLayersModal(true)}
+                                onShowSnowLevelModal={() => actions.setShowSnowLevelModal(true)}
                             />
                         </Suspense>
                     )}

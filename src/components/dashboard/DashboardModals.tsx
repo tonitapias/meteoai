@@ -20,13 +20,14 @@ const PressureModal = lazy(() => import('../PressureModal'));
 const ComfortModal = lazy(() => import('../ComfortModal'));
 const VisibilityModal = lazy(() => import('../VisibilityModal'));
 const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
+const SnowLevelModal = lazy(() => import('../SnowLevelModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
     const { state, actions, flags, modals } = useAppContext();
-    const { weatherData, aqiData } = state;
+    const { weatherData, aqiData, calculations } = state;
 
     // NOU: Instanciem el motor de traduccions
     const { i18n } = useTranslation();
@@ -134,6 +135,15 @@ export const DashboardModals = () => {
                 <CloudLayersModal
                     weatherData={weatherData}
                     onClose={() => actions.setShowCloudLayersModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showSnowLevelModal && (
+                <SnowLevelModal
+                    freezingLevel={calculations.currentFreezingLevel ?? null}
+                    chartDataFull={calculations.chartDataFull || []}
+                    unit={flags.unit}
+                    onClose={() => actions.setShowSnowLevelModal(false)}
                     lang={flags.lang}
                 />
             )}
