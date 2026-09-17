@@ -88,9 +88,14 @@ export const WEATHER_THRESHOLDS = {
     FREEZING_BUFFER: 300 // Metres per sota de la cota 0 on pot nevar
   },
 
-  // Visibilitat (m)
+  // Visibilitat (m). POOR/GOOD ja eren usats per visibilityRules.ts/weatherLogic.ts per
+  // determinar el codi de temps (boira); FOG/HAZE afegits per a les 4 bandes visuals que ja
+  // pintava VisibilityWidget.tsx (ara centralitzades perquè el giny i el modal de detall no
+  // puguin desincronitzar-se). GOOD es comparteix entre tots dos usos (10000m).
   VISIBILITY: {
-    POOR: 1000, // Menys d'1km es considera boira si no plou
+    POOR: 1000,  // Menys d'1km es considera boira si no plou (visibilityRules.ts)
+    FOG: 2000,   // Per sota: boira (VisibilityWidget/Modal)
+    HAZE: 5000,  // 2000-5000: calitja
     GOOD: 10000
   },
 

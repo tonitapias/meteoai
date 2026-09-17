@@ -97,7 +97,13 @@ Un setè modal de detall, accessible tocant el giny de Punt de Rosada en Mode Ex
 * **Finestra de xafogor:** primer tram de la finestra amb condicions humides i el seu pic previst, o confirma que no n'hi ha cap en les properes 48 hores.
 * Reutilitza `hourly.dew_point_2m`/`relative_humidity_2m`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
-### 9. Alertes Meteorològiques Oficials
+### 9. Visibilitat i Boira
+Un vuitè modal de detall, accessible tocant el giny de Visibilitat en Mode Expert:
+* **Evolució de 48h** de la visibilitat (`visibility`), *scrubbable*, amb les mateixes 4 bandes que ja pintava el giny (Excel·lent/Bona/Calitja/Boira) — ara centralitzades a `WEATHER_THRESHOLDS` perquè giny i modal no puguin desincronitzar-se mai.
+* **Avís de boira:** primer tram de la finestra amb visibilitat per sota del llindar de boira i el mínim previst, o confirma que no n'hi ha cap en les properes 48 hores.
+* Reutilitza `hourly.visibility`, ja demanat a Open-Meteo — cap crida de xarxa nova.
+
+### 10. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
 * **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
@@ -106,7 +112,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
 * **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
-### 10. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 11. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.

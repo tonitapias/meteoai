@@ -269,8 +269,8 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
                 </span>
                 {hasHourlyUv && activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
-                    {activeEntry.timeStr.slice(11, 16)}
-                    {' · UV '}<span className={getUVCategory(activeEntry.uv ?? 0).color}>{activeEntry.uv !== null ? activeEntry.uv.toFixed(1) : '--'}</span>
+                    {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
+                    {' · UV '}<span className={getUVCategory((isScrubbing ? activeEntry.uv : currentUV) ?? 0).color}>{(isScrubbing ? activeEntry.uv : currentUV ?? null) !== null ? (isScrubbing ? activeEntry.uv as number : currentUV as number).toFixed(1) : '--'}</span>
                     {activeEntry.uvClear !== null && <span className="text-slate-500"> · {t.clearSky} {activeEntry.uvClear.toFixed(1)}</span>}
                   </span>
                 ) : (

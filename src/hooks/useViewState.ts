@@ -28,6 +28,7 @@ export function useViewState() {
     const [showUvModal, setShowUvModal] = useState(false);
     const [showPressureModal, setShowPressureModal] = useState(false);
     const [showComfortModal, setShowComfortModal] = useState(false);
+    const [showVisibilityModal, setShowVisibilityModal] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
     useEffect(() => { 
@@ -52,6 +53,7 @@ export function useViewState() {
     useModalHistory(showUvModal, useCallback(() => setShowUvModal(false), []));
     useModalHistory(showPressureModal, useCallback(() => setShowPressureModal(false), []));
     useModalHistory(showComfortModal, useCallback(() => setShowComfortModal(false), []));
+    useModalHistory(showVisibilityModal, useCallback(() => setShowVisibilityModal(false), []));
 
     // --- 5. Helpers d'Acció UI ---
     const toggleDebug = useCallback(() => {
@@ -79,7 +81,8 @@ export function useViewState() {
                 showAqiModal,
                 showUvModal,
                 showPressureModal,
-                showComfortModal
+                showComfortModal,
+                showVisibilityModal
             }
         },
         actions: {
@@ -98,7 +101,8 @@ export function useViewState() {
             setShowAqiModal,
             setShowUvModal,
             setShowPressureModal,
-            setShowComfortModal
+            setShowComfortModal,
+            setShowVisibilityModal
         }
     };
 }

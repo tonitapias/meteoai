@@ -1,6 +1,9 @@
 import { Eye, Mountain, CloudOff } from 'lucide-react';
 import { VisibilityWidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
+
+const { VISIBILITY } = WEATHER_THRESHOLDS;
 
 // Diccionari Tàctic Local per a Risc Zero
 const VIS_TRANS = {
@@ -29,23 +32,23 @@ export const VisibilityWidget = ({ visibility, lang = 'ca' }: VisibilityWidgetPr
   let borderColor = "border-slate-700/50";
 
   if (hasValidData) {
-    if (safeVis >= 10000) {
+    if (safeVis >= VISIBILITY.GOOD) {
       status = t.excellent;
-      blurClass = "blur-none opacity-20"; 
+      blurClass = "blur-none opacity-20";
       colorClass = "text-emerald-400";
       progress = 100;
       bgGlow = "from-emerald-950/10 to-black/80";
       borderColor = "border-emerald-500/20";
-    } else if (safeVis >= 5000) {
+    } else if (safeVis >= VISIBILITY.HAZE) {
       status = t.good;
-      blurClass = "blur-[1px] opacity-30"; 
+      blurClass = "blur-[1px] opacity-30";
       colorClass = "text-sky-400";
       progress = 75;
       bgGlow = "from-sky-950/20 to-black/80";
       borderColor = "border-sky-500/20";
-    } else if (safeVis >= 2000) {
+    } else if (safeVis >= VISIBILITY.FOG) {
       status = t.haze;
-      blurClass = "blur-[2px] opacity-40"; 
+      blurClass = "blur-[2px] opacity-40";
       colorClass = "text-amber-400";
       progress = 40;
       bgGlow = "from-amber-950/20 to-black/80";
