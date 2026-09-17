@@ -31,6 +31,7 @@ export function useViewState() {
     const [showVisibilityModal, setShowVisibilityModal] = useState(false);
     const [showCloudLayersModal, setShowCloudLayersModal] = useState(false);
     const [showSnowLevelModal, setShowSnowLevelModal] = useState(false);
+    const [showWindModal, setShowWindModal] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
     useEffect(() => { 
@@ -58,6 +59,7 @@ export function useViewState() {
     useModalHistory(showVisibilityModal, useCallback(() => setShowVisibilityModal(false), []));
     useModalHistory(showCloudLayersModal, useCallback(() => setShowCloudLayersModal(false), []));
     useModalHistory(showSnowLevelModal, useCallback(() => setShowSnowLevelModal(false), []));
+    useModalHistory(showWindModal, useCallback(() => setShowWindModal(false), []));
 
     // --- 5. Helpers d'Acció UI ---
     const toggleDebug = useCallback(() => {
@@ -88,7 +90,8 @@ export function useViewState() {
                 showComfortModal,
                 showVisibilityModal,
                 showCloudLayersModal,
-                showSnowLevelModal
+                showSnowLevelModal,
+                showWindModal
             }
         },
         actions: {
@@ -110,7 +113,8 @@ export function useViewState() {
             setShowComfortModal,
             setShowVisibilityModal,
             setShowCloudLayersModal,
-            setShowSnowLevelModal
+            setShowSnowLevelModal,
+            setShowWindModal
         }
     };
 }

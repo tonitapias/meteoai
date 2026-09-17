@@ -21,6 +21,7 @@ const ComfortModal = lazy(() => import('../ComfortModal'));
 const VisibilityModal = lazy(() => import('../VisibilityModal'));
 const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
 const SnowLevelModal = lazy(() => import('../SnowLevelModal'));
+const WindModal = lazy(() => import('../WindModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -144,6 +145,13 @@ export const DashboardModals = () => {
                     chartDataFull={calculations.chartDataFull || []}
                     unit={flags.unit}
                     onClose={() => actions.setShowSnowLevelModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showWindModal && (
+                <WindModal
+                    weatherData={weatherData}
+                    onClose={() => actions.setShowWindModal(false)}
                     lang={flags.lang}
                 />
             )}

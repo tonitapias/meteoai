@@ -59,9 +59,10 @@ interface ExpertWidgetsProps {
   onShowVisibilityModal: () => void;
   onShowCloudLayersModal: () => void;
   onShowSnowLevelModal: () => void;
+  onShowWindModal: () => void;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -252,7 +253,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20 grid-flow-dense">
-          <WidgetCard>
+          <WidgetCard onClick={onShowWindModal}>
               <CompassGauge
                 degrees={currentWindDir}
                 speed={currentWindSpeed}

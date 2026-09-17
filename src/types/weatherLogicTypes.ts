@@ -78,6 +78,7 @@ export interface StrictCurrentWeather {
   relative_humidity_2m: number;
   wind_speed_10m: number;
   wind_gusts_10m?: number;
+  wind_direction_10m?: number;
   visibility?: number;
   cloud_cover?: number;
   is_day: number;
@@ -101,6 +102,7 @@ export interface StrictHourlyWeather {
   cape?: (number | null)[];
   wind_speed_10m: (number | null)[];
   wind_gusts_10m?: (number | null)[];
+  wind_direction_10m?: (number | null)[];
   snow_depth?: (number | null)[];
   relative_humidity_2m: (number | null)[];
   freezing_level_height?: (number | null)[];
