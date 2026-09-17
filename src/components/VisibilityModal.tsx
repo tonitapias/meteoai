@@ -120,20 +120,15 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
 
   // --- Pròxima finestra de boira: primer tram contigu amb visibilitat < FOG ---
   const nextFogWindow = useMemo(() => {
-    for (let i = 0; i < N; i++) {
-      const e = windowEntries[i];
-      if (e.visibility !== null && e.visibility < VISIBILITY.FOG) {
-        let min = e.visibility, minIdx = i, j = i;
-        while (j < N && windowEntries[j].visibility !== null && (windowEntries[j].visibility as number) < VISIBILITY.FOG) {
-          const v = windowEntries[j].visibility as number;
-          if (v < min) { min = v; minIdx = j; }
-          j++;
-        }
-        return { startIdx: i, min, minIdx };
-      }
-    }
-    return null;
-  }, [windowEntries, N]);
+    const startIdx = windowEntries.findIndex(e => e.visibility !== null && e.visibility < VISIBILITY.FOG);
+    if (startIdx === -1) return null;
+    const remaining = windowEntries.slice(startIdx);
+    const runLength = remaining.findIndex(e => e.visibility === null || e.visibility >= VISIBILITY.FOG);
+    const segment = runLength === -1 ? remaining : remaining.slice(0, runLength);
+    const min = Math.min(...segment.map(e => e.visibility as number));
+    const minIdx = startIdx + segment.findIndex(e => e.visibility === min);
+    return { startIdx, min, minIdx };
+  }, [windowEntries]);
 
   // --- Scrub horitzontal (mateix patró RAF que la resta de modals experts) ---
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);

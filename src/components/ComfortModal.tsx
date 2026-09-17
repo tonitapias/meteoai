@@ -133,20 +133,15 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
 
   // --- Pròxima finestra de xafogor: primer tram contigu amb punt de rosada >= COMFORTABLE ---
   const nextComfortWindow = useMemo(() => {
-    for (let i = 0; i < N; i++) {
-      const e = windowEntries[i];
-      if (e.dewPoint !== null && e.dewPoint >= DEW_POINT.COMFORTABLE) {
-        let peak = e.dewPoint, peakIdx = i, j = i;
-        while (j < N && windowEntries[j].dewPoint !== null && (windowEntries[j].dewPoint as number) >= DEW_POINT.COMFORTABLE) {
-          const v = windowEntries[j].dewPoint as number;
-          if (v > peak) { peak = v; peakIdx = j; }
-          j++;
-        }
-        return { startIdx: i, peak, peakIdx };
-      }
-    }
-    return null;
-  }, [windowEntries, N]);
+    const startIdx = windowEntries.findIndex(e => e.dewPoint !== null && e.dewPoint >= DEW_POINT.COMFORTABLE);
+    if (startIdx === -1) return null;
+    const remaining = windowEntries.slice(startIdx);
+    const runLength = remaining.findIndex(e => e.dewPoint === null || e.dewPoint < DEW_POINT.COMFORTABLE);
+    const segment = runLength === -1 ? remaining : remaining.slice(0, runLength);
+    const peak = Math.max(...segment.map(e => e.dewPoint as number));
+    const peakIdx = startIdx + segment.findIndex(e => e.dewPoint === peak);
+    return { startIdx, peak, peakIdx };
+  }, [windowEntries]);
 
   // --- Scrub horitzontal (mateix patró RAF que la resta de modals experts) ---
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);

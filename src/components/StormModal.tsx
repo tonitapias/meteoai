@@ -139,20 +139,15 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
 
   // --- Pròxima finestra de tempesta: primer tram contigu amb CAPE >= MIN_STORM ---
   const nextStormWindow = useMemo(() => {
-    for (let i = 0; i < N; i++) {
-      const e = windowEntries[i];
-      if (e.cape !== null && e.cape >= CAPE.MIN_STORM) {
-        let peak = e.cape, peakIdx = i, j = i;
-        while (j < N && windowEntries[j].cape !== null && (windowEntries[j].cape as number) >= CAPE.MIN_STORM) {
-          const v = windowEntries[j].cape as number;
-          if (v > peak) { peak = v; peakIdx = j; }
-          j++;
-        }
-        return { startIdx: i, peak, peakIdx };
-      }
-    }
-    return null;
-  }, [windowEntries, N]);
+    const startIdx = windowEntries.findIndex(e => e.cape !== null && e.cape >= CAPE.MIN_STORM);
+    if (startIdx === -1) return null;
+    const remaining = windowEntries.slice(startIdx);
+    const runLength = remaining.findIndex(e => e.cape === null || e.cape < CAPE.MIN_STORM);
+    const segment = runLength === -1 ? remaining : remaining.slice(0, runLength);
+    const peak = Math.max(...segment.map(e => e.cape as number));
+    const peakIdx = startIdx + segment.findIndex(e => e.cape === peak);
+    return { startIdx, peak, peakIdx };
+  }, [windowEntries]);
 
   // --- Scrub horitzontal sobre el gràfic (mateix patró RAF que l'arc solar) ---
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
