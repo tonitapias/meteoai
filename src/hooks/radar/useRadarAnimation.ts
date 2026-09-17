@@ -35,6 +35,17 @@ type HdAgency = 'goes' | 'meteosat' | 'himawari';
 // expulsem la més antiga (mai la que és l'objectiu actual).
 const MAX_LIVE_HD_FRAMES_PER_AGENCY = 4;
 
+// PERF/VRAM (2026-09-17): el radar abans només tenia LibreWXR (~12-13
+// frames com a màxim, mida fixa de l'API). Ara cada frame pot tenir DUES
+// fonts vives (LibreWXR + RainViewer), i la unió de línies temporals dels
+// dos proveïdors pot ser més llarga que la de qualsevol dels dos sols.
+// Sense límit, un cicle complet de reproducció acaba mantenint totes les
+// fonts vives alhora (mateix problema documentat més amunt per a l'HD).
+// Apliquem el mateix patró FIFO, un per pista (LibreWXR i RainViewer per
+// separat), per no doblar la pressió de VRAM just quan LibreWXR ja està
+// donant problemes de resposta.
+const MAX_LIVE_RADAR_FRAMES = 6;
+
 export function useRadarAnimation({
   mapRef,
   overlaysRef,
@@ -84,6 +95,11 @@ export function useRadarAnimation({
     himawari: []
   });
 
+  // Mateix FIFO que hdLoadOrderRef però per a les dues pistes de radar
+  // (MAX_LIVE_RADAR_FRAMES, vegeu ensureFrameLoaded).
+  const radarLoadOrderRef = useRef<number[]>([]);
+  const rvRadarLoadOrderRef = useRef<number[]>([]);
+
   // CORRECCIÓ (Fase 3): abans les capes HD només es retiraven quan la
   // pròpia API de RainViewer feia caducar el timestamp (cicle de ~5 min).
   // Si l'usuari feia toggle ON/OFF repetit d'un satèl·lit HD, cada ON creava
@@ -106,6 +122,8 @@ export function useRadarAnimation({
       loadedRadarIdsRef.current = {};
       loadedRvRadarIdsRef.current = {};
       loadedSatIdsRef.current = {};
+      radarLoadOrderRef.current = [];
+      rvRadarLoadOrderRef.current = [];
     };
   }, []);
 
@@ -148,6 +166,7 @@ export function useRadarAnimation({
         const radSourceId = `rad-src-${timestampKey}`;
         safeRemoveLayerAndSource(map, layerId, radSourceId);
         delete loadedRadarIdsRef.current[timestampKey];
+        radarLoadOrderRef.current = radarLoadOrderRef.current.filter(t => t !== timestampKey);
       }
     });
 
@@ -158,6 +177,7 @@ export function useRadarAnimation({
         const radRvSourceId = `rad-rv-src-${timestampKey}`;
         safeRemoveLayerAndSource(map, layerId, radRvSourceId);
         delete loadedRvRadarIdsRef.current[timestampKey];
+        rvRadarLoadOrderRef.current = rvRadarLoadOrderRef.current.filter(t => t !== timestampKey);
       }
     });
 
@@ -224,6 +244,18 @@ export function useRadarAnimation({
             },
           }, Z_LAYERS.PIS_6_UI);
           loadedRadarIdsRef.current[frameTime] = radLayerId;
+
+          // PERF/VRAM: mateix FIFO que als agències HD — expulsem el frame
+          // més antic d'aquesta pista si superem el límit (mai l'objectiu actual).
+          const order = radarLoadOrderRef.current;
+          order.push(frameTime);
+          while (order.length > MAX_LIVE_RADAR_FRAMES) {
+            const oldestTs = order[0];
+            if (oldestTs === frameTime) break;
+            order.shift();
+            safeRemoveLayerAndSource(map, `rad-layer-${oldestTs}`, `rad-src-${oldestTs}`);
+            delete loadedRadarIdsRef.current[oldestTs];
+          }
         } catch (e) {
           console.warn(`[Zero Risk] Error afegint radar ${radLayerId}:`, e);
         }
@@ -242,7 +274,13 @@ export function useRadarAnimation({
             type: 'raster',
             tiles: [`${rvHostRef.current}${rvFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
             tileSize: 512,
-            maxzoom: 8,
+            // CORRECCIÓ (2026-09-17): el zoom màxim real de RainViewer és 7 —
+            // a partir de z=8 el seu servidor retorna una imatge d'error
+            // "Zoom Level Not Supported" en lloc d'un tile transparent, que
+            // es veia tapant tot el mapa perquè aquesta capa és la que va a
+            // sobre. maxzoom:7 fa que Mapbox faci servir el tile de z=7
+            // ampliat en lloc de demanar-ne un que no existeix.
+            maxzoom: 7,
           });
           map.addLayer({
             id: radRvLayerId,
@@ -257,6 +295,16 @@ export function useRadarAnimation({
             },
           }, Z_LAYERS.PIS_6_UI);
           loadedRvRadarIdsRef.current[frameTime] = radRvLayerId;
+
+          const rvOrder = rvRadarLoadOrderRef.current;
+          rvOrder.push(frameTime);
+          while (rvOrder.length > MAX_LIVE_RADAR_FRAMES) {
+            const oldestTs = rvOrder[0];
+            if (oldestTs === frameTime) break;
+            rvOrder.shift();
+            safeRemoveLayerAndSource(map, `rad-rv-layer-${oldestTs}`, `rad-rv-src-${oldestTs}`);
+            delete loadedRvRadarIdsRef.current[oldestTs];
+          }
         } catch (e) {
           console.warn(`[Zero Risk] Error afegint radar RainViewer ${radRvLayerId}:`, e);
         }
