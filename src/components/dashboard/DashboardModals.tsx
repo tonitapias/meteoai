@@ -19,6 +19,7 @@ const UvModal = lazy(() => import('../UvModal'));
 const PressureModal = lazy(() => import('../PressureModal'));
 const ComfortModal = lazy(() => import('../ComfortModal'));
 const VisibilityModal = lazy(() => import('../VisibilityModal'));
+const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -126,6 +127,13 @@ export const DashboardModals = () => {
                 <VisibilityModal
                     weatherData={weatherData}
                     onClose={() => actions.setShowVisibilityModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showCloudLayersModal && (
+                <CloudLayersModal
+                    weatherData={weatherData}
+                    onClose={() => actions.setShowCloudLayersModal(false)}
                     lang={flags.lang}
                 />
             )}

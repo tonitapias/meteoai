@@ -120,6 +120,7 @@ export const DashboardContent = () => {
                                 onShowPressureModal={() => actions.setShowPressureModal(true)}
                                 onShowComfortModal={() => actions.setShowComfortModal(true)}
                                 onShowVisibilityModal={() => actions.setShowVisibilityModal(true)}
+                                onShowCloudLayersModal={() => actions.setShowCloudLayersModal(true)}
                             />
                         </Suspense>
                     )}

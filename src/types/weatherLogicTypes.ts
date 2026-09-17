@@ -104,6 +104,7 @@ export interface StrictHourlyWeather {
   snow_depth?: (number | null)[];
   relative_humidity_2m: (number | null)[];
   freezing_level_height?: (number | null)[];
+  cloud_cover_low?: (number | null)[];
   cloud_cover_mid?: (number | null)[];
   cloud_cover_high?: (number | null)[];
   uv_index?: (number | null)[];
