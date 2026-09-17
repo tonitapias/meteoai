@@ -51,11 +51,28 @@ export function useRadarAnimation({
 
   const isPlayingRef = useRef<boolean>(false);
   const hostRef = useRef<string>('');
-  const radarFramesRef = useRef<RadarFrame[]>([]);
+  // Línia temporal "mestra" del reproductor: unió ordenada dels timestamps
+  // que té CADASCUN dels dos proveïdors (no només LibreWXR). Així el frame
+  // "ara" reflecteix el més recent disponible entre tots dos — abans es
+  // limitava sempre a LibreWXR, que sol anar ~30 min per darrere de
+  // RainViewer. Els detalls de cada frame (host+path) es busquen per
+  // timestamp exacte a lwFramesByTimeRef / rvFramesByTimeRef.
+  const radarFramesRef = useRef<number[]>([]);
   const satFramesRef = useRef<RadarFrame[]>([]);
   const currentFrameIndexRef = useRef<number>(0);
 
+  // Capa de LibreWXR (cobertura global) i capa "prioritària" de RainViewer
+  // (cobertura real de radar, allà on n'hi ha). La de RainViewer es
+  // renderitza PER SOBRE: com que els PNG de RainViewer són transparents
+  // fora de cobertura, es veu LibreWXR per sota sense cap lògica addicional.
+  // Cada frame de la línia temporal mestra pot existir a un proveïdor, a
+  // l'altre, o a tots dos — no calen coincidir en tots els timestamps.
+  const lwFramesByTimeRef = useRef<Record<number, RadarFrame>>({});
+  const rvHostRef = useRef<string>('');
+  const rvFramesByTimeRef = useRef<Record<number, RadarFrame>>({});
+
   const loadedRadarIdsRef = useRef<Record<number, string>>({});
+  const loadedRvRadarIdsRef = useRef<Record<number, string>>({});
   const loadedSatIdsRef = useRef<Record<number, string>>({});
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -87,6 +104,7 @@ export function useRadarAnimation({
       isMountedRef.current = false;
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
       loadedRadarIdsRef.current = {};
+      loadedRvRadarIdsRef.current = {};
       loadedSatIdsRef.current = {};
     };
   }, []);
@@ -116,11 +134,11 @@ export function useRadarAnimation({
   }, [mapRef, safeRemoveLayerAndSource]);
 
   // Només destrueix frames quan la pròpia API ens diu que ja han caducat en el temps
-  const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
+  const cleanupExpiredLayers = useCallback((validRadarTimes: number[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    const activeRadarTimes = new Set(validRadarFrames.map(f => f.time));
+    const activeRadarTimes = new Set(validRadarTimes);
     const activeSatTimes = new Set(validSatFrames.map(f => f.time));
 
     Object.keys(loadedRadarIdsRef.current).forEach((key) => {
@@ -130,6 +148,16 @@ export function useRadarAnimation({
         const radSourceId = `rad-src-${timestampKey}`;
         safeRemoveLayerAndSource(map, layerId, radSourceId);
         delete loadedRadarIdsRef.current[timestampKey];
+      }
+    });
+
+    Object.keys(loadedRvRadarIdsRef.current).forEach((key) => {
+      const timestampKey = Number(key);
+      if (!activeRadarTimes.has(timestampKey)) {
+        const layerId = loadedRvRadarIdsRef.current[timestampKey];
+        const radRvSourceId = `rad-rv-src-${timestampKey}`;
+        safeRemoveLayerAndSource(map, layerId, radRvSourceId);
+        delete loadedRvRadarIdsRef.current[timestampKey];
       }
     });
 
@@ -155,46 +183,83 @@ export function useRadarAnimation({
 
   const ensureFrameLoaded = useCallback((index: number) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !hostRef.current) return;
+    if (!map || !map.isStyleLoaded()) return;
 
     const rFrames = radarFramesRef.current;
     const sFrames = satFramesRef.current;
 
     if (!rFrames || rFrames.length === 0 || index < 0 || index >= rFrames.length) return;
-    const rFrame = rFrames[index];
-    if (!rFrame || rFrame.time === null) return;
-
-    const radSourceId = `rad-src-${rFrame.time}`;
-    const radLayerId = `rad-layer-${rFrame.time}`;
+    const frameTime = rFrames[index];
+    if (frameTime === null || frameTime === undefined) return;
 
     const isTarget = index === currentFrameIndexRef.current;
 
     // HACK VRAM: 0.000001 força la pre-càrrega a GPU sense ser visible. Evita parpellejos.
     const initialRadOpacity = (isTarget && overlaysRef.current.precip) ? 0.88 : 0.000001;
 
-    if (!loadedRadarIdsRef.current[rFrame.time] && !map.getSource(radSourceId)) {
-      try {
-        map.addSource(radSourceId, {
-          type: 'raster',
-          tiles: [`${hostRef.current}${rFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
-          tileSize: 512,
-          maxzoom: 8,
-        });
-        map.addLayer({
-          id: radLayerId,
-          type: 'raster',
-          source: radSourceId,
-          layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
-          paint: {
-            'raster-opacity': getRadOpacityExp(initialRadOpacity),
-            'raster-opacity-transition': { duration: 0, delay: 0 },
-            'raster-fade-duration': 0,
-            'raster-resampling': 'linear'
-          },
-        }, Z_LAYERS.PIS_6_UI);
-        loadedRadarIdsRef.current[rFrame.time] = radLayerId;
-      } catch (e) {
-        console.warn(`[Zero Risk] Error afegint radar ${radLayerId}:`, e);
+    // Capa de LibreWXR (cobertura global) per a aquest instant, si en té dades.
+    const lwFrame = lwFramesByTimeRef.current[frameTime];
+    if (lwFrame && hostRef.current && !loadedRadarIdsRef.current[frameTime]) {
+      const radSourceId = `rad-src-${frameTime}`;
+      const radLayerId = `rad-layer-${frameTime}`;
+
+      if (!map.getSource(radSourceId)) {
+        try {
+          map.addSource(radSourceId, {
+            type: 'raster',
+            tiles: [`${hostRef.current}${lwFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
+            tileSize: 512,
+            maxzoom: 8,
+          });
+          map.addLayer({
+            id: radLayerId,
+            type: 'raster',
+            source: radSourceId,
+            layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
+            paint: {
+              'raster-opacity': getRadOpacityExp(initialRadOpacity),
+              'raster-opacity-transition': { duration: 0, delay: 0 },
+              'raster-fade-duration': 0,
+              'raster-resampling': 'linear'
+            },
+          }, Z_LAYERS.PIS_6_UI);
+          loadedRadarIdsRef.current[frameTime] = radLayerId;
+        } catch (e) {
+          console.warn(`[Zero Risk] Error afegint radar ${radLayerId}:`, e);
+        }
+      }
+    }
+
+    // Capa prioritària de RainViewer per a aquest mateix instant (si en té dades).
+    const rvFrame = rvFramesByTimeRef.current[frameTime];
+    if (rvFrame && rvHostRef.current && !loadedRvRadarIdsRef.current[frameTime]) {
+      const radRvSourceId = `rad-rv-src-${frameTime}`;
+      const radRvLayerId = `rad-rv-layer-${frameTime}`;
+
+      if (!map.getSource(radRvSourceId)) {
+        try {
+          map.addSource(radRvSourceId, {
+            type: 'raster',
+            tiles: [`${rvHostRef.current}${rvFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
+            tileSize: 512,
+            maxzoom: 8,
+          });
+          map.addLayer({
+            id: radRvLayerId,
+            type: 'raster',
+            source: radRvSourceId,
+            layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
+            paint: {
+              'raster-opacity': getRadOpacityExp(initialRadOpacity),
+              'raster-opacity-transition': { duration: 0, delay: 0 },
+              'raster-fade-duration': 0,
+              'raster-resampling': 'linear'
+            },
+          }, Z_LAYERS.PIS_6_UI);
+          loadedRvRadarIdsRef.current[frameTime] = radRvLayerId;
+        } catch (e) {
+          console.warn(`[Zero Risk] Error afegint radar RainViewer ${radRvLayerId}:`, e);
+        }
       }
     }
 
@@ -203,7 +268,7 @@ export function useRadarAnimation({
       let minDiff = Infinity;
       sFrames.forEach((sFrame, sIdx) => {
         if (!sFrame || sFrame.time === null) return;
-        const diff = Math.abs(sFrame.time - rFrame.time!);
+        const diff = Math.abs(sFrame.time - frameTime);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
 
@@ -334,8 +399,9 @@ export function useRadarAnimation({
   // que realment canvien. Els canvis provocats per un toggle d'overlay (que
   // sí afecten TOTES les capes d'un tipus, p.ex. mostrar/amagar precip)
   // continuen fent el recorregut complet — vegeu el paràmetre `animationTick`.
-  const lastTargetIdsRef = useRef<{ radar: string | null; sat: string | null; hd: Record<HdAgency, string | null> }>({
+  const lastTargetIdsRef = useRef<{ radar: string | null; rvRadar: string | null; sat: string | null; hd: Record<HdAgency, string | null> }>({
     radar: null,
+    rvRadar: null,
     sat: null,
     hd: { goes: null, meteosat: null, himawari: null }
   });
@@ -373,18 +439,19 @@ export function useRadarAnimation({
       prevHdEnabledRef.current[agency] = isEnabledNow;
     });
 
-    const currentRadarFrame = radarFramesRef.current[safeIndex];
-    const targetRadarId = currentRadarFrame?.time ? loadedRadarIdsRef.current[currentRadarFrame.time] : undefined;
+    const currentFrameTime = radarFramesRef.current[safeIndex];
+    const targetRadarId = currentFrameTime ? loadedRadarIdsRef.current[currentFrameTime] : undefined;
+    const targetRvRadarId = currentFrameTime ? loadedRvRadarIdsRef.current[currentFrameTime] : undefined;
 
-    if (currentRadarFrame && currentRadarFrame.time !== null) {
+    if (currentFrameTime !== null && currentFrameTime !== undefined) {
       if (timeDisplayRef.current) {
-         timeDisplayRef.current.textContent = formatTime(currentRadarFrame.time);
+         timeDisplayRef.current.textContent = formatTime(currentFrameTime);
       }
-      setCurrentFrameTimestamp(currentRadarFrame.time);
-      currentFrameTimestampRef.current = currentRadarFrame.time;
+      setCurrentFrameTimestamp(currentFrameTime);
+      currentFrameTimestampRef.current = currentFrameTime;
 
       if (!isPlayingRef.current) {
-        syncLighting(currentRadarFrame.time * 1000);
+        syncLighting(currentFrameTime * 1000);
         syncAtmosphere();
       }
     }
@@ -404,6 +471,15 @@ export function useRadarAnimation({
         map.setLayoutProperty(targetRadarId, 'visibility', showPrecip ? 'visible' : 'none');
         map.setPaintProperty(targetRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.88) : 0);
       }
+
+      const prevRvRadarId = lastTargetIdsRef.current.rvRadar;
+      if (prevRvRadarId && prevRvRadarId !== targetRvRadarId && map.getLayer(prevRvRadarId)) {
+        map.setPaintProperty(prevRvRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.000001) : 0);
+      }
+      if (targetRvRadarId && map.getLayer(targetRvRadarId)) {
+        map.setLayoutProperty(targetRvRadarId, 'visibility', showPrecip ? 'visible' : 'none');
+        map.setPaintProperty(targetRvRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.88) : 0);
+      }
     } else {
       Object.values(loadedRadarIdsRef.current).forEach((id) => {
         if (id && map.getLayer(id)) {
@@ -414,15 +490,25 @@ export function useRadarAnimation({
           map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
         }
       });
+      Object.values(loadedRvRadarIdsRef.current).forEach((id) => {
+        if (id && map.getLayer(id)) {
+          const isTarget = id === targetRvRadarId;
+          const targetOpacity = isTarget ? 0.88 : 0.000001;
+
+          map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
+          map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
+        }
+      });
     }
     lastTargetIdsRef.current.radar = targetRadarId ?? null;
+    lastTargetIdsRef.current.rvRadar = targetRvRadarId ?? null;
 
-    if (satFramesRef.current.length > 0 && currentRadarFrame && currentRadarFrame.time !== null) {
+    if (satFramesRef.current.length > 0 && currentFrameTime !== null && currentFrameTime !== undefined) {
       let closestSatIdx = 0;
       let minDiff = Infinity;
       satFramesRef.current.forEach((sFrame, sIdx) => {
         if (!sFrame || sFrame.time === null) return;
-        const diff = Math.abs(sFrame.time - currentRadarFrame.time!);
+        const diff = Math.abs(sFrame.time - currentFrameTime);
         if (diff < minDiff) { minDiff = diff; closestSatIdx = sIdx; }
       });
 
@@ -504,29 +590,48 @@ export function useRadarAnimation({
     }
   }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency]);
 
-  const injectLayersIntoMap = useCallback((parsedData: z.infer<typeof RainViewerResponseSchema>) => {
+  const injectLayersIntoMap = useCallback((
+    parsedData: z.infer<typeof RainViewerResponseSchema>,
+    rvParsedData?: z.infer<typeof RainViewerResponseSchema> | null
+  ) => {
     const map = mapRef.current;
     if (!map) return;
 
     const { host, radar, satellite } = parsedData;
     hostRef.current = host;
 
-    const rFrames = (radar?.past || []).filter(f => f && f.time !== null);
+    const lwFrames = (radar?.past || []).filter(f => f && f.time !== null);
+    lwFramesByTimeRef.current = {};
+    lwFrames.forEach((f) => { lwFramesByTimeRef.current[f.time!] = f; });
+
+    rvHostRef.current = rvParsedData?.host || '';
+    const rvFrames = (rvParsedData?.radar?.past || []).filter(f => f && f.time !== null);
+    rvFramesByTimeRef.current = {};
+    rvFrames.forEach((f) => { rvFramesByTimeRef.current[f.time!] = f; });
+
     const sFrames = (satellite?.infrared || []).filter(f => f && f.time !== null);
 
-    radarFramesRef.current = rFrames;
+    // Unió ordenada dels timestamps dels dos proveïdors: el frame "ara" i el
+    // rang del reproductor reflecteixen el més recent disponible entre tots
+    // dos, no només LibreWXR (que sol anar més endarrerit).
+    const timeSet = new Set<number>();
+    lwFrames.forEach(f => timeSet.add(f.time!));
+    rvFrames.forEach(f => timeSet.add(f.time!));
+    const unionTimes = Array.from(timeSet).sort((a, b) => a - b);
+
+    radarFramesRef.current = unionTimes;
     satFramesRef.current = sFrames;
-    setFramesCount(rFrames.length);
+    setFramesCount(unionTimes.length);
 
-    cleanupExpiredLayers(rFrames, sFrames);
+    cleanupExpiredLayers(unionTimes, sFrames);
 
-    if (rFrames.length === 0) return;
+    if (unionTimes.length === 0) return;
 
-    const initialIdx = Math.max(0, rFrames.length - 1);
+    const initialIdx = Math.max(0, unionTimes.length - 1);
     currentFrameIndexRef.current = initialIdx;
 
     ensureFrameLoaded(initialIdx);
-    if (rFrames.length > 1) {
+    if (unionTimes.length > 1) {
       setTimeout(() => {
         if (isMountedRef.current) ensureFrameLoaded(0);
       }, 100);

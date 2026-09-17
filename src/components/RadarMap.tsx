@@ -50,7 +50,7 @@ interface RadarMapProps {
 export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLayerMenu }: RadarMapProps) {
   const { t } = useTranslation();
 
-  const { loading, error, radarData, fetchRadarData } = useRadarData();
+  const { loading, error, radarData, rainviewerData, fetchRadarData } = useRadarData();
 
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
     dark: { name: t('baseDark', 'Fosc'), url: `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, attribution: '&copy; Mapbox' },
@@ -157,9 +157,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   // 1. Dades Noves (Injecció)
   useEffect(() => {
     if (radarData && mapRef.current) {
-      injectLayersIntoMap(radarData);
+      injectLayersIntoMap(radarData, rainviewerData);
     }
-  }, [radarData, injectLayersIntoMap, mapRef]);
+  }, [radarData, rainviewerData, injectLayersIntoMap, mapRef]);
 
   // 2. Sincronització global quan canvien els overlays o la baseLayer
   useEffect(() => {
