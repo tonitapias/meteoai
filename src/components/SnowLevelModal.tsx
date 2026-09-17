@@ -109,12 +109,13 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
   // --- Moment en què la cota serà més baixa (més rellevant: quan la neu arriba més avall) ---
   const minWindow = useMemo(() => {
     let best: { idx: number; value: number } | null = null;
-    windowEntries.forEach((e, i) => {
-      if (e.snowLevel === null) return;
-      if (!best || e.snowLevel < best.value) best = { idx: i, value: e.snowLevel };
-    });
+    for (let i = 0; i < N; i++) {
+      const value = windowEntries[i].snowLevel;
+      if (value === null) continue;
+      if (!best || value < best.value) best = { idx: i, value };
+    }
     return best;
-  }, [windowEntries]);
+  }, [windowEntries, N]);
 
   // --- Scrub horitzontal (mateix patró RAF que la resta de modals experts) ---
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
