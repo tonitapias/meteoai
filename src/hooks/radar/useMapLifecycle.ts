@@ -61,6 +61,17 @@ export function useMapLifecycle({
   const isMountedRef = useRef<boolean>(true);
   const syncPendingRef = useRef<boolean>(false);
 
+  // CORRECCIÓ (deadlock LibreWXR caigut): `map.isStyleLoaded()` requereix
+  // que TOTES les fonts de tessel·les del mapa hagin acabat de carregar, no
+  // només les que ens interessen. Una tessel·la penjada per sempre (mai
+  // resol ni falla — símptoma exacte d'una caiguda de LibreWXR/RainViewer)
+  // deixa `isStyleLoaded()` a `false` per sempre, i `map.once('idle', ...)`
+  // tampoc dispara mai més perquè reavalua la mateixa condició. Aquest flag
+  // es marca `true` UNA sola vegada dins de `map.on('load', ...)`, que
+  // Mapbox garanteix que dispara exactament un cop per instància de mapa
+  // independentment de si fonts afegides més tard es pengen.
+  const styleReadyRef = useRef<boolean>(false);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => { isMountedRef.current = false; };
@@ -69,6 +80,8 @@ export function useMapLifecycle({
   // El Hook de Cicle de Vida s'encarrega d'instanciar i destruir.
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
+
+    styleReadyRef.current = false;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
@@ -254,10 +267,18 @@ export function useMapLifecycle({
         fetchRadarData();
       } catch (e) {
         console.error("[Zero Risk] Fallada crítica carregant capes inicials:", e);
+      } finally {
+        // CORRECCIÓ: es marca fora del `try` perquè, si afegir les capes
+        // inicials falla per algun motiu, l'estat "estil llest" no quedi
+        // bloquejat a `false` per sempre — avui un throw aquí no impedeix
+        // que `isStyleLoaded()` acabi sent `true` tot sol, i el nostre flag
+        // ha de tolerar el mateix cas sense convertir-se en un deadlock nou.
+        styleReadyRef.current = true;
       }
     });
 
     return () => {
+      styleReadyRef.current = false;
       if (atmosphereThrottle.timer) clearTimeout(atmosphereThrottle.timer);
       if (mapRef.current) {
         mapRef.current.off('move', throttledSyncAtmosphere);
@@ -276,7 +297,7 @@ export function useMapLifecycle({
     radarFramesLength: number
   ) => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !isMountedRef.current) return;
+    if (!map || !styleReadyRef.current || !isMountedRef.current) return;
 
     try {
       syncAtmosphere();
@@ -412,12 +433,15 @@ export function useMapLifecycle({
     const map = mapRef.current;
     if (!map) return;
 
-    if (map.isStyleLoaded()) {
+    if (styleReadyRef.current) {
       executeSync(currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength);
     } else {
       if (!syncPendingRef.current) {
         syncPendingRef.current = true;
-        map.once('idle', () => {
+        // CORRECCIÓ: `once('load', ...)` en lloc de `once('idle', ...)` —
+        // 'load' dispara exactament un cop garantit, encara que una font
+        // afegida després es quedi penjada per sempre (vegeu styleReadyRef).
+        map.once('load', () => {
           syncPendingRef.current = false;
           if (isMountedRef.current) {
             executeSync(currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength);
@@ -430,6 +454,7 @@ export function useMapLifecycle({
   return {
     mapRef,
     webglKey,
+    styleReadyRef,
     syncLayersState
   };
 }

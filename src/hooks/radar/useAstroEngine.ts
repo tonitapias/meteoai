@@ -12,6 +12,7 @@ interface UseAstroEngineProps {
   lon: number;
   activeBaseLayer: BaseLayerType;
   currentFrameTimestampRef: MutableRefObject<number | null>;
+  styleReadyRef: MutableRefObject<boolean>;
 }
 
 export function useAstroEngine({
@@ -19,7 +20,8 @@ export function useAstroEngine({
   lat,
   lon,
   activeBaseLayer,
-  currentFrameTimestampRef
+  currentFrameTimestampRef,
+  styleReadyRef
 }: UseAstroEngineProps) {
 
   const activeBaseLayerRef = useRef(activeBaseLayer);
@@ -37,7 +39,7 @@ export function useAstroEngine({
   const syncAtmosphere = useCallback(() => {
     if (!isMountedRef.current) return;
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !styleReadyRef.current) return;
 
     try {
       const center = map.getCenter();
@@ -68,12 +70,12 @@ export function useAstroEngine({
     } catch (e) {
       console.warn("[Zero Risk] Atmosfera silenciada", e);
     }
-  }, [mapRef, currentFrameTimestampRef]);
+  }, [mapRef, currentFrameTimestampRef, styleReadyRef]);
 
   const syncLighting = useCallback((timestampMs: number | null) => {
     if (!isMountedRef.current) return;
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !styleReadyRef.current) return;
 
     const evalTime = timestampMs || Date.now();
     const { position, intensity } = getSunLightConfig(evalTime, lat, lon);
@@ -95,13 +97,13 @@ export function useAstroEngine({
     } catch (e) {
       console.warn("[Zero Risk] Llums silenciades", e);
     }
-  }, [lat, lon, mapRef]);
+  }, [lat, lon, mapRef, styleReadyRef]);
 
   useEffect(() => {
     const nightTimer = setInterval(() => {
       if (!isMountedRef.current) return;
       const map = mapRef.current;
-      if (map && map.isStyleLoaded() && map.getSource('night-source')) {
+      if (map && styleReadyRef.current && map.getSource('night-source')) {
         try {
           const source = map.getSource('night-source') as GeoJSONSource;
           // CORRECCIÓ (revisió Fase 3): mateix motiu que a useMapLifecycle.ts
@@ -116,7 +118,7 @@ export function useAstroEngine({
     }, 60000);
 
     return () => clearInterval(nightTimer);
-  }, [mapRef]);
+  }, [mapRef, styleReadyRef]);
 
   return {
     syncAtmosphere,

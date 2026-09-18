@@ -8,6 +8,7 @@ interface UseCameraFlightProps {
   lon: number;
   activeBaseLayer: BaseLayerType;
   overlays: Overlays;
+  styleReadyRef: MutableRefObject<boolean>;
 }
 
 export function useCameraFlight({
@@ -15,7 +16,8 @@ export function useCameraFlight({
   lat,
   lon,
   activeBaseLayer,
-  overlays
+  overlays,
+  styleReadyRef
 }: UseCameraFlightProps) {
   const isMountedRef = useRef<boolean>(true);
 
@@ -46,7 +48,7 @@ export function useCameraFlight({
     const map = mapRef.current;
     if (!map || !isMountedRef.current) return;
 
-    if (map.isStyleLoaded()) {
+    if (styleReadyRef.current) {
       action();
       return;
     }
@@ -55,7 +57,9 @@ export function useCameraFlight({
 
     if (!idleListenerAttachedRef.current) {
       idleListenerAttachedRef.current = true;
-      map.once('idle', () => {
+      // CORRECCIÓ: `once('load', ...)` en lloc de `once('idle', ...)` —
+      // vegeu styleReadyRef a useMapLifecycle.ts.
+      map.once('load', () => {
         idleListenerAttachedRef.current = false;
         const actions = pendingActionsRef.current;
         pendingActionsRef.current = [];
@@ -64,7 +68,7 @@ export function useCameraFlight({
         }
       });
     }
-  }, [mapRef]);
+  }, [mapRef, styleReadyRef]);
 
   // 1. Canvi de coordenades base
   // CORRECCIÓ (Fase 3): abans aquest efecte NO passava per safeCameraExecute,
