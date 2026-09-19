@@ -116,3 +116,32 @@ describe("getGeminiAnalysis — qualitat de l'aire", () => {
         expect(await promptFor(buildWeather(94), { current: { dust: 438, pm10: 314 } })).not.toContain('Aerosols:');
     });
 });
+
+describe('getGeminiAnalysis — perill AIR_QUALITY del worker', () => {
+    beforeEach(() => { vi.restoreAllMocks(); });
+
+    const withLlm = async (hazard: string, risk: string) => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                engine: 'gemini',
+                candidates: [{ content: { parts: [{ text: JSON.stringify({
+                    risk_level: risk, hazard_type: hazard, tactical_reasoning: 'x', text: 'Resum.', tips: [],
+                }) }] } }],
+            }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        return getGeminiAnalysis(buildWeather(50), 'ca', 0, { current: { european_aqi: 94, dust: 388 } });
+    };
+
+    it("el perill AIR_QUALITY arriba a la interfície (no es descarta com a NONE)", async () => {
+        const result = await withLlm('AIR_QUALITY', 'AMBER');
+        expect(result?.risk_level).toBe('AMBER');
+        expect(result?.hazard_type).toBe('AIR_QUALITY');
+    });
+
+    it('un perill inventat continua caient a NONE', async () => {
+        const result = await withLlm('DUST_STORM', 'AMBER');
+        expect(result?.hazard_type).toBe('NONE');
+    });
+});

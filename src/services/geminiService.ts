@@ -13,7 +13,7 @@ import {
 // --- CONTRACTE D'INTERFÍCIES (RISC ZERO AMB MÀXIMA PRECISIÓ TÈRMICA) ---
 
 export type TacticalRiskLevel = 'GREEN' | 'AMBER' | 'RED';
-export type TacticalHazardType = 'NONE' | 'WIND' | 'RAIN' | 'THERMAL' | 'HEAT' | 'COLD' | 'CONVECTIVE' | 'VISIBILITY' | 'SNOW_ICE';
+export type TacticalHazardType = 'NONE' | 'WIND' | 'RAIN' | 'THERMAL' | 'HEAT' | 'COLD' | 'CONVECTIVE' | 'VISIBILITY' | 'SNOW_ICE' | 'AIR_QUALITY';
 export type TacticalTipCategory = 'SKY' | 'THERMAL' | 'WIND' | 'HAZARD';
 
 export interface TacticalTip {
@@ -410,11 +410,11 @@ export const getGeminiAnalysis = async (
         const currentAqi = currentEuAqi ?? currentUsAqi;
 
         // Avís d'aerosols (pols/partícules del CAMS, vegeu utils/rules/aerosolRules.ts): només s'afegeix a la
-        // telemetria quan salta. La línia diu explícitament que NO és visibilitat ni boira: el worker no té cap
-        // perill de qualitat de l'aire (NONE/WIND/RAIN/HEAT/COLD/CONVECTIVE/VISIBILITY/SNOW_ICE) i, amb la
-        // formulació anterior ("el cel pot veure's enterbolit"), la IA triava VISIBILITY ("BOIRA DENSA O
-        // VISIBILITAT REDUÏDA") en un lloc amb HR del 12 %. Amb els METAR, la pols només baixa la visibilitat
-        // observada en el 13 % de les hores en què salta l'avís.
+        // telemetria quan salta. La línia diu explícitament que NO és visibilitat ni boira: amb la formulació
+        // anterior ("el cel pot veure's enterbolit"), Gemini triava VISIBILITY ("BOIRA DENSA O VISIBILITAT
+        // REDUÏDA") en un lloc amb HR del 12 %, perquè llavors el worker no tenia cap perill de qualitat de
+        // l'aire; ara hi és (AIR_QUALITY) i la línia hi apunta. Amb els METAR, la pols només baixa la
+        // visibilitat observada en el 13 % de les hores en què salta l'avís.
         const dustAdvisory = resolveDustAdvisory(aqiCurrentObj, currentHumidity, typeof currentObj.precipitation === 'number' ? currentObj.precipitation : null);
         const aerosolLine = dustAdvisory.kind === 'dust'
             ? `
@@ -652,7 +652,7 @@ export const getGeminiAnalysis = async (
                     const rawRisk = String(parsed.risk_level ?? 'AMBER').toUpperCase() as TacticalRiskLevel;
                     const safeRiskLevel: TacticalRiskLevel = validRisks.includes(rawRisk) ? rawRisk : 'AMBER';
 
-                    const validHazards: TacticalHazardType[] = ['NONE', 'WIND', 'RAIN', 'THERMAL', 'HEAT', 'COLD', 'CONVECTIVE', 'VISIBILITY', 'SNOW_ICE'];
+                    const validHazards: TacticalHazardType[] = ['NONE', 'WIND', 'RAIN', 'THERMAL', 'HEAT', 'COLD', 'CONVECTIVE', 'VISIBILITY', 'SNOW_ICE', 'AIR_QUALITY'];
                     const rawHazard = String(parsed.hazard_type ?? 'NONE').toUpperCase() as TacticalHazardType;
                     const safeHazardType: TacticalHazardType = validHazards.includes(rawHazard) ? rawHazard : 'NONE';
 
