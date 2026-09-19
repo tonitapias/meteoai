@@ -228,7 +228,8 @@ export const es = {
   },
 
   // --- NOVES CLAUS ---
-  aiSummaryFog: "Hay niebla o bancos de niebla bajos.", 
+  aiSummaryFog: "Hay niebla o bancos de niebla bajos.",
+  aiSummaryFreezingFog: "Hay niebla helada: se deposita escarcha sobre las superficies y puede haber hielo en el suelo.",
   alertVisibility: "Visibilidad muy reducida",
   notifWait: "Espera unos segundos antes de volver a actualizar.",
   notifLocationSuccess: "Ubicación actualizada correctamente.",
@@ -301,6 +302,7 @@ export const es = {
   alertColdExtreme: "Frío severo. Riesgo congelación.",
   alertColdHigh: "Heladas. Calzadas resbaladizas.",
   alertRain: "Precipitaciones abundantes.",
+  alertFreezingRain: "Lluvia helada: riesgo de hielo en carreteras y superficies.",
   alertAir: "Calidad del aire deficiente.",
   alertUV: "Radiación UV Extrema",
 

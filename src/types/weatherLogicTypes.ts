@@ -18,6 +18,7 @@ export interface TranslationMap {
   aiSummaryVariableNight: string;
   aiSummaryOvercast: string;
   aiSummaryFog: string;
+  aiSummaryFreezingFog: string;
   alertVisibility: string;
   aiSummarySnow: string;
   aiSummaryCloudy: string;
@@ -36,6 +37,7 @@ export interface TranslationMap {
   alertSnow: string;
   rain: string;
   alertRain: string;
+  alertFreezingRain: string;
   wind: string;
   tipWindbreaker: string;
   alertWindHigh: string;

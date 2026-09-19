@@ -229,7 +229,8 @@ export const fr = {
   },
 
   // --- NOVES CLAUS ---
-  aiSummaryFog: "Il y a du brouillard ou des bancs de brume.", 
+  aiSummaryFog: "Il y a du brouillard ou des bancs de brume.",
+  aiSummaryFreezingFog: "Il y a du brouillard givrant : du givre se dépose sur les surfaces et du verglas peut se former au sol.",
   alertVisibility: "Visibilité très réduite",
   notifWait: "Veuillez patienter quelques secondes avant de mettre à jour.",
   notifLocationSuccess: "Localisation mise à jour avec succès.",
@@ -302,6 +303,7 @@ export const fr = {
   alertColdExtreme: "Froid extrême. Risque d'hypothermie.",
   alertColdHigh: "Gelées. Prudence sur la route.",
   alertRain: "Précipitations abondantes.",
+  alertFreezingRain: "Pluie verglaçante : risque de verglas sur les routes et les surfaces.",
   alertAir: "Qualité de l'air médiocre.",
   alertUV: "Rayonnement UV Extrême",
   

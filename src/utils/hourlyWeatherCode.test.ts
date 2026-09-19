@@ -72,6 +72,24 @@ describe('getHourlyWeatherCode', () => {
     it('sense visibilitat ni codi de boira NO fabrica boira', () => {
         expect(getHourlyWeatherCode({ ...base, visibility: [null, null, null] }, 0, 500)).not.toBe(45);
     });
+
+    it('la mateixa sèrie saturada a T <= 0 °C dona boira GEBRADORA (48), no 45', () => {
+        const h = { ...base, temperature_2m: [-3, -3, -3], visibility: [300, 300, 300] };
+        expect(getHourlyWeatherCode(h, 0, 500)).toBe(48);
+    });
+
+    it('la pluja engelant del model (66) arriba intacta a una hora de superfície gelada', () => {
+        const h = {
+            ...base,
+            temperature_2m: [-2, -2, -2],
+            relative_humidity_2m: [92, 92, 92],
+            precipitation: [1.2, 1.2, 1.2],
+            cloud_cover_low: [100, 100, 100],
+            weather_code: [66, 66, 66],
+            freezing_level_height: [0, 0, 0]
+        };
+        expect(getHourlyWeatherCode(h, 0, 500)).toBe(66);
+    });
 });
 
 /**

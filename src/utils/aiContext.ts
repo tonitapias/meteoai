@@ -11,6 +11,7 @@ import {
     ReliabilityResult 
 } from '../types/weatherLogicTypes';
 import { safeNum, extractValidNum } from './weatherMath';
+import { isFreezingPrecipCode } from './rules/winterRules';
 
 const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
@@ -62,7 +63,7 @@ const analyzeSky = (code: number, isDay: number, currentHour: number, visibility
     else if (code === 2) parts.push(isDay ? tr.aiSummaryVariable : tr.aiSummaryVariableNight);
     else if (code === 3) parts.push(tr.aiSummaryOvercast); 
     else if (code === 45 || code === 48) {
-        parts.push(tr.aiSummaryFog); 
+        parts.push(code === 48 ? tr.aiSummaryFreezingFog : tr.aiSummaryFog);
         if (visibility < 500) alerts.push({ type: "VIS", msg: tr.alertVisibility, level: 'warning' });
     }
     else if ((code >= 71 && code <= 77) || code === 85 || code === 86) parts.push(tr.aiSummarySnow);
@@ -113,9 +114,11 @@ const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
     const alerts: Alert[] = []; 
     const tips: string[] = [];   
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
+    const isFreezingPrecip = isFreezingPrecipCode(code);
 
     if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
+    else if (isFreezingPrecip) alerts.push({ type: tr.rain, msg: tr.alertFreezingRain, level: 'high' });
     else if ((code === 65 || code === 82 || precipSum > ALERTS.PRECIP_SUM_HIGH) && isRaining) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
 
     if (windGusts > 50) {

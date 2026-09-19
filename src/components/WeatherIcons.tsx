@@ -2,7 +2,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import {
   Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon,
-  Cloud, CloudFog, Snowflake, CloudSnow, CloudOff
+  Cloud, CloudFog, CloudDrizzle, Snowflake, CloudSnow, CloudOff
 } from 'lucide-react';
 
 interface CommonIconProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -50,6 +50,25 @@ const VariableRainIcon = ({ isDay, className, ...props }: CommonIconProps) => {
          )}
       </div>
       <CloudRain className="w-full h-full text-cyan-400 fill-cyan-400/20 animate-pulse relative z-10 drop-shadow-[0_0_12px_rgba(34,211,238,0.6)]" strokeWidth={2} />
+    </div>
+  );
+};
+
+const FREEZING_BASE_ICON = { fog: CloudFog, drizzle: CloudDrizzle, rain: CloudRain } as const;
+
+/**
+ * Fenomen "engelant": la icona del fenomen base (boira, plugim o pluja) reduïda, amb un floc de
+ * neu a la cantonada. És un únic llenguatge visual per a tot el que gela en tocar terra —boira
+ * gebradora (48), plugim engelant (56/57) i pluja engelant (66/67)— perquè es llegeixi d'un cop
+ * d'ull com "això deixa gel", i es distingeixi de la boira/pluja normals i de la neu.
+ */
+const FreezingIcon = ({ base, className, ...props }: CommonIconProps & { base: keyof typeof FREEZING_BASE_ICON }) => {
+  const Base = FREEZING_BASE_ICON[base];
+
+  return (
+    <div className={`${className} relative flex items-center justify-center transform-gpu`} {...props}>
+      <Base className="absolute bottom-[-2%] left-[-2%] w-[84%] h-[84%] text-cyan-200 fill-cyan-200/20 animate-pulse drop-shadow-[0_0_10px_rgba(165,243,252,0.4)]" strokeWidth={2} />
+      <Snowflake className="absolute top-[-6%] right-[-6%] w-[50%] h-[50%] z-10 text-white fill-white/20 drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" strokeWidth={2.2} />
     </div>
   );
 };
@@ -152,16 +171,17 @@ export const getWeatherIcon = (
     }
     
     if (safeCode === 3) return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/40 animate-[pulse_4s_ease-in-out_infinite] drop-shadow-[0_0_10px_rgba(148,163,184,0.3)]`} />;
-    if (safeCode >= 45 && safeCode <= 48) return <CloudFog {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/30 animate-pulse`} />;
+    if (safeCode === 48) return <FreezingIcon base="fog" className={commonProps.className} />;
+    if (safeCode >= 45 && safeCode <= 47) return <CloudFog {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-400/30 animate-pulse`} />;
     if (safeCode >= 51 && safeCode <= 55) return <CloudRain {...commonProps} className={`${commonProps.className} text-sky-300 fill-sky-300/20 drop-shadow-[0_0_8px_rgba(125,211,252,0.4)]`} />;
-    if (safeCode >= 56 && safeCode <= 57) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-300 fill-cyan-300/20 drop-shadow-[0_0_8px_rgba(103,232,249,0.5)]`} />;
+    if (safeCode >= 56 && safeCode <= 57) return <FreezingIcon base="drizzle" className={commonProps.className} />;
 
     if (safeCode >= 61 && safeCode <= 65) {
         if (safeCode <= 62) return <VariableRainIcon isDay={isDaylight} {...commonProps} />;
         return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-500 fill-cyan-500/20 animate-pulse drop-shadow-[0_0_12px_rgba(6,182,212,0.6)]`} />;
     }
 
-    if (safeCode >= 66 && safeCode <= 67) return <CloudRain {...commonProps} className={`${commonProps.className} text-cyan-400 fill-cyan-400/20 animate-pulse drop-shadow-[0_0_15px_rgba(34,211,238,0.7)]`} />;
+    if (safeCode >= 66 && safeCode <= 67) return <FreezingIcon base="rain" className={commonProps.className} />;
     if (safeCode >= 71 && safeCode <= 77) return <Snowflake {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-[spin_3s_linear_infinite] drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]`} />; 
     if (safeCode >= 80 && safeCode <= 82) return <VariableRainIcon isDay={isDaylight} {...commonProps} />;
     if (safeCode >= 85 && safeCode <= 86) return <CloudSnow {...commonProps} className={`${commonProps.className} text-white fill-white/30 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]`} />;

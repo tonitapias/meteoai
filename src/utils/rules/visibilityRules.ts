@@ -2,7 +2,7 @@ import { calculateDewPoint } from '../weatherMath';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 import { adjustBaseSkyCode } from './cloudRules';
 
-const { HUMIDITY, VISIBILITY, PRECIPITATION } = WEATHER_THRESHOLDS;
+const { HUMIDITY, VISIBILITY, PRECIPITATION, TEMP } = WEATHER_THRESHOLDS;
 
 /** Diferència T − Td (°C): com de prop de la saturació és l'aire de superfície. */
 export const getDewPointSpread = (temp: number, humidity: number): number =>
@@ -34,6 +34,12 @@ export const hasFogSignal = (code: number, visibility: number): boolean =>
  * Un codi de boira entrant que la saturació no confirma es rebaixa a l'estat de cel
  * segons la nuvolositat real (mateix criteri que abans per a la calitja a > 20 ºC).
  * Un senyal només de visibilitat que no es confirma no toca el codi.
+ *
+ * TIPUS DE BOIRA: la boira confirmada a T <= 0 ºC és sempre gebradora (48): són gotetes
+ * d'aigua subrefredades que dipositen gebre en tocar objectes (FZFG als METAR). Es
+ * decideix aquí i no només amb el codi del model: un senyal de boira per visibilitat
+ * (o un 45 d'un model que no distingeix el gebre) a -4 °C és igual de gebradora. Per
+ * sobre de 0 °C, en canvi, no pot ser-ho i sempre és boira normal (45).
  */
 export const resolveFog = (
     code: number,
@@ -57,7 +63,7 @@ export const resolveFog = (
 
     let result = safeCode;
     if (confirmed) {
-        result = safeCode === 48 ? 48 : 45;
+        result = temp <= TEMP.FREEZING ? 48 : 45;
     } else if (isFogCode) {
         // Boira del model no confirmada per la saturació: restaurem el cel real.
         result = adjustBaseSkyCode(0, cloudCover);

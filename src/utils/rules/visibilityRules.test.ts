@@ -80,6 +80,24 @@ describe('resolveFog — senyal del model + saturació', () => {
         expect(resolveFog(48, 3, 100, OVERCAST, GOOD_VIS, 0)).toBe(45);
     });
 
+    it('boira confirmada a <= 0 °C és SEMPRE gebradora (48), encara que el senyal sigui un 45 o només visibilitat', () => {
+        expect(resolveFog(45, -3, 100, OVERCAST, GOOD_VIS, 0)).toBe(48);
+        expect(resolveFog(0, -4, 100, CLEAR, 400, 0)).toBe(48);
+        expect(resolveFog(3, -12, 100, OVERCAST, 300, 0)).toBe(48);
+        expect(resolveFog(45, 0, 100, OVERCAST, GOOD_VIS, 0)).toBe(48);
+    });
+
+    it('per sobre de 0 °C la boira mai és gebradora, ni que el model digui 48', () => {
+        expect(resolveFog(45, 0.5, 100, OVERCAST, GOOD_VIS, 0)).toBe(45);
+        expect(resolveFog(0, 2, 100, CLEAR, 400, 0)).toBe(45);
+        expect(resolveFog(48, 0.5, 100, OVERCAST, GOOD_VIS, 0)).toBe(45);
+    });
+
+    it('sense saturació, el fred no fabrica boira gebradora', () => {
+        expect(resolveFog(45, -3, 80, OVERCAST, GOOD_VIS, 0)).toBe(3);
+        expect(resolveFog(3, -3, 80, OVERCAST, 400, 0)).toBe(3);
+    });
+
     it('amb precipitació >= TRACE no hi ha boira (el senyal no compta si plou)', () => {
         const trace = WEATHER_THRESHOLDS.PRECIPITATION.TRACE;
         expect(resolveFog(45, T, 100, OVERCAST, 300, trace)).not.toBe(45);

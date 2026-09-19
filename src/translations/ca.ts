@@ -227,7 +227,8 @@ export const ca = {
   },
 
   // --- NOVES CLAUS (Boira i Notificacions) ---
-  aiSummaryFog: "Hi ha boira o bancs de boira baixos.", 
+  aiSummaryFog: "Hi ha boira o bancs de boira baixos.",
+  aiSummaryFreezingFog: "Hi ha boira gebradora: es diposita gebre sobre les superfícies i pot haver-hi gel a terra.",
   alertVisibility: "Visibilitat molt reduïda",
   notifWait: "Espera uns segons abans de tornar a actualitzar.",
   notifLocationSuccess: "Ubicació actualitzada correctament.",
@@ -300,6 +301,7 @@ export const ca = {
   alertColdExtreme: "Fred sever. Risc congelació.",
   alertColdHigh: "Glaçades. Calçades relliscoses.",
   alertRain: "Precipitacions abundants.",
+  alertFreezingRain: "Pluja engelant: risc de gel a les carreteres i a les superfícies.",
   alertAir: "Qualitat de l'aire deficient.",
   alertUV: "Radiació UV Extrema",
   

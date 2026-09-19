@@ -229,7 +229,8 @@ export const en = {
   },
 
   // --- NOVES CLAUS ---
-  aiSummaryFog: "It is foggy or low mist banks present.", 
+  aiSummaryFog: "It is foggy or low mist banks present.",
+  aiSummaryFreezingFog: "Freezing fog is present: rime deposits on surfaces and ice may form on the ground.",
   alertVisibility: "Low visibility",
   notifWait: "Please wait a few seconds before updating again.",
   notifLocationSuccess: "Location updated successfully.",
@@ -302,6 +303,7 @@ export const en = {
   alertColdExtreme: "Severe cold. Frostbite risk.",
   alertColdHigh: "Frost. Slippery roads.",
   alertRain: "Heavy rainfall.",
+  alertFreezingRain: "Freezing rain: risk of ice on roads and surfaces.",
   alertAir: "Poor air quality.",
   alertUV: "Extreme UV Radiation",
 

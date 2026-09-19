@@ -299,14 +299,16 @@ const evaluateDeterministicRisk = (
             // crues sempre guanyen": és millor un avís de més que un de menys).
             const rawSevere = wmo !== undefined && wmo !== null;
             if (rawSevere && (wmo === 95 || wmo === 96 || wmo === 99)) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
-            else if (rawSevere && [66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
+            else if (rawSevere && [56, 57, 66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
             else {
                 // Boira: NOMÉS si la política de boira la confirma (senyal del model + saturació
                 // de superfície, vegeu visibilityRules.resolveFog). El codi 45/48 brut d'ICON
                 // dona ~4 vegades més hores de boira de les reals i posava AMBER a la ciutat
                 // amb el cel serè; el mateix codi que veu l'usuari a la icona és el que compta.
                 const fogCode = getHourlyWeatherCode(hourly, i, elevation, weatherData.hourlyComparison);
-                if (fogCode === 45 || fogCode === 48) upgradeRisk('AMBER', 'VISIBILITY');
+                // La gebradora (48) diposita gebre i deixa gel a terra: el risc dominant és el de gel.
+                if (fogCode === 48) upgradeRisk('AMBER', 'SNOW_ICE');
+                else if (fogCode === 45) upgradeRisk('AMBER', 'VISIBILITY');
             }
 
             // Pluja en mm/h independent del codi WMO (abans no hi havia cap

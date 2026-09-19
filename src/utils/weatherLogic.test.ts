@@ -99,6 +99,53 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
         expect(result).toBe(61);
     });
 
+    it('boira amb T <= 0 °C sortida per visibilitat (sense codi 48 del model) és GEBRADORA', () => {
+        const current = createCurrent(0, -4, 0, 0);
+        current.relative_humidity_2m = 100;
+        current.visibility = 400;
+
+        expect(getRealTimeWeatherCode(current, [0], 0, 0, 500)).toBe(48);
+    });
+
+    it('boira amb T > 0 °C mai és gebradora encara que el model digui 48', () => {
+        const current = createCurrent(48, 3, 0, 100);
+        current.relative_humidity_2m = 100;
+
+        expect(getRealTimeWeatherCode(current, [0], 0, 3000, 0)).toBe(45);
+    });
+
+    // PLUJA/PLUGIM ENGELANT: abans determineSnowCode els convertia sempre en neu a T <= 1 °C
+    // (i applyThermalLock els rebaixava per sobre), així que 56/57/66/67 no sortien MAI del
+    // motor: una pluja engelant a -1 °C es pintava com "Nevada moderada".
+    it('la pluja i el plugim engelants (56/57/66/67) sobreviuen a T <= 1 °C i NO es converteixen en neu', () => {
+        const cases: Array<[number, number]> = [[56, 0.3], [57, 1], [66, 1], [67, 3]];
+        for (const [code, mm] of cases) {
+            for (const temp of [-5, -1, 0, 1]) {
+                const current = createCurrent(code, temp, mm, 100);
+                expect(getRealTimeWeatherCode(current, [mm], 0, 100, 0)).toBe(code);
+            }
+        }
+    });
+
+    it('la pluja engelant es rebaixa a pluja líquida quan la superfície és càlida', () => {
+        const cases: Array<[number, number]> = [[56, 51], [57, 53], [66, 61], [67, 63]];
+        for (const [code, liquid] of cases) {
+            const current = createCurrent(code, 8, 1, 100);
+            // Cota de gel alta: no hi ha cap base tèrmica per a gel ni neu.
+            expect(getRealTimeWeatherCode(current, [1], 0, 3000, 0)).toBe(liquid);
+        }
+    });
+
+    it('la pluja engelant sense precipitació real (telemetria) no es manté', () => {
+        const current = createCurrent(66, -1, 0, 100);
+        expect(getRealTimeWeatherCode(current, [0], 0, 100, 0)).toBe(3);
+    });
+
+    it('la pluja normal a <= 1 °C continua convertint-se en neu (no és engelant)', () => {
+        const current = createCurrent(63, -1, 1, 100);
+        expect(getRealTimeWeatherCode(current, [1], 0, 100, 0)).toBe(73);
+    });
+
     it('DOCTRINA RISC ZERO: sense temperatura real, ha de tornar null (mai un 0ºC fals)', () => {
         // Un 0ºC fals aquí podria fer que determineSnowCode/applyThermalLock
         // mostressin neu en ple estiu si la temperatura real fos, per exemple, 30ºC.

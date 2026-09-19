@@ -16,6 +16,10 @@ export const isSnowPossible = (temp: number, freezingLevel: number, elevation: n
     return temp <= SNOW.TEMP_SNOW || (temp <= SNOW.TEMP_MIX && freezingDist < SNOW.FREEZING_BUFFER);
 };
 
+/** Plugim (56, 57) o pluja (66, 67) engelants: precipitació líquida que gela en tocar terra. */
+export const isFreezingPrecipCode = (code: number): boolean =>
+    code === 56 || code === 57 || code === 66 || code === 67;
+
 /** Determina si la pluja s'ha de convertir en neu per temperatura */
 export const determineSnowCode = (
     code: number,
@@ -25,6 +29,14 @@ export const determineSnowCode = (
     precipAmount: number
 ): number => {
     if (!isSnowPossible(temp, freezingLevel, elevation)) return code;
+
+    // Pluja/plugim engelant: el model ja ha diagnosticat que cau líquida sobre una superfície
+    // per sota de 0 °C (cal una capa càlida en altura que fongui la neu, cosa que ni la
+    // temperatura de superfície ni la cota de gel poden revelar). És un fenomen DIFERENT de la
+    // neu i més perillós (gel transparent a la carretera), així que no el convertim: només
+    // es conserva quan la superfície està realment a <= TEMP_SNOW; per sobre, la franja
+    // d'aiguaneu continua tractant-se com fins ara.
+    if (isFreezingPrecipCode(code) && temp <= SNOW.TEMP_SNOW) return code;
 
     const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
 
