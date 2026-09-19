@@ -12,7 +12,8 @@ import {
     getGeminiAnalysis, 
     TacticalTip, 
     TacticalRiskLevel, 
-    TacticalHazardType 
+    TacticalHazardType,
+    type AiAirQualityInput
 } from '../services/geminiService';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
@@ -90,7 +91,7 @@ export function useWeatherAI(
         setAiAnalysis(local);
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
-        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode);
+        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null);
         
         if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
           setAiAnalysis((prev) => {

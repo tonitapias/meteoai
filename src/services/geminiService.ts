@@ -2,6 +2,7 @@
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
 import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { 
@@ -345,14 +346,23 @@ const evaluateDeterministicRisk = (
     return { risk: maxRisk, hazard: detectedHazard };
 };
 
+/** Qualitat de l'aire de l'API d'aire d'Open-Meteo (es carrega a part de la previsió): la forma mínima que la IA en llegeix. */
+export interface AiAirQualityInput {
+    current?: Record<string, unknown>;
+    hourly?: Record<string, unknown>;
+}
+
 /**
  * `effectiveCode`: el codi de temps que veu l'usuari a la capçalera (ja passat per la política de
  * boira i la resta de l'orquestrador). Si falta, es cau al codi brut del model.
+ * `aqiData`: qualitat de l'aire. NO ve dins la previsió, així que abans la IA rebia sempre
+ * "Qualitat Aire: N/D" i no podia parlar de contaminació ni de calima.
  */
 export const getGeminiAnalysis = async (
     weatherData: ExtendedWeatherData,
     language: string,
-    effectiveCode: number | null = null
+    effectiveCode: number | null = null,
+    aqiData: AiAirQualityInput | null = null
 ): Promise<AICacheData | null> => {
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
@@ -386,9 +396,33 @@ export const getGeminiAnalysis = async (
         const currentApparentTemp = typeof currentObj.apparent_temperature === 'number' ? currentObj.apparent_temperature : null;
         const currentHumidity = typeof currentObj.relative_humidity_2m === 'number' ? currentObj.relative_humidity_2m : (typeof currentObj.humidity === 'number' ? currentObj.humidity : null);
 
-        const hasEuAqi = typeof currentObj.european_aqi === 'number' || Array.isArray(hourlyObj.european_aqi);
+        // La qualitat de l'aire ve de l'API d'aire (aqiData); els camps de la previsió queden com a reserva.
+        const aqiCurrentObj: Record<string, unknown> = aqiData?.current ?? {};
+        const aqiHourlyObj: Record<string, unknown> = aqiData?.hourly ?? {};
+        const pickNum = (...vals: unknown[]): number | null => {
+            for (const v of vals) if (typeof v === 'number' && !isNaN(v)) return v;
+            return null;
+        };
+        const currentEuAqi = pickNum(aqiCurrentObj.european_aqi, currentObj.european_aqi);
+        const currentUsAqi = pickNum(aqiCurrentObj.us_aqi, currentObj.us_aqi);
+        const hasEuAqi = currentEuAqi !== null || Array.isArray(aqiHourlyObj.european_aqi) || Array.isArray(hourlyObj.european_aqi);
         const aqiScale: 'EU' | 'US' = hasEuAqi ? 'EU' : 'US';
-        const currentAqi = typeof currentObj.european_aqi === 'number' ? currentObj.european_aqi : (typeof currentObj.us_aqi === 'number' ? currentObj.us_aqi : null);
+        const currentAqi = currentEuAqi ?? currentUsAqi;
+
+        // Avís d'aerosols (pols/partícules del CAMS, vegeu utils/rules/aerosolRules.ts): només s'afegeix a la
+        // telemetria quan salta. La línia diu explícitament que NO és visibilitat ni boira: el worker no té cap
+        // perill de qualitat de l'aire (NONE/WIND/RAIN/HEAT/COLD/CONVECTIVE/VISIBILITY/SNOW_ICE) i, amb la
+        // formulació anterior ("el cel pot veure's enterbolit"), la IA triava VISIBILITY ("BOIRA DENSA O
+        // VISIBILITAT REDUÏDA") en un lloc amb HR del 12 %. Amb els METAR, la pols només baixa la visibilitat
+        // observada en el 13 % de les hores en què salta l'avís.
+        const dustAdvisory = resolveDustAdvisory(aqiCurrentObj, currentHumidity, typeof currentObj.precipitation === 'number' ? currentObj.precipitation : null);
+        const aerosolLine = dustAdvisory.kind === 'dust'
+            ? `
+          Aerosols: POLS EN SUSPENSIÓ (calima) — pols ${Math.round(dustAdvisory.dust ?? 0)} µg/m³. Mesura de qualitat de l'aire (salut), NO de visibilitat ni de boira: no en derivis boira ni visibilitat reduïda.`
+            : dustAdvisory.kind === 'particles'
+                ? `
+          Aerosols: PARTÍCULES EN SUSPENSIÓ — PM10 ${Math.round(dustAdvisory.pm10 ?? 0)} µg/m³. Mesura de qualitat de l'aire (salut), NO de visibilitat ni de boira: no en derivis boira ni visibilitat reduïda.`
+                : '';
 
         const currentTimeRaw = currentObj?.time;
         const currentHourStr = (typeof currentTimeRaw === 'string' || typeof currentTimeRaw === 'number')
@@ -493,6 +527,14 @@ export const getGeminiAnalysis = async (
             const precipArr = weatherData.hourly.precipitation as (number | null)[] | undefined;
             const probArr = weatherData.hourly.precipitation_probability as (number | null)[] | undefined;
 
+            // Qualitat de l'aire per hores: s'alinea pel TEXT de l'hora ("2026-09-19T03:00", tots dos amb timezone
+            // auto), no per índex, perquè les dues sèries no tenen per què començar a la mateixa hora.
+            const aqiIndexByTime = new Map<string, number>();
+            if (Array.isArray(aqiHourlyObj.time)) {
+                aqiHourlyObj.time.forEach((t: unknown, j: number) => { if (typeof t === 'string') aqiIndexByTime.set(t, j); });
+            }
+            const aqiSeries = (aqiHourlyObj.european_aqi ?? aqiHourlyObj.us_aqi) as (number | null)[] | undefined;
+
             for (let i = startIndex; i < endIndex; i++) {
                 const timeRaw = times[i];
                 if (timeRaw === undefined || timeRaw === null) continue;
@@ -533,7 +575,8 @@ export const getGeminiAnalysis = async (
                 const uvStr = uvHour !== null ? `${uvHour}` : "N/D";
 
                 const aqiArr = (hourlyObj.european_aqi ?? hourlyObj.us_aqi) as (number | null)[] | undefined;
-                const aqiHour = aqiArr?.[i] ?? null;
+                const aqiJ = typeof timeRaw === 'string' ? aqiIndexByTime.get(timeRaw) : undefined;
+                const aqiHour = aqiArr?.[i] ?? (aqiJ !== undefined ? aqiSeries?.[aqiJ] : null) ?? null;
                 const aqiStr = getTacticalAqiDescription(aqiHour, aqiScale);
 
                 tableRows.push(`| ${hourStr} | ${wmoDesc} | ${tempStr}ºC | ${apparentStr} | ${humStr} | ${precipStr}mm (${probStr}%) | ${windStr}km/h (${gustsStr}km/h) | ${uvStr} | ${aqiStr} |`);
@@ -549,7 +592,7 @@ export const getGeminiAnalysis = async (
           Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum)}
           Temperatura Real: ${weatherData.current.temperature_2m}ºC | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
-          Pluja actual: ${weatherData.current.precipitation}mm | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}
+          Pluja actual: ${weatherData.current.precipitation}mm | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}
           MODEL EN ÚS: ${modelInfo.name}
 
           MATRIU D'EVOLUCIÓ PREVISTA (6 HORES):
