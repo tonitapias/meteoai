@@ -305,6 +305,10 @@ export const ca = {
   alertFreezingRain: "Pluja engelant: risc de gel a les carreteres i a les superfícies.",
   alertSleet: "Aiguaneu: pluja i neu barrejades, superfícies relliscoses.",
   wmoMostlyCloudy: "Molt ennuvolat",
+  dustLabel: "Calima",
+  alertDust: "Calima: molta pols en suspensió (CAMS). El cel pot veure's enterbolit, però la visibilitat no sempre baixa. Evita l'esforç intens a l'aire lliure si ets sensible.",
+  particlesLabel: "Partícules en suspensió",
+  alertParticles: "Concentració molt alta de partícules (PM10) a l'aire. El cel pot veure's enterbolit. Evita l'esforç intens a l'aire lliure si ets sensible.",
   alertAir: "Qualitat de l'aire deficient.",
   alertUV: "Radiació UV Extrema",
   

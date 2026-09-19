@@ -40,6 +40,10 @@ export interface TranslationMap {
   alertFreezingRain: string;
   alertSleet: string;
   wmoMostlyCloudy: string;
+  dustLabel: string;
+  alertDust: string;
+  particlesLabel: string;
+  alertParticles: string;
   wind: string;
   tipWindbreaker: string;
   alertWindHigh: string;

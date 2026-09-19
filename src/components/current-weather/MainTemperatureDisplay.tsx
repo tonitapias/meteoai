@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Haze } from 'lucide-react';
 import { safeVal } from '../widgets/widgetHelpers';
 
 interface MainTemperatureDisplayProps {
@@ -7,9 +7,14 @@ interface MainTemperatureDisplayProps {
   min: number | null;
   weatherLabel: string;
   statusColor: string;
+  /** Avís d'aerosols (pols/partícules): nom de l'avís; null/absent si no n'hi ha. */
+  advisoryLabel?: string | null;
+  /** Xifra amb la unitat ("438 µg/m³"): es mostra SENSE majúscules, perquè `uppercase` converteix µg en ΜG (sembla mg). */
+  advisoryValue?: string;
+  advisoryTitle?: string;
 }
 
-export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusColor }: MainTemperatureDisplayProps) => {
+export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusColor, advisoryLabel, advisoryValue, advisoryTitle }: MainTemperatureDisplayProps) => {
   // DOCTRINA RISC ZERO: Validació estricta numèrica per separar 0°C (Glaçada) de null (Sense Dades)
   const isValidTemp = typeof temp === 'number' && !isNaN(temp);
   const isValidMax = typeof max === 'number' && !isNaN(max);
@@ -40,6 +45,15 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
                     {weatherLabel}
                 </span>
             </div>
+
+            {/* Avís d'aerosols: només informa de la càrrega de pols/partícules (CAMS), mai de la visibilitat */}
+            {advisoryLabel && (
+                <div role="status" title={advisoryTitle} className="flex items-center gap-2 px-3 py-1 rounded-full border border-amber-400/30 bg-amber-950/40 backdrop-blur-md w-fit">
+                    <Haze className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">{advisoryLabel}</span>
+                    {advisoryValue && <span className="text-[11px] font-bold normal-case tracking-normal text-amber-200/90">{advisoryValue}</span>}
+                </div>
+            )}
 
             {/* Màximes i Mínimes */}
             <div className="flex items-center gap-4 text-sm font-mono font-bold">

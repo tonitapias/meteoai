@@ -12,6 +12,7 @@ import {
 } from '../types/weatherLogicTypes';
 import { safeNum, extractValidNum } from './weatherMath';
 import { isFreezingPrecipCode, isSleetCode } from './rules/winterRules';
+import type { DustKind } from './rules/aerosolRules';
 
 const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
@@ -107,10 +108,11 @@ interface AlertParams {
     aqiValue: number;
     currentCape: number;
     precipSum: number;
+    dustKind: DustKind;
 }
 
 const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
-    const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum } = params;
+    const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum, dustKind } = params;
     const alerts: Alert[] = []; 
     const tips: string[] = [];   
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
@@ -140,7 +142,11 @@ const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
         if(uvMax >= ALERTS.UV_EXTREME) alerts.push({ type: tr.sun, msg: tr.alertUV, level: 'high' }); 
         tips.push(tr.tipSunscreen); 
     }
-    if (aqiValue > ALERTS.AQI_BAD) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
+    // Avís d'aerosols (vegeu aerosolRules): quan n'hi ha, explica la CAUSA de la mala qualitat de l'aire
+    // i substitueix l'avís genèric, perquè no surtin dos avisos pel mateix.
+    if (dustKind === 'dust') alerts.push({ type: tr.aqi, msg: tr.alertDust, level: 'warning' });
+    else if (dustKind === 'particles') alerts.push({ type: tr.aqi, msg: tr.alertParticles, level: 'warning' });
+    else if (aqiValue > ALERTS.AQI_BAD) alerts.push({ type: tr.aqi, msg: tr.alertAir, level: 'warning' });
 
     if (temp < TEMP.FREEZING) { alerts.push({ type: tr.cold, msg: tr.alertColdExtreme, level: 'high' }); tips.push(tr.tipCoat, tr.tipThermal); } 
     else if (temp < TEMP.COLD) { tips.push(tr.tipCoat); if (temp < 5) tips.push(tr.tipLayers); } 
@@ -177,7 +183,9 @@ export const generateAIPrediction = (
     language: Language = 'ca', 
     effectiveCode: number | null = null, 
     reliability: ReliabilityResult | null = null, 
-    unit: string = 'C'
+    unit: string = 'C',
+    // Avís de pols/partícules de "ara" (resolveDustAdvisory); null si no n'hi ha.
+    dustKind: DustKind = null
 ): AIPredictionResult => {
     const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
     if (!tr || !current || !daily || !hourly) {
@@ -259,7 +267,7 @@ export const generateAIPrediction = (
         const alertsAndTips = generateAlertsAndTips({
             code, windSpeed, windGusts, temp: validTemp,
             rainProb: futureRainProb, isRaining, uvMax,
-            isDay, aqiValue: safeNum(aqiValue), 
+            isDay, aqiValue: safeNum(aqiValue), dustKind,
             currentCape, precipSum
         }, tr);
 

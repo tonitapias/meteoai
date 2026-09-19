@@ -307,6 +307,10 @@ export const fr = {
   alertFreezingRain: "Pluie verglaçante : risque de verglas sur les routes et les surfaces.",
   alertSleet: "Pluie et neige mêlées : surfaces glissantes.",
   wmoMostlyCloudy: "très nuageux",
+  dustLabel: "Poussière en suspension",
+  alertDust: "Poussière en suspension (CAMS) : le ciel peut paraître voilé, mais la visibilité ne baisse pas toujours. Évitez les efforts intenses en extérieur si vous êtes sensible.",
+  particlesLabel: "Particules en suspension",
+  alertParticles: "Concentration très élevée de particules (PM10) dans l'air. Le ciel peut paraître voilé. Évitez les efforts intenses en extérieur si vous êtes sensible.",
   alertAir: "Qualité de l'air médiocre.",
   alertUV: "Rayonnement UV Extrême",
   

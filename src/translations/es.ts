@@ -306,6 +306,10 @@ export const es = {
   alertFreezingRain: "Lluvia helada: riesgo de hielo en carreteras y superficies.",
   alertSleet: "Aguanieve: lluvia y nieve mezcladas, superficies resbaladizas.",
   wmoMostlyCloudy: "muy nublado",
+  dustLabel: "Calima",
+  alertDust: "Calima: mucho polvo en suspensión (CAMS). El cielo puede verse velado, pero la visibilidad no siempre baja. Evita el esfuerzo intenso al aire libre si eres sensible.",
+  particlesLabel: "Partículas en suspensión",
+  alertParticles: "Concentración muy alta de partículas (PM10) en el aire. El cielo puede verse velado. Evita el esfuerzo intenso al aire libre si eres sensible.",
   alertAir: "Calidad del aire deficiente.",
   alertUV: "Radiación UV Extrema",
 

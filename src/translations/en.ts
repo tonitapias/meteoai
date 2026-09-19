@@ -307,6 +307,10 @@ export const en = {
   alertFreezingRain: "Freezing rain: risk of ice on roads and surfaces.",
   alertSleet: "Sleet: rain and snow mixed, slippery surfaces.",
   wmoMostlyCloudy: "mostly cloudy",
+  dustLabel: "Airborne dust",
+  alertDust: "Airborne dust (CAMS): the sky may look hazy, but visibility does not always drop. Avoid heavy exertion outdoors if you are sensitive.",
+  particlesLabel: "Airborne particles",
+  alertParticles: "Very high concentration of particles (PM10) in the air. The sky may look hazy. Avoid heavy exertion outdoors if you are sensitive.",
   alertAir: "Poor air quality.",
   alertUV: "Extreme UV Radiation",
 

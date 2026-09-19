@@ -8,6 +8,7 @@ import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 import { REGIONAL_MODELS } from '../constants/regionalModels';
+import type { AirQualityData } from '../types/weather';
 
 const AROME_MODEL = REGIONAL_MODELS.find(m => m.id === 'AROME_HD')!;
 
@@ -175,5 +176,59 @@ describe('CurrentWeather Component', () => {
     });
     
     expect(activeBadge.length).toBe(0);
+  });
+
+  describe("avís d'aerosols (pols/partícules)", () => {
+    const renderWith = (aqi: Record<string, unknown> | null, humidity = 40, precip = 0) => {
+      mockedUsePreferences.mockReturnValue(createMockPrefs('C', 'ca'));
+      const data: ExtendedWeatherData = {
+        ...mockData,
+        current: { ...mockData.current, relative_humidity_2m: humidity, precipitation: precip }
+      };
+      return render(
+        <CurrentWeather
+          data={data}
+          effectiveCode={1}
+          unit="C"
+          lang="ca"
+          isFavorite={false}
+          onToggleFavorite={() => {}}
+          onShowRadar={() => {}}
+          onShowRegionalModel={() => {}}
+          aqiData={aqi as unknown as AirQualityData}
+        />
+      );
+    };
+
+    it('amb molta pols i aire sec mostra la càpsula "Calima" amb la xifra i la insígnia', () => {
+      renderWith({ current: { dust: 438, pm10: 314 } });
+      expect(screen.getByText('Calima')).toBeInTheDocument();
+      // La unitat es mostra sense majúscules (CSS `uppercase` convertiria µg en ΜG, que sembla mg).
+      const value = screen.getByText('438 µg/m³');
+      expect(value).toBeInTheDocument();
+      expect(value.className).toContain('normal-case');
+      expect(screen.getByRole('img', { name: /Calima · 438 µg\/m³/ })).toBeInTheDocument();
+    });
+
+    it('amb PM10 alt sense pols mostra "Partícules en suspensió", no "Calima"', () => {
+      renderWith({ current: { dust: 5, pm10: 213 } });
+      expect(screen.getByText('Partícules en suspensió')).toBeInTheDocument();
+      expect(screen.getByText('PM10 213 µg/m³')).toBeInTheDocument();
+      expect(screen.queryByText(/Calima/)).not.toBeInTheDocument();
+    });
+
+    it('sense pols alta, amb aire humit, amb pluja o sense dades NO mostra cap avís', () => {
+      for (const [aqi, hum, pr] of [
+        [{ current: { dust: 20, pm10: 30 } }, 40, 0],
+        [{ current: { dust: 438 } }, 90, 0],
+        [{ current: { dust: 438 } }, 40, 1],
+        [null, 40, 0],
+      ] as Array<[Record<string, unknown> | null, number, number]>) {
+        const { unmount } = renderWith(aqi, hum, pr);
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.queryByText(/Calima|Partícules/)).not.toBeInTheDocument();
+        unmount();
+      }
+    });
   });
 });

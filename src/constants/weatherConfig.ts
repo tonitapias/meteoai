@@ -118,6 +118,22 @@ export const WEATHER_THRESHOLDS = {
     GOOD: 10000
   },
 
+  // Pols en suspensió / partícules (CAMS, via l'API de Qualitat de l'Aire d'Open-Meteo), µg/m³.
+  // AVÍS D'AEROSOLS, no una previsió de visibilitat. Contra 24 mesos de METAR de 20 aeroports:
+  //  - la visibilitat del model meteorològic NO veu la calitja d'aerosols (a les hores amb HZ
+  //    observat el 95 % tenien >= 10 km al model, i ICON no en dona cap a Canàries);
+  //  - la pols del CAMS sí que puja molt a les hores amb HZ (Canàries: mediana 438 µg/m³ contra
+  //    un P90 de 46 de la resta), però com a predictor de visibilitat és fluix: amb aquesta regla
+  //    (aire sec) només el 13 % de les hores tenen visibilitat observada < 10 km (4 % < 5 km).
+  // Per això només s'usa per avisar que hi ha molta pols a l'aire (cel enterbolit, salut), mai per
+  // dir que la visibilitat és baixa. Amb aquests llindars salta el ~5 % de les hores a Canàries i
+  // gairebé mai a la resta d'Europa. El llindar d'humitat deixa fora la boirina humida.
+  AEROSOL: {
+    DUST_MIN: 100,     // pols (dust) >= 100 µg/m³ -> avís de calima
+    PM10_MIN: 150,     // PM10 >= 150 µg/m³ (EAQI "extremadament dolenta") sense pols -> avís de partícules
+    MAX_HUMIDITY: 75   // HR < 75 %: aire sec (≈ deliqüescència del NaCl); per sobre és boirina, no aerosol sec
+  },
+
   // Configuració per defecte de l'UI
   DEFAULTS: {
     MAX_DISPLAY_SNOW_LEVEL: 3500, // Només mostrem cota neu si és inferior a això

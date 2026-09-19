@@ -7,6 +7,7 @@ import {
 } from '../types/weatherLogicTypes';
 
 import { generateAIPrediction } from '../utils/aiContext';
+import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
 import { 
     getGeminiAnalysis, 
     TacticalTip, 
@@ -71,7 +72,9 @@ export function useWeatherAI(
     
     const aqiVal = aqiData?.current?.european_aqi ?? 0;
     const relLevel = reliability?.level || 'high';
-    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}`;
+    const currentRecord = current as unknown as Record<string, unknown>;
+    const dustKind = resolveDustAdvisory(aqiData?.current, currentRecord.relative_humidity_2m as number | undefined, currentRecord.precipitation as number | undefined).kind;
+    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
     if (lastProcessedKey.current === currentKey) return;
@@ -82,7 +85,7 @@ export function useWeatherAI(
         // Càlcul de previsió local determinística d'emergència (Fallback immediat)
         const local = generateAIPrediction(
           current, weatherData.daily, weatherData.hourly, 
-          aqiVal, lang, effectiveCode, reliability, unit
+          aqiVal, lang, effectiveCode, reliability, unit, dustKind
         );
         setAiAnalysis(local);
 

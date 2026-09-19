@@ -42,3 +42,29 @@ describe('generateAIPrediction — codi de temps de la política de boira', () =
         expect(out.text).toContain(tr.aiSummaryFog as string);
     });
 });
+
+describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
+    const msgs = (dustKind: 'dust' | 'particles' | null, aqi = 0) =>
+        generateAIPrediction(current, daily, hourly, aqi, 'ca', 3, null, 'C', dustKind).alerts.map(a => a.msg);
+
+    it('amb calima avisa amb el text de pols, que no promet una visibilitat baixa', () => {
+        expect(msgs('dust')).toContain(tr.alertDust);
+        expect(tr.alertDust as string).toMatch(/no sempre baixa/);
+    });
+
+    it('amb partícules (PM10 sense pols) avisa amb el text de partícules', () => {
+        expect(msgs('particles')).toContain(tr.alertParticles);
+        expect(msgs('particles')).not.toContain(tr.alertDust);
+    });
+
+    it("l'avís d'aerosols substitueix l'avís genèric de qualitat de l'aire (no en surten dos)", () => {
+        const withDust = msgs('dust', 90);
+        expect(withDust).toContain(tr.alertDust);
+        expect(withDust).not.toContain(tr.alertAir);
+    });
+
+    it("sense avís d'aerosols, l'avís genèric de qualitat de l'aire continua igual", () => {
+        expect(msgs(null, 90)).toContain(tr.alertAir);
+        expect(msgs(null, 0)).not.toContain(tr.alertDust);
+    });
+});

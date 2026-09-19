@@ -2,7 +2,10 @@
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
-import { Language } from '../translations';
+import { Haze } from 'lucide-react';
+import { Language, TRANSLATIONS } from '../translations';
+import type { TranslationMap } from '../types/weatherLogicTypes';
+import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
 import { AirQualityData } from '../types/weather';
 import { useCurrentWeatherLogic } from '../hooks/useCurrentWeatherLogic';
 import type { RegionalModel } from '../constants/regionalModels';
@@ -87,6 +90,17 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
   const currentWindSpeed = parseMetric(weather.stats.windSpeed) ?? 0;
   const currentPrecip = parseMetric(currentData.precipitation) ?? 0;
 
+  // AVÍS D'AEROSOLS (pols/partícules del CAMS): només informa de la càrrega d'aerosols, no de la visibilitat.
+  const tr = (TRANSLATIONS[props.lang] || TRANSLATIONS['ca']) as unknown as TranslationMap;
+  const dustAdvisory = resolveDustAdvisory(props.aqiData?.current, parseMetric(weather.stats.humidity), currentPrecip);
+  const advisoryText = dustAdvisory.kind === 'dust' ? tr.alertDust : dustAdvisory.kind === 'particles' ? tr.alertParticles : undefined;
+  const advisoryLabel = dustAdvisory.kind === 'dust' ? tr.dustLabel : dustAdvisory.kind === 'particles' ? tr.particlesLabel : null;
+  const advisoryValue = dustAdvisory.kind === 'dust'
+    ? `${Math.round(dustAdvisory.dust ?? 0)} µg/m³`
+    : dustAdvisory.kind === 'particles'
+      ? `PM10 ${Math.round(dustAdvisory.pm10 ?? 0)} µg/m³`
+      : undefined;
+
   // SPATIAL UI BASE AMB MATRIU DE FONS (Optimitzat per baix consum)
 
   return (
@@ -128,6 +142,9 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
               min={parseMetric(weather.temps.min)}
               weatherLabel={weather.visuals.weatherLabel as string}
               statusColor={weather.visuals.statusColor as string}
+              advisoryLabel={advisoryLabel}
+              advisoryValue={advisoryValue}
+              advisoryTitle={advisoryText}
             />
           </div>
         </div>
@@ -147,6 +164,11 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
                 currentTemp,
                 currentPrecip, // Passem el volum real de pluja per a la sincronització de telemetria
                 props.effectiveCloudCover
+              )}
+              {dustAdvisory.kind && (
+                <span role="img" aria-label={advisoryLabel ? `${advisoryLabel} · ${advisoryValue}` : undefined} title={advisoryText} className="absolute bottom-1 right-1 md:bottom-2 md:right-2 z-30 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-amber-400/40 backdrop-blur-sm shadow-[0_0_14px_rgba(251,191,36,0.35)]">
+                  <Haze className="w-6 h-6 md:w-7 md:h-7 text-amber-300" aria-hidden="true" />
+                </span>
               )}
             </div>
           </div>
