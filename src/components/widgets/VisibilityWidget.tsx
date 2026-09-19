@@ -2,6 +2,7 @@ import { Eye, Mountain, CloudOff } from 'lucide-react';
 import { VisibilityWidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
+import { formatVisibilityKm } from '../../utils/visibilityDisplay';
 
 const { VISIBILITY } = WEATHER_THRESHOLDS;
 
@@ -13,7 +14,7 @@ const VIS_TRANS = {
   fr: { title: "VISIBILITÉ", excellent: "Excellente", good: "Bonne", haze: "Brumes", fog: "Brouillard", nodata: "PAS DE DONNÉES" }
 };
 
-export const VisibilityWidget = ({ visibility, lang = 'ca' }: VisibilityWidgetProps) => {
+export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: VisibilityWidgetProps) => {
   // DOCTRINA RISC ZERO: Resolució d'idioma estricta i sense 'any'
   const safeLang = (lang && VIS_TRANS[lang as keyof typeof VIS_TRANS]) ? (lang as keyof typeof VIS_TRANS) : 'ca';
   const t = VIS_TRANS[safeLang];
@@ -21,7 +22,8 @@ export const VisibilityWidget = ({ visibility, lang = 'ca' }: VisibilityWidgetPr
   // Risc Zero: Diferenciar estricament 0 metres de "pèrdua de senyal"
   const hasValidData = typeof visibility === 'number' && !isNaN(visibility);
   const safeVis = hasValidData ? Math.max(0, visibility) : 0;
-  const visibilityKm = hasValidData ? (safeVis / 1000).toFixed(1).replace('.0', '') : '--';
+  // Amb límit ("≥2" / "≤1"): la visibilitat del model no es creu si la política de boira no la confirma.
+  const visibilityKm = hasValidData ? formatVisibilityKm(safeVis, bound) : '--';
   
   // Lògica d'estat visual
   let status = t.nodata;

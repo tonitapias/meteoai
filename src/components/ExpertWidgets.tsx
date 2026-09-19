@@ -16,6 +16,7 @@ import { ConsensusInactiveWidget } from './widgets/ConsensusInactiveWidget';
 import { ConsensusLoadingWidget } from './widgets/ConsensusLoadingWidget';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
 import { getCurrentUV } from '../utils/uvIndexUtils';
+import { resolveCurrentDisplayVisibility } from '../utils/visibilityDisplay';
 import {
   CompassGauge,
   SnowLevelWidget,
@@ -60,9 +61,12 @@ interface ExpertWidgetsProps {
   onShowCloudLayersModal: () => void;
   onShowSnowLevelModal: () => void;
   onShowWindModal: () => void;
+  // Codi de temps de la capçalera (ja passat per la política de boira): decideix si el giny de
+  // Visibilitat pot dir "boira" (vegeu utils/visibilityDisplay.ts).
+  effectiveCode?: number | null;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, effectiveCode = null }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -86,7 +90,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   
   const currentWindDir = typeof current?.wind_direction_10m === 'number' ? current.wind_direction_10m : undefined;
   const currentWindGusts = typeof current?.wind_gusts_10m === 'number' ? current.wind_gusts_10m : undefined;
-  const currentVisibility = typeof current?.visibility === 'number' ? current.visibility : undefined;
+  const { meters: currentVisibility, bound: visibilityBound } = resolveCurrentDisplayVisibility(current, effectiveCode);
   const currentCloudLow = typeof current?.cloud_cover_low === 'number' ? current.cloud_cover_low : undefined;
   const currentCloudMid = typeof current?.cloud_cover_mid === 'number' ? current.cloud_cover_mid : undefined;
   const currentCloudHigh = typeof current?.cloud_cover_high === 'number' ? current.cloud_cover_high : undefined;
@@ -268,7 +272,7 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard onClick={onShowVisibilityModal}>
-              <VisibilityWidget visibility={currentVisibility} lang={lang} />
+              <VisibilityWidget visibility={currentVisibility} bound={visibilityBound} lang={lang} />
           </WidgetCard>
 
           <WidgetCard onClick={onShowCloudLayersModal}>

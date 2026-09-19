@@ -129,6 +129,7 @@ export const DashboardModals = () => {
             {modals.showVisibilityModal && (
                 <VisibilityModal
                     weatherData={weatherData}
+                    effectiveCode={calculations.effectiveWeatherCode}
                     onClose={() => actions.setShowVisibilityModal(false)}
                     lang={flags.lang}
                 />

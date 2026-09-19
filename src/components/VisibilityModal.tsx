@@ -3,6 +3,8 @@
 // bandes que ja pinta VisibilityWidget.tsx (ara centralitzades a WEATHER_THRESHOLDS.VISIBILITY)
 // i avís de la pròxima finestra de boira prevista. Reutilitza hourly.visibility, ja demanat a
 // Open-Meteo — cap crida de xarxa nova.
+// ALINEAT AMB LA POLÍTICA DE BOIRA (utils/visibilityDisplay.ts): una hora només surt com a boira
+// si la icona/la IA també la marquen; la resta es mostra amb límit ("≥ 2 km" / "≤ 1 km").
 import { useState, useRef, useMemo, memo } from 'react';
 import { X, Eye, AlertTriangle, CloudOff } from 'lucide-react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
@@ -11,11 +13,20 @@ import { MATRIX_BG } from './widgets/widgetStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
+import {
+  resolveDisplayVisibility,
+  resolveCurrentDisplayVisibility,
+  formatVisibilityKm,
+  type VisibilityBound,
+} from '../utils/visibilityDisplay';
 
 const { VISIBILITY } = WEATHER_THRESHOLDS;
 
 interface VisibilityModalProps {
   weatherData: ExtendedWeatherData;
+  // Codi de temps de la capçalera (mateixa font "ara" que el giny de Visibilitat).
+  effectiveCode?: number | null;
   onClose: () => void;
   lang?: Language;
 }
@@ -30,6 +41,7 @@ const T: Record<Language, Record<string, string>> = {
     minVisPeak: 'Mínim previst', in_: "D'aquí a", minVis: 'Visibilitat Mín. 48h',
     hoursReduced: 'Hores amb Visibilitat Reduïda', now: 'ARA', hoursShort: 'h',
     excellent: "Excel·lent", good: 'Bona', haze: 'Calitja', fog: 'Boira', unknown: 'Desconegut',
+    cappedHint: "≥ / ≤: el model preveu una visibilitat diferent, però la humitat de superfície no confirma (o sí que confirma) la boira — el mateix criteri que les icones. Sense boira confirmada es mostra com a calitja (≥ 2 km).",
   },
   es: {
     title: 'VISIBILIDAD', subtitle: 'Observatorio de Niebla', noData: 'DATOS INSUFICIENTES',
@@ -38,6 +50,7 @@ const T: Record<Language, Record<string, string>> = {
     minVisPeak: 'Mínimo previsto', in_: 'Dentro de', minVis: 'Visibilidad Mín. 48h',
     hoursReduced: 'Horas con Visibilidad Reducida', now: 'AHORA', hoursShort: 'h',
     excellent: 'Excelente', good: 'Buena', haze: 'Calima', fog: 'Niebla', unknown: 'Desconocido',
+    cappedHint: "≥ / ≤: el modelo prevé una visibilidad distinta, pero la humedad de superficie no confirma (o sí confirma) la niebla — el mismo criterio que los iconos. Sin niebla confirmada se muestra como calima (≥ 2 km).",
   },
   en: {
     title: 'VISIBILITY', subtitle: 'Fog Observatory', noData: 'INSUFFICIENT DATA',
@@ -46,6 +59,7 @@ const T: Record<Language, Record<string, string>> = {
     minVisPeak: 'Expected minimum', in_: 'In', minVis: 'Min Visibility 48h',
     hoursReduced: 'Hours with Reduced Visibility', now: 'NOW', hoursShort: 'h',
     excellent: 'Excellent', good: 'Good', haze: 'Haze', fog: 'Fog', unknown: 'Unknown',
+    cappedHint: "≥ / ≤: the model forecasts a different visibility, but surface humidity does not confirm (or does confirm) fog — the same rule as the icons. Without confirmed fog it is shown as haze (≥ 2 km).",
   },
   fr: {
     title: 'VISIBILITÉ', subtitle: 'Observatoire de Brouillard', noData: 'DONNÉES INSUFFISANTES',
@@ -54,6 +68,7 @@ const T: Record<Language, Record<string, string>> = {
     minVisPeak: 'Minimum prévu', in_: 'Dans', minVis: 'Visibilité Min 48h',
     hoursReduced: 'Heures à Visibilité Réduite', now: 'MAINTENANT', hoursShort: 'h',
     excellent: 'Excellente', good: 'Bonne', haze: 'Brume', fog: 'Brouillard', unknown: 'Inconnu',
+    cappedHint: "≥ / ≤ : le modèle prévoit une visibilité différente, mais l'humidité de surface ne confirme pas (ou confirme) le brouillard — même critère que les icônes. Sans brouillard confirmé, affichée comme brume (≥ 2 km).",
   },
 };
 
@@ -74,7 +89,7 @@ function getVisibilitySeverity(visM: number | null, t: Record<string, string>): 
 
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 
-export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: VisibilityModalProps) {
+export default function VisibilityModal({ weatherData, effectiveCode = null, onClose, lang = 'ca' }: VisibilityModalProps) {
   const safeLang: Language = T[lang] ? lang : 'ca';
   const t = T[safeLang];
 
@@ -91,30 +106,48 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
 
   const hasData = currentHourIndex !== -1 && Array.isArray(hourly?.visibility);
 
+  const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+  const hourlyComparison = weatherData.hourlyComparison;
+
+  // Cada hora es resol amb el MATEIX codi de temps que la icona (getHourlyWeatherCode): només és
+  // "boira" si la política de boira la confirma; si no, la visibilitat no baixa de 2 km ("≥").
   const windowEntries = useMemo(() => {
     if (!hasData || !hourly) return [];
     const total = Array.isArray(hourly.time) ? hourly.time.length : 0;
     const n = Math.min(WINDOW_HOURS, total - currentHourIndex);
+    const series = hourly as unknown as HourlySeries;
     return Array.from({ length: Math.max(0, n) }, (_, i) => {
       const idx = currentHourIndex + i;
-      return { idx, timeStr: String(hourly.time?.[idx] ?? ''), visibility: getSafe(hourly.visibility, idx) };
+      const code = getHourlyWeatherCode(series, idx, elevation, hourlyComparison);
+      const { meters, bound } = resolveDisplayVisibility(getSafe(hourly.visibility, idx), code, getSafe(hourly.precipitation, idx) ?? 0);
+      return { idx, timeStr: String(hourly.time?.[idx] ?? ''), visibility: meters, bound };
     });
-  }, [hasData, hourly, currentHourIndex]);
+  }, [hasData, hourly, currentHourIndex, elevation, hourlyComparison]);
 
   const N = windowEntries.length;
 
   // Prioritzem el valor "ara" del bloc current (mateixa font que VisibilityWidget al
   // dashboard) — hourly[hora actual] pot diferir lleugerament, vegeu la lliçó de Pressió/Confort.
-  const currentVisibility = typeof current?.visibility === 'number' ? current.visibility : (N > 0 ? windowEntries[0].visibility : null);
+  // Resolució compartida amb el giny (resolveCurrentDisplayVisibility) i amb el codi de la capçalera.
+  const currentResolved: { meters: number | null; bound: VisibilityBound } = typeof current?.visibility === 'number'
+    ? resolveCurrentDisplayVisibility(current, effectiveCode)
+    : (N > 0 ? { meters: windowEntries[0].visibility, bound: windowEntries[0].bound } : { meters: null, bound: null });
+  const currentVisibility = currentResolved.meters;
   const severity = getVisibilitySeverity(currentVisibility, t);
 
   const minVisibility = useMemo(() => {
     const vals = windowEntries.map(e => e.visibility).filter((v): v is number => v !== null);
-    return vals.length > 0 ? Math.min(...vals) : null;
+    if (vals.length === 0) return null;
+    const meters = Math.min(...vals);
+    // Si el mínim és un valor amb límit, s'indica; un empat amb un valor real del model preval.
+    const atMin = windowEntries.filter(e => e.visibility === meters);
+    const real = atMin.find(e => e.bound === null);
+    return { meters, bound: (real ? null : atMin[0]?.bound ?? null) as VisibilityBound };
   }, [windowEntries]);
 
+  // Una hora amb límit "≥ 2 km" no es pot comptar com a visibilitat reduïda: només sabem que és >= 2 km.
   const hoursReduced = useMemo(
-    () => windowEntries.filter(e => e.visibility !== null && e.visibility < VISIBILITY.HAZE).length,
+    () => windowEntries.filter(e => e.visibility !== null && e.bound !== 'min' && e.visibility < VISIBILITY.HAZE).length,
     [windowEntries]
   );
 
@@ -127,7 +160,7 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
     const segment = runLength === -1 ? remaining : remaining.slice(0, runLength);
     const min = Math.min(...segment.map(e => e.visibility as number));
     const minIdx = startIdx + segment.findIndex(e => e.visibility === min);
-    return { startIdx, min, minIdx };
+    return { startIdx, min, minIdx, minBound: windowEntries[minIdx].bound };
   }, [windowEntries]);
 
   // --- Scrub horitzontal (mateix patró RAF que la resta de modals experts) ---
@@ -172,6 +205,8 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
   const activeEntry = N > 0 ? windowEntries[activeIndex] : null;
   const isScrubbing = scrubIndex !== null && scrubIndex !== 0;
   const displayVisibility = isScrubbing ? activeEntry?.visibility ?? null : currentVisibility;
+  const displayBound: VisibilityBound = isScrubbing ? activeEntry?.bound ?? null : currentResolved.bound;
+  const anyBounded = windowEntries.some(e => e.bound !== null);
 
   // --- Geometria del gràfic: km en un eix log-friendly simple, tallat a 15km (per sobre de
   // GOOD ja és "excel·lent" indistintament) ---
@@ -252,7 +287,7 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
               <div className="flex flex-col items-center sm:items-start gap-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.visNow}</span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none drop-shadow-xl ${severity.color}`}>
-                  {currentVisibility !== null ? (currentVisibility / 1000).toFixed(1).replace('.0', '') : '--'}
+                  {formatVisibilityKm(currentVisibility, currentResolved.bound)}
                 </span>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">km</span>
               </div>
@@ -274,7 +309,7 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
                 {nextFogWindow ? (
                   <span className={`text-sm font-bold ${severity.color}`}>
                     {nextFogWindow.startIdx === 0 ? t.activeNow : `${t.in_} ${nextFogWindow.startIdx}${t.hoursShort}`}
-                    {' · '}{t.minVisPeak} {(nextFogWindow.min / 1000).toFixed(1).replace('.0', '')} km
+                    {' · '}{t.minVisPeak} {formatVisibilityKm(nextFogWindow.min, nextFogWindow.minBound)} km
                   </span>
                 ) : (
                   <span className="text-sm font-bold text-emerald-400">{t.noFog}</span>
@@ -291,7 +326,7 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
                 {activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
-                    {' · '}<span className={getVisibilitySeverity(displayVisibility, t).color}>{displayVisibility !== null ? (displayVisibility / 1000).toFixed(1).replace('.0', '') : '--'} km</span>
+                    {' · '}<span className={getVisibilitySeverity(displayVisibility, t).color}>{formatVisibilityKm(displayVisibility, displayBound)} km</span>
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
@@ -313,7 +348,7 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
                 aria-valuemin={0}
                 aria-valuemax={N - 1}
                 aria-valuenow={activeIndex}
-                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.visibility ?? '--'} m` : undefined}
+                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.bound === 'min' ? '≥ ' : activeEntry.bound === 'max' ? '≤ ' : ''}${activeEntry.visibility ?? '--'} m` : undefined}
                 onKeyDown={handleKeyDown}
               >
                 <line x1="0" y1={visToY(VISIBILITY.FOG)} x2={CHART_W} y2={visToY(VISIBILITY.FOG)} stroke="#f43f5e" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 3" />
@@ -335,6 +370,9 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
                   </g>
                 )}
               </svg>
+              {anyBounded && (
+                <p className="mt-3 text-[10px] leading-snug text-slate-500 font-medium">{t.cappedHint}</p>
+              )}
             </div>
 
             {/* TARGETES D'ESTADÍSTIQUES */}
@@ -348,14 +386,14 @@ export default function VisibilityModal({ weatherData, onClose, lang = 'ca' }: V
 
 interface StatsSectionProps {
   t: Record<string, string>;
-  minVisibility: number | null;
+  minVisibility: { meters: number; bound: VisibilityBound } | null;
   hoursReduced: number;
 }
 
 const StatsSection = memo(function StatsSection({ t, minVisibility, hoursReduced }: StatsSectionProps) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <StatCard label={t.minVis} value={minVisibility !== null ? `${(minVisibility / 1000).toFixed(1).replace('.0', '')} km` : '--'} icon={<Eye className="w-3.5 h-3.5" />} />
+      <StatCard label={t.minVis} value={minVisibility !== null ? `${formatVisibilityKm(minVisibility.meters, minVisibility.bound)} km` : '--'} icon={<Eye className="w-3.5 h-3.5" />} />
       <StatCard label={t.hoursReduced} value={`${hoursReduced}${t.hoursShort}`} icon={<AlertTriangle className="w-3.5 h-3.5" />} />
     </div>
   );

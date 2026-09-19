@@ -112,6 +112,7 @@ export const DashboardContent = () => {
                                 lang={flags.lang}
                                 unit={flags.unit}
                                 freezingLevel={calculations.currentFreezingLevel ?? null}
+                                effectiveCode={calculations.effectiveWeatherCode}
                                 onShowSolarModal={() => actions.setShowSolarModal(true)}
                                 onShowMoonModal={() => actions.setShowMoonModal(true)}
                                 onShowStormModal={() => actions.setShowStormModal(true)}

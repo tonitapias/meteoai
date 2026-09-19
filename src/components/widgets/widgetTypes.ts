@@ -28,5 +28,7 @@ export interface HourlyWidgetProps {
 
 export interface VisibilityWidgetProps {
   visibility?: number | null; // Valor en metres. DOCTRINA RISC ZERO: pot faltar.
+  // 'min' → el valor real és >= visibility ("≥"); 'max' → és <= visibility ("≤"). Vegeu utils/visibilityDisplay.ts.
+  bound?: 'min' | 'max' | null;
   lang: string;
 }
