@@ -103,6 +103,7 @@ Un vuitè modal de detall, accessible tocant el giny de Visibilitat en Mode Expe
 * **Avís de boira:** primer tram de la finestra amb visibilitat per sota del llindar de boira i el mínim previst, o confirma que no n'hi ha cap en les properes 48 hores.
 * **Boira gebradora:** la boira confirmada a T ≤ 0 °C és sempre gebradora (gotetes subrefredades que dipositen gebre i deixen gel a terra) i té icona pròpia: la boira amb un floc de neu a la cantonada. El llindar està verificat contra 24 mesos de METAR de 20 aeroports europeus i canaris (702.000 informes): per sobre de 0 °C no hi ha cap boira gebradora en 4.482 informes de boira, i a T ≤ −1 °C ho és entre el 94 i el 100 %.
 * **Pluja i plugim engelants:** quan el model diagnostica precipitació líquida sobre una superfície sota zero, l'app la mostra com a engelant —amb el mateix floc de neu sobre la icona de plugim o de pluja— en lloc de convertir-la en neu, que és un fenomen diferent i menys perillós que la glaçada a la carretera. La IA n'avisa amb un text i un avís de risc de gel propis.
+* **Porta de núvols baixos:** la boira és un núvol a nivell de terra, així que només es confirma si el model porta almenys un 70 % de núvols baixos (a més del senyal del model, la saturació i l'absència de pluja). Contra 24 mesos de METAR de 20 aeroports (350.000 hores comparades amb la sortida del model), això puja l'índex d'encert (CSI) de 0,25 a 0,30 i baixa les falses alarmes de 0,73 a 0,65, a canvi de perdre un 8 % de les hores de boira encertades. Si la dada de núvols baixos falta, no s'aplica —mai es converteix una dada absent en un 0 %.
 * Reutilitza `hourly.visibility`, ja demanat a Open-Meteo — cap crida de xarxa nova.
 
 ### 10. Núvols: Perfil de Capes
@@ -110,6 +111,7 @@ Un novè modal de detall, accessible tocant el giny de Núvols en Mode Expert:
 * **Cobertura efectiva actual:** ponderació de les tres capes (baixos×1.0 + mitjans×0.6 + alts×0.3 — el mateix càlcul que ja determina la icona de cel a la resta de l'app) classificada en 4 estats (Serè/Parcialment Ennuvolat/Molt Ennuvolat/Cobert).
 * **Evolució de 48h per capa:** gràfic *scrubbable* amb les tres capes (alts/mitjans/baixos) superposades, per veure com evoluciona el perfil vertical del cel al llarg del temps, no només un percentatge global.
 * **Estadístiques:** capa dominant de la finestra (la de major cobertura mitjana) i hores amb cel cobert.
+* **Icona i etiqueta "Molt ennuvolat":** a partir del 70 % de cobertura efectiva, el cel deixa de pintar-se com el sol entre núvols i passa a la icona de dos núvols, amb l'etiqueta corresponent a la capçalera. Es decideix amb el mateix percentatge que va decidir el codi de cel, a "ara", a cada hora i al diari (mitjana diürna).
 * Reutilitza `hourly.cloud_cover_low/mid/high`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
 ### 11. Cota de Neu
@@ -140,6 +142,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Neo-Skeuomorfisme:** Informació presentada amb codis de colors funcionals (Verd=Òptim, Ambre=Avís) i estats lluminosos que imiten instrumentació física.
+* **Llenguatge d'icones del temps:** cada estat té una icona diferent, i dins de cada família la intensitat es llegeix pel nombre de marques —2, 3 o 5 ratlles a la pluja; 2, 4 o 6 flocs a la neu—. El plugim té gotetes fines, l'aiguaneu barreja una ratlla de pluja amb flocs, la tempesta amb calamarsa hi afegeix pedres, el "majorment serè" és un sol amb un núvol petit, i tot el que gela en tocar terra (boira, plugim i pluja engelants) porta un floc de neu a la cantonada. L'aiguaneu (pluja i neu barrejades) es deriva de la temperatura (1–4 °C) i de la cota de gel (isoterma 0 °C sobre el terra, a menys de 300 m): Open-Meteo no el publica.
 * **Smart Dictionary (i18n):** Interfície totalment desacoblada per garantir canvis d'idioma autònoms en estat offline.
 
 ---
