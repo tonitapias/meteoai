@@ -11,6 +11,7 @@ vi.mock('./cacheService', () => ({
 }));
 
 import { getGeminiAnalysis } from './geminiService';
+import { TRANSLATIONS } from '../translations';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 const FOG_DESC = 'Boira o boira baixa';
@@ -106,6 +107,31 @@ describe('getGeminiAnalysis — política de boira', () => {
     it('sense effectiveCode, l\'estat del cel actual cau al codi brut del model', async () => {
         const { prompt } = await run(buildWeather(94), null);
         expect(prompt).toContain(`Estat del Cel: ${FOG_DESC}`);
+    });
+
+    it("l'aiguaneu que deriva l'app (68/69) arriba a la IA com a text, no com a 'Codi WMO'", async () => {
+        const weather = buildWeather(90);
+        weather.elevation = 0;
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.weather_code = Array.from({ length: 8 }, () => 63);       // el model diu pluja...
+        h.temperature_2m = Array.from({ length: 8 }, () => 3);      // ...a 3 °C amb la cota 0 °C a 200 m: aiguaneu
+        h.precipitation = Array.from({ length: 8 }, () => 1);
+        h.freezing_level_height = Array.from({ length: 8 }, () => 200);
+        h.visibility = Array.from({ length: 8 }, () => 5000);
+        (weather.current as unknown as Record<string, number>).temperature_2m = 3;
+        const { prompt } = await run(weather, 69);
+        expect(prompt).toContain('Aiguaneu');
+        expect(prompt).not.toContain('Codi WMO');
+    });
+
+    it("cap codi que l'app sap etiquetar arriba a la IA com un 'Codi WMO' opac", async () => {
+        const codes = Object.keys(TRANSLATIONS.ca.wmo).map(Number);
+        expect(codes.length).toBeGreaterThan(20);
+        for (const code of codes) {
+            const { prompt } = await run(buildWeather(94), code);
+            const estat = prompt.match(/Estat del Cel: (.*)/)?.[1] ?? '';
+            expect(estat, `codi ${code}`).not.toMatch(/^Codi WMO/);
+        }
     });
 
     it('el tallafocs de tempesta segueix anant sobre el codi brut (dades crues guanyen)', async () => {

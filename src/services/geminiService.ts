@@ -179,6 +179,10 @@ const getTacticalWeatherDescription = (code: number | null | undefined, temp: nu
         case 65: return "Pluja contínua (Feble, moderada o forta)";
         case 66:
         case 67: return !isFreezing ? "Pluja contínua intensa" : "Pluja gelant (Risc alt de gel al terra)";
+        // Aiguaneu (68 feble, 69 moderat/fort): el deriva l'app (Open-Meteo no el publica) a la franja
+        // 1-4 °C amb la cota de gel prop del terra. Sense aquest cas la IA rebia el text literal "Codi WMO 69".
+        case 68:
+        case 69: return "Aiguaneu (Pluja i neu barrejades; superfícies relliscoses)";
         case 71:
         case 73:
         case 75: return !isFreezing ? "Pluja moderada o intensa" : "Nevada contínua (Feble, moderada o copiosa)";
