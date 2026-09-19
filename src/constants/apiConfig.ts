@@ -60,6 +60,12 @@ export const PARAMS_AQI_HOURLY = [
 // contra Open-Meteo: HRRR i ICON-D2 la suporten al 100%; HRDPS no té
 // 'visibility' ni 'freezing_level_height', però el motor de merge ja ignora
 // els camps null — vegeu regionalModels.ts).
+// ATENCIÓ (verificat en viu): els camps que un model regional no publica queden
+// a null i, un cop combinat, s'hi veu el valor del model global. AROME HD no
+// porta 'weather_code', 'visibility', 'freezing_level_height' ni 'cloud_cover'
+// total; d'altres (MeteoSwiss, ItaliaMeteo, GeoSphere AT, MET Norway, JMA...) no
+// porten 'visibility'. Qualsevol pantalla que decideixi una icona ha de fer-ho
+// sobre la sèrie combinada (utils/hourlyWeatherCode.ts), no sobre la crua.
 
 export const REGIONAL_HD_CURRENT = [
     "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day",

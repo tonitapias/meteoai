@@ -72,6 +72,7 @@ export const DashboardModals = () => {
                     model={flags.activeRegionalModel}
                     onClose={() => actions.setShowRegionalModel(false)}
                     lang={flags.lang}
+                    weatherData={weatherData}
                 />
             )}
             {modals.showSolarModal && (

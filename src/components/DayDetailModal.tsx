@@ -6,7 +6,7 @@ import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogic
 import { WeatherUnit, formatPrecipitation, getSafeLocale } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
-import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { getHourlyWeatherCode, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -148,70 +148,34 @@ export default function DayDetailModal({
 
         // DOCTRINA RISC ZERO: temp/pluja/vent es mostren directament a la taula —
         // si falten, null (i "--" a la UI, ja implementat més avall), mai un 0
-        // fals. Les variables "ForCalc" de sota alimenten només l'orquestrador
-        // de codi/icona (getRealTimeWeatherCode / getInversionCorrectedTemp),
-        // que és fora d'abast d'aquest fix i encara necessita un número.
+        // fals. windForCalc alimenta només getInversionCorrectedTemp, que encara
+        // necessita un número.
         const rawTemp = extractValidArrayNum(hRaw.temperature_2m, idx);
-        const rawCode = getSafeArrNum(hRaw.weather_code ?? hRaw.weathercode, idx, 0);
         const precipProb = extractValidArrayNum(hRaw.precipitation_probability, idx);
         const precipSum = extractValidArrayNum(hRaw.precipitation, idx);
         const snowfall = extractValidArrayNum(hRaw.snowfall, idx);
         const windSpeed = extractValidArrayNum(hRaw.wind_speed_10m, idx);
 
-        const tempForCalc = rawTemp ?? 0;
         const windForCalc = windSpeed ?? 0;
-        const precipSumForCalc = precipSum ?? 0;
-        const precipProbForCalc = precipProb ?? 0;
 
-        // Extracció expandida per al motor físic unificat
-        const humidity = getSafeArrNum(hRaw.relative_humidity_2m, idx, 70);
-        const cloudCover = getSafeArrNum(hRaw.cloud_cover, idx, 0);
+        // Capes de núvols: només per a la correcció d'inversió de la temperatura
+        // mostrada (el codi de la icona el calcula getHourlyWeatherCode).
         const cloudLow = getSafeArrNum(hRaw.cloud_cover_low, idx, 0);
         const cloudMid = getSafeArrNum(hRaw.cloud_cover_mid, idx, 0);
         const cloudHigh = getSafeArrNum(hRaw.cloud_cover_high, idx, 0);
-        const cape = getSafeArrNum(hRaw.cape, idx, 0);
-        const visibility = getSafeArrNum(hRaw.visibility, idx, 10000);
-        
+
+        // Dia/nit: l'`is_day` de l'API (exacte al minut) mana. L'aproximació per hora
+        // sencera de sortida/posta només és l'última reserva: sempre falla a les hores
+        // frontera (sortida 07:35 → donava "dia" a les 07:00, encara de nit; posta 19:53
+        // → donava "nit" a les 19:00, encara de dia) i deixava aquesta taula amb una
+        // icona diferent de la de l'evolució horària per a la mateixa hora.
         const currentHour = parseInt(time.split('T')[1]?.slice(0, 2) || "0", 10);
-        const isDayNum = currentHour >= sunriseHour && currentHour < sunsetHour ? 1 : 0;
-        const isDay = isDayNum === 1;
+        const isDay = resolveIsDay(hRaw, idx, () => currentHour >= sunriseHour && currentHour < sunsetHour);
+        const isDayNum = isDay ? 1 : 0;
 
-        let freezingLevel = getSafeArrNum(hRaw.freezing_level_height, idx, -1);
-        if (freezingLevel === -1) {
-            freezingLevel = Math.max(elevation, elevation + (tempForCalc / 0.0065));
-        }
-
-        // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb validació creuada
-        // [NOTA] temperature_2m aquí és rawTemp (CRUA, no tempForCalc ni la corregida
-        // per inversió): la correcció d'inversió només s'aplica a la temperatura
-        // MOSTRADA (displayTemp, més avall), i getRealTimeWeatherCode ja sap tornar
-        // null quan rawTemp falta, en lloc de fingir un 0ºC que podria fer aparèixer
-        // neu en ple estiu (determineSnowCode/applyThermalLock).
-        const simulatedCurrent = {
-            time: time,
-            weather_code: rawCode,
-            temperature_2m: rawTemp,
-            apparent_temperature: rawTemp,
-            wind_speed_10m: windForCalc,
-            visibility: visibility,
-            relative_humidity_2m: humidity,
-            cloud_cover_low: cloudLow,
-            cloud_cover_mid: cloudMid,
-            cloud_cover_high: cloudHigh,
-            cloud_cover: cloudCover,
-            precipitation: precipSumForCalc,
-            cape: cape,
-            is_day: isDayNum
-        } as unknown as StrictCurrentWeather;
-        // ^ Cast estricte validant TS2352 mitjançant 'unknown'
-
-        const finalCode = getRealTimeWeatherCode(
-            simulatedCurrent,
-            [precipSumForCalc],
-            precipProbForCalc,
-            freezingLevel,
-            elevation
-        );
+        // Codi de la icona: font única (utils/hourlyWeatherCode.ts), la mateixa que fan
+        // servir Forecast24h i el modal del model regional.
+        const finalCode = getHourlyWeatherCode(hRaw as HourlySeries, idx, elevation, weatherData.hourlyComparison);
 
         // Sense temperatura real d'aquesta hora, no té sentit "corregir-la" —
         // es manté null i la UI ja sap mostrar "--°" (vegeu hasTemp més avall).

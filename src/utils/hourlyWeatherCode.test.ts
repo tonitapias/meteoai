@@ -1,0 +1,154 @@
+import { describe, it, expect } from 'vitest';
+import { getHourlyWeatherCode, resolveFreezingLevel, resolveIsDay } from './hourlyWeatherCode';
+import { buildRegionalHourlyRows } from './regionalHourlyRows';
+import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
+import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
+
+// Sèrie horària mínima de 3 hores (00:00, 01:00, 02:00 del 2026-09-19)
+const TIMES = ['2026-09-19T00:00', '2026-09-19T01:00', '2026-09-19T02:00'];
+
+describe('resolveFreezingLevel', () => {
+    it('usa el valor de la sèrie pròpia quan hi és', () => {
+        const h = { freezing_level_height: [null, 3900, null] };
+        expect(resolveFreezingLevel(h, 1, 500, 14)).toBe(3900);
+    });
+
+    it('recorre als models de comparació en ordre ecmwf → gfs → icon', () => {
+        const h = { freezing_level_height: [null, null, null] };
+        const cmp = {
+            ecmwf: [{}, { freezing_level_height: null }, {}],
+            gfs: [{}, { freezing_level_height: 3830 }, {}],
+            icon: [{}, { freezing_level_height: 4010 }, {}]
+        };
+        expect(resolveFreezingLevel(h, 1, 500, 14, cmp)).toBe(3830);
+    });
+
+    it('extrapola amb 6,5 °C/km sense clamp com a últim recurs', () => {
+        expect(resolveFreezingLevel({}, 0, 500, 13)).toBeCloseTo(500 + 13 / 0.0065, 5);
+        // Fa prou fred perquè la isoterma quedi per sota de l'elevació: es reflecteix.
+        expect(resolveFreezingLevel({}, 0, 500, -6)).toBeLessThan(500);
+    });
+});
+
+describe('resolveIsDay', () => {
+    it("l'is_day de l'API mana sobre l'aproximació per hora sencera", () => {
+        // 07:00 amb sortida a les 07:35: l'API diu nit, l'heurística diria dia.
+        expect(resolveIsDay({ is_day: [0] }, 0, () => true)).toBe(false);
+        expect(resolveIsDay({ is_day: [1] }, 0, () => false)).toBe(true);
+    });
+
+    it("només usa la reserva si l'API no porta is_day", () => {
+        expect(resolveIsDay({}, 0, () => true)).toBe(true);
+        expect(resolveIsDay({ is_day: [null] }, 0, () => false)).toBe(false);
+    });
+});
+
+describe('getHourlyWeatherCode', () => {
+    const base = {
+        time: TIMES,
+        temperature_2m: [14, 14, 14],
+        relative_humidity_2m: [95, 95, 95],
+        precipitation: [0, 0, 0],
+        cloud_cover_low: [0, 0, 0],
+        cloud_cover_mid: [0, 0, 0],
+        cloud_cover_high: [0, 0, 0],
+        weather_code: [0, 0, 0],
+        wind_speed_10m: [2, 2, 2]
+    };
+
+    it('retorna null si l\'hora no té temperatura real', () => {
+        expect(getHourlyWeatherCode({ ...base, temperature_2m: [null, 14, 14] }, 0, 500)).toBeNull();
+    });
+
+    it('marca boira si la visibilitat de la sèrie és crítica (sense pluja)', () => {
+        expect(getHourlyWeatherCode({ ...base, visibility: [300, 300, 300] }, 0, 500)).toBe(45);
+    });
+
+    it('sense visibilitat ni codi de boira NO fabrica boira', () => {
+        expect(getHourlyWeatherCode({ ...base, visibility: [null, null, null] }, 0, 500)).not.toBe(45);
+    });
+});
+
+/**
+ * REGRESSIÓ (informe d'usuari): el modal AROME no marcava boira però l'evolució
+ * horària i "Previsió per hores" sí. Causa: AROME HD no publica weather_code,
+ * visibility ni freezing_level_height; el modal els omplia amb marcadors i la resta
+ * de l'app amb els valors del model global (ICON: boira, visibilitat < 1 km).
+ * La mateixa hora ha de donar la mateixa icona en totes les pantalles.
+ */
+describe('buildRegionalHourlyRows — homogeneïtat amb la resta de l\'app', () => {
+    // Sèrie crua d'AROME: sense weather_code, visibility ni freezing_level_height
+    const arome = {
+        time: TIMES,
+        temperature_2m: [16.3, 15.7, 15.3],
+        relative_humidity_2m: [93, 93, 92],
+        precipitation: [0, 0, 0],
+        cloud_cover_low: [0, 0, 0],
+        cloud_cover_mid: [0, 0, 0],
+        cloud_cover_high: [0, 0, 0],
+        wind_speed_10m: [6, 6, 4],
+        wind_gusts_10m: [10, 9, 8],
+        wind_direction_10m: [200, 210, 220],
+        cape: [0, 0, 0],
+        weather_code: [null, null, null],
+        visibility: [null, null, null],
+        freezing_level_height: [null, null, null],
+        is_day: [0, 0, 0]
+    };
+
+    // Dades combinades tal com les veuen Forecast24h/DayDetailModal: valors d'AROME on
+    // n'hi ha; on no (weather_code, visibility, freezing_level_height) els d'ICON.
+    const merged = {
+        ...arome,
+        weather_code: [45, 45, 45],
+        visibility: [1360, 840, 820],
+        freezing_level_height: [3990, 4010, 4020]
+    };
+    const baseData = { elevation: 504, hourly: merged, hourlyComparison: {} } as unknown as ExtendedWeatherData;
+
+    // 00:10 hora local (UTC+2) del 2026-09-19
+    const now = new Date('2026-09-18T22:10:00Z');
+    const args = { hourly: arome, elevation: 504, utcOffsetSeconds: 7200, latitude: 41.9, now };
+
+    it('la icona de cada fila és exactament la que calcula la resta de l\'app', () => {
+        const rows = buildRegionalHourlyRows({ ...args, baseData });
+        expect(rows).toHaveLength(3);
+        rows.forEach((row, i) => {
+            expect(row.code).toBe(getHourlyWeatherCode(merged, i, 504, baseData.hourlyComparison));
+            expect(row.code).toBe(45); // la boira és la mateixa a tot arreu
+        });
+    });
+
+    it("la cota 0 °C mostrada és la real del model, no l'extrapolació de la temperatura", () => {
+        const rows = buildRegionalHourlyRows({ ...args, baseData });
+        expect(rows.map(r => r.freezingLevel)).toEqual([3990, 4010, 4020]);
+    });
+
+    it('sense dades combinades, calcula igualment sobre la sèrie crua (sense boira inventada)', () => {
+        const rows = buildRegionalHourlyRows(args);
+        expect(rows).toHaveLength(3);
+        rows.forEach(r => expect(r.code).not.toBe(45));
+    });
+
+    it("descarta les hores ja passades a la ubicació", () => {
+        // 01:30 hora local: la fila de les 00:00 ja no s'ha de mostrar
+        const later = new Date('2026-09-18T23:30:00Z');
+        const rows = buildRegionalHourlyRows({ ...args, baseData, now: later });
+        expect(rows.map(r => r.hour)).toEqual([1, 2]);
+    });
+
+    it('la temperatura mostrada porta la mateixa correcció d\'inversió que la resta', () => {
+        // Nit d'hivern, calma i cel serè: correcció màxima (−3,5 °C) a l'app
+        const winter = { ...arome, time: ['2026-01-10T00:00'], temperature_2m: [2], wind_speed_10m: [0], is_day: [0] };
+        const rows = buildRegionalHourlyRows({
+            hourly: winter, elevation: 504, utcOffsetSeconds: 3600, latitude: 41.9,
+            now: new Date('2026-01-09T23:10:00Z')
+        });
+        const expected = getInversionCorrectedTemp(
+            { temperature_2m: 2, is_day: 0, wind_speed_10m: 0, cloud_cover_low: 0, cloud_cover_mid: 0, cloud_cover_high: 0 } as unknown as StrictCurrentWeather,
+            0, 41.9
+        );
+        expect(expected).toBeCloseTo(-1.5, 5);
+        expect(rows[0].temp).toBeCloseTo(expected, 5);
+    });
+});

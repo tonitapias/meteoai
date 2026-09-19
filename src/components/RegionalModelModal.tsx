@@ -3,11 +3,11 @@ import { useRegionalModel } from '../hooks/useRegionalModel';
 import { X, Wind, Droplets, Snowflake, Activity, Zap, AlertOctagon, ShieldCheck, Mountain, ArrowUp } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../translations';
-import { getRealTimeWeatherCode } from '../utils/weatherLogic';
-import { StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import type { RegionalModel } from '../constants/regionalModels';
+import { buildRegionalHourlyRows } from '../utils/regionalHourlyRows';
 
 interface RegionalModelModalProps {
   lat: number;
@@ -15,22 +15,13 @@ interface RegionalModelModalProps {
   model: RegionalModel;
   onClose: () => void;
   lang?: Language;
-}
-
-interface HourlyRow {
-  time: string;
-  hour: number;
-  date: string;
-  temp: number;
-  precip: number;
-  code: number;
-  wind: number;
-  gust: number;
-  windDir: number;
-  cape: number;
-  freezingLevel: number;
-  isDay: boolean;
-  cloudCover: number;
+  /**
+   * Dades combinades de l'app. Amb elles, la icona i la cota 0 °C de cada fila es
+   * calculen sobre la mateixa sèrie que Forecast24h i DayDetailModal (vegeu
+   * utils/hourlyWeatherCode.ts) — el model regional no publica tots els camps
+   * (AROME HD no porta weather_code, visibility ni freezing_level_height).
+   */
+  weatherData?: ExtendedWeatherData | null;
 }
 
 // DOCTRINA RISC ZERO: Diccionari tàctic intern segur
@@ -112,7 +103,7 @@ const localeMap: Record<string, string> = {
   fr: 'fr-FR'
 };
 
-export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'ca' }: RegionalModelModalProps) {
+export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'ca', weatherData }: RegionalModelModalProps) {
   const { regionalData, loading, error, fetchRegionalModel, clearRegionalModel } = useRegionalModel();
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -161,131 +152,15 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
     return () => clearRegionalModel();
   }, [lat, lon, model, fetchRegionalModel, clearRegionalModel]);
 
-  const hourlyRows = useMemo<HourlyRow[]>(() => {
-    const h = regionalData?.hourly;
-    if (!h || !Array.isArray(h.time) || h.time.length === 0) return [];
-
-    const locationNow = new Date(new Date().getTime() + utcOffsetSeconds * 1000);
-    const todayDateStr = locationNow.toISOString().split('T')[0];
-    const nowHour = locationNow.getUTCHours();
-
-    const rows: HourlyRow[] = [];
-    const timeLength = h.time.length;
-    const elevation = (typeof regionalData?.elevation === 'number' && !isNaN(regionalData.elevation)) ? regionalData.elevation : 0;
-
-    // Agrupem la precipitació minutal (15 min) per hora ("YYYY-MM-DDTHH") una
-    // sola vegada, en lloc de fingir una mostra horària única més avall.
-    // Això dona a getRealTimeWeatherCode mostres sub-horàries de veritat per
-    // detectar virga/intensitat real, en lloc d'un array d'1 element.
-    const minutelyByHour = new Map<string, number[]>();
-    const minutelyTime = regionalData?.minutely_15?.time;
-    const minutelyPrecip = regionalData?.minutely_15?.precipitation;
-    if (Array.isArray(minutelyTime)) {
-        minutelyTime.forEach((mTime, idx) => {
-            if (typeof mTime !== 'string') return;
-            const val = minutelyPrecip?.[idx];
-            if (val === null || val === undefined || isNaN(val)) return;
-            const hourKey = mTime.slice(0, 13); // "YYYY-MM-DDTHH"
-            const arr = minutelyByHour.get(hourKey) ?? [];
-            arr.push(val);
-            minutelyByHour.set(hourKey, arr);
-        });
-    }
-
-    for (let i = 0; i < timeLength; i++) {
-        const timeStr = h.time[i];
-        if (!timeStr || typeof timeStr !== 'string') continue;
-
-        const dateStr = timeStr.slice(0, 10);
-        const hour = parseInt(timeStr.slice(11, 13), 10);
-
-        if (dateStr < todayDateStr) continue;
-        if (dateStr === todayDateStr && hour < nowHour) continue;
-
-        const tempActual = h.temperature_2m?.[i];
-        if (tempActual === null || tempActual === undefined || isNaN(tempActual)) continue;
-
-        const isDayValue = h.is_day?.[i];
-        const isDay = isDayValue !== undefined && isDayValue !== null
-            ? isDayValue === 1
-            : (hour >= 7 && hour <= 21);
-
-        const precipActual = h.precipitation?.[i] ?? 0;
-        const low = h.cloud_cover_low?.[i] ?? 0;
-        const mid = h.cloud_cover_mid?.[i] ?? 0;
-        const high = h.cloud_cover_high?.[i] ?? 0;
-        const effectiveCloudCover = Math.min(100, Math.max(0, (low * 1.0) + (mid * 0.6) + (high * 0.3)));
-
-        let freezingLevel = h.freezing_level_height?.[i];
-        if (freezingLevel === null || freezingLevel === undefined || isNaN(freezingLevel)) {
-            // Càlcul de fallback amb el gradient tèrmic estàndard (6,5°C/km).
-            // Sense clamp: si fa prou fred, la isoterma 0 pot quedar per sota
-            // de la teva pròpia elevació, i això és exactament el que cal mostrar.
-            freezingLevel = elevation + (tempActual / 0.0065);
-        }
-
-        const cape = h.cape?.[i] ?? 0;
-        const wind = h.wind_speed_10m?.[i] ?? 0;
-        const gust = h.wind_gusts_10m?.[i] ?? 0;
-        const windDir = h.wind_direction_10m?.[i] ?? 0;
-
-        // DOCTRINA RISC ZERO: Injecció completa de telemetria per a l'Orquestrador
-        const simulatedCurrent = {
-            source: model.label,
-            time: timeStr,
-            weather_code: h.weather_code?.[i] ?? 0,
-            temperature_2m: tempActual,
-            apparent_temperature: tempActual,
-            wind_speed_10m: wind,
-            visibility: h.visibility?.[i] ?? 10000,
-            relative_humidity_2m: h.relative_humidity_2m?.[i] ?? 70,
-            cloud_cover_low: low,
-            cloud_cover_mid: mid,
-            cloud_cover_high: high,
-            cloud_cover: effectiveCloudCover,
-            precipitation: precipActual, // Injectat per sincronització de telemetria d'icones
-            cape: cape,                  // Injectat per detecció de tempestes convectives
-            is_day: isDay ? 1 : 0
-        } as StrictCurrentWeather;
-
-        // Mostres sub-horàries de veritat si n'hi ha (fins a 4, cada 15 min);
-        // si no n'hi ha per a aquesta hora, l'única mostra disponible és el
-        // total horari, exactament com abans.
-        const hourKey = timeStr.slice(0, 13);
-        const minutelySamples = minutelyByHour.get(hourKey);
-        const precipSamplesForCode = (minutelySamples && minutelySamples.length > 0) ? minutelySamples : [precipActual];
-
-        // Ara la crida està totalment homologada als 5 paràmetres de l'Orquestrador purificat
-        const finalCode = getRealTimeWeatherCode(
-            simulatedCurrent,
-            precipSamplesForCode,
-            precipActual > 0 ? 100 : 0,
-            freezingLevel,
-            elevation
-        );
-
-        rows.push({
-            time: timeStr,
-            hour: hour,
-            date: dateStr,
-            temp: tempActual,
-            precip: precipActual,
-            // finalCode només pot ser null si tempActual és invàlida, i ja hem
-            // fet `continue` uns quants línies amunt en aquest cas — el ?? 0 és
-            // defensiu per al tipatge, no un camí realment accessible.
-            code: finalCode ?? 0,
-            wind: wind,
-            gust: Math.max(wind, gust),
-            windDir: windDir,
-            cape: cape,
-            freezingLevel: freezingLevel,
-            isDay: isDay,
-            cloudCover: effectiveCloudCover
-        });
-    }
-
-    return rows;
-  }, [regionalData, utcOffsetSeconds, model]);
+  // Les files (i, sobretot, la icona de cada hora) es calculen a
+  // utils/regionalHourlyRows.ts sobre la mateixa font que la resta de l'app.
+  const hourlyRows = useMemo(() => buildRegionalHourlyRows({
+    hourly: regionalData?.hourly as Record<string, unknown> | undefined,
+    elevation: (typeof regionalData?.elevation === 'number' && !isNaN(regionalData.elevation)) ? regionalData.elevation : 0,
+    utcOffsetSeconds,
+    latitude: lat,
+    baseData: weatherData
+  }), [regionalData, utcOffsetSeconds, lat, weatherData]);
 
   // DOCTRINA RISC ZERO: Lògica immutabilitzada i segura contra arrays buits que provocarien Infinity o -Infinity
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);

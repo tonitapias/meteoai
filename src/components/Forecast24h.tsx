@@ -6,7 +6,7 @@ import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './widgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
-import { getRealTimeWeatherCode } from '../utils/weatherLogic';
+import { getHourlyWeatherCode, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeNum, extractValidArrayNum } from '../utils/weatherMath';
 import { isRegionalModelActive } from '../constants/regionalModels';
@@ -45,6 +45,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         
         if (startIndex === -1) return [];
 
+        const hourlySeries = hourly as unknown as HourlySeries;
         const rows: ChartDataPoint[] = [];
         const MAX_HOURS = 25;
         
@@ -64,28 +65,22 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             // EXTRACCIÓ BLINDADA: Evitem trencaments si l'API de Meteo omet capes
             // DOCTRINA RISC ZERO: la temperatura mostrada a cada targeta no pot
             // ser un 0°C fals — si falta, null (HourlyForecastWidget ja en sap
-            // mostrar "--°"). rawTempForCalc només alimenta l'extrapolació de
-            // cota de gel de més avall quan cap model de comparació en té.
+            // mostrar "--°").
             const rawTemp = extractValidArrayNum(hourly.temperature_2m, targetIndex);
-            const rawTempForCalc = rawTemp ?? 0;
             const pProb = getSafeNum(hourly.precipitation_probability, targetIndex);
             const pAmt = getSafeNum(hourly.precipitation, targetIndex);
             const windSpeed = getSafeNum(hourly.wind_speed_10m, targetIndex);
             const sAmt = getSafeNum(hourly.snowfall, targetIndex);
-            const rawCode = getSafeNum(hourly.weather_code, targetIndex);
             
-            // Extracció expandida per al motor físic unificat
-            const humidity = getSafeNum(hourly.relative_humidity_2m, targetIndex, 70);
-            const cloudCover = getSafeNum(hourly.cloud_cover, targetIndex, 0);
+            // Capes de núvols: només per a la correcció d'inversió de la temperatura
+            // mostrada (el codi de la icona el calcula getHourlyWeatherCode).
             const cloudLow = getSafeNum(hourly.cloud_cover_low, targetIndex, 0);
             const cloudMid = getSafeNum(hourly.cloud_cover_mid, targetIndex, 0);
             const cloudHigh = getSafeNum(hourly.cloud_cover_high, targetIndex, 0);
-            const cape = getSafeNum(hourly.cape, targetIndex, 0);
-            const visibility = getSafeNum(hourly.visibility, targetIndex, 10000);
-            
+
             // Identificador Dia/Nit 
-            const isDayNum = getSafeNum(hourly.is_day, targetIndex, 1);
-            const isDay = isDayNum === 1;
+            const isDay = resolveIsDay(hourlySeries, targetIndex, () => true);
+            const isDayNum = isDay ? 1 : 0;
 
             // [FIX PRECISIÓ] Apliquem la mateixa correcció d'inversió tèrmica que ja
             // s'usa a la capçalera (useCurrentWeatherLogic) i a DayDetailModal, perquè
@@ -109,59 +104,10 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 )
                 : null;
 
-            let freezingLevel = getSafeNum(hourly.freezing_level_height, targetIndex, -1);
-            if (freezingLevel === -1) {
-                // [FIX PRECISIÓ] Abans de recórrer a la nostra extrapolació, mirem si algun
-                // dels models de comparació (ecmwf/gfs/icon) sí que porta aquesta dada per a
-                // la mateixa hora — mateix ordre de prioritat que useDayDetailData.ts, per
-                // evitar que els dos components divergeixin en la cota de neu. Són valors
-                // reals d'un model, més fiables que una extrapolació de gradient estàndard.
-                const ecmwfVal = hourlyComparison?.ecmwf?.[targetIndex]?.freezing_level_height;
-                const gfsVal = hourlyComparison?.gfs?.[targetIndex]?.freezing_level_height;
-                const iconVal = hourlyComparison?.icon?.[targetIndex]?.freezing_level_height;
-                const comparisonFl = typeof ecmwfVal === 'number' ? ecmwfVal
-                    : typeof gfsVal === 'number' ? gfsVal
-                    : typeof iconVal === 'number' ? iconVal
-                    : null;
-
-                if (comparisonFl !== null) {
-                    freezingLevel = comparisonFl;
-                } else {
-                    // Últim recurs: extrapolació pròpia amb rawTemp (temperatura de model,
-                    // no corregida per inversió — vegeu nota de dalt).
-                    freezingLevel = Math.max(safeElevation, safeElevation + (rawTempForCalc / 0.0065));
-                }
-            }
-
-            // SIMULACIÓ FÍSICA: Alimentem l'orquestrador central amb l'estructura que demana TS2352
-            // [NOTA] temperature_2m aquí és rawTemp (CRUA, no tempForCalc): getRealTimeWeatherCode
-            // ja sap tornar null quan rawTemp falta, en lloc de fingir un 0ºC que podria
-            // fer aparèixer neu en ple estiu (determineSnowCode/applyThermalLock).
-            const simulatedCurrent = {
-                time: timeStr,
-                weather_code: rawCode,
-                temperature_2m: rawTemp,
-                apparent_temperature: rawTemp,
-                wind_speed_10m: windSpeed,
-                visibility: visibility,
-                relative_humidity_2m: humidity,
-                cloud_cover_low: cloudLow,
-                cloud_cover_mid: cloudMid,
-                cloud_cover_high: cloudHigh,
-                cloud_cover: cloudCover,
-                precipitation: pAmt,
-                cape: cape,
-                is_day: isDayNum
-            } as unknown as StrictCurrentWeather; 
-            // ^ Cast segur 'unknown' primer, com suggereix TypeScript, per evitar col·lisions d'herència
-
-            const finalCode = getRealTimeWeatherCode(
-                simulatedCurrent,
-                [pAmt],
-                pProb,
-                freezingLevel,
-                safeElevation // Ús del paràmetre netejat contra TS2345
-            );
+            // Codi de la icona: font única (utils/hourlyWeatherCode.ts), la mateixa que fan
+            // servir DayDetailModal i el modal del model regional — així la mateixa hora
+            // no pot mostrar icones diferents segons la pantalla.
+            const finalCode = getHourlyWeatherCode(hourlySeries, targetIndex, safeElevation, hourlyComparison);
 
             let precipString = '';
             if (pAmt > 0) {
