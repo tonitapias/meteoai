@@ -47,7 +47,7 @@ describe('getHourlyWeatherCode', () => {
     const base = {
         time: TIMES,
         temperature_2m: [14, 14, 14],
-        relative_humidity_2m: [95, 95, 95],
+        relative_humidity_2m: [99, 99, 99],   // saturat: T−Td ≈ 0,15 °C
         precipitation: [0, 0, 0],
         cloud_cover_low: [0, 0, 0],
         cloud_cover_mid: [0, 0, 0],
@@ -60,8 +60,13 @@ describe('getHourlyWeatherCode', () => {
         expect(getHourlyWeatherCode({ ...base, temperature_2m: [null, 14, 14] }, 0, 500)).toBeNull();
     });
 
-    it('marca boira si la visibilitat de la sèrie és crítica (sense pluja)', () => {
+    it('marca boira si la visibilitat de la sèrie és crítica i la saturació ho confirma', () => {
         expect(getHourlyWeatherCode({ ...base, visibility: [300, 300, 300] }, 0, 500)).toBe(45);
+    });
+
+    it('visibilitat crítica SENSE saturació (T−Td ≈ 0,8 °C) no marca boira', () => {
+        const h = { ...base, relative_humidity_2m: [95, 95, 95], visibility: [300, 300, 300] };
+        expect(getHourlyWeatherCode(h, 0, 500)).not.toBe(45);
     });
 
     it('sense visibilitat ni codi de boira NO fabrica boira', () => {
@@ -77,11 +82,12 @@ describe('getHourlyWeatherCode', () => {
  * La mateixa hora ha de donar la mateixa icona en totes les pantalles.
  */
 describe('buildRegionalHourlyRows — homogeneïtat amb la resta de l\'app', () => {
-    // Sèrie crua d'AROME: sense weather_code, visibility ni freezing_level_height
+    // Sèrie crua d'AROME: sense weather_code, visibility ni freezing_level_height.
+    // Saturada (T−Td < 0,5 °C): amb el senyal d'ICON, la boira ha de sortir a tot arreu.
     const arome = {
         time: TIMES,
         temperature_2m: [16.3, 15.7, 15.3],
-        relative_humidity_2m: [93, 93, 92],
+        relative_humidity_2m: [99, 99, 98],
         precipitation: [0, 0, 0],
         cloud_cover_low: [0, 0, 0],
         cloud_cover_mid: [0, 0, 0],
@@ -150,5 +156,43 @@ describe('buildRegionalHourlyRows — homogeneïtat amb la resta de l\'app', () 
         );
         expect(expected).toBeCloseTo(-1.5, 5);
         expect(rows[0].temp).toBeCloseTo(expected, 5);
+    });
+});
+
+/**
+ * Cas real (Vic, nit del 18 al 19/09/2026): ICON preveia codi 45 i visibilitat 840–1360 m,
+ * però AROME (i el sensor XEMA de Vic) tenien HR 94–96 % i T−Td 0,6–1,0 °C, i els METAR
+ * propers marcaven CAVOK. La boira NO s'ha de mostrar a cap pantalla.
+ */
+describe("buildRegionalHourlyRows — senyal de boira d'ICON sense saturació d'AROME", () => {
+    const arome = {
+        time: TIMES,
+        temperature_2m: [15.9, 15.2, 15.0],
+        relative_humidity_2m: [95, 96, 94],
+        precipitation: [0, 0, 0],
+        cloud_cover_low: [0, 0, 0],
+        cloud_cover_mid: [0, 0, 0],
+        cloud_cover_high: [0, 0, 0],
+        wind_speed_10m: [4, 2, 2],
+        wind_gusts_10m: [6, 4, 4],
+        wind_direction_10m: [200, 210, 220],
+        cape: [0, 0, 0],
+        weather_code: [null, null, null],
+        visibility: [null, null, null],
+        freezing_level_height: [null, null, null],
+        is_day: [0, 0, 0]
+    };
+    const merged = { ...arome, weather_code: [45, 45, 45], visibility: [1360, 840, 820], freezing_level_height: [3990, 4010, 4020] };
+    const baseData = { elevation: 504, hourly: merged, hourlyComparison: {} } as unknown as ExtendedWeatherData;
+    const now = new Date('2026-09-18T22:10:00Z'); // 00:10 hora local (UTC+2)
+
+    it('cap pantalla mostra boira i totes donen el mateix codi', () => {
+        const rows = buildRegionalHourlyRows({ hourly: arome, elevation: 504, utcOffsetSeconds: 7200, latitude: 41.9, baseData, now });
+        expect(rows).toHaveLength(3);
+        rows.forEach((row, i) => {
+            expect(row.code).toBe(getHourlyWeatherCode(merged, i, 504, baseData.hourlyComparison));
+            expect(row.code).not.toBe(45);
+            expect(row.code).not.toBe(48);
+        });
     });
 });

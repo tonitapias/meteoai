@@ -21,9 +21,16 @@ export const WEATHER_THRESHOLDS = {
 
   // Humitat i Boira
   HUMIDITY: {
-    HIGH: 92,        // Humitat alta (per forçar icona variable)
-    FOG_BASE: 96,    // Humitat mínima per boira
-    DEW_SPREAD: 1.2  // Diferència màxima Temp-Rosada per boira
+    HIGH: 92,             // Humitat alta (per forçar icona variable)
+    // Diferència màxima T − Td (°C) perquè una previsió de boira es confirmi
+    // (visibilityRules.ts). Verificat contra 200.000 METAR d'un any (11 aeroports
+    // de la zona AROME): amb visibilitat < 1 km, T−Td té mediana 0 °C i P97 = 1 °C, i
+    // amb T−Td ≥ 1,5 °C hi ha 0 casos de boira en 65.000 informes. Contra 272 hores
+    // de boira observada (12 nov–29 des 2025, ±1 h): exigir T−Td ≤ 0,5 °C sobre el
+    // senyal de boira del model fa passar el FAR de 78 % a 55 % i el biaix de 4,3 a
+    // 1,6 (CSI 0,21 → 0,38). 0,4 és pràcticament igual; més enllà de 0,7 es perd
+    // gairebé tot el guany.
+    FOG_MAX_SPREAD: 0.5
   },
 
   // Inestabilitat (J/kg)

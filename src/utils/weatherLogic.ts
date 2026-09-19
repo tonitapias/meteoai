@@ -6,7 +6,7 @@ import { safeNum, extractValidNum } from './weatherMath';
 // --- IMPORTS DE REGLES (Mòduls especialitzats) ---
 import { adjustBaseSkyCode, calculateEffectiveCloudCover } from './rules/cloudRules';
 import { getInstantaneousPrecipitation, checkForVirga, adjustRainIntensity } from './rules/precipitationRules';
-import { checkForFog, checkCriticalVisibility } from './rules/visibilityRules';
+import { resolveFog } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
 import { determineSnowCode, isSnowPossible } from './rules/winterRules';
 
@@ -110,12 +110,14 @@ export const getRealTimeWeatherCode = (
     // C. Filtre Virga (última paraula real sobre si la pluja arriba a terra)
     code = checkForVirga(code, humidity, cloudCover, precipInstantanea);
 
-    // D. Detecció de Boira per punt de rosada (amb el seu propi tallafoc integrat)
-    code = checkForFog(code, temp, humidity, cloudCover);
-
-    // D2. Detecció de Boira per visibilitat real d'AROME — xarxa de seguretat
-    // quan el punt de rosada no ha disparat però la visibilitat mesurada sí.
-    code = checkCriticalVisibility(code, visibility, precipInstantanea, temp, humidity);
+    // D. Boira: senyal del model (codi 45/48 o visibilitat < 1 km) CONFIRMAT per la
+    // saturació de superfície (T − Td). Vegeu resolveFog per a la política i la seva
+    // verificació. NOTA: AROME HD (Open-Meteo) NO publica weather_code ni visibility;
+    // on no en porta, el senyal prové del model global de la sèrie combinada (p.ex.
+    // ICON), mentre que la saturació la confirma la temperatura/humitat d'AROME. Per
+    // això totes les pantalles han de calcular-ho sobre la mateixa sèrie (vegeu
+    // utils/hourlyWeatherCode.ts).
+    code = resolveFog(code, temp, humidity, cloudCover, visibility, precipInstantanea);
     
     // E. Ajust per Tempestes (CAPE)
     code = adjustForStorms(code, cape, cloudCover, precipInstantanea);

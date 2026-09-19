@@ -1,82 +1,70 @@
 import { calculateDewPoint } from '../weatherMath';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
+import { adjustBaseSkyCode } from './cloudRules';
 
 const { HUMIDITY, VISIBILITY, PRECIPITATION } = WEATHER_THRESHOLDS;
 
-/** 
- * Detecta condicions de boira o humitat extrema, 
- * aplicant un bloqueig termodinàmic estricte contra falsos positius del model.
+/** Diferència T − Td (°C): com de prop de la saturació és l'aire de superfície. */
+export const getDewPointSpread = (temp: number, humidity: number): number =>
+    temp - calculateDewPoint(temp, humidity);
+
+/**
+ * El model prediu boira: codi WMO 45/48, o visibilitat per sota de 1 km.
+ * Ho poden aportar el model regional o el global de la sèrie combinada — AROME HD,
+ * per exemple, no publica ni weather_code ni visibility, i el senyal li arriba del
+ * model global (vegeu utils/hourlyWeatherCode.ts).
  */
-export const checkForFog = (code: number, temp: number, humidity: number, cloudCover: number): number => {
-    let safeCode = code;
+export const hasFogSignal = (code: number, visibility: number): boolean =>
+    code === 45 || code === 48 || visibility < VISIBILITY.POOR;
 
-    // 1. BLOQUEIG TERMOMECÀNIC (Anti-Glaç a temperatures positives)
-    if (safeCode === 48 && temp > 0) {
-        safeCode = 45; // Boira gebradora impossible a > 0ºC, rebaixem a boira normal
-    }
-
-    // 2. BLOQUEIG TERMODINÀMIC (Anti-Boira a ple estiu / Calitja confosa amb boira)
-    // La boira és altament improbable a > 20ºC tret que la humitat sigui extrema (> 90%).
-    // Si l'API ens marca 45 però fa calor i no hi ha saturació d'humitat, és pols en suspensió (calitja).
-    if (safeCode === 45) {
-        if (temp > 20 && humidity < 90) {
-            // Restaurem l'estat del cel basat en la nuvolositat real, esborrant la falsa boira
-            if (cloudCover > 85) return 3;
-            if (cloudCover > 45) return 2;
-            if (cloudCover > 15) return 1;
-            return 0;
-        }
-    }
-
-    // Si el codi ja és de precipitació o tempesta (superior a 48), no intentem fabricar boira.
-    // Mantenim la dada de la precipitació primària intacta.
-    if (safeCode > 48) return safeCode;
-
-    // 3. CÀLCUL PSICROMÈTRIC (Creació artificial de boira si les condicions són reals)
-    const dewPoint = calculateDewPoint(temp, humidity);
-    const spread = temp - dewPoint;
-
-    // Per forçar boira (si el cel inicialment no en marcava), exigim que la 
-    // temperatura sigui raonable (<= 22ºC) o bé, humitats pròpies de climes tropicals (> 95%).
-    if (safeCode < 45 && spread < HUMIDITY.DEW_SPREAD && humidity > HUMIDITY.FOG_BASE && cloudCover > 50) {
-        if (temp <= 22 || humidity >= 95) {
-            return 45;
-        }
-    }
-    
-    // Ajust d'humitat alta per forçar lleugera nuvolositat si tot estava esclarit
-    if (safeCode === 0 && humidity > HUMIDITY.HIGH) {
-        return 1;
-    }
-    
-    return safeCode;
-};
-
-/** 
- * Força el codi de mala visibilitat si és crític i no plou.
- * Incorpora filtres termodinàmics opcionals (Risc Zero) per evitar "Falses Boires" 
- * en el cas que altres mòduls li passin dades brutes de sensors o visibilitat òptica.
+/**
+ * POLÍTICA DE BOIRA: només hi ha icona de boira si
+ *   1. un model en dona senyal (hasFogSignal), I
+ *   2. la temperatura i la humitat de la sèrie confirmen la saturació
+ *      (T − Td <= HUMIDITY.FOG_MAX_SPREAD), I
+ *   3. no plou (precipitació < TRACE) i el codi no és ja de precipitació/tempesta.
+ *
+ * Abans qualsevol senyal de visibilitat < 1 km (o codi 45) bastava, i es fabricava
+ * boira només amb HR alta + núvols. Verificat contra observacions METAR, això
+ * sobreprevenia la boira ~4,3 vegades i el 10,8 % de les hores que marcava eren
+ * físicament impossibles (T−Td >= 1,5 °C mesurat). El senyal d'un sol model no basta:
+ * quan un model diu "saturat" només ~1 de cada 5 vegades hi ha boira real. Vegeu el
+ * llindar a weatherConfig.ts (HUMIDITY.FOG_MAX_SPREAD) per a les xifres.
+ *
+ * Un codi de boira entrant que la saturació no confirma es rebaixa a l'estat de cel
+ * segons la nuvolositat real (mateix criteri que abans per a la calitja a > 20 ºC).
+ * Un senyal només de visibilitat que no es confirma no toca el codi.
  */
-export const checkCriticalVisibility = (
-    code: number, 
-    visibility: number, 
-    precipAmount: number,
-    temp?: number,
-    humidity?: number
+export const resolveFog = (
+    code: number,
+    temp: number,
+    humidity: number,
+    cloudCover: number,
+    visibility: number,
+    precipAmount: number
 ): number => {
-    // Si la visibilitat és crítica i no plou...
-    if ((code === 45 || code === 48 || visibility < VISIBILITY.POOR) && precipAmount < PRECIPITATION.TRACE) {
-        
-        // Segur Termodinàmic: Si sabem la temp/humitat i detectem perfil de Calitja (Calor + Sec)
-        if (typeof temp === 'number' && typeof humidity === 'number') {
-            if (temp > 20 && humidity < 90) {
-                // No forcem la boira. Si el codi original ja era boira errònia, la netegem a Cel Serè (0).
-                return (code === 45 || code === 48) ? 0 : code;
-            }
-        }
-        
-        return 45;
+    // Precipitació o tempesta ja decidides: no fabriquem ni mantenim boira a sobre.
+    if (code > 48) return code;
+
+    // Boira gebradora impossible a > 0 ºC: rebaixem a boira normal.
+    const safeCode = (code === 48 && temp > 0) ? 45 : code;
+    const isFogCode = safeCode === 45 || safeCode === 48;
+
+    const confirmed =
+        hasFogSignal(safeCode, visibility) &&
+        precipAmount < PRECIPITATION.TRACE &&
+        getDewPointSpread(temp, humidity) <= HUMIDITY.FOG_MAX_SPREAD;
+
+    let result = safeCode;
+    if (confirmed) {
+        result = safeCode === 48 ? 48 : 45;
+    } else if (isFogCode) {
+        // Boira del model no confirmada per la saturació: restaurem el cel real.
+        result = adjustBaseSkyCode(0, cloudCover);
     }
-    
-    return code;
+
+    // Ajust d'humitat alta per forçar lleugera nuvolositat si tot estava esclarit
+    if (result === 0 && humidity > HUMIDITY.HIGH) return 1;
+
+    return result;
 };

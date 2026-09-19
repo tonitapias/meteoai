@@ -48,13 +48,55 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
         expect(result).toBe(63); 
     });
 
-    it('hauria de detectar BOIRA per saturació (Dew Point Spread)', () => {
+    // POLÍTICA DE BOIRA (vegeu resolveFog / HUMIDITY.FOG_MAX_SPREAD): senyal de boira del
+    // model (codi 45/48 o visibilitat < 1 km) I saturació de superfície (T−Td <= 0,5 °C).
+    it('hauria de detectar BOIRA si el model la preveu i la saturació ho confirma', () => {
+        const current = createCurrent(45, 10, 0, 100);
+        current.relative_humidity_2m = 100;
+
+        const result = getRealTimeWeatherCode(current, [0], 0, 3000, 0);
+        expect(result).toBe(45);
+    });
+
+    it('hauria de detectar BOIRA per visibilitat < 1 km si la saturació ho confirma', () => {
+        const current = createCurrent(0, 10, 0, 0);
+        current.relative_humidity_2m = 99;
+        current.visibility = 400;
+
+        const result = getRealTimeWeatherCode(current, [0], 0, 3000, 0);
+        expect(result).toBe(45);
+    });
+
+    it('la saturació SOLA (sense cap senyal de boira del model) no fabrica boira', () => {
         const current = createCurrent(3, 10, 0, 100);
         current.relative_humidity_2m = 100;
 
-        const minutelyPrecip = [0];
-        const result = getRealTimeWeatherCode(current, minutelyPrecip, 0, 3000, 0);
-        expect(result).toBe(45);
+        const result = getRealTimeWeatherCode(current, [0], 0, 3000, 0);
+        expect(result).toBe(3);
+    });
+
+    it('un senyal de boira del model SENSE saturació no es converteix en icona de boira', () => {
+        // Cas real (Vic, nit del 18 al 19/09/2026): ICON deia codi 45 i visibilitat 840 m,
+        // però AROME/el sensor tenien 15,2 °C i HR 96 % (T−Td = 0,6 °C) i els METAR
+        // propers marcaven CAVOK. Amb HR 94 % (T−Td ≈ 1 °C), tampoc.
+        for (const rh of [96, 94]) {
+            const current = createCurrent(45, 15.2, 0, 0);
+            current.relative_humidity_2m = rh;
+            current.visibility = 840;
+
+            const result = getRealTimeWeatherCode(current, [0], 0, 3000, 500);
+            expect(result).not.toBe(45);
+            expect(result).not.toBe(48);
+        }
+    });
+
+    it('amb saturació però amb pluja, el codi de precipitació mana sobre la boira', () => {
+        const current = createCurrent(45, 10, 1.2, 100);
+        current.relative_humidity_2m = 100;
+        current.visibility = 300;
+
+        const result = getRealTimeWeatherCode(current, [1.2], 100, 3000, 0);
+        expect(result).toBe(61);
     });
 
     it('DOCTRINA RISC ZERO: sense temperatura real, ha de tornar null (mai un 0ºC fals)', () => {
