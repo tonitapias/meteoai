@@ -42,7 +42,11 @@ export function useWeatherAI(
     aqiData: AQIData | null, 
     lang: Language, 
     unit: WeatherUnit, 
-    reliability: ReliabilityResult | null
+    reliability: ReliabilityResult | null,
+    // Codi de temps ja passat per l'orquestrador (getRealTimeWeatherCode) — el mateix que
+    // veu l'usuari a la capçalera. Sense ell, la IA llegiria el codi BRUT del model
+    // (p.ex. el 45 d'ICON) i se saltaria la política de boira (visibilityRules.resolveFog).
+    effectiveCode: number | null = null
 ) {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisState | null>(null);
   const lastProcessedKey = useRef<string>("");
@@ -67,7 +71,7 @@ export function useWeatherAI(
     
     const aqiVal = aqiData?.current?.european_aqi ?? 0;
     const relLevel = reliability?.level || 'high';
-    const currentKey = `${lat}-${lon}-${weatherCode}-${lang}-${unit}-${aqiVal}-${relLevel}`;
+    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
     if (lastProcessedKey.current === currentKey) return;
@@ -78,12 +82,12 @@ export function useWeatherAI(
         // Càlcul de previsió local determinística d'emergència (Fallback immediat)
         const local = generateAIPrediction(
           current, weatherData.daily, weatherData.hourly, 
-          aqiVal, lang, null, reliability, unit
+          aqiVal, lang, effectiveCode, reliability, unit
         );
         setAiAnalysis(local);
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
-        const gemini = await getGeminiAnalysis(weatherData, lang);
+        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode);
         
         if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
           setAiAnalysis((prev) => {
@@ -110,7 +114,7 @@ export function useWeatherAI(
     const timer = setTimeout(fetchAI, 500);
     return () => clearTimeout(timer);
 
-  }, [weatherData, aqiData, lang, unit, reliability]);
+  }, [weatherData, aqiData, lang, unit, reliability, effectiveCode]);
 
   return { aiAnalysis };
 }

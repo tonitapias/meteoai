@@ -1,6 +1,7 @@
 // src/services/geminiService.ts
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
+import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { 
@@ -264,13 +265,14 @@ const evaluateDeterministicRisk = (
     let detectedHazard: TacticalHazardType | null = null;
 
     try {
-        const hourly = weatherData.hourly as Record<string, unknown> | undefined;
+        const hourly = weatherData.hourly as unknown as HourlySeries | undefined;
         if (!hourly) return { risk: 'GREEN', hazard: null };
 
         const wmoArr = (hourly.weather_code ?? hourly.weathercode) as (number | null)[] | undefined;
         const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
         const tempArr = hourly.temperature_2m as (number | null)[] | undefined;
         const precipArr = hourly.precipitation as (number | null)[] | undefined;
+        const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
 
         const upgradeRisk = (newRisk: TacticalRiskLevel, newHazard: TacticalHazardType) => {
             const hierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
@@ -293,10 +295,18 @@ const evaluateDeterministicRisk = (
             const temp = tempArr?.[i];
             const precip = precipArr?.[i];
 
-            if (wmo !== undefined && wmo !== null) {
-                if (wmo === 95 || wmo === 96 || wmo === 99) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
-                else if ([66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
-                else if ([45, 48].includes(wmo as number)) upgradeRisk('AMBER', 'VISIBILITY');
+            // Tempesta i neu/gel: es mantenen sobre el codi BRUT del model (doctrina "les dades
+            // crues sempre guanyen": és millor un avís de més que un de menys).
+            const rawSevere = wmo !== undefined && wmo !== null;
+            if (rawSevere && (wmo === 95 || wmo === 96 || wmo === 99)) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
+            else if (rawSevere && [66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
+            else {
+                // Boira: NOMÉS si la política de boira la confirma (senyal del model + saturació
+                // de superfície, vegeu visibilityRules.resolveFog). El codi 45/48 brut d'ICON
+                // dona ~4 vegades més hores de boira de les reals i posava AMBER a la ciutat
+                // amb el cel serè; el mateix codi que veu l'usuari a la icona és el que compta.
+                const fogCode = getHourlyWeatherCode(hourly, i, elevation, weatherData.hourlyComparison);
+                if (fogCode === 45 || fogCode === 48) upgradeRisk('AMBER', 'VISIBILITY');
             }
 
             // Pluja en mm/h independent del codi WMO (abans no hi havia cap
@@ -329,7 +339,15 @@ const evaluateDeterministicRisk = (
     return { risk: maxRisk, hazard: detectedHazard };
 };
 
-export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, language: string): Promise<AICacheData | null> => {
+/**
+ * `effectiveCode`: el codi de temps que veu l'usuari a la capçalera (ja passat per la política de
+ * boira i la resta de l'orquestrador). Si falta, es cau al codi brut del model.
+ */
+export const getGeminiAnalysis = async (
+    weatherData: ExtendedWeatherData,
+    language: string,
+    effectiveCode: number | null = null
+): Promise<AICacheData | null> => {
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
         return null;
@@ -462,6 +480,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
             ];
 
+            const hourlyElevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
             const tempArr = weatherData.hourly.temperature_2m as (number | null)[] | undefined;
             const windArr = weatherData.hourly.wind_speed_10m as (number | null)[] | undefined;
             const gustsArr = weatherData.hourly.wind_gusts_10m as (number | null)[] | undefined;
@@ -489,8 +508,10 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
                 const probHour = probArr?.[i];
                 const probStr = typeof probHour === 'number' ? probHour : 0;
 
+                // Mateix codi que les icones de l'app (utils/hourlyWeatherCode.ts); si l'hora no té
+                // temperatura real, l'orquestrador no dona codi i es cau al brut del model.
                 const wmoArr = (hourlyObj.weather_code ?? hourlyObj.weathercode) as (number | null)[] | undefined;
-                const wmoHour = wmoArr?.[i] ?? null;
+                const wmoHour = getHourlyWeatherCode(hourlyObj, i, hourlyElevation, weatherData.hourlyComparison) ?? wmoArr?.[i] ?? null;
                 const wmoDesc = getTacticalWeatherDescription(wmoHour, tempNum);
 
                 const apparentArr = (hourlyObj.apparent_temperature) as (number | null)[] | undefined;
@@ -519,7 +540,7 @@ export const getGeminiAnalysis = async (weatherData: ExtendedWeatherData, langua
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
-          Estat del Cel: ${getTacticalWeatherDescription(currentWmoCode, currentTempNum)}
+          Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum)}
           Temperatura Real: ${weatherData.current.temperature_2m}ºC | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
           Pluja actual: ${weatherData.current.precipitation}mm | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}
