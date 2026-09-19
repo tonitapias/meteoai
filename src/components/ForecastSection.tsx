@@ -7,7 +7,7 @@ import { formatPrecipitation, getSafeLocale } from '../utils/formatters';
 import { getSafeArrayNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
+import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { MATRIX_BG } from './widgets/widgetStyles';
 
 import { useTacticalModal } from '../hooks/useTacticalModal';
@@ -145,19 +145,16 @@ const ForecastSection = memo(function ForecastSection({
       }
 
       // MOTOR VISUAL INTEL·LIGENT — mateixa regla oficial que la resta de l'app
-      // (adjustBaseSkyCode, cloudRules.ts), no uns llindars propis d'aquesta vista.
-      let code = rawCode;
-      if (rawCode <= 3) {
-        const daylightHours = dayHours.filter(d => d.isDay === 1);
-        if (daylightHours.length > 0) {
-          const totalClouds = daylightHours.reduce((acc, curr) => {
+      // (utils/dailyWeatherCode.ts: cel diürn real; un codi diari de boira no compta
+      // com a condició de tot el dia).
+      const daylightHours = dayHours.filter(d => d.isDay === 1);
+      const avgClouds = daylightHours.length > 0
+        ? daylightHours.reduce((acc, curr) => {
             const c = Number(curr.cloud);
             return acc + (isNaN(c) ? 0 : c);
-          }, 0);
-          const avgClouds = totalClouds / daylightHours.length;
-          code = adjustBaseSkyCode(rawCode, avgClouds);
-        }
-      }
+          }, 0) / daylightHours.length
+        : null;
+      const code = resolveDailyCode(rawCode, avgClouds);
 
       const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
       const minTempLabel = minTemp !== null ? `${Math.round(minTemp)}°` : '--°';

@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { LineChart, X, Droplets } from 'lucide-react'; 
 import { getWeatherIcon } from './WeatherIcons';
-import { adjustBaseSkyCode } from '../utils/rules/cloudRules';
+import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { Language } from '../translations';
 import { StrictDailyWeather } from '../types/weatherLogicTypes';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -130,9 +130,9 @@ const TrendChartModal = memo(function TrendChartModal({
             .toUpperCase();
         }
 
-        // Filtre de núvols diürns — mateixa regla oficial que la resta de l'app
-        // (adjustBaseSkyCode, cloudRules.ts).
-        if (rawCode <= 3 && Array.isArray(chartData) && chartData.length > 0) {
+        // Cel diürn real — mateixa regla oficial que la resta de l'app
+        // (utils/dailyWeatherCode.ts; un codi diari de boira no compta com a condició de tot el dia).
+        if (Array.isArray(chartData) && chartData.length > 0) {
           const dateOnly = rawDate.slice(0, 10);
           const dayHours = chartData.filter(d =>
             typeof d.time === 'string' && d.time.startsWith(dateOnly) && d.isDay === 1
@@ -142,8 +142,7 @@ const TrendChartModal = memo(function TrendChartModal({
               const c = Number(curr.cloud);
               return acc + (isNaN(c) ? 0 : c);
             }, 0);
-            const avgClouds = totalClouds / dayHours.length;
-            code = adjustBaseSkyCode(rawCode, avgClouds);
+            code = resolveDailyCode(rawCode, totalClouds / dayHours.length);
           }
         }
       }
