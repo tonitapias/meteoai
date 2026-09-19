@@ -101,6 +101,8 @@ Un setè modal de detall, accessible tocant el giny de Punt de Rosada en Mode Ex
 Un vuitè modal de detall, accessible tocant el giny de Visibilitat en Mode Expert:
 * **Evolució de 48h** de la visibilitat (`visibility`), *scrubbable*, amb les mateixes 4 bandes que ja pintava el giny (Excel·lent/Bona/Calitja/Boira) — ara centralitzades a `WEATHER_THRESHOLDS` perquè giny i modal no puguin desincronitzar-se mai.
 * **Avís de boira:** primer tram de la finestra amb visibilitat per sota del llindar de boira i el mínim previst, o confirma que no n'hi ha cap en les properes 48 hores.
+* **Boira gebradora:** la boira confirmada a T ≤ 0 °C és sempre gebradora (gotetes subrefredades que dipositen gebre i deixen gel a terra) i té icona pròpia: la boira amb un floc de neu a la cantonada. El llindar està verificat contra 24 mesos de METAR de 20 aeroports europeus i canaris (702.000 informes): per sobre de 0 °C no hi ha cap boira gebradora en 4.482 informes de boira, i a T ≤ −1 °C ho és entre el 94 i el 100 %.
+* **Pluja i plugim engelants:** quan el model diagnostica precipitació líquida sobre una superfície sota zero, l'app la mostra com a engelant —amb el mateix floc de neu sobre la icona de plugim o de pluja— en lloc de convertir-la en neu, que és un fenomen diferent i menys perillós que la glaçada a la carretera. La IA n'avisa amb un text i un avís de risc de gel propis.
 * Reutilitza `hourly.visibility`, ja demanat a Open-Meteo — cap crida de xarxa nova.
 
 ### 10. Núvols: Perfil de Capes
