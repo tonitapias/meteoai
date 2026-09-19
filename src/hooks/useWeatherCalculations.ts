@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { getShiftedDate } from '../utils/weatherMath';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { getHourCodesByDate, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { WeatherUnit } from '../utils/formatters';
 
 // ELS NOUS MICRO-HOOKS
@@ -57,6 +58,14 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     currentCape, weeklyExtremes, currentDewPoint, reliability, moonPhaseVal, barometricTrend
   } = useCurrentConditions(weatherData, shiftedNow, currentHourlyIndex, chartData24h);
 
+  // Codis del motor de totes les hores, per dia: la previsió setmanal en tria la icona amb els mateixos
+  // codis filtrats que l'evolució horària (vegeu resolveDailyCode).
+  const dayHourCodes = useMemo(() => {
+    if (!weatherData?.hourly) return {};
+    const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+    return getHourCodesByDate(weatherData.hourly as unknown as HourlySeries, elevation, weatherData.hourlyComparison);
+  }, [weatherData]);
+
   // 3. Retornem exactament el mateix objecte de sempre (Contracte intacte cap a la UI)
   return { 
     shiftedNow, 
@@ -73,6 +82,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     chartData24h, 
     chartDataFull, 
     comparisonData, 
+    dayHourCodes,
     weeklyExtremes 
   };
 }

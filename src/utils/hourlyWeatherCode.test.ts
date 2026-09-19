@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getHourlyWeatherCode, resolveFreezingLevel, resolveIsDay } from './hourlyWeatherCode';
+import { getHourlyWeatherCode, getHourCodesByDate, resolveFreezingLevel, resolveIsDay } from './hourlyWeatherCode';
 import { buildRegionalHourlyRows } from './regionalHourlyRows';
 import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
 import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
@@ -99,6 +99,44 @@ describe('getHourlyWeatherCode', () => {
             freezing_level_height: [0, 0, 0]
         };
         expect(getHourlyWeatherCode(h, 0, 500)).toBe(66);
+    });
+});
+
+describe('getHourCodesByDate', () => {
+    const series = {
+        time: ['2026-09-19T22:00', '2026-09-19T23:00', '2026-09-20T00:00', '2026-09-20T01:00', '2026-09-20T02:00'],
+        temperature_2m: [15, 15, 14, null, 14],
+        relative_humidity_2m: [60, 60, 60, 60, 60],
+        precipitation: [0, 0, 1.2, 0, 0],
+        cloud_cover_low: [50, 50, 100, 100, 50],
+        cloud_cover_mid: [0, 0, 0, 0, 0],
+        cloud_cover_high: [0, 0, 0, 0, 0],
+        weather_code: [0, 0, 61, 3, 0],
+        wind_speed_10m: [2, 2, 2, 2, 2]
+    };
+
+    it("agrupa els codis del motor per dia local i conserva l'ordre horari", () => {
+        const out = getHourCodesByDate(series, 500);
+        expect(Object.keys(out)).toEqual(['2026-09-19', '2026-09-20']);
+        expect(out['2026-09-19']).toHaveLength(2);
+        expect(out['2026-09-20']).toHaveLength(3);
+    });
+
+    it("cada codi és exactament el de getHourlyWeatherCode (mateixa font que l'evolució horària)", () => {
+        const out = getHourCodesByDate(series, 500);
+        const flat = [...out['2026-09-19'], ...out['2026-09-20']];
+        flat.forEach((c, i) => expect(c).toBe(getHourlyWeatherCode(series, i, 500)));
+    });
+
+    it('una hora sense temperatura dona null (mai un codi inventat) i la pluja es filtra per mm', () => {
+        const out = getHourCodesByDate(series, 500);
+        expect(out['2026-09-20'][1]).toBeNull();
+        expect(out['2026-09-20'][0]).toBe(61);
+    });
+
+    it('sense sèrie de temps torna un objecte buit', () => {
+        expect(getHourCodesByDate({}, 0)).toEqual({});
+        expect(getHourCodesByDate({ time: 'x' }, 0)).toEqual({});
     });
 });
 

@@ -101,6 +101,31 @@ export const getHourlyWeatherCode = (
 };
 
 /**
+ * Codis del motor (getHourlyWeatherCode) de TOTES les hores de la sèrie, agrupats per dia ("YYYY-MM-DD",
+ * la data local de la sèrie). Serveix perquè la previsió setmanal triï la icona del dia amb els mateixos
+ * codis filtrats que veu l'evolució horària (vegeu resolveDailyCode). Una hora sense temperatura real
+ * dona null; el motor no s'inventa mai un codi.
+ */
+export const getHourCodesByDate = (
+    hourly: HourlySeries,
+    elevation: number,
+    comparison?: HourlyComparison
+): Record<string, Array<number | null>> => {
+    const times = hourly.time;
+    const out: Record<string, Array<number | null>> = {};
+    if (!Array.isArray(times)) return out;
+
+    for (let i = 0; i < times.length; i++) {
+        const t = times[i];
+        if (typeof t !== 'string' || t.length < 10) continue;
+        const date = t.slice(0, 10);
+        if (!out[date]) out[date] = [];
+        out[date].push(getHourlyWeatherCode(hourly, i, elevation, comparison));
+    }
+    return out;
+};
+
+/**
  * % efectiu de núvols d'una hora (mateixa ponderació que decideix el codi de cel: baixos x1,0 + mitjans x0,6
  * + alts x0,3). Serveix perquè les pantalles triïn la variant "molt ennuvolat" de la icona (isMostlyCloudy) amb
  * el mateix valor que va decidir el codi. null si cap de les tres capes porta dada (no es fingeix un cel).

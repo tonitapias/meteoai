@@ -33,6 +33,8 @@ export interface ComparisonData {
 interface ForecastSectionProps {
   chartData: ChartDataPoint[];
   dailyData: StrictDailyWeather;
+  /** Codis del motor de les hores de cada dia ("YYYY-MM-DD" → codis): la icona del dia es tria amb ells. */
+  dayHourCodes?: Record<string, Array<number | null>>;
   weeklyExtremes: { min: number; max: number };
   lang: Language;
   onDayClick: (index: number) => void;
@@ -60,7 +62,7 @@ const I18N_ARIA_CHART_BTN = {
 };
 
 const ForecastSection = memo(function ForecastSection({
-  chartData, dailyData, weeklyExtremes, lang, onDayClick, latitude
+  chartData, dailyData, dayHourCodes, weeklyExtremes, lang, onDayClick, latitude
 }: ForecastSectionProps) {
   
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
@@ -154,14 +156,14 @@ const ForecastSection = memo(function ForecastSection({
             return acc + (isNaN(c) ? 0 : c);
           }, 0) / daylightHours.length
         : null;
-      const code = resolveDailyCode(rawCode, avgClouds);
+      const code = resolveDailyCode(rawCode, avgClouds, dayHourCodes?.[dateOnly]);
 
       const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
       const minTempLabel = minTemp !== null ? `${Math.round(minTemp)}°` : '--°';
 
       return { rawDate, i, dayName, dateNum, code, avgClouds, maxWind, precipProb, minTemp, maxTemp, minTempLabel, maxTempLabel, precipSum, snowSum };
     }).filter((d): d is NonNullable<typeof d> => d !== null);
-  }, [dailyData, chartData, lang, latitude]);
+  }, [dailyData, chartData, dayHourCodes, lang, latitude]);
 
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length === 0) return null;
 
@@ -286,6 +288,7 @@ const ForecastSection = memo(function ForecastSection({
         onClose={closeTrendModal} 
         dailyData={dailyData} 
         chartData={chartData}
+        dayHourCodes={dayHourCodes}
         lang={lang} 
       />
 

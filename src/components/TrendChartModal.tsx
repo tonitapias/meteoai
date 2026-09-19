@@ -19,6 +19,8 @@ export interface TrendChartModalProps {
   onClose: () => void;
   dailyData: StrictDailyWeather;
   chartData: ChartDataPoint[];
+  /** Codis del motor de les hores de cada dia ("YYYY-MM-DD" → codis): la icona del dia es tria amb ells. */
+  dayHourCodes?: Record<string, Array<number | null>>;
   lang: Language;
 }
 
@@ -69,7 +71,7 @@ const I18N_ARIA_CLOSE = {
 
 
 const TrendChartModal = memo(function TrendChartModal({ 
-  isOpen, onClose, dailyData, chartData, lang 
+  isOpen, onClose, dailyData, chartData, dayHourCodes, lang 
 }: TrendChartModalProps) {
   
   // EFECTE UX PREMIUM: Bloqueig scroll
@@ -133,8 +135,8 @@ const TrendChartModal = memo(function TrendChartModal({
 
         // Cel diürn real — mateixa regla oficial que la resta de l'app
         // (utils/dailyWeatherCode.ts; un codi diari de boira no compta com a condició de tot el dia).
+        const dateOnly = rawDate.slice(0, 10);
         if (Array.isArray(chartData) && chartData.length > 0) {
-          const dateOnly = rawDate.slice(0, 10);
           const dayHours = chartData.filter(d =>
             typeof d.time === 'string' && d.time.startsWith(dateOnly) && d.isDay === 1
           );
@@ -144,14 +146,15 @@ const TrendChartModal = memo(function TrendChartModal({
               return acc + (isNaN(c) ? 0 : c);
             }, 0);
             avgClouds = totalClouds / dayHours.length;
-            code = resolveDailyCode(rawCode, avgClouds);
           }
         }
+        // Sense núvols ni hores del motor, resolveDailyCode torna el codi cru: es pot cridar sempre.
+        code = resolveDailyCode(rawCode, avgClouds, dayHourCodes?.[dateOnly]);
       }
 
       return { max, min, code, avgClouds, wind, precipProb, dayInitial };
     });
-  }, [dailyData, chartData, lang]);
+  }, [dailyData, chartData, dayHourCodes, lang]);
 
   if (!isOpen) return null;
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return null;

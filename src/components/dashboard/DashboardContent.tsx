@@ -139,6 +139,7 @@ export const DashboardContent = () => {
                         <ForecastSection
                             chartData={calculations.chartDataFull || []}
                             dailyData={weatherData.daily}
+                            dayHourCodes={calculations.dayHourCodes}
                             weeklyExtremes={calculations.weeklyExtremes}
                             lang={flags.lang}
                             onDayClick={actions.setSelectedDayIndex}
