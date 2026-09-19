@@ -3,7 +3,7 @@
 // RegionalModelModal.tsx com a funció pura perquè es pugui testar que la icona de
 // cada fila coincideix amb la de la resta de l'app (vegeu hourlyWeatherCode.ts).
 import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { getHourlyWeatherCode, resolveFreezingLevel, resolveIsDay, type HourlySeries } from './hourlyWeatherCode';
+import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveFreezingLevel, resolveIsDay, type HourlySeries } from './hourlyWeatherCode';
 import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
 import { calculateEffectiveCloudCover } from './rules/cloudRules';
 import { extractValidArrayNum, getSafeArrayNum, getSafeMonthFromIso } from './weatherMath';
@@ -22,6 +22,8 @@ export interface RegionalHourlyRow {
     freezingLevel: number;
     isDay: boolean;
     cloudCover: number;
+    /** % de núvols de la mateixa sèrie que decideix la icona (vegeu getHourlyEffectiveCloudCover). */
+    iconCloudCover: number | null;
 }
 
 interface BuildRowsArgs {
@@ -132,7 +134,8 @@ export const buildRegionalHourlyRows = ({
             cape: getSafeArrayNum(hourly.cape, i, 0),
             freezingLevel: resolveFreezingLevel(iconSeries, iconIdx, iconElevation, tempActual, baseData?.hourlyComparison),
             isDay,
-            cloudCover: calculateEffectiveCloudCover(low, mid, high)
+            cloudCover: calculateEffectiveCloudCover(low, mid, high),
+            iconCloudCover: getHourlyEffectiveCloudCover(iconSeries, iconIdx)
         });
     }
 

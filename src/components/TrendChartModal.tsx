@@ -119,6 +119,7 @@ const TrendChartModal = memo(function TrendChartModal({
 
       let dayInitial = '';
       let code = rawCode;
+      let avgClouds: number | null = null;
 
       if (typeof rawDate === 'string') {
         // [FIX PRECISIÓ] Vegeu el mateix fix a ForecastSection.tsx: forcem hora local
@@ -142,12 +143,13 @@ const TrendChartModal = memo(function TrendChartModal({
               const c = Number(curr.cloud);
               return acc + (isNaN(c) ? 0 : c);
             }, 0);
-            code = resolveDailyCode(rawCode, totalClouds / dayHours.length);
+            avgClouds = totalClouds / dayHours.length;
+            code = resolveDailyCode(rawCode, avgClouds);
           }
         }
       }
 
-      return { max, min, code, wind, precipProb, dayInitial };
+      return { max, min, code, avgClouds, wind, precipProb, dayInitial };
     });
   }, [dailyData, chartData, lang]);
 
@@ -306,7 +308,7 @@ const TrendChartModal = memo(function TrendChartModal({
                   </span>
                   
                   <div className="scale-[0.85] md:scale-[1.3] transform-gpu transition-transform duration-300 group-hover:scale-100 md:group-hover:scale-[1.4] my-1 md:my-3">
-                    {getWeatherIcon(d.code, "w-8 h-8 md:w-12 md:h-12", true, 0, d.wind)}
+                    {getWeatherIcon(d.code, "w-8 h-8 md:w-12 md:h-12", true, 0, d.wind, null, 0, d.avgClouds)}
                   </div>
                   
                   <div className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded border ${d.precipProb > 0 ? 'bg-blue-500/10 border-blue-500/20' : 'bg-transparent border-transparent opacity-40'}`}>

@@ -17,6 +17,8 @@ import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from './widgets/widgetStyles';
 interface CurrentWeatherProps {
   data: ExtendedWeatherData;
   effectiveCode: number | null;
+  /** % efectiu de núvols d'"ara": tria la variant "molt ennuvolat" de la icona i de l'etiqueta. */
+  effectiveCloudCover?: number | null;
   unit: WeatherUnit;
   lang: Language;
   isFavorite: boolean;
@@ -53,6 +55,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
     lang: props.lang,
     shiftedNow: props.shiftedNow,
     effectiveCode: props.effectiveCode,
+    effectiveCloudCover: props.effectiveCloudCover,
   });
 
   if (!weather) return null;
@@ -142,7 +145,8 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
                 0, // probabilitat de pluja (visualment 0 aquí ja que la principal mana sobre el precipAmt)
                 currentWindSpeed,
                 currentTemp,
-                currentPrecip // Passem el volum real de pluja per a la sincronització de telemetria
+                currentPrecip, // Passem el volum real de pluja per a la sincronització de telemetria
+                props.effectiveCloudCover
               )}
             </div>
           </div>

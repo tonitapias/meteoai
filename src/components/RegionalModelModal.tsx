@@ -375,7 +375,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                                     )}
                                                 </div>
                                                 <div className="filter drop-shadow-xl shrink-0 w-8 h-8 md:w-11 md:h-11 flex items-center justify-center">
-                                                    {getWeatherIcon(row.code, "w-full h-full", row.isDay, row.precip > 0 ? 90 : 0, row.wind, row.temp, row.precip)}
+                                                    {getWeatherIcon(row.code, "w-full h-full", row.isDay, row.precip > 0 ? 90 : 0, row.wind, row.temp, row.precip, row.iconCloudCover)}
                                                 </div>
                                             </div>
 

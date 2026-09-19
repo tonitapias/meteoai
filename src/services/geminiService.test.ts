@@ -48,7 +48,8 @@ const buildWeather = (rh: number): ExtendedWeatherData => {
             relative_humidity_2m: arr(rh),
             precipitation: arr(0),
             precipitation_probability: arr(0),
-            cloud_cover_low: arr(0),
+            // Capa baixa: la boira n'implica una (la política de boira exigeix >= CLOUDS.FOG_MIN_LOW).
+            cloud_cover_low: arr(100),
             cloud_cover_mid: arr(0),
             cloud_cover_high: arr(0),
             wind_speed_10m: arr(3),

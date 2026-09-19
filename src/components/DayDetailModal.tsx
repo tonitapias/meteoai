@@ -6,7 +6,7 @@ import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogic
 import { WeatherUnit, formatPrecipitation, getSafeLocale } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { getWeatherIcon } from './WeatherIcons';
-import { getHourlyWeatherCode, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -46,6 +46,7 @@ interface TableRowData {
     snowfall: number | null;
     windSpeed: number | null;
     isDay: boolean;
+    cloudCover: number | null;
 }
 
 // HELPER RISC ZERO: Extreu l'hora d'un ISO string sense passar per Date/fus horari del navegador
@@ -202,7 +203,8 @@ export default function DayDetailModal({
             precipSum,
             snowfall,
             windSpeed,
-            isDay
+            isDay,
+            cloudCover: getHourlyEffectiveCloudCover(hRaw as HourlySeries, idx)
         });
     }
 
@@ -399,7 +401,7 @@ export default function DayDetailModal({
                                 
                                 <div className="col-span-2 flex justify-center">
                                     <div className="scale-[0.6] md:scale-75 origin-center filter drop-shadow-md group-hover:scale-90 transition-transform duration-300">
-                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb ?? 0, row.windSpeed || 0, row.temp, row.precipSum ?? 0)}
+                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb ?? 0, row.windSpeed || 0, row.temp, row.precipSum ?? 0, row.cloudCover)}
                                     </div>
                                 </div>
                                 

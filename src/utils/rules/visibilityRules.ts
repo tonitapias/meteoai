@@ -2,7 +2,7 @@ import { calculateDewPoint } from '../weatherMath';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 import { adjustBaseSkyCode } from './cloudRules';
 
-const { HUMIDITY, VISIBILITY, PRECIPITATION, TEMP } = WEATHER_THRESHOLDS;
+const { HUMIDITY, VISIBILITY, PRECIPITATION, TEMP, CLOUDS } = WEATHER_THRESHOLDS;
 
 /** Diferència T − Td (°C): com de prop de la saturació és l'aire de superfície. */
 export const getDewPointSpread = (temp: number, humidity: number): number =>
@@ -22,7 +22,11 @@ export const hasFogSignal = (code: number, visibility: number): boolean =>
  *   1. un model en dona senyal (hasFogSignal), I
  *   2. la temperatura i la humitat de la sèrie confirmen la saturació
  *      (T − Td <= HUMIDITY.FOG_MAX_SPREAD), I
- *   3. no plou (precipitació < TRACE) i el codi no és ja de precipitació/tempesta.
+ *   3. no plou (precipitació < TRACE) i el codi no és ja de precipitació/tempesta, I
+ *   4. hi ha prou nuvolositat BAIXA (>= CLOUDS.FOG_MIN_LOW): la boira és un núvol a nivell de
+ *      terra i, sense cap capa baixa al model, el senyal de boira és majoritàriament fals.
+ *      Si la dada de núvols baixos falta (null) NO s'aplica: mai convertim una dada absent
+ *      en un 0 % que descartaria la boira.
  *
  * Abans qualsevol senyal de visibilitat < 1 km (o codi 45) bastava, i es fabricava
  * boira només amb HR alta + núvols. Verificat contra observacions METAR, això
@@ -47,7 +51,8 @@ export const resolveFog = (
     humidity: number,
     cloudCover: number,
     visibility: number,
-    precipAmount: number
+    precipAmount: number,
+    lowCloudCover: number | null = null
 ): number => {
     // Precipitació o tempesta ja decidides: no fabriquem ni mantenim boira a sobre.
     if (code > 48) return code;
@@ -59,13 +64,14 @@ export const resolveFog = (
     const confirmed =
         hasFogSignal(safeCode, visibility) &&
         precipAmount < PRECIPITATION.TRACE &&
-        getDewPointSpread(temp, humidity) <= HUMIDITY.FOG_MAX_SPREAD;
+        getDewPointSpread(temp, humidity) <= HUMIDITY.FOG_MAX_SPREAD &&
+        (lowCloudCover === null || lowCloudCover >= CLOUDS.FOG_MIN_LOW);
 
     let result = safeCode;
     if (confirmed) {
         result = temp <= TEMP.FREEZING ? 48 : 45;
     } else if (isFogCode) {
-        // Boira del model no confirmada per la saturació: restaurem el cel real.
+        // Boira del model no confirmada (saturació o núvols baixos): restaurem el cel real.
         result = adjustBaseSkyCode(0, cloudCover);
     }
 

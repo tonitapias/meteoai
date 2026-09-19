@@ -287,6 +287,7 @@ export const en = {
     56: "light freezing drizzle", 57: "dense freezing drizzle",
     61: "slight rain", 63: "moderate rain", 65: "heavy rain",
     66: "light freezing rain", 67: "heavy freezing rain",
+    68: "light sleet", 69: "sleet",
     71: "slight snow fall", 73: "moderate snow fall", 75: "heavy snow fall",
     77: "snow grains",
     80: "slight rain showers", 81: "moderate rain showers", 82: "violent rain showers",
@@ -304,6 +305,8 @@ export const en = {
   alertColdHigh: "Frost. Slippery roads.",
   alertRain: "Heavy rainfall.",
   alertFreezingRain: "Freezing rain: risk of ice on roads and surfaces.",
+  alertSleet: "Sleet: rain and snow mixed, slippery surfaces.",
+  wmoMostlyCloudy: "mostly cloudy",
   alertAir: "Poor air quality.",
   alertUV: "Extreme UV Radiation",
 

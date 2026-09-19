@@ -6,7 +6,7 @@ import { StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './widgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
-import { getHourlyWeatherCode, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeNum, extractValidArrayNum } from '../utils/weatherMath';
 import { isRegionalModelActive } from '../constants/regionalModels';
@@ -119,7 +119,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             rows.push({
                 time: i === 0 ? NOW_LABEL : `${hours}H`,
                 temp: temp,
-                icon: getWeatherIcon(finalCode, "w-8 h-8", isDay, pProb, windSpeed, temp, pAmt),
+                icon: getWeatherIcon(finalCode, "w-8 h-8", isDay, pProb, windSpeed, temp, pAmt, getHourlyEffectiveCloudCover(hourlySeries, targetIndex)),
                 precip: pProb || (pAmt > 0 ? 100 : 0),
                 precipText: precipString,
                 isNow: i === 0

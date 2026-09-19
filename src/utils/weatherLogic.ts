@@ -117,7 +117,8 @@ export const getRealTimeWeatherCode = (
     // ICON), mentre que la saturació la confirma la temperatura/humitat d'AROME. Per
     // això totes les pantalles han de calcular-ho sobre la mateixa sèrie (vegeu
     // utils/hourlyWeatherCode.ts).
-    code = resolveFog(code, temp, humidity, cloudCover, visibility, precipInstantanea);
+    // Núvols baixos: null (no 0) si la dada falta, perquè resolveFog no la faci servir per descartar boira.
+    code = resolveFog(code, temp, humidity, cloudCover, visibility, precipInstantanea, extractValidNum(current.cloud_cover_low));
     
     // E. Ajust per Tempestes (CAPE)
     code = adjustForStorms(code, cape, cloudCover, precipInstantanea);

@@ -286,6 +286,7 @@ export const es = {
     56: "llovizna helada ligera", 57: "llovizna helada densa",
     61: "lluvia ligera", 63: "lluvia moderada", 65: "lluvia fuerte",
     66: "lluvia helada ligera", 67: "lluvia helada fuerte",
+    68: "aguanieve ligera", 69: "aguanieve",
     71: "nevada ligera", 73: "nevada moderada", 75: "nevada fuerte",
     77: "cinarra",
     80: "chubascos ligeros", 81: "chubascos moderados", 82: "chubascos torrenciales",
@@ -303,6 +304,8 @@ export const es = {
   alertColdHigh: "Heladas. Calzadas resbaladizas.",
   alertRain: "Precipitaciones abundantes.",
   alertFreezingRain: "Lluvia helada: riesgo de hielo en carreteras y superficies.",
+  alertSleet: "Aguanieve: lluvia y nieve mezcladas, superficies resbaladizas.",
+  wmoMostlyCloudy: "muy nublado",
   alertAir: "Calidad del aire deficiente.",
   alertUV: "Radiación UV Extrema",
 

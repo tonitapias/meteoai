@@ -3,6 +3,7 @@ import { getDewPointSpread, hasFogSignal, resolveFog } from './visibilityRules';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 
 const { FOG_MAX_SPREAD } = WEATHER_THRESHOLDS.HUMIDITY;
+const { FOG_MIN_LOW } = WEATHER_THRESHOLDS.CLOUDS;
 
 // A T = 10 °C (fórmula de l'app): HR 100 → T−Td 0,00 · 98 → 0,30 · 97 → 0,45 · 96 → 0,61 · 95 → 0,76
 const T = 10;
@@ -96,6 +97,41 @@ describe('resolveFog — senyal del model + saturació', () => {
     it('sense saturació, el fred no fabrica boira gebradora', () => {
         expect(resolveFog(45, -3, 80, OVERCAST, GOOD_VIS, 0)).toBe(3);
         expect(resolveFog(3, -3, 80, OVERCAST, 400, 0)).toBe(3);
+    });
+
+    // PORTA DE NÚVOLS BAIXOS (CLOUDS.FOG_MIN_LOW): la boira és un núvol a nivell de terra; sense
+    // capa baixa al model el senyal de boira és majoritàriament fals (verificat amb METAR).
+    describe('porta de núvols baixos', () => {
+        it('llindar exacte: >= FOG_MIN_LOW confirma, per sota no', () => {
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0, FOG_MIN_LOW)).toBe(45);
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0, FOG_MIN_LOW - 1)).not.toBe(45);
+        });
+
+        it('un 45 del model sense capa baixa es rebaixa al cel real', () => {
+            expect(resolveFog(45, T, 100, CLEAR, GOOD_VIS, 0, 20)).toBe(1); // cel serè + HR alta
+            expect(resolveFog(45, T, 100, 60, GOOD_VIS, 0, 20)).toBe(2);
+        });
+
+        it('un senyal només de visibilitat sense capa baixa no fabrica boira ni toca el codi', () => {
+            expect(resolveFog(3, T, 100, OVERCAST, 300, 0, 20)).toBe(3);
+        });
+
+        it('també val per a la boira gebradora (T <= 0 °C)', () => {
+            expect(resolveFog(45, -3, 100, OVERCAST, 300, 0, 100)).toBe(48);
+            expect(resolveFog(45, -3, 100, OVERCAST, 300, 0, 40)).not.toBe(48);
+            expect(resolveFog(48, -3, 100, OVERCAST, 300, 0, 40)).not.toBe(48);
+        });
+
+        it('DOCTRINA RISC ZERO: sense dada de núvols baixos (null) NO es descarta la boira', () => {
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0, null)).toBe(45);
+            expect(resolveFog(0, -3, 100, CLEAR, 300, 0, null)).toBe(48);
+            // I el mateix si l'argument s'omet (compatibilitat amb les crides antigues)
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0)).toBe(45);
+        });
+
+        it('un 0 % real SÍ és una dada (cel serè de veritat): no hi ha boira', () => {
+            expect(resolveFog(45, T, 100, CLEAR, 300, 0, 0)).not.toBe(45);
+        });
     });
 
     it('amb precipitació >= TRACE no hi ha boira (el senyal no compta si plou)', () => {

@@ -159,7 +159,7 @@ const ForecastSection = memo(function ForecastSection({
       const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
       const minTempLabel = minTemp !== null ? `${Math.round(minTemp)}°` : '--°';
 
-      return { rawDate, i, dayName, dateNum, code, maxWind, precipProb, minTemp, maxTemp, minTempLabel, maxTempLabel, precipSum, snowSum };
+      return { rawDate, i, dayName, dateNum, code, avgClouds, maxWind, precipProb, minTemp, maxTemp, minTempLabel, maxTempLabel, precipSum, snowSum };
     }).filter((d): d is NonNullable<typeof d> => d !== null);
   }, [dailyData, chartData, lang, latitude]);
 
@@ -234,7 +234,7 @@ const ForecastSection = memo(function ForecastSection({
 
                 <div className="flex items-center justify-center flex-1 px-2 md:px-4">
                    <div className="scale-[0.8] md:scale-[1.1] transition-transform group-hover:scale-[1.25] duration-500 transform-gpu">
-                    {getWeatherIcon(day.code, "w-10 h-10 md:w-11 md:h-11", true, 0, day.maxWind)}
+                    {getWeatherIcon(day.code, "w-10 h-10 md:w-11 md:h-11", true, 0, day.maxWind, null, 0, day.avgClouds)}
                    </div>
                 </div>
 

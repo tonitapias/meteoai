@@ -285,6 +285,7 @@ export const ca = {
     56: "Plugim engelant feble", 57: "Plugim engelant dens",
     61: "Pluja feble", 63: "Pluja moderada", 65: "Pluja forta",
     66: "Pluja engelant feble", 67: "Pluja engelant forta",
+    68: "Aiguaneu feble", 69: "Aiguaneu",
     71: "Nevada feble", 73: "Nevada moderada", 75: "Nevada forta",
     77: "Grans de neu",
     80: "Ruixats febles", 81: "Ruixats moderats", 82: "Ruixats violents",
@@ -302,6 +303,8 @@ export const ca = {
   alertColdHigh: "Glaçades. Calçades relliscoses.",
   alertRain: "Precipitacions abundants.",
   alertFreezingRain: "Pluja engelant: risc de gel a les carreteres i a les superfícies.",
+  alertSleet: "Aiguaneu: pluja i neu barrejades, superfícies relliscoses.",
+  wmoMostlyCloudy: "Molt ennuvolat",
   alertAir: "Qualitat de l'aire deficient.",
   alertUV: "Radiació UV Extrema",
   

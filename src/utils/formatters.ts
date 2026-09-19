@@ -2,6 +2,7 @@
 import { TRANSLATIONS, Language } from '../translations';
 import { TranslationMap, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { safeNum } from './weatherMath';
+import { isMostlyCloudy } from './rules/cloudRules';
 
 // Re-exportem tipus si cal, però preferim usar els importats
 export type WeatherUnit = 'C' | 'F';
@@ -12,10 +13,16 @@ export type WeatherUnit = 'C' | 'F';
  * Obté l'etiqueta de text (Ex: "Pluja lleugera") per a un codi WMO
  * Mogut des de weatherLogic.ts per desacoblar física de traducció
  */
-export const getWeatherLabel = (current: StrictCurrentWeather | undefined, language: Language): string => {
+export const getWeatherLabel = (
+  current: StrictCurrentWeather | undefined,
+  language: Language,
+  cloudCover?: number | null
+): string => {
   const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
   if (!tr || !current) return "";
   const code = safeNum(current.weather_code, 0);
+  // Mateixa variant que la icona (Cloudy): dins del codi 2, a partir de CLOUDS.MOSTLY_CLOUDY.
+  if (isMostlyCloudy(code, cloudCover) && tr.wmoMostlyCloudy) return tr.wmoMostlyCloudy;
   return tr.wmo[code] || "---";
 };
 

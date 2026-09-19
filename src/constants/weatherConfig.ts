@@ -16,7 +16,19 @@ export const WEATHER_THRESHOLDS = {
     SCATTERED: 45, // 15-45%: Parcialment ennuvolat
     BROKEN: 85,    // 45-85%: Molt ennuvolat
     OVERCAST: 85,  // >85%: Cobert
-    STORM_BASE: 60 // Mínim de núvols per considerar tempesta
+    STORM_BASE: 60, // Mínim de núvols per considerar tempesta
+    // Dins del codi 2 (45-85 %), a partir d'aquí el cel es pinta com a "molt ennuvolat"
+    // (icona Cloudy) i no com a "parcialment ennuvolat" (sol amb núvol). Aprox. 5-6 oktes.
+    MOSTLY_CLOUDY: 70,
+    // Mínim de núvols BAIXOS (%) perquè una previsió de boira es confirmi (visibilityRules.ts).
+    // La boira és un núvol a nivell de terra, i el model la representa com a nuvolositat baixa:
+    // amb menys, el senyal de boira és majoritàriament fals. Verificat contra 24 mesos de METAR
+    // de 20 aeroports europeus i canaris (350.000 hores model↔METAR, ICON): amb >= 70 % el
+    // CSI puja de 0,25 a 0,30 (de 0,36 a 0,39 a T <= 0 °C), la taxa de falses alarmes baixa
+    // de 0,73 a 0,65 i el biaix de 2,7 a 1,9, a canvi de perdre un 8 % de les hores de boira
+    // encertades (POD 0,73 -> 0,67). Millora o queda igual a totes les estacions amb prou
+    // boira. Pujar-ho a 90 % encara és més precís (CSI 0,32) però perd un 18 % de les hores.
+    FOG_MIN_LOW: 70
   },
 
   // Humitat i Boira

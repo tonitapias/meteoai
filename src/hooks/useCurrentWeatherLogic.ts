@@ -23,10 +23,11 @@ interface UseCurrentWeatherLogicProps {
     lang: Language;
     shiftedNow?: Date;
     effectiveCode: number | null;
+    effectiveCloudCover?: number | null;
 }
 
 export const useCurrentWeatherLogic = ({
-    data, unit, lang, shiftedNow, effectiveCode 
+    data, unit, lang, shiftedNow, effectiveCode, effectiveCloudCover
 }: UseCurrentWeatherLogicProps) => {
     
     const { current, location, daily } = data;
@@ -85,11 +86,11 @@ export const useCurrentWeatherLogic = ({
                 // que getWeatherLabel ja usa per a un codi desconegut), mai
                 // l'etiqueta d'un 0 fals ("Cel serè").
                 weatherLabel: effectiveCode !== null
-                    ? getWeatherLabel({ ...current, weather_code: effectiveCode }, lang)
+                    ? getWeatherLabel({ ...current, weather_code: effectiveCode }, lang, effectiveCloudCover)
                     : "---"
             }
         };
-    }, [current, location, daily, unit, lang, shiftedNow, effectiveCode]);
+    }, [current, location, daily, unit, lang, shiftedNow, effectiveCode, effectiveCloudCover]);
 
     return formattedData;
 };

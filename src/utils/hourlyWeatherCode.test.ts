@@ -49,7 +49,7 @@ describe('getHourlyWeatherCode', () => {
         temperature_2m: [14, 14, 14],
         relative_humidity_2m: [99, 99, 99],   // saturat: T−Td ≈ 0,15 °C
         precipitation: [0, 0, 0],
-        cloud_cover_low: [0, 0, 0],
+        cloud_cover_low: [100, 100, 100],   // la boira n'implica una capa baixa (CLOUDS.FOG_MIN_LOW)
         cloud_cover_mid: [0, 0, 0],
         cloud_cover_high: [0, 0, 0],
         weather_code: [0, 0, 0],
@@ -71,6 +71,16 @@ describe('getHourlyWeatherCode', () => {
 
     it('sense visibilitat ni codi de boira NO fabrica boira', () => {
         expect(getHourlyWeatherCode({ ...base, visibility: [null, null, null] }, 0, 500)).not.toBe(45);
+    });
+
+    it('sense capa baixa al model (núvols baixos 20 %) la boira no es confirma', () => {
+        const h = { ...base, cloud_cover_low: [20, 20, 20], visibility: [300, 300, 300] };
+        expect(getHourlyWeatherCode(h, 0, 500)).not.toBe(45);
+    });
+
+    it('DOCTRINA RISC ZERO: sense dada de núvols baixos (null a la sèrie) la boira es manté', () => {
+        const h = { ...base, cloud_cover_low: [null, null, null], visibility: [300, 300, 300] };
+        expect(getHourlyWeatherCode(h, 0, 500)).toBe(45);
     });
 
     it('la mateixa sèrie saturada a T <= 0 °C dona boira GEBRADORA (48), no 45', () => {
@@ -124,6 +134,7 @@ describe('buildRegionalHourlyRows — homogeneïtat amb la resta de l\'app', () 
     // n'hi ha; on no (weather_code, visibility, freezing_level_height) els d'ICON.
     const merged = {
         ...arome,
+        cloud_cover_low: [100, 100, 100],   // la boira n'implica una capa baixa (CLOUDS.FOG_MIN_LOW)
         weather_code: [45, 45, 45],
         visibility: [1360, 840, 820],
         freezing_level_height: [3990, 4010, 4020]

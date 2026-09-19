@@ -21,7 +21,8 @@ const buildWeather = (rh: number, visibility = 840): ExtendedWeatherData => {
             time: Array.from({ length: n }, (_, i) => `2026-09-19T${String(i).padStart(2, '0')}:00`),
             weather_code: arr(45), visibility: arr(visibility),
             temperature_2m: arr(15.2), relative_humidity_2m: arr(rh), precipitation: arr(0),
-            cloud_cover_low: arr(0), cloud_cover_mid: arr(0), cloud_cover_high: arr(0),
+            // Capa baixa: la boira n'implica una (la política de boira exigeix >= CLOUDS.FOG_MIN_LOW).
+            cloud_cover_low: arr(100), cloud_cover_mid: arr(0), cloud_cover_high: arr(0),
             wind_speed_10m: arr(3), is_day: arr(0), cape: arr(0), freezing_level_height: arr(4000),
         },
         daily: {}, hourlyComparison: {},

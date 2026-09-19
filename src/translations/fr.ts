@@ -287,6 +287,7 @@ export const fr = {
     56: "bruine verglaçante légère", 57: "bruine verglaçante dense",
     61: "pluie faible", 63: "pluie modérée", 65: "pluie forte",
     66: "pluie verglaçante légère", 67: "pluie verglaçante forte",
+    68: "pluie et neige mêlées faible", 69: "pluie et neige mêlées",
     71: "chute de neige faible", 73: "chute de neige modérée", 75: "chute de neige forte",
     77: "grains de neige",
     80: "averses faibles", 81: "averses modérées", 82: "averses torrentielles",
@@ -304,6 +305,8 @@ export const fr = {
   alertColdHigh: "Gelées. Prudence sur la route.",
   alertRain: "Précipitations abondantes.",
   alertFreezingRain: "Pluie verglaçante : risque de verglas sur les routes et les surfaces.",
+  alertSleet: "Pluie et neige mêlées : surfaces glissantes.",
+  wmoMostlyCloudy: "très nuageux",
   alertAir: "Qualité de l'air médiocre.",
   alertUV: "Rayonnement UV Extrême",
   

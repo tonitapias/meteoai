@@ -59,7 +59,7 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
     });
 
     it('hauria de detectar BOIRA per visibilitat < 1 km si la saturació ho confirma', () => {
-        const current = createCurrent(0, 10, 0, 0);
+        const current = createCurrent(0, 10, 0, 100);
         current.relative_humidity_2m = 99;
         current.visibility = 400;
 
@@ -100,11 +100,31 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
     });
 
     it('boira amb T <= 0 °C sortida per visibilitat (sense codi 48 del model) és GEBRADORA', () => {
-        const current = createCurrent(0, -4, 0, 0);
+        const current = createCurrent(0, -4, 0, 100);
         current.relative_humidity_2m = 100;
         current.visibility = 400;
 
         expect(getRealTimeWeatherCode(current, [0], 0, 0, 500)).toBe(48);
+    });
+
+    it('PORTA DE NÚVOLS BAIXOS: amb el model saturat però sense capa baixa (< 70 %), no hi ha boira', () => {
+        const current = createCurrent(45, 10, 0, 100);
+        current.relative_humidity_2m = 100;
+        current.visibility = 300;
+        current.cloud_cover_low = 30;
+
+        const result = getRealTimeWeatherCode(current, [0], 0, 3000, 0);
+        expect(result).not.toBe(45);
+        expect(result).not.toBe(48);
+    });
+
+    it('PORTA DE NÚVOLS BAIXOS: amb la dada absent la boira es manté (mai un 0 % fingit)', () => {
+        const current = createCurrent(45, 10, 0, 100);
+        current.relative_humidity_2m = 100;
+        current.visibility = 300;
+        delete (current as { cloud_cover_low?: number }).cloud_cover_low;
+
+        expect(getRealTimeWeatherCode(current, [0], 0, 3000, 0)).toBe(45);
     });
 
     it('boira amb T > 0 °C mai és gebradora encara que el model digui 48', () => {
@@ -144,6 +164,34 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
     it('la pluja normal a <= 1 °C continua convertint-se en neu (no és engelant)', () => {
         const current = createCurrent(63, -1, 1, 100);
         expect(getRealTimeWeatherCode(current, [1], 0, 100, 0)).toBe(73);
+    });
+
+    // AIGUANEU (68/69): franja 1-4 °C amb la isoterma 0 °C SOBRE el terra (< 300 m). La neu es fon en
+    // part abans d'arribar-hi: abans es pintava com a "Nevada".
+    describe('aiguaneu', () => {
+        it('a la franja de barreja la precipitació és aiguaneu: 68 feble, 69 moderat o fort', () => {
+            // T=3 °C, cota 0 °C a 200 m sobre el terra
+            expect(getRealTimeWeatherCode(createCurrent(61, 3, 0.3, 100), [0.3], 0, 200, 0)).toBe(68);
+            expect(getRealTimeWeatherCode(createCurrent(63, 3, 1, 100), [1], 0, 200, 0)).toBe(69);
+            expect(getRealTimeWeatherCode(createCurrent(65, 3, 3, 100), [3], 0, 200, 0)).toBe(69);
+        });
+
+        it('a T <= 1 °C (neu segura) continua sent neu, no aiguaneu', () => {
+            expect(getRealTimeWeatherCode(createCurrent(63, 1, 1, 100), [1], 0, 200, 0)).toBe(73);
+            expect(getRealTimeWeatherCode(createCurrent(61, 0.5, 0.3, 100), [0.3], 0, 200, 0)).toBe(71);
+        });
+
+        it('amb la isoterma 0 °C SOTA el terra la columna és freda: neu, no aiguaneu', () => {
+            expect(getRealTimeWeatherCode(createCurrent(63, 3, 1, 100), [1], 0, -100, 0)).toBe(73);
+        });
+
+        it('amb la cota de gel lluny (>= 300 m) no hi ha ni neu ni aiguaneu: pluja', () => {
+            expect(getRealTimeWeatherCode(createCurrent(63, 3, 1, 100), [1], 0, 500, 0)).toBe(63);
+        });
+
+        it('per sobre de 4 °C mai hi ha aiguaneu', () => {
+            expect(getRealTimeWeatherCode(createCurrent(63, 6, 1, 100), [1], 0, 100, 0)).toBe(63);
+        });
     });
 
     it('DOCTRINA RISC ZERO: sense temperatura real, ha de tornar null (mai un 0ºC fals)', () => {

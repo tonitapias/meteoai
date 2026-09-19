@@ -1,8 +1,9 @@
 // src/hooks/useCurrentConditions.ts
 import { useMemo } from 'react';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
-import { calculateDewPoint, getMoonPhase } from '../utils/weatherMath';
+import { calculateDewPoint, getMoonPhase, extractValidArrayNum, extractValidNum } from '../utils/weatherMath';
 import { calculateReliability } from '../utils/rules/reliabilityRules';
+import { calculateEffectiveCloudCover } from '../utils/rules/cloudRules';
 import { ExtendedWeatherData, StrictCurrentWeather, StrictDailyWeather } from '../types/weatherLogicTypes';
 import { getComparisonVal } from '../utils/weatherMappers';
 
@@ -70,7 +71,8 @@ export function useCurrentConditions(
           ...currentRaw,
           cape: currentRaw.cape ?? currentCape,
           visibility: currentRaw.visibility ?? getSafeArrNum(hRaw.visibility, idx, 10000),
-          cloud_cover_low: currentRaw.cloud_cover_low ?? getSafeArrNum(hRaw.cloud_cover_low, idx, 0),
+          // null (no 0) si falta: la porta de boira (resolveFog) només s'aplica amb dada real.
+          cloud_cover_low: currentRaw.cloud_cover_low ?? extractValidArrayNum(hRaw.cloud_cover_low, idx),
           cloud_cover_mid: currentRaw.cloud_cover_mid ?? getSafeArrNum(hRaw.cloud_cover_mid, idx, 0),
           cloud_cover_high: currentRaw.cloud_cover_high ?? getSafeArrNum(hRaw.cloud_cover_high, idx, 0),
           precipitation: currentRaw.precipitation ?? getSafeArrNum(hRaw.precipitation, idx, 0),
@@ -79,6 +81,23 @@ export function useCurrentConditions(
 
       return getRealTimeWeatherCode(enrichedCurrent, minutelyPreciseData, currentRainProbability, currentFreezingLevel, elevation);
   }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel, currentHourlyIndex, currentCape]);
+
+  // % efectiu de núvols d'"ara" (mateixa font i ponderació que el codi de cel): serveix perquè la icona i
+  // l'etiqueta triïn la variant "molt ennuvolat" amb el mateix valor que va decidir el codi.
+  const effectiveCloudCover = useMemo(() => {
+      if (!weatherData?.current || !weatherData?.hourly) return null;
+      const hRaw = weatherData.hourly as Record<string, unknown>;
+      const currentRaw = weatherData.current as Record<string, unknown>;
+      const layer = (key: string) => {
+          const own = extractValidNum(currentRaw[key]);
+          return own !== null ? own : extractValidArrayNum(hRaw[key], currentHourlyIndex);
+      };
+      const low = layer('cloud_cover_low');
+      const mid = layer('cloud_cover_mid');
+      const high = layer('cloud_cover_high');
+      if (low === null && mid === null && high === null) return null;
+      return calculateEffectiveCloudCover(low ?? 0, mid ?? 0, high ?? 0);
+  }, [weatherData, currentHourlyIndex]);
 
   const weeklyExtremes = useMemo(() => {
     const minTemps = weatherData?.daily?.temperature_2m_min;
@@ -111,7 +130,7 @@ export function useCurrentConditions(
 
   return {
       minutelyPreciseData, currentRainProbability, currentFreezingLevel, 
-      effectiveWeatherCode, currentCape, weeklyExtremes, 
+      effectiveWeatherCode, effectiveCloudCover, currentCape, weeklyExtremes, 
       currentDewPoint, reliability, moonPhaseVal, barometricTrend
   };
 }

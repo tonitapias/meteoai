@@ -11,7 +11,7 @@ import {
     ReliabilityResult 
 } from '../types/weatherLogicTypes';
 import { safeNum, extractValidNum } from './weatherMath';
-import { isFreezingPrecipCode } from './rules/winterRules';
+import { isFreezingPrecipCode, isSleetCode } from './rules/winterRules';
 
 const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
@@ -21,7 +21,7 @@ const { PRECIPITATION, WIND, TEMP, ALERTS, HUMIDITY } = WEATHER_THRESHOLDS;
 
 // 1. CORRECCIÓ PLUJA: Lògica centralitzada i llindar a 0.2mm
 const calculateIsRaining = (code: number, precipAmount: number) => {
-    const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95 && precipAmount > 0);
+    const isRainCode = (code >= 51 && code <= 69) || (code >= 80 && code <= 82) || (code >= 95 && precipAmount > 0);
     return isRainCode || precipAmount >= 0.2;
 };
 
@@ -115,10 +115,12 @@ const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
     const tips: string[] = [];   
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     const isFreezingPrecip = isFreezingPrecipCode(code);
+    const isSleet = isSleetCode(code);
 
     if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     else if (isFreezingPrecip) alerts.push({ type: tr.rain, msg: tr.alertFreezingRain, level: 'high' });
+    else if (isSleet) alerts.push({ type: tr.snow, msg: tr.alertSleet, level: 'warning' });
     else if ((code === 65 || code === 82 || precipSum > ALERTS.PRECIP_SUM_HIGH) && isRaining) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
 
     if (windGusts > 50) {

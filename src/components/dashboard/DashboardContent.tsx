@@ -51,6 +51,7 @@ export const DashboardContent = () => {
             <CurrentWeather 
                 data={weatherData} 
                 effectiveCode={calculations.effectiveWeatherCode}
+                effectiveCloudCover={calculations.effectiveCloudCover}
                 unit={flags.unit} 
                 lang={flags.lang} 
                 shiftedNow={calculations.shiftedNow}

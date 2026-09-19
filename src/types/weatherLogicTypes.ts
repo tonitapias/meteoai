@@ -38,6 +38,8 @@ export interface TranslationMap {
   rain: string;
   alertRain: string;
   alertFreezingRain: string;
+  alertSleet: string;
+  wmoMostlyCloudy: string;
   wind: string;
   tipWindbreaker: string;
   alertWindHigh: string;

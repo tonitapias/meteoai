@@ -14,6 +14,7 @@
 // (model regional on en té, model global on no), amb la mateixa cadena de reserva.
 
 import { getRealTimeWeatherCode } from './weatherLogic';
+import { calculateEffectiveCloudCover } from './rules/cloudRules';
 import { extractValidArrayNum, getSafeArrayNum } from './weatherMath';
 import type { StrictCurrentWeather } from '../types/weatherLogicTypes';
 
@@ -80,7 +81,8 @@ export const getHourlyWeatherCode = (
         wind_speed_10m: getSafeArrayNum(hourly.wind_speed_10m, idx, 0),
         visibility: getSafeArrayNum(hourly.visibility, idx, 10000),
         relative_humidity_2m: getSafeArrayNum(hourly.relative_humidity_2m, idx, 70),
-        cloud_cover_low: getSafeArrayNum(hourly.cloud_cover_low, idx, 0),
+        // null (no 0) si falta: la porta de boira (resolveFog) només s'aplica amb dada real.
+        cloud_cover_low: extractValidArrayNum(hourly.cloud_cover_low, idx),
         cloud_cover_mid: getSafeArrayNum(hourly.cloud_cover_mid, idx, 0),
         cloud_cover_high: getSafeArrayNum(hourly.cloud_cover_high, idx, 0),
         cloud_cover: getSafeArrayNum(hourly.cloud_cover, idx, 0),
@@ -96,6 +98,19 @@ export const getHourlyWeatherCode = (
         resolveFreezingLevel(hourly, idx, elevation, rawTemp, comparison),
         elevation
     );
+};
+
+/**
+ * % efectiu de núvols d'una hora (mateixa ponderació que decideix el codi de cel: baixos x1,0 + mitjans x0,6
+ * + alts x0,3). Serveix perquè les pantalles triïn la variant "molt ennuvolat" de la icona (isMostlyCloudy) amb
+ * el mateix valor que va decidir el codi. null si cap de les tres capes porta dada (no es fingeix un cel).
+ */
+export const getHourlyEffectiveCloudCover = (hourly: HourlySeries, idx: number): number | null => {
+    const low = extractValidArrayNum(hourly.cloud_cover_low, idx);
+    const mid = extractValidArrayNum(hourly.cloud_cover_mid, idx);
+    const high = extractValidArrayNum(hourly.cloud_cover_high, idx);
+    if (low === null && mid === null && high === null) return null;
+    return calculateEffectiveCloudCover(low ?? 0, mid ?? 0, high ?? 0);
 };
 
 /**

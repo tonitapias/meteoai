@@ -53,7 +53,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
   const { chartData24h, chartDataFull, comparisonData } = useChartData(weatherData, currentHourlyIndex, unit);
 
   const {
-    minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode,
+    minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, effectiveCloudCover,
     currentCape, weeklyExtremes, currentDewPoint, reliability, moonPhaseVal, barometricTrend
   } = useCurrentConditions(weatherData, shiftedNow, currentHourlyIndex, chartData24h);
 
@@ -64,6 +64,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     currentRainProbability, 
     currentFreezingLevel, 
     effectiveWeatherCode, 
+    effectiveCloudCover,
     barometricTrend, 
     currentCape, 
     currentDewPoint, 

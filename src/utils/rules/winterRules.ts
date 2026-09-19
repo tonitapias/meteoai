@@ -20,7 +20,10 @@ export const isSnowPossible = (temp: number, freezingLevel: number, elevation: n
 export const isFreezingPrecipCode = (code: number): boolean =>
     code === 56 || code === 57 || code === 66 || code === 67;
 
-/** Determina si la pluja s'ha de convertir en neu per temperatura */
+/** Aiguaneu: pluja i neu barrejades (68 feble, 69 moderat o fort). WMO 4677; Open-Meteo no el publica, el deriva l'app. */
+export const isSleetCode = (code: number): boolean => code === 68 || code === 69;
+
+/** Determina si la pluja s'ha de convertir en neu (o aiguaneu) per temperatura */
 export const determineSnowCode = (
     code: number,
     temp: number,
@@ -41,9 +44,19 @@ export const determineSnowCode = (
     const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
 
     if (isRainCode || precipAmount > 0) {
-        if (code === 65 || code === 82 || code === 67 || code >= 95 || precipAmount > PRECIPITATION.MODERATE) return 75; 
-        if (code === 63 || code === 81 || code === 55 || code === 57 || precipAmount >= PRECIPITATION.LIGHT) return 73; 
-        return 71; 
+        const heavy = code === 65 || code === 82 || code === 67 || code >= 95 || precipAmount > PRECIPITATION.MODERATE;
+        const moderate = code === 63 || code === 81 || code === 55 || code === 57 || precipAmount >= PRECIPITATION.LIGHT;
+
+        // Franja d'aiguaneu: per sobre de TEMP_SNOW (neu segura) la neu només és possible perquè la cota
+        // de gel és prop del terra (isSnowPossible). Si la isoterma 0 °C és SOBRE el terra (0 <= dist <
+        // FREEZING_BUFFER), la neu travessa una capa càlida i es fon en part abans d'arribar-hi: no és
+        // neu, és pluja i neu barrejades. Abans es pintava com a "Nevada", una promesa massa forta.
+        // Si la isoterma és sota el terra la columna és freda i, malgrat el T2m, continua sent neu.
+        if (temp > SNOW.TEMP_SNOW && freezingLevel - elevation >= 0) return heavy || moderate ? 69 : 68;
+
+        if (heavy) return 75;
+        if (moderate) return 73;
+        return 71;
     }
     
     if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
