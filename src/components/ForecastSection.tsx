@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Calendar, Umbrella, ArrowRight } from 'lucide-react'; 
 import { TempRangeBar } from './widgets';
 import { getWeatherIcon } from './WeatherIcons';
@@ -76,8 +76,16 @@ const ForecastSection = memo(function ForecastSection({
   const {
     isOpen: isTrendModalOpen,
     openModal: openTrendModal,
-    closeModal: closeTrendModal
+    closeModal: closeTrendModal,
+    closeModalThen: closeTrendModalThen
   } = useTacticalModal('trendChart');
+
+  // Un dia del gràfic obre el seu detall. El detall NO es pot obrir a la vegada que es tanca el gràfic:
+  // vegeu useTacticalModal.closeModalThen (el popstate del tancament el tancaria a ell).
+  const handleTrendDayClick = useCallback(
+    (dayIndex: number) => closeTrendModalThen(() => onDayClick(dayIndex)),
+    [closeTrendModalThen, onDayClick]
+  );
 
   // [FIX] Aquest càlcul (filtratge de chartData x7, correcció d'inversió tèrmica,
   // ajust de núvols...) corria directament al cos del render, sense useMemo —
@@ -263,6 +271,7 @@ const ForecastSection = memo(function ForecastSection({
         regionalModelLabel={regionalModelLabel}
         lang={lang}
         latitude={latitude}
+        onDayClick={handleTrendDayClick}
       />
 
     </div>

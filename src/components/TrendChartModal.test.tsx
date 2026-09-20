@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { buildCapsuleGradient } from '../utils/temperatureColors';
 import TrendChartModal from './TrendChartModal';
 import ForecastSection from './ForecastSection';
 import type { StrictDailyWeather } from '../types/weatherLogicTypes';
@@ -271,5 +272,244 @@ describe('TrendChartModal — mateixes xifres que la llista de 7 dies', () => {
         expect(screen.getAllByText('8°')).toHaveLength(14);
         expect(screen.getAllByText('18°')).toHaveLength(14);
         expect(screen.queryByText('10°')).toBeNull();
+    });
+});
+
+describe('TrendChartModal — cada dia obre el seu detall', () => {
+    const days = () => screen.getAllByTestId('trend-day');
+
+    it('amb onDayClick, cada dia és un botó que crida amb el seu índex (1..7) i el gràfic no es tanca pel seu compte', () => {
+        const onDayClick = vi.fn();
+        const onClose = vi.fn();
+        renderModal(makeDaily(SEPT), [], { onDayClick, onClose });
+
+        expect(days()).toHaveLength(7);
+        expect(days().every(d => d.tagName === 'BUTTON')).toBe(true);
+
+        fireEvent.click(days()[2]);
+        expect(onDayClick).toHaveBeenCalledTimes(1);
+        expect(onDayClick).toHaveBeenCalledWith(3);
+        // El tancament el gestiona qui passa onDayClick (closeModalThen): un doble tancament faria history.back() dues vegades.
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('sense onDayClick els dies no són botons (no es promet cap acció que no existeix)', () => {
+        renderModal(makeDaily(SEPT));
+        expect(days().every(d => d.tagName !== 'BUTTON')).toBe(true);
+        expect(screen.queryAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Tancar modal']);
+    });
+});
+
+describe('TrendChartModal — accessibilitat', () => {
+    it('cada dia diu en una frase el que el gràfic diu visualment', () => {
+        renderModal(makeDaily(SEPT, { precipitation_probability_max: [0, 10, 0, 0, 0, 0, 0, 0] }));
+        expect(screen.getAllByTestId('trend-day')[0].getAttribute('aria-label'))
+            .toBe('dilluns, màxima 24°, mínima 12°, pluja 10%');
+    });
+
+    it('amb fiabilitat, mm i origen, tot entra a l\'etiqueta; amb onDayClick s\'hi afegeix què fa el botó', () => {
+        renderModal(
+            makeDaily(SEPT, { precipitation_sum: [0, 0, 0, 0, 4.2, 0, 0, 0] }),
+            hoursFor(SEPT, 14, 27, 10, ['2026-09-21']),
+            { dailyComparison: COMPARISON, regionalModelLabel: 'AROME HD', onDayClick: () => {} }
+        );
+        const labels = screen.getAllByTestId('trend-day').map(d => d.getAttribute('aria-label') ?? '');
+        expect(labels[0]).toContain('AROME HD');
+        expect(labels[3]).toContain('Fiabilitat baixa');
+        expect(labels[3]).toContain('4 mm');
+        expect(labels[6]).toContain('Model global');
+        expect(labels[0]).toMatch(/\. veure el detall del dia$/);
+    });
+
+    it('l\'etiqueta surt en l\'idioma de l\'usuari', () => {
+        renderModal(makeDaily(SEPT), [], { lang: 'en' });
+        expect(screen.getAllByTestId('trend-day')[0].getAttribute('aria-label')).toBe('Monday, high 24°, low 12°, rain 10%');
+    });
+
+    it('el gràfic visual és decoratiu per als lectors de pantalla (la informació és a les etiquetes dels dies)', () => {
+        renderModal(makeDaily(SEPT));
+        expect(screen.getAllByTestId('trend-column')[0].closest('[aria-hidden="true"]')).not.toBeNull();
+    });
+
+    it('el diàleg queda descrit pel resum de la tendència', () => {
+        renderModal(makeDaily(SEPT));
+        const dialog = screen.getByRole('dialog');
+        const id = dialog.getAttribute('aria-describedby');
+        expect(id).toBeTruthy();
+        expect(document.getElementById(id!)).toBe(screen.getByTestId('trend-summary'));
+    });
+
+    it('respecta "reduir moviment": sense animació les columnes i les línies són visibles des del primer moment', () => {
+        renderModal(makeDaily(SEPT));
+        const css = document.querySelector('[role="dialog"] style')!.textContent ?? '';
+        expect(css).toContain('prefers-reduced-motion: reduce');
+        expect(css).toMatch(/reduce\)\s*\{[^}]*\.anim-draw-line\s*\{[^}]*animation:\s*none/);
+        expect(css).toMatch(/\.anim-column\s*\{[^}]*animation:\s*none;\s*opacity:\s*1/);
+    });
+
+    describe('focus del diàleg', () => {
+        const withOpener = (isOpen: boolean, onDayClick?: () => void) => (
+            <>
+                <button data-testid="opener">Obrir</button>
+                <TrendChartModal isOpen={isOpen} onClose={() => {}} dailyData={makeDaily(SEPT)} chartData={[]} lang="ca" onDayClick={onDayClick} />
+            </>
+        );
+
+        it('en obrir-se, el focus entra al diàleg (al botó de tancar) i en tancar-se torna a qui l\'havia obert', () => {
+            const { rerender } = render(withOpener(false));
+            const opener = screen.getByTestId('opener');
+            opener.focus();
+            expect(document.activeElement).toBe(opener);
+
+            rerender(withOpener(true));
+            expect(document.activeElement).toBe(screen.getByLabelText('Tancar modal'));
+
+            rerender(withOpener(false));
+            expect(document.activeElement).toBe(opener);
+        });
+
+        it('el Tab dóna la volta dins el diàleg: de l\'últim control al primer, i Maj+Tab al revés', () => {
+            const { rerender } = render(withOpener(false, () => {}));
+            rerender(withOpener(true, () => {}));
+            const close = screen.getByLabelText('Tancar modal');
+            const allDays = screen.getAllByTestId('trend-day');
+            const lastDay = allDays[allDays.length - 1];
+
+            lastDay.focus();
+            fireEvent.keyDown(document, { key: 'Tab' });
+            expect(document.activeElement).toBe(close);
+
+            fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+            expect(document.activeElement).toBe(lastDay);
+        });
+
+        it('el Tab entre controls interns no es toca (només s\'intercepta a les vores)', () => {
+            const { rerender } = render(withOpener(false, () => {}));
+            rerender(withOpener(true, () => {}));
+            const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+            (screen.getAllByTestId('trend-day')[1] as HTMLElement).focus();
+            document.dispatchEvent(event);
+            expect(event.defaultPrevented).toBe(false);
+        });
+
+        it('un Tab amb el focus fora del diàleg el fa entrar al diàleg', () => {
+            const { rerender } = render(withOpener(false, () => {}));
+            rerender(withOpener(true, () => {}));
+            screen.getByTestId('opener').focus();
+            fireEvent.keyDown(document, { key: 'Tab' });
+            expect(document.activeElement).toBe(screen.getByLabelText('Tancar modal'));
+        });
+    });
+});
+
+describe('TrendChartModal — línies de tendència, resum i colors', () => {
+    const dOf = (id: string) => screen.getByTestId(id).getAttribute('d') ?? '';
+
+    it('dibuixa dues línies, màximes i mínimes, d\'un sol traç quan hi ha totes les dades', () => {
+        renderModal(makeDaily(SEPT));
+        expect(dOf('trend-line-max').match(/M/g)).toHaveLength(1);
+        expect(dOf('trend-line-max').match(/L/g)).toHaveLength(6);
+        expect(dOf('trend-line-min').match(/L/g)).toHaveLength(6);
+        expect(dOf('trend-line-min')).not.toBe(dOf('trend-line-max'));   // no són la mateixa línia
+    });
+
+    it('un dia sense dada trenca les dues línies en dos trams (no dibuixa per sobre del forat)', () => {
+        renderModal(makeDaily(SEPT, {
+            temperature_2m_max: [25, 24, 26, null, 30, 27, 25, 23],
+            temperature_2m_min: [12, 12, 13, null, 15, 13, 12, 11],
+        }));
+        for (const id of ['trend-line-max', 'trend-line-min']) {
+            expect(dOf(id).match(/M/g)).toHaveLength(2);   // dos trams: dies 1-2 i dies 4-7
+            expect(dOf(id).match(/L/g)).toHaveLength(4);   // 1 segment + 3 segments
+        }
+    });
+
+    it('cada càpsula es pinta amb el degradat de la paleta real entre la seva màxima i la seva mínima', () => {
+        renderModal(makeDaily(SEPT, {
+            temperature_2m_max: [25, 35, 32, 28, 28, 29, 28, 25],
+            temperature_2m_min: [12, 19, 18, 14, 15, 16, 15, 14],
+        }));
+        const capsule = screen.getAllByTestId('trend-column')[0].children[1] as HTMLElement;
+        // jsdom normalitza els colors hexadecimals a rgb() i treu el "to bottom" (és el valor per defecte).
+        const asJsdom = buildCapsuleGradient(35, 19)
+            .replace('to bottom, ', '')
+            .replace(/#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/g, (_, r, g, b) =>
+                `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`);
+        expect(capsule.getAttribute('style')).toContain(asJsdom);
+        // I no és el degradat lineal de dos colors d'abans: passa per les bandes intermèdies de la paleta.
+        expect(asJsdom.match(/rgb\(/g)).toHaveLength(4);
+    });
+
+    describe('frase resum', () => {
+        const summary = () => screen.getByTestId('trend-summary').textContent;
+
+        it('un refredament net es diu com a tal, amb les xifres de la setmana', () => {
+            renderModal(makeDaily(SEPT, { temperature_2m_max: [25, 35, 32, 28, 28, 29, 28, 25] }));
+            expect(summary()).toBe('Refredament: la màxima baixa de 35° a 25° al llarg de la setmana.');
+            expect(screen.queryByTestId('trend-uncertain')).toBeNull();
+        });
+
+        it('una setmana amb un dip però sense canvi net entre extrems és "variable"', () => {
+            renderModal(makeDaily(SEPT));   // 24 ... 23 amb un pic de 30
+            expect(summary()).toBe('Setmana variable: les màximes oscil·len entre 23° i 30°.');
+        });
+
+        it('si els models discrepen gairebé tant com el canvi, ho avisa', () => {
+            // Refredament de 30° a 26° (4°) amb ECMWF 9° per sobre a l'últim dia: 4 < 2*9
+            const max = [25, 30, 29, 28, 27, 27, 26, 26];
+            const cmp = { ecmwf: model(max.map((v, i) => (i === 7 ? v + 9 : v)), MIN), gfs: model(max, MIN), icon: model(max, MIN) };
+            renderModal(makeDaily(SEPT, { temperature_2m_max: max }), [], { dailyComparison: cmp });
+            expect(summary()).toContain('Refredament');
+            expect(screen.getByTestId('trend-uncertain').textContent).toContain('Poc segur');
+        });
+
+        it('el resum surt en l\'idioma de l\'usuari', () => {
+            renderModal(makeDaily(SEPT, { temperature_2m_max: [25, 35, 32, 28, 28, 29, 28, 25] }), [], { lang: 'en' });
+            expect(summary()).toBe('Cooling: the high drops from 35° to 25° over the week.');
+        });
+
+        it('amb menys de 3 dies amb màxima no es diu res (i el diàleg no queda descrit per un resum que no hi és)', () => {
+            renderModal(makeDaily(SEPT, { temperature_2m_max: [25, 24, null, null, null, null, null, 23] }));
+            expect(screen.queryByTestId('trend-summary')).toBeNull();
+            expect(screen.getByRole('dialog').getAttribute('aria-describedby')).toBeNull();
+        });
+    });
+
+    it('la llegenda diu quina línia és cada una', () => {
+        renderModal(makeDaily(SEPT));
+        expect(screen.getByText('Màximes')).toBeTruthy();
+        expect(screen.getByText('Mínimes')).toBeTruthy();
+    });
+});
+
+describe('ForecastSection ↔ gràfic: obrir el detall d\'un dia des del gràfic', () => {
+    const dailyData = makeDaily(SEPT);
+
+    const renderSection = (onDayClick: (i: number) => void) =>
+        render(
+            <ForecastSection
+                chartData={[]}
+                dailyData={dailyData}
+                weeklyExtremes={{ min: 0, max: 30 }}
+                lang="ca"
+                onDayClick={onDayClick}
+                latitude={41.9}
+            />
+        );
+
+    it('un dia del gràfic tanca el gràfic i obre el detall d\'aquell dia un cop assentat l\'historial', async () => {
+        const onDayClick = vi.fn();
+        renderSection(onDayClick);
+
+        fireEvent.click(screen.getByLabelText('Obrir gràfic de temperatures'));
+        expect(screen.getByRole('dialog')).toBeTruthy();
+
+        fireEvent.click(screen.getAllByTestId('trend-day')[4]);
+        // No a l'instant: history.back() encara no ha acabat i el seu popstate tancaria el detall que s'obrís ara.
+        expect(onDayClick).not.toHaveBeenCalled();
+        expect(screen.queryByRole('dialog')).toBeNull();
+
+        await waitFor(() => expect(onDayClick).toHaveBeenCalledTimes(1));
+        expect(onDayClick).toHaveBeenCalledWith(5);
     });
 });
