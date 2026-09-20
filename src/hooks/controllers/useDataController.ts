@@ -28,7 +28,7 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
   const theme = useWeatherTheme(weatherData, calculations.effectiveWeatherCode);
 
   // 4. Intel·ligència (AI)
-  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability, calculations.effectiveWeatherCode);
+  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability, calculations.effectiveWeatherCode, calculations.effectiveCloudCover);
 
   // Fusionem Theme dins de Calculations (com es feia abans) per consistència
   const calculationsWithTheme = {

@@ -101,7 +101,7 @@ describe('getGeminiAnalysis — política de boira', () => {
 
     it('l\'"Estat del Cel" actual és el codi que veu l\'usuari (effectiveCode), no el brut del model', async () => {
         const { prompt } = await run(buildWeather(94), 3);
-        expect(prompt).toContain('Estat del Cel: De poc núvol a cobert');
+        expect(prompt).toContain('Estat del Cel: Cobert (cel completament tapat)');
     });
 
     it('sense effectiveCode, l\'estat del cel actual cau al codi brut del model', async () => {

@@ -63,4 +63,27 @@ describe('useWeatherAI — el codi de temps efectiu arriba a les dues IA', () =>
         expect(generateAIPrediction).toHaveBeenCalledTimes(2);
         expect(generateAIPrediction.mock.calls[1][5]).toBe(45);
     });
+
+    it('passa el % efectiu de núvols a Gemini (5è paràmetre) perquè descrigui el cel com la capçalera', async () => {
+        renderHook(() => useWeatherAI(WEATHER, null, 'ca', 'C', null, 2, 78));
+        await flush();
+        // getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData, effectiveCloudCover)
+        expect(getGeminiAnalysis.mock.calls[0][4]).toBe(78);
+    });
+
+    it('només recalcula quan canvia la variant "molt ennuvolat", no a cada canvi del % de núvols', async () => {
+        const { rerender } = renderHook(
+            ({ clouds }: { clouds: number }) => useWeatherAI(WEATHER, null, 'ca', 'C', null, 2, clouds),
+            { initialProps: { clouds: 72 } }
+        );
+        await flush();
+        rerender({ clouds: 78 });   // segueix "molt ennuvolat"
+        await flush();
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(1);
+
+        rerender({ clouds: 60 });   // passa a "parcialment ennuvolat"
+        await flush();
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(2);
+        expect(getGeminiAnalysis.mock.calls[1][4]).toBe(60);
+    });
 });

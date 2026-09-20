@@ -1,7 +1,8 @@
 // src/services/geminiService.ts
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
-import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { isMostlyCloudy } from '../utils/rules/cloudRules';
 import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
@@ -158,16 +159,17 @@ const getTacticalModelInfo = (weatherData: ExtendedWeatherData): ModelTacticalIn
 /**
  * DESXIFRATGE WMO ENTENEDOR
  */
-const getTacticalWeatherDescription = (code: number | null | undefined, temp: number | null | undefined = null): string => {
+const getTacticalWeatherDescription = (code: number | null | undefined, temp: number | null | undefined = null, cloudCover: number | null | undefined = null): string => {
     if (code === null || code === undefined) return "Estat del cel no determinat";
     
     const isFreezing = temp !== null && temp !== undefined && temp <= 3.0;
 
     switch (code) {
         case 0: return "Cel ras / Completament serè";
-        case 1:
-        case 2:
-        case 3: return "De poc núvol a cobert";
+        case 1: return "Majoritàriament serè (pocs núvols)";
+        // Mateix criteri que la capçalera i les icones: dins del 2, per sobre de CLOUDS.MOSTLY_CLOUDY és "molt ennuvolat".
+        case 2: return isMostlyCloudy(code, cloudCover) ? "Molt ennuvolat (cel majoritàriament tapat, amb clarianes)" : "Parcialment ennuvolat (cel variable)";
+        case 3: return "Cobert (cel completament tapat)";
         case 45: return "Boira o boira baixa (Visibilitat reduïda)";
         case 48: return !isFreezing ? "Boira densa o humitat alta" : "Boira gebradora (Risc de gel o gebre)";
         case 51:
@@ -357,12 +359,16 @@ export interface AiAirQualityInput {
  * boira i la resta de l'orquestrador). Si falta, es cau al codi brut del model.
  * `aqiData`: qualitat de l'aire. NO ve dins la previsió, així que abans la IA rebia sempre
  * "Qualitat Aire: N/D" i no podia parlar de contaminació ni de calima.
+ * `effectiveCloudCover`: % efectiu de núvols d'"ara" (el que decideix el codi de cel), perquè el cel actual
+ * es descrigui igual que a la capçalera ("Molt ennuvolat" dins del codi 2). Les hores de la taula el
+ * calculen de la seva pròpia sèrie.
  */
 export const getGeminiAnalysis = async (
     weatherData: ExtendedWeatherData,
     language: string,
     effectiveCode: number | null = null,
-    aqiData: AiAirQualityInput | null = null
+    aqiData: AiAirQualityInput | null = null,
+    effectiveCloudCover: number | null = null
 ): Promise<AICacheData | null> => {
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
@@ -560,7 +566,7 @@ export const getGeminiAnalysis = async (
                 // temperatura real, l'orquestrador no dona codi i es cau al brut del model.
                 const wmoArr = (hourlyObj.weather_code ?? hourlyObj.weathercode) as (number | null)[] | undefined;
                 const wmoHour = getHourlyWeatherCode(hourlyObj, i, hourlyElevation, weatherData.hourlyComparison) ?? wmoArr?.[i] ?? null;
-                const wmoDesc = getTacticalWeatherDescription(wmoHour, tempNum);
+                const wmoDesc = getTacticalWeatherDescription(wmoHour, tempNum, getHourlyEffectiveCloudCover(hourlyObj as HourlySeries, i));
 
                 const apparentArr = (hourlyObj.apparent_temperature) as (number | null)[] | undefined;
                 const apparentHour = apparentArr?.[i] ?? null;
@@ -589,7 +595,7 @@ export const getGeminiAnalysis = async (
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
-          Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum)}
+          Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
           Temperatura Real: ${weatherData.current.temperature_2m}ºC | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
           Pluja actual: ${weatherData.current.precipitation}mm | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}

@@ -8,6 +8,7 @@ import {
 
 import { generateAIPrediction } from '../utils/aiContext';
 import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
+import { isMostlyCloudy } from '../utils/rules/cloudRules';
 import { 
     getGeminiAnalysis, 
     TacticalTip, 
@@ -48,7 +49,9 @@ export function useWeatherAI(
     // Codi de temps ja passat per l'orquestrador (getRealTimeWeatherCode) — el mateix que
     // veu l'usuari a la capçalera. Sense ell, la IA llegiria el codi BRUT del model
     // (p.ex. el 45 d'ICON) i se saltaria la política de boira (visibilityRules.resolveFog).
-    effectiveCode: number | null = null
+    effectiveCode: number | null = null,
+    // % efectiu de núvols d'"ara" (useCurrentConditions): la IA descriu el cel igual que la capçalera.
+    effectiveCloudCover: number | null = null
 ) {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisState | null>(null);
   const lastProcessedKey = useRef<string>("");
@@ -75,7 +78,9 @@ export function useWeatherAI(
     const relLevel = reliability?.level || 'high';
     const currentRecord = current as unknown as Record<string, unknown>;
     const dustKind = resolveDustAdvisory(aqiData?.current, currentRecord.relative_humidity_2m as number | undefined, currentRecord.precipitation as number | undefined).kind;
-    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}`;
+    // Només la variant (no el % cru), perquè el cel no recalculi la IA a cada canvi de núvols.
+    const mostlyCloudy = isMostlyCloudy(effectiveCode ?? Number(weatherCode), effectiveCloudCover);
+    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
     if (lastProcessedKey.current === currentKey) return;
@@ -91,7 +96,7 @@ export function useWeatherAI(
         setAiAnalysis(local);
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
-        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null);
+        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover);
         
         if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
           setAiAnalysis((prev) => {
@@ -118,7 +123,7 @@ export function useWeatherAI(
     const timer = setTimeout(fetchAI, 500);
     return () => clearTimeout(timer);
 
-  }, [weatherData, aqiData, lang, unit, reliability, effectiveCode]);
+  }, [weatherData, aqiData, lang, unit, reliability, effectiveCode, effectiveCloudCover]);
 
   return { aiAnalysis };
 }
