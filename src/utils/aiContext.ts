@@ -126,7 +126,7 @@ const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
     else if ((code === 65 || code === 82 || precipSum > ALERTS.PRECIP_SUM_HIGH) && isRaining) alerts.push({ type: tr.rain, msg: tr.alertRain, level: 'warning' });
 
     if (windGusts > 50) {
-        alerts.push({ type: tr.wind, msg: "Ràfegues de vent fortes", level: 'warning' });
+        alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' });
         tips.push(tr.tipWindbreaker);
     } else if (windSpeed > WIND.STRONG) { 
         alerts.push({ type: tr.wind, msg: tr.alertWindHigh, level: 'warning' }); 
@@ -240,10 +240,15 @@ export const generateAIPrediction = (
         const currentRainVol = hourly.precipitation ? safeNum(hourly.precipitation[currentHour]) : 0;
         const nextHourRainVol = hourly.precipitation ? safeNum(hourly.precipitation[currentHour + 1]) : 0;
         
+        // Mateixes frases (traduïdes) que ja usa analyzePrecipitation: abans eren text en català fix, també per a es/en/fr.
+        // Si analyzePrecipitation ja l'ha afegida, no es repeteix.
+        const pushOnce = (sentence: string) => {
+            if (!summaryParts.some(p => p.trim() === sentence.trim())) summaryParts.push(" " + sentence);
+        };
         if (nextHourRainVol > currentRainVol * 2 && nextHourRainVol > 1) {
-            summaryParts.push(" Atenció: la pluja s'intensificarà notablement aviat.");
+            pushOnce(tr.aiRainMore);
         } else if (currentRainVol > 0 && nextHourRainVol === 0) {
-            summaryParts.push(" La pluja anirà remetent properament.");
+            pushOnce(tr.aiRainStopping);
         }
 
         const windText = analyzeWind(windSpeed, tr);

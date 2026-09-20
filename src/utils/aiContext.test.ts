@@ -68,3 +68,36 @@ describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
         expect(msgs(null, 0)).not.toContain(tr.alertDust);
     });
 });
+
+// El text de reserva (el que es veu mentre la IA carrega, o si falla) tenia tres frases en català fix: també les
+// rebien els usuaris d'es/en/fr. Ara surten de les claus de traducció que ja existien.
+describe('generateAIPrediction — frases de reserva traduïdes (no català fix)', () => {
+    const CATALAN_FIXED = [/s'intensificarà notablement aviat/, /remetent properament/, /Ràfegues de vent fortes/];
+    // El "ara" és la 01:00 (índex 1): precipitació d'ara i de la següent hora.
+    const withRain = (now: number, next: number) => ({ ...hourly, precipitation: [0, now, next] }) as unknown as StrictHourlyWeather;
+
+    (['ca', 'es', 'en', 'fr'] as const).forEach(lang => {
+        const t = TRANSLATIONS[lang] as unknown as Record<string, string>;
+
+        it(`[${lang}] la pluja que s'intensifica i la que remet usen la frase de la llengua`, () => {
+            const more = generateAIPrediction(current, daily, withRain(0.5, 3), 0, lang, 3, null, 'C').text;
+            expect(more).toContain(t.aiRainMore.trim());
+            const stops = generateAIPrediction(current, daily, withRain(1, 0), 0, lang, 3, null, 'C').text;
+            expect(stops).toContain(t.aiRainStopping.trim());
+            if (lang !== 'ca') CATALAN_FIXED.forEach(re => { expect(more).not.toMatch(re); expect(stops).not.toMatch(re); });
+        });
+
+        it(`[${lang}] les ràfegues fortes avisen amb el text de la llengua`, () => {
+            const gusty = { ...current, wind_gusts_10m: 60 } as unknown as StrictCurrentWeather;
+            const msgs = generateAIPrediction(gusty, daily, hourly, 0, lang, 3, null, 'C').alerts.map(a => a.msg);
+            expect(msgs).toContain(t.alertWindHigh);
+        });
+    });
+
+    it('si analyzePrecipitation ja ha dit que la pluja remet, la frase no es repeteix', () => {
+        const raining = { ...current, minutely15: [0.5, 0] } as unknown as StrictCurrentWeather;
+        const text = generateAIPrediction(raining, daily, withRain(1, 0), 0, 'ca', 61, null, 'C').text;
+        const sentence = (TRANSLATIONS.ca as unknown as Record<string, string>).aiRainStopping.trim();
+        expect(text.split(sentence).length - 1).toBe(1);
+    });
+});
