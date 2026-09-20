@@ -12,6 +12,7 @@ vi.mock('./cacheService', () => ({
 
 import { getGeminiAnalysis } from './geminiService';
 import { TRANSLATIONS } from '../translations';
+import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 const FOG_DESC = 'Boira o boira baixa';
@@ -132,6 +133,55 @@ describe('getGeminiAnalysis — política de boira', () => {
             const estat = prompt.match(/Estat del Cel: (.*)/)?.[1] ?? '';
             expect(estat, `codi ${code}`).not.toMatch(/^Codi WMO/);
         }
+    });
+
+    describe('tallafocs — aiguaneu (68/69, derivat pel motor)', () => {
+        /** 8 hores amb el model dient pluja (`rawCode`) a `temp` °C, la isoterma 0 °C a `freezingLevel` m i `precip` mm/h. */
+        const rainy = (rawCode: number, temp: number, freezingLevel: number, precip: number): ExtendedWeatherData => {
+            const weather = buildWeather(90);
+            weather.elevation = 0;
+            const h = weather.hourly as unknown as Record<string, number[]>;
+            h.weather_code = Array.from({ length: 8 }, () => rawCode);
+            h.temperature_2m = Array.from({ length: 8 }, () => temp);
+            h.apparent_temperature = Array.from({ length: 8 }, () => temp);
+            h.precipitation = Array.from({ length: 8 }, () => precip);
+            h.freezing_level_height = Array.from({ length: 8 }, () => freezingLevel);
+            h.visibility = Array.from({ length: 8 }, () => 5000);
+            const c = weather.current as unknown as Record<string, number>;
+            c.temperature_2m = temp;
+            c.weather_code = rawCode;
+            return weather;
+        };
+        const engineCode = (w: ExtendedWeatherData) => getHourlyWeatherCode(w.hourly as unknown as HourlySeries, 0, 0, w.hourlyComparison);
+
+        it("l'aiguaneu moderat (69) puja a AMBER/SNOW_ICE encara que la IA digui GREEN", async () => {
+            const weather = rainy(63, 3, 200, 1);   // pluja a 3 °C amb la cota 0 °C a 200 m
+            expect(engineCode(weather)).toBe(69);
+            const { result } = await run(weather, 69);
+            expect(result?.risk_level).toBe('AMBER');
+            expect(result?.hazard_type).toBe('SNOW_ICE');
+        });
+
+        it("l'aiguaneu feble (68) també puja a AMBER/SNOW_ICE", async () => {
+            const weather = rainy(61, 3, 200, 0.3);
+            expect(engineCode(weather)).toBe(68);
+            const { result } = await run(weather, 68);
+            expect(result?.risk_level).toBe('AMBER');
+            expect(result?.hazard_type).toBe('SNOW_ICE');
+        });
+
+        it('la mateixa pluja amb la isoterma 0 °C molt amunt (pluja de debò, no aiguaneu) continua GREEN', async () => {
+            const weather = rainy(63, 3, 1800, 1);
+            expect(engineCode(weather)).toBe(63);
+            const { result } = await run(weather, 63);
+            expect(result?.risk_level).toBe('GREEN');
+        });
+
+        it('una pluja càlida no es toca', async () => {
+            const weather = rainy(63, 12, 3000, 1);
+            const { result } = await run(weather, 63);
+            expect(result?.risk_level).toBe('GREEN');
+        });
     });
 
     it('el tallafocs de tempesta segueix anant sobre el codi brut (dades crues guanyen)', async () => {

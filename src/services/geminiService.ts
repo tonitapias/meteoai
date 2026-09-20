@@ -3,6 +3,7 @@ import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
+import { isSleetCode } from '../utils/rules/winterRules';
 import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
@@ -312,10 +313,14 @@ const evaluateDeterministicRisk = (
                 // de superfície, vegeu visibilityRules.resolveFog). El codi 45/48 brut d'ICON
                 // dona ~4 vegades més hores de boira de les reals i posava AMBER a la ciutat
                 // amb el cel serè; el mateix codi que veu l'usuari a la icona és el que compta.
-                const fogCode = getHourlyWeatherCode(hourly, i, elevation, weatherData.hourlyComparison);
+                const engineCode = getHourlyWeatherCode(hourly, i, elevation, weatherData.hourlyComparison);
                 // La gebradora (48) diposita gebre i deixa gel a terra: el risc dominant és el de gel.
-                if (fogCode === 48) upgradeRisk('AMBER', 'SNOW_ICE');
-                else if (fogCode === 45) upgradeRisk('AMBER', 'VISIBILITY');
+                if (engineCode === 48) upgradeRisk('AMBER', 'SNOW_ICE');
+                else if (engineCode === 45) upgradeRisk('AMBER', 'VISIBILITY');
+                // Aiguaneu (68/69): el deriva l'app a partir d'un codi de pluja brut (Open-Meteo no el publica),
+                // així que el filtre del codi brut d'aquí dalt no el veu. Pluja i neu barrejades a 1-4 °C deixen
+                // les superfícies relliscoses (mateix perill que la neu o el gel), i és el que veu l'usuari.
+                else if (engineCode !== null && isSleetCode(engineCode)) upgradeRisk('AMBER', 'SNOW_ICE');
             }
 
             // Pluja en mm/h independent del codi WMO (abans no hi havia cap
