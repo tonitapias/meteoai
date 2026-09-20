@@ -120,7 +120,9 @@ describe("getGeminiAnalysis — qualitat de l'aire", () => {
 describe('getGeminiAnalysis — perill AIR_QUALITY del worker', () => {
     beforeEach(() => { vi.restoreAllMocks(); });
 
-    const withLlm = async (hazard: string, risk: string) => {
+    const CALIMA: AiAirQualityInput = { current: { european_aqi: 94, dust: 388 } };
+
+    const withLlm = async (hazard: string, risk: string, aqi: AiAirQualityInput = CALIMA, rh = 50) => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({
@@ -131,7 +133,7 @@ describe('getGeminiAnalysis — perill AIR_QUALITY del worker', () => {
             }),
         });
         vi.stubGlobal('fetch', fetchMock);
-        return getGeminiAnalysis(buildWeather(50), 'ca', 0, { current: { european_aqi: 94, dust: 388 } });
+        return getGeminiAnalysis(buildWeather(rh), 'ca', 0, aqi);
     };
 
     it("el perill AIR_QUALITY arriba a la interfície (no es descarta com a NONE)", async () => {
@@ -140,8 +142,41 @@ describe('getGeminiAnalysis — perill AIR_QUALITY del worker', () => {
         expect(result?.hazard_type).toBe('AIR_QUALITY');
     });
 
-    it('un perill inventat continua caient a NONE', async () => {
-        const result = await withLlm('DUST_STORM', 'AMBER');
+    it('un perill inventat continua caient a NONE (sense cap avís de calima a les dades)', async () => {
+        const result = await withLlm('DUST_STORM', 'AMBER', { current: { european_aqi: 50 } });
         expect(result?.hazard_type).toBe('NONE');
+    });
+
+    // Gemini Flash-Lite no complia de manera estable la regla "amb la línia Aerosols, AMBER / AIR_QUALITY": amb les mateixes
+    // dades sortia GREEN, GREEN i AMBER en tres crides seguides. Ara l'avís de calima de l'app ho força el tallafocs.
+    describe('tallafocs — calima i partícules', () => {
+        it('amb calima, encara que la IA digui GREEN/NONE, surt AMBER / AIR_QUALITY', async () => {
+            const result = await withLlm('NONE', 'GREEN');
+            expect(result?.risk_level).toBe('AMBER');
+            expect(result?.hazard_type).toBe('AIR_QUALITY');
+        });
+
+        it('amb partícules (PM10 alt sense pols) també', async () => {
+            const result = await withLlm('NONE', 'GREEN', { current: { dust: 5, pm10: 213 } });
+            expect(result?.risk_level).toBe('AMBER');
+            expect(result?.hazard_type).toBe('AIR_QUALITY');
+        });
+
+        it("sense avís de calima (pols baixa) no toca res: la IA en diu GREEN i queda GREEN", async () => {
+            const result = await withLlm('NONE', 'GREEN', { current: { european_aqi: 50, dust: 20, pm10: 30 } });
+            expect(result?.risk_level).toBe('GREEN');
+            expect(result?.hazard_type).toBe('NONE');
+        });
+
+        it("amb aire humit (HR >= 75 %) l'avís no salta, encara que hi hagi pols al model", async () => {
+            const result = await withLlm('NONE', 'GREEN', CALIMA, 94);
+            expect(result?.risk_level).toBe('GREEN');
+        });
+
+        it("no rebaixa: si la IA ja diu RED, es queda RED", async () => {
+            const result = await withLlm('WIND', 'RED');
+            expect(result?.risk_level).toBe('RED');
+            expect(result?.hazard_type).toBe('WIND');
+        });
     });
 });

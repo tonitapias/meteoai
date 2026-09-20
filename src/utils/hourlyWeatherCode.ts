@@ -15,7 +15,8 @@
 
 import { getRealTimeWeatherCode } from './weatherLogic';
 import { calculateEffectiveCloudCover } from './rules/cloudRules';
-import { extractValidArrayNum, getSafeArrayNum } from './weatherMath';
+import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
+import { extractValidArrayNum, getSafeArrayNum, getSafeMonthFromIso } from './weatherMath';
 import type { StrictCurrentWeather } from '../types/weatherLogicTypes';
 
 /** Sèries horàries en brut: cada clau és un array indexat per hora. */
@@ -97,6 +98,37 @@ export const getHourlyWeatherCode = (
         getSafeArrayNum(hourly.precipitation_probability, idx, 0),
         resolveFreezingLevel(hourly, idx, elevation, rawTemp, comparison),
         elevation
+    );
+};
+
+/**
+ * Temperatura MOSTRADA d'una hora: la del model amb la correcció d'inversió tèrmica (nits serenes i en calma
+ * de la temporada freda, fins a -3,5 °C). És la xifra que veuen l'evolució horària i el detall del dia, i la que
+ * ha de citar la IA: amb la crua, una nit d'inversió amb -1 °C a l'app sortia al text de la IA com "2 graus,
+ * cap fenomen advers". null si l'hora no té temperatura real (mai un 0 fals).
+ */
+export const getHourlyDisplayTemp = (
+    hourly: HourlySeries,
+    idx: number,
+    latitude?: number
+): number | null => {
+    const rawTemp = extractValidArrayNum(hourly.temperature_2m, idx);
+    if (rawTemp === null) return null;
+
+    const timeArr = hourly.time;
+    const time = Array.isArray(timeArr) && typeof timeArr[idx] === 'string' ? (timeArr[idx] as string) : undefined;
+
+    return getInversionCorrectedTemp(
+        {
+            temperature_2m: rawTemp,
+            is_day: resolveIsDay(hourly, idx, () => true) ? 1 : 0,
+            wind_speed_10m: getSafeArrayNum(hourly.wind_speed_10m, idx, 0),
+            cloud_cover_low: getSafeArrayNum(hourly.cloud_cover_low, idx, 0),
+            cloud_cover_mid: getSafeArrayNum(hourly.cloud_cover_mid, idx, 0),
+            cloud_cover_high: getSafeArrayNum(hourly.cloud_cover_high, idx, 0),
+        } as unknown as StrictCurrentWeather,
+        getSafeMonthFromIso(time),
+        latitude
     );
 };
 

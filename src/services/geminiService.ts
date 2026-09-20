@@ -1,10 +1,12 @@
 // src/services/geminiService.ts
-import { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
-import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, getHourlyDisplayTemp, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
 import { isSleetCode } from '../utils/rules/winterRules';
-import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
+import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules';
+import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getSafeMonthFromIso } from '../utils/weatherMath';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
 import { 
@@ -205,24 +207,41 @@ const getTacticalWeatherDescription = (code: number | null | undefined, temp: nu
 
 /**
  * ANÀLISI DE QUALITAT DE L'AIRE (AQI)
+ * Les bandes viuen en una sola taula: la descripció que llegeix la IA i la banda que entra a la clau de cache
+ * (vegeu getGeminiAnalysis) surten de la mateixa font, i no es poden desincronitzar.
  */
+const AQI_BANDS: Record<'EU' | 'US', ReadonlyArray<{ max: number; label: string }>> = {
+    EU: [
+        { max: 20, label: 'Bona / Aire net' },
+        { max: 40, label: 'Acceptable' },
+        { max: 60, label: 'Moderada / Regular' },
+        { max: 80, label: 'Deficient / Mala qualitat' },
+        { max: 100, label: 'Molt deficient / Precaució gent sensible' },
+    ],
+    US: [
+        { max: 50, label: 'Bona / Aire net' },
+        { max: 100, label: 'Moderada / Acceptable' },
+        { max: 150, label: 'Desfavorable per a persones sensibles' },
+        { max: 200, label: 'Deficient / Insalubre' },
+    ],
+};
+const AQI_ALERT_LABEL: Record<'EU' | 'US', string> = {
+    EU: "ALERTA: Qualitat de l'aire dolenta / Contaminació alta",
+    US: "ALERTA: Qualitat de l'aire dolenta / Pols o calima alta",
+};
+
+/** Índex de banda (0 = la millor; bands.length = "ALERTA"), o -1 si no hi ha dada. */
+const getAqiBandIndex = (aqi: number | null | undefined, scale: 'EU' | 'US'): number => {
+    if (aqi === null || aqi === undefined || aqi < 0) return -1;
+    const idx = AQI_BANDS[scale].findIndex(b => aqi <= b.max);
+    return idx === -1 ? AQI_BANDS[scale].length : idx;
+};
+
 const getTacticalAqiDescription = (aqi: number | null | undefined, scale: 'EU' | 'US' = 'EU'): string => {
-    if (aqi === null || aqi === undefined || aqi < 0) return "N/D";
-    
-    if (scale === 'EU') {
-        if (aqi <= 20) return `${aqi} (Bona / Aire net)`;
-        if (aqi <= 40) return `${aqi} (Acceptable)`;
-        if (aqi <= 60) return `${aqi} (Moderada / Regular)`;
-        if (aqi <= 80) return `${aqi} (Deficient / Mala qualitat)`;
-        if (aqi <= 100) return `${aqi} (Molt deficient / Precaució gent sensible)`;
-        return `${aqi} (ALERTA: Qualitat de l'aire dolenta / Contaminació alta)`;
-    } else {
-        if (aqi <= 50) return `${aqi} (Bona / Aire net)`;
-        if (aqi <= 100) return `${aqi} (Moderada / Acceptable)`;
-        if (aqi <= 150) return `${aqi} (Desfavorable per a persones sensibles)`;
-        if (aqi <= 200) return `${aqi} (Deficient / Insalubre)`;
-        return `${aqi} (ALERTA: Qualitat de l'aire dolenta / Pols o calima alta)`;
-    }
+    const band = getAqiBandIndex(aqi, scale);
+    if (band === -1) return "N/D";
+    const label = band < AQI_BANDS[scale].length ? AQI_BANDS[scale][band].label : AQI_ALERT_LABEL[scale];
+    return `${aqi} (${label})`;
 };
 
 /**
@@ -264,10 +283,29 @@ const getTacticalComfortDescription = (
 // revalidació sobre una resposta servida des de cache — vegeu getGeminiAnalysis.
 const RISK_HIERARCHY: Record<TacticalRiskLevel, number> = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
 
+/** Latitud de la ubicació (sense ella no es pot saber quin hemisferi és a l'hivern); undefined si falta. */
+const resolveLatitude = (weatherData: ExtendedWeatherData): number | undefined => {
+    const d = weatherData as unknown as LocatableData;
+    const lat = d.latitude ?? d.location?.latitude;
+    return typeof lat === 'number' && !isNaN(lat) ? lat : undefined;
+};
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/** Pluja horària mínima per comptar l'hora com "amb pluja": el mateix 0,2 mm que usa l'app per dir que plou (aiContext.calculateIsRaining). */
+const RAIN_HOUR_MIN_MM = 0.2;
+
+/**
+ * `dustKind`: l'avís de pols/partícules d'ARA (resolveDustAdvisory). El prompt del worker diu que amb la línia
+ * "Aerosols" el risc és AMBER / AIR_QUALITY, però Gemini Flash-Lite no ho complia de manera estable: amb les
+ * mateixes dades sortia GREEN, GREEN i AMBER en tres crides seguides, i segons l'idioma. Com la resta de perills,
+ * la regla és determinista aquí i la IA només la redacta.
+ */
 const evaluateDeterministicRisk = (
-    weatherData: ExtendedWeatherData, 
-    startIndex: number, 
-    endIndex: number
+    weatherData: ExtendedWeatherData,
+    startIndex: number,
+    endIndex: number,
+    dustKind: DustKind = null
 ): { risk: TacticalRiskLevel, hazard: TacticalHazardType | null } => {
     let maxRisk: TacticalRiskLevel = 'GREEN';
     let detectedHazard: TacticalHazardType | null = null;
@@ -278,9 +316,9 @@ const evaluateDeterministicRisk = (
 
         const wmoArr = (hourly.weather_code ?? hourly.weathercode) as (number | null)[] | undefined;
         const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
-        const tempArr = hourly.temperature_2m as (number | null)[] | undefined;
         const precipArr = hourly.precipitation as (number | null)[] | undefined;
         const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+        const latitude = resolveLatitude(weatherData);
 
         const upgradeRisk = (newRisk: TacticalRiskLevel, newHazard: TacticalHazardType) => {
             const hierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
@@ -300,7 +338,9 @@ const evaluateDeterministicRisk = (
         for (let i = startIndex; i < endIndex; i++) {
             const wmo = wmoArr?.[i];
             const gust = gustsArr?.[i];
-            const temp = tempArr?.[i];
+            // La temperatura que veu l'usuari (amb la correcció d'inversió), no la crua del model: una nit serena i
+            // en calma d'hivern amb +2 °C al model i -1 °C a la pantalla és una nit de gelada, i la IA no la veia.
+            const temp = getHourlyDisplayTemp(hourly, i, latitude);
             const precip = precipArr?.[i];
 
             // Tempesta i neu/gel: es mantenen sobre el codi BRUT del model (doctrina "les dades
@@ -342,15 +382,71 @@ const evaluateDeterministicRisk = (
             if (typeof temp === 'number') {
                 if (temp >= 40) upgradeRisk('RED', 'HEAT');
                 else if (temp >= 35) upgradeRisk('AMBER', 'HEAT');
-                else if (temp <= -8) upgradeRisk('RED', 'COLD');
+                // -10 °C: el llindar RED del prompt del worker (T <= -10ºC). Aquí hi havia -8, més antic que el prompt.
+                else if (temp <= -10) upgradeRisk('RED', 'COLD');
                 else if (temp <= 0) upgradeRisk('AMBER', 'COLD');
             }
         }
+
+        // Després del bucle: en un empat d'AMBER, un perill meteorològic (vent, pluja...) té preferència sobre l'aire.
+        if (dustKind !== null) upgradeRisk('AMBER', 'AIR_QUALITY');
     } catch (e) {
         console.warn("⚠️ Error en l'avaluació matemàtica del tallafocs", e);
     }
 
     return { risk: maxRisk, hazard: detectedHazard };
+};
+
+interface WindowRow {
+    hour: string;
+    temp: number | null;
+    gust: number | null;
+    precip: number;
+    prob: number;
+}
+
+/**
+ * Xifres exactes de la finestra (mínima/màxima, ràfega màxima, pluja total/pic/inici/final), calculades aquí.
+ * Abans la IA les havia de treure de la taula i les llegia malament: amb 14, 17, 20 i 23 mm/h escrivia
+ * "acumulacions de 23 mil·límetres" quan en queien ~80, i amb pluja a partir de les 12:00 deia "intermitent"
+ * sense cap hora. Els models petits no sumen ni troben màxims de manera fiable.
+ */
+const buildWindowSummary = (rows: WindowRow[]): string => {
+    if (rows.length === 0) return '';
+    const lines: string[] = [];
+    const at = (i: number) => (i === 0 ? `${rows[i].hour}, ara` : rows[i].hour);
+
+    const temps = rows.map((r, i) => ({ i, v: r.temp })).filter((x): x is { i: number; v: number } => x.v !== null);
+    if (temps.length > 0) {
+        const lo = temps.reduce((a, b) => (b.v < a.v ? b : a));
+        const hi = temps.reduce((a, b) => (b.v > a.v ? b : a));
+        lines.push(`Temperatura: mínima ${lo.v}ºC (${at(lo.i)}) | màxima ${hi.v}ºC (${at(hi.i)})`);
+    }
+
+    const gusts = rows.map((r, i) => ({ i, v: r.gust })).filter((x): x is { i: number; v: number } => x.v !== null);
+    if (gusts.length > 0) {
+        const top = gusts.reduce((a, b) => (b.v > a.v ? b : a));
+        lines.push(`Ràfega màxima: ${top.v}km/h (${at(top.i)})`);
+    }
+
+    const wet = rows.map((r, i) => ({ i, v: r.precip })).filter(x => x.v >= RAIN_HOUR_MIN_MM);
+    if (wet.length === 0) {
+        lines.push(`Pluja: cap hora amb pluja apreciable (totes < ${RAIN_HOUR_MIN_MM}mm/h)`);
+    } else {
+        const total = round1(wet.reduce((s, x) => s + x.v, 0));
+        const peak = wet.reduce((a, b) => (b.v > a.v ? b : a));
+        const first = wet[0].i;
+        const last = wet[wet.length - 1].i;
+        const notes: string[] = [];
+        if (wet.length < last - first + 1) notes.push('amb pauses');
+        if (last === rows.length - 1) notes.push('continua al final de la finestra');
+        // La intensitat (mm/h) va PRIMER i el total etiquetat com a acumulat: amb "26mm en total" davant, Gemini el comparava
+        // amb el llindar RED de "> 20 mm/h" i escalava a RED una tempesta de només 8 mm/h.
+        lines.push(`Pluja: intensitat màxima ${round1(peak.v)}mm/h (${at(peak.i)}) | acumulat de totes les hores ${total}mm (no és una intensitat) | hores amb pluja: de ${at(first)} a ${at(last)}${notes.length ? ` (${notes.join('; ')})` : ''}`);
+    }
+
+    lines.push(`Probabilitat màxima de pluja: ${Math.max(...rows.map(r => r.prob))}%`);
+    return lines.join('\n          ');
 };
 
 /** Qualitat de l'aire de l'API d'aire d'Open-Meteo (es carrega a part de la previsió): la forma mínima que la IA en llegeix. */
@@ -437,11 +533,31 @@ export const getGeminiAnalysis = async (
 
         const currentTimeRaw = currentObj?.time;
         const currentHourStr = (typeof currentTimeRaw === 'string' || typeof currentTimeRaw === 'number')
-            ? getTacticalHourStr(currentTimeRaw, tz, utcOffset) 
+            ? getTacticalHourStr(currentTimeRaw, tz, utcOffset)
             : getTacticalHourStr(Math.floor(Date.now() / 1000), tz, utcOffset);
 
+        // Temperatura d'"ara" tal com la mostra la capçalera (amb la correcció d'inversió), no la crua del model.
+        const latitude = resolveLatitude(weatherData);
+        const currentDisplayTemp = currentTempNum !== null
+            ? round1(getInversionCorrectedTemp(
+                weatherData.current as unknown as StrictCurrentWeather,
+                getSafeMonthFromIso(typeof currentTimeRaw === 'string' ? currentTimeRaw : undefined),
+                latitude
+            ))
+            : null;
+        const currentPrecipStr = typeof currentObj.precipitation === 'number' ? `${currentObj.precipitation}mm` : 'N/D';
+
+        // La resposta en cache s'ha d'haver generat per a la MATEIXA situació, no només per al mateix lloc: sense això, si
+        // a les 10:00 fa sol i a les 10:40 comença a ploure, dins l'hora de cache la IA seguia dient "cel serè" (i GREEN)
+        // mentre la capçalera ja mostrava pluja. Són els mateixos senyals que fan tornar a cridar el hook (useWeatherAI).
+        const situationKey = [
+            effectiveCode ?? currentWmoCode ?? 'x',
+            isMostlyCloudy(effectiveCode ?? currentWmoCode, effectiveCloudCover) ? 'mc' : 'c',
+            dustAdvisory.kind ?? 'n',
+            getAqiBandIndex(currentAqi, aqiScale)
+        ].join('-');
         const elevationKey = context.location.elevation.toString();
-        const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}`, lat, lon, language);
+        const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}_${situationKey}`, lat, lon, language);
 
         // [FIX PRECISIÓ] Finestra d'avaluació (properes ~6h) calculada ABANS de
         // consultar la cache, perquè el tallafocs determinista pugui revalidar-se
@@ -501,7 +617,7 @@ export const getGeminiAnalysis = async (
                 // que "les dades crues sempre guanyen" també dins la finestra
                 // de cache, no només en una crida fresca a la IA.
                 try {
-                    const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex);
+                    const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex, dustAdvisory.kind);
                     if (RISK_HIERARCHY[deterministicEval.risk] > RISK_HIERARCHY[cachedData.risk_level]) {
                         console.warn(`🛡️ TALLAFOCS (revalidat sobre cache): les dades actuals forcen '${deterministicEval.risk}' per '${deterministicEval.hazard}' — la cache encara deia '${cachedData.risk_level}'.`);
                         return {
@@ -520,6 +636,7 @@ export const getGeminiAnalysis = async (
         }
 
         let finestraPrevista = "Sense dades horàries.";
+        let windowSummary = '';
 
         if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
             const times = weatherData.hourly.time;
@@ -532,7 +649,7 @@ export const getGeminiAnalysis = async (
             ];
 
             const hourlyElevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
-            const tempArr = weatherData.hourly.temperature_2m as (number | null)[] | undefined;
+            const windowRows: WindowRow[] = [];
             const windArr = weatherData.hourly.wind_speed_10m as (number | null)[] | undefined;
             const gustsArr = weatherData.hourly.wind_gusts_10m as (number | null)[] | undefined;
             const precipArr = weatherData.hourly.precipitation as (number | null)[] | undefined;
@@ -551,8 +668,9 @@ export const getGeminiAnalysis = async (
                 if (timeRaw === undefined || timeRaw === null) continue;
 
                 const hourStr = getTacticalHourStr(timeRaw, tz, utcOffset);
-                const tempHour = tempArr?.[i];
-                const tempNum = typeof tempHour === 'number' ? tempHour : null;
+                // Temperatura mostrada (amb la correcció d'inversió), arrodonida al dècim: el càlcul dona xifres llargues.
+                const tempDisplay = getHourlyDisplayTemp(hourlyObj as HourlySeries, i, latitude);
+                const tempNum = tempDisplay !== null ? round1(tempDisplay) : null;
                 const tempStr = tempNum !== null ? tempNum : '--';
                 
                 const windHour = windArr?.[i];
@@ -591,8 +709,16 @@ export const getGeminiAnalysis = async (
                 const aqiStr = getTacticalAqiDescription(aqiHour, aqiScale);
 
                 tableRows.push(`| ${hourStr} | ${wmoDesc} | ${tempStr}ºC | ${apparentStr} | ${humStr} | ${precipStr}mm (${probStr}%) | ${windStr}km/h (${gustsStr}km/h) | ${uvStr} | ${aqiStr} |`);
+                windowRows.push({
+                    hour: hourStr,
+                    temp: tempNum,
+                    gust: typeof gustsHour === 'number' ? gustsHour : null,
+                    precip: precipStr,
+                    prob: probStr
+                });
             }
             finestraPrevista = tableRows.join('\n');
+            windowSummary = buildWindowSummary(windowRows);
         }
 
         // Prompt descarregat d'instruccions: Només telemetria en brut per al Worker
@@ -601,11 +727,14 @@ export const getGeminiAnalysis = async (
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
           Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
-          Temperatura Real: ${weatherData.current.temperature_2m}ºC | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
+          Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}ºC` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
-          Pluja actual: ${weatherData.current.precipitation}mm | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}
+          Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}
           MODEL EN ÚS: ${modelInfo.name}
-
+${windowSummary ? `
+          RESUM CALCULAT DE LA FINESTRA (xifres exactes: usa-les tal qual, no sumis ni recalculis):
+          ${windowSummary}
+` : ''}
           MATRIU D'EVOLUCIÓ PREVISTA (6 HORES):
           ${finestraPrevista}
         `;
@@ -655,7 +784,7 @@ export const getGeminiAnalysis = async (
                 }
 
                 // Execució del tallafocs matemàtic fora del bucle IA
-                const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex);
+                const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex, dustAdvisory.kind);
 
                 if (typeof parsed.text === 'string' && parsed.text.trim().length > 0) {
                     
@@ -704,7 +833,12 @@ export const getGeminiAnalysis = async (
                             : 'unknown'
                     };
 
-                    await cacheService.set(cacheKey, validatedData);
+                    // L'escut d'emergència del worker (Gemini i Groq caiguts) no és una anàlisi: si es guardés, un error
+                    // de segons es quedaria enganxat una hora sencera (semàfor AMBER inclòs) encara que el servei ja
+                    // s'hagués recuperat. Es mostra, però no es cacheja: la propera càrrega ho torna a provar.
+                    if (validatedData.engine !== 'emergency') {
+                        await cacheService.set(cacheKey, validatedData);
+                    }
                     return validatedData;
                 }
             } catch (parseError) {

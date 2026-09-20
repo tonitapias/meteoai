@@ -10,7 +10,8 @@ vi.mock('./cacheService', () => ({
     },
 }));
 
-import { getGeminiAnalysis } from './geminiService';
+import { getGeminiAnalysis, type AiAirQualityInput } from './geminiService';
+import { cacheService } from './cacheService';
 import { TRANSLATIONS } from '../translations';
 import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
@@ -190,5 +191,167 @@ describe('getGeminiAnalysis — política de boira', () => {
         const { result } = await run(weather, 3);
         expect(result?.risk_level).toBe('AMBER');
         expect(result?.hazard_type).toBe('CONVECTIVE');
+    });
+});
+
+/** Sèries constants de 8 hores sobre el fixture de la boira, amb la temperatura, el vent i la data que calgui. */
+const calm = (opts: { date: string; temp: number; wind?: number; day?: number; rh?: number }): ExtendedWeatherData => {
+    const weather = buildWeather(opts.rh ?? 85);
+    const n = 8;
+    const fill = (v: number) => Array.from({ length: n }, () => v);
+    const h = weather.hourly as unknown as Record<string, unknown>;
+    h.time = Array.from({ length: n }, (_, i) => `${opts.date}T0${i}:00`);
+    h.weather_code = fill(0);
+    h.temperature_2m = fill(opts.temp);
+    h.apparent_temperature = fill(opts.temp);
+    h.visibility = fill(20000);
+    h.cloud_cover_low = fill(0);
+    h.wind_speed_10m = fill(opts.wind ?? 0);
+    h.is_day = fill(opts.day ?? 0);
+    const c = weather.current as unknown as Record<string, unknown>;
+    c.time = `${opts.date}T00:00`;
+    c.weather_code = 0;
+    c.temperature_2m = opts.temp;
+    c.apparent_temperature = opts.temp;
+    c.wind_speed_10m = opts.wind ?? 0;
+    c.is_day = opts.day ?? 0;
+    return weather;
+};
+
+describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió tèrmica)', () => {
+    beforeEach(() => { vi.restoreAllMocks(); });
+
+    // Nit serena i en calma de gener amb +2 °C al model: la capçalera i l'evolució horària en mostren -1,5 °C
+    // (correcció d'inversió). La IA rebia els +2 °C crus i deia "cap fenomen advers" en una nit de gelada.
+    it('a l\'hivern, en una nit serena i en calma, la IA rep la temperatura corregida que veu l\'usuari', async () => {
+        const { prompt } = await run(calm({ date: '2027-01-15', temp: 2 }), 0);
+        expect(prompt).toContain('Temperatura Real: -1.5ºC');
+        // columna TEMP (3a): la corregida; la SENSACIÓ (4a) es manté crua, com a la pantalla
+        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -1\.5ºC \|/);
+        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| 2ºC \|/);
+    });
+
+    it('la mateixa nit al setembre (fora de la temporada d\'inversió) no es corregeix', async () => {
+        const { prompt } = await run(calm({ date: '2026-09-15', temp: 2 }), 0);
+        expect(prompt).toContain('Temperatura Real: 2ºC');
+    });
+
+    it('amb vent (>6 km/h) la inversió es trenca i tampoc no es corregeix', async () => {
+        const { prompt } = await run(calm({ date: '2027-01-15', temp: 2, wind: 10 }), 0);
+        expect(prompt).toContain('Temperatura Real: 2ºC');
+    });
+
+    it('el tallafocs de gelada usa la temperatura mostrada: +2 °C al model però -1,5 °C a la pantalla → AMBER / COLD', async () => {
+        const { result } = await run(calm({ date: '2027-01-15', temp: 2 }), 0);
+        expect(result?.risk_level).toBe('AMBER');
+        expect(result?.hazard_type).toBe('COLD');
+    });
+
+    it('sense inversió, +2 °C continuen sent GREEN', async () => {
+        const { result } = await run(calm({ date: '2026-09-15', temp: 2 }), 0);
+        expect(result?.risk_level).toBe('GREEN');
+    });
+
+    // El prompt del worker diu RED a T <= -10 ºC; el tallafocs tenia -8 (més antic), i a -9 forçava RED contra el prompt.
+    it('el fred passa a RED a -10 °C (llindar del prompt del worker), no a -8', async () => {
+        const at = async (temp: number) => (await run(calm({ date: '2026-09-15', temp, wind: 10, day: 1 }), 0)).result;
+        expect((await at(-9))?.risk_level).toBe('AMBER');
+        expect((await at(-10))?.risk_level).toBe('RED');
+        expect((await at(-10))?.hazard_type).toBe('COLD');
+    });
+});
+
+describe('getGeminiAnalysis — resum calculat de la finestra', () => {
+    beforeEach(() => { vi.restoreAllMocks(); });
+
+    const summaryOf = (prompt: string) => prompt.match(/RESUM CALCULAT[^\n]*\n([\s\S]*?)\n\s*MATRIU/)?.[1].replace(/^\s+/gm, '') ?? '';
+
+    it('sense pluja: ho diu, i dona la temperatura mínima/màxima i la ràfega màxima amb la seva hora', async () => {
+        const weather = calm({ date: '2026-09-15', temp: 20, day: 1 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.temperature_2m = [20, 21, 23, 24, 22, 21, 20, 19];
+        h.wind_gusts_10m = [10, 12, 30, 18, 12, 10, 9, 9];
+        const { prompt } = await run(weather, 0);
+        const s = summaryOf(prompt);
+        expect(s).toContain('Temperatura: mínima 20ºC (00:00, ara) | màxima 24ºC (03:00)');
+        expect(s).toContain('Ràfega màxima: 30km/h (02:00)');
+        expect(s).toContain('Pluja: cap hora amb pluja apreciable (totes < 0.2mm/h)');
+    });
+
+    // Cas real d'abans: hores de 14, 17, 20 i 23 mm/h → la IA escrivia "acumulacions de 23 mil·límetres" (n'hi havia ~80).
+    it('amb pluja: total sumat, pic amb hora, i primera/última hora (continua al final de la finestra)', async () => {
+        const weather = calm({ date: '2026-09-15', temp: 17, day: 1 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.precipitation = [0, 0, 1.2, 1.2, 4, 1.2, 1.2, 1.2];
+        h.precipitation_probability = [10, 30, 80, 90, 95, 80, 70, 60];
+        const { prompt } = await run(weather, 0);
+        const s = summaryOf(prompt);
+        // finestra = 6 hores (00:00-05:00): 1.2 + 1.2 + 4 + 1.2 = 7.6
+        expect(s).toContain('Pluja: intensitat màxima 4mm/h (04:00) | acumulat de totes les hores 7.6mm (no és una intensitat) | hores amb pluja: de 02:00 a 05:00 (continua al final de la finestra)');
+        expect(s).toContain('Probabilitat màxima de pluja: 95%');
+    });
+
+    it('una pluja intermitent ho indica ("amb pauses") i, si acaba dins la finestra, no diu que continuï', async () => {
+        const weather = calm({ date: '2026-09-15', temp: 17, day: 1 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.precipitation = [1, 0, 1, 0, 0, 0, 0, 0];
+        const { prompt } = await run(weather, 0);
+        const s = summaryOf(prompt);
+        expect(s).toContain('hores amb pluja: de 00:00, ara a 02:00 (amb pauses)');
+        expect(s).not.toContain('continua');
+    });
+
+    it('sense dades horàries no hi ha resum', async () => {
+        const weather = calm({ date: '2026-09-15', temp: 17 });
+        (weather.hourly as unknown as Record<string, unknown>).time = [];
+        const { prompt } = await run(weather, 0);
+        expect(prompt).not.toContain('RESUM CALCULAT');
+    });
+});
+
+describe('getGeminiAnalysis — cache de la IA', () => {
+    beforeEach(() => { vi.restoreAllMocks(); vi.mocked(cacheService.generateAiKey).mockClear(); vi.mocked(cacheService.set).mockClear(); });
+
+    const keyFor = async (effectiveCode: number, aqi: AiAirQualityInput | null = null) => {
+        vi.mocked(cacheService.generateAiKey).mockClear();
+        const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ engine: 'gemini', candidates: [{ content: { parts: [{ text: JSON.stringify({ risk_level: 'GREEN', hazard_type: 'NONE', text: 'x', tips: [] }) }] } }] }) });
+        vi.stubGlobal('fetch', fetchMock);
+        // HR 50 %: la calima només salta amb aire sec.
+        await getGeminiAnalysis(calm({ date: '2026-09-15', temp: 17, day: 1, rh: 50 }), 'ca', effectiveCode, aqi);
+        return vi.mocked(cacheService.generateAiKey).mock.calls[0][0];
+    };
+
+    // Sense això, a les 10:00 amb sol la IA quedava a la cache i a les 10:40 (ja plovent) seguia dient "cel serè".
+    it('la clau de cache canvia quan canvia la situació (cel, calima, banda de qualitat de l\'aire)', async () => {
+        const clear = await keyFor(0);
+        const rain = await keyFor(61);
+        const dust = await keyFor(0, { current: { european_aqi: 30, dust: 300 } });
+        const badAir = await keyFor(0, { current: { european_aqi: 90 } });
+        expect(new Set([clear, rain, dust, badAir]).size).toBe(4);
+    });
+
+    it('la mateixa situació dona la mateixa clau (no es crida la IA de més)', async () => {
+        expect(await keyFor(0)).toBe(await keyFor(0));
+        // una variació d'AQI dins la mateixa banda ("Bona": 0-20) no canvia la clau
+        expect(await keyFor(0, { current: { european_aqi: 5 } })).toBe(await keyFor(0, { current: { european_aqi: 15 } }));
+    });
+
+    const withEngine = async (engine: string) => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ engine, candidates: [{ content: { parts: [{ text: JSON.stringify({ risk_level: 'AMBER', hazard_type: 'NONE', text: 'Connexió perduda.', tips: [] }) }] } }] }) }));
+        return getGeminiAnalysis(calm({ date: '2026-09-15', temp: 17, day: 1 }), 'ca', 0);
+    };
+
+    // L'escut d'emergència (Gemini i Groq caiguts) es mostrava però es cachejava 60 min: un error de segons quedava
+    // enganxat tota l'hora, amb semàfor AMBER, encara que el servei ja s'hagués recuperat.
+    it("la resposta de l'escut d'emergència es mostra però NO es guarda a la cache", async () => {
+        const result = await withEngine('emergency');
+        expect(result?.engine).toBe('emergency');
+        expect(cacheService.set).not.toHaveBeenCalled();
+    });
+
+    it('una resposta real de Gemini o Groq sí que es guarda', async () => {
+        expect((await withEngine('gemini'))?.engine).toBe('gemini');
+        expect((await withEngine('groq'))?.engine).toBe('groq');
+        expect(cacheService.set).toHaveBeenCalledTimes(2);
     });
 });
