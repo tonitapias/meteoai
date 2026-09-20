@@ -4,9 +4,9 @@ import { TempRangeBar } from './widgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
 import { formatPrecipitation, getSafeLocale } from '../utils/formatters';
-import { getSafeArrayNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
-import { StrictDailyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
+import { StrictDailyWeather } from '../types/weatherLogicTypes';
+import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
 import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { MATRIX_BG } from './widgets/widgetStyles';
 
@@ -109,53 +109,19 @@ const ForecastSection = memo(function ForecastSection({
       const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i);
       const maxWind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
 
-      // Hores d'aquest dia dins el chart horari complet (reutilitzat per la
-      // correcció d'inversió i per la icona de núvols, més avall)
+      // Hores d'aquest dia dins el chart horari complet (reutilitzat per les
+      // temperatures extremes i per la icona de núvols, més avall)
       const dateOnly = rawDate.slice(0, 10);
-      const dayHours = (Array.isArray(chartData) && chartData.length > 0)
-        ? chartData.filter(d => typeof d.time === 'string' && d.time.startsWith(dateOnly))
-        : [];
+      const dayHours = hoursOfDate(chartData, dateOnly);
 
-      // [FIX PRECISIÓ] dailyData.temperature_2m_max/min és un valor de model en
-      // brut. Busquem dins les hores reals d'aquest dia quina és la més freda i
-      // la més càlida i apliquem getInversionCorrectedTemp NOMÉS a aquestes
-      // hores concretes, amb el seu propi mes — mateix patró que Forecast24h.tsx
-      // i DayDetailModal.tsx. Sense dades horàries per aquest dia, es manté el
-      // valor cru com a fallback.
-      let maxTemp = rawMaxTemp;
-      let minTemp = rawMinTemp;
-
-      const numericDayHours = dayHours.filter(
-        (d): d is ChartDataPoint & { temp: number } => typeof d.temp === 'number' && !isNaN(d.temp)
-      );
-
-      if (numericDayHours.length > 0) {
-        const hottestHour = numericDayHours.reduce((a, b) => (b.temp > a.temp ? b : a));
-        const coldestHour = numericDayHours.reduce((a, b) => (b.temp < a.temp ? b : a));
-
-        const toStrictCurrent = (h: ChartDataPoint & { temp: number }) => ({
-          temperature_2m: h.temp,
-          cloud_cover_low: typeof h.cloudLow === 'number' ? h.cloudLow : 0,
-          cloud_cover_mid: typeof h.cloudMid === 'number' ? h.cloudMid : 0,
-          cloud_cover_high: typeof h.cloudHigh === 'number' ? h.cloudHigh : 0,
-          wind_speed_10m: typeof h.wind === 'number' ? h.wind : 0,
-          is_day: h.isDay
-        } as unknown as StrictCurrentWeather);
-
-        maxTemp = getInversionCorrectedTemp(toStrictCurrent(hottestHour), getSafeMonthFromIso(hottestHour.time), latitude);
-        minTemp = getInversionCorrectedTemp(toStrictCurrent(coldestHour), getSafeMonthFromIso(coldestHour.time), latitude);
-      }
+      // Màxima/mínima amb correcció d'inversió — la mateixa font que el gràfic de tendència
+      // (utils/dailyExtremes.ts), perquè llista i gràfic mai no discrepin.
+      const { max: maxTemp, min: minTemp } = resolveDailyExtremes(rawMaxTemp, rawMinTemp, dayHours, latitude);
 
       // MOTOR VISUAL INTEL·LIGENT — mateixa regla oficial que la resta de l'app
       // (utils/dailyWeatherCode.ts: cel diürn real; un codi diari de boira no compta
       // com a condició de tot el dia).
-      const daylightHours = dayHours.filter(d => d.isDay === 1);
-      const avgClouds = daylightHours.length > 0
-        ? daylightHours.reduce((acc, curr) => {
-            const c = Number(curr.cloud);
-            return acc + (isNaN(c) ? 0 : c);
-          }, 0) / daylightHours.length
-        : null;
+      const avgClouds = averageDaylightClouds(dayHours);
       const code = resolveDailyCode(rawCode, avgClouds, dayHourCodes?.[dateOnly]);
 
       const maxTempLabel = maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°';
@@ -289,7 +255,8 @@ const ForecastSection = memo(function ForecastSection({
         dailyData={dailyData} 
         chartData={chartData}
         dayHourCodes={dayHourCodes}
-        lang={lang} 
+        lang={lang}
+        latitude={latitude}
       />
 
     </div>

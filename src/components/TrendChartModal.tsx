@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { LineChart, X, Droplets } from 'lucide-react'; 
 import { getWeatherIcon } from './WeatherIcons';
 import { resolveDailyCode } from '../utils/dailyWeatherCode';
+import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
+import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
+import { getSafeLocale } from '../utils/formatters';
 import { Language } from '../translations';
 import { StrictDailyWeather } from '../types/weatherLogicTypes';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -22,25 +25,29 @@ export interface TrendChartModalProps {
   /** Codis del motor de les hores de cada dia ("YYYY-MM-DD" → codis): la icona del dia es tria amb ells. */
   dayHourCodes?: Record<string, Array<number | null>>;
   lang: Language;
+  /** Latitud, per a la correcció d'inversió tèrmica (mateixa que la llista de 7 dies). */
+  latitude?: number;
 }
 
-// HELPER RISC ZERO
-const getSafeArrayNum = (arr: unknown, index: number, fallback: number = 0): number => {
-  if (!Array.isArray(arr)) return fallback;
-  const val = arr[index];
-  return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
-};
+// DOCTRINA RISC ZERO: una xifra que falta és null i es pinta com a "--", mai com un 0 fals
+// (un 0° o un "0%" inventats deformarien l'escala i afirmarien un dia sec que ningú ha confirmat).
+interface TrendDay {
+  max: number | null;
+  min: number | null;
+  code: number;
+  avgClouds: number | null;
+  wind: number;
+  precipProb: number | null;
+  dayInitial: string;
+}
 
-// HELPER RISC ZERO
-const getSafeLocale = (lang: Language): string => {
-  switch (lang) {
-    case 'es': return 'es-ES';
-    case 'fr': return 'fr-FR';
-    case 'en': return 'en-US';
-    case 'ca':
-    default: return 'ca-ES';
-  }
-};
+// Només els dies amb màxima I mínima tenen càpsula, entren a l'escala i a la línia de tendència.
+const isComplete = (d: TrendDay): d is TrendDay & { max: number; min: number } =>
+  d.max !== null && d.min !== null;
+
+const formatDegrees = (val: number | null): string => (val !== null ? `${Math.round(val)}°` : '--°');
+
+const hasPrecip = (prob: number | null): boolean => prob !== null && prob > 0;
 
 // MOTOR DE COLOR ABSOLUT (Spatial UI Tàctic)
 const getAbsoluteColor = (temp: number): string => {
@@ -70,8 +77,8 @@ const I18N_ARIA_CLOSE = {
 };
 
 
-const TrendChartModal = memo(function TrendChartModal({ 
-  isOpen, onClose, dailyData, chartData, dayHourCodes, lang 
+const TrendChartModal = memo(function TrendChartModal({
+  isOpen, onClose, dailyData, chartData, dayHourCodes, lang, latitude
 }: TrendChartModalProps) {
   
   // EFECTE UX PREMIUM: Bloqueig scroll
@@ -108,19 +115,21 @@ const TrendChartModal = memo(function TrendChartModal({
   // qualsevol re-render el tornava a recalcular sencer encara que dailyData/
   // chartData/lang no haguessin canviat. Cal situar-lo ABANS dels `return null`
   // condicionals de sota (regles dels Hooks).
-  const trendData = useMemo(() => {
+  const trendData = useMemo((): TrendDay[] => {
     if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return [];
 
-    return dailyData.time.slice(1, 8).map((rawDate: unknown, index: number) => {
+    return dailyData.time.slice(1, 8).map((rawDate: unknown, index: number): TrendDay => {
       const i = index + 1;
-      const max = getSafeArrayNum(dailyData.temperature_2m_max, i);
-      const min = getSafeArrayNum(dailyData.temperature_2m_min, i);
+      const rawMax = extractValidArrayNum(dailyData.temperature_2m_max, i);
+      const rawMin = extractValidArrayNum(dailyData.temperature_2m_min, i);
       const rawCode = getSafeArrayNum(dailyData.weather_code, i);
       const wind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
-      const precipProb = getSafeArrayNum(dailyData.precipitation_probability_max, i);
+      const precipProb = extractValidArrayNum(dailyData.precipitation_probability_max, i);
 
       let dayInitial = '';
       let code = rawCode;
+      let max = rawMax;
+      let min = rawMin;
       let avgClouds: number | null = null;
 
       if (typeof rawDate === 'string') {
@@ -133,28 +142,23 @@ const TrendChartModal = memo(function TrendChartModal({
             .toUpperCase();
         }
 
+        const dateOnly = rawDate.slice(0, 10);
+        const dayHours = hoursOfDate(chartData, dateOnly);
+
+        // Màxima/mínima amb la mateixa font que la llista de 7 dies (utils/dailyExtremes.ts):
+        // amb la correcció d'inversió tèrmica, perquè gràfic i llista mai no discrepin.
+        ({ max, min } = resolveDailyExtremes(rawMax, rawMin, dayHours, latitude));
+
         // Cel diürn real — mateixa regla oficial que la resta de l'app
         // (utils/dailyWeatherCode.ts; un codi diari de boira no compta com a condició de tot el dia).
-        const dateOnly = rawDate.slice(0, 10);
-        if (Array.isArray(chartData) && chartData.length > 0) {
-          const dayHours = chartData.filter(d =>
-            typeof d.time === 'string' && d.time.startsWith(dateOnly) && d.isDay === 1
-          );
-          if (dayHours.length > 0) {
-            const totalClouds = dayHours.reduce((acc, curr) => {
-              const c = Number(curr.cloud);
-              return acc + (isNaN(c) ? 0 : c);
-            }, 0);
-            avgClouds = totalClouds / dayHours.length;
-          }
-        }
+        avgClouds = averageDaylightClouds(dayHours);
         // Sense núvols ni hores del motor, resolveDailyCode torna el codi cru: es pot cridar sempre.
         code = resolveDailyCode(rawCode, avgClouds, dayHourCodes?.[dateOnly]);
       }
 
       return { max, min, code, avgClouds, wind, precipProb, dayInitial };
     });
-  }, [dailyData, chartData, dayHourCodes, lang]);
+  }, [dailyData, chartData, dayHourCodes, lang, latitude]);
 
   if (!isOpen) return null;
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return null;
@@ -165,22 +169,31 @@ const TrendChartModal = memo(function TrendChartModal({
   const closeAriaLabel = I18N_ARIA_CLOSE[lang] || I18N_ARIA_CLOSE['ca'];
 
   // 2. MOTOR MATEMÀTIC DE COLUMNES DE RANG (Candlestick)
-  const maxTemps = trendData.map(d => d.max);
-  const minTemps = trendData.map(d => d.min);
-  
-  const chartMax = Math.max(...maxTemps);
-  const chartMin = Math.min(...minTemps);
+  // L'escala només compta els dies complets: un dia sense dada no pot arrossegar-la cap a 0°.
+  const completeDays = trendData.filter(isComplete);
+  const hasScale = completeDays.length > 0;
+  const chartMax = hasScale ? Math.max(...completeDays.map(d => d.max)) : 1;
+  const chartMin = hasScale ? Math.min(...completeDays.map(d => d.min)) : 0;
 
-  const padding = chartMax === chartMin ? 2 : (chartMax - chartMin) * 0.25; 
+  const padding = chartMax === chartMin ? 2 : (chartMax - chartMin) * 0.25;
   const yMax = chartMax + padding;
   const yMin = chartMin - padding;
   const range = yMax - yMin;
 
   const N = trendData.length;
   const getX = (index: number) => ((index + 0.5) / N) * 100;
-  const getY = (val: number) => ((yMax - val) / range) * 100; 
+  const getY = (val: number) => ((yMax - val) / range) * 100;
 
-  const pointsStr = trendData.map((d, i) => `${getX(i)},${getY(d.max)}`).join(' ');
+  // Fil de tendència: uneix les màximes dels dies complets; un dia sense dada trenca el fil
+  // (no s'inventa cap punt ni es dibuixa una recta per sobre del forat).
+  let trendPath = '';
+  let penDown = false;
+  for (let i = 0; i < N; i++) {
+    const d = trendData[i];
+    if (!isComplete(d)) { penDown = false; continue; }
+    trendPath += `${penDown ? 'L' : 'M'}${getX(i)},${getY(d.max)} `;
+    penDown = true;
+  }
 
   // 3. RENDERITZAT SPATIAL UI PORTAL
   const modalContent = (
@@ -248,9 +261,9 @@ const TrendChartModal = memo(function TrendChartModal({
               
               {/* FIL DE TENDÈNCIA (Fons) */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <polyline 
-                  points={pointsStr} 
-                  fill="none" 
+                <path
+                  d={trendPath}
+                  fill="none"
                   stroke="#475569" 
                   strokeWidth="1.5" 
                   strokeDasharray="2 3"
@@ -262,14 +275,18 @@ const TrendChartModal = memo(function TrendChartModal({
 
               {/* COLUMNES DE RANG (Candlesticks HTML) */}
               {trendData.map((d, i) => {
-                const yMaxPos = getY(d.max);
-                const yMinPos = getY(d.min);
-                const colorMax = getAbsoluteColor(d.max);
-                const colorMin = getAbsoluteColor(d.min);
+                const complete = isComplete(d);
+                // Sense dada, el marcador buit ocupa una franja fixa al mig del gràfic.
+                const yMaxPos = complete ? getY(d.max) : 44;
+                const yMinPos = complete ? getY(d.min) : 56;
+                const capsuleStyle = complete
+                  ? { background: `linear-gradient(to bottom, ${getAbsoluteColor(d.max)}, ${getAbsoluteColor(d.min)})` }
+                  : undefined;
 
                 return (
-                  <div 
+                  <div
                     key={`candlestick-${i}`}
+                    data-testid="trend-column"
                     className="absolute flex flex-col items-center anim-column"
                     style={{ 
                       left: `${getX(i)}%`, 
@@ -280,22 +297,22 @@ const TrendChartModal = memo(function TrendChartModal({
                     }}
                   >
                     {/* Màxima (Dalt) */}
-                    <span className="absolute bottom-full mb-1.5 md:mb-2 text-[11px] md:text-sm font-black text-white drop-shadow-md">
-                      {Math.round(d.max)}°
+                    <span className={`absolute bottom-full mb-1.5 md:mb-2 text-[11px] md:text-sm font-black drop-shadow-md ${d.max !== null ? 'text-white' : 'text-slate-500'}`}>
+                      {formatDegrees(d.max)}
                     </span>
-                    
-                    {/* Càpsula Tèrmica */}
-                    <div 
-                      className="w-2.5 md:w-4 h-full rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/20"
-                      style={{ 
-                        background: `linear-gradient(to bottom, ${colorMax}, ${colorMin})`,
+
+                    {/* Càpsula Tèrmica (buida i discontínua si el dia no té màxima i mínima) */}
+                    <div
+                      className={`w-2.5 md:w-4 h-full rounded-full border ${complete ? 'shadow-[0_0_15px_rgba(0,0,0,0.5)] border-white/20' : 'border-dashed border-slate-600'}`}
+                      style={{
+                        ...capsuleStyle,
                         minHeight: '12px' // Assegura que mai col·lapsa a 0px si min == max
                       }}
                     ></div>
 
                     {/* Mínima (Baix) */}
-                    <span className="absolute top-full mt-1.5 md:mt-2 text-[10px] md:text-sm font-bold text-slate-400 drop-shadow-md">
-                      {Math.round(d.min)}°
+                    <span className={`absolute top-full mt-1.5 md:mt-2 text-[10px] md:text-sm font-bold drop-shadow-md ${d.min !== null ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {formatDegrees(d.min)}
                     </span>
                   </div>
                 );
@@ -314,10 +331,10 @@ const TrendChartModal = memo(function TrendChartModal({
                     {getWeatherIcon(d.code, "w-8 h-8 md:w-12 md:h-12", true, 0, d.wind, null, 0, d.avgClouds)}
                   </div>
                   
-                  <div className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded border ${d.precipProb > 0 ? 'bg-blue-500/10 border-blue-500/20' : 'bg-transparent border-transparent opacity-40'}`}>
-                    <Droplets className={`w-2.5 h-2.5 md:w-4 md:h-4 ${d.precipProb > 0 ? 'text-blue-400' : 'text-slate-600'}`} />
-                    <span className={`text-[8px] md:text-[11px] font-black tabular-nums ${d.precipProb > 0 ? 'text-blue-300' : 'text-slate-500'}`}>
-                      {d.precipProb}%
+                  <div className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded border ${hasPrecip(d.precipProb) ? 'bg-blue-500/10 border-blue-500/20' : 'bg-transparent border-transparent opacity-40'}`}>
+                    <Droplets className={`w-2.5 h-2.5 md:w-4 md:h-4 ${hasPrecip(d.precipProb) ? 'text-blue-400' : 'text-slate-600'}`} />
+                    <span className={`text-[8px] md:text-[11px] font-black tabular-nums ${hasPrecip(d.precipProb) ? 'text-blue-300' : 'text-slate-500'}`}>
+                      {d.precipProb !== null ? `${d.precipProb}%` : '--'}
                     </span>
                   </div>
                 </div>
