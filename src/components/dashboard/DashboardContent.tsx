@@ -2,6 +2,7 @@
 import { lazy, Suspense } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { getSafeLatitude } from '../../utils/weatherMath';
+import { isRegionalModelActive } from '../../constants/regionalModels';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 
 // Components estàtics
@@ -140,6 +141,8 @@ export const DashboardContent = () => {
                             chartData={calculations.chartDataFull || []}
                             dailyData={weatherData.daily}
                             dayHourCodes={calculations.dayHourCodes}
+                            dailyComparison={weatherData.dailyComparison}
+                            regionalModelLabel={isRegionalModelActive(weatherData.current?.source) ? (weatherData.current.source as string) : null}
                             weeklyExtremes={calculations.weeklyExtremes}
                             lang={flags.lang}
                             onDayClick={actions.setSelectedDayIndex}

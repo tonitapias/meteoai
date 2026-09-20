@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import type { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { HourlyDataSchema, CurrentDataSchema } from '../schemas/weatherSchema';
-import { buildModelSuffixRegex, type RegionalModel } from '../constants/regionalModels';
+import { buildModelSuffixRegex, REGIONAL_TEMP_FLAG_KEY, type RegionalModel } from '../constants/regionalModels';
 
 // --- 1. SCHEMAS & TIPUS INTERNS (Idèntic a l'original per seguretat) ---
 const RegionalModelCleanedSchema = z.object({
@@ -117,6 +117,15 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
                         }
                 }
             });
+
+            // Proveniència: la sèrie horària barreja model regional (primers dies) i global (la resta)
+            // i el gràfic setmanal ha de poder assenyalar on es produeix el salt. Només es marca
+            // l'hora si la temperatura regional era vàlida i s'ha escrit de debò.
+            const regionalTemp = (source.hourly as Record<string, number[] | undefined>).temperature_2m?.[sourceIndex];
+            if (regionalTemp != null && !isNaN(Number(regionalTemp))) {
+                if (!tH[REGIONAL_TEMP_FLAG_KEY]) tH[REGIONAL_TEMP_FLAG_KEY] = new Array(masterTimeLength).fill(null);
+                tH[REGIONAL_TEMP_FLAG_KEY][globalIndex] = 1;
+            }
 
             // Reforç de probabilitat de pluja
             const precipArr = source.hourly?.precipitation as number[] | undefined;

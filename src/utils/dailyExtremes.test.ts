@@ -15,20 +15,44 @@ const dayOf = (date: string, night: number, day: number, extra: Record<string, u
 
 describe('resolveDailyExtremes', () => {
     it('sense hores del dia torna els valors crus del model, i un valor absent continua sent null (mai 0)', () => {
-        expect(resolveDailyExtremes(20, 10, [])).toEqual({ max: 20, min: 10 });
-        expect(resolveDailyExtremes(null, null, [])).toEqual({ max: null, min: null });
-        expect(resolveDailyExtremes(null, 7, [])).toEqual({ max: null, min: 7 });
+        expect(resolveDailyExtremes(20, 10, [])).toMatchObject({ max: 20, min: 10 });
+        expect(resolveDailyExtremes(null, null, [])).toMatchObject({ max: null, min: null });
+        expect(resolveDailyExtremes(null, 7, [])).toMatchObject({ max: null, min: 7 });
     });
 
     it('amb hores, la màxima i la mínima surten de les hores i no del valor diari cru', () => {
         const hours = dayOf('2026-09-21', 14, 27);
-        expect(resolveDailyExtremes(30, 11, hours)).toEqual({ max: 27, min: 14 });
+        expect(resolveDailyExtremes(30, 11, hours)).toMatchObject({ max: 27, min: 14 });
     });
 
     it('les hores sense temperatura (null) s\'ignoren; si totes en falten, es torna als valors crus', () => {
         const hours = [hour('2026-09-21T00:00', null), hour('2026-09-21T12:00', 22), hour('2026-09-21T13:00', null)];
-        expect(resolveDailyExtremes(30, 11, hours)).toEqual({ max: 22, min: 22 });
-        expect(resolveDailyExtremes(30, 11, [hour('2026-09-21T00:00', null)])).toEqual({ max: 30, min: 11 });
+        expect(resolveDailyExtremes(30, 11, hours)).toMatchObject({ max: 22, min: 22 });
+        expect(resolveDailyExtremes(30, 11, [hour('2026-09-21T00:00', null)])).toMatchObject({ max: 30, min: 11 });
+    });
+
+    describe('procedència (model regional o global)', () => {
+        it('sense marca a les hores, cap extrem no és regional', () => {
+            expect(resolveDailyExtremes(30, 11, dayOf('2026-09-21', 14, 27))).toMatchObject({ maxRegional: false, minRegional: false });
+            expect(resolveDailyExtremes(30, 11, [])).toMatchObject({ maxRegional: false, minRegional: false });
+        });
+
+        it('cada extrem és regional segons la seva hora: la màxima pot ser regional i la mínima no', () => {
+            const base = dayOf('2026-09-21', 14, 27);   // hores 8-18 de dia (27°), la resta de nit (14°)
+            const isSunHour = (i: number) => i >= 8 && i < 19;
+
+            // Només les hores de sol (on hi ha la màxima) són regionals; la mínima, de nit, és del global.
+            const sunRegional = base.map((h, i) => ({ ...h, regionalTemp: isSunHour(i) }));
+            expect(resolveDailyExtremes(30, 11, sunRegional)).toMatchObject({ max: 27, maxRegional: true, min: 14, minRegional: false });
+
+            // I al revés: només la nit és regional.
+            const nightRegional = base.map((h, i) => ({ ...h, regionalTemp: !isSunHour(i) }));
+            expect(resolveDailyExtremes(30, 11, nightRegional)).toMatchObject({ maxRegional: false, minRegional: true });
+        });
+
+        it('el valor cru de reserva (sense hores) mai no compta com a regional', () => {
+            expect(resolveDailyExtremes(35, 19, [])).toMatchObject({ maxRegional: false, minRegional: false });
+        });
     });
 
     it('a l\'hivern, nit serena i gairebé en calma: la mínima baixa per la inversió tèrmica i la màxima no', () => {

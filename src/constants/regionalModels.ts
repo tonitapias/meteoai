@@ -214,6 +214,13 @@ export const isRegionalModelActive = (source: string | null | undefined): boolea
     typeof source === 'string' && REGIONAL_MODEL_LABELS.has(source);
 
 /**
+ * Clau sintètica de `hourly` (1 = sí, null = no) que marca les hores la temperatura de les quals ve
+ * d'un model regional (vegeu regionalModelEngine.injectHourly). Les màximes i mínimes de la previsió
+ * setmanal surten de les hores, així que és la manera de saber de quin model ve cada dia.
+ */
+export const REGIONAL_TEMP_FLAG_KEY = 'regional_temperature_2m';
+
+/**
  * Regex compartida per netejar els sufixos de model que Open-Meteo afegeix
  * a les claus quan es demanen múltiples `models=` (p.ex. `temperature_2m_icon_d2`).
  * Es genera a partir del registre perquè regionalModelEngine.ts i useRegionalModel.ts

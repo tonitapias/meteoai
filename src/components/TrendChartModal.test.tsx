@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import TrendChartModal from './TrendChartModal';
@@ -28,7 +29,11 @@ const makeDaily = (dates: string[], overrides: Partial<Record<string, Array<numb
         ...overrides,
     }) as unknown as StrictDailyWeather;
 
-const renderModal = (dailyData: StrictDailyWeather, chartData: Array<Record<string, unknown>> = []) =>
+const renderModal = (
+    dailyData: StrictDailyWeather,
+    chartData: Array<Record<string, unknown>> = [],
+    extra: Partial<ComponentProps<typeof TrendChartModal>> = {}
+) =>
     render(
         <TrendChartModal
             isOpen
@@ -37,6 +42,7 @@ const renderModal = (dailyData: StrictDailyWeather, chartData: Array<Record<stri
             chartData={chartData as never}
             lang="ca"
             latitude={41.9}
+            {...extra}
         />
     );
 
@@ -44,15 +50,25 @@ const columns = () => screen.getAllByTestId('trend-column') as HTMLElement[];
 const columnBox = (c: HTMLElement) => ({ top: c.style.top, bottom: c.style.bottom });
 
 // 24 hores per dia: nit (isDay 0) a `night`, dia (isDay 1) a `day`, amb cel serè i `wind` km/h.
-const hoursFor = (dates: string[], night: number, day: number, wind: number) =>
+// `regionalDates`: dates les hores de les quals tenen la temperatura d'un model regional.
+const hoursFor = (dates: string[], night: number, day: number, wind: number, regionalDates: string[] = []) =>
     dates.flatMap(date =>
         Array.from({ length: 24 }, (_, h) => ({
             time: `${date}T${String(h).padStart(2, '0')}:00`,
             temp: h >= 8 && h < 19 ? day : night,
             precip: 0, cloud: 0, cloudLow: 0, cloudMid: 0, cloudHigh: 0, wind,
             isDay: h >= 8 && h < 19 ? 1 : 0,
+            regionalTemp: regionalDates.includes(date),
         }))
     );
+
+// Comparació de models globals: ECMWF s'allunya 8° de la màxima del dia índex 4 (30° -> 38°, fora del marge natural del gràfic); la resta gairebé coincideixen.
+const model = (max: number[], min: number[]) => ({ temperature_2m_max: max, temperature_2m_min: min, precipitation_sum: max.map(() => 0) });
+const COMPARISON = {
+    ecmwf: model(MAX.map((v, i) => (i === 4 ? v + 8 : v + 0.3)), MIN),
+    gfs: model(MAX, MIN),
+    icon: model(MAX, MIN),
+};
 
 describe('TrendChartModal — dades absents', () => {
     it('amb totes les dades, pinta 7 columnes amb les xifres del model', () => {
@@ -110,6 +126,116 @@ describe('TrendChartModal — dades absents', () => {
         expect(screen.getAllByText('--')).toHaveLength(1);
         // Un 0% real continua sent un 0%.
         expect(screen.getAllByText('0%')).toHaveLength(4);
+    });
+});
+
+describe('TrendChartModal — desacord entre models i fiabilitat per dia', () => {
+    const levels = () => screen.getAllByTestId('reliability').map(e => e.getAttribute('data-level'));
+
+    it('només dibuixa el bigoti del dia on els models discrepen de debò (< 1° no es dibuixa)', () => {
+        renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
+        expect(screen.getAllByTestId('model-range')).toHaveLength(1);
+        expect(screen.getByTitle('Rang entre models: 30–38°')).toBeTruthy();
+    });
+
+    it('el bigoti cap dins el gràfic: l\'escala el comptava i no queda tallat', () => {
+        renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
+        const w = screen.getByTestId('model-range');
+        const top = parseFloat(w.style.top);
+        const bottom = top + parseFloat(w.style.height);
+        expect(top).toBeGreaterThanOrEqual(0);
+        expect(bottom).toBeLessThanOrEqual(100);
+    });
+
+    it('cada dia té la seva fiabilitat: alta si els models coincideixen, baixa on n\'hi ha un que s\'allunya molt', () => {
+        renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
+        expect(levels()).toEqual(['high', 'high', 'high', 'low', 'high', 'high', 'high']);
+        expect(screen.getAllByLabelText('Fiabilitat baixa')).toHaveLength(1);
+    });
+
+    it('la llegenda explica el rang i la fiabilitat', () => {
+        renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
+        expect(screen.getByText('Rang entre models')).toBeTruthy();
+        expect(screen.getByText('Fiabilitat (acord entre models)')).toBeTruthy();
+    });
+
+    it('sense comparació de models no hi ha bigotis, ni fiabilitat, ni llegenda (no s\'inventa cap acord)', () => {
+        renderModal(makeDaily(SEPT));
+        expect(screen.queryAllByTestId('model-range')).toHaveLength(0);
+        expect(screen.queryAllByTestId('reliability')).toHaveLength(0);
+        expect(screen.queryByText('Rang entre models')).toBeNull();
+        expect(screen.queryByText('Fiabilitat (acord entre models)')).toBeNull();
+    });
+
+    it('els textos surten en l\'idioma de l\'usuari', () => {
+        renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON, lang: 'en' });
+        expect(screen.getByText('Model range')).toBeTruthy();
+        expect(screen.getAllByLabelText('Low reliability')).toHaveLength(1);
+    });
+});
+
+describe('TrendChartModal — on la sèrie passa del model regional al global', () => {
+    const chart = (regionalDates: string[]) => hoursFor(SEPT, 14, 27, 10, regionalDates);
+    const runs = () => screen.getAllByTestId('source-run');
+
+    it('els dos primers dies del model regional i la resta del global: dos trams, amb l\'etiqueta del model', () => {
+        // Dies mostrats: 21 al 27. Regionals: 21 i 22.
+        renderModal(makeDaily(SEPT), chart(['2026-09-21', '2026-09-22']), { regionalModelLabel: 'AROME HD' });
+        expect(runs().map(r => [r.textContent, r.style.gridColumn])).toEqual([
+            ['AROME HD', 'span 2'],
+            ['Model global', 'span 5'],
+        ]);
+        expect(runs().map(r => r.getAttribute('data-regional'))).toEqual(['true', 'false']);
+    });
+
+    it('si totes les dades són del model global no hi ha tira d\'origen', () => {
+        renderModal(makeDaily(SEPT), chart([]), { regionalModelLabel: null });
+        expect(screen.queryAllByTestId('source-run')).toHaveLength(0);
+    });
+
+    it('sense sèrie horària tampoc: no s\'assenyala un origen que no es coneix', () => {
+        renderModal(makeDaily(SEPT), [], { regionalModelLabel: 'AROME HD' });
+        expect(screen.queryAllByTestId('source-run')).toHaveLength(0);
+    });
+
+    it('un tram regional al mig també es marca (no es pressuposa que sigui al principi)', () => {
+        renderModal(makeDaily(SEPT), chart(['2026-09-23']), { regionalModelLabel: 'AROME HD' });
+        expect(runs().map(r => [r.getAttribute('data-regional'), r.style.gridColumn])).toEqual([
+            ['false', 'span 2'], ['true', 'span 1'], ['false', 'span 4'],
+        ]);
+    });
+
+    it('si hi ha dies regionals però no s\'ha passat l\'etiqueta, es mostra "HD" en lloc de deixar-ho en blanc', () => {
+        renderModal(makeDaily(SEPT), chart(['2026-09-21']));
+        expect(runs()[0].textContent).toBe('HD');
+    });
+});
+
+describe('TrendChartModal — quantitat de pluja i probabilitats baixes', () => {
+    const amounts = () => screen.getAllByTestId('precip-amount').map(e => e.textContent);
+
+    it('mostra els mm previstos només els dies que en tenen, i els cm si és neu', () => {
+        renderModal(makeDaily(SEPT, {
+            precipitation_sum: [0, 0, 0, 4.2, 0, 0, 0, 0],
+            snowfall_sum: [0, 0, 0, 0, 0, 3, 0, 0],
+        }));
+        expect(amounts()).toEqual(['', '', '4 mm', '', '', '', '']);
+    });
+
+    it('una quantitat que falta no s\'inventa com a 0 mm (es deixa en blanc)', () => {
+        renderModal(makeDaily(SEPT, { precipitation_sum: [0, null, 0, 0, 0, 0, 0, 0] }));
+        expect(amounts().every(t => t === '')).toBe(true);
+    });
+
+    it('una probabilitat baixa (< 20 %) es mostra atenuada i una de real, ressaltada', () => {
+        renderModal(makeDaily(SEPT, { precipitation_probability_max: [0, 10, 19, 20, 60, 0, 0, 0] }));
+        const badge = (text: string) => screen.getByText(text).closest('div')!;
+        expect(badge('10%').className).toContain('opacity-40');
+        expect(badge('19%').className).toContain('opacity-40');
+        expect(badge('20%').className).toContain('bg-blue-500/10');
+        expect(badge('60%').className).toContain('bg-blue-500/10');
+        // Atenuada no vol dir amagada: el valor continua sent visible.
+        expect(screen.getByText('10%')).toBeTruthy();
     });
 });
 

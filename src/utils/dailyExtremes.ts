@@ -32,16 +32,25 @@ export const hoursOfDate = (
  * aquestes hores concretes, amb el seu propi mes — mateix patró que Forecast24h.tsx i DayDetailModal.tsx.
  * Sense dades horàries per al dia, es manté el valor cru com a fallback (que pot ser null: mai un 0 fals).
  */
+export interface DailyExtremes {
+    max: number | null;
+    min: number | null;
+    /** La màxima surt d'una hora amb temperatura de model regional (i no del model global). */
+    maxRegional: boolean;
+    /** Idem per a la mínima. */
+    minRegional: boolean;
+}
+
 export const resolveDailyExtremes = (
     rawMax: number | null,
     rawMin: number | null,
     dayHours: ReadonlyArray<HourlyPoint>,
     latitude?: number
-): { max: number | null; min: number | null } => {
+): DailyExtremes => {
     const numericHours = dayHours.filter(
         (h): h is HourlyPoint & { temp: number } => typeof h.temp === 'number' && !isNaN(h.temp)
     );
-    if (numericHours.length === 0) return { max: rawMax, min: rawMin };
+    if (numericHours.length === 0) return { max: rawMax, min: rawMin, maxRegional: false, minRegional: false };
 
     const hottest = numericHours.reduce((a, b) => (b.temp > a.temp ? b : a));
     const coldest = numericHours.reduce((a, b) => (b.temp < a.temp ? b : a));
@@ -60,7 +69,12 @@ export const resolveDailyExtremes = (
             latitude
         );
 
-    return { max: corrected(hottest), min: corrected(coldest) };
+    return {
+        max: corrected(hottest),
+        min: corrected(coldest),
+        maxRegional: hottest.regionalTemp === true,
+        minRegional: coldest.regionalTemp === true
+    };
 };
 
 /** Mitjana de núvols (%) de les hores de sol del dia, o null si no hi ha hores de sol amb dades horàries. */

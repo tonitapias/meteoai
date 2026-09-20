@@ -2,6 +2,7 @@
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WeatherUnit } from '../utils/formatters';
 import { calculateSnowLevel } from './rules/winterRules';
+import { REGIONAL_TEMP_FLAG_KEY } from '../constants/regionalModels';
 
 export const getComparisonVal = (data: unknown, key: string, i: number): number | null => {
     if (!data) return null;
@@ -114,6 +115,8 @@ export const generateHourlyChartData = (
         timestamp: new Date(tRaw).getTime(),
         temp: tempFinal,
         tempSource: tempResult.source,
+        // La temperatura d'aquesta hora ve d'un model regional (vegeu REGIONAL_TEMP_FLAG_KEY).
+        regionalTemp: tempResult.source === 'primary' && hourlyDataSafe[REGIONAL_TEMP_FLAG_KEY]?.[realIndex] === 1,
         apparent: appTempFinal,
         rain: rainProbVal, 
         pop: rainProbVal, 

@@ -4,10 +4,11 @@ import { LineChart, X, Droplets } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
+import { resolveDailySpread, type DailyModelSpread } from '../utils/dailyModelSpread';
 import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
-import { getSafeLocale } from '../utils/formatters';
+import { getSafeLocale, formatPrecipitation } from '../utils/formatters';
 import { Language } from '../translations';
-import { StrictDailyWeather } from '../types/weatherLogicTypes';
+import { StrictDailyWeather, ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { MATRIX_BG } from './widgets/widgetStyles';
 
 export interface ChartDataPoint {
@@ -27,6 +28,10 @@ export interface TrendChartModalProps {
   lang: Language;
   /** Latitud, per a la correcció d'inversió tèrmica (mateixa que la llista de 7 dies). */
   latitude?: number;
+  /** Previsió diària dels models globals (ECMWF/GFS/ICON): d'aquí surt el desacord entre models de cada dia. */
+  dailyComparison?: ExtendedWeatherData['dailyComparison'];
+  /** Etiqueta del model regional actiu (p. ex. "AROME HD"), o null/absent si les dades són del model global. */
+  regionalModelLabel?: string | null;
 }
 
 // DOCTRINA RISC ZERO: una xifra que falta és null i es pinta com a "--", mai com un 0 fals
@@ -38,7 +43,13 @@ interface TrendDay {
   avgClouds: number | null;
   wind: number;
   precipProb: number | null;
+  precipSum: number | null;
+  snowSum: number;
   dayInitial: string;
+  /** Desacord entre models sobre les temperatures d'aquest dia (bigotis i fiabilitat). */
+  spread: DailyModelSpread;
+  /** Alguna de les seves temperatures extremes surt del model regional (i no del global). */
+  regional: boolean;
 }
 
 // Només els dies amb màxima I mínima tenen càpsula, entren a l'escala i a la línia de tendència.
@@ -47,7 +58,61 @@ const isComplete = (d: TrendDay): d is TrendDay & { max: number; min: number } =
 
 const formatDegrees = (val: number | null): string => (val !== null ? `${Math.round(val)}°` : '--°');
 
-const hasPrecip = (prob: number | null): boolean => prob !== null && prob > 0;
+// La probabilitat diària és el MÀXIM de les probabilitats horàries: un 5-10 % és una sola hora amb un
+// senyal feble, no un dia de risc. Per sota d'aquest llindar es mostra atenuada (però es mostra).
+const LIKELY_WET_PROBABILITY = 20;
+const hasPrecip = (prob: number | null): boolean => prob !== null && prob >= LIKELY_WET_PROBABILITY;
+
+// Un rang entre models de menys d'1° no s'ha de dibuixar: no aporta res i embruta el gràfic.
+const MIN_VISIBLE_SPREAD = 1;
+const hasVisibleRange = (r: DailyModelSpread['maxRange']): r is NonNullable<DailyModelSpread['maxRange']> =>
+  r !== null && r.high - r.low >= MIN_VISIBLE_SPREAD;
+
+const RELIABILITY_DOTS = { high: 3, medium: 2, low: 1 } as const;
+const RELIABILITY_COLOR = { high: 'bg-emerald-400', medium: 'bg-amber-400', low: 'bg-red-400' } as const;
+
+/** Trams consecutius de dies amb la mateixa font (model regional o global), per a la tira d'origen. */
+const sourceRuns = (days: ReadonlyArray<{ regional: boolean }>): Array<{ regional: boolean; span: number }> => {
+  const runs: Array<{ regional: boolean; span: number }> = [];
+  for (const d of days) {
+    const last = runs[runs.length - 1];
+    if (last && last.regional === d.regional) last.span += 1;
+    else runs.push({ regional: d.regional, span: 1 });
+  }
+  return runs;
+};
+
+/** Bigoti vertical (amb topalls) que marca el rang entre models d'una temperatura, a la dreta de la càpsula. */
+const ModelRangeWhisker = ({ x, top, height, title }: { x: number; top: number; height: number; title: string }) => (
+  <div
+    data-testid="model-range"
+    title={title}
+    className="absolute w-1.5 ml-3.5 md:ml-[18px] border-y border-slate-300/60"
+    style={{ left: `${x}%`, top: `${top}%`, height: `${height}%` }}
+  >
+    <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-300/60"></div>
+  </div>
+);
+
+/** Tres punts d'acord entre models: 3 alta, 2 mitjana, 1 baixa. Sense `label` és decoratiu (llegenda). */
+const ReliabilityDots = ({ level, label }: { level: keyof typeof RELIABILITY_DOTS; label?: string }) => (
+  <span
+    data-testid={label ? 'reliability' : undefined}
+    data-level={label ? level : undefined}
+    role={label ? 'img' : undefined}
+    aria-label={label}
+    aria-hidden={label ? undefined : true}
+    title={label}
+    className="flex items-center gap-0.5 h-1.5"
+  >
+    {[0, 1, 2].map(n => (
+      <span
+        key={n}
+        className={`w-1.5 h-1.5 rounded-full ${n < RELIABILITY_DOTS[level] ? RELIABILITY_COLOR[level] : 'bg-slate-700'}`}
+      ></span>
+    ))}
+  </span>
+);
 
 // MOTOR DE COLOR ABSOLUT (Spatial UI Tàctic)
 const getAbsoluteColor = (temp: number): string => {
@@ -61,10 +126,34 @@ const getAbsoluteColor = (temp: number): string => {
 };
 
 const I18N_MODAL = {
-  ca: { title: "Gràfic Temperatures", trend: "Tendència 7 Dies" },
-  es: { title: "Gráfico Temperaturas", trend: "Tendencia 7 Días" },
-  fr: { title: "Graphe Températures", trend: "Tendance 7 Jours" },
-  en: { title: "Temperature Chart", trend: "7-Day Trend" }
+  ca: {
+    title: "Gràfic Temperatures", trend: "Tendència 7 Dies",
+    rangeLegend: "Rang entre models", reliabilityLegend: "Fiabilitat (acord entre models)",
+    reliability: { high: "Fiabilitat alta", medium: "Fiabilitat mitjana", low: "Fiabilitat baixa" },
+    globalModel: "Model global",
+    sourceHint: "Les màximes i mínimes dels primers dies vénen del model regional; a partir d'aquí, del model global. Entre tots dos pot haver-hi un salt que no és un canvi de temps."
+  },
+  es: {
+    title: "Gráfico Temperaturas", trend: "Tendencia 7 Días",
+    rangeLegend: "Rango entre modelos", reliabilityLegend: "Fiabilidad (acuerdo entre modelos)",
+    reliability: { high: "Fiabilidad alta", medium: "Fiabilidad media", low: "Fiabilidad baja" },
+    globalModel: "Modelo global",
+    sourceHint: "Las máximas y mínimas de los primeros días vienen del modelo regional; a partir de ahí, del modelo global. Entre ambos puede haber un salto que no es un cambio de tiempo."
+  },
+  fr: {
+    title: "Graphe Températures", trend: "Tendance 7 Jours",
+    rangeLegend: "Écart entre modèles", reliabilityLegend: "Fiabilité (accord entre modèles)",
+    reliability: { high: "Fiabilité élevée", medium: "Fiabilité moyenne", low: "Fiabilité faible" },
+    globalModel: "Modèle global",
+    sourceHint: "Les maximales et minimales des premiers jours viennent du modèle régional ; ensuite, du modèle global. Entre les deux, un saut peut apparaître sans que le temps ait changé."
+  },
+  en: {
+    title: "Temperature Chart", trend: "7-Day Trend",
+    rangeLegend: "Model range", reliabilityLegend: "Reliability (model agreement)",
+    reliability: { high: "High reliability", medium: "Medium reliability", low: "Low reliability" },
+    globalModel: "Global model",
+    sourceHint: "Highs and lows for the first days come from the regional model; after that, from the global model. There can be a jump between the two that is not a change in the weather."
+  }
 };
 
 // [FIX PRECISIÓ] Mateixa correcció que a ForecastSection.tsx: l'aria-label
@@ -78,7 +167,7 @@ const I18N_ARIA_CLOSE = {
 
 
 const TrendChartModal = memo(function TrendChartModal({
-  isOpen, onClose, dailyData, chartData, dayHourCodes, lang, latitude
+  isOpen, onClose, dailyData, chartData, dayHourCodes, lang, latitude, dailyComparison, regionalModelLabel
 }: TrendChartModalProps) {
   
   // EFECTE UX PREMIUM: Bloqueig scroll
@@ -125,11 +214,14 @@ const TrendChartModal = memo(function TrendChartModal({
       const rawCode = getSafeArrayNum(dailyData.weather_code, i);
       const wind = getSafeArrayNum(dailyData.wind_speed_10m_max, i);
       const precipProb = extractValidArrayNum(dailyData.precipitation_probability_max, i);
+      const precipSum = extractValidArrayNum(dailyData.precipitation_sum, i);
+      const snowSum = getSafeArrayNum(dailyData.snowfall_sum, i);
 
       let dayInitial = '';
       let code = rawCode;
       let max = rawMax;
       let min = rawMin;
+      let regional = false;
       let avgClouds: number | null = null;
 
       if (typeof rawDate === 'string') {
@@ -147,7 +239,9 @@ const TrendChartModal = memo(function TrendChartModal({
 
         // Màxima/mínima amb la mateixa font que la llista de 7 dies (utils/dailyExtremes.ts):
         // amb la correcció d'inversió tèrmica, perquè gràfic i llista mai no discrepin.
-        ({ max, min } = resolveDailyExtremes(rawMax, rawMin, dayHours, latitude));
+        const extremes = resolveDailyExtremes(rawMax, rawMin, dayHours, latitude);
+        ({ max, min } = extremes);
+        regional = extremes.maxRegional || extremes.minRegional;
 
         // Cel diürn real — mateixa regla oficial que la resta de l'app
         // (utils/dailyWeatherCode.ts; un codi diari de boira no compta com a condició de tot el dia).
@@ -156,9 +250,11 @@ const TrendChartModal = memo(function TrendChartModal({
         code = resolveDailyCode(rawCode, avgClouds, dayHourCodes?.[dateOnly]);
       }
 
-      return { max, min, code, avgClouds, wind, precipProb, dayInitial };
+      const spread = resolveDailySpread(i, max, min, dailyData, dailyComparison);
+
+      return { max, min, code, avgClouds, wind, precipProb, precipSum, snowSum, dayInitial, spread, regional };
     });
-  }, [dailyData, chartData, dayHourCodes, lang, latitude]);
+  }, [dailyData, chartData, dayHourCodes, lang, latitude, dailyComparison]);
 
   if (!isOpen) return null;
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return null;
@@ -172,8 +268,9 @@ const TrendChartModal = memo(function TrendChartModal({
   // L'escala només compta els dies complets: un dia sense dada no pot arrossegar-la cap a 0°.
   const completeDays = trendData.filter(isComplete);
   const hasScale = completeDays.length > 0;
-  const chartMax = hasScale ? Math.max(...completeDays.map(d => d.max)) : 1;
-  const chartMin = hasScale ? Math.min(...completeDays.map(d => d.min)) : 0;
+  // Els rangs entre models també hi entren: així cap bigoti no queda tallat pel marge del gràfic.
+  const chartMax = hasScale ? Math.max(...completeDays.map(d => Math.max(d.max, d.spread.maxRange?.high ?? d.max))) : 1;
+  const chartMin = hasScale ? Math.min(...completeDays.map(d => Math.min(d.min, d.spread.minRange?.low ?? d.min))) : 0;
 
   const padding = chartMax === chartMin ? 2 : (chartMax - chartMin) * 0.25;
   const yMax = chartMax + padding;
@@ -194,6 +291,11 @@ const TrendChartModal = memo(function TrendChartModal({
     trendPath += `${penDown ? 'L' : 'M'}${getX(i)},${getY(d.max)} `;
     penDown = true;
   }
+
+  const showRangeLegend = completeDays.some(d => hasVisibleRange(d.spread.maxRange) || hasVisibleRange(d.spread.minRange));
+  const showReliabilityLegend = trendData.some(d => d.spread.reliability !== null);
+  const showSourceStrip = trendData.some(d => d.regional);
+  const formatRange = (r: { low: number; high: number }) => `${Math.round(r.low)}–${Math.round(r.high)}°`;
 
   // 3. RENDERITZAT SPATIAL UI PORTAL
   const modalContent = (
@@ -273,6 +375,26 @@ const TrendChartModal = memo(function TrendChartModal({
                 />
               </svg>
 
+              {/* BIGOTIS: rang de la màxima i de la mínima entre models, a la dreta de la càpsula */}
+              {completeDays.length > 0 && trendData.map((d, i) => {
+                if (!isComplete(d)) return null;
+                const whiskers = [
+                  { key: 'max', range: d.spread.maxRange },
+                  { key: 'min', range: d.spread.minRange }
+                ];
+                return whiskers.map(({ key, range }) =>
+                  hasVisibleRange(range) ? (
+                    <ModelRangeWhisker
+                      key={`range-${key}-${i}`}
+                      x={getX(i)}
+                      top={getY(range.high)}
+                      height={getY(range.low) - getY(range.high)}
+                      title={`${mDict.rangeLegend}: ${formatRange(range)}`}
+                    />
+                  ) : null
+                );
+              })}
+
               {/* COLUMNES DE RANG (Candlesticks HTML) */}
               {trendData.map((d, i) => {
                 const complete = isComplete(d);
@@ -319,7 +441,24 @@ const TrendChartModal = memo(function TrendChartModal({
               })}
             </div>
 
-            {/* BARRA INFERIOR (Ultra-neta: Només Dia, Icona, Pluja) */}
+            {/* ORIGEN DE LES DADES: on la sèrie passa del model regional al global (un salt aquí no és canvi de temps) */}
+            {showSourceStrip && (
+              <div className="grid grid-cols-7 gap-px w-full" title={mDict.sourceHint}>
+                {sourceRuns(trendData).map((run, k) => (
+                  <div
+                    key={`source-${k}`}
+                    data-testid="source-run"
+                    data-regional={run.regional}
+                    className={`text-center truncate rounded border py-0.5 text-[8px] md:text-[10px] font-black uppercase tracking-widest ${run.regional ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-white/5 border-white/5 text-slate-500'}`}
+                    style={{ gridColumn: `span ${run.span}` }}
+                  >
+                    {run.regional ? (regionalModelLabel || 'HD') : mDict.globalModel}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* BARRA INFERIOR: Dia, Icona, Pluja (probabilitat i quantitat) i fiabilitat */}
             <div className="grid grid-cols-7 w-full mt-4 md:mt-8 border-t border-white/5 pt-4">
               {trendData.map((d, i) => (
                 <div key={`col-${i}`} className="flex flex-col items-center justify-end gap-1 md:gap-3 flex-1 group">
@@ -337,10 +476,38 @@ const TrendChartModal = memo(function TrendChartModal({
                       {d.precipProb !== null ? `${d.precipProb}%` : '--'}
                     </span>
                   </div>
+
+                  {/* Quantitat prevista (només si n'hi ha); l'espai es reserva perquè les columnes quedin alineades */}
+                  <span data-testid="precip-amount" className="min-h-[12px] md:min-h-[14px] text-[8px] md:text-[10px] font-black tabular-nums text-cyan-300/90">
+                    {d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum) : ''}
+                  </span>
+
+                  {d.spread.reliability
+                    ? <ReliabilityDots level={d.spread.reliability} label={mDict.reliability[d.spread.reliability]} />
+                    : <span className="h-1.5" />}
                 </div>
               ))}
             </div>
-            
+
+            {(showRangeLegend || showReliabilityLegend) && (
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mt-4 md:mt-6 text-[9px] md:text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                {showRangeLegend && (
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden="true" className="relative inline-block w-1.5 h-3.5 border-y border-slate-300/60">
+                      <span className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-300/60"></span>
+                    </span>
+                    {mDict.rangeLegend}
+                  </span>
+                )}
+                {showReliabilityLegend && (
+                  <span className="flex items-center gap-2">
+                    <ReliabilityDots level="medium" />
+                    {mDict.reliabilityLegend}
+                  </span>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       </div>

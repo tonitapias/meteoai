@@ -5,7 +5,7 @@ import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
 import { formatPrecipitation, getSafeLocale } from '../utils/formatters';
 import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
-import { StrictDailyWeather } from '../types/weatherLogicTypes';
+import { StrictDailyWeather, ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
 import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -35,6 +35,10 @@ interface ForecastSectionProps {
   dailyData: StrictDailyWeather;
   /** Codis del motor de les hores de cada dia ("YYYY-MM-DD" → codis): la icona del dia es tria amb ells. */
   dayHourCodes?: Record<string, Array<number | null>>;
+  /** Previsió diària dels models globals (ECMWF/GFS/ICON): el gràfic de tendència en dibuixa el desacord. */
+  dailyComparison?: ExtendedWeatherData['dailyComparison'];
+  /** Etiqueta del model regional actiu (p. ex. "AROME HD"), o null si les dades són del model global. */
+  regionalModelLabel?: string | null;
   weeklyExtremes: { min: number; max: number };
   lang: Language;
   onDayClick: (index: number) => void;
@@ -62,7 +66,7 @@ const I18N_ARIA_CHART_BTN = {
 };
 
 const ForecastSection = memo(function ForecastSection({
-  chartData, dailyData, dayHourCodes, weeklyExtremes, lang, onDayClick, latitude
+  chartData, dailyData, dayHourCodes, dailyComparison, regionalModelLabel, weeklyExtremes, lang, onDayClick, latitude
 }: ForecastSectionProps) {
   
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
@@ -255,6 +259,8 @@ const ForecastSection = memo(function ForecastSection({
         dailyData={dailyData} 
         chartData={chartData}
         dayHourCodes={dayHourCodes}
+        dailyComparison={dailyComparison}
+        regionalModelLabel={regionalModelLabel}
         lang={lang}
         latitude={latitude}
       />
