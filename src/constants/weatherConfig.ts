@@ -24,11 +24,15 @@ export const WEATHER_THRESHOLDS = {
     // La boira és un núvol a nivell de terra, i el model la representa com a nuvolositat baixa:
     // amb menys, el senyal de boira és majoritàriament fals. Verificat contra 24 mesos de METAR
     // de 20 aeroports europeus i canaris (350.000 hores model↔METAR, ICON): amb >= 70 % el
-    // CSI puja de 0,25 a 0,30 (de 0,36 a 0,39 a T <= 0 °C), la taxa de falses alarmes baixa
-    // de 0,73 a 0,65 i el biaix de 2,7 a 1,9, a canvi de perdre un 8 % de les hores de boira
-    // encertades (POD 0,73 -> 0,67). Millora o queda igual a totes les estacions amb prou
-    // boira. Pujar-ho a 90 % encara és més precís (CSI 0,32) però perd un 18 % de les hores.
-    FOG_MIN_LOW: 70
+    // CSI puja de 0,25 a 0,30, la taxa de falses alarmes baixa de 0,73 a 0,65 i el biaix de
+    // 2,7 a 1,9, a canvi de perdre un 8 % de les hores de boira encertades (POD 0,73 -> 0,67).
+    // Per què 50 i no 70: amb el camí real de l'app (AROME) a 9 aeroports europeus qualsevol
+    // llindar entre 30 i 90 % és estadísticament igual (CSI 0,375; 50 vs 70: +0,002, dins del
+    // soroll), però a Girona i Sabadell (2 anys de METAR, 358 hores de boira) el 70 % era pitjor:
+    // el 58 % de les hores de boira real tenen < 70 % de núvols baixos al model (boira de
+    // radiació poc gruixuda que la capa baixa no veu) i 50 vs 70 dona +0,018 de CSI (IC 95 %
+    // [+0,004, +0,036]). Amb només ICON (fora d'AROME) el 70 % encara és ~0,03 de CSI millor.
+    FOG_MIN_LOW: 50
   },
 
   // Humitat i Boira

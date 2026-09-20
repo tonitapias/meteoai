@@ -107,6 +107,14 @@ describe('resolveFog — senyal del model + saturació', () => {
             expect(resolveFog(45, T, 100, OVERCAST, 300, 0, FOG_MIN_LOW - 1)).not.toBe(45);
         });
 
+        it('una capa baixa moderada (boira de radiació poc gruixuda) SÍ confirma la boira, però una de fina no', () => {
+            // A Girona i Sabadell el 58 % de les hores de boira real tenen < 70 % de núvols baixos al model:
+            // amb la porta al 70 % es descartava boira real (50 vs 70: +0,018 de CSI, significatiu).
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0, 55)).toBe(45);
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0, 50)).toBe(45);
+            expect(resolveFog(45, T, 100, OVERCAST, 300, 0, 45)).not.toBe(45);
+        });
+
         it('un 45 del model sense capa baixa es rebaixa al cel real', () => {
             expect(resolveFog(45, T, 100, CLEAR, GOOD_VIS, 0, 20)).toBe(1); // cel serè + HR alta
             expect(resolveFog(45, T, 100, 60, GOOD_VIS, 0, 20)).toBe(2);
