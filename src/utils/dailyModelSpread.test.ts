@@ -69,9 +69,20 @@ describe('resolveDailySpread — fiabilitat', () => {
         expect(resolveDailySpread(0, 20, 10, null, cmp(1)).reliability).toBeNull();
     });
 
-    it('la setmana real de Girona: els dies 4-6 discrepen més que els primers', () => {
+    it("la setmana real de Girona: el desacord de la mínima també compta (GFS 4-5° més càlid de nit)", () => {
         const level = (i: number) => resolveDailySpread(i, null, null, GIRONA_DAILY, GIRONA_CMP).reliability;
-        expect(level(1)).toBe('high');    // 32 / 32,2 / 33,5 -> 1,5°
-        expect(level(4)).toBe('medium');  // 27,6 / 31,3 -> 3,7°
+        // Dilluns: màxima d'acord (32 / 32,2 / 33,5 -> 1,5°) però mínima 14,8 / 15,2 / 20,1 -> 5,3°. Abans sortia "alta"
+        // perquè només es mirava la màxima; a l'aeroport de Girona l'error mitjà de la mínima és de 2,3 °C.
+        expect(level(1)).toBe('medium');
+        // Dijous: màxima 27,6 / 31,3 (3,7°) i mínima 14,1 / 18,6 (4,5°).
+        expect(level(4)).toBe('medium');
+        // Dia 6: màxima quasi idèntica (0,4°) però mínima 12,8 / 17,7 (4,9°).
+        expect(level(6)).toBe('medium');
+    });
+
+    it('un dia en què màxima i mínima coincideixen entre els models és de fiabilitat alta', () => {
+        const d = daily([25], [12]);
+        const cmp: Comparison = { ecmwf: model([25.3], [12.4]), gfs: model([24.8], [11.9]), icon: model([25], [12.2]) };
+        expect(resolveDailySpread(0, 25, 12, d, cmp).reliability).toBe('high');
     });
 });
