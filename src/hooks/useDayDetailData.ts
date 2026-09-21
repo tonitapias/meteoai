@@ -108,8 +108,9 @@ export const useDayDetailData = (
     );
   }, [weatherData, selectedDayIndex, dayIndices]);
 
-  // Probabilitat màxima de pluja: la diària o la de la taula si aquesta és més alta (el reforç del model
-  // regional només arriba a les hores). Així la targeta no pot dir "0 %" sobre una taula amb hores al 70 %.
+  // Probabilitat màxima de pluja: la diària o la de la taula si aquesta és més alta. El reforç del model
+  // regional ja puja la probabilitat diària (regionalModelEngine.injectDailyRainProbability), així que aquí
+  // només és una garantia: la targeta mai no pot dir "0 %" sobre una taula amb hores al 70 %.
   const precipProbMax = useMemo<number | null>(() => {
     if (!weatherData || selectedDayIndex === null) return null;
     const hourlyProb = (weatherData.hourly as unknown as Record<string, unknown>).precipitation_probability;

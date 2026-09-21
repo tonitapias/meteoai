@@ -84,8 +84,12 @@ const injectMinutely = (target: ExtendedWeatherData, source: CleanedSource) => {
     }
 };
 
-const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, masterTimeLength: number) => {
-    if (!source.hourly || !target.hourly || !target.hourly.time) return;
+/** Probabilitat de pluja (%) que el reforç regional ha escrit a les hores, per dia ("YYYY-MM-DD" → la més alta d'aquell dia). */
+type BoostedRainProbabilityByDate = Map<string, number>;
+
+const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, masterTimeLength: number): BoostedRainProbabilityByDate => {
+    const boostedByDate: BoostedRainProbabilityByDate = new Map();
+    if (!source.hourly || !target.hourly || !target.hourly.time) return boostedByDate;
 
     const HOURLY_FIELDS: (keyof StrictHourlyWeather)[] = [
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
@@ -135,11 +139,45 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
                 if (!tH.precipitation_probability) tH.precipitation_probability = new Array(masterTimeLength).fill(0);
                 const currentProb = tH.precipitation_probability[globalIndex] || 0;
                 if (currentProb < 50) {
-                    tH.precipitation_probability[globalIndex] = Math.max(currentProb, 70);
+                    const boostedProb = Math.max(currentProb, 70);
+                    tH.precipitation_probability[globalIndex] = boostedProb;
+                    // El dia d'aquesta hora també ho ha de saber (vegeu injectDailyRainProbability).
+                    const date = String(target.hourly.time[globalIndex]).slice(0, 10);
+                    boostedByDate.set(date, Math.max(boostedByDate.get(date) ?? 0, boostedProb));
                 }
             }
         }
     });
+
+    return boostedByDate;
+};
+
+/**
+ * Porta el reforç de pluja de les hores a la probabilitat DIÀRIA. Sense això el reforç només arribava a la
+ * taula horària: la llista de 7 dies i el gràfic de tendència (que llegeixen precipitation_probability_max)
+ * deien, p. ex., 18 % d'un dia que les hores donaven al 70 % (mesurat a 17 de 96 dies amb model regional).
+ *
+ * Només se sap de segur el que el reforç ha escrit: la probabilitat diària puja fins a aquest valor, mai baixa
+ * (un 90 % del model global no es toca) i un dia que el reforç no ha tocat queda com estava. No es refà cap
+ * màxim a partir de totes les hores. No es muta `daily` de les dades base: se'n fa una còpia.
+ */
+const injectDailyRainProbability = (target: ExtendedWeatherData, boostedByDate: BoostedRainProbabilityByDate) => {
+    const daily = target.daily;
+    if (boostedByDate.size === 0 || !daily || !Array.isArray(daily.time)) return;
+
+    const current = Array.isArray(daily.precipitation_probability_max) ? daily.precipitation_probability_max : [];
+    const raised: Array<number | null> = daily.time.map((_, i) => {
+        const existing = current[i];
+        return typeof existing === 'number' && !isNaN(existing) ? existing : null;
+    });
+
+    daily.time.forEach((day, i) => {
+        const boosted = boostedByDate.get(String(day).slice(0, 10));
+        if (boosted === undefined) return;
+        raised[i] = raised[i] === null ? boosted : Math.max(raised[i] as number, boosted);
+    });
+
+    target.daily = { ...daily, precipitation_probability_max: raised };
 };
 
 // --- 4. FUNCIÓ PRINCIPAL (Clean Code) ---
@@ -193,7 +231,7 @@ export const injectHighResModels = (baseData: ExtendedWeatherData, highResData: 
     // 4. Execució modular
     injectCurrent(target, source, model);
     injectMinutely(target, source);
-    injectHourly(target, source, masterTimeLength);
+    injectDailyRainProbability(target, injectHourly(target, source, masterTimeLength));
 
     return target;
 };
