@@ -3,6 +3,7 @@ import { useWeather } from '../useWeather';
 import { useWeatherCalculations } from '../useWeatherCalculations';
 import { useWeatherTheme } from '../useWeatherTheme';
 import { useWeatherAI } from '../useWeatherAI';
+import { useRefreshOnResume } from '../useRefreshOnResume';
 import { useGeoLocation } from '../../context/GeoLocationContext';
 import { selectRegionalModel } from '../../constants/regionalModels';
 import type { Language } from '../../translations';
@@ -17,8 +18,12 @@ interface DataControllerProps {
 
 export function useDataController({ lang, unit, now }: DataControllerProps) {
   // 1. Obtenció de Dades Pures
-  const { weatherData, aqiData, loading, error, fetchWeatherByCoords } = useWeather(lang, unit);
+  const { weatherData, aqiData, loading, error, fetchWeatherByCoords, refreshLoadedLocation, getLastLoadedAt } = useWeather(lang, unit);
   const { getCoordinates } = useGeoLocation();
+
+  // Sense això la previsió només es carregava en canviar d'ubicació i, amb l'app
+  // oberta hores, la finestra de 24 h no avançava mai.
+  useRefreshOnResume({ getLastLoadedAt, refresh: refreshLoadedLocation });
 
   // 2. Física i Matemàtiques (Calculations)
   // Necessiten 'now' per saber la posició del sol
