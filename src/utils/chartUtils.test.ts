@@ -1,6 +1,6 @@
 // src/utils/chartUtils.test.ts
 import { describe, it, expect } from 'vitest';
-import { calculateYDomain, generateGraphPoints, generateSmoothPath, ChartDataPoint, GraphPoint } from './chartUtils';
+import { calculateYDomain, generateGraphPoints, generateSmoothPath, generateBandPath, ChartDataPoint, GraphPoint } from './chartUtils';
 
 describe('Chart Logic Engine (chartUtils)', () => {
     
@@ -106,6 +106,33 @@ describe('Chart Logic Engine (chartUtils)', () => {
             expect(generateSmoothPath([pt(0, null), pt(10, null)], 100)).toBe('');
             // Un punt aïllat entre dos forats tampoc fa tram.
             expect(generateSmoothPath([pt(0, null), pt(10, 5), pt(20, null)], 100)).toBe('');
+        });
+    });
+    // 4. BANDA DE MODELS: l'àrea entre el model més alt i el més baix de cada hora
+    describe('generateBandPath', () => {
+        const b = (x: number, top: number, bottom: number) => ({ x, top, bottom });
+
+        it("tanca una àrea: baixa la vora superior d'esquerra a dreta i torna per la inferior", () => {
+            const d = generateBandPath([b(0, 10, 30), b(10, 12, 34), b(20, 8, 28)]);
+            expect(d.match(/M/g)).toHaveLength(1);
+            expect(d.match(/Z/g)).toHaveLength(1);
+            // 2 corbes a la vora superior + 2 a la inferior.
+            expect(d.match(/C/g)).toHaveLength(4);
+            expect(d.startsWith('M 0,10')).toBe(true);
+            // Salta del final de la vora superior (x=20,y=8) al final de la inferior (x=20,y=28).
+            expect(d).toContain('L 20,28');
+        });
+
+        it("una hora sense banda (menys de 2 models) talla l'àrea en dos trams", () => {
+            const d = generateBandPath([b(0, 10, 30), b(10, 12, 34), null, b(30, 9, 25), b(40, 11, 27)]);
+            expect(d.match(/M/g)).toHaveLength(2);
+            expect(d.match(/Z/g)).toHaveLength(2);
+        });
+
+        it("un tram d'una sola hora no té àrea, i sense res no dibuixa res", () => {
+            expect(generateBandPath([])).toBe('');
+            expect(generateBandPath([b(0, 10, 30)])).toBe('');
+            expect(generateBandPath([b(0, 10, 30), null, b(20, 9, 25)])).toBe('');
         });
     });
 });

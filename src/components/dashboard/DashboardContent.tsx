@@ -159,6 +159,7 @@ export const DashboardContent = () => {
                                     comparisonData={calculations.chartSeries?.comparison ?? null}
                                     unit={flags.unit === 'F' ? '°F' : '°C'}
                                     lang={flags.lang}
+                                    regionalModelLabel={isRegionalModelActive(weatherData.current?.source) ? (weatherData.current.source as string) : null}
                                 />
                             </Suspense>
                         </div>

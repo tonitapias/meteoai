@@ -38,6 +38,9 @@ export const CHART_COLORS = {
     models: {
         ecmwf: '#fb7185',      // Rose-400 [FIX] Afegit — abans hi mancava tot i que el comentari ja el preveia
         gfs: '#4ade80',        // Green-400
-        icon: '#fbbf24'        // Amber-400
+        icon: '#fbbf24',       // Amber-400
+        // AIFS (ECMWF amb IA). Neutre a propòsit: qualsevol matís (cian, violeta) es confondria amb la línia
+        // principal d'alguna mètrica (turquesa del vent, índigo de la temperatura, blau de la pluja).
+        aifs: '#e2e8f0'        // Slate-200
     }
 } as const;

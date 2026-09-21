@@ -19,6 +19,7 @@ import type { WeatherUnit } from './formatters';
 import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
 import { calculateSnowLevel } from './rules/winterRules';
 import { resolveIsDay } from './hourlyWeatherCode';
+import { REGIONAL_TEMP_FLAG_KEY } from '../constants/regionalModels';
 import { extractValidArrayNum, extractValidNum, getSafeLatitude, getSafeMonthFromIso } from './weatherMath';
 
 export const CHART_MODEL_KEYS = ['ecmwf', 'gfs', 'icon', 'aifs'] as const;
@@ -36,6 +37,11 @@ export type HourlyChartPoint = {
     gusts: number | null;
     /** Cota de neu (m). */
     snowLevel: number | null;
+    /**
+     * Aquesta hora de la línia PRINCIPAL ve d'un model regional (AROME HD...) i no del model global.
+     * Sempre false a les sèries de models de comparació, que són globals.
+     */
+    regional: boolean;
 };
 
 export interface HourlyChartSeries {
@@ -85,7 +91,8 @@ export const buildHourlyChartSeries = (
         read: Reader,
         fallback: Reader | null,
         isDay: boolean,
-        snowSource: number | null
+        snowSource: number | null,
+        regional: boolean
     ): HourlyChartPoint => {
         const time = String(times[idx]);
         const pick = (key: string): number | null => read(key) ?? fallback?.(key) ?? null;
@@ -113,7 +120,8 @@ export const buildHourlyChartSeries = (
             precip: read('precipitation'),
             wind: read('wind_speed_10m'),
             gusts: read('wind_gusts_10m'),
-            snowLevel: calculateSnowLevel(snowSource)
+            snowLevel: calculateSnowLevel(snowSource),
+            regional
         };
     };
 
@@ -131,7 +139,8 @@ export const buildHourlyChartSeries = (
     const primary = validIndices.map(idx => {
         const isDay = resolveIsDay(hourly, idx, () => true);
         isDayAt.set(idx, isDay);
-        return buildPoint(idx, primaryReader(idx), null, isDay, primaryFreezingLevel(idx));
+        const regional = extractValidArrayNum(hourly[REGIONAL_TEMP_FLAG_KEY], idx) === 1;
+        return buildPoint(idx, primaryReader(idx), null, isDay, primaryFreezingLevel(idx), regional);
     });
 
     if (!comparisonRaw) return { primary, comparison: null };
@@ -148,7 +157,7 @@ export const buildHourlyChartSeries = (
             const ownIsDay = read('is_day');
             const isDay = ownIsDay !== null ? ownIsDay >= 1 : (isDayAt.get(idx) ?? true);
             // La cota de neu d'un model és la SEVA (ECMWF i AIFS no la publiquen: línia absent, no inventada).
-            return buildPoint(idx, read, primaryReader(idx), isDay, read('freezing_level_height'));
+            return buildPoint(idx, read, primaryReader(idx), isDay, read('freezing_level_height'), false);
         });
         const hasData = points.some(p => p.temp !== null || p.precip !== null || p.wind !== null);
         comparison[model] = hasData ? points : [];

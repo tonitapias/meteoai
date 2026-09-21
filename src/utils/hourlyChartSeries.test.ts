@@ -197,6 +197,20 @@ describe('buildHourlyChartSeries', () => {
         });
     });
 
+    describe('procedència: hores de la línia principal que vénen d\'un model regional', () => {
+        it('marca `regional` només a les hores amb la marca de proveïdor regional; els models mai', () => {
+            const hourly = calmClearNight({ regional_temperature_2m: [1, 1, 1, null, null, null] });
+            const { primary, comparison } = buildHourlyChartSeries(makeData(hourly, { gfs: modelRows() }), idx, 'C');
+            expect(primary.map(p => p.regional)).toEqual([true, true, true, false, false, false]);
+            expect(comparison?.gfs.every(p => p.regional === false)).toBe(true);
+        });
+
+        it('sense la marca, cap hora és regional', () => {
+            const { primary } = buildHourlyChartSeries(makeData(calmClearNight()), idx, 'C');
+            expect(primary.every(p => p.regional === false)).toBe(true);
+        });
+    });
+
     describe('cota de neu', () => {
         it('la línia principal cau a ECMWF → GFS → ICON quan no en té (els regionals no la publiquen)', () => {
             const hourly = calmClearNight();

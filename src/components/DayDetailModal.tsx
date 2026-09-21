@@ -10,6 +10,7 @@ import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type 
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import { isRegionalModelActive } from '../constants/regionalModels';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -366,6 +367,7 @@ export default function DayDetailModal({
                       comparisonData={comparisonData} 
                       unit={unit === 'F' ? '°F' : '°C'} 
                       lang={lang} 
+                      regionalModelLabel={isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null}
                    />
                </div>
             </div>
