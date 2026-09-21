@@ -1,61 +1,27 @@
 import React, { useMemo, useEffect, useCallback, useRef } from 'react';
-import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, ArrowDown, ArrowUp } from 'lucide-react';
+import { X, Calendar, Droplets, Wind, Thermometer, Sun, CloudSun, Mountain, Clock, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import SmartForecastCharts from './SmartForecastCharts';
 import { ReliabilityDots } from './ReliabilityDots';
+import { DayStatCard } from './dayDetail/DayStatCard';
+import { DayPartsStrip } from './dayDetail/DayPartsStrip';
+import { SunTimesCard } from './dayDetail/SunTimesCard';
 import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { WeatherUnit, formatPrecipitation, getSafeLocale } from '../utils/formatters';
+import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { hasVisibleRange, type ModelRange } from '../utils/dailyModelSpread';
 import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
 import { isLikelyWet } from '../utils/precipSignal';
+import { getUVCategory } from '../utils/uvIndexUtils';
+import { summarizeDayParts } from '../utils/dayParts';
+import { swipeDirection } from '../utils/dayNavigation';
 import { getWeatherIcon } from './WeatherIcons';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { isRegionalModelActive } from '../constants/regionalModels';
-
-interface StatCardProps {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  sub?: string;
-  color: string;
-  glowClasses: string;
-  /** Línia petita sota la xifra (p. ex. la probabilitat de pluja). */
-  note?: string;
-  /** Atenua la nota: és un senyal feble (vegeu utils/precipSignal.ts). */
-  noteDim?: boolean;
-  /** Reserva l'alçada de la nota encara que aquesta targeta no en tingui, perquè les icones de la fila quedin alineades. */
-  reserveNote?: boolean;
-}
-
-const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses, note, noteDim, reserveNote }: StatCardProps) => (
-  <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-md group hover:border-white/10 transition-colors duration-500 transform-gpu z-10">
-    <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]"></div>
-    
-    <div className={`relative z-10 p-2.5 rounded-xl bg-black/50 border border-white/5 mb-1 transition-shadow duration-500 ${value !== '--' ? glowClasses : 'shadow-none opacity-50'}`}>
-        <Icon className={`w-5 h-5 ${value !== '--' ? color : 'text-slate-500'}`} strokeWidth={2.5}/>
-    </div>
-    
-    <span className="relative z-10 text-[10px] text-slate-400 uppercase font-black tracking-widest">{label}</span>
-    
-    <span className={`relative z-10 text-xl font-mono font-black tabular-nums tracking-tight transition-colors duration-500 ${value === '--' ? 'text-slate-600' : 'text-slate-100'}`}>
-      {value}<span className="text-xs ml-0.5 font-bold text-slate-500">{value !== '--' ? sub : ''}</span>
-    </span>
-
-    {(note || reserveNote) && (
-      <span
-        data-testid={note ? 'stat-note' : undefined}
-        className={`relative z-10 -mt-1 min-h-[14px] text-[10px] font-black uppercase tracking-widest tabular-nums ${noteDim ? 'text-slate-600' : 'text-blue-300'}`}
-      >
-        {note}
-      </span>
-    )}
-  </div>
-);
 
 // DOCTRINA RISC ZERO: Interfície estricta
 interface TableRowData {
@@ -83,6 +49,8 @@ interface DayDetailModalProps {
   weatherData: ExtendedWeatherData | null;
   selectedDayIndex: number | null;
   onClose: () => void;
+  /** Si hi és, el detall es pot canviar al dia anterior/següent (fletxes, ←/→ i lliscant) sense tancar-lo. */
+  onSelectDay?: (dayIndex: number) => void;
   unit: WeatherUnit;
   lang: Language;
 }
@@ -91,6 +59,7 @@ export default function DayDetailModal({
   weatherData, 
   selectedDayIndex, 
   onClose, 
+  onSelectDay,
   unit, 
   lang
 }: DayDetailModalProps) {
@@ -110,8 +79,10 @@ export default function DayDetailModal({
 
   const confidenceText = CONFIDENCE_TEXT[lang] || CONFIDENCE_TEXT.ca;
 
-  const { dayData, extremes, windMax, precipProbMax, spread, isRegionalDay, hourlyData, comparisonData, snowLevelText, dayIndices, nowIndex } =
-    useDayDetailData(weatherData, selectedDayIndex, unit);
+  const {
+    dayData, extremes, dayCode, avgDaylightClouds, windMax, gustsMax, precipProbMax, spread, isRegionalDay,
+    hourlyData, comparisonData, snowLevelText, snowLevelRelevant, daylightSec, neighbours, dayIndices, nowIndex
+  } = useDayDetailData(weatherData, selectedDayIndex, unit);
 
   // Model regional actiu a la ubicació (p. ex. "AROME HD"), o null si tota la previsió és del model global.
   const regionalModelLabel = isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null;
@@ -140,6 +111,52 @@ export default function DayDetailModal({
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  // Canvi de dia sense tancar el detall: només dins els dies que la llista ja mostra i només si qui obre el
+  // modal ens dóna com canviar-lo (onSelectDay).
+  const prevDay = onSelectDay ? neighbours.prev : null;
+  const nextDay = onSelectDay ? neighbours.next : null;
+  const goToDay = useCallback((target: number | null) => {
+      if (target !== null && onSelectDay) onSelectDay(target);
+  }, [onSelectDay]);
+
+  // Fletxes ← / → del teclat (no si s'està escrivint ni amb cap modificador).
+  useEffect(() => {
+      const handleArrows = (e: KeyboardEvent) => {
+          if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+          const target = e.target;
+          if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+          const destination = e.key === 'ArrowLeft' ? prevDay : e.key === 'ArrowRight' ? nextDay : null;
+          if (destination === null) return;
+          e.preventDefault();
+          goToDay(destination);
+      };
+      window.addEventListener('keydown', handleArrows);
+      return () => window.removeEventListener('keydown', handleArrows);
+  }, [prevDay, nextDay, goToDay]);
+
+  // El dia nou s'obre des de dalt, no a l'alçada de scroll on era l'anterior.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [selectedDayIndex]);
+
+  // Gest de lliscar amb un dit. Els gràfics es reserven els seus propis gestos horitzontals (data-no-swipe).
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      const touch = e.touches[0];
+      const reserved = e.target instanceof Element && e.target.closest('[data-no-swipe]') !== null;
+      swipeStart.current = touch && !reserved ? { x: touch.clientX, y: touch.clientY } : null;
+  };
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+      const start = swipeStart.current;
+      swipeStart.current = null;
+      const touch = e.changedTouches[0];
+      if (!start || !touch) return;
+      const direction = swipeDirection(touch.clientX - start.x, touch.clientY - start.y);
+      if (direction === 1) goToDay(nextDay);
+      else if (direction === -1) goToDay(prevDay);
+  };
 
   const formattedPrecipitation = useMemo(() => {
     if (!dayData || !weatherData || selectedDayIndex === null) return { val: "--", unit: "" };
@@ -250,6 +267,9 @@ export default function DayDetailModal({
     return rows;
   }, [weatherData, selectedDayIndex, dayIndices]);
 
+  // Resum per franges (matinada, matí, tarda, nit) de les MATEIXES files que mostra la taula.
+  const dayParts = useMemo(() => summarizeDayParts(tableRows), [tableRows]);
+
   if (!dayData) return null;
 
   const formatTime = (isoString?: string) => {
@@ -308,6 +328,38 @@ export default function DayDetailModal({
 
   const precipNote = precipProbMax !== null ? `${TACTICAL_I18N.rainChance} ${Math.round(precipProbMax)}%` : undefined;
 
+  const labelGusts = tDayDetail.gusts || 'RÀFEGUES';
+  const gustsNote = gustsMax !== null ? `${labelGusts} ${Math.round(gustsMax)} km/h` : undefined;
+
+  // Categoria de risc de l'índex UV amb la mateixa taula (i colors) que el widget d'UV i el modal solar.
+  const uvCategory = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? getUVCategory(dayData.uvMax) : null;
+
+  // Quarta targeta contextual: la cota de neu quan hi pot haver neu; si no, les hores de sol (sobre les de llum).
+  const labelSunshine = tDayDetail.sunshine || 'HORES DE SOL';
+  const sunshineValue = formatHoursMinutes(dayData.sunshineSec);
+  const sunshineNote = sunshineValue !== '--' && daylightSec !== null
+      ? `${tDayDetail.outOf || 'de'} ${formatHoursMinutes(daylightSec)}`
+      : undefined;
+
+  const labelNow = tDayDetail.now || 'ARA';
+  const labelPrevDay = tDayDetail.prevDay || 'Dia anterior';
+  const labelNextDay = tDayDetail.nextDay || 'Dia següent';
+  const partLabels = {
+      night: tDayDetail.partNight || 'Matinada',
+      morning: tDayDetail.partMorning || 'Matí',
+      afternoon: tDayDetail.partAfternoon || 'Tarda',
+      evening: tDayDetail.partEvening || 'Nit'
+  };
+
+  // Estat del cel del dia amb la mateixa etiqueta que la resta de l'app (p. ex. "Majorment serè").
+  const skyLabel = dayCode !== null
+      ? getWeatherLabel({ weather_code: dayCode } as unknown as StrictCurrentWeather, lang, avgDaylightClouds)
+      : '';
+
+  // Hora local d'"ara" si el dia mostrat és avui (marca la franja i la fila en curs i atenua el que ja ha passat).
+  const nowRowHour = nowIndex !== null ? parseInt(tableRows[nowIndex]?.hour?.slice(0, 2) ?? '', 10) : NaN;
+  const nowHour = isNaN(nowRowHour) ? null : nowRowHour;
+
 
   return (
     <div
@@ -318,7 +370,12 @@ export default function DayDetailModal({
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-200"
         onClick={handleBackdropClick}
     >
-      <div className="bg-[#050608] sm:border border-white/10 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[95vh] overflow-y-auto custom-scrollbar sm:rounded-[2rem] shadow-2xl relative sm:ring-1 sm:ring-white/5">
+      <div
+          ref={scrollRef}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className="bg-[#050608] sm:border border-white/10 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[95vh] overflow-y-auto custom-scrollbar sm:rounded-[2rem] shadow-2xl relative sm:ring-1 sm:ring-white/5"
+      >
           
           <button 
             onClick={onClose}
@@ -338,11 +395,49 @@ export default function DayDetailModal({
                       <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || TACTICAL_I18N.detailHeader}
                   </div>
                   
-                  <h2 id="day-detail-modal-title" className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg">
-                      {formatDate(dayData.date)}
-                  </h2>
-                  
-                  <div className="flex items-center justify-center gap-6 mt-4 bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner backdrop-blur-md">
+                  <div className="flex items-center justify-center gap-2 md:gap-4 w-full">
+                      {onSelectDay && (
+                          <button
+                              type="button"
+                              data-testid="day-prev"
+                              onClick={() => goToDay(prevDay)}
+                              disabled={prevDay === null}
+                              aria-label={labelPrevDay}
+                              className="shrink-0 p-2 md:p-2.5 rounded-full border border-white/10 bg-black/40 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 transition-colors disabled:opacity-25 disabled:pointer-events-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+                          >
+                              <ChevronLeft className="w-5 h-5" />
+                          </button>
+                      )}
+                      <h2 id="day-detail-modal-title" className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg min-w-0">
+                          {formatDate(dayData.date)}
+                      </h2>
+                      {onSelectDay && (
+                          <button
+                              type="button"
+                              data-testid="day-next"
+                              onClick={() => goToDay(nextDay)}
+                              disabled={nextDay === null}
+                              aria-label={labelNextDay}
+                              className="shrink-0 p-2 md:p-2.5 rounded-full border border-white/10 bg-black/40 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 transition-colors disabled:opacity-25 disabled:pointer-events-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+                          >
+                              <ChevronRight className="w-5 h-5" />
+                          </button>
+                      )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mt-4">
+                  {dayCode !== null && (
+                      <div data-testid="day-sky" className="flex items-center gap-3">
+                          {getWeatherIcon(dayCode, "w-12 h-12 md:w-14 md:h-14", true, 0, windMax ?? 0, null, 0, avgDaylightClouds)}
+                          {skyLabel && skyLabel !== '---' && (
+                              <span data-testid="day-sky-label" className="max-w-[9rem] text-left text-sm md:text-base font-black uppercase tracking-widest leading-tight text-slate-200">
+                                  {skyLabel}
+                              </span>
+                          )}
+                      </div>
+                  )}
+
+                  <div className="flex items-center justify-center gap-6 bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner backdrop-blur-md">
                       <div className="flex items-center gap-2">
                           <ArrowUp className={`w-4 h-4 ${safeMaxTemp !== '--' ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]' : 'text-slate-600'}`} />
                           <span data-testid="day-max" className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMaxTemp !== '--' ? 'text-slate-100' : 'text-slate-600'}`}>
@@ -356,6 +451,7 @@ export default function DayDetailModal({
                               {safeMinTemp}°
                           </span>
                       </div>
+                  </div>
                   </div>
 
                   {(reliabilityLevel || rangeParts.length > 0 || sourceLabel) && (
@@ -401,75 +497,88 @@ export default function DayDetailModal({
 
           <div className="p-4 md:p-8 space-y-6 relative z-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <StatCard
+                <DayStatCard
                     icon={Droplets}
                     label={labelPrecip}
                     value={formattedPrecipitation.val}
                     sub={formattedPrecipitation.unit}
                     note={precipNote}
-                    noteDim={!isLikelyWet(precipProbMax)}
+                    noteTestId="note-precip"
+                    noteClass={isLikelyWet(precipProbMax) ? 'text-blue-300' : 'text-slate-600'}
                     reserveNote
                     color="text-blue-400"
                     glowClasses="shadow-[0_0_12px_rgba(96,165,250,0.25)] group-hover:shadow-[0_0_20px_rgba(96,165,250,0.5)]"
                 />
-                <StatCard
+                <DayStatCard
                     icon={Wind}
                     label={labelWind}
                     value={safeWindMax}
                     sub={safeWindMax !== '--' ? "km/h" : ""}
+                    note={gustsNote}
+                    noteTestId="note-gusts"
+                    noteClass="text-emerald-300/80"
                     reserveNote
                     color="text-emerald-400"
                     glowClasses="shadow-[0_0_12px_rgba(52,211,153,0.25)] group-hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]"
                 />
-                <StatCard
+                <DayStatCard
                     icon={Sun}
                     label={labelUv}
                     value={safeUvMax}
                     sub=""
+                    note={uvCategory ? uvCategory.label[lang] : undefined}
+                    noteTestId="note-uv"
+                    noteClass={uvCategory?.color}
                     reserveNote
                     color="text-amber-400"
                     glowClasses="shadow-[0_0_12px_rgba(251,191,36,0.25)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.5)]"
                 />
-                <StatCard
-                    icon={Mountain}
-                    label={labelSnow}
-                    value={safeSnowLevel}
-                    sub={snowLevelUnit}
-                    reserveNote
-                    color="text-indigo-400"
-                    glowClasses="shadow-[0_0_12px_rgba(129,140,248,0.25)] group-hover:shadow-[0_0_20px_rgba(129,140,248,0.5)]" 
-                />
+                {snowLevelRelevant ? (
+                    <DayStatCard
+                        testId="stat-snow"
+                        icon={Mountain}
+                        label={labelSnow}
+                        value={safeSnowLevel}
+                        sub={snowLevelUnit}
+                        reserveNote
+                        color="text-indigo-400"
+                        glowClasses="shadow-[0_0_12px_rgba(129,140,248,0.25)] group-hover:shadow-[0_0_20px_rgba(129,140,248,0.5)]"
+                    />
+                ) : (
+                    <DayStatCard
+                        testId="stat-sunshine"
+                        icon={CloudSun}
+                        label={labelSunshine}
+                        value={sunshineValue}
+                        sub=""
+                        note={sunshineNote}
+                        noteTestId="note-sunshine"
+                        noteClass="text-amber-300/80"
+                        reserveNote
+                        color="text-amber-300"
+                        glowClasses="shadow-[0_0_12px_rgba(252,211,77,0.25)] group-hover:shadow-[0_0_20px_rgba(252,211,77,0.5)]"
+                    />
+                )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-5 rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-colors backdrop-blur-sm shadow-lg">
-                   <div className={MATRIX_BG}></div>
-                   <div className="flex items-center gap-4 relative z-10">
-                      <div className="p-3 bg-black/50 rounded-xl text-amber-400 border border-amber-500/20 group-hover:shadow-[0_0_15px_rgba(251,191,36,0.3)] transition-all">
-                          <Sun className="w-5 h-5"/>
-                      </div>
-                      <div>
-                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{labelSunrise}</span>
-                          <div className="text-2xl font-mono font-bold text-slate-200 tabular-nums">{formatTime(dayData.sunrise)}</div>
-                      </div>
-                   </div>
-                </div>
+            <SunTimesCard
+                sunriseLabel={labelSunrise}
+                sunsetLabel={labelSunset}
+                sunrise={formatTime(dayData.sunrise)}
+                sunset={formatTime(dayData.sunset)}
+                duration={daylightSec !== null ? formatHoursMinutes(daylightSec) : null}
+                durationLabel={tDayDetail.daylight || 'de llum'}
+            />
 
-                <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-5 rounded-2xl flex items-center justify-between group hover:border-indigo-500/30 transition-colors backdrop-blur-sm shadow-lg">
-                   <div className={MATRIX_BG}></div>
-                   <div className="flex items-center gap-4 relative z-10">
-                      <div className="p-3 bg-black/50 rounded-xl text-indigo-400 border border-indigo-500/20 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all">
-                          <Moon className="w-5 h-5"/>
-                      </div>
-                      <div>
-                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{labelSunset}</span>
-                          <div className="text-2xl font-mono font-bold text-slate-200 tabular-nums">{formatTime(dayData.sunset)}</div>
-                      </div>
-                   </div>
-                </div>
-            </div>
+            <DayPartsStrip
+                parts={dayParts}
+                title={tDayDetail.partsTitle || 'MOMENTS DEL DIA'}
+                labels={partLabels}
+                nowLabel={labelNow}
+                nowHour={nowHour}
+            />
 
-            <div className="relative overflow-hidden bg-[#0a0b10] border border-white/5 rounded-3xl p-5 md:p-8 shadow-inner">
+            <div data-no-swipe className="relative overflow-hidden bg-[#0a0b10] border border-white/5 rounded-3xl p-5 md:p-8 shadow-inner">
                <div className={MATRIX_BG}></div>
                <div className="relative z-10">
                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6 flex items-center gap-2">
@@ -488,7 +597,7 @@ export default function DayDetailModal({
             </div>
 
             {tableRows && tableRows.length > 0 && (
-                <div className="bg-[#0a0b10] border border-white/5 rounded-3xl overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
+                <div className="bg-[#0a0b10] border border-white/5 rounded-3xl overflow-clip shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
                     <div className="px-6 md:px-8 py-5 border-b border-white/5 bg-[#0f111a]/90 backdrop-blur-md">
                          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
                             <Clock className="w-4 h-4 text-cyan-400" /> 
@@ -497,7 +606,7 @@ export default function DayDetailModal({
                     </div>
                     
                     <div className="divide-y divide-white/5">
-                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-black/60 shadow-inner">
+                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-[#0a0b10] shadow-inner sm:sticky sm:top-0 sm:z-20">
                             <div className="col-span-2">{TACTICAL_I18N.colHour}</div>
                             <div className="col-span-2 text-center">{TACTICAL_I18N.colSky}</div>
                             <div className="col-span-3 text-center">{TACTICAL_I18N.colTemp}</div>
@@ -509,11 +618,22 @@ export default function DayDetailModal({
                             const showPrecip = (row.precipProb !== null && row.precipProb > 0) || (row.precipSum !== null && row.precipSum > 0);
                             const hasTemp = row.temp !== null;
                             const hasWind = row.windSpeed !== null;
+                            const isNowRow = nowIndex !== null && idx === nowIndex;
+                            const isPastRow = nowIndex !== null && idx < nowIndex;
                             
                             return (
-                            <div key={`row-${idx}`} className="grid grid-cols-12 px-4 md:px-6 py-4 items-center hover:bg-white/[0.02] transition-colors group">
-                                <div className="col-span-2 text-xs md:text-sm font-mono font-bold text-slate-400 group-hover:text-cyan-300 transition-colors">
+                            <div
+                                key={`row-${idx}`}
+                                data-testid="hour-row"
+                                data-now={isNowRow}
+                                aria-current={isNowRow ? 'time' : undefined}
+                                className={`grid grid-cols-12 px-4 md:px-6 py-4 items-center hover:bg-white/[0.02] transition-colors group ${isNowRow ? 'bg-cyan-500/[0.07]' : ''} ${isPastRow ? 'opacity-50' : ''}`}
+                            >
+                                <div className="col-span-2 flex flex-col items-start gap-0.5 text-xs md:text-sm font-mono font-bold text-slate-400 group-hover:text-cyan-300 transition-colors">
                                     {row.hour}
+                                    {isNowRow && (
+                                        <span className="px-1 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[8px] font-black uppercase tracking-widest text-cyan-300">{labelNow}</span>
+                                    )}
                                 </div>
                                 
                                 <div className="col-span-2 flex justify-center">

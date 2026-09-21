@@ -8,6 +8,7 @@ import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { getUVCategory, UVCategory } from '../utils/uvIndexUtils';
+import { formatHoursMinutes as minutesToHM } from '../utils/formatters';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { SunOrb } from './SunOrb';
 import { StatCard } from './AstroStatCard';
@@ -90,14 +91,6 @@ const T: Record<Language, Record<string, string>> = {
 };
 
 const localeMap: Record<string, string> = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
-
-const minutesToHM = (totalSeconds: number | null | undefined): string => {
-  if (typeof totalSeconds !== 'number' || isNaN(totalSeconds)) return '--';
-  const totalMin = Math.round(totalSeconds / 60);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  return `${h}h ${m.toString().padStart(2, '0')}m`;
-};
 
 // Mapa d'altitud (-18..90 graus) a coordenada Y de l'SVG (150=horitzó/nadir, 10=zenit)
 const MIN_ALT = -18, MAX_ALT = 90, TOP_Y = 12, BOTTOM_Y = 150;

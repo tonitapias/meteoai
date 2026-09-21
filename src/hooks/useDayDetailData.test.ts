@@ -135,8 +135,9 @@ const buildSeptember = (opts: {
     hourlyWind?: boolean;
     hourlyProb?: (i: number) => number;
     comparison?: boolean;
+    hourlyGusts?: boolean;
 } = {}): ExtendedWeatherData => {
-    const { regionalFlags = [true, true], hourlyWind = true, hourlyProb = () => 0, comparison = true } = opts;
+    const { regionalFlags = [true, true], hourlyWind = true, hourlyProb = () => 0, comparison = true, hourlyGusts = false } = opts;
     const dailyOf = (max: number, min: number) => ({
         temperature_2m_max: [max, max], temperature_2m_min: [min, min], precipitation_sum: [0, 0]
     });
@@ -150,6 +151,7 @@ const buildSeptember = (opts: {
             regional_temperature_2m: SEP_TIME.map((_, i) => (regionalFlags[i < 24 ? 0 : 1] ? 1 : null)),
             is_day: SEP_TIME.map((_, i) => sepDay(i)),
             ...(hourlyWind ? { wind_speed_10m: SEP_TIME.map((_, i) => (i % 24 === 12 ? 13 : 5)) } : {}),
+            ...(hourlyGusts ? { wind_gusts_10m: SEP_TIME.map((_, i) => (i % 24 === 15 ? 34 : 8)) } : {}),
             cloud_cover_low: flat(48, 0), cloud_cover_mid: flat(48, 0), cloud_cover_high: flat(48, 0),
             precipitation: flat(48, 0),
             precipitation_probability: SEP_TIME.map((_, i) => hourlyProb(i))
@@ -163,6 +165,8 @@ const buildSeptember = (opts: {
             time: ['2026-09-21', '2026-09-22'],
             ...dailyOf(27.6, 17.5),
             wind_speed_10m_max: [15, 15],
+            wind_gusts_10m_max: [30, 30],
+            sunshine_duration: [30000, 35280],
             precipitation_probability_max: [10, 10],
             sunrise: ['2026-09-21T07:38', '2026-09-22T07:39'],
             sunset: ['2026-09-21T19:51', '2026-09-22T19:49'],
@@ -238,5 +242,55 @@ describe('useDayDetailData: capçalera coherent amb el gràfic i la llista', () 
         expect(none.result.current.precipProbMax).toBeNull();
         expect(none.result.current.spread).toBeNull();
         expect(none.result.current.isRegionalDay).toBe(false);
+    });
+});
+
+describe('useDayDetailData: peces del detall ampliat', () => {
+    it('la ràfega màxima surt de les hores del dia i, sense ràfegues horàries, del valor diari', () => {
+        const fromHours = renderHook(() => useDayDetailData(buildSeptember({ hourlyGusts: true }), 1));
+        expect(fromHours.result.current.gustsMax).toBe(34);
+
+        const fromDaily = renderHook(() => useDayDetailData(buildSeptember({ hourlyGusts: false }), 1));
+        expect(fromDaily.result.current.gustsMax).toBe(30);
+    });
+
+    it('la durada del dia surt de la sortida i la posta (12 h 10 min)', () => {
+        const { result } = renderHook(() => useDayDetailData(buildSeptember(), 1));
+        expect(result.current.daylightSec).toBe((12 * 60 + 10) * 60);
+    });
+
+    it('les hores de sol són les del dia; si no hi ha dada, null (no 0)', () => {
+        const withSun = renderHook(() => useDayDetailData(buildSeptember(), 1));
+        expect(withSun.result.current.dayData?.sunshineSec).toBe(35280);
+
+        const without = renderHook(() => useDayDetailData(data, 0));
+        expect(without.result.current.dayData?.sunshineSec).toBeNull();
+    });
+
+    it('la cota de neu només és rellevant si hi pot haver neu (cota baixa, o neu prevista)', () => {
+        // El fixture de gener porta una isoterma a 1500 m → cota 1200 m: rellevant.
+        const winter = renderHook(() => useDayDetailData(data, 0));
+        expect(winter.result.current.snowLevelRelevant).toBe(true);
+
+        // Setembre sense isoterma ni neu: no.
+        const summer = renderHook(() => useDayDetailData(buildSeptember(), 1));
+        expect(summer.result.current.snowLevelRelevant).toBe(false);
+    });
+
+    it('els dies veïns respecten els extrems de la llista i els dies que la previsió porta', () => {
+        // Només 2 dies (0 i 1): del dia 1 no hi ha ni anterior (0 no és a la llista) ni següent.
+        const two = renderHook(() => useDayDetailData(buildSeptember(), 1));
+        expect(two.result.current.neighbours).toEqual({ prev: null, next: null });
+
+        const none = renderHook(() => useDayDetailData(null, null));
+        expect(none.result.current.neighbours).toEqual({ prev: null, next: null });
+    });
+
+    it('sense weatherData no hi ha cel del dia ni ràfegues', () => {
+        const none = renderHook(() => useDayDetailData(null, null));
+        expect(none.result.current.dayCode).toBeNull();
+        expect(none.result.current.gustsMax).toBeNull();
+        expect(none.result.current.daylightSec).toBeNull();
+        expect(none.result.current.snowLevelRelevant).toBe(false);
     });
 });

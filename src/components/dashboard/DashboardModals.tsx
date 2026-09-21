@@ -54,6 +54,7 @@ export const DashboardModals = () => {
                     weatherData={weatherData} 
                     selectedDayIndex={modals.selectedDayIndex} 
                     onClose={() => actions.setSelectedDayIndex(null)} 
+                    onSelectDay={actions.setSelectedDayIndex}
                     unit={flags.unit} 
                     lang={flags.lang} 
                 />

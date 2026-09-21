@@ -87,6 +87,15 @@ export const formatTime = (dateString: string | undefined, lang: Language): stri
   }
 };
 
+/** Durada en hores i minuts ("12h 10m") a partir de segons, o "--" si no hi ha dada (mai un "0h 00m" inventat). */
+export const formatHoursMinutes = (totalSeconds: number | null | undefined): string => {
+  if (typeof totalSeconds !== 'number' || isNaN(totalSeconds)) return '--';
+  const totalMin = Math.round(totalSeconds / 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h ${m.toString().padStart(2, '0')}m`;
+};
+
 export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null): string => {
   const safePrecip = precipitationTotal ?? 0;
   const safeSnow = snowfall ?? 0;
