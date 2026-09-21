@@ -4,7 +4,10 @@ import { LineChart, X, Droplets } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
-import { resolveDailySpread, type DailyModelSpread } from '../utils/dailyModelSpread';
+import { resolveDailySpread, hasVisibleRange, type DailyModelSpread } from '../utils/dailyModelSpread';
+import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
+import { isLikelyWet } from '../utils/precipSignal';
+import { ReliabilityDots } from './ReliabilityDots';
 import { buildCapsuleGradient } from '../utils/temperatureColors';
 import { summarizeTrend } from '../utils/trendSummary';
 import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
@@ -70,19 +73,6 @@ const isComplete = (d: TrendDay): d is TrendDay & { max: number; min: number } =
 
 const formatDegrees = (val: number | null): string => (val !== null ? `${Math.round(val)}°` : '--°');
 
-// La probabilitat diària és el MÀXIM de les probabilitats horàries: un 5-10 % és una sola hora amb un
-// senyal feble, no un dia de risc. Per sota d'aquest llindar es mostra atenuada (però es mostra).
-const LIKELY_WET_PROBABILITY = 20;
-const hasPrecip = (prob: number | null): boolean => prob !== null && prob >= LIKELY_WET_PROBABILITY;
-
-// Un rang entre models de menys d'1° no s'ha de dibuixar: no aporta res i embruta el gràfic.
-const MIN_VISIBLE_SPREAD = 1;
-const hasVisibleRange = (r: DailyModelSpread['maxRange']): r is NonNullable<DailyModelSpread['maxRange']> =>
-  r !== null && r.high - r.low >= MIN_VISIBLE_SPREAD;
-
-const RELIABILITY_DOTS = { high: 3, medium: 2, low: 1 } as const;
-const RELIABILITY_COLOR = { high: 'bg-emerald-400', medium: 'bg-amber-400', low: 'bg-red-400' } as const;
-
 // Colors de les dues línies de tendència (màximes càlides, mínimes fresques): la legenda usa els mateixos.
 const MAX_LINE_COLOR = '#fb923c';
 const MIN_LINE_COLOR = '#38bdf8';
@@ -125,33 +115,11 @@ const ModelRangeWhisker = ({ x, top, height, title }: { x: number; top: number; 
   </div>
 );
 
-/** Tres punts d'acord entre models: 3 alta, 2 mitjana, 1 baixa. Sense `label` és decoratiu (llegenda). */
-const ReliabilityDots = ({ level, label }: { level: keyof typeof RELIABILITY_DOTS; label?: string }) => (
-  <span
-    data-testid={label ? 'reliability' : undefined}
-    data-level={label ? level : undefined}
-    role={label ? 'img' : undefined}
-    aria-label={label}
-    aria-hidden={label ? undefined : true}
-    title={label}
-    className="flex items-center gap-0.5 h-1.5"
-  >
-    {[0, 1, 2].map(n => (
-      <span
-        key={n}
-        className={`w-1.5 h-1.5 rounded-full ${n < RELIABILITY_DOTS[level] ? RELIABILITY_COLOR[level] : 'bg-slate-700'}`}
-      ></span>
-    ))}
-  </span>
-);
-
 const I18N_MODAL = {
   ca: {
     title: "Gràfic Temperatures", trend: "Tendència 7 Dies",
-    rangeLegend: "Rang entre models", reliabilityLegend: "Fiabilitat (acord entre models)",
+    ...CONFIDENCE_TEXT.ca, reliabilityLegend: "Fiabilitat (acord entre models)",
     maxLine: "Màximes", minLine: "Mínimes",
-    reliability: { high: "Fiabilitat alta", medium: "Fiabilitat mitjana", low: "Fiabilitat baixa" },
-    globalModel: "Model global",
     sourceHint: "Les màximes i mínimes dels primers dies vénen del model regional; a partir d'aquí, del model global. Entre tots dos pot haver-hi un salt que no és un canvi de temps.",
     aria: { max: "màxima", min: "mínima", rain: "pluja", openDay: "veure el detall del dia" },
     summary: {
@@ -164,10 +132,8 @@ const I18N_MODAL = {
   },
   es: {
     title: "Gráfico Temperaturas", trend: "Tendencia 7 Días",
-    rangeLegend: "Rango entre modelos", reliabilityLegend: "Fiabilidad (acuerdo entre modelos)",
+    ...CONFIDENCE_TEXT.es, reliabilityLegend: "Fiabilidad (acuerdo entre modelos)",
     maxLine: "Máximas", minLine: "Mínimas",
-    reliability: { high: "Fiabilidad alta", medium: "Fiabilidad media", low: "Fiabilidad baja" },
-    globalModel: "Modelo global",
     sourceHint: "Las máximas y mínimas de los primeros días vienen del modelo regional; a partir de ahí, del modelo global. Entre ambos puede haber un salto que no es un cambio de tiempo.",
     aria: { max: "máxima", min: "mínima", rain: "lluvia", openDay: "ver el detalle del día" },
     summary: {
@@ -180,10 +146,8 @@ const I18N_MODAL = {
   },
   fr: {
     title: "Graphe Températures", trend: "Tendance 7 Jours",
-    rangeLegend: "Écart entre modèles", reliabilityLegend: "Fiabilité (accord entre modèles)",
+    ...CONFIDENCE_TEXT.fr, reliabilityLegend: "Fiabilité (accord entre modèles)",
     maxLine: "Maximales", minLine: "Minimales",
-    reliability: { high: "Fiabilité élevée", medium: "Fiabilité moyenne", low: "Fiabilité faible" },
-    globalModel: "Modèle global",
     sourceHint: "Les maximales et minimales des premiers jours viennent du modèle régional ; ensuite, du modèle global. Entre les deux, un saut peut apparaître sans que le temps ait changé.",
     aria: { max: "maximale", min: "minimale", rain: "pluie", openDay: "voir le détail du jour" },
     summary: {
@@ -196,10 +160,8 @@ const I18N_MODAL = {
   },
   en: {
     title: "Temperature Chart", trend: "7-Day Trend",
-    rangeLegend: "Model range", reliabilityLegend: "Reliability (model agreement)",
+    ...CONFIDENCE_TEXT.en, reliabilityLegend: "Reliability (model agreement)",
     maxLine: "Highs", minLine: "Lows",
-    reliability: { high: "High reliability", medium: "Medium reliability", low: "Low reliability" },
-    globalModel: "Global model",
     sourceHint: "Highs and lows for the first days come from the regional model; after that, from the global model. There can be a jump between the two that is not a change in the weather.",
     aria: { max: "high", min: "low", rain: "rain", openDay: "open day details" },
     summary: {
@@ -384,9 +346,9 @@ const TrendChartModal = memo(function TrendChartModal({
         {getWeatherIcon(d.code, "w-8 h-8 md:w-12 md:h-12", true, 0, d.wind, null, 0, d.avgClouds)}
       </div>
 
-      <div className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1 py-0.5 md:px-3 md:py-1.5 rounded border ${hasPrecip(d.precipProb) ? 'bg-blue-500/10 border-blue-500/20' : 'bg-transparent border-transparent opacity-40'}`}>
-        <Droplets className={`hidden md:block md:w-4 md:h-4 ${hasPrecip(d.precipProb) ? 'text-blue-400' : 'text-slate-600'}`} />
-        <span className={`text-[10px] md:text-[11px] font-black tabular-nums ${hasPrecip(d.precipProb) ? 'text-blue-300' : 'text-slate-500'}`}>
+      <div className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1 py-0.5 md:px-3 md:py-1.5 rounded border ${isLikelyWet(d.precipProb) ? 'bg-blue-500/10 border-blue-500/20' : 'bg-transparent border-transparent opacity-40'}`}>
+        <Droplets className={`hidden md:block md:w-4 md:h-4 ${isLikelyWet(d.precipProb) ? 'text-blue-400' : 'text-slate-600'}`} />
+        <span className={`text-[10px] md:text-[11px] font-black tabular-nums ${isLikelyWet(d.precipProb) ? 'text-blue-300' : 'text-slate-500'}`}>
           {d.precipProb !== null ? `${d.precipProb}%` : '--'}
         </span>
       </div>

@@ -21,6 +21,11 @@ export interface DailyModelSpread {
     reliability: 'high' | 'medium' | 'low' | null;
 }
 
+// Un rang entre models de menys d'1° no s'ha de dibuixar: no aporta res i embruta la pantalla.
+export const MIN_VISIBLE_SPREAD = 1;
+export const hasVisibleRange = (r: ModelRange | null): r is ModelRange =>
+    r !== null && r.high - r.low >= MIN_VISIBLE_SPREAD;
+
 const COMPARED_MODELS = ['ecmwf', 'gfs', 'icon'] as const;
 
 const nonNull = (values: ReadonlyArray<number | null>): number[] =>

@@ -1,10 +1,15 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { X, Calendar, Droplets, Wind, Thermometer, Sun, Moon, Mountain, Clock, ArrowDown, ArrowUp } from 'lucide-react';
 import SmartForecastCharts from './SmartForecastCharts';
+import { ReliabilityDots } from './ReliabilityDots';
 import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { WeatherUnit, formatPrecipitation, getSafeLocale } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
+import { useDialogFocus } from '../hooks/useDialogFocus';
+import { hasVisibleRange, type ModelRange } from '../utils/dailyModelSpread';
+import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
+import { isLikelyWet } from '../utils/precipSignal';
 import { getWeatherIcon } from './WeatherIcons';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
@@ -19,9 +24,15 @@ interface StatCardProps {
   sub?: string;
   color: string;
   glowClasses: string;
+  /** Línia petita sota la xifra (p. ex. la probabilitat de pluja). */
+  note?: string;
+  /** Atenua la nota: és un senyal feble (vegeu utils/precipSignal.ts). */
+  noteDim?: boolean;
+  /** Reserva l'alçada de la nota encara que aquesta targeta no en tingui, perquè les icones de la fila quedin alineades. */
+  reserveNote?: boolean;
 }
 
-const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses }: StatCardProps) => (
+const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses, note, noteDim, reserveNote }: StatCardProps) => (
   <div className="relative overflow-hidden bg-gradient-to-br from-[#0f111a]/90 to-black/80 border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-md group hover:border-white/10 transition-colors duration-500 transform-gpu z-10">
     <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]"></div>
     
@@ -34,6 +45,15 @@ const StatCard = ({ icon: Icon, label, value, sub, color, glowClasses }: StatCar
     <span className={`relative z-10 text-xl font-mono font-black tabular-nums tracking-tight transition-colors duration-500 ${value === '--' ? 'text-slate-600' : 'text-slate-100'}`}>
       {value}<span className="text-xs ml-0.5 font-bold text-slate-500">{value !== '--' ? sub : ''}</span>
     </span>
+
+    {(note || reserveNote) && (
+      <span
+        data-testid={note ? 'stat-note' : undefined}
+        className={`relative z-10 -mt-1 min-h-[14px] text-[10px] font-black uppercase tracking-widest tabular-nums ${noteDim ? 'text-slate-600' : 'text-blue-300'}`}
+      >
+        {note}
+      </span>
+    )}
   </div>
 );
 
@@ -84,10 +104,28 @@ export default function DayDetailModal({
     colSky: lang === 'en' ? 'SKY' : lang === 'fr' ? 'CIEL' : lang === 'es' ? 'CIELO' : 'CEL',
     colTemp: 'TEMP',
     colRain: lang === 'en' ? 'RAIN' : lang === 'fr' ? 'PLUIE' : lang === 'es' ? 'LLUVIA' : 'PLUJA',
-    colWind: lang === 'en' ? 'WIND' : lang === 'es' ? 'VIENTO' : 'VENT'
+    colWind: lang === 'en' ? 'WIND' : lang === 'es' ? 'VIENTO' : 'VENT',
+    rainChance: lang === 'en' ? 'MAX CHANCE' : lang === 'fr' ? 'PROB. MAX' : lang === 'es' ? 'PROB. MÁX' : 'PROB. MÀX'
   }), [lang]);
 
-  const { dayData, hourlyData, comparisonData, snowLevelText, dayIndices, nowIndex } = useDayDetailData(weatherData, selectedDayIndex, unit);
+  const confidenceText = CONFIDENCE_TEXT[lang] || CONFIDENCE_TEXT.ca;
+
+  const { dayData, extremes, windMax, precipProbMax, spread, isRegionalDay, hourlyData, comparisonData, snowLevelText, dayIndices, nowIndex } =
+    useDayDetailData(weatherData, selectedDayIndex, unit);
+
+  // Model regional actiu a la ubicació (p. ex. "AROME HD"), o null si tota la previsió és del model global.
+  const regionalModelLabel = isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null;
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Focus dins el diàleg en obrir-lo, Tab que hi dóna la volta i retorn del focus en tancar-lo (com el gràfic de tendència).
+  useDialogFocus(dayData !== null, dialogRef);
+
+  // Bloqueig del scroll de la pàgina de darrere mentre el detall és obert (com la resta de modals).
+  useEffect(() => {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = original; };
+  }, []);
 
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target === e.currentTarget) {
@@ -232,17 +270,48 @@ export default function DayDetailModal({
       } catch { return isoString; }
   };
 
-  const safeMaxTemp = typeof dayData.maxTemp === 'number' && !isNaN(dayData.maxTemp) ? Math.round(dayData.maxTemp) : '--';
-  const safeMinTemp = typeof dayData.minTemp === 'number' && !isNaN(dayData.minTemp) ? Math.round(dayData.minTemp) : '--';
-  const safeWindMax = typeof dayData.windMax === 'number' && !isNaN(dayData.windMax) ? Math.round(dayData.windMax) : '--';
+  // Màxima, mínima i vent màxim vénen de les HORES del dia (vegeu useDayDetailData): són les mateixes
+  // xifres que la llista de 7 dies i que el gràfic i la taula d'aquest mateix detall.
+  const safeMaxTemp = typeof extremes?.max === 'number' && !isNaN(extremes.max) ? Math.round(extremes.max) : '--';
+  const safeMinTemp = typeof extremes?.min === 'number' && !isNaN(extremes.min) ? Math.round(extremes.min) : '--';
+  const safeWindMax = typeof windMax === 'number' && !isNaN(windMax) ? Math.round(windMax) : '--';
   const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? dayData.uvMax.toFixed(1) : '--';
-  
+
   const safeSnowLevel = snowLevelText;
   const snowLevelUnit = '';
+
+  // Etiquetes de les targetes: el bloc `dayDetail` de les traduccions (p. ex. "VENT MÀX"), no les paraules
+  // soltes de l'app ("Vent"), que hi feien semblar un vent mitjà quan és el màxim del dia.
+  const labelPrecip = tDayDetail.precip || TACTICAL_I18N.colRain;
+  const labelWind = tDayDetail.wind || (lang === 'en' ? 'MAX WIND' : lang === 'fr' ? 'VENT MAX' : lang === 'es' ? 'VIENTO MÁX' : 'VENT MÀX');
+  const labelUv = tDayDetail.uv || 'UV';
+  const labelSnow = tDayDetail.snowLevel || (typeof tRecord.snowLevel === 'string' ? tRecord.snowLevel : 'COTA NEU');
+  const labelSunrise = tDayDetail.sunrise || (typeof tRecord.sunrise === 'string' ? tRecord.sunrise : 'SORTIDA');
+  const labelSunset = tDayDetail.sunset || (typeof tRecord.sunset === 'string' ? tRecord.sunset : 'POSTA');
+  const labelClose = typeof tRecord.closeWindow === 'string' ? tRecord.closeWindow : 'Tancar finestra';
+  const labelMax = typeof tRecord.max === 'string' ? tRecord.max : 'Màx';
+  const labelMin = typeof tRecord.min === 'string' ? tRecord.min : 'Mín';
+
+  // Fiabilitat, rang entre models i origen de les temperatures del dia: la mateixa informació que ja dóna
+  // el gràfic de tendència, perquè una xifra sense aquest context sembla més segura del que és.
+  const formatRange = (r: ModelRange) => `${Math.round(r.low)}–${Math.round(r.high)}°`;
+  const maxRange = spread?.maxRange ?? null;
+  const minRange = spread?.minRange ?? null;
+  const rangeParts = [
+      hasVisibleRange(maxRange) ? `${labelMax} ${formatRange(maxRange)}` : null,
+      hasVisibleRange(minRange) ? `${labelMin} ${formatRange(minRange)}` : null
+  ].filter((p): p is string => p !== null);
+  const reliabilityLevel = spread?.reliability ?? null;
+  // Només hi ha origen que dir quan la ubicació té model regional: un dia de model global entre dies
+  // regionals és justament el salt que l'usuari ha de poder explicar-se.
+  const sourceLabel = regionalModelLabel ? (isRegionalDay ? regionalModelLabel : confidenceText.globalModel) : null;
+
+  const precipNote = precipProbMax !== null ? `${TACTICAL_I18N.rainChance} ${Math.round(precipProbMax)}%` : undefined;
 
 
   return (
     <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="day-detail-modal-title"
@@ -254,7 +323,7 @@ export default function DayDetailModal({
           <button 
             onClick={onClose}
             className="fixed sm:absolute top-4 right-4 md:top-5 md:right-5 p-3 sm:p-2 bg-black/50 sm:bg-slate-900 rounded-full text-slate-400 hover:text-cyan-400 border border-white/10 sm:border-slate-700 hover:border-cyan-500/50 backdrop-blur-md transition-all z-50 hover:rotate-90 duration-300 shadow-md active:scale-95"
-            aria-label="Tancar"
+            aria-label={labelClose}
           >
             <X className="w-5 h-5" />
           </button>
@@ -276,53 +345,98 @@ export default function DayDetailModal({
                   <div className="flex items-center justify-center gap-6 mt-4 bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner backdrop-blur-md">
                       <div className="flex items-center gap-2">
                           <ArrowUp className={`w-4 h-4 ${safeMaxTemp !== '--' ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]' : 'text-slate-600'}`} />
-                          <span className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMaxTemp !== '--' ? 'text-slate-100' : 'text-slate-600'}`}>
+                          <span data-testid="day-max" className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMaxTemp !== '--' ? 'text-slate-100' : 'text-slate-600'}`}>
                               {safeMaxTemp}°
                           </span>
                       </div>
                       <div className="w-px h-6 bg-white/10"></div>
                       <div className="flex items-center gap-2">
                           <ArrowDown className={`w-4 h-4 ${safeMinTemp !== '--' ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'text-slate-600'}`} />
-                          <span className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMinTemp !== '--' ? 'text-slate-300' : 'text-slate-600'}`}>
+                          <span data-testid="day-min" className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMinTemp !== '--' ? 'text-slate-300' : 'text-slate-600'}`}>
                               {safeMinTemp}°
                           </span>
                       </div>
                   </div>
+
+                  {(reliabilityLevel || rangeParts.length > 0 || sourceLabel) && (
+                      <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                          {reliabilityLevel && (
+                              <span
+                                  data-testid="day-reliability"
+                                  data-level={reliabilityLevel}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-widest text-slate-300 backdrop-blur-md"
+                              >
+                                  <ReliabilityDots level={reliabilityLevel} />
+                                  {confidenceText.reliability[reliabilityLevel]}
+                              </span>
+                          )}
+                          {rangeParts.length > 0 && (
+                              <span
+                                  data-testid="day-model-range"
+                                  className="inline-block px-2.5 py-1.5 rounded-full border border-white/10 bg-black/40 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 tabular-nums backdrop-blur-md"
+                              >
+                                  {confidenceText.rangeLegend}:{' '}
+                                  {/* Si a mòbil no hi cap tot en una línia, el salt cau entre la màxima i la mínima, mai dins d'un rang. */}
+                                  {rangeParts.map((part, i) => (
+                                      <React.Fragment key={part}>
+                                          {i > 0 ? ' ' : ''}
+                                          <span className="whitespace-nowrap">{i > 0 ? '· ' : ''}{part}</span>
+                                      </React.Fragment>
+                                  ))}
+                              </span>
+                          )}
+                          {sourceLabel && (
+                              <span
+                                  data-testid="day-source"
+                                  data-regional={isRegionalDay}
+                                  className={`inline-flex items-center px-2.5 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest backdrop-blur-md ${isRegionalDay ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                              >
+                                  {sourceLabel}
+                              </span>
+                          )}
+                      </div>
+                  )}
               </div>
           </div>
 
           <div className="p-4 md:p-8 space-y-6 relative z-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <StatCard 
-                    icon={Droplets} 
-                    label={tDayDetail.precip || (typeof tRecord.precip === 'string' ? tRecord.precip : TACTICAL_I18N.colRain)} 
-                    value={formattedPrecipitation.val} 
-                    sub={formattedPrecipitation.unit} 
-                    color="text-blue-400" 
-                    glowClasses="shadow-[0_0_12px_rgba(96,165,250,0.25)] group-hover:shadow-[0_0_20px_rgba(96,165,250,0.5)]" 
+                <StatCard
+                    icon={Droplets}
+                    label={labelPrecip}
+                    value={formattedPrecipitation.val}
+                    sub={formattedPrecipitation.unit}
+                    note={precipNote}
+                    noteDim={!isLikelyWet(precipProbMax)}
+                    reserveNote
+                    color="text-blue-400"
+                    glowClasses="shadow-[0_0_12px_rgba(96,165,250,0.25)] group-hover:shadow-[0_0_20px_rgba(96,165,250,0.5)]"
                 />
-                <StatCard 
-                    icon={Wind} 
-                    label={typeof tRecord.wind === 'string' ? tRecord.wind : "VENT MÀX"} 
-                    value={safeWindMax} 
-                    sub={safeWindMax !== '--' ? "km/h" : ""} 
-                    color="text-emerald-400" 
-                    glowClasses="shadow-[0_0_12px_rgba(52,211,153,0.25)] group-hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]" 
+                <StatCard
+                    icon={Wind}
+                    label={labelWind}
+                    value={safeWindMax}
+                    sub={safeWindMax !== '--' ? "km/h" : ""}
+                    reserveNote
+                    color="text-emerald-400"
+                    glowClasses="shadow-[0_0_12px_rgba(52,211,153,0.25)] group-hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]"
                 />
-                <StatCard 
-                    icon={Sun} 
-                    label="INDEX UV" 
-                    value={safeUvMax} 
-                    sub="" 
-                    color="text-amber-400" 
-                    glowClasses="shadow-[0_0_12px_rgba(251,191,36,0.25)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.5)]" 
+                <StatCard
+                    icon={Sun}
+                    label={labelUv}
+                    value={safeUvMax}
+                    sub=""
+                    reserveNote
+                    color="text-amber-400"
+                    glowClasses="shadow-[0_0_12px_rgba(251,191,36,0.25)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.5)]"
                 />
-                <StatCard 
-                    icon={Mountain} 
-                    label={typeof tRecord.snowLevel === 'string' ? tRecord.snowLevel : "COTA NEU"} 
-                    value={safeSnowLevel} 
-                    sub={snowLevelUnit} 
-                    color="text-indigo-400" 
+                <StatCard
+                    icon={Mountain}
+                    label={labelSnow}
+                    value={safeSnowLevel}
+                    sub={snowLevelUnit}
+                    reserveNote
+                    color="text-indigo-400"
                     glowClasses="shadow-[0_0_12px_rgba(129,140,248,0.25)] group-hover:shadow-[0_0_20px_rgba(129,140,248,0.5)]" 
                 />
             </div>
@@ -335,7 +449,7 @@ export default function DayDetailModal({
                           <Sun className="w-5 h-5"/>
                       </div>
                       <div>
-                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{typeof tRecord.sunrise === 'string' ? tRecord.sunrise : "SORTIDA"}</span>
+                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{labelSunrise}</span>
                           <div className="text-2xl font-mono font-bold text-slate-200 tabular-nums">{formatTime(dayData.sunrise)}</div>
                       </div>
                    </div>
@@ -348,7 +462,7 @@ export default function DayDetailModal({
                           <Moon className="w-5 h-5"/>
                       </div>
                       <div>
-                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{typeof tRecord.sunset === 'string' ? tRecord.sunset : "POSTA"}</span>
+                          <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{labelSunset}</span>
                           <div className="text-2xl font-mono font-bold text-slate-200 tabular-nums">{formatTime(dayData.sunset)}</div>
                       </div>
                    </div>
@@ -367,7 +481,7 @@ export default function DayDetailModal({
                       comparisonData={comparisonData} 
                       unit={unit === 'F' ? '°F' : '°C'} 
                       lang={lang} 
-                      regionalModelLabel={isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null}
+                      regionalModelLabel={regionalModelLabel}
                       nowIndex={nowIndex}
                    />
                </div>
