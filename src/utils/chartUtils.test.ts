@@ -1,47 +1,121 @@
 // src/utils/chartUtils.test.ts
 import { describe, it, expect } from 'vitest';
-import { calculateYDomain, generateGraphPoints, generateSmoothPath, generateBandPath, ChartDataPoint, GraphPoint } from './chartUtils';
+import {
+    calculateAxis,
+    calculateNiceTicks,
+    generateGraphPoints,
+    generateSmoothPath,
+    generateBandPath,
+    indexToX,
+    xToIndex,
+    valueToY,
+    ChartDataPoint,
+    GraphPoint
+} from './chartUtils';
 
 describe('Chart Logic Engine (chartUtils)', () => {
     
-    // 1. TESTEJEM ELS MARGES DE SEGURETAT (El problema que teníem)
-    describe('calculateYDomain', () => {
-        it('hauria de donar un marge del 110% per probabilitat de pluja', () => {
-            // Simulem dades que arriben al 100%
-            const values = [0, 50, 100]; 
-            const domain = calculateYDomain(values, 'rain');
-            
-            expect(domain.min).toBe(0);
-            expect(domain.max).toBe(110); // Verifiquem que deixa aire per dalt
+    // 1. EIXOS: valors "rodons" que contenen tots els punts
+    describe('calculateNiceTicks', () => {
+        it('tria marques rodones que contenen tot el rang', () => {
+            const axis = calculateNiceTicks(12.6, 27, { steps: [1, 2, 4, 5, 10] });
+            expect(axis.ticks).toEqual([12, 16, 20, 24, 28]);
+            expect(axis.min).toBe(12);
+            expect(axis.max).toBe(28);
         });
 
-        it('hauria de donar un marge DOBLE (2.0x) per volum de precipitació', () => {
-            // Cas pluja forta: 10mm
-            const values = [0, 5, 10];
-            const domain = calculateYDomain(values, 'precip');
-
-            expect(domain.min).toBe(0);
-            expect(domain.max).toBe(20); // 10 * 2.0 = 20 (Molt d'aire)
+        it('el domini sempre conté els valors, sigui quin sigui el rang', () => {
+            for (const [lo, hi] of [[0, 3.2], [-4.3, 6.1], [1480, 4530], [0.02, 0.9], [-30, -12], [95, 100]]) {
+                const axis = calculateNiceTicks(lo, hi);
+                expect(axis.min).toBeLessThanOrEqual(lo);
+                expect(axis.max).toBeGreaterThanOrEqual(hi);
+                expect(axis.ticks.length).toBeGreaterThanOrEqual(2);
+                expect(axis.ticks.length).toBeLessThanOrEqual(8);
+            }
         });
 
-        it('hauria de respectar el mínim de 1mm per precipitació quasi nul·la', () => {
-            // Cas pluja ridícula: 0.1mm
-            const values = [0, 0.1];
-            const domain = calculateYDomain(values, 'precip');
-
-            // Max real és 0.1, però forcem base 1. Llavors 1 * 2.0 = 2.
-            expect(domain.max).toBe(2); 
+        it("un rang sense amplada (tots els valors iguals) s'obre una mica perquè hi hagi eix", () => {
+            const axis = calculateNiceTicks(20, 20);
+            expect(axis.min).toBeLessThan(20);
+            expect(axis.max).toBeGreaterThan(20);
         });
 
-        it('hauria de donar un marge del 10% per temperatura', () => {
-            const values = [10, 20]; // Rang de 10
-            const domain = calculateYDomain(values, 'temp');
+        it('no arrossega errors de coma flotant a les marques (0,1 + 0,2 ≠ 0,30000000000000004)', () => {
+            const axis = calculateNiceTicks(0, 0.6, { target: 3 });
+            for (const t of axis.ticks) expect(t).toBe(Number(t.toFixed(6)));
+        });
+    });
 
-            // Marge = 10 * 0.1 = 1.
-            // Min = 10 - 1 = 9
-            // Max = 20 + 1 = 21
-            expect(domain.min).toBe(9);
-            expect(domain.max).toBe(21);
+    describe('calculateAxis', () => {
+        it('la probabilitat (i humitat/núvols) va SEMPRE de 0 a 100', () => {
+            expect(calculateAxis([12, 40], 'rain')).toEqual({ min: 0, max: 100, ticks: [0, 50, 100] });
+            expect(calculateAxis([], 'humidity').max).toBe(100);
+        });
+
+        it("el volum de pluja parteix de zero i té un mínim d'1 mm (un plugim no omple el gràfic)", () => {
+            const drizzle = calculateAxis([0, 0.1], 'precip');
+            expect(drizzle.min).toBe(0);
+            expect(drizzle.max).toBeGreaterThanOrEqual(1);
+            const storm = calculateAxis([0, 8.5], 'precip');
+            expect(storm.max).toBeGreaterThanOrEqual(8.5);
+            expect(storm.max).toBeLessThanOrEqual(12);
+        });
+
+        it("el vent parteix de zero i té un mínim de 10 km/h (una calma no s'escala fins a semblar ventada)", () => {
+            const calm = calculateAxis([2, 4], 'wind');
+            expect(calm.min).toBe(0);
+            expect(calm.max).toBeGreaterThanOrEqual(10);
+            expect(calculateAxis([5, 27], 'wind').max).toBeGreaterThanOrEqual(27);
+        });
+
+        it("la temperatura s'ajusta al rang real (no parteix de zero)", () => {
+            const axis = calculateAxis([12.6, 27], 'temp');
+            expect(axis.min).toBeGreaterThan(0);
+            expect(axis.min).toBeLessThanOrEqual(12.6);
+            expect(axis.max).toBeGreaterThanOrEqual(27);
+        });
+
+        it("la cota de neu s'ajusta al rang, en metres", () => {
+            const axis = calculateAxis([1480, 4530], 'snowLevel');
+            expect(axis.min).toBeLessThanOrEqual(1480);
+            expect(axis.max).toBeGreaterThanOrEqual(4530);
+        });
+
+        it('sense valors, un eix per defecte en lloc de petar', () => {
+            expect(calculateAxis([], 'temp').ticks.length).toBeGreaterThan(1);
+            expect(calculateAxis([Number.NaN], 'wind').ticks.length).toBeGreaterThan(1);
+        });
+    });
+
+    // 1b. MARGES PROPIS I CONVERSIONS X ↔ ÍNDEX
+    describe('marges i coordenades', () => {
+        const dims = { width: 200, height: 100, paddingX: 10, paddingY: 10, paddingLeft: 40, paddingRight: 20, paddingTop: 30, paddingBottom: 20 };
+
+        it('els marges propis manen sobre paddingX/paddingY; sense ells, els simètrics de sempre', () => {
+            expect(indexToX(0, 5, dims)).toBe(40);
+            expect(indexToX(4, 5, dims)).toBe(180);
+            expect(indexToX(0, 5, { width: 200, height: 100, paddingX: 10, paddingY: 10 })).toBe(10);
+            expect(indexToX(4, 5, { width: 200, height: 100, paddingX: 10, paddingY: 10 })).toBe(190);
+        });
+
+        it('valueToY: el mínim del domini cau a la base útil i el màxim al sostre útil', () => {
+            expect(valueToY(0, dims, { min: 0, max: 10 })).toBe(80);
+            expect(valueToY(10, dims, { min: 0, max: 10 })).toBe(30);
+        });
+
+        it("xToIndex és la inversa d'indexToX i mai surt de la sèrie", () => {
+            for (let i = 0; i < 24; i++) expect(xToIndex(indexToX(i, 24, dims), 24, dims)).toBe(i);
+            expect(xToIndex(-500, 24, dims)).toBe(0);
+            expect(xToIndex(5000, 24, dims)).toBe(23);
+            expect(xToIndex(100, 1, dims)).toBe(0);
+        });
+
+        it('generateGraphPoints usa els marges propis i retalla al sostre útil, no al paddingY', () => {
+            const pts = generateGraphPoints([{ time: 't0', v: 0 }, { time: 't1', v: 1000 }], dims, { min: 0, max: 10 }, 'v');
+            expect(pts[0].x).toBe(40);
+            expect(pts[0].y).toBe(80);
+            expect(pts[1].x).toBe(180);
+            expect(pts[1].y).toBe(30);
         });
     });
 

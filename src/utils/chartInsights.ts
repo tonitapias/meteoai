@@ -162,9 +162,34 @@ export interface ChartInsights {
         agreement: AgreementLevel | null;
     };
     snowLevel: {
+        /** Cota mínima i màxima de la línia principal (m). */
+        low: PeakFigure | null;
+        high: PeakFigure | null;
+        averageSpread: number | null;
         agreement: AgreementLevel | null;
     };
 }
+
+export type SnowLevelDisplay =
+    /** Hi ha cota amb valors dins del que val la pena dibuixar. */
+    | 'chart'
+    /** Tota la finestra té la cota per sobre del límit de visualització: no hi ha neu prevista. */
+    | 'above-cap'
+    /** Cap hora amb cota (cap model en publica). */
+    | 'no-data';
+
+/**
+ * Si val la pena dibuixar el gràfic de la cota de neu. A l'estiu la cota és a 4.500 m tota la finestra: una
+ * línia plana a dalt de tot no diu res, i el que cal és dir-ho en una frase. `cap` és el límit a partir del
+ * qual l'app deixa de mostrar cota (WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL).
+ */
+export const classifySnowLevel = (primary: HourlyChartPoint[], cap: number): SnowLevelDisplay => {
+    const levels = primary
+        .map(p => p.snowLevel)
+        .filter((v): v is number => typeof v === 'number' && !Number.isNaN(v));
+    if (levels.length === 0) return 'no-data';
+    return levels.every(v => v > cap) ? 'above-cap' : 'chart';
+};
 
 export const buildChartInsights = (primary: HourlyChartPoint[], comparison: ComparisonSeries | null): ChartInsights => {
     const models = activeModels(comparison);
@@ -208,6 +233,9 @@ export const buildChartInsights = (primary: HourlyChartPoint[], comparison: Comp
             agreement: levelOf(averageSpread(comparison, 'wind'), AGREEMENT_THRESHOLDS.wind)
         },
         snowLevel: {
+            low: peak(primary, 'snowLevel', 'min'),
+            high: peak(primary, 'snowLevel', 'max'),
+            averageSpread: averageSpread(comparison, 'snowLevel'),
             agreement: levelOf(averageSpread(comparison, 'snowLevel'), AGREEMENT_THRESHOLDS.snowLevel)
         }
     };

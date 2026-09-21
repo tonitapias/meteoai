@@ -5,6 +5,7 @@ import {
     averageSpread,
     buildChartInsights,
     isSeriesIdentical,
+    classifySnowLevel,
     maxSpread,
     modelsIdenticalToPrimary,
     type ComparisonSeries
@@ -14,7 +15,7 @@ import type { HourlyChartPoint } from './hourlyChartSeries';
 const N = 24;
 const pt = (i: number, over: Partial<HourlyChartPoint> = {}): HourlyChartPoint => ({
     time: `2026-09-21T${String(i % 24).padStart(2, '0')}:00`,
-    temp: null, rain: null, precip: null, wind: null, gusts: null, snowLevel: null, regional: false,
+    temp: null, rain: null, precip: null, wind: null, gusts: null, snowLevel: null, regional: false, isDay: true,
     ...over
 });
 const series = (f: (i: number) => Partial<HourlyChartPoint>): HourlyChartPoint[] => Array.from({ length: N }, (_, i) => pt(i, f(i)));
@@ -192,3 +193,29 @@ describe('models idèntics a la línia principal (best_match = ICON al sud d\'Eu
         expect(buildChartInsights(primary, c).temp.agreement).toBe('low');
     });
 });
+
+describe('cota de neu', () => {
+    it("mínima i màxima de la línia principal amb la seva hora, i acord entre GFS i ICON", () => {
+        const primary = series(i => ({ snowLevel: 1500 + i * 100 }));
+        const c = cmp({ gfs: series(i => ({ snowLevel: 1500 + i * 100 })), icon: series(i => ({ snowLevel: 1550 + i * 100 })) });
+        const s = buildChartInsights(primary, c).snowLevel;
+        expect(s.low).toEqual({ value: 1500, index: 0 });
+        expect(s.high).toEqual({ value: 3800, index: 23 });
+        expect(s.averageSpread).toBeCloseTo(50, 10);
+        expect(s.agreement).toBe('high');
+    });
+
+    it("classifySnowLevel: sense cap cota, 'no-data'; tot per sobre del límit, 'above-cap'; si no, 'chart'", () => {
+        expect(classifySnowLevel(series(() => ({})), 3500)).toBe('no-data');
+        expect(classifySnowLevel([], 3500)).toBe('no-data');
+        expect(classifySnowLevel(series(() => ({ snowLevel: 4500 })), 3500)).toBe('above-cap');
+        expect(classifySnowLevel(series(i => ({ snowLevel: i === 10 ? 3400 : 4500 })), 3500)).toBe('chart');
+        // Exactament al límit ja és visible (no "per sobre").
+        expect(classifySnowLevel(series(() => ({ snowLevel: 3500 })), 3500)).toBe('chart');
+    });
+
+    it("les hores sense cota no impedeixen classificar les que en tenen", () => {
+        expect(classifySnowLevel(series(i => ({ snowLevel: i < 12 ? null : 4000 })), 3500)).toBe('above-cap');
+    });
+});
+

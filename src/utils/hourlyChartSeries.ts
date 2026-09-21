@@ -42,6 +42,8 @@ export type HourlyChartPoint = {
      * Sempre false a les sèries de models de comparació, que són globals.
      */
     regional: boolean;
+    /** De dia (true) o de nit (false) segons `is_day` de l'API; serveix per ombrejar la nit als gràfics. */
+    isDay: boolean;
 };
 
 export interface HourlyChartSeries {
@@ -121,7 +123,8 @@ export const buildHourlyChartSeries = (
             wind: read('wind_speed_10m'),
             gusts: read('wind_gusts_10m'),
             snowLevel: calculateSnowLevel(snowSource),
-            regional
+            regional,
+            isDay
         };
     };
 
@@ -165,4 +168,15 @@ export const buildHourlyChartSeries = (
     }
 
     return { primary, comparison: anyModelHasData ? comparison : null };
+};
+
+/**
+ * Posició de l'hora actual dins d'una sèrie ("ara"), o null si l'hora no hi és (p. ex. el detall d'un dia
+ * que no és avui). `currentTime` és el `current.time` de l'API ("2026-09-21T15:45"): es compara per hora.
+ */
+export const findNowIndex = (points: ReadonlyArray<{ time: string }>, currentTime: unknown): number | null => {
+    if (typeof currentTime !== 'string' || currentTime.length < 13) return null;
+    const hourPrefix = currentTime.slice(0, 13);
+    const index = points.findIndex(p => p.time.startsWith(hourPrefix));
+    return index === -1 ? null : index;
 };

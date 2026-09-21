@@ -2,6 +2,7 @@
 import { lazy, Suspense } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { getSafeLatitude } from '../../utils/weatherMath';
+import { findNowIndex } from '../../utils/hourlyChartSeries';
 import { isRegionalModelActive } from '../../constants/regionalModels';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 
@@ -160,6 +161,8 @@ export const DashboardContent = () => {
                                     unit={flags.unit === 'F' ? '°F' : '°C'}
                                     lang={flags.lang}
                                     regionalModelLabel={isRegionalModelActive(weatherData.current?.source) ? (weatherData.current.source as string) : null}
+                                    nowIndex={findNowIndex(calculations.chartSeries?.primary ?? [], weatherData.current?.time)}
+                                    updatedAt={weatherData.current?.time ?? null}
                                 />
                             </Suspense>
                         </div>

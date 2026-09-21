@@ -12,34 +12,109 @@ export interface GraphPoint {
     time: string;
 }
 
-interface ChartDimensions {
+export interface ChartDimensions {
     width: number;
     height: number;
     paddingX: number;
     paddingY: number;
+    /** Marges pròpies: si hi són manen sobre paddingX/paddingY (l'eix Y necessita més marge a l'esquerra). */
+    paddingLeft?: number;
+    paddingRight?: number;
+    paddingTop?: number;
+    paddingBottom?: number;
 }
 
-export const calculateYDomain = (values: number[], layer: string): { min: number; max: number } => {
-    if (values.length === 0) return { min: 0, max: 100 };
+/** Domini de l'eix Y i les marques (valors) on dibuixar les línies de quadrícula. */
+export interface ChartAxis {
+    min: number;
+    max: number;
+    ticks: number[];
+}
 
-    let min = Math.min(...values);
-    let max = Math.max(...values);
+const resolvePadding = (dims: ChartDimensions) => ({
+    left: dims.paddingLeft ?? dims.paddingX,
+    right: dims.paddingRight ?? dims.paddingX,
+    top: dims.paddingTop ?? dims.paddingY,
+    bottom: dims.paddingBottom ?? dims.paddingY
+});
 
-    if (layer === 'rain' || layer === 'humidity' || layer === 'cloud') {
-        min = 0;
-        max = 110; 
-    } else if (layer === 'precip') {
-        min = 0;
-        // CANVI RADICAL: Marge doble (2.0) per absorbir pics de pluja sense tocar sostre.
-        const actualMax = Math.max(max, 1); 
-        max = actualMax * 2.0; 
-    } else {
-        const range = max - min || 1;
-        min -= range * 0.1;
-        max += range * 0.1;
+/** X d'una posició de la sèrie (0 = primera hora), repartides per l'àrea útil del gràfic. */
+export const indexToX = (index: number, count: number, dims: ChartDimensions): number => {
+    const { left, right } = resolvePadding(dims);
+    return left + (index / (Math.max(count, 2) - 1)) * (dims.width - left - right);
+};
+
+/** Posició de la sèrie més propera a una X (píxels dins el gràfic), dins de [0, count − 1]. */
+export const xToIndex = (x: number, count: number, dims: ChartDimensions): number => {
+    const { left, right } = resolvePadding(dims);
+    const span = dims.width - left - right;
+    if (span <= 0 || count <= 1) return 0;
+    const i = Math.round(((x - left) / span) * (Math.max(count, 2) - 1));
+    return Math.max(0, Math.min(count - 1, i));
+};
+
+/** Y d'un valor dins el domini, SENSE retallar (la retallada és cosa de generateGraphPoints). */
+export const valueToY = (value: number, dims: ChartDimensions, domain: { min: number; max: number }): number => {
+    const { top, bottom } = resolvePadding(dims);
+    const rng = domain.max - domain.min || 1;
+    return dims.height - bottom - ((value - domain.min) / rng) * (dims.height - top - bottom);
+};
+
+export interface NiceTicksOptions {
+    /** Nombre de trams que es vol aproximadament (per defecte 4). */
+    target?: number;
+    /** Multiplicadors "rodons" del pas dins d'una dècada (per defecte 1, 2, 5, 10). */
+    steps?: readonly number[];
+}
+
+/**
+ * Domini i marques amb valors "rodons" (12, 16, 20, 24, 28) que contenen tots els valors. Un rang sense
+ * amplada (tots els valors iguals) s'obre una mica perquè hi hagi eix.
+ */
+export const calculateNiceTicks = (min: number, max: number, options: NiceTicksOptions = {}): ChartAxis => {
+    const target = options.target ?? 4;
+    const steps = options.steps ?? [1, 2, 5, 10];
+
+    let lo = min;
+    let hi = max;
+    if (hi - lo <= 0) {
+        const pad = Math.max(Math.abs(lo) * 0.05, 1);
+        lo -= pad;
+        hi += pad;
     }
 
-    return { min, max };
+    const rawStep = (hi - lo) / target;
+    const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+    const step = (steps.find(s => s * magnitude >= rawStep * (1 - 1e-9)) ?? 10) * magnitude;
+
+    const first = Math.floor(lo / step + 1e-9) * step;
+    const last = Math.ceil(hi / step - 1e-9) * step;
+    const ticks: number[] = [];
+    for (let v = first; v <= last + step * 1e-6; v += step) ticks.push(Number(v.toFixed(6)));
+
+    return { min: ticks[0], max: ticks[ticks.length - 1], ticks };
+};
+
+/**
+ * Eix Y de cada capa. La probabilitat (i humitat/núvols) és sempre 0–100; el volum de pluja, el vent i la
+ * cota parteixen de zero o d'un rang mínim perquè un plugim de 0,1 mm o una calma de 3 km/h no omplin
+ * el gràfic; la resta (temperatura, cota de neu) s'ajusta als valors.
+ */
+export const calculateAxis = (values: number[], layer: string): ChartAxis => {
+    if (layer === 'rain' || layer === 'humidity' || layer === 'cloud') {
+        return { min: 0, max: 100, ticks: [0, 50, 100] };
+    }
+
+    const finite = values.filter(v => Number.isFinite(v));
+    if (finite.length === 0) return { min: 0, max: 10, ticks: [0, 5, 10] };
+
+    const lo = Math.min(...finite);
+    const hi = Math.max(...finite);
+
+    if (layer === 'precip') return calculateNiceTicks(0, Math.max(hi, 1));
+    if (layer === 'wind') return calculateNiceTicks(0, Math.max(hi, 10));
+    if (layer === 'snowLevel') return calculateNiceTicks(lo, hi);
+    return calculateNiceTicks(lo, hi, { steps: [1, 2, 4, 5, 10] });
 };
 
 export const generateGraphPoints = (
@@ -48,17 +123,15 @@ export const generateGraphPoints = (
     domain: { min: number; max: number },
     dataKey: string
 ): GraphPoint[] => {
-    const { width, height, paddingX, paddingY } = dims;
-    const { min, max } = domain;
-    const rng = max - min || 1;
+    const { height } = dims;
+    const { top } = resolvePadding(dims);
 
     const calcY = (val: number | null) => {
         if (val === null) return height + 10;
-        
-        const rawY = height - paddingY - ((val - min) / rng) * (height - 2 * paddingY);
+
         // CLAMPING: Això és el que realment protegeix de sortir de la gràfica.
-        // Assegura que cap punt estigui per sobre del marge superior (paddingY).
-        return Math.max(paddingY, rawY); 
+        // Assegura que cap punt estigui per sobre del marge superior.
+        return Math.max(top, valueToY(val, dims, domain));
     };
 
     return data.map((d, i) => {
@@ -77,7 +150,7 @@ export const generateGraphPoints = (
         }
 
         return {
-            x: paddingX + (i / (Math.max(data.length, 2) - 1)) * (width - 2 * paddingX),
+            x: indexToX(i, data.length, dims),
             y: calcY(val),
             value: val,
             time: d.time

@@ -105,6 +105,15 @@ describe('useDayDetailData: gràfic del detall de dia', () => {
         expect(none.result.current.snowLevelText).toBe('---');
     });
 
+    it("nowIndex és l'hora actual dins el dia si el dia és avui (current.time = 2026-01-15T00:00) i null si no ho és", () => {
+        const today = renderHook(() => useDayDetailData(data, 0));
+        expect(today.result.current.nowIndex).toBe(0);
+        const tomorrow = renderHook(() => useDayDetailData(data, 1));
+        expect(tomorrow.result.current.nowIndex).toBeNull();
+        const none = renderHook(() => useDayDetailData(null, null));
+        expect(none.result.current.nowIndex).toBeNull();
+    });
+
     it('la cota de neu del resum surt de la mateixa sèrie que dibuixa el gràfic', () => {
         const { result } = renderHook(() => useDayDetailData(data, 0));
         // freezing_level 1500 m − buffer de cota → mateix valor a totes les hores → "NNNm" sense rang.

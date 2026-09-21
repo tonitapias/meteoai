@@ -87,7 +87,7 @@ export default function DayDetailModal({
     colWind: lang === 'en' ? 'WIND' : lang === 'es' ? 'VIENTO' : 'VENT'
   }), [lang]);
 
-  const { dayData, hourlyData, comparisonData, snowLevelText, dayIndices } = useDayDetailData(weatherData, selectedDayIndex, unit);
+  const { dayData, hourlyData, comparisonData, snowLevelText, dayIndices, nowIndex } = useDayDetailData(weatherData, selectedDayIndex, unit);
 
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target === e.currentTarget) {
@@ -368,6 +368,7 @@ export default function DayDetailModal({
                       unit={unit === 'F' ? '°F' : '°C'} 
                       lang={lang} 
                       regionalModelLabel={isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null}
+                      nowIndex={nowIndex}
                    />
                </div>
             </div>

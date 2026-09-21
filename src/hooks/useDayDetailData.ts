@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { WeatherUnit } from '../utils/formatters';
-import { buildHourlyChartSeries } from '../utils/hourlyChartSeries';
+import { buildHourlyChartSeries, findNowIndex } from '../utils/hourlyChartSeries';
 
 export const useDayDetailData = (
   weatherData: ExtendedWeatherData | null,
@@ -52,6 +52,9 @@ export const useDayDetailData = (
   const hourlyData = useMemo(() => chartSeries?.primary ?? [], [chartSeries]);
   const comparisonData = chartSeries?.comparison ?? null;
 
+  // Posició d'"ara" dins les hores d'aquest dia: només si el dia és avui (si no, no hi ha cap marca).
+  const nowIndex = useMemo(() => findNowIndex(hourlyData, weatherData?.current?.time), [hourlyData, weatherData]);
+
   const snowLevelText = useMemo(() => {
      const levels = hourlyData
         .map(d => d.snowLevel)
@@ -71,5 +74,5 @@ export const useDayDetailData = (
   // [NETEJA] Exposem dayIndices perquè DayDetailModal.tsx el pugui reutilitzar a
   // tableRows en lloc de recalcular "les 24 hores del dia" amb una lògica pròpia
   // que assumia un bloc contigu de 24 posicions.
-  return { dayData, hourlyData, comparisonData, snowLevelText, dayIndices };
+  return { dayData, hourlyData, comparisonData, snowLevelText, dayIndices, nowIndex };
 };

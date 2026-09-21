@@ -1,6 +1,6 @@
 // src/utils/hourlyChartSeries.test.ts
 import { describe, it, expect } from 'vitest';
-import { buildHourlyChartSeries } from './hourlyChartSeries';
+import { buildHourlyChartSeries, findNowIndex } from './hourlyChartSeries';
 import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
 import { calculateSnowLevel } from './rules/winterRules';
 import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
@@ -194,6 +194,27 @@ describe('buildHourlyChartSeries', () => {
             const none = buildHourlyChartSeries(makeData(calmClearNight(), { gfs: empty, icon: empty }), idx, 'C');
             expect(none.comparison).toBeNull();
             expect(buildHourlyChartSeries(makeData(calmClearNight()), idx, 'C').comparison).toBeNull();
+        });
+    });
+
+    describe('isDay i "ara"', () => {
+        it("cada punt porta si és de dia o de nit (la principal, del seu is_day; un model, del seu o el de la principal)", () => {
+            const flags = [0, 0, 1, 1, 0, 0];
+            const rows = modelRows().map((r, i) => (i === 3 ? { ...r, is_day: null } : { ...r, is_day: flags[i] }));
+            const { primary, comparison } = buildHourlyChartSeries(makeData(calmClearNight({ is_day: flags }), { gfs: rows }), idx, 'C');
+            expect(primary.map(p => p.isDay)).toEqual([false, false, true, true, false, false]);
+            // A l'índex 3 el model no publica is_day: hereta el de la principal (de dia).
+            expect(comparison?.gfs.map(p => p.isDay)).toEqual([false, false, true, true, false, false]);
+        });
+
+        it("findNowIndex troba l'hora actual per hora (no per minut) i és null si no hi és", () => {
+            const points = timesOf('2026-01-15').map(time => ({ time }));
+            expect(findNowIndex(points, '2026-01-15T03:45')).toBe(3);
+            expect(findNowIndex(points, '2026-01-15T03:00')).toBe(3);
+            expect(findNowIndex(points, '2026-01-16T03:00')).toBeNull();
+            expect(findNowIndex(points, undefined)).toBeNull();
+            expect(findNowIndex(points, '2026-01')).toBeNull();
+            expect(findNowIndex([], '2026-01-15T03:00')).toBeNull();
         });
     });
 
