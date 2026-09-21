@@ -71,6 +71,10 @@ export interface SmartForecastText {
         above: string;
         noData: string;
     };
+    strip: {
+        /** Text de la franja de lectura (mòbil) quan encara no hi ha cap hora per mostrar. */
+        hint: string;
+    };
 }
 
 export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
@@ -116,6 +120,9 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         snow: {
             above: 'Sense neu prevista: la cota és per sobre de {cap} m durant tota la finestra.',
             noData: 'Cap model publica la cota de neu per a aquestes hores.'
+        },
+        strip: {
+            hint: 'Arrossega el dit per sobre del gràfic per veure les dades de cada hora.'
         }
     },
     es: {
@@ -160,6 +167,9 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         snow: {
             above: 'Sin nieve prevista: la cota está por encima de {cap} m durante toda la ventana.',
             noData: 'Ningún modelo publica la cota de nieve para estas horas.'
+        },
+        strip: {
+            hint: 'Arrastra el dedo sobre el gráfico para ver los datos de cada hora.'
         }
     },
     en: {
@@ -204,6 +214,9 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         snow: {
             above: 'No snow expected: the snow level is above {cap} m for the whole window.',
             noData: 'No model publishes the snow level for these hours.'
+        },
+        strip: {
+            hint: 'Drag your finger across the chart to see the data for each hour.'
         }
     },
     fr: {
@@ -248,6 +261,9 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         snow: {
             above: 'Pas de neige prévue : la cote est au-dessus de {cap} m sur toute la fenêtre.',
             noData: 'Aucun modèle ne publie la cote de neige pour ces heures.'
+        },
+        strip: {
+            hint: 'Faites glisser le doigt sur le graphique pour voir les données de chaque heure.'
         }
     }
 };

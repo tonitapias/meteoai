@@ -329,3 +329,136 @@ describe('SmartForecastCharts: mòbil', () => {
         expect(screen.getAllByText('14:00').length).toBeGreaterThan(0);
     });
 });
+
+describe('SmartForecastCharts: franja de lectura (mòbil)', () => {
+    const strip = () => screen.getByTestId('readout-strip');
+    const mobileTree = (container: HTMLElement) => container.querySelectorAll('.md\\:hidden')[1] as HTMLElement;
+
+    it("en repòs mostra les dades d'ARA i ho diu amb l'etiqueta ARA", () => {
+        renderCharts({ nowIndex: 0 });
+        expect(within(strip()).getByTestId('readout-now')).toHaveTextContent('ARA');
+        expect(strip()).toHaveTextContent('14:00 · dl. 21');
+        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('AROME HD');
+        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('20°C');
+    });
+
+    it("sense cap hora d'ARA (p. ex. el detall d'un altre dia) no s'inventa cap hora: mostra el text d'ajuda", () => {
+        renderCharts();
+        expect(strip()).toHaveTextContent('Arrossega el dit per sobre del gràfic per veure les dades de cada hora.');
+        expect(screen.queryByTestId('readout-now')).toBeNull();
+        expect(within(strip()).queryByTestId('readout-primary')).toBeNull();
+    });
+
+    it("un ARA que no és dins la sèrie tampoc s'inventa res", () => {
+        renderCharts({ nowIndex: 99 });
+        expect(strip()).toHaveTextContent('Arrossega el dit');
+        expect(screen.queryByTestId('readout-now')).toBeNull();
+    });
+
+    it("en tocar una hora mostra les dades d'AQUELLA hora de cada model i deixa d'estar en repòs", () => {
+        const { container } = renderCharts({ nowIndex: 0 });
+        hoverHour(container, 12);
+        expect(strip()).toHaveTextContent('02:00 · dt. 22');
+        expect(screen.queryByTestId('readout-now')).toBeNull();
+        const s = within(strip());
+        expect(s.getByTestId('readout-primary')).toHaveTextContent('23°C');
+        expect(s.getByTestId('readout-ecmwf')).toHaveTextContent('22°C');
+        expect(s.getByTestId('readout-gfs')).toHaveTextContent('25°C');
+        expect(s.getByTestId('readout-icon')).toHaveTextContent('21°C');
+        expect(s.getByTestId('readout-aifs')).toHaveTextContent('24°C');
+    });
+
+    it("el nom de la línia principal és el del model REAL d'aquella hora (regional o global)", () => {
+        const { container } = renderCharts();
+        hoverHour(container, 3);
+        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('AROME HD');
+        hoverHour(container, 18);
+        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('MODEL GLOBAL');
+    });
+
+    it("a mòbil el cartell flotant ja no tapa el gràfic (les dades surten a la franja), però a escriptori es manté", () => {
+        const { container } = renderCharts();
+        hoverHour(container, 3);
+        // El cartell flotant etiqueta els models amb dos punts ("ECMWF:"); la franja, sense.
+        expect(within(mobileTree(container)).queryByText('ECMWF:')).toBeNull();
+        expect(screen.getAllByText('ECMWF:').length).toBeGreaterThan(0);
+        // El cursor (línia i punts sobre la corba) es dibuixa igualment a mòbil.
+        expect(mobileTree(container).querySelectorAll('svg circle').length).toBeGreaterThan(0);
+    });
+
+    it("respecta els models amagats a la llegenda", () => {
+        const { container } = renderCharts();
+        fireEvent.click(screen.getByTestId('legend-gfs'));
+        hoverHour(container, 3);
+        expect(within(strip()).queryByTestId('readout-gfs')).toBeNull();
+        expect(within(strip()).getByTestId('readout-ecmwf')).toBeInTheDocument();
+    });
+
+    it("a la pluja hi ha UNA sola franja amb volum i probabilitat de cada model (AIFS, només el volum)", () => {
+        const { container } = renderCharts();
+        fireEvent.click(screen.getByRole('button', { name: 'PLUJA' }));
+        expect(screen.getAllByTestId('readout-strip')).toHaveLength(1);
+        hoverHour(container, 8);
+        const s = within(strip());
+        expect(s.getByTestId('readout-primary')).toHaveTextContent('1,2 mm · 10 %');
+        expect(s.getByTestId('readout-ecmwf')).toHaveTextContent('0,0 mm · 10 %');
+        expect(s.getByTestId('readout-aifs')).toHaveTextContent('0,0 mm');
+        expect(s.getByTestId('readout-aifs')).not.toHaveTextContent('%');
+    });
+
+    it("al vent afegeix la ràfega", () => {
+        const { container } = renderCharts();
+        fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
+        hoverHour(container, 3);
+        expect(within(strip()).getByTestId('readout-gust')).toHaveTextContent('20 km/h');
+        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('10 km/h');
+    });
+
+    it("sense ràfegues a les dades, no hi ha xip de ràfega (ni un 0 km/h)", () => {
+        const noGusts = primary.map(p => ({ ...p, gusts: null }));
+        const { container } = renderCharts({ data: noGusts });
+        fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
+        hoverHour(container, 3);
+        expect(within(strip()).queryByTestId('readout-gust')).toBeNull();
+    });
+
+    it("a la cota de neu diu la cota de cada model que en publica (AIFS no)", () => {
+        const { container } = renderCharts();
+        fireEvent.click(screen.getByRole('button', { name: 'Cota de neu' }));
+        hoverHour(container, 3);
+        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('3.000 m');
+        expect(within(strip()).getByTestId('readout-gfs')).toHaveTextContent('3.000 m');
+        expect(within(strip()).queryByTestId('readout-aifs')).toBeNull();
+    });
+
+    it("la cota de neu compacta (estiu) no porta franja: no hi ha cap gràfic per llegir", () => {
+        const summer = primary.map(p => ({ ...p, snowLevel: 4500 }));
+        renderCharts({ data: summer, comparisonData: null });
+        fireEvent.click(screen.getByRole('button', { name: 'Cota de neu' }));
+        expect(screen.queryByTestId('readout-strip')).toBeNull();
+    });
+
+    it("la franja té alçada fixa per pestanya, perquè el gràfic de sota no es mogui mentre s'arrossega", () => {
+        const { container } = renderCharts({ nowIndex: 0 });
+        expect(strip().style.minHeight).toBe('96px');
+        hoverHour(container, 5);
+        expect(strip().style.minHeight).toBe('96px');
+        fireEvent.click(screen.getByRole('button', { name: 'PLUJA' }));
+        expect(strip().style.minHeight).toBe('132px');
+    });
+
+    it("en canviar de pestanya la franja torna a l'estat de repòs (ARA) en lloc d'arrossegar l'última hora tocada", () => {
+        const { container } = renderCharts({ nowIndex: 0 });
+        hoverHour(container, 12);
+        expect(screen.queryByTestId('readout-now')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
+        expect(screen.getByTestId('readout-now')).toHaveTextContent('ARA');
+        expect(strip()).toHaveTextContent('14:00 · dl. 21');
+    });
+
+    it("els textos de la franja surten en l'idioma de l'usuari", () => {
+        renderCharts({ lang: 'en' });
+        expect(strip()).toHaveTextContent('Drag your finger across the chart to see the data for each hour.');
+    });
+});
+

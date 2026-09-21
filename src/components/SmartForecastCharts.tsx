@@ -35,6 +35,7 @@ import { CHART_MODEL_KEYS, type ChartModelKey, type HourlyChartPoint } from '../
 import { getSafeLocale } from '../utils/formatters';
 import { getSmartForecastText, type SmartForecastText } from './smartForecastI18n';
 import { SmartChartLegend, type LegendModel } from './SmartChartLegend';
+import { SmartChartReadout, type ReadoutChip } from './SmartChartReadout';
 import { MATRIX_BG } from './widgets/widgetStyles';
 
 type ChartLayer = 'temp' | 'rain' | 'precip' | 'wind' | 'cloud' | 'humidity' | 'snowLevel';
@@ -72,6 +73,12 @@ interface SingleHourlyChartProps {
     regionalModelLabel?: string | null;
     /** Posició d'"ara" dins la sèrie, si hi és: línia vertical, punt a la línia i "ARA" a l'eix. */
     nowIndex?: number | null;
+    /**
+     * Cartell flotant amb les dades de l'hora. A mòbil és false: allà les dades surten a la franja fixa de
+     * sobre del gràfic (SmartChartReadout), perquè el cartell tapava mig gràfic. La línia i els punts del
+     * cursor es dibuixen igualment.
+     */
+    showTooltip?: boolean;
 }
 
 interface LayerConfig {
@@ -103,7 +110,7 @@ const formatRawTime = (isoString: string | null | undefined): string => {
      }
 };
 
-const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca', title, regionalModelLabel, nowIndex = null }: SingleHourlyChartProps) => {
+const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels, layer, unit, hoveredIndex, setHoveredIndex, height = 160, lang = 'ca', title, regionalModelLabel, nowIndex = null, showTooltip = true }: SingleHourlyChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState<number>(1000);
@@ -273,8 +280,8 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
          {title ?? currentConfig.title}
       </div>
 
-      {/* Cartell Emergent HUD (Spatial UI Mobile-First) */}
-      {hoverData && hoverData.value !== null && (
+      {/* Cartell Emergent HUD (escriptori; a mòbil, la franja de lectura de sobre del gràfic) */}
+      {showTooltip && hoverData && hoverData.value !== null && (
         <div
           className="absolute z-20 pointer-events-none flex flex-col rounded-xl bg-[#050608]/95 backdrop-blur-xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-75 ease-out overflow-hidden"
           style={{
@@ -641,7 +648,57 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
   const toggleModel = (key: ChartModelKey) =>
       setHiddenByUser(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
 
-  const chartEl = (layer: ChartLayer, chartUnit: string, height: number, extra: Partial<SingleHourlyChartProps> = {}) => (
+  // Franja de lectura (mòbil): les dades de l'hora tocada o, en repòs, les d'ARA mateix. Surt de la MATEIXA
+  // sèrie que el gràfic i respecta els models que l'usuari ha amagat a la llegenda.
+  const stripIndex = hoveredIndex ?? (nowIndex !== null && nowIndex >= 0 && nowIndex < data.length ? nowIndex : null);
+  const oneDecimal = (v: number): string => v.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const readoutChips = (tab: ChartTab, i: number): ReadoutChip[] => {
+      const point = data[i];
+      if (!point) return [];
+      const primaryColor = tab === 'temp' ? CHART_COLORS.temp.color
+          : tab === 'rain' ? CHART_COLORS.rain.color
+          : tab === 'wind' ? CHART_COLORS.wind.color
+          : CHART_COLORS.snowLevel.color;
+      const format = (p: HourlyChartPoint): string | null => {
+          if (tab === 'temp') return p.temp === null ? null : `${Math.round(p.temp)}${unit}`;
+          if (tab === 'wind') return p.wind === null ? null : `${Math.round(p.wind)} km/h`;
+          if (tab === 'snow') return p.snowLevel === null ? null : meters(p.snowLevel);
+          // Pluja: volum i probabilitat junts ("0,4 mm · 55 %"); un model sense probabilitat (AIFS) només en porta el volum.
+          const mm = p.precip === null ? null : `${oneDecimal(p.precip)} mm`;
+          const pct = p.rain === null ? null : `${Math.round(p.rain)} %`;
+          return mm !== null && pct !== null ? `${mm} · ${pct}` : (mm ?? pct);
+      };
+      const chips: ReadoutChip[] = [{
+          key: 'primary',
+          label: point.regional && regionalModelLabel ? regionalModelLabel : text.globalModel,
+          color: primaryColor,
+          value: format(point) ?? '—',
+          primary: true
+      }];
+      if (tab === 'wind' && point.gusts !== null) {
+          chips.push({ key: 'gust', label: text.gust, color: primaryColor, value: `${Math.round(point.gusts)} km/h` });
+      }
+      for (const key of drawnModels) {
+          const modelPoint = comparisonData?.[key]?.[i];
+          const value = modelPoint ? format(modelPoint) : null;
+          if (value !== null) chips.push({ key, label: MODEL_STYLE[key].label, color: MODEL_STYLE[key].color, value });
+      }
+      return chips;
+  };
+  // Alçada fixa per pestanya (la pluja porta "mm · %" a cada model i ocupa més files): el gràfic no es mou.
+  const STRIP_MIN_HEIGHT: Record<ChartTab, number> = { temp: 96, rain: 132, wind: 96, snow: 96 };
+  const readoutEl = activeTab === 'snow' && snowDisplay !== 'chart' ? null : (
+      <SmartChartReadout
+          title={stripIndex !== null ? `${formatRawTime(data[stripIndex]?.time)} · ${formatDayLabel(data[stripIndex]?.time ?? '', locale)}` : null}
+          isNow={hoveredIndex === null && stripIndex !== null}
+          nowLabel={text.legend.now}
+          chips={stripIndex !== null ? readoutChips(activeTab, stripIndex) : []}
+          hint={text.strip.hint}
+          minHeight={STRIP_MIN_HEIGHT[activeTab]}
+      />
+  );
+
+  const chartEl = (layer: ChartLayer, chartUnit: string, height: number, mobile: boolean, extra: Partial<SingleHourlyChartProps> = {}) => (
       <SingleHourlyChart
           data={data}
           comparisonData={comparisonData}
@@ -655,6 +712,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           lang={lang}
           regionalModelLabel={regionalModelLabel}
           nowIndex={nowIndex}
+          showTooltip={!mobile}
           {...extra}
       />
   );
@@ -668,7 +726,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           notes: identicalNote && <Note>{identicalNote}</Note>,
           charts: mobile => (
               <div style={{ height: mobile ? 260 : 384 }} className="w-full">
-                  {chartEl('temp', unit, mobile ? 260 : 384)}
+                  {chartEl('temp', unit, mobile ? 260 : 384, mobile)}
               </div>
           )
       },
@@ -682,11 +740,11 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           charts: mobile => (
               <div className="flex flex-col gap-3 w-full">
                   <div style={{ height: mobile ? 210 : 240 }} className="w-full">
-                      {chartEl('precip', 'mm', mobile ? 210 : 240, { title: text.volume })}
+                      {chartEl('precip', 'mm', mobile ? 210 : 240, mobile, { title: text.volume })}
                   </div>
                   {/* Prou alt perquè hi càpiga el cartell amb la principal i els 4 models (~190 px). */}
                   <div style={{ height: 220 }} className="w-full">
-                      {chartEl('rain', '%', 220)}
+                      {chartEl('rain', '%', 220, mobile)}
                   </div>
               </div>
           )
@@ -697,7 +755,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           notes: <Note>{[text.notes.gusts, identicalNote].filter(Boolean).join(' ')}</Note>,
           charts: mobile => (
               <div style={{ height: mobile ? 260 : 256 }} className="w-full">
-                  {chartEl('wind', 'km/h', mobile ? 260 : 256)}
+                  {chartEl('wind', 'km/h', mobile ? 260 : 256, mobile)}
               </div>
           )
       },
@@ -708,7 +766,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
               notes: identicalNote && <Note>{identicalNote}</Note>,
               charts: mobile => (
                   <div style={{ height: mobile ? 260 : 256 }} className="w-full">
-                      {chartEl('snowLevel', 'm', mobile ? 260 : 256)}
+                      {chartEl('snowLevel', 'm', mobile ? 260 : 256, mobile)}
                   </div>
               )
           }
@@ -730,7 +788,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           {tabs.map((tab) => (
               <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => { setActiveTab(tab.id); setHoveredIndex(null); }}
                   className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 flex-1 justify-center ${
                       activeTab === tab.id
                       ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-900/50 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transform scale-[1.02]'
@@ -760,6 +818,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           <div className="md:hidden w-full">
              {'agreement' in activeSection && <AgreementRow level={activeSection.agreement ?? null} text={text.agreement} />}
              {activeSection.figures && <KeyFigures items={activeSection.figures} />}
+             {readoutEl}
              {activeSection.charts(true)}
              {activeSection.notes}
           </div>
