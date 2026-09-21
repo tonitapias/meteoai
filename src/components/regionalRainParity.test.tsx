@@ -49,7 +49,7 @@ const baseData = () => ({
     },
 }) as unknown as ExtendedWeatherData;
 
-// El model regional (AROME HD) cobreix 48 h i preveu 1,2 mm a les 15 h del 22 de setembre (índex de dia 1).
+// El model regional (AROME HD) cobreix 48 h i preveu 1,2 mm a les 14, 15 i 16 h del 22 de setembre (índex de dia 1): 3,6 mm.
 const regionalData = () => {
     const times = HOURS.slice(0, 48);
     return {
@@ -57,7 +57,7 @@ const regionalData = () => {
         hourly: {
             time: times,
             temperature_2m: times.map(() => 25),
-            precipitation: times.map((_, i) => (i === 24 + 15 ? 1.2 : 0)),
+            precipitation: times.map((_, i) => (i >= 24 + 14 && i <= 24 + 16 ? 1.2 : 0)),
         },
     } as unknown as ExtendedWeatherData;
 };
@@ -91,40 +91,46 @@ const renderTrend = (data: ExtendedWeatherData) =>
 const renderDetail = (data: ExtendedWeatherData) =>
     render(<DayDetailModal weatherData={data} selectedDayIndex={1} onClose={() => {}} unit="C" lang="ca" />);
 
-describe('probabilitat de pluja d\'un dia: llista, gràfic de tendència i detall diuen el MATEIX', () => {
-    it('sense model regional la llista diu el 10 % del model global (referència)', () => {
+describe("pluja regional: la probabilitat i el total d'un dia són els MATEIXOS a la llista, al gràfic de tendència i al detall", () => {
+    it('sense model regional la llista diu el 10 % i cap pluja del model global (referència)', () => {
         renderList(baseData());
-        expect(screen.queryByText('70%')).toBeNull();
+        expect(screen.queryByText('20%')).toBeNull();
+        expect(screen.queryByText('4 mm')).toBeNull();
         expect(screen.getAllByText('10%').length).toBeGreaterThan(0);
     });
 
-    it('amb el reforç regional el 22 de setembre és del 70 % a la llista', () => {
+    it("amb l'evidència regional el 22 de setembre és del 20 % (no del 70 %) i porta 4 mm a la llista", () => {
         renderList(withRegional());
         // La primera fila de la llista és el dia 1 (22 de setembre); els altres dies segueixen al 10 %.
-        expect(screen.getAllByText('70%')).toHaveLength(1);
+        expect(screen.getAllByText('20%')).toHaveLength(1);
+        expect(screen.queryByText('70%')).toBeNull();
         expect(screen.getAllByText('10%').length).toBeGreaterThan(0);
+        // 3,6 mm = la suma de les tres hores de pluja de la taula (abans: 0 mm del model global).
+        expect(screen.getByText('4 mm')).toBeTruthy();
     });
 
-    it('i el mateix 70 % surt al gràfic de tendència', () => {
+    it('i el mateix 20 % i 4 mm surten al gràfic de tendència', () => {
         renderTrend(withRegional());
         const firstDay = screen.getAllByTestId('trend-day')[0];
-        expect(firstDay.textContent).toContain('70%');
-        expect(screen.getAllByTestId('trend-day')[1].textContent).not.toContain('70%');
+        expect(firstDay.textContent).toContain('20%');
+        expect(firstDay.querySelector('[data-testid="precip-amount"]')?.textContent).toBe('4 mm');
+        expect(screen.getAllByTestId('trend-day')[1].textContent).not.toContain('20%');
     });
 
     it('i al detall del dia', () => {
         renderDetail(withRegional());
-        expect(screen.getByTestId('note-precip').textContent).toBe('PROB. MÀX 70%');
+        expect(screen.getByTestId('note-precip').textContent).toBe('PROB. MÀX 20%');
+        expect(screen.getByTestId('note-precip').parentElement?.textContent).toContain('4mm');
     });
 
-    it('els tres coincideixen en un dia que el reforç no ha tocat', () => {
+    it("els tres coincideixen en un dia que l'evidència no ha tocat", () => {
         const data = withRegional();
         const list = renderList(data);
-        // Dia 2 (23 de setembre): 10 % a la llista.
         expect(screen.getAllByText('10%').length).toBeGreaterThan(0);
         list.unmount();
 
         renderTrend(data);
         expect(screen.getAllByTestId('trend-day')[1].textContent).toContain('10%');
+        expect(screen.getAllByTestId('trend-day')[1].textContent).not.toContain('mm');
     });
 });
