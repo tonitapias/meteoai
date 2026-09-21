@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ForecastSection from './ForecastSection';
 import type { StrictDailyWeather } from '../types/weatherLogicTypes';
 
@@ -77,5 +77,52 @@ describe('ForecastSection — la icona del dia passa pels mateixos filtres que l
     it('el tipus del motor arriba a la setmana (aiguaneu i pluja engelant)', () => {
         renderWeek({ '2026-09-21': day(69), '2026-09-22': day(66) });
         expect(codes().slice(0, 2)).toEqual([69, 66]);
+    });
+});
+
+describe("ForecastSection — accés al detall d'avui", () => {
+    const renderWith = (onDayClick: (index: number) => void, lang: 'ca' | 'es' | 'fr' | 'en' = 'ca') =>
+        render(
+            <ForecastSection
+                chartData={chartData}
+                dailyData={dailyData}
+                weeklyExtremes={{ min: 0, max: 30 }}
+                lang={lang}
+                onDayClick={onDayClick}
+                latitude={41.9}
+            />
+        );
+
+    it("el botó \"Avui\" obre el detall d'avui (índex 0), que la llista de demà en endavant no porta", () => {
+        const onDayClick = vi.fn();
+        renderWith(onDayClick);
+        fireEvent.click(screen.getByTestId('open-today'));
+        expect(onDayClick).toHaveBeenCalledTimes(1);
+        expect(onDayClick).toHaveBeenCalledWith(0);
+    });
+
+    it('la llista continua començant demà: el botó no afegeix cap fila', () => {
+        const onDayClick = vi.fn();
+        renderWith(onDayClick);
+        // 7 files de dia (demà + 6), sense cap fila per a avui.
+        expect(screen.getAllByTestId('day-icon')).toHaveLength(7);
+        fireEvent.click(screen.getAllByText(/^2[1-7]$/)[0].closest('button') as HTMLElement);
+        expect(onDayClick).toHaveBeenLastCalledWith(1);
+    });
+
+    it("té text i nom accessible a cada idioma", () => {
+        const expected = {
+            ca: ['Avui', "Obrir el detall d'avui"],
+            es: ['Hoy', 'Abrir el detalle de hoy'],
+            fr: ["Aujourd'hui", "Ouvrir le détail d'aujourd'hui"],
+            en: ['Today', "Open today's detail"],
+        } as const;
+        for (const lang of ['ca', 'es', 'fr', 'en'] as const) {
+            const { unmount } = renderWith(() => {}, lang);
+            const button = screen.getByTestId('open-today');
+            expect(button.getAttribute('aria-label')).toBe(expected[lang][1]);
+            expect(button.textContent?.toLowerCase()).toContain(expected[lang][0].toLowerCase());
+            unmount();
+        }
     });
 });

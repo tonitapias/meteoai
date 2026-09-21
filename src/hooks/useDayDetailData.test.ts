@@ -277,10 +277,14 @@ describe('useDayDetailData: peces del detall ampliat', () => {
         expect(summer.result.current.snowLevelRelevant).toBe(false);
     });
 
-    it('els dies veïns respecten els extrems de la llista i els dies que la previsió porta', () => {
-        // Només 2 dies (0 i 1): del dia 1 no hi ha ni anterior (0 no és a la llista) ni següent.
+    it('els dies veïns respecten els extrems i els dies que la previsió porta', () => {
+        // Només 2 dies (0 i 1): del dia 1 es pot tornar a avui (0) però no hi ha següent.
         const two = renderHook(() => useDayDetailData(buildSeptember(), 1));
-        expect(two.result.current.neighbours).toEqual({ prev: null, next: null });
+        expect(two.result.current.neighbours).toEqual({ prev: 0, next: null });
+
+        // Avui no té anterior.
+        const today = renderHook(() => useDayDetailData(buildSeptember(), 0));
+        expect(today.result.current.neighbours).toEqual({ prev: null, next: 1 });
 
         const none = renderHook(() => useDayDetailData(null, null));
         expect(none.result.current.neighbours).toEqual({ prev: null, next: null });

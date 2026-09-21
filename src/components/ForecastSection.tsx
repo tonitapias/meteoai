@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Calendar, Umbrella, ArrowRight } from 'lucide-react'; 
+import { Calendar, CalendarCheck, Umbrella, ArrowRight } from 'lucide-react'; 
 import { TempRangeBar } from './widgets';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
@@ -65,6 +65,14 @@ const I18N_ARIA_CHART_BTN = {
   en: "Open temperature chart"
 };
 
+// [ACCÉS A AVUI] La llista comença demà; el detall d'avui (amb la marca d'"ara" i les hores que ja han passat) s'obre des d'aquí.
+const I18N_ARIA_TODAY_BTN = {
+  ca: "Obrir el detall d'avui",
+  es: "Abrir el detalle de hoy",
+  fr: "Ouvrir le détail d'aujourd'hui",
+  en: "Open today's detail"
+};
+
 const ForecastSection = memo(function ForecastSection({
   chartData, dailyData, dayHourCodes, dailyComparison, regionalModelLabel, weeklyExtremes, lang, onDayClick, latitude
 }: ForecastSectionProps) {
@@ -72,6 +80,8 @@ const ForecastSection = memo(function ForecastSection({
   const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
   const btnText = I18N_BTN[lang] || I18N_BTN['ca'];
   const btnAriaLabel = I18N_ARIA_CHART_BTN[lang] || I18N_ARIA_CHART_BTN['ca'];
+  const todayAriaLabel = I18N_ARIA_TODAY_BTN[lang] || I18N_ARIA_TODAY_BTN['ca'];
+  const todayText = typeof tRecord.today === 'string' ? tRecord.today : 'Avui';
   
   const {
     isOpen: isTrendModalOpen,
@@ -166,6 +176,20 @@ const ForecastSection = memo(function ForecastSection({
             {typeof tRecord.forecast7days === 'string' ? tRecord.forecast7days : "PREVISIÓ 7 DIES"}
           </h3>
           
+          <div className="flex items-center gap-2 md:gap-3">
+          <button
+            type="button"
+            data-testid="open-today"
+            onClick={() => onDayClick(0)}
+            aria-label={todayAriaLabel}
+            className="group flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-indigo-500/30 hover:bg-indigo-950/40 hover:border-indigo-400 transition-all duration-300 backdrop-blur-md cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
+          >
+            <CalendarCheck className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-300 group-hover:text-white transition-colors" />
+            <span className="text-[10px] md:text-xs font-black text-indigo-100 group-hover:text-white tracking-widest uppercase">
+              {todayText}
+            </span>
+          </button>
+
           {/* BOTÓ DE MICRO-GRÀFIC AMB TRADUCCIÓ */}
           <button 
             onClick={openTrendModal}
@@ -186,6 +210,7 @@ const ForecastSection = memo(function ForecastSection({
               {btnText}
             </span>
           </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 relative z-10">

@@ -1,17 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { neighbourDays, swipeDirection, FIRST_LISTED_DAY, LAST_LISTED_DAY } from './dayNavigation';
+import { neighbourDays, swipeDirection, FIRST_DETAIL_DAY, LAST_DETAIL_DAY } from './dayNavigation';
 
 describe('neighbourDays', () => {
     it('al mig de la setmana hi ha dia anterior i següent', () => {
         expect(neighbourDays(3, 9)).toEqual({ prev: 2, next: 4 });
     });
 
-    it('el primer dia de la llista no té anterior (avui no és a la llista)', () => {
-        expect(neighbourDays(FIRST_LISTED_DAY, 9)).toEqual({ prev: null, next: 2 });
+    it('des de demà es pot tornar a avui', () => {
+        expect(neighbourDays(1, 9)).toEqual({ prev: 0, next: 2 });
     });
 
-    it('l\'últim dia de la llista no té següent, encara que la previsió porti més dies', () => {
-        expect(neighbourDays(LAST_LISTED_DAY, 9)).toEqual({ prev: 6, next: null });
+    it("avui és el primer dia: no té anterior", () => {
+        expect(neighbourDays(FIRST_DETAIL_DAY, 9)).toEqual({ prev: null, next: 1 });
+    });
+
+    it("l'últim dia no té següent, encara que la previsió porti més dies", () => {
+        expect(neighbourDays(LAST_DETAIL_DAY, 9)).toEqual({ prev: 6, next: null });
     });
 
     it('no es pot anar a un dia que la previsió no porta', () => {
@@ -20,8 +24,12 @@ describe('neighbourDays', () => {
         expect(neighbourDays(2, 4)).toEqual({ prev: 1, next: 3 });
     });
 
+    it('amb un sol dia (només avui) no hi ha veïns', () => {
+        expect(neighbourDays(0, 1)).toEqual({ prev: null, next: null });
+    });
+
     it('sense dies no hi ha veïns', () => {
-        expect(neighbourDays(1, 0)).toEqual({ prev: null, next: null });
+        expect(neighbourDays(0, 0)).toEqual({ prev: null, next: null });
     });
 });
 

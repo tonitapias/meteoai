@@ -1,22 +1,23 @@
 // src/utils/dayNavigation.ts
-// Dies veïns d'un dia del detall. Es pot anar i venir només entre els dies que la previsió setmanal
-// ja llista (ForecastSection i TrendChartModal mostren els índexs 1..7 de `daily`; 0 és avui).
+// Dies veïns d'un dia del detall. Es pot anar i venir entre avui (índex 0 de `daily`) i el setè dia (índex 7),
+// que són els que la previsió ensenya: la llista i el gràfic de tendència mostren 1..7 i la llista porta un accés
+// directe al detall d'avui.
 
-export const FIRST_LISTED_DAY = 1;
-export const LAST_LISTED_DAY = 7;
+export const FIRST_DETAIL_DAY = 0;
+export const LAST_DETAIL_DAY = 7;
 
 export interface NeighbourDays {
-    /** Índex del dia anterior, o null si aquest és el primer de la llista. */
+    /** Índex del dia anterior, o null si aquest és el primer (avui). */
     prev: number | null;
-    /** Índex del dia següent, o null si aquest és l'últim de la llista o no n'hi ha dades. */
+    /** Índex del dia següent, o null si aquest és l'últim o no n'hi ha dades. */
     next: number | null;
 }
 
 /** `dayCount`: nombre de dies que porta `daily` (un dia sense entrada no es pot obrir). */
 export const neighbourDays = (dayIndex: number, dayCount: number): NeighbourDays => {
-    const last = Math.min(LAST_LISTED_DAY, dayCount - 1);
+    const last = Math.min(LAST_DETAIL_DAY, dayCount - 1);
     return {
-        prev: dayIndex > FIRST_LISTED_DAY ? dayIndex - 1 : null,
+        prev: dayIndex > FIRST_DETAIL_DAY ? dayIndex - 1 : null,
         next: dayIndex < last ? dayIndex + 1 : null
     };
 };

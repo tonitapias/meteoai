@@ -365,15 +365,23 @@ describe('DayDetailModal — canvi de dia', () => {
         expect(onSelectDay).toHaveBeenLastCalledWith(3);
     });
 
-    it("als extrems de la llista la fletxa corresponent està desactivada (no es surt de la setmana ni cap a 'avui')", () => {
-        const first = renderDetail(build(), 'ca', { selectedDayIndex: 1, onSelectDay: vi.fn() });
+    it("als extrems la fletxa corresponent està desactivada: avui no té anterior i l'últim dia no té següent", () => {
+        const today = renderDetail(build(), 'ca', { selectedDayIndex: 0, onSelectDay: vi.fn() });
         expect((screen.getByTestId('day-prev') as HTMLButtonElement).disabled).toBe(true);
         expect((screen.getByTestId('day-next') as HTMLButtonElement).disabled).toBe(false);
-        first.unmount();
+        today.unmount();
 
         renderDetail(build(), 'ca', { selectedDayIndex: 3, onSelectDay: vi.fn() });
         expect((screen.getByTestId('day-next') as HTMLButtonElement).disabled).toBe(true);
         expect((screen.getByTestId('day-prev') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('des de demà la fletxa enrere porta a avui', () => {
+        const onSelectDay = vi.fn();
+        renderDetail(build(), 'ca', { selectedDayIndex: 1, onSelectDay });
+        expect((screen.getByTestId('day-prev') as HTMLButtonElement).disabled).toBe(false);
+        fireEvent.click(screen.getByTestId('day-prev'));
+        expect(onSelectDay).toHaveBeenLastCalledWith(0);
     });
 
     it('les fletxes tenen nom accessible traduït', () => {
