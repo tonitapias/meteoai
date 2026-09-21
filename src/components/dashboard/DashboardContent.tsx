@@ -155,8 +155,8 @@ export const DashboardContent = () => {
                         <div className="bento-card p-4 sm:p-6 md:p-8 bg-[#0B0C15]/90 border border-white/10 shadow-2xl backdrop-blur-xl">
                             <Suspense fallback={<SectionSkeleton />}>
                                 <SmartForecastCharts
-                                    data={calculations.chartData24h || []}
-                                    comparisonData={calculations.comparisonData || null}
+                                    data={calculations.chartSeries?.primary ?? []}
+                                    comparisonData={calculations.chartSeries?.comparison ?? null}
                                     unit={flags.unit === 'F' ? '°F' : '°C'}
                                     lang={flags.lang}
                                 />

@@ -97,6 +97,20 @@ describe('useWeatherCalculations', () => {
         expect(result.current.chartData24h[0].temp).toBe(68);
     });
 
+    // Cas 3b: la sèrie que dibuixen els gràfics d'Expert (línia principal + models)
+    it('chartSeries: null sense dades; amb dades porta la temperatura en la unitat de l\'usuari', () => {
+        const none = renderHook(() => useWeatherCalculations(null, 'C', new Date()));
+        expect(none.result.current.chartSeries).toBeNull();
+
+        const now = new Date('2023-10-10T12:00:00Z');
+        const c = renderHook(() => useWeatherCalculations(mockWeatherData, 'C', now));
+        const f = renderHook(() => useWeatherCalculations(mockWeatherData, 'F', now));
+        expect(c.result.current.chartSeries?.primary[0].temp).toBe(20);
+        expect(f.result.current.chartSeries?.primary[0].temp).toBe(68);
+        // Sense models de comparació a les dades → null (no una comparació buida).
+        expect(c.result.current.chartSeries?.comparison).toBeNull();
+    });
+
     // Cas 4: Detecció d'extrems setmanals
     it('calcula correctament els extrems setmanals', () => {
         const now = new Date('2023-10-10T12:00:00Z');

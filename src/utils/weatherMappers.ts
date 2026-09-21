@@ -25,6 +25,10 @@ export const getComparisonVal = (data: unknown, key: string, i: number): number 
 
 export type SmartSource = 'primary' | 'ecmwf' | 'gfs' | 'icon' | 'estimated';
 
+// ATENCIÓ: `temp` d'aquesta sèrie és la temperatura CRUA del model, a propòsit: resolveDailyExtremes
+// (dailyExtremes.ts) hi aplica la correcció d'inversió, i corregir-la aquí la corregiria DUES vegades.
+// Per DIBUIXAR una temperatura (gràfics d'Expert, detall de dia) feu servir buildHourlyChartSeries
+// (hourlyChartSeries.ts), que la porta corregida i amb els forats com a null.
 export const generateHourlyChartData = (
     weatherData: ExtendedWeatherData,
     currentHourlyIndex: number,

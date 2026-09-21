@@ -51,7 +51,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
   }, [weatherData]);
 
   // 2. Orquestració dels mòduls
-  const { chartData24h, chartDataFull, comparisonData } = useChartData(weatherData, currentHourlyIndex, unit);
+  const { chartData24h, chartDataFull, chartSeries } = useChartData(weatherData, currentHourlyIndex, unit);
 
   const {
     minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, effectiveCloudCover,
@@ -80,8 +80,8 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     reliability, 
     moonPhaseVal, 
     chartData24h, 
-    chartDataFull, 
-    comparisonData, 
+    chartDataFull,
+    chartSeries,
     dayHourCodes,
     weeklyExtremes 
   };

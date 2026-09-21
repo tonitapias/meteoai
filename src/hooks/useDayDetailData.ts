@@ -1,16 +1,16 @@
 // src/hooks/useDayDetailData.ts
 import { useMemo } from 'react';
-import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes'; 
+import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
-import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { calculateSnowLevel } from '../utils/rules/winterRules';
-import { getSafeLatitude, getSafeMonthFromIso } from '../utils/weatherMath';
+import { WeatherUnit } from '../utils/formatters';
+import { buildHourlyChartSeries } from '../utils/hourlyChartSeries';
 
 export const useDayDetailData = (
-  weatherData: ExtendedWeatherData | null, 
-  selectedDayIndex: number | null
+  weatherData: ExtendedWeatherData | null,
+  selectedDayIndex: number | null,
+  unit: WeatherUnit = 'C'
 ) => {
-  
+
   const dayData = useMemo(() => {
     if (!weatherData || selectedDayIndex === null) return null;
     const i = selectedDayIndex;
@@ -34,115 +34,34 @@ export const useDayDetailData = (
     const targetDate = dayData.date.includes('T') ? dayData.date.split('T')[0] : dayData.date;
 
     return weatherData.hourly.time
-      .map((t: string, idx: number) => ({ 
-        datePart: t.includes('T') ? t.split('T')[0] : t, 
-        idx 
+      .map((t: string, idx: number) => ({
+        datePart: t.includes('T') ? t.split('T')[0] : t,
+        idx
       }))
       .filter((item: { datePart: string, idx: number }) => item.datePart === targetDate)
       .map((item: { datePart: string, idx: number }) => item.idx);
   }, [weatherData, dayData]);
 
-  const hourlyData = useMemo(() => {
-    if (!weatherData || dayIndices.length === 0) return [];
+  // Línia principal + models d'aquest dia, amb la MATEIXA sèrie que el tauler d'Expert (temperatura
+  // corregida per inversió, forats com a null i models alineats hora a hora). Vegeu hourlyChartSeries.ts.
+  const chartSeries = useMemo(
+    () => (weatherData && dayIndices.length > 0 ? buildHourlyChartSeries(weatherData, dayIndices, unit) : null),
+    [weatherData, dayIndices, unit]
+  );
 
-    // DOCTRINA RISC ZERO (TS7053 i TS2339): Cast segur a diccionaris estructurats 
-    // per validar propietats no previstes a la interfície sense usar 'any'
-    const hRaw = weatherData.hourly as Record<string, number[] | undefined>;
-    const compRaw = weatherData.hourlyComparison as Record<string, Record<string, unknown>[] | undefined> | undefined;
-
-    return dayIndices.map((idx: number) => {
-        let fl = weatherData.hourly.freezing_level_height?.[idx];
-        if (fl == null) {
-             const ecmwfVal = compRaw?.ecmwf?.[idx]?.freezing_level_height;
-             const gfsVal = compRaw?.gfs?.[idx]?.freezing_level_height;
-             const iconVal = compRaw?.icon?.[idx]?.freezing_level_height;
-             fl = (typeof ecmwfVal === 'number' ? ecmwfVal 
-                 : typeof gfsVal === 'number' ? gfsVal 
-                 : typeof iconVal === 'number' ? iconVal 
-                 : null);
-        }
-        
-        const snowLevel = calculateSnowLevel(fl);
-
-        // [NETEJA] Abans hi havia un bloc que llegia compRaw?.arome per a precip/rainProb/
-        // cloudCover. normData.ts mai crea hourlyComparison.arome (només ecmwf/gfs/icon),
-        // així que sempre queia al fallback — retirat, comportament idèntic.
-        const precip = weatherData.hourly.precipitation?.[idx];
-        const rainProb = weatherData.hourly.precipitation_probability?.[idx];
-        const baseCloudCover = hRaw.cloud_cover?.[idx];
-        const cloudCover = typeof baseCloudCover === 'number' ? baseCloudCover : 0;
-
-        const time = weatherData.hourly.time[idx];
-        const rawTemp = weatherData.hourly.temperature_2m[idx];
-
-        const temp = (typeof rawTemp === 'number')
-            ? getInversionCorrectedTemp(
-                {
-                    temperature_2m: rawTemp,
-                    cloud_cover_low: hRaw.cloud_cover_low?.[idx] ?? 0,
-                    cloud_cover_mid: hRaw.cloud_cover_mid?.[idx] ?? 0,
-                    cloud_cover_high: hRaw.cloud_cover_high?.[idx] ?? 0,
-                    wind_speed_10m: weatherData.hourly.wind_speed_10m[idx],
-                    is_day: hRaw.is_day?.[idx] ?? 1
-                } as unknown as StrictCurrentWeather,
-                getSafeMonthFromIso(time),
-                getSafeLatitude(weatherData.location)
-              )
-            : rawTemp;
-
-        return {
-            time,
-            temp,
-            rain: rainProb,
-            snowLevel,
-            precip: precip,
-            wind: weatherData.hourly.wind_speed_10m[idx],
-            humidity: weatherData.hourly.relative_humidity_2m[idx],
-            cloud: cloudCover
-        };
-    });
-  }, [weatherData, dayIndices]);
-
-  const comparisonData = useMemo(() => {
-      if (!weatherData?.hourlyComparison || dayIndices.length === 0) return null;
-
-      // DOCTRINA RISC ZERO: Homologuem el tipatge a l'origen
-      const compRaw = weatherData.hourlyComparison as Record<string, Record<string, unknown>[] | undefined>;
-
-      const extract = (modelArr: Record<string, unknown>[]) => {
-          if (!modelArr?.length) return [];
-          return dayIndices.map((idx: number) => {
-              const d = modelArr[idx];
-              if (!d) return null;
-              return {
-                  time: weatherData.hourly.time[idx],
-                  temp: d.temperature_2m,
-                  rain: d.precipitation_probability,
-                  wind: d.wind_speed_10m,
-                  humidity: d.relative_humidity_2m,
-                  precip: d.precipitation,
-                  cloud: d.cloud_cover
-              };
-          }).filter((item): item is NonNullable<typeof item> => item !== null);
-      };
-
-      return {
-          ecmwf: extract(compRaw.ecmwf || []),
-          gfs: extract(compRaw.gfs || []),
-          icon: extract(compRaw.icon || [])
-      };
-  }, [weatherData, dayIndices]);
+  const hourlyData = useMemo(() => chartSeries?.primary ?? [], [chartSeries]);
+  const comparisonData = chartSeries?.comparison ?? null;
 
   const snowLevelText = useMemo(() => {
      const levels = hourlyData
         .map(d => d.snowLevel)
         .filter((l: number | null): l is number => l != null);
-        
+
      if (levels.length === 0) return "---";
-     
+
      const min = Math.round(Math.min(...levels));
      const max = Math.round(Math.max(...levels));
-     
+
      const cap = WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
      if (min > cap) return `> ${cap}m`;
      if (Math.abs(max - min) < 50) return `${min}m`;

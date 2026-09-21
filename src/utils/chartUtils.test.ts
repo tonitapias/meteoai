@@ -1,6 +1,6 @@
 // src/utils/chartUtils.test.ts
 import { describe, it, expect } from 'vitest';
-import { calculateYDomain, generateGraphPoints, ChartDataPoint } from './chartUtils';
+import { calculateYDomain, generateGraphPoints, generateSmoothPath, ChartDataPoint, GraphPoint } from './chartUtils';
 
 describe('Chart Logic Engine (chartUtils)', () => {
     
@@ -79,6 +79,33 @@ describe('Chart Logic Engine (chartUtils)', () => {
             // Si és null, el posem fora de pantalla per baix (height + 10 = 110)
             expect(points[0].y).toBe(110);
             expect(points[0].value).toBeNull();
+        });
+    });
+
+    // 3. UN FORAT DE DADES TALLA EL TRAÇ (mai s'inventen les hores que cap model ha donat)
+    describe('generateSmoothPath', () => {
+        const pt = (x: number, value: number | null): GraphPoint => ({ x, y: value === null ? 110 : 100 - value, value, time: `t${x}` });
+
+        it('uneix amb corbes els punts consecutius amb dada', () => {
+            const path = generateSmoothPath([pt(0, 10), pt(10, 20), pt(20, 30)], 100);
+            expect(path.match(/M/g)).toHaveLength(1);
+            expect(path.match(/C/g)).toHaveLength(2);
+        });
+
+        it('una hora sense dada al mig talla el traç en dos trams, sense unir els veïns', () => {
+            const path = generateSmoothPath([pt(0, 10), pt(10, 20), pt(20, null), pt(30, 40), pt(40, 50)], 100);
+            expect(path.match(/M/g)).toHaveLength(2);
+            expect(path.match(/C/g)).toHaveLength(2);
+            // Cap corba no pot anar del punt x=10 al punt x=30 (saltant el forat).
+            expect(path).not.toMatch(/10,\d+ .*30,\d+.*30,\d+/);
+        });
+
+        it('sense cap tram (buit, un sol punt o tot nuls) no dibuixa res', () => {
+            expect(generateSmoothPath([], 100)).toBe('');
+            expect(generateSmoothPath([pt(0, 10)], 100)).toBe('');
+            expect(generateSmoothPath([pt(0, null), pt(10, null)], 100)).toBe('');
+            // Un punt aïllat entre dos forats tampoc fa tram.
+            expect(generateSmoothPath([pt(0, null), pt(10, 5), pt(20, null)], 100)).toBe('');
         });
     });
 });

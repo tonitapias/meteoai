@@ -86,23 +86,27 @@ export const generateGraphPoints = (
 };
 
 export const generateSmoothPath = (pts: GraphPoint[], heightLimit: number): string => {
-    // Filtrem punts vàlids
-    const validPts = pts.filter(p => p.value !== null && p.y <= heightLimit + 50);
-    
-    if (validPts.length < 2) return "";
+    // DOCTRINA RISC ZERO: una hora sense dada (value null) TALLA el traç. Abans es filtrava i la corba
+    // unia els dos punts veïns, dibuixant una previsió que cap model havia donat per a aquelles hores.
+    let d = '';
+    let prev: GraphPoint | null = null;
+    let segments = 0;
 
-    let d = `M ${validPts[0].x},${validPts[0].y}`;
-    
-    for (let i = 0; i < validPts.length - 1; i++) {
-        const p0 = validPts[i];
-        const p1 = validPts[i + 1];
-        
-        const cx = (p0.x + p1.x) / 2;
-        
-        // CORRECCIÓ LINT: Hem eliminat la variable 'cy' que no s'utilitzava.
-        // La corba es genera amb tangents horitzontals basades en els punts ja 'clampats'.
-        
-        d += ` C ${cx},${p0.y} ${cx},${p1.y} ${p1.x},${p1.y}`;
+    for (const p of pts) {
+        if (p.value === null || p.y > heightLimit + 50) {
+            prev = null;
+            continue;
+        }
+        if (prev === null) {
+            d += `${d ? ' ' : ''}M ${p.x},${p.y}`;
+        } else {
+            // CORRECCIÓ LINT: sense variable 'cy'. La corba té tangents horitzontals sobre punts ja 'clampats'.
+            const cx = (prev.x + p.x) / 2;
+            d += ` C ${cx},${prev.y} ${cx},${p.y} ${p.x},${p.y}`;
+            segments++;
+        }
+        prev = p;
     }
-    return d;
+    // Sense cap tram (0 o 1 punts vàlids aïllats) no hi ha res a dibuixar.
+    return segments === 0 ? "" : d;
 };

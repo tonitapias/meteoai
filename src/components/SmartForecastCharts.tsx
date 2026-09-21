@@ -17,9 +17,12 @@ import {
 } from '../utils/chartUtils';
 import { MATRIX_BG } from './widgets/widgetStyles';
 
+// Models de comparació (vegeu utils/hourlyChartSeries.ts). Cada sèrie va alineada hora a hora amb `data`.
+type ComparisonData = Partial<Record<'ecmwf' | 'gfs' | 'icon' | 'aifs', ChartDataPoint[]>> | null;
+
 interface SingleHourlyChartProps {
     data: ChartDataPoint[];
-    comparisonData: { ecmwf?: ChartDataPoint[], gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
+    comparisonData: ComparisonData;
     layer: 'temp' | 'rain' | 'precip' | 'wind' | 'cloud' | 'humidity' | 'snowLevel';
     unit: string;
     hoveredIndex: number | null;
@@ -138,8 +141,10 @@ const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hoveredInde
 
   const paths = useMemo(() => {
       const linePath = generateSmoothPath(points, height);
-      const areaPath = linePath && points.length > 0
-          ? `${linePath} L ${points[points.length-1]?.x || width - paddingX},${height} L ${points[0]?.x || paddingX},${height} Z`
+      // L'àrea es tanca sobre el primer i l'últim punt AMB dada (els forats no compten com a extrems).
+      const withValue = points.filter(p => p.value !== null);
+      const areaPath = linePath && withValue.length > 0
+          ? `${linePath} L ${withValue[withValue.length - 1].x},${height} L ${withValue[0].x},${height} Z`
           : "";
 
       return {
@@ -149,7 +154,7 @@ const SingleHourlyChart = memo(({ data, comparisonData, layer, unit, hoveredInde
           gfsPath: comparisonData?.gfs ? generateSmoothPath(gfsPoints, height) : "",
           iconPath: comparisonData?.icon ? generateSmoothPath(iconPoints, height) : ""
       };
-  }, [points, ecmwfPoints, gfsPoints, iconPoints, height, comparisonData, width, paddingX]);
+  }, [points, ecmwfPoints, gfsPoints, iconPoints, height, comparisonData]);
 
   if (!data || data.length === 0) return null;
 
@@ -292,7 +297,7 @@ SingleHourlyChart.displayName = 'SingleHourlyChart';
 
 interface SmartForecastChartsProps {
     data: ChartDataPoint[];
-    comparisonData: { ecmwf?: ChartDataPoint[], gfs: ChartDataPoint[], icon: ChartDataPoint[] } | null;
+    comparisonData: ComparisonData;
     unit: string;
     lang?: Language;
 }
