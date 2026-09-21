@@ -38,13 +38,25 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
   // només s'aplica el resultat si encara és la petició més recent en arribar.
   const requestIdRef = useRef(0);
 
+  // Última ubicació carregada amb ÈXIT i quan (per tornar-la a demanar quan les
+  // dades envelleixen — vegeu useRefreshOnResume). Una càrrega explícita la posa
+  // a null en començar i només es reomple si acaba bé: mentre hi ha una petició
+  // en curs, o si ha fallat, no hi ha res "carregat" que refrescar (i un refresc
+  // en segon pla no pot trepitjar el requestId d'una càrrega de l'usuari).
+  const loadedRef = useRef<{ lat: number; lon: number; name: string; country?: string; at: number } | null>(null);
+
   // [FIX] Embolcallat en useCallback: sense això, cada render d'aquest hook
   // (p. ex. cada tick de rellotge de 60s que passa per useAppController)
   // generava una nova referència de funció, que es propagava a
   // useAppActions.handleGetCurrentLocation (que la té com a dependència) i
   // d'allà a tot el que consumeix el context — trencant qualsevol intent de
   // memoització aigües avall encara que res rellevant hagués canviat.
-  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, locationName: string, country?: string): Promise<WeatherFetchResult> => {
+  //
+  // `silent` = refresc en segon pla d'una ubicació ja a pantalla: no posa
+  // `loading` (parpellejaria el capçal) i, si falla, no posa `error`, perquè
+  // DashboardContent pinta l'ErrorBanner EN LLOC del panell i una caiguda de
+  // xarxa passatgera esborraria una previsió perfectament vàlida.
+  const loadWeather = useCallback(async (lat: number, lon: number, locationName: string, country: string | undefined, silent: boolean): Promise<WeatherFetchResult> => {
     const now = Date.now();
 
     // Evitem crides repetides en menys de 3 segons
@@ -59,8 +71,11 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     const requestId = ++requestIdRef.current;
     const isStale = () => requestIdRef.current !== requestId;
 
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      loadedRef.current = null;
+      setLoading(true);
+      setError(null);
+    }
     lastFetchRef.current = { lat, lon, unit, time: now };
 
     try {
@@ -80,6 +95,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       setWeatherData(response.data);
       setAqiData(response.aqi);
+      loadedRef.current = { lat, lon, name: locationName, country, at: Date.now() };
 
       return { success: true };
 
@@ -88,12 +104,18 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
       const errorMessage = err instanceof Error ? err.message : String(err);
 
-      Sentry.captureException(err, {
-          tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API },
-          extra: { lat, lon, unit }
-      });
+      // Un refresc en segon pla sense connexió és esperable (el desvetlla de la
+      // xarxa en tornar del segon pla no és instantani; 'online' el reintenta):
+      // no cal omplir Sentry amb això.
+      const expectedOffline = silent && typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (!expectedOffline) {
+        Sentry.captureException(err, {
+            tags: { service: SENTRY_TAGS.SERVICE_WEATHER_API },
+            extra: { lat, lon, unit }
+        });
+      }
 
-      setError(t.fetchError || "Error obtenint dades");
+      if (!silent) setError(t.fetchError || "Error obtenint dades");
 
       return {
           success: false,
@@ -101,15 +123,33 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           type: FETCH_ERROR_TYPES.NETWORK
       };
     } finally {
-      if (!isStale()) setLoading(false);
+      if (!silent && !isStale()) setLoading(false);
     }
   }, [lang, unit, t, runRegionalModelWorker]);
+
+  const fetchWeatherByCoords = useCallback(
+    (lat: number, lon: number, locationName: string, country?: string): Promise<WeatherFetchResult> =>
+      loadWeather(lat, lon, locationName, country, false),
+    [loadWeather]
+  );
+
+  // Refresc silenciós de la ubicació carregada amb les mateixes coordenades,
+  // nom i país. No fa res si no n'hi ha cap (vegeu loadedRef).
+  const refreshLoadedLocation = useCallback(async (): Promise<WeatherFetchResult | null> => {
+    const loaded = loadedRef.current;
+    if (!loaded) return null;
+    return loadWeather(loaded.lat, loaded.lon, loaded.name, loaded.country, true);
+  }, [loadWeather]);
+
+  const getLastLoadedAt = useCallback(() => loadedRef.current?.at ?? null, []);
 
   return {
     weatherData,
     aqiData,
     loading,
     error,
-    fetchWeatherByCoords
+    fetchWeatherByCoords,
+    refreshLoadedLocation,
+    getLastLoadedAt
   };
 }

@@ -10,6 +10,7 @@ import type { WeatherUnit } from '../utils/formatters';
 import { cacheService } from '../services/cacheService'; 
 import { SENTRY_TAGS } from '../constants/errorConstants';
 import type { Language } from '../translations';
+import { CACHE_TTL } from '../constants/cacheConfig';
 
 // Tipus de retorn
 interface WeatherRepositoryResponse {
@@ -21,8 +22,6 @@ interface WeatherRepositoryResponse {
 // Tipus per a la funció del Worker (per injectar-la)
 // [CORRECCIÓ] Substituït 'any' per 'WeatherData' (Tipatge estricte)
 type RegionalModelWorkerFn = (currentData: ExtendedWeatherData, regionalData: WeatherData, model: RegionalModel) => Promise<ExtendedWeatherData>;
-
-const CACHE_TTL = 15 * 60 * 1000; 
 
 export const WeatherRepository = {
     /**
@@ -42,7 +41,7 @@ export const WeatherRepository = {
 
         // 1. Intentar Cache Local
         try {
-            const cachedPacket = await cacheService.get<{ weather: ExtendedWeatherData; aqi: AirQualityData | null }>(cacheKey, CACHE_TTL);
+            const cachedPacket = await cacheService.get<{ weather: ExtendedWeatherData; aqi: AirQualityData | null }>(cacheKey, CACHE_TTL.WEATHER);
             if (cachedPacket) {
                 return { 
                     success: true, 
