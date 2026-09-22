@@ -8,6 +8,12 @@
 [![Sentry](https://img.shields.io/badge/Sentry-Telemetry-362D59?style=for-the-badge&logo=sentry&logoColor=white)]()
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-success?style=for-the-badge&logo=pwa&logoColor=white)]()
 
+### 🇬🇧 In English
+
+> MeteoToni AI is a high-precision weather forecast PWA (React 19 + TypeScript) for any location in the world. It blends global models (ECMWF, AIFS, GFS, ICON) with 14 auto-selected national high-resolution models (AROME, ICON-D2, HRRR, JMA and more, down to 1 km), cross-checks them against real-time radar and official alerts from 7 national weather services, and adds an AI layer (Google Gemini, with a deterministic risk fallback) for a plain-language summary. The app itself is available in Catalan, Spanish, English and French — this README is written in Catalan, the author's own language.
+
+---
+
 > **Previsió meteorològica d'alta precisió, combinant models globals, model d'alta resolució i intel·ligència artificial.**
 
 MeteoToni AI combina la potència predictiva dels models meteorològics globals amb la precisió topogràfica de 14 models nacionals d'alta resolució (AROME, ICON-D2, HRRR, JMA i altres, fins a 1km), seleccionats automàticament segons la teva ubicació, tot processat per un motor d'intel·ligència artificial en temps real per oferir-te la previsió més precisa possible allà on siguis.
