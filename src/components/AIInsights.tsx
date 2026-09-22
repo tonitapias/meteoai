@@ -28,7 +28,8 @@ interface AlertItem {
 export interface TacticalAnalysisResult extends Omit<Partial<AICacheData>, 'tips'> {
     text: string;
     tips?: (TacticalTip | string)[];
-    confidenceLevel?: 'high' | 'medium' | 'low';
+    // null = sense comparació entre models: no es mostra la insígnia.
+    confidenceLevel?: 'high' | 'medium' | 'low' | null;
     confidence?: string;
     alerts?: AlertItem[];
     source?: string;

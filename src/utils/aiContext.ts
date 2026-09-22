@@ -188,8 +188,10 @@ export const generateAIPrediction = (
     dustKind: DustKind = null
 ): AIPredictionResult => {
     const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
+    // Sense dades no hi ha acord entre models que valgui: sense insígnia (confidenceLevel null), mai una
+    // "Incertesa alta" que, en arribar el text de Gemini, quedaria sola al costat d'un text normal.
     if (!tr || !current || !daily || !hourly) {
-        return { text: "...", tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
+        return { text: "...", tips: [], alerts: [], confidence: "", confidenceLevel: null };
     }
     
     try {
@@ -207,8 +209,8 @@ export const generateAIPrediction = (
                 text: tr.aiNoData,
                 tips: [],
                 alerts: [],
-                confidence: tr.aiConfidenceLow,
-                confidenceLevel: 'low'
+                confidence: "",
+                confidenceLevel: null
             };
         }
         const code = validCode;
@@ -276,13 +278,12 @@ export const generateAIPrediction = (
             currentCape, precipSum
         }, tr);
 
-        let confidenceText = tr.aiConfidence; 
-        // [FIX] Especifiquem el tipus estrictament per complir amb l'AIPredictionResult
-        let confidenceLevel: 'low' | 'medium' | 'high' = 'high';
-        if (reliability) {
-            if (reliability.level === 'low') { confidenceLevel = 'low'; confidenceText = tr.aiConfidenceLow; } 
-            else if (reliability.level === 'medium') { confidenceLevel = 'medium'; confidenceText = tr.aiConfidenceMod; }
-        }
+        // Sense comparació entre models (reliability null) no hi ha insígnia: abans sortia "Consens Models" per defecte.
+        const confidenceLevel: AIPredictionResult['confidenceLevel'] = reliability?.level ?? null;
+        const confidenceText = confidenceLevel === 'low' ? tr.aiConfidenceLow
+            : confidenceLevel === 'medium' ? tr.aiConfidenceMod
+            : confidenceLevel === 'high' ? tr.aiConfidence
+            : "";
 
         const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
 
@@ -296,7 +297,7 @@ export const generateAIPrediction = (
 
     } catch (error) {
         console.error("AI Generation Error:", error);
-        return { text: tr.aiSummaryClear, tips: [], alerts: [], confidence: "Error", confidenceLevel: "low" };
+        return { text: tr.aiSummaryClear, tips: [], alerts: [], confidence: "", confidenceLevel: null };
     }
 };
 

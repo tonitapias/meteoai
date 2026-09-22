@@ -75,7 +75,7 @@ export function useWeatherAI(
     const weatherCode = current.weather_code;
     
     const aqiVal = aqiData?.current?.european_aqi ?? 0;
-    const relLevel = reliability?.level || 'high';
+    const relLevel = reliability?.level ?? 'none';
     const currentRecord = current as unknown as Record<string, unknown>;
     const dustKind = resolveDustAdvisory(aqiData?.current, currentRecord.relative_humidity_2m as number | undefined, currentRecord.precipitation as number | undefined).kind;
     // Només la variant (no el % cru), perquè el cel no recalculi la IA a cada canvi de núvols.

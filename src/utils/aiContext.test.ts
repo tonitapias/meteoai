@@ -69,6 +69,34 @@ describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
     });
 });
 
+// La insígnia de l'anàlisi (Consens / Divergència / Incertesa alta). Sense comparació entre models o sense les dades
+// d'ara no n'hi ha cap: abans sortia "Consens Models" per defecte o "Incertesa alta", i quan el text de Gemini
+// substituïa el missatge de "sense dades" la insígnia vermella quedava sola al costat d'un text normal.
+describe("generateAIPrediction — insígnia d'acord entre models", () => {
+    const badge = (reliability: Parameters<typeof generateAIPrediction>[6], cur: StrictCurrentWeather = current) => {
+        const out = generateAIPrediction(cur, daily, hourly, 0, 'ca', 3, reliability, 'C');
+        return { level: out.confidenceLevel, text: out.confidence };
+    };
+
+    it('cada nivell té el seu text', () => {
+        expect(badge({ level: 'high', type: 'ok', value: 0 })).toEqual({ level: 'high', text: tr.aiConfidence });
+        expect(badge({ level: 'medium', type: 'divergent', value: 0 })).toEqual({ level: 'medium', text: tr.aiConfidenceMod });
+        expect(badge({ level: 'low', type: 'temp', value: 7 })).toEqual({ level: 'low', text: tr.aiConfidenceLow });
+    });
+
+    it('sense comparació entre models no hi ha insígnia (no un "Consens" per defecte)', () => {
+        expect(badge(null)).toEqual({ level: null, text: '' });
+    });
+
+    it('sense la temperatura d\'ara no hi ha insígnia (no una "Incertesa alta"), encara que els models coincideixin', () => {
+        const noTemp = { ...current, temperature_2m: null } as unknown as StrictCurrentWeather;
+        const out = generateAIPrediction(noTemp, daily, hourly, 0, 'ca', 3, { level: 'high', type: 'ok', value: 0 }, 'C');
+        expect(out.text).toBe(tr.aiNoData);
+        expect(out.confidenceLevel).toBeNull();
+        expect(out.confidence).toBe('');
+    });
+});
+
 // El text de reserva (el que es veu mentre la IA carrega, o si falla) tenia tres frases en català fix: també les
 // rebien els usuaris d'es/en/fr. Ara surten de les claus de traducció que ja existien.
 describe('generateAIPrediction — frases de reserva traduïdes (no català fix)', () => {

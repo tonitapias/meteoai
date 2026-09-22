@@ -184,7 +184,8 @@ export interface AIPredictionResult {
   text: string;
   tips: string[];
   confidence: string;
-  confidenceLevel: 'high' | 'medium' | 'low';
+  // null = no es pot comparar cap model (o falten les dades d'ara): la insígnia no es mostra.
+  confidenceLevel: 'high' | 'medium' | 'low' | null;
   alerts: Alert[];
 }
 
