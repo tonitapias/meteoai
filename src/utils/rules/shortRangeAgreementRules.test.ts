@@ -48,11 +48,19 @@ describe('calculateShortRangeAgreement — temperatura de les pròximes 6 h', ()
         expect(agreement(20, [20, 23.5, 20, 20])?.level).toBe('medium');
     });
 
-    it('una discrepància gran entre models és incertesa alta, i el valor és el rang mitjà', () => {
-        const result = agreement(20, [20, 27, 20, 20]);
-        expect(result?.level).toBe('low');
-        expect(result?.type).toBe('temp');
-        expect(result?.value).toBe(7);
+    it('una discrepància gran entre models és incertesa alta, causada per la temperatura', () => {
+        expect(agreement(20, [20, 27, 20, 20])).toEqual({ level: 'low', cause: 'temp', tempMarginC: 4 });
+    });
+
+    it('amb acord, ni causa ni marge', () => {
+        expect(agreement(20, [20.3, 19.8, 20.1, 20.2])).toEqual({ level: 'high', cause: null, tempMarginC: null });
+    });
+
+    it('el marge de la temperatura creix amb la discrepància: ±3 °C, ±4 °C i ±5 °C', () => {
+        expect(agreement(20, [20, 23.5, 20, 20])).toEqual({ level: 'medium', cause: 'temp', tempMarginC: 3 });   // puntuació 1,46
+        expect(agreement(20, [20, 25.9, 20, 20])).toEqual({ level: 'medium', cause: 'temp', tempMarginC: 3 });   // 2,46
+        expect(agreement(20, [20, 27, 20, 20])?.tempMarginC).toBe(4);     // 2,92
+        expect(agreement(20, [20, 30, 20, 20])?.tempMarginC).toBe(5);     // 4,17
     });
 
     it("si el que es mostra va per lliure respecte de tots els globals, també compta (tot i que els globals estiguin d'acord)", () => {
@@ -77,10 +85,7 @@ describe('calculateShortRangeAgreement — pluja de les pròximes 6 h', () => {
     it('la mitjana i la baixa depenen de quants globals contradiuen el que es mostra (1/4 alta, 2/4 mitjana, 3/4 baixa)', () => {
         expect(rain(0, [0.5, 0, 0, 0])?.level).toBe('high');
         expect(rain(0, [0.5, 0.5, 0, 0])?.level).toBe('medium');
-        const low = rain(0, [0.5, 0.5, 0.5, 0]);
-        expect(low?.level).toBe('low');
-        expect(low?.type).toBe('precip');
-        expect(low?.value).toBe(0.75);
+        expect(rain(0, [0.5, 0.5, 0.5, 0])).toEqual({ level: 'low', cause: 'rain', tempMarginC: null });
     });
 
     it('si es mostra pluja i cap global en dona, és incertesa alta', () => {
@@ -91,6 +96,34 @@ describe('calculateShortRangeAgreement — pluja de les pròximes 6 h', () => {
     it('el llindar de pluja és 0,3 mm en les 6 hores', () => {
         expect(rain(0, [0.05, 0.05, 0.05, 0])?.level).toBe('low');     // 0,3 mm: plou
         expect(rain(0, [0.04, 0.04, 0.04, 0])?.level).toBe('high');    // 0,24 mm: sec
+    });
+});
+
+describe('calculateShortRangeAgreement — la causa és qui posa el nivell', () => {
+    // Temperatura i pluja a la vegada: `temps` per model (mostrada primer) i pluja per hora (mm).
+    const both = (temps: [number, number[]], rains: [number, number[]]) => {
+        const { hourly, comparison } = build(
+            { temp: flat(temps[0]), precip: flat(rains[0]) },
+            temps[1].map((t, i) => ({ temp: flat(t), precip: flat(rains[1][i]) }))
+        );
+        return calculateShortRangeAgreement(hourly, comparison, 0);
+    };
+    const TEMP_LOW: [number, number[]] = [20, [20, 27, 20, 20]];
+    const TEMP_MEDIUM: [number, number[]] = [20, [20, 23.5, 20, 20]];
+    const RAIN_LOW: [number, number[]] = [0, [0.5, 0.5, 0.5, 0]];
+    const RAIN_MEDIUM: [number, number[]] = [0, [0.5, 0.5, 0, 0]];
+
+    it('temperatura i pluja al mateix nivell: totes dues, amb el marge de la temperatura', () => {
+        expect(both(TEMP_LOW, RAIN_LOW)).toEqual({ level: 'low', cause: 'both', tempMarginC: 4 });
+        expect(both(TEMP_MEDIUM, RAIN_MEDIUM)).toEqual({ level: 'medium', cause: 'both', tempMarginC: 3 });
+    });
+
+    it('la pitjor mana: pluja baixa amb temperatura mitjana és pluja (sense marge de temperatura)', () => {
+        expect(both(TEMP_MEDIUM, RAIN_LOW)).toEqual({ level: 'low', cause: 'rain', tempMarginC: null });
+    });
+
+    it('temperatura baixa amb pluja mitjana és temperatura', () => {
+        expect(both(TEMP_LOW, RAIN_MEDIUM)).toEqual({ level: 'low', cause: 'temp', tempMarginC: 4 });
     });
 });
 

@@ -31,6 +31,9 @@ export interface TacticalAnalysisResult extends Omit<Partial<AICacheData>, 'tips
     // null = sense comparació entre models: no es mostra la insígnia.
     confidenceLevel?: 'high' | 'medium' | 'low' | null;
     confidence?: string;
+    // Color de la insígnia (un dubte només de temperatura és ambre, no vermell) i frase que l'explica.
+    confidenceColor?: 'green' | 'amber' | 'red' | null;
+    confidenceHint?: string;
     alerts?: AlertItem[];
     source?: string;
 }
@@ -210,16 +213,22 @@ const TacticalRiskBadge = ({ analysis, ui }: { analysis: TacticalAnalysisResult;
 const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => {
     if (!analysis || !analysis.confidence || !analysis.confidenceLevel) return null;
 
-    const styles: Record<'high' | 'medium' | 'low', string> = {
-        high: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/80',
-        medium: 'text-amber-300 border-amber-500/40 bg-amber-950/80',
-        low: 'text-rose-200 border-rose-500/50 bg-rose-950/80'
+    const styles: Record<'green' | 'amber' | 'red', string> = {
+        green: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/80',
+        amber: 'text-amber-300 border-amber-500/40 bg-amber-950/80',
+        red: 'text-rose-200 border-rose-500/50 bg-rose-950/80'
     };
+    const levelColor = { high: 'green', medium: 'amber', low: 'red' } as const;
 
-    const currentStyle = styles[analysis.confidenceLevel] || styles.medium;
+    const currentStyle = styles[analysis.confidenceColor ?? levelColor[analysis.confidenceLevel]] || styles.amber;
 
     return (
-        <span className={`text-[10px] sm:text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${currentStyle} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`}>
+        <span
+            data-testid="ai-confidence"
+            data-color={analysis.confidenceColor ?? levelColor[analysis.confidenceLevel]}
+            title={analysis.confidenceHint || undefined}
+            className={`text-[10px] sm:text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${currentStyle} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`}
+        >
             <span className="truncate max-w-[130px] sm:max-w-none font-sans font-extrabold tracking-wider">
                 {analysis.confidence}
             </span>

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
     ExtendedWeatherData, 
-    ReliabilityResult, 
+    ShortRangeAgreement,
     AIPredictionResult 
 } from '../types/weatherLogicTypes';
 
@@ -45,7 +45,8 @@ export function useWeatherAI(
     aqiData: AQIData | null, 
     lang: Language, 
     unit: WeatherUnit, 
-    reliability: ReliabilityResult | null,
+    // Acord entre models de les pròximes 6 hores (shortRangeAgreementRules): la insígnia de l'anàlisi.
+    reliability: ShortRangeAgreement | null,
     // Codi de temps ja passat per l'orquestrador (getRealTimeWeatherCode) — el mateix que
     // veu l'usuari a la capçalera. Sense ell, la IA llegiria el codi BRUT del model
     // (p.ex. el 45 d'ICON) i se saltaria la política de boira (visibilityRules.resolveFog).
@@ -78,7 +79,8 @@ export function useWeatherAI(
     const weatherCode = current.weather_code;
     
     const aqiVal = aqiData?.current?.european_aqi ?? 0;
-    const relLevel = reliability?.level ?? 'none';
+    // Nivell, causa i marge: un canvi de "Temperatura ±3°" a "±4°" també ha de refer la insígnia.
+    const relLevel = reliability ? `${reliability.level}:${reliability.cause ?? '-'}:${reliability.tempMarginC ?? '-'}` : 'none';
     const currentRecord = current as unknown as Record<string, unknown>;
     const dustKind = resolveDustAdvisory(aqiData?.current, currentRecord.relative_humidity_2m as number | undefined, currentRecord.precipitation as number | undefined).kind;
     // Només la variant (no el % cru), perquè el cel no recalculi la IA a cada canvi de núvols.

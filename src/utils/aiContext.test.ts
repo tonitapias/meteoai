@@ -69,30 +69,62 @@ describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
     });
 });
 
-// La insígnia de l'anàlisi (Consens / Divergència / Incertesa alta). Sense comparació entre models o sense les dades
-// d'ara no n'hi ha cap: abans sortia "Consens Models" per defecte o "Incertesa alta", i quan el text de Gemini
+// La insígnia de l'anàlisi diu QUÈ és incert: "Temperatura ±N°" en ambre (mai vermell), la pluja dubtosa (ambre) o
+// incerta (vermell), i els textos generals quan dubten totes dues coses. Sense comparació entre models o sense les
+// dades d'ara no n'hi ha cap: abans sortia "Consens Models" per defecte o "Incertesa alta", i quan el text de Gemini
 // substituïa el missatge de "sense dades" la insígnia vermella quedava sola al costat d'un text normal.
 describe("generateAIPrediction — insígnia d'acord entre models", () => {
     const badge = (reliability: Parameters<typeof generateAIPrediction>[6], cur: StrictCurrentWeather = current) => {
         const out = generateAIPrediction(cur, daily, hourly, 0, 'ca', 3, reliability, 'C');
-        return { level: out.confidenceLevel, text: out.confidence };
+        return { level: out.confidenceLevel, text: out.confidence, color: out.confidenceColor, hint: out.confidenceHint };
     };
 
-    it('cada nivell té el seu text', () => {
-        expect(badge({ level: 'high', type: 'ok', value: 0 })).toEqual({ level: 'high', text: tr.aiConfidence });
-        expect(badge({ level: 'medium', type: 'divergent', value: 0 })).toEqual({ level: 'medium', text: tr.aiConfidenceMod });
-        expect(badge({ level: 'low', type: 'temp', value: 7 })).toEqual({ level: 'low', text: tr.aiConfidenceLow });
+    it('amb acord: "Consens Models" en verd', () => {
+        expect(badge({ level: 'high', cause: null, tempMarginC: null })).toEqual({ level: 'high', text: tr.aiConfidence, color: 'green', hint: tr.aiConfidenceHintHigh });
+    });
+
+    it('només la temperatura: "Temperatura ±N°" en ambre, també amb el dubte fort (mai vermell)', () => {
+        expect(badge({ level: 'medium', cause: 'temp', tempMarginC: 3 })).toMatchObject({ level: 'medium', text: 'Temperatura ±3°', color: 'amber' });
+        const strong = badge({ level: 'low', cause: 'temp', tempMarginC: 4 });
+        expect(strong).toMatchObject({ level: 'low', text: 'Temperatura ±4°', color: 'amber' });
+        expect(strong.hint).toContain('±4°');
+    });
+
+    it('en Fahrenheit el marge es converteix (±3 °C = ±5 °F, ±4 °C = ±7 °F)', () => {
+        const f = (tempMarginC: number) =>
+            generateAIPrediction(current, daily, hourly, 0, 'ca', 3, { level: 'medium', cause: 'temp', tempMarginC }, 'F').confidence;
+        expect(f(3)).toBe('Temperatura ±5°');
+        expect(f(4)).toBe('Temperatura ±7°');
+    });
+
+    it('la pluja: dubtosa en ambre, incerta en vermell', () => {
+        expect(badge({ level: 'medium', cause: 'rain', tempMarginC: null })).toMatchObject({ text: tr.aiConfidenceRainMod, color: 'amber', hint: tr.aiConfidenceHintRain });
+        expect(badge({ level: 'low', cause: 'rain', tempMarginC: null })).toMatchObject({ text: tr.aiConfidenceRainLow, color: 'red', hint: tr.aiConfidenceHintRain });
+    });
+
+    it('temperatura i pluja alhora: els textos generals, ambre o vermell', () => {
+        expect(badge({ level: 'medium', cause: 'both', tempMarginC: 3 })).toMatchObject({ text: tr.aiConfidenceMod, color: 'amber', hint: tr.aiConfidenceHintBoth });
+        expect(badge({ level: 'low', cause: 'both', tempMarginC: 4 })).toMatchObject({ text: tr.aiConfidenceLow, color: 'red', hint: tr.aiConfidenceHintBoth });
+    });
+
+    it('cada llengua té el seu text de temperatura', () => {
+        const temp = (lang: 'es' | 'en' | 'fr') =>
+            generateAIPrediction(current, daily, hourly, 0, lang, 3, { level: 'medium', cause: 'temp', tempMarginC: 3 }, 'C').confidence;
+        expect(temp('es')).toBe('Temperatura ±3°');
+        expect(temp('en')).toBe('Temperature ±3°');
+        expect(temp('fr')).toBe('Température ±3°');
     });
 
     it('sense comparació entre models no hi ha insígnia (no un "Consens" per defecte)', () => {
-        expect(badge(null)).toEqual({ level: null, text: '' });
+        expect(badge(null)).toEqual({ level: null, text: '', color: null, hint: '' });
     });
 
     it('sense la temperatura d\'ara no hi ha insígnia (no una "Incertesa alta"), encara que els models coincideixin', () => {
         const noTemp = { ...current, temperature_2m: null } as unknown as StrictCurrentWeather;
-        const out = generateAIPrediction(noTemp, daily, hourly, 0, 'ca', 3, { level: 'high', type: 'ok', value: 0 }, 'C');
+        const out = generateAIPrediction(noTemp, daily, hourly, 0, 'ca', 3, { level: 'high', cause: null, tempMarginC: null }, 'C');
         expect(out.text).toBe(tr.aiNoData);
         expect(out.confidenceLevel).toBeNull();
+        expect(out.confidenceColor).toBeNull();
         expect(out.confidence).toBe('');
     });
 });

@@ -7,8 +7,8 @@ import {
     StrictCurrentWeather, 
     StrictDailyWeather, 
     StrictHourlyWeather, 
-    AIPredictionResult, 
-    ReliabilityResult 
+    AIPredictionResult,
+    ShortRangeAgreement
 } from '../types/weatherLogicTypes';
 import { safeNum, extractValidNum } from './weatherMath';
 import { isFreezingPrecipCode, isSleetCode } from './rules/winterRules';
@@ -168,6 +168,40 @@ const getFutureRainProbability = (hourly: StrictHourlyWeather, daily: StrictDail
     return safeNum(daily.precipitation_probability_max?.[0], 0);
 };
 
+type ConfidenceBadge = Pick<AIPredictionResult, 'confidence' | 'confidenceLevel' | 'confidenceColor' | 'confidenceHint'>;
+
+// Sense dades no hi ha acord entre models que valgui: sense insígnia, ni un consens ni una incertesa inventats.
+const NO_BADGE: ConfidenceBadge = { confidence: "", confidenceLevel: null, confidenceColor: null, confidenceHint: "" };
+
+// Insígnia de l'anàlisi +6h: diu QUÈ és incert. Un dubte només de temperatura és ambre i porta el seu marge
+// ("Temperatura ±3°"), mai vermell: el vermell queda per quan la majoria de models globals contradiuen si plourà
+// (o quan dubten la temperatura i la pluja alhora).
+const describeAgreement = (agreement: ShortRangeAgreement | null, tr: TranslationMap, unit: string): ConfidenceBadge => {
+    if (!agreement) return NO_BADGE;
+    const { level, cause, tempMarginC } = agreement;
+    if (level === 'high' || cause === null) {
+        return { confidence: tr.aiConfidence, confidenceLevel: 'high', confidenceColor: 'green', confidenceHint: tr.aiConfidenceHintHigh };
+    }
+    if (cause === 'temp' && tempMarginC !== null) {
+        const margin = String(unit === 'F' || unit === 'imperial' ? Math.round(tempMarginC * 9 / 5) : tempMarginC);
+        return {
+            confidence: tr.aiConfidenceTemp.replace('{n}', margin),
+            confidenceLevel: level,
+            confidenceColor: 'amber',
+            confidenceHint: tr.aiConfidenceHintTemp.replace('{n}', margin)
+        };
+    }
+    if (cause === 'rain') {
+        return level === 'low'
+            ? { confidence: tr.aiConfidenceRainLow, confidenceLevel: level, confidenceColor: 'red', confidenceHint: tr.aiConfidenceHintRain }
+            : { confidence: tr.aiConfidenceRainMod, confidenceLevel: level, confidenceColor: 'amber', confidenceHint: tr.aiConfidenceHintRain };
+    }
+    // Temperatura i pluja alhora.
+    return level === 'low'
+        ? { confidence: tr.aiConfidenceLow, confidenceLevel: level, confidenceColor: 'red', confidenceHint: tr.aiConfidenceHintBoth }
+        : { confidence: tr.aiConfidenceMod, confidenceLevel: level, confidenceColor: 'amber', confidenceHint: tr.aiConfidenceHintBoth };
+};
+
 const analyzeWind = (windSpeed: number, tr: TranslationMap) => {
     if (windSpeed > WIND.MODERATE) {
         return windSpeed > WIND.STRONG ? tr.aiWindStrong : tr.aiWindMod;
@@ -182,16 +216,17 @@ export const generateAIPrediction = (
     aqiValue: number, 
     language: Language = 'ca', 
     effectiveCode: number | null = null, 
-    reliability: ReliabilityResult | null = null, 
+    // Acord entre models de les pròximes 6 hores (shortRangeAgreementRules); null = no es pot comparar.
+    agreement: ShortRangeAgreement | null = null,
     unit: string = 'C',
     // Avís de pols/partícules de "ara" (resolveDustAdvisory); null si no n'hi ha.
     dustKind: DustKind = null
 ): AIPredictionResult => {
     const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
-    // Sense dades no hi ha acord entre models que valgui: sense insígnia (confidenceLevel null), mai una
-    // "Incertesa alta" que, en arribar el text de Gemini, quedaria sola al costat d'un text normal.
+    // Sense dades no hi ha acord entre models que valgui: sense insígnia, mai una "Incertesa alta" que, en arribar
+    // el text de Gemini, quedaria sola al costat d'un text normal.
     if (!tr || !current || !daily || !hourly) {
-        return { text: "...", tips: [], alerts: [], confidence: "", confidenceLevel: null };
+        return { text: "...", tips: [], alerts: [], ...NO_BADGE };
     }
     
     try {
@@ -209,8 +244,7 @@ export const generateAIPrediction = (
                 text: tr.aiNoData,
                 tips: [],
                 alerts: [],
-                confidence: "",
-                confidenceLevel: null
+                ...NO_BADGE
             };
         }
         const code = validCode;
@@ -278,26 +312,21 @@ export const generateAIPrediction = (
             currentCape, precipSum
         }, tr);
 
-        // Sense comparació entre models (reliability null) no hi ha insígnia: abans sortia "Consens Models" per defecte.
-        const confidenceLevel: AIPredictionResult['confidenceLevel'] = reliability?.level ?? null;
-        const confidenceText = confidenceLevel === 'low' ? tr.aiConfidenceLow
-            : confidenceLevel === 'medium' ? tr.aiConfidenceMod
-            : confidenceLevel === 'high' ? tr.aiConfidence
-            : "";
+        // Sense comparació entre models (agreement null) no hi ha insígnia: abans sortia "Consens Models" per defecte.
+        const badge = describeAgreement(agreement, tr, unit);
 
         const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
 
         return { 
             text: finalString, 
             tips: alertsAndTips.tips, 
-            confidence: confidenceText, 
-            confidenceLevel, 
+            ...badge,
             alerts: [...alertsList, ...alertsAndTips.alerts] 
         };
 
     } catch (error) {
         console.error("AI Generation Error:", error);
-        return { text: tr.aiSummaryClear, tips: [], alerts: [], confidence: "", confidenceLevel: null };
+        return { text: tr.aiSummaryClear, tips: [], alerts: [], ...NO_BADGE };
     }
 };
 

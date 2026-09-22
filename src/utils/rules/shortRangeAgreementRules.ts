@@ -1,5 +1,5 @@
 // src/utils/rules/shortRangeAgreementRules.ts
-import type { ExtendedWeatherData, ReliabilityResult } from '../../types/weatherLogicTypes';
+import type { ExtendedWeatherData, ShortRangeAgreement } from '../../types/weatherLogicTypes';
 import { extractValidArrayNum, extractValidNum } from '../weatherMath';
 
 // ACORD ENTRE MODELS PER A LES PRÒXIMES 6 HORES (la insígnia de l'"ANÀLISI METEO IA | +6H").
@@ -28,6 +28,12 @@ import { extractValidArrayNum, extractValidNum } from '../weatherMath';
 // La proporció de fallades segueix gairebé exactament la proporció de globals que discrepen: cap 3-4 %, 1 de 4
 // 17-20 %, 2 de 4 31-41 %, 3 o 4 de 4 50-74 %.
 //
+// CAUSA I MARGE. El nivell diu també QUÈ és incert, perquè les dues causes es comporten diferent: quan el nivell baixa
+// per la temperatura, l'encert sobre la pluja gairebé no falla (3-5 %); quan baixa per la pluja, la temperatura sol
+// anar bé (error > 3 °C en un 3-8 %). Quan la causa és la temperatura, el marge és el percentil 80 de l'error més
+// gran de les 6 hores: ±3 °C fins a una puntuació de 2,5 (el 80 % de finestres hi cap), ±4 °C fins a 3,5 (79 %) i
+// ±5 °C per sobre (76 %).
+//
 // Es fa servir la temperatura dels models EN BRUT, sense la correcció d'inversió tèrmica de l'app
 // (temperatureCorrections): aquí es mesura l'acord entre models, no la nostra correcció, i la calibració és en brut.
 // Límit conegut: la calibració usa la passada més recent de cada hora (termini de 0 a 6 h aprox.); a l'app les
@@ -49,6 +55,16 @@ const WET_TOTAL_MM = 0.3;
 const RAIN_MEDIUM_DISSENT = 0.5;
 const RAIN_LOW_DISSENT = 0.75;
 
+// Marge de la temperatura (°C) segons la puntuació: el primer tram on hi cap.
+const TEMP_MARGINS = [
+    { maxScore: 2.5, marginC: 3 },
+    { maxScore: 3.5, marginC: 4 },
+    { maxScore: Infinity, marginC: 5 },
+] as const;
+
+type Level = ShortRangeAgreement['level'];
+const LEVEL_RANK: Record<Level, number> = { high: 0, medium: 1, low: 2 };
+
 type HourlyLike = { temperature_2m?: unknown; precipitation?: unknown } | null | undefined;
 type HourlyComparison = ExtendedWeatherData['hourlyComparison'] | null | undefined;
 
@@ -58,7 +74,7 @@ const modelValue = (comparison: HourlyComparison, model: typeof GLOBAL_MODELS[nu
 const mean = (values: number[]): number => values.reduce((a, b) => a + b, 0) / values.length;
 
 /** Puntuació de temperatura (1 = discrepància típica), o null si no hi ha prou hores amb prou models. */
-const temperatureScore = (hourly: HourlyLike, comparison: HourlyComparison, start: number): { score: number; range: number } | null => {
+const temperatureScore = (hourly: HourlyLike, comparison: HourlyComparison, start: number): number | null => {
     const ranges: number[] = [];
     const deviations: number[] = [];
     for (let h = start; h < start + WINDOW_HOURS; h++) {
@@ -70,8 +86,7 @@ const temperatureScore = (hourly: HourlyLike, comparison: HourlyComparison, star
         deviations.push(Math.abs(shown - mean(globals)));
     }
     if (ranges.length < MIN_VALID_HOURS) return null;
-    const range = mean(ranges);
-    return { score: (range / TYPICAL_TEMP_RANGE + mean(deviations) / TYPICAL_DISPLAYED_DEVIATION) / 2, range };
+    return (mean(ranges) / TYPICAL_TEMP_RANGE + mean(deviations) / TYPICAL_DISPLAYED_DEVIATION) / 2;
 };
 
 /** Total de la finestra amb prou hores reals; null si no n'hi ha prou (mai un 0 mm fals). */
@@ -109,21 +124,28 @@ export const calculateShortRangeAgreement = (
     hourly: HourlyLike,
     comparison: HourlyComparison,
     startIndex: number
-): ReliabilityResult | null => {
+): ShortRangeAgreement | null => {
     if (!hourly || !comparison || !Number.isInteger(startIndex) || startIndex < 0) return null;
 
     const temp = temperatureScore(hourly, comparison, startIndex);
     const dissent = rainDissent(hourly, comparison, startIndex);
     if (temp === null && dissent === null) return null;
 
-    if (temp !== null && temp.score > TEMP_LOW_SCORE) {
-        return { level: 'low', type: 'temp', value: Number(temp.range.toFixed(1)) };
-    }
-    if (dissent !== null && dissent >= RAIN_LOW_DISSENT) {
-        return { level: 'low', type: 'precip', value: Number(dissent.toFixed(2)) };
-    }
-    if ((temp !== null && temp.score > TEMP_MEDIUM_SCORE) || (dissent !== null && dissent >= RAIN_MEDIUM_DISSENT)) {
-        return { level: 'medium', type: 'divergent', value: 0 };
-    }
-    return { level: 'high', type: 'ok', value: 0 };
+    const tempLevel: Level | null = temp === null ? null
+        : temp > TEMP_LOW_SCORE ? 'low' : temp > TEMP_MEDIUM_SCORE ? 'medium' : 'high';
+    const rainLevel: Level | null = dissent === null ? null
+        : dissent >= RAIN_LOW_DISSENT ? 'low' : dissent >= RAIN_MEDIUM_DISSENT ? 'medium' : 'high';
+
+    // El pitjor dels dos acords mana; la causa és qui el posa (o tots dos, si coincideixen).
+    const level = [tempLevel, rainLevel]
+        .filter((l): l is Level => l !== null)
+        .reduce<Level>((worst, l) => (LEVEL_RANK[l] > LEVEL_RANK[worst] ? l : worst), 'high');
+    if (level === 'high') return { level, cause: null, tempMarginC: null };
+
+    const tempDrives = tempLevel === level;
+    const rainDrives = rainLevel === level;
+    const tempMarginC = tempDrives && temp !== null
+        ? TEMP_MARGINS.find(m => temp <= m.maxScore)?.marginC ?? null
+        : null;
+    return { level, cause: tempDrives && rainDrives ? 'both' : tempDrives ? 'temp' : 'rain', tempMarginC };
 };

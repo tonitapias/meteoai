@@ -69,6 +69,13 @@ export interface TranslationMap {
   aiConfidence: string;
   aiConfidenceLow: string;
   aiConfidenceMod: string;
+  aiConfidenceTemp: string;
+  aiConfidenceRainMod: string;
+  aiConfidenceRainLow: string;
+  aiConfidenceHintHigh: string;
+  aiConfidenceHintTemp: string;
+  aiConfidenceHintRain: string;
+  aiConfidenceHintBoth: string;
   [key: string]: unknown;
 }
 
@@ -186,6 +193,10 @@ export interface AIPredictionResult {
   confidence: string;
   // null = no es pot comparar cap model (o falten les dades d'ara): la insígnia no es mostra.
   confidenceLevel: 'high' | 'medium' | 'low' | null;
+  // Color de la insígnia. No sempre és el del nivell: un dubte només de temperatura és ambre, no vermell.
+  confidenceColor: 'green' | 'amber' | 'red' | null;
+  // Frase que explica la insígnia (es mostra en passar-hi per sobre).
+  confidenceHint: string;
   alerts: Alert[];
 }
 
@@ -193,4 +204,16 @@ export interface ReliabilityResult {
     level: 'low' | 'medium' | 'high';
     type: 'general' | 'temp' | 'precip' | 'divergent' | 'ok';
     value: number | string;
+}
+
+/** Acord entre models de les pròximes 6 hores (utils/rules/shortRangeAgreementRules.ts): la insígnia de l'anàlisi +6h. */
+export interface ShortRangeAgreement {
+    level: 'low' | 'medium' | 'high';
+    /** Què fa baixar el nivell (null si és alt): la temperatura, la pluja o totes dues. */
+    cause: 'temp' | 'rain' | 'both' | null;
+    /**
+     * Marge de la temperatura mostrada, en °C: en 8 de cada 10 finestres de la calibració l'error de totes les hores
+     * hi cap. Només quan la temperatura és la causa (sola o amb la pluja); si no, null.
+     */
+    tempMarginC: number | null;
 }
