@@ -87,3 +87,105 @@ describe('useWeatherAI — el codi de temps efectiu arriba a les dues IA', () =>
         expect(getGeminiAnalysis.mock.calls[1][4]).toBe(60);
     });
 });
+
+// L'anàlisi s'espera 500 ms abans de cridar la IA. Abans, la clau es donava per "processada" en programar l'espera: si
+// durant aquells 500 ms arribaven dades noves amb la mateixa clau (p. ex. un refresc), la neteja de l'efecte cancel·lava
+// l'espera i el nou efecte ja no en programava cap altra. L'anàlisi no es feia mai i es quedava a la pantalla l'anterior
+// (amb la seva insígnia), d'una altra consulta.
+describe("useWeatherAI — l'espera de 500 ms no es perd", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        generateAIPrediction.mockReset().mockReturnValue({ text: 'local', tips: [], alerts: [], confidence: 'x', confidenceLevel: 'high' });
+        getGeminiAnalysis.mockReset().mockResolvedValue(null);
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    const advance = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
+
+    it("si arriben dades noves amb la mateixa clau durant l'espera, l'anàlisi es fa igualment (amb les dades noves)", async () => {
+        const { rerender } = renderHook(
+            ({ wd }: { wd: ExtendedWeatherData }) => useWeatherAI(wd, null, 'ca', 'C', null, 3),
+            { initialProps: { wd: WEATHER } }
+        );
+        await advance(200);
+        const refreshed = { ...WEATHER, current: { ...WEATHER.current } } as ExtendedWeatherData;
+        rerender({ wd: refreshed });
+        await advance(600);
+
+        expect(generateAIPrediction).toHaveBeenCalledTimes(1);
+        expect(generateAIPrediction.mock.calls[0][0]).toBe(refreshed.current);
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(1);
+        expect(getGeminiAnalysis.mock.calls[0][0]).toBe(refreshed);
+    });
+
+    it('un cop feta, la mateixa clau no es torna a analitzar', async () => {
+        const { rerender } = renderHook(
+            ({ wd }: { wd: ExtendedWeatherData }) => useWeatherAI(wd, null, 'ca', 'C', null, 3),
+            { initialProps: { wd: WEATHER } }
+        );
+        await advance(600);
+        rerender({ wd: { ...WEATHER } as ExtendedWeatherData });
+        await advance(600);
+        expect(generateAIPrediction).toHaveBeenCalledTimes(1);
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(1);
+    });
+
+    it("la resposta de la IA d'una consulta anterior no s'aplica mentre la nova espera", async () => {
+        let resolveOld: (v: unknown) => void = () => {};
+        getGeminiAnalysis.mockReset()
+            .mockImplementationOnce(() => new Promise(r => { resolveOld = r; }))
+            .mockResolvedValue(null);
+        const { result, rerender } = renderHook(
+            ({ code }: { code: number }) => useWeatherAI(WEATHER, null, 'ca', 'C', null, code),
+            { initialProps: { code: 3 } }
+        );
+        await advance(600);                 // la consulta vella ja espera la IA
+        rerender({ code: 45 });             // consulta nova: comença la seva espera de 500 ms
+        await act(async () => { resolveOld({ text: 'text vell', tips: [] }); });
+        await advance(100);                 // encara dins l'espera de la nova
+
+        expect(result.current.aiAnalysis?.text).not.toBe('text vell');
+    });
+
+    it("tornar a la clau ja analitzada durant l'espera d'una altra no la repeteix, i la seva IA sí que s'aplica", async () => {
+        let resolveFirst: (v: unknown) => void = () => {};
+        getGeminiAnalysis.mockReset()
+            .mockImplementationOnce(() => new Promise(r => { resolveFirst = r; }))
+            .mockResolvedValue(null);
+        const { result, rerender } = renderHook(
+            ({ code }: { code: number }) => useWeatherAI(WEATHER, null, 'ca', 'C', null, code),
+            { initialProps: { code: 3 } }
+        );
+        await advance(600);
+        rerender({ code: 45 });
+        await advance(100);
+        rerender({ code: 3 });              // torna a la primera abans que la segona arrenqui
+        await act(async () => { resolveFirst({ text: 'text bo', tips: [] }); });
+        await advance(600);
+
+        expect(generateAIPrediction).toHaveBeenCalledTimes(1);
+        expect(result.current.aiAnalysis?.text).toBe('text bo');
+    });
+
+    it("tornar a una clau quan a la pantalla ja hi ha l'anàlisi d'una altra: la IA vella no s'hi barreja, es refà", async () => {
+        let resolveFirst: (v: unknown) => void = () => {};
+        getGeminiAnalysis.mockReset()
+            .mockImplementationOnce(() => new Promise(r => { resolveFirst = r; }))
+            .mockResolvedValue(null);
+        const { result, rerender } = renderHook(
+            ({ code }: { code: number }) => useWeatherAI(WEATHER, null, 'ca', 'C', null, code),
+            { initialProps: { code: 3 } }
+        );
+        await advance(600);
+        rerender({ code: 45 });
+        await advance(600);                 // la segona ja és a la pantalla
+        rerender({ code: 3 });              // es torna a la primera: comença la seva espera
+        await act(async () => { resolveFirst({ text: 'text vell', tips: [] }); });
+        await advance(100);
+        expect(result.current.aiAnalysis?.text).not.toBe('text vell');
+
+        await advance(600);
+        expect(generateAIPrediction).toHaveBeenCalledTimes(3);
+        expect(generateAIPrediction.mock.calls[2][5]).toBe(3);
+    });
+});

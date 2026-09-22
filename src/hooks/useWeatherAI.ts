@@ -54,7 +54,10 @@ export function useWeatherAI(
     effectiveCloudCover: number | null = null
 ) {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisState | null>(null);
-  const lastProcessedKey = useRef<string>("");
+  // startedKey: l'última anàlisi que ha arrencat de debò (és la que hi ha a la pantalla i no cal repetir-la).
+  // wantedKey: l'última consulta demanada, la que ha de guanyar.
+  const startedKey = useRef<string>("");
+  const wantedKey = useRef<string>("");
 
   useEffect(() => {
     // 1. Validació inicial (Risc Zero)
@@ -83,8 +86,8 @@ export function useWeatherAI(
     const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
-    if (lastProcessedKey.current === currentKey) return;
-    lastProcessedKey.current = currentKey;
+    wantedKey.current = currentKey;
+    if (startedKey.current === currentKey) return;
 
     const fetchAI = async () => {
       try {
@@ -98,7 +101,9 @@ export function useWeatherAI(
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
         const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover);
         
-        if (gemini && gemini.text && lastProcessedKey.current === currentKey) {
+        // Només si aquesta consulta encara és la vigent i la que hi ha a la pantalla: la resposta d'una consulta
+        // anterior no s'enganxa al text local d'una altra.
+        if (gemini && gemini.text && startedKey.current === currentKey && wantedKey.current === currentKey) {
           setAiAnalysis((prev) => {
               if (!prev) return null;
               return {
@@ -120,7 +125,14 @@ export function useWeatherAI(
       }
     };
 
-    const timer = setTimeout(fetchAI, 500);
+    // La clau es dona per feta quan l'anàlisi ARRENCA, no en programar l'espera. Abans es marcava aquí mateix: si durant
+    // els 500 ms arribaven dades noves amb la mateixa clau (un refresc), la neteja cancel·lava l'espera i el nou efecte
+    // veia la clau com a feta i no en programava cap altra. L'anàlisi no es feia mai i la pantalla es quedava amb
+    // l'anterior, d'una altra consulta (text i insígnia inclosos).
+    const timer = setTimeout(() => {
+      startedKey.current = currentKey;
+      fetchAI();
+    }, 500);
     return () => clearTimeout(timer);
 
   }, [weatherData, aqiData, lang, unit, reliability, effectiveCode, effectiveCloudCover]);
