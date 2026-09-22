@@ -2,9 +2,9 @@
 import { useMemo } from 'react';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
 import { calculateDewPoint, getMoonPhase, extractValidArrayNum, extractValidNum } from '../utils/weatherMath';
-import { calculateReliability } from '../utils/rules/reliabilityRules';
+import { calculateShortRangeAgreement } from '../utils/rules/shortRangeAgreementRules';
 import { calculateEffectiveCloudCover } from '../utils/rules/cloudRules';
-import { ExtendedWeatherData, StrictCurrentWeather, StrictDailyWeather } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { getComparisonVal } from '../utils/weatherMappers';
 
 // Definim un tipus bàsic per a les dades del gràfic que necessitem aquí
@@ -113,12 +113,12 @@ export function useCurrentConditions(
 
   const currentDewPoint = useMemo(() => calculateDewPoint(weatherData?.current?.temperature_2m || 0, weatherData?.current?.relative_humidity_2m || 0), [weatherData]);
   
-  const reliability = useMemo(() => {
-      if (!weatherData?.daily) return { level: 'high', type: 'ok', value: 0 } as const;
-      // [FIX PRECISIÓ] ECMWF ja es baixa (dailyComparison.ecmwf) però abans no
-      // s'incloïa en aquesta comparació — vegeu la nota a reliabilityRules.ts.
-      return calculateReliability(weatherData.daily as StrictDailyWeather, weatherData.dailyComparison?.gfs, weatherData.dailyComparison?.icon, 0, weatherData.dailyComparison?.ecmwf);
-  }, [weatherData]);
+  // Acord entre models de les 6 hores de l'"ANÀLISI METEO IA | +6H" (vegeu shortRangeAgreementRules.ts). Abans era la
+  // fiabilitat del dia 0 sencer, que de nit jutjava hores ja passades. null = no es pot comparar (sense insígnia).
+  const reliability = useMemo(
+      () => calculateShortRangeAgreement(weatherData?.hourly, weatherData?.hourlyComparison, currentHourlyIndex),
+      [weatherData, currentHourlyIndex]
+  );
   
   // [FIX] Amb `[]` com a dependències, la fase lunar es calculava un cop a
   // l'arrencada i mai més: si la PWA queda oberta passat el pas de mitjanit,
