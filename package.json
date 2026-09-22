@@ -1,6 +1,12 @@
 {
   "name": "MeteoToniAi",
+  "description": "Previsió meteorològica d'alta precisió: models globals i 14 models regionals d'alta resolució seleccionats automàticament per ubicació, radar en temps real i anàlisi per IA.",
   "homepage": "https://tonitapias.github.io/meteoai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tonitapias/meteoai.git"
+  },
+  "author": "Toni Tapias",
   "private": true,
   "license": "MIT",
   "version": "3.26.0",
