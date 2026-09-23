@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { rainProbabilityWithRegionalEvidence as evidence, MEASURABLE_RAIN_MM } from './rainEvidence';
+import { rainProbabilityWithModelEvidence as evidence, MEASURABLE_RAIN_MM } from './rainEvidence';
 
-describe('rainProbabilityWithRegionalEvidence', () => {
+describe('rainProbabilityWithModelEvidence', () => {
     it('sense pluja mesurable al model regional (o sense dada) no toca la probabilitat global', () => {
         expect(evidence(15, 0)).toBe(15);
         expect(evidence(15, MEASURABLE_RAIN_MM - 0.01)).toBe(15);

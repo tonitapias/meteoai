@@ -1,5 +1,6 @@
 // src/utils/rainEvidence.ts
-// Com es combina la probabilitat de pluja de l'ensemble global amb l'evidència d'un model regional determinista.
+// Com es combina la probabilitat de pluja de l'ensemble global amb l'evidència d'un model determinista: el model
+// regional (injectHighResModels) o la sèrie principal quan no és ICON (injectBaseRainEvidence).
 //
 // LA PROBABILITAT GLOBAL (Open-Meteo `precipitation_probability`) surt d'un ensemble: és la fracció de membres que
 // donen >= 0,1 mm en aquella hora. El model regional (AROME HD, ICON-D2...) és UNA sola previsió: dona quantitats,
@@ -24,6 +25,19 @@
 // LÍMITS: la "pluja observada" és la d'un METAR a :00/:30, que perd els ruixats curts, així que les freqüències
 // absolutes són un límit inferior; per això NOMÉS es puja (mai s'abaixa cap probabilitat) i no es recalibra la PoP global.
 // El calibratge és a 24 h de termini; a termini més curt l'evidència és més forta (i aquí queda conservadora).
+//
+// SÈRIE PRINCIPAL (set. 2026, arran de Roses: "0 %" amb 0,3 mm i icones de tempesta). La probabilitat d'Open-Meteo és
+// sempre la de l'ensemble d'ICON (igual a la d'icon_seamless el 100 % de les hores), però la pluja de les hores sense
+// model regional és la del best_match, que segons el punt és ICON (Girona, Barcelona, Madrid, París...) o un altre
+// model (Météo-France els primers dies i ECMWF 9 km després: Roses, Perpinyà, Marsella, Bordeus, Bilbao). Mesurat amb
+// 26 aeroports, set. 2024 – set. 2026, 469.000 hores, pluja del best_match a 1-5 dies vista (API "previous runs") i la
+// PoP arxivada de termini curt (l'única que es guarda, com al calibratge anterior), contra pluja observada als METAR:
+//   - On la sèrie és ICON, aquesta corba EMPITJORA el Brier als dies 2-5 (+0,1 a +1,2 %, a 3-6 de 22 estacions
+//     millora): la seva pluja ja és dins de la probabilitat del seu propi ensemble i es comptaria dues vegades.
+//   - On NO és ICON, el millora als dies 1-3 (-1,8 %, -0,7 %, -0,6 %; amb PoP ~0 i pluja al model, observada 12 % al
+//     dia 1 contra el 10 % de la corba). Als dies 4-5 la mesura, esbiaixada en contra (la PoP de termini curt ja "sap"
+//     si plourà), dona +0,3/+0,5 %; amb ICON determinista sec al mateix termini com a indicador de PoP baixa, la pluja
+//     observada és del 14,5-18 %. La corba (10 % amb PoP 0) queda entre les dues cotes i s'aplica a tots els terminis.
 
 /** Llindar de pluja mesurable (mm/h): el mateix que defineix la probabilitat global d'Open-Meteo. */
 export const MEASURABLE_RAIN_MM = 0.1;
@@ -54,15 +68,16 @@ const observedRainFrequency = (pop: number): number => {
 };
 
 /**
- * Probabilitat de pluja (%) d'una hora un cop tinguda en compte l'evidència del model regional.
+ * Probabilitat de pluja (%) d'una hora un cop tinguda en compte l'evidència d'un model determinista (regional, o la
+ * sèrie principal quan no és ICON).
  *
- * `globalPercent`: probabilitat global de l'hora (0-100). `regionalMm`: la pluja màxima que el model regional preveu
- * dins de ±1 h d'aquesta hora (mm), o null si no n'hi ha dada. Sense evidència (< 0,1 mm o cap dada) torna la global
- * tal qual. Mai no la baixa: si la global ja és igual o més alta que la freqüència observada, no es toca.
+ * `globalPercent`: probabilitat global de l'hora (0-100). `modelMm`: la pluja màxima que el model preveu dins de ±1 h
+ * d'aquesta hora (mm), o null si no n'hi ha dada. Sense evidència (< 0,1 mm o cap dada) torna la global tal qual.
+ * Mai no la baixa: si la global ja és igual o més alta que la freqüència observada, no es toca.
  */
-export const rainProbabilityWithRegionalEvidence = (globalPercent: number, regionalMm: number | null): number => {
+export const rainProbabilityWithModelEvidence = (globalPercent: number, modelMm: number | null): number => {
     if (typeof globalPercent !== 'number' || isNaN(globalPercent)) return globalPercent;
-    if (typeof regionalMm !== 'number' || isNaN(regionalMm) || regionalMm < MEASURABLE_RAIN_MM) return globalPercent;
+    if (typeof modelMm !== 'number' || isNaN(modelMm) || modelMm < MEASURABLE_RAIN_MM) return globalPercent;
 
     const pop = Math.min(1, Math.max(0, globalPercent / 100));
     return Math.max(globalPercent, Math.round(100 * observedRainFrequency(pop)));

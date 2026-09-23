@@ -2,6 +2,7 @@
 import * as Sentry from "@sentry/react";
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { normalizeModelData } from '../utils/normData';
+import { injectBaseRainEvidence } from '../utils/regionalModelEngine';
 import { selectRegionalModel, type RegionalModel } from '../constants/regionalModels';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import { getRegionalHDData } from '../services/weatherApi';
@@ -97,6 +98,10 @@ export const WeatherRepository = {
                 });
             }
         }
+
+        // 3b. Probabilitat de pluja coherent amb la pluja mostrada a les hores sense model regional
+        // (la pluja és d'un model determinista i la probabilitat, de l'ensemble d'ICON; vegeu injectBaseRainEvidence).
+        processedData = injectBaseRainEvidence(processedData);
 
         // 4. Finalització i Normalització de lloc
         // [FIX] Càsting segur al spread per satisfer TS sense alterar el runtime JS

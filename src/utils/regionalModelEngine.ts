@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ExtendedWeatherData, StrictHourlyWeather, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { HourlyDataSchema, CurrentDataSchema } from '../schemas/weatherSchema';
 import { buildModelSuffixRegex, REGIONAL_TEMP_FLAG_KEY, type RegionalModel } from '../constants/regionalModels';
-import { MEASURABLE_RAIN_MM, rainProbabilityWithRegionalEvidence } from './rainEvidence';
+import { MEASURABLE_RAIN_MM, rainProbabilityWithModelEvidence } from './rainEvidence';
 
 // --- 1. SCHEMAS & TIPUS INTERNS (Idèntic a l'original per seguretat) ---
 const RegionalModelCleanedSchema = z.object({
@@ -98,7 +98,8 @@ interface HourlyInjectionResult {
 const HOUR_MS = 3600000;
 
 /**
- * Pluja màxima (mm) del model regional a l'hora `index` i a les dues veïnes (±1 h), o null si cap no en porta dada.
+ * Pluja màxima (mm) d'una sèrie determinista (el model regional, o la sèrie mostrada) a l'hora `index` i a les dues
+ * veïnes (±1 h), o null si cap no en porta dada.
  * Una previsió puntual d'un model determinista té errors de fase d'ordre d'una hora: mirar el veïnat fa que una pluja
  * prevista a les 15 h que arriba a les 16 h no faci perdre l'evidència (vegeu rainEvidence.ts). Només compten les
  * veïnes que són realment l'hora anterior o la següent (un forat a la sèrie no s'estén).
@@ -168,7 +169,7 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
             if (regionalMm !== null && regionalMm >= MEASURABLE_RAIN_MM) {
                 if (!tH.precipitation_probability) tH.precipitation_probability = new Array(masterTimeLength).fill(0);
                 const currentProb = tH.precipitation_probability[globalIndex] || 0;
-                const updatedProb = rainProbabilityWithRegionalEvidence(currentProb, regionalMm);
+                const updatedProb = rainProbabilityWithModelEvidence(currentProb, regionalMm);
                 if (updatedProb > currentProb) {
                     tH.precipitation_probability[globalIndex] = updatedProb;
                     // El dia d'aquesta hora també ho ha de saber (vegeu injectDailyRainProbability).
@@ -258,6 +259,76 @@ const injectDailyPrecipitationTotal = (target: ExtendedWeatherData, regionalPrec
     });
 
     if (changed) target.daily = { ...daily, precipitation_sum: totals };
+};
+
+/** Camps que han de coincidir exactament perquè una hora de la sèrie principal sigui la d'ICON (best_match = ICON). */
+const ICON_IDENTITY_FIELDS = ['temperature_2m', 'relative_humidity_2m', 'precipitation'] as const;
+
+/**
+ * La sèrie principal d'aquesta hora és una altra que ICON? Sí si algun camp difereix del d'ICON, o si ICON no té
+ * aquella hora (valor null: més enllà del seu abast, on el best_match passa a ECMWF) i la sèrie sí. Si coincideixen
+ * tots, la sèrie ÉS ICON (Open-Meteo tria ICON com a best_match a molts punts: Girona, Barcelona, Madrid, París...).
+ * Si la comparativa d'ICON no porta el camp (no s'ha baixat), no se sap, i es tracta com a no independent.
+ */
+const isIndependentOfIcon = (hourly: Record<string, unknown>, icon: Record<string, unknown> | undefined, i: number): boolean => {
+    if (!icon) return false;
+    return ICON_IDENTITY_FIELDS.some(field => {
+        const own = (hourly[field] as Array<number | null> | undefined)?.[i];
+        if (typeof own !== 'number' || isNaN(own)) return false;
+        const other = icon[field];
+        if (other === null) return true;
+        return typeof other === 'number' && !isNaN(other) && own !== other;
+    });
+};
+
+/**
+ * Evidència de pluja de la SÈRIE PRINCIPAL, a les hores que no porten model regional (els dies de més enllà del seu
+ * abast, o tota la previsió on no n'hi ha cap), QUAN aquesta sèrie no és ICON. La probabilitat de pluja d'Open-Meteo
+ * és sempre la de l'ensemble d'ICON, però la pluja mostrada és la del best_match, que segons el punt és ICON o un
+ * altre model (Météo-France els primers dies i ECMWF 9 km després, a Roses, Perpinyà, Marsella, Bordeus o Bilbao).
+ * Llavors eren dues fonts que es contradeien: "0 %" al costat de 0,3 mm (Roses, 27-09-2026: ECMWF 9 km plovia,
+ * l'ensemble d'ICON no). Es fa servir la mateixa corba calibrada que amb el model regional (vegeu rainEvidence.ts),
+ * sobre la pluja que es MOSTRA a la taula (±1 h), i el dia n'hereta el màxim.
+ *
+ * On la sèrie és ICON no es toca: la seva pluja ja és dins de la probabilitat del seu propi ensemble, i sumar-la
+ * seria comptar-la dues vegades (mesurat: vegeu rainEvidence.ts). Les hores de model regional tampoc (injectHighResModels
+ * ja hi ha aplicat la seva evidència), una hora sense probabilitat no se n'inventa cap i mai no es baixa res.
+ * No es muten les dades d'entrada.
+ */
+export const injectBaseRainEvidence = (data: ExtendedWeatherData): ExtendedWeatherData => {
+    const hourly = data?.hourly as unknown as Record<string, unknown> | undefined;
+    if (!hourly || !Array.isArray(hourly.time) || !Array.isArray(hourly.precipitation_probability)) return data;
+
+    const times = hourly.time as unknown[];
+    const precip = hourly.precipitation as Array<number | null> | undefined;
+    const regionalHours = hourly[REGIONAL_TEMP_FLAG_KEY] as Array<number | null> | undefined;
+    const iconHours = data.hourlyComparison?.icon;
+    const probs = [...(hourly.precipitation_probability as Array<number | null>)];
+    const boostedByDate: BoostedRainProbabilityByDate = new Map();
+
+    times.forEach((t, i) => {
+        if (regionalHours?.[i] === 1) return;
+        if (!isIndependentOfIcon(hourly, iconHours?.[i], i)) return;
+        const current = probs[i];
+        if (typeof current !== 'number' || isNaN(current)) return;
+        const mm = neighbourhoodPrecip(times, precip, i);
+        if (mm === null || mm < MEASURABLE_RAIN_MM) return;
+        const updated = rainProbabilityWithModelEvidence(current, mm);
+        if (updated > current) {
+            probs[i] = updated;
+            const date = String(t).slice(0, 10);
+            boostedByDate.set(date, Math.max(boostedByDate.get(date) ?? 0, updated));
+        }
+    });
+
+    if (boostedByDate.size === 0) return data;
+
+    const target: ExtendedWeatherData = {
+        ...data,
+        hourly: { ...data.hourly, precipitation_probability: probs } as ExtendedWeatherData['hourly']
+    };
+    injectDailyRainProbability(target, boostedByDate);
+    return target;
 };
 
 // --- 4. FUNCIÓ PRINCIPAL (Clean Code) ---
