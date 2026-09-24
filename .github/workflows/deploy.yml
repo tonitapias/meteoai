@@ -31,6 +31,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Les mateixes comprovacions que ci.yml: si fallen, no es publica res.
+      # (ci.yml corre en paral·lel i no bloqueja aquest workflow.)
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      # Sense els tests de contracte: criden APIs externes reals i una caiguda
+      # d'una font (DWD, IPMA...) no ha de bloquejar un desplegament. Ja es
+      # comproven cada dia a api-health-check.yml.
+      - name: Test
+        run: npx vitest run --exclude "**/*api-contract.test.ts"
+
       - name: Build
         env:
           VITE_PROXY_URL: ${{ secrets.VITE_PROXY_URL }}
