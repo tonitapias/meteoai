@@ -12,6 +12,7 @@ import {
   Overlays,
   getBlackMarbleUrl,
 } from '../utils/radarPhysics';
+import type { Language } from '../translations';
 
 // 2. DOMINI D'ESTAT EXTRET
 import { useRadarData } from '../hooks/useRadarData';
@@ -48,7 +49,10 @@ interface RadarMapProps {
 }
 
 export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLayerMenu }: RadarMapProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // DashboardModals (pare d'aquest modal) sincronitza i18next amb l'idioma de
+  // l'app, així que aquí i18n.language és fiable.
+  const lang: Language = (['ca', 'es', 'en', 'fr'] as const).find(l => i18n.language?.startsWith(l)) ?? 'ca';
 
   const { loading, error, radarData, rainviewerData, fetchRadarData } = useRadarData();
 
@@ -119,7 +123,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     setShowLayerMenu,
     syncAtmosphere: () => syncAtmosphere(),
     syncLighting: (ts: number | null) => syncLighting(ts),
-    fetchRadarData
+    fetchRadarData,
+    lang
   });
 
   const { syncAtmosphere, syncLighting } = useAstroEngine({
@@ -201,16 +206,23 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
 
       <div className="absolute bottom-[calc(max(env(safe-area-inset-bottom,24px),24px)+72px)] left-[max(env(safe-area-inset-left,10px),10px)] z-[999] flex flex-col items-start gap-1.5 pointer-events-none">
         {showAttribution && (
-          <a
-            href="https://librewxr.net/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t('openBrowser')}
-            className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
-          >
-            <span className="text-[9px] font-mono uppercase tracking-wider leading-none">{t('radarData')}</span>
-            <span className="text-[8px] font-mono opacity-70 leading-none">{t('radarFail')}</span>
-          </a>
+          <>
+            <a
+              href="https://librewxr.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('openBrowser')}
+              className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+            >
+              <span className="text-[9px] font-mono uppercase tracking-wider leading-none">{t('radarData')}</span>
+              <span className="text-[8px] font-mono opacity-70 leading-none">{t('radarFail')}</span>
+            </a>
+            {/* Atribució obligatòria de Mapbox i OpenStreetMap (mapes Fosc/Clar, relleu 3D i etiquetes). */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200">
+              <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">© Mapbox</a>
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">© OpenStreetMap</a>
+            </div>
+          </>
         )}
         <button
           onClick={() => setShowAttribution(v => !v)}

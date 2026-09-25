@@ -12,6 +12,16 @@ import {
   getNasaFiresOpacityExp,
   Z_LAYERS
 } from '../../utils/radarPhysics';
+import {
+  MAPBOX_GLYPHS_URL,
+  MAPBOX_STREETS_URL,
+  PLACE_LABEL_SOURCE_LAYER,
+  PLACE_LABEL_FILTER,
+  buildPlaceLabelLayout,
+  buildPlaceLabelPaint,
+  getPlaceLabelColors
+} from '../../utils/mapLabels';
+import type { Language } from '../../translations';
 
 // --- CIRURGIA: FORAT NEGRE PER A CANCEL·LACIÓ DE XARXA ---
 const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -39,6 +49,10 @@ interface UseMapLifecycleProps {
   syncAtmosphere: () => void;
   syncLighting: (timestampMs: number | null) => void;
   fetchRadarData: (force?: boolean) => void;
+  // Idioma dels noms de països a la capa d'etiquetes. Es llegeix en crear el
+  // mapa: el selector d'idioma és fora del modal del radar, i el mapa es
+  // destrueix en tancar-lo.
+  lang: Language;
 }
 
 export function useMapLifecycle({
@@ -51,7 +65,8 @@ export function useMapLifecycle({
   setShowLayerMenu,
   syncAtmosphere,
   syncLighting,
-  fetchRadarData
+  fetchRadarData,
+  lang
 }: UseMapLifecycleProps) {
 
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -85,7 +100,8 @@ export function useMapLifecycle({
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: { version: 8, sources: {}, layers: [] },
+      // `glyphs`: tipografies per a la capa vectorial d'etiquetes (symbol).
+      style: { version: 8, glyphs: MAPBOX_GLYPHS_URL, sources: {}, layers: [] },
       center: [lon, lat],
       zoom: 7,
       attributionControl: false,
@@ -255,13 +271,18 @@ export function useMapLifecycle({
 
         map.addLayer({ id: Z_LAYERS.PIS_5_HIGH_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
-        map.addSource('labels-src', { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png'], tileSize: 256 });
+        // Etiquetes vectorials de Mapbox (abans raster de CARTO, que ara
+        // exigeix API key: veure utils/mapLabels.ts). Manté l'id
+        // `layer-labels`, que és l'àncora per sota de la qual s'insereix el radar.
+        map.addSource('labels-src', { type: 'vector', url: MAPBOX_STREETS_URL });
         map.addLayer({
           id: Z_LAYERS.PIS_6_UI, // layer-labels
-          type: 'raster',
+          type: 'symbol',
           source: 'labels-src',
-          layout: { visibility: overlaysRef.current.labels ? 'visible' : 'none' },
-          paint: { 'raster-opacity': 0.9 },
+          'source-layer': PLACE_LABEL_SOURCE_LAYER,
+          filter: PLACE_LABEL_FILTER,
+          layout: buildPlaceLabelLayout(lang, overlaysRef.current.labels),
+          paint: buildPlaceLabelPaint(activeBaseLayer === 'light' || activeBaseLayer === 'relief'),
         });
 
         fetchRadarData();
@@ -410,6 +431,9 @@ export function useMapLifecycle({
 
       if (map.getLayer(Z_LAYERS.PIS_6_UI)) {
         map.setLayoutProperty(Z_LAYERS.PIS_6_UI, 'visibility', currentOverlays.labels ? 'visible' : 'none');
+        const labelColors = getPlaceLabelColors(currentActiveBase === 'light' || currentActiveBase === 'relief');
+        map.setPaintProperty(Z_LAYERS.PIS_6_UI, 'text-color', labelColors.text);
+        map.setPaintProperty(Z_LAYERS.PIS_6_UI, 'text-halo-color', labelColors.halo);
       }
 
       if (radarFramesLength > 0) {
