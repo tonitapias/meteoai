@@ -225,8 +225,15 @@ describe('filtre de pluja tropical i ruixats', () => {
         expect(code(natalHour(), false)).toBe(80);
     });
 
-    it('amb el cel quasi tapat (> 85 %) el plugim feble es manté encara que hi hagi filtre', () => {
-        expect(code(natalHour({ cloud_cover_low: 95 }), true)).toBe(51);
+    it('amb el cel quasi tapat (> 85 %) es pinta pluja feble amb el filtre; sense filtre (fora del tròpic) és plugim', () => {
+        expect(code(natalHour({ cloud_cover_low: 95 }), true)).toBe(61);
+        expect(code(natalHour({ cloud_cover_low: 95 }), false)).toBe(51);
+    });
+
+    it('amb el filtre, el "plugim moderat" de l\'ECMWF (0,5-1 mm) amb el cel entre el 60 i el 85 % és pluja feble', () => {
+        // Ubud, 28-09-2026 a les 16:00: codi 53, 0,7 mm i el cel al 75 %.
+        expect(code(natalHour({ weather_code: 53, precipitation: 0.7, cloud_cover_low: 75 }), true)).toBe(61);
+        expect(code(natalHour({ weather_code: 53, precipitation: 0.7, cloud_cover_low: 75 }), false)).toBe(53);
     });
 
     it('a partir de 0,5 mm plou encara que el cel sigui trencat: ruixat', () => {

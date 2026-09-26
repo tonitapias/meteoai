@@ -23,6 +23,11 @@ export const WEATHER_THRESHOLDS = {
   //    dies 3 i 5 (IC 95 % per blocs de dies sense el 0) i, a la setmana, els dies amb icona de pluja passen del 85 %
   //    al 62 %, amb pluja real el 64 % de les vegades (abans el 53 %) i CSI 0,53 -> 0,58. Natal: 87 % -> 51 % dels dies
   //    (en plou el 35 %). Altres regles (només núvol > 60 %, >= 0,3 mm, total diari >= 1-2 mm) quedaven iguals o pitjor.
+  // El "plugim" que queda (cel tapat, o >= 0,5 mm) es pinta com a PLUJA: Open-Meteo tria el codi de l'ECMWF només per
+  // la quantitat (51 < 0,5 mm, 53 fins a 1 mm, 55 fins a 1,3 mm; per sobre, pluja o ruixat), i a les mateixes 24
+  // estacions, quan l'app pintava plugim i plovia, els METAR deien plugim el 5,7 % de les vegades (pluja el 70 %,
+  // ruixat o tempesta el 24 %): el mateix 2-6 % que amb qualsevol altra icona. Era el 25 % de les hores amb icona de
+  // precipitació.
   // NOMÉS al tròpic (|latitud| <= MAX_ABS_LATITUDE) i sense model regional: fora no s'ha verificat.
   TROPICAL_RAIN: {
     MAX_ABS_LATITUDE: 23.44, // Tròpics de Càncer i Capricorn

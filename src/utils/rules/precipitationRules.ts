@@ -32,16 +32,26 @@ export const checkForVirga = (code: number, humidity: number, cloudCover: number
 
 const isLiquidRainCode = (code: number): boolean => (code >= 51 && code <= 55) || (code >= 61 && code <= 65);
 
+/** Nivell d'intensitat (0 feble, 1 moderat, 2 fort) amb els talls MODERATE/HEAVY de adjustRainIntensity. */
+const intensityLevel = (precip: number): 0 | 1 | 2 => {
+    const amount = safeNum(precip, 0);
+    if (amount > PRECIPITATION.HEAVY) return 2;
+    if (amount >= PRECIPITATION.MODERATE) return 1;
+    return 0;
+};
+
 /**
  * FILTRE DE PLUJA TROPICAL (vegeu WEATHER_THRESHOLDS.TROPICAL_RAIN): pluja líquida feble (< MIN_MM) sense el cel
- * quasi tapat no es pinta; queda el cel que toca. Només toca plugim, pluja i ruixats: la tempesta (la decideix
+ * quasi tapat no es pinta; queda el cel que toca. El plugim que hi queda es pinta com a pluja (vegeu TROPICAL_RAIN:
+ * a l'ECMWF "plugim" només vol dir menys d'1,3 mm/h). Només toca plugim, pluja i ruixats: la tempesta (la decideix
  * adjustForStorms, abans), la neu, l'aiguaneu i la pluja engelant no hi passen mai.
  */
 export const applyTropicalRainGate = (code: number, precip: number, cloudCover: number): number => {
     const isLiquid = isLiquidRainCode(code) || (code >= 80 && code <= 82);
     if (!isLiquid) return code;
-    if (safeNum(precip, 0) >= TROPICAL_RAIN.MIN_MM || cloudCover > CLOUDS.OVERCAST) return code;
-    return adjustBaseSkyCode(0, cloudCover);
+    if (safeNum(precip, 0) < TROPICAL_RAIN.MIN_MM && cloudCover <= CLOUDS.OVERCAST) return adjustBaseSkyCode(0, cloudCover);
+    if (code >= 51 && code <= 55) return [61, 63, 65][intensityLevel(precip)];
+    return code;
 };
 
 /**
@@ -51,10 +61,7 @@ export const applyTropicalRainGate = (code: number, precip: number, cloudCover: 
  */
 export const applyShowerSky = (code: number, precip: number, cloudCover: number): number => {
     if (!isLiquidRainCode(code) || cloudCover > CLOUDS.SHOWER_MAX) return code;
-    const amount = safeNum(precip, 0);
-    if (amount > PRECIPITATION.HEAVY) return 82;
-    if (amount >= PRECIPITATION.MODERATE) return 81;
-    return 80;
+    return [80, 81, 82][intensityLevel(precip)];
 };
 
 /** Ajusta la intensitat de la pluja (feble/moderada/forta) segons mm/h */

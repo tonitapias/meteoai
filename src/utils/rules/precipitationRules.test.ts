@@ -9,14 +9,18 @@ describe('applyTropicalRainGate', () => {
         expect(applyTropicalRainGate(80, 0.2, 40)).toBe(1);
     });
 
-    it('amb el cel quasi tapat (> 85 %) la pluja feble es manté', () => {
-        expect(applyTropicalRainGate(51, 0.1, 86)).toBe(51);
+    it('amb el cel quasi tapat (> 85 %) la pluja feble es manté, i el plugim es diu pluja', () => {
+        expect(applyTropicalRainGate(51, 0.1, 86)).toBe(61);
+        expect(applyTropicalRainGate(61, 0.1, 86)).toBe(61);
         expect(applyTropicalRainGate(51, 0.1, 85)).toBe(2);
     });
 
-    it('a partir de 0,5 mm la pluja es manté sigui quin sigui el cel', () => {
+    it('a partir de 0,5 mm la pluja es manté sigui quin sigui el cel, i el plugim de l\'ECMWF (53/55) es diu pluja', () => {
         expect(applyTropicalRainGate(61, 0.5, 30)).toBe(61);
         expect(applyTropicalRainGate(80, 3, 10)).toBe(80);
+        expect(applyTropicalRainGate(53, 0.7, 75)).toBe(61);
+        expect(applyTropicalRainGate(55, 1.1, 95)).toBe(61);
+        expect(applyTropicalRainGate(55, 2.0, 95)).toBe(63);
     });
 
     it('no toca mai la tempesta, la neu, l\'aiguaneu, la pluja engelant ni el cel', () => {
