@@ -235,8 +235,9 @@ describe('DayDetailModal — capçalera amb l\'estat del dia', () => {
 });
 
 describe('DayDetailModal — targetes', () => {
-    it("l'índex UV porta la categoria de risc (5,8 → moderat, ambre) amb la mateixa taula que el widget d'UV", () => {
-        renderDetail(build({ uv: 5.8 }));
+    // Categories de l'OMS sobre l'índex arrodonit (uvIndexUtils.roundUVIndex): 5,4 → 5 moderat; 5,8 → 6 alt.
+    it("l'índex UV porta la categoria de risc (5,4 → moderat, ambre) amb la mateixa taula que el widget d'UV", () => {
+        renderDetail(build({ uv: 5.4 }));
         const note = screen.getByTestId('note-uv');
         expect(note.textContent).toBe('MODERAT');
         expect(note.className).toContain('text-amber-400');
@@ -287,7 +288,7 @@ describe('DayDetailModal — targetes', () => {
         expect(screen.getByTestId('note-gusts').textContent).toBe('GUSTS 34 km/h');
         expect(within(screen.getByTestId('stat-sunshine')).getByText('SUNSHINE')).toBeTruthy();
         expect(screen.getByTestId('note-sunshine').textContent).toBe('of 12h 10m');
-        expect(screen.getByTestId('note-uv').textContent).toBe('MODERATE');
+        expect(screen.getByTestId('note-uv').textContent).toBe('HIGH'); // UV 5,8 → 6 (OMS)
     });
 });
 

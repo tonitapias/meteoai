@@ -226,9 +226,12 @@ describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió t�
     it('a l\'hivern, en una nit serena i en calma, la IA rep la temperatura corregida que veu l\'usuari', async () => {
         const { prompt } = await run(calm({ date: '2027-01-15', temp: 1.25 }), 0);
         expect(prompt).toContain('Temperatura Real: -0.5ºC');
-        // columna TEMP (3a): la corregida; la SENSACIÓ (4a) es manté crua, com a la pantalla
-        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -0\.5ºC \|/);
+        // columna TEMP (3a) i SENSACIÓ (4a): totes dues corregides, com a la capçalera (sensació = temperatura al fixture)
+        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -0\.5ºC \| -0\.5ºC \|/);
         expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| 1\.3ºC \|/);
+        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| -0\.5ºC \| 1\.25ºC \|/);
+        // i la línia de confort d'"ara" cita la sensació corregida
+        expect(prompt).toContain('Sensació: -0.5ºC');
     });
 
     it('la mateixa nit al setembre (fora de la temporada d\'inversió) no es corregeix', async () => {

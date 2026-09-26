@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './temperatureCorrections';
+import { getInversionCorrectedApparent, getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './temperatureCorrections';
 import { StrictCurrentWeather } from '../../types/weatherLogicTypes';
 
 describe('getInversionCorrectedTemp', () => {
@@ -54,5 +54,28 @@ describe('getInversionCorrectedTemp', () => {
     const extremeWeather = { ...baseWeather, temperature_2m: 10, wind_speed_10m: 0 } as StrictCurrentWeather;
     const result = getInversionCorrectedTemp(extremeWeather);
     expect(result).toBeGreaterThanOrEqual(6.0); // 10 - 4 = 6
+  });
+});
+
+describe('getInversionCorrectedApparent', () => {
+  it('desplaça la sensació tant com la temperatura: la diferència entre totes dues (vent, humitat) no canvia', () => {
+    // Model: 2 °C i sensació 1 °C; la correcció d'inversió porta la temperatura a 0,25 °C.
+    const shown = 2 - MAX_INVERSION_CORRECTION_C;
+    expect(getInversionCorrectedApparent(1, 2, shown)).toBeCloseTo(1 - MAX_INVERSION_CORRECTION_C, 5);
+    expect(getInversionCorrectedApparent(1, 2, shown)! - shown).toBeCloseTo(1 - 2, 5);
+  });
+
+  it('sense correcció (temperatura mostrada = crua) la sensació queda igual', () => {
+    expect(getInversionCorrectedApparent(24.3, 22, 22)).toBe(24.3);
+  });
+
+  it('sense sensació: null, mai un 0 fals', () => {
+    expect(getInversionCorrectedApparent(null, 2, 0.25)).toBeNull();
+    expect(getInversionCorrectedApparent(undefined, 2, 0.25)).toBeNull();
+  });
+
+  it('sense alguna de les dues temperatures no se sap la correcció: la sensació es deixa tal com ve', () => {
+    expect(getInversionCorrectedApparent(1, null, 0.25)).toBe(1);
+    expect(getInversionCorrectedApparent(1, 2, null)).toBe(1);
   });
 });

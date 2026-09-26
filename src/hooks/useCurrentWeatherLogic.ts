@@ -4,7 +4,7 @@ import type { ExtendedWeatherData, StrictCurrentWeather, LocationMeta } from '..
 import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
 import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
-import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { extractValidArrayNum, getSafeLatitude } from '../utils/weatherMath';
 import { isRegionalModelActive } from '../constants/regionalModels';
 import { generateHourlyChartData } from '../utils/weatherMappers';
@@ -80,7 +80,8 @@ export const useCurrentWeatherLogic = ({
                 main: renderTemp(realTemp), 
                 max: renderTemp(todayExtremes.max),
                 min: renderTemp(todayExtremes.min),
-                apparent: renderTemp(current.apparent_temperature as number | undefined)
+                // Mateixa correcció d'inversió que la temperatura (vegeu getInversionCorrectedApparent).
+                apparent: renderTemp(getInversionCorrectedApparent(current.apparent_temperature, current.temperature_2m, realTemp))
             },
             meta: {
                 locationName: loc?.name,

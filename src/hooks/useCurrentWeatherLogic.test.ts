@@ -1,5 +1,5 @@
 // src/hooks/useCurrentWeatherLogic.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCurrentWeatherLogic } from './useCurrentWeatherLogic';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
@@ -50,5 +50,38 @@ describe('useCurrentWeatherLogic — màxima i mínima d\'avui', () => {
         const { result } = renderHook(() => useCurrentWeatherLogic({ data: makeData(false), unit: 'C', lang: 'ca', effectiveCode: 0 }));
         expect(result.current?.temps.max).toBe(28);
         expect(result.current?.temps.min).toBe(15);
+    });
+});
+
+// La capçalera aplica la correcció d'inversió a la temperatura segons el mes del rellotge (new Date()), no de les dades.
+describe("useCurrentWeatherLogic — sensació tèrmica amb la mateixa correcció d'inversió", () => {
+    afterEach(() => { vi.useRealTimers(); });
+
+    const winterNight = (): ExtendedWeatherData => ({
+        current: {
+            time: '2027-01-15T03:00', temperature_2m: 2, apparent_temperature: 1, weather_code: 0,
+            relative_humidity_2m: 80, wind_speed_10m: 0, is_day: 0,
+            cloud_cover_low: 0, cloud_cover_mid: 0, cloud_cover_high: 0
+        },
+        daily: { time: ['2027-01-15'], temperature_2m_max: [9], temperature_2m_min: [0] },
+        hourly: { time: [] },
+        location: { name: 'Girona', country: 'ES', latitude: 41.98, longitude: 2.82 }
+    } as unknown as ExtendedWeatherData);
+
+    it("en una nit d'inversió la sensació baixa tant com la temperatura (abans quedava crua per sobre)", () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2027-01-15T02:00:00Z'));
+        const { result } = renderHook(() => useCurrentWeatherLogic({ data: winterNight(), unit: 'C', lang: 'ca', effectiveCode: 0 }));
+        // 2 − 1,75 = 0,25 → 0°; sensació 1 − 1,75 = −0,75 → −1° (abans: 0° de temperatura i 1° de sensació).
+        expect(result.current?.temps.main).toBe(0);
+        expect(result.current?.temps.apparent).toBe(-1);
+    });
+
+    it("fora de la temporada d'inversió la sensació és la del model", () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2027-07-15T02:00:00Z'));
+        const { result } = renderHook(() => useCurrentWeatherLogic({ data: winterNight(), unit: 'C', lang: 'ca', effectiveCode: 0 }));
+        expect(result.current?.temps.main).toBe(2);
+        expect(result.current?.temps.apparent).toBe(1);
     });
 });

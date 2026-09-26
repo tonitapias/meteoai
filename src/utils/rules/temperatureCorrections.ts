@@ -1,6 +1,6 @@
 // src/utils/rules/temperatureCorrections.ts
 import { StrictCurrentWeather } from '../../types/weatherLogicTypes';
-import { safeNum } from '../weatherMath';
+import { extractValidNum, safeNum } from '../weatherMath';
 import { checkInversionRisk } from './inversionRules';
 import { calculateEffectiveCloudCover } from './cloudRules';
 
@@ -85,4 +85,28 @@ export const getInversionCorrectedTemp = (
 
     // Retornem la nova temperatura
     return rawTemp - safeCorrection;
+};
+
+/**
+ * Sensació tèrmica MOSTRADA: la del model desplaçada tant com la temperatura per la correcció d'inversió.
+ *
+ * Open-Meteo calcula la sensació a partir de la temperatura crua (més el vent, la humitat i el sol). Sense això, en una
+ * nit d'inversió la pantalla deia p. ex. "1°, sensació 3°": la correcció baixava l'aire però no el que se sent. Restant-hi
+ * el mateix que a la temperatura, la diferència entre totes dues (l'efecte del vent i de la humitat) queda la del model.
+ *
+ * `rawTemp` és la temperatura crua del model i `displayTemp` la corregida (getInversionCorrectedTemp o
+ * getHourlyDisplayTemp). Sense sensació, null (mai un 0 fals); sense alguna de les dues temperatures no se sap quina
+ * correcció s'ha aplicat i la sensació es deixa tal com ve.
+ */
+export const getInversionCorrectedApparent = (
+    apparent: unknown,
+    rawTemp: unknown,
+    displayTemp: number | null | undefined
+): number | null => {
+    const feels = extractValidNum(apparent);
+    if (feels === null) return null;
+    const raw = extractValidNum(rawTemp);
+    const shown = extractValidNum(displayTemp);
+    if (raw === null || shown === null) return feels;
+    return feels - (raw - shown);
 };

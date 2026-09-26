@@ -9,7 +9,7 @@ import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
-import { getUVCategory } from '../utils/uvIndexUtils';
+import { getUVCategory, needsUVProtection } from '../utils/uvIndexUtils';
 
 interface UvModalProps {
   weatherData: ExtendedWeatherData;
@@ -58,8 +58,6 @@ const getSafe = (arr: (number | null)[] | undefined, idx: number): number | null
   return typeof v === 'number' && !isNaN(v) ? v : null;
 };
 
-// Llindar OMS de protecció: a partir d'UV 3 cal protegir-se (ombra, crema, ulleres de sol).
-const PROTECTION_THRESHOLD = 3;
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 
 export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }: UvModalProps) {
@@ -104,7 +102,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
     return vals.length > 0 ? Math.max(...vals) : null;
   }, [todayEntries]);
 
-  const protectionEntries = useMemo(() => todayEntries.filter(e => e.uv !== null && e.uv >= PROTECTION_THRESHOLD), [todayEntries]);
+  const protectionEntries = useMemo(() => todayEntries.filter(e => e.uv !== null && needsUVProtection(e.uv)), [todayEntries]);
   const protectionWindow = protectionEntries.length > 0
     ? { start: protectionEntries[0], end: protectionEntries[protectionEntries.length - 1] }
     : null;
@@ -237,7 +235,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
                 {typeof currentUV === 'number' && (() => {
                   const nowCategory = getUVCategory(currentUV);
-                  const needsProtection = currentUV >= PROTECTION_THRESHOLD;
+                  const needsProtection = needsUVProtection(currentUV);
                   return (
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border backdrop-blur-md bg-black/40 w-fit ${nowCategory.color.replace('text-', 'border-')}/40`}>
                       {needsProtection ? <ShieldAlert className={`w-3.5 h-3.5 ${nowCategory.color}`} /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />}

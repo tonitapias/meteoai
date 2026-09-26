@@ -13,8 +13,26 @@ export interface UVCategory {
   glow: string;
 }
 
+/**
+ * L'OMS comunica l'índex UV com un ENTER i les seves categories (0-2 baix, 3-5 moderat, 6-7 alt, 8-10 molt alt, 11+
+ * extrem) i el llindar de protecció (3) es refereixen a aquest valor arrodonit. Open-Meteo el dona amb decimals: amb el
+ * valor cru, tot el tram x,5-x,99 de cada frontera quedava una categoria per sota (p. ex. 5,8 sortia "MODERAT" en lloc
+ * d'"ALT", i 2,7 "BAIX" i sense protecció).
+ *
+ * S'arrodoneix el número TAL COM ES MOSTRA (un decimal, toFixed(1)) i no el cru: Girona, 26-09-2026, tenia 5,45, que
+ * l'OMS arrodoneix a 5, però la pantalla diu "5.5", i "5.5 MODERAT" semblava un error. Només difereix de l'OMS estricta
+ * entre x,45 i x,4999, molt per sota de l'error de qualsevol previsió d'UV.
+ */
+export const roundUVIndex = (uv: number): number => Math.round(Number(uv.toFixed(1)));
+
+/** Llindar de l'OMS a partir del qual cal protegir-se (ombra, crema, ulleres de sol), sobre l'índex arrodonit. */
+export const UV_PROTECTION_THRESHOLD = 3;
+
+export const needsUVProtection = (uv: number): boolean => roundUVIndex(uv) >= UV_PROTECTION_THRESHOLD;
+
 // DOCTRINA RISC ZERO: Diccionari tàctic purificat
-export const getUVCategory = (uv: number): UVCategory => {
+export const getUVCategory = (rawUv: number): UVCategory => {
+  const uv = roundUVIndex(rawUv);
   if (uv < 3) return {
     label: { ca: 'BAIX', es: 'BAJO', en: 'LOW', fr: 'FAIBLE' },
     action: { ca: 'SENSE RISC', es: 'SIN RIESGO', en: 'SAFE', fr: 'SANS RISQUE' },

@@ -5,7 +5,7 @@ import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, getHourlyDisplayTem
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
 import { isSleetCode } from '../utils/rules/winterRules';
 import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules';
-import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeMonthFromIso } from '../utils/weatherMath';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService'; 
@@ -545,6 +545,9 @@ export const getGeminiAnalysis = async (
                 latitude
             ))
             : null;
+        // Sensació d'"ara" com la de la capçalera: amb la mateixa correcció d'inversió que la temperatura.
+        const currentDisplayApparentRaw = getInversionCorrectedApparent(currentApparentTemp, currentTempNum, currentDisplayTemp);
+        const currentDisplayApparent = currentDisplayApparentRaw !== null ? round1(currentDisplayApparentRaw) : null;
         const currentPrecipStr = typeof currentObj.precipitation === 'number' ? `${currentObj.precipitation}mm` : 'N/D';
 
         // La resposta en cache s'ha d'haver generat per a la MATEIXA situació, no només per al mateix lloc: sense això, si
@@ -691,9 +694,11 @@ export const getGeminiAnalysis = async (
                 const wmoHour = getHourlyWeatherCode(hourlyObj, i, hourlyElevation, weatherData.hourlyComparison) ?? wmoArr?.[i] ?? null;
                 const wmoDesc = getTacticalWeatherDescription(wmoHour, tempNum, getHourlyEffectiveCloudCover(hourlyObj as HourlySeries, i));
 
+                // Sensació amb la mateixa correcció d'inversió que la columna TEMP (vegeu getInversionCorrectedApparent).
                 const apparentArr = (hourlyObj.apparent_temperature) as (number | null)[] | undefined;
-                const apparentHour = apparentArr?.[i] ?? null;
-                const apparentStr = apparentHour !== null ? `${apparentHour}ºC` : "--ºC";
+                const rawTempArr = hourlyObj.temperature_2m as (number | null)[] | undefined;
+                const apparentHour = getInversionCorrectedApparent(apparentArr?.[i], rawTempArr?.[i], tempDisplay);
+                const apparentStr = apparentHour !== null ? `${round1(apparentHour)}ºC` : "--ºC";
 
                 const humArr = (hourlyObj.relative_humidity_2m ?? hourlyObj.humidity) as (number | null)[] | undefined;
                 const humHour = humArr?.[i] ?? null;
@@ -728,7 +733,7 @@ export const getGeminiAnalysis = async (
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
           Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
           Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}ºC` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
-          Confort Tèrmic: ${getTacticalComfortDescription(currentTempNum, currentApparentTemp, currentHumidity)}
+          Confort Tèrmic: ${getTacticalComfortDescription(currentDisplayTemp, currentDisplayApparent, currentHumidity)}
           Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}
           MODEL EN ÚS: ${modelInfo.name}
 ${windowSummary ? `

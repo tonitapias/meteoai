@@ -23,7 +23,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
     const displayCape = hasValidData ? Math.round(safeCape) : '--'; 
     
     // Estats inicials per defecte (Pèrdua de telemetria / Risc Desconegut)
-    let severity = String(t.unknown || 'DESCONEGUT');
+    let severity = String(t.capeUnknown || 'DESCONEGUT');
     let color = 'text-slate-500';
     let barColor = 'bg-slate-700/50';
     let borderColor = 'border-slate-500/20';
@@ -94,7 +94,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                       <CloudOff className="w-4 h-4 text-slate-500" />
                   )}
                   <span className="tracking-wider text-slate-200">
-                    {String(t.instability_actual || "CAPE ACTUAL")}
+                    {String(t.capeNowTitle || "CAPE ACTUAL")}
                   </span>
               </div>
               
@@ -129,7 +129,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                       {displayCape}
                   </span>
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-3 mt-1">
-                      {hasValidData ? 'J/kg' : String(t.no_data || 'SENSE DADES')}
+                      {hasValidData ? 'J/kg' : String(t.capeNoData || 'SENSE DADES')}
                   </span>
                   
                   <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border backdrop-blur-md bg-black/40 w-fit transition-colors duration-500 ${hasValidData && safeCape >= CAPE.MIN_STORM ? borderColor : 'border-white/5'}`}>

@@ -40,3 +40,23 @@ describe('CapeWidget — etiqueta d\'inestabilitat', () => {
         });
     });
 });
+
+// Títol, "sense dades" i "desconegut" llegien claus inexistents (instability_actual, no_data, unknown): sempre en català.
+describe("CapeWidget — títol i estat sense dades en l'idioma de l'usuari", () => {
+    it('el títol surt traduït', () => {
+        const cases: Array<[Language, string]> = [['ca', 'CAPE ACTUAL'], ['es', 'CAPE ACTUAL'], ['en', 'CURRENT CAPE'], ['fr', 'CAPE ACTUEL']];
+        cases.forEach(([lang, title]) => {
+            const { unmount } = renderCape(500, lang);
+            expect(screen.getByText(title)).toBeTruthy();
+            unmount();
+        });
+    });
+
+    it('sense dada de CAPE: "NO DATA" i "Unknown" en anglès, no el text català', () => {
+        renderCape(null, 'en');
+        expect(screen.getByText('NO DATA')).toBeTruthy();
+        expect(screen.getByText('Unknown')).toBeTruthy();
+        expect(screen.queryByText('SENSE DADES')).toBeNull();
+        expect(screen.queryByText('DESCONEGUT')).toBeNull();
+    });
+});
