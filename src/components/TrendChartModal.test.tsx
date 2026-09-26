@@ -241,13 +241,13 @@ describe('TrendChartModal — quantitat de pluja i probabilitats baixes', () => 
 });
 
 describe('TrendChartModal — mateixes xifres que la llista de 7 dies', () => {
-    // Nit d'hivern serena i gairebé en calma (vent 3 km/h): la mínima crua del model és 10° i la llista
-    // la corregeix per inversió tèrmica (10 - 1,75 = 8,25 -> 8°). El gràfic ha de dir el mateix.
+    // Nit d'hivern serena i en calma (vent 0 km/h): la mínima crua del model és 10° i la llista la corregeix per
+    // inversió tèrmica (10 - 1,75 = 8,25 -> 8°, vegeu MAX_INVERSION_CORRECTION_C). El gràfic ha de dir el mateix.
     const daily = makeDaily(JAN, {
         temperature_2m_max: JAN.map(() => 20),
         temperature_2m_min: JAN.map(() => 10),
     });
-    const chartData = hoursFor(JAN, 10, 18, 3);
+    const chartData = hoursFor(JAN, 10, 18, 0);
 
     it('el gràfic aplica la correcció d\'inversió i les xifres surten de les hores', () => {
         renderModal(daily, chartData);

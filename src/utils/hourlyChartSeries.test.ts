@@ -1,7 +1,7 @@
 // src/utils/hourlyChartSeries.test.ts
 import { describe, it, expect } from 'vitest';
 import { buildHourlyChartSeries, findNowIndex } from './hourlyChartSeries';
-import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
+import { getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './rules/temperatureCorrections';
 import { calculateSnowLevel } from './rules/winterRules';
 import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 
@@ -13,7 +13,7 @@ const idx = Array.from({ length: HOURS }, (_, i) => i);
 type Hourly = Record<string, unknown>;
 type Row = Record<string, unknown>;
 
-// Nit d'hivern serena i en calma a Girona: el cas en què la correcció d'inversió resta (fins a) 3,5°.
+// Nit d'hivern serena i en calma a Girona: el cas en què la correcció d'inversió resta el seu màxim (MAX_INVERSION_CORRECTION_C).
 const calmClearNight = (over: Hourly = {}): Hourly => ({
     time: timesOf('2026-01-15'),
     temperature_2m: fillArr(5),
@@ -62,10 +62,10 @@ const forecast24hFormula = (temp: number, isDay: number, wind: number, low: numb
 
 describe('buildHourlyChartSeries', () => {
     describe('temperatura principal: mateixa correcció que la resta de l\'app', () => {
-        it('resta la inversió tèrmica en una nit d\'hivern serena i en calma (5° → 1,5°)', () => {
+        it('resta la inversió tèrmica en una nit d\'hivern serena i en calma (5° → 3,25°)', () => {
             const { primary } = buildHourlyChartSeries(makeData(calmClearNight()), idx, 'C');
             expect(primary).toHaveLength(HOURS);
-            expect(primary[0].temp).toBeCloseTo(1.5, 5);
+            expect(primary[0].temp).toBeCloseTo(5 - MAX_INVERSION_CORRECTION_C, 5);
         });
 
         it('dona exactament el que dona Forecast24h/DayDetail (mateixa funció, mateixos paràmetres)', () => {
@@ -86,14 +86,14 @@ describe('buildHourlyChartSeries', () => {
 
         it('a l\'Hemisferi Sud l\'hivern és maig-setembre: setembre a Buenos Aires sí que corregeix', () => {
             const south = makeData(calmClearNight({ time: timesOf('2026-09-21') }), undefined, -34.6);
-            expect(buildHourlyChartSeries(south, idx, 'C').primary[0].temp).toBeCloseTo(1.5, 5);
+            expect(buildHourlyChartSeries(south, idx, 'C').primary[0].temp).toBeCloseTo(5 - MAX_INVERSION_CORRECTION_C, 5);
             const north = makeData(calmClearNight({ time: timesOf('2026-09-21') }), undefined, 41.98);
             expect(buildHourlyChartSeries(north, idx, 'C').primary[0].temp).toBe(5);
         });
 
-        it('la conversió a °F és posterior a la correcció (5° − 3,5° = 1,5° → 35°F)', () => {
+        it('la conversió a °F és posterior a la correcció (5° − 1,75° = 3,25° → 38°F)', () => {
             const { primary } = buildHourlyChartSeries(makeData(calmClearNight()), idx, 'F');
-            expect(primary[0].temp).toBe(35);
+            expect(primary[0].temp).toBe(Math.round((5 - MAX_INVERSION_CORRECTION_C) * 9 / 5 + 32));
         });
     });
 
@@ -146,7 +146,7 @@ describe('buildHourlyChartSeries', () => {
             const { primary, comparison } = buildHourlyChartSeries(makeData(calmClearNight(), { gfs: rows }), idx, 'C');
             expect(comparison?.gfs).toHaveLength(primary.length);
             expect(comparison?.gfs[2].temp).toBeNull();
-            expect(comparison?.gfs[4].temp).toBeCloseTo(11 - 3.5, 5);
+            expect(comparison?.gfs[4].temp).toBeCloseTo(11 - MAX_INVERSION_CORRECTION_C, 5);
             expect(comparison?.gfs.map(p => p.time)).toEqual(primary.map(p => p.time));
         });
 
@@ -160,7 +160,7 @@ describe('buildHourlyChartSeries', () => {
                 'C'
             );
             expect(comparison?.gfs[0].temp).toBe(6);
-            expect(comparison?.icon[0].temp).toBeCloseTo(2.5, 5);
+            expect(comparison?.icon[0].temp).toBeCloseTo(6 - MAX_INVERSION_CORRECTION_C, 5);
         });
 
         it('si un model no publica capes de núvols o vent, s\'usen les de la línia principal en aquella hora', () => {

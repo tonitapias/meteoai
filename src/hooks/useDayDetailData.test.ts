@@ -3,6 +3,10 @@ import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useDayDetailData } from './useDayDetailData';
 import { useChartData } from './useChartData';
+import { MAX_INVERSION_CORRECTION_C } from '../utils/rules/temperatureCorrections';
+
+// Correcció d'una nit serena de gener amb vent d'1 km/h (el de les dades de sota): MAX × (6 − 1) / 6.
+const CALM_CORRECTION = MAX_INVERSION_CORRECTION_C * 5 / 6;
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 // Dos dies d'hivern a Girona (nit serena i en calma a primera hora): 2026-01-15 i 2026-01-16.
@@ -72,8 +76,8 @@ describe('useDayDetailData: gràfic del detall de dia', () => {
 
     it('la temperatura de la nit va corregida per inversió (3° cru → menys)', () => {
         const { result } = renderHook(() => useDayDetailData(data, 0));
-        // 00:00, nit, calma (vent 1), cel serè, gener: la correcció resta 3,5 × (6−1)/6 ≈ 2,9°.
-        expect(result.current.hourlyData[0].temp).toBeLessThan(3 - 2);
+        // 00:00, nit, calma (vent 1), cel serè, gener: la correcció resta MAX × (6−1)/6.
+        expect(result.current.hourlyData[0].temp).toBeCloseTo(3 - CALM_CORRECTION, 5);
         // 12:00, de dia: cru.
         expect(result.current.hourlyData[12].temp).toBe(3 + 12 / 4);
     });
@@ -82,7 +86,7 @@ describe('useDayDetailData: gràfic del detall de dia', () => {
         const { result } = renderHook(() => useDayDetailData(data, 0));
         const { hourlyData, comparisonData } = result.current;
         expect(comparisonData?.aifs.map(p => p.time)).toEqual(hourlyData.map(p => p.time));
-        expect(comparisonData?.gfs[0].temp).toBeLessThan(2 - 2);
+        expect(comparisonData?.gfs[0].temp).toBeCloseTo(2 - CALM_CORRECTION, 5);
         expect(comparisonData?.gfs[12].temp).toBe(2 + 12 / 4);
     });
 
@@ -191,8 +195,8 @@ describe('useDayDetailData: capçalera coherent amb el gràfic i la llista', () 
 
     it("la mínima d'una nit d'hivern serena i en calma va corregida per inversió, com a la llista", () => {
         const { result } = renderHook(() => useDayDetailData(data, 0));
-        // El valor diari cru diu 3°; la nit calmada i serena de gener n'és ~2,9° més freda.
-        expect(result.current.extremes?.min).toBeLessThan(3 - 2);
+        // El valor diari cru diu 3°; la nit calmada i serena de gener n'és més freda (la mateixa correcció que a les hores).
+        expect(result.current.extremes?.min).toBeCloseTo(3 - CALM_CORRECTION, 5);
     });
 
     it('marca el dia com a regional només si la seva màxima o mínima surt d\'una hora regional', () => {

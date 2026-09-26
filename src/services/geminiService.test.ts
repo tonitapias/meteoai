@@ -221,14 +221,14 @@ const calm = (opts: { date: string; temp: number; wind?: number; day?: number; r
 describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió tèrmica)', () => {
     beforeEach(() => { vi.restoreAllMocks(); });
 
-    // Nit serena i en calma de gener amb +2 °C al model: la capçalera i l'evolució horària en mostren -1,5 °C
-    // (correcció d'inversió). La IA rebia els +2 °C crus i deia "cap fenomen advers" en una nit de gelada.
+    // Nit serena i en calma de gener amb +1,25 °C al model: la capçalera i l'evolució horària en mostren -0,5 °C
+    // (correcció d'inversió de 1,75 °C). La IA rebia els graus crus i deia "cap fenomen advers" en una nit de gelada.
     it('a l\'hivern, en una nit serena i en calma, la IA rep la temperatura corregida que veu l\'usuari', async () => {
-        const { prompt } = await run(calm({ date: '2027-01-15', temp: 2 }), 0);
-        expect(prompt).toContain('Temperatura Real: -1.5ºC');
+        const { prompt } = await run(calm({ date: '2027-01-15', temp: 1.25 }), 0);
+        expect(prompt).toContain('Temperatura Real: -0.5ºC');
         // columna TEMP (3a): la corregida; la SENSACIÓ (4a) es manté crua, com a la pantalla
-        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -1\.5ºC \|/);
-        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| 2ºC \|/);
+        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -0\.5ºC \|/);
+        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| 1\.3ºC \|/);
     });
 
     it('la mateixa nit al setembre (fora de la temporada d\'inversió) no es corregeix', async () => {
@@ -241,8 +241,8 @@ describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió t�
         expect(prompt).toContain('Temperatura Real: 2ºC');
     });
 
-    it('el tallafocs de gelada usa la temperatura mostrada: +2 °C al model però -1,5 °C a la pantalla → AMBER / COLD', async () => {
-        const { result } = await run(calm({ date: '2027-01-15', temp: 2 }), 0);
+    it('el tallafocs de gelada usa la temperatura mostrada: +1,25 °C al model però -0,5 °C a la pantalla → AMBER / COLD', async () => {
+        const { result } = await run(calm({ date: '2027-01-15', temp: 1.25 }), 0);
         expect(result?.risk_level).toBe('AMBER');
         expect(result?.hazard_type).toBe('COLD');
     });

@@ -51,6 +51,10 @@ export const WEATHER_THRESHOLDS = {
 
   // Inestabilitat (J/kg)
   CAPE: {
+    // Per sota, l'energia convectiva és negligible i l'etiqueta és "Estable". Entre WEAK i MIN_STORM l'aire és feblement
+    // inestable, no estable: la mateixa verificació de la regla de tempesta (stormRules.ts) troba trons observats amb
+    // CAPE de 800 J/kg, i baixar MIN_STORM a 800 milloraria el CSI. Abans tot aquest tram es pintava "Estable" en verd.
+    WEAK: 100,
     MIN_STORM: 1200,   // Mínim per risc de tempesta
     HIGH_STORM: 2000,  // Risc sever o tempesta seca
     EXTREME: 3000      // Situació perillosa

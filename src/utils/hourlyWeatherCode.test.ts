@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getHourlyWeatherCode, getHourCodesByDate, resolveFreezingLevel, resolveIsDay } from './hourlyWeatherCode';
 import { buildRegionalHourlyRows } from './regionalHourlyRows';
-import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
+import { getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './rules/temperatureCorrections';
 import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 
 // Sèrie horària mínima de 3 hores (00:00, 01:00, 02:00 del 2026-09-19)
@@ -211,7 +211,7 @@ describe('buildRegionalHourlyRows — homogeneïtat amb la resta de l\'app', () 
     });
 
     it('la temperatura mostrada porta la mateixa correcció d\'inversió que la resta', () => {
-        // Nit d'hivern, calma i cel serè: correcció màxima (−3,5 °C) a l'app
+        // Nit d'hivern, calma i cel serè: correcció màxima (MAX_INVERSION_CORRECTION_C) a l'app
         const winter = { ...arome, time: ['2026-01-10T00:00'], temperature_2m: [2], wind_speed_10m: [0], is_day: [0] };
         const rows = buildRegionalHourlyRows({
             hourly: winter, elevation: 504, utcOffsetSeconds: 3600, latitude: 41.9,
@@ -221,7 +221,7 @@ describe('buildRegionalHourlyRows — homogeneïtat amb la resta de l\'app', () 
             { temperature_2m: 2, is_day: 0, wind_speed_10m: 0, cloud_cover_low: 0, cloud_cover_mid: 0, cloud_cover_high: 0 } as unknown as StrictCurrentWeather,
             0, 41.9
         );
-        expect(expected).toBeCloseTo(-1.5, 5);
+        expect(expected).toBeCloseTo(2 - MAX_INVERSION_CORRECTION_C, 5);
         expect(rows[0].temp).toBeCloseTo(expected, 5);
     });
 });

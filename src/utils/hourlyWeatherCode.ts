@@ -103,7 +103,7 @@ export const getHourlyWeatherCode = (
 
 /**
  * Temperatura MOSTRADA d'una hora: la del model amb la correcció d'inversió tèrmica (nits serenes i en calma
- * de la temporada freda, fins a -3,5 °C). És la xifra que veuen l'evolució horària i el detall del dia, i la que
+ * de la temporada freda, fins a MAX_INVERSION_CORRECTION_C). És la xifra que veuen l'evolució horària i el detall del dia, i la que
  * ha de citar la IA: amb la crua, una nit d'inversió amb -1 °C a l'app sortia al text de la IA com "2 graus,
  * cap fenomen advers". null si l'hora no té temperatura real (mai un 0 fals).
  */

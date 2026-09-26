@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds, type HourlyPoint } from './dailyExtremes';
+import { MAX_INVERSION_CORRECTION_C } from './rules/temperatureCorrections';
 
 // Una hora del chart horari complet amb els camps que llegeix la correcció d'inversió.
 const hour = (time: string, temp: number | null, extra: Record<string, unknown> = {}): HourlyPoint => ({
@@ -56,11 +57,11 @@ describe('resolveDailyExtremes', () => {
     });
 
     it('a l\'hivern, nit serena i gairebé en calma: la mínima baixa per la inversió tèrmica i la màxima no', () => {
-        // vent 3 km/h -> força 0,5 -> correcció 1,75°
+        // vent 3 km/h -> força 0,5 -> la meitat de la correcció màxima
         const hours = dayOf('2026-01-12', 10, 18, { wind: 3 });
         const { max, min } = resolveDailyExtremes(20, 10, hours, 41.9);
         expect(max).toBe(18);
-        expect(min).toBeCloseTo(8.25, 5);
+        expect(min).toBeCloseTo(10 - MAX_INVERSION_CORRECTION_C * 0.5, 5);
     });
 
     it('amb vent (> 6 km/h), amb núvols o a l\'estiu la inversió no s\'aplica', () => {
@@ -71,7 +72,7 @@ describe('resolveDailyExtremes', () => {
 
     it('a l\'Hemisferi Sud l\'hivern cau al juliol: amb latitud negativa la correcció s\'aplica', () => {
         const hours = dayOf('2026-07-12', 10, 18, { wind: 3 });
-        expect(resolveDailyExtremes(20, 10, hours, -34.6).min).toBeCloseTo(8.25, 5);
+        expect(resolveDailyExtremes(20, 10, hours, -34.6).min).toBeCloseTo(10 - MAX_INVERSION_CORRECTION_C * 0.5, 5);
         expect(resolveDailyExtremes(20, 10, hours, 41.9).min).toBe(10);
     });
 });

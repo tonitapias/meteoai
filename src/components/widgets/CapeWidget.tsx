@@ -28,33 +28,49 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
     let barColor = 'bg-slate-700/50';
     let borderColor = 'border-slate-500/20';
     let bgGlow = 'from-slate-950/20 to-black/80';
+    // Halo de la cantonada, literal a cada branca (abans es derivava de `color` amb un replace i Tailwind no podia
+    // generar una classe que no apareix escrita enlloc).
+    let haloColor = 'bg-slate-500';
     
     // Escala visual acoblada als llindars de domini (stormRules.ts), no números propis
     const MAX_CAPE = CAPE.EXTREME;
     const heightPct = hasValidData ? Math.min((safeCape / MAX_CAPE) * 100, 100) : 0;
 
     if (hasValidData) {
-        if (safeCape >= CAPE.HIGH_STORM) { 
-            severity = String(t.severe || 'Severa'); 
+        // Claus pròpies del giny (capeStable/capeWeak/...): abans llegia t.stable/t.moderate/t.high/t.severe, que no
+        // existeixen a cap traducció, i en castellà, anglès i francès sempre sortia el text català de reserva.
+        if (safeCape >= CAPE.HIGH_STORM) {
+            severity = String(t.capeSevere || 'Severa');
             color = 'text-rose-500'; 
+            haloColor = 'bg-rose-500';
             barColor = 'bg-gradient-to-t from-rose-600 via-rose-500 to-orange-500'; 
             borderColor = 'border-rose-500/40';
             bgGlow = 'from-rose-950/30 to-black/80';
         } else if (safeCape >= ALERTS.CAPE_STORM) { 
-            severity = String(t.high || 'Alta'); 
+            severity = String(t.capeHigh || 'Alta');
             color = 'text-amber-400'; 
+            haloColor = 'bg-amber-400';
             barColor = 'bg-gradient-to-t from-amber-500 via-amber-400 to-transparent'; 
             borderColor = 'border-amber-400/40';
             bgGlow = 'from-amber-950/20 to-black/80';
         } else if (safeCape >= CAPE.MIN_STORM) { 
-            severity = String(t.moderate || 'Moderada'); 
-            color = 'text-yellow-300'; 
-            barColor = 'bg-gradient-to-t from-yellow-400 to-transparent'; 
+            severity = String(t.capeModerate || 'Moderada');
+            color = 'text-yellow-300';
+            haloColor = 'bg-yellow-300';
+            barColor = 'bg-gradient-to-t from-yellow-400 to-transparent';
             borderColor = 'border-yellow-400/30';
             bgGlow = 'from-yellow-950/10 to-black/80';
+        } else if (safeCape >= CAPE.WEAK) {
+            severity = String(t.capeWeak || 'Feble');
+            color = 'text-lime-300';
+            haloColor = 'bg-lime-300';
+            barColor = 'bg-gradient-to-t from-lime-400 via-lime-300 to-transparent';
+            borderColor = 'border-lime-400/20';
+            bgGlow = 'from-lime-950/10 to-black/80';
         } else {
-            severity = String(t.stable || 'Estable'); 
+            severity = String(t.capeStable || 'Estable');
             color = 'text-emerald-400'; 
+            haloColor = 'bg-emerald-400';
             barColor = 'bg-gradient-to-t from-emerald-500 via-emerald-400 to-transparent'; 
             borderColor = 'border-emerald-500/20';
             bgGlow = 'from-emerald-950/10 to-black/80';
@@ -68,7 +84,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
       <div className={SPATIAL_WIDGET_STYLE}>
           {/* Capes de fons espacials */}
           <div className={MATRIX_BG}></div>
-          <div className={`absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-3xl pointer-events-none z-0 ${hasValidData ? color.replace('text-', 'bg-') : 'bg-slate-500'}`}></div>
+          <div className={`absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-3xl pointer-events-none z-0 ${haloColor}`}></div>
 
           <div className={`${TITLE_STYLE} flex justify-between items-center w-full z-10 relative`}>
               <div className="flex items-center gap-2">

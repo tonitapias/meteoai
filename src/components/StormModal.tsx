@@ -31,7 +31,7 @@ const T: Record<Language, Record<string, string>> = {
     scrubHint: 'Toca o arrossega per explorar', nextWindow: 'Pròxima Finestra de Tempesta',
     activeNow: 'Actiu ara mateix', noRiskWindow: 'Sense risc previst en 48h', peakCape: 'Pic previst',
     in_: "D'aquí a", maxCape24: 'Màx. CAPE 24h', maxCape48: 'Màx. CAPE 48h', hoursAtRisk: 'Hores en Risc',
-    unknown: 'Desconegut', stable: 'Estable', moderate: 'Moderada', high: 'Alta', severe: 'Severa',
+    unknown: 'Desconegut', stable: 'Estable', weak: 'Feble', moderate: 'Moderada', high: 'Alta', severe: 'Severa',
     rainChance: 'Prob. Pluja', now: 'ARA', hoursShort: 'h',
   },
   es: {
@@ -40,7 +40,7 @@ const T: Record<Language, Record<string, string>> = {
     scrubHint: 'Toca o arrastra para explorar', nextWindow: 'Próxima Ventana de Tormenta',
     activeNow: 'Activo ahora mismo', noRiskWindow: 'Sin riesgo previsto en 48h', peakCape: 'Pico previsto',
     in_: 'Dentro de', maxCape24: 'Máx. CAPE 24h', maxCape48: 'Máx. CAPE 48h', hoursAtRisk: 'Horas en Riesgo',
-    unknown: 'Desconocido', stable: 'Estable', moderate: 'Moderada', high: 'Alta', severe: 'Severa',
+    unknown: 'Desconocido', stable: 'Estable', weak: 'Débil', moderate: 'Moderada', high: 'Alta', severe: 'Severa',
     rainChance: 'Prob. Lluvia', now: 'AHORA', hoursShort: 'h',
   },
   en: {
@@ -49,7 +49,7 @@ const T: Record<Language, Record<string, string>> = {
     scrubHint: 'Tap or drag to explore', nextWindow: 'Next Storm Window',
     activeNow: 'Active right now', noRiskWindow: 'No risk expected in 48h', peakCape: 'Expected peak',
     in_: 'In', maxCape24: 'Max CAPE 24h', maxCape48: 'Max CAPE 48h', hoursAtRisk: 'Hours at Risk',
-    unknown: 'Unknown', stable: 'Stable', moderate: 'Moderate', high: 'High', severe: 'Severe',
+    unknown: 'Unknown', stable: 'Stable', weak: 'Weak', moderate: 'Moderate', high: 'High', severe: 'Severe',
     rainChance: 'Rain Chance', now: 'NOW', hoursShort: 'h',
   },
   fr: {
@@ -58,7 +58,7 @@ const T: Record<Language, Record<string, string>> = {
     scrubHint: 'Touchez ou glissez pour explorer', nextWindow: 'Prochaine Fenêtre Orageuse',
     activeNow: "Actif en ce moment", noRiskWindow: 'Aucun risque prévu sous 48h', peakCape: 'Pic prévu',
     in_: 'Dans', maxCape24: 'Max CAPE 24h', maxCape48: 'Max CAPE 48h', hoursAtRisk: 'Heures à Risque',
-    unknown: 'Inconnu', stable: 'Stable', moderate: 'Modérée', high: 'Élevée', severe: 'Sévère',
+    unknown: 'Inconnu', stable: 'Stable', weak: 'Faible', moderate: 'Modérée', high: 'Élevée', severe: 'Sévère',
     rainChance: 'Prob. Pluie', now: 'MAINTENANT', hoursShort: 'h',
   },
 };
@@ -75,6 +75,8 @@ function getSeverity(cape: number | null, t: Record<string, string>): Severity {
   if (cape >= CAPE.HIGH_STORM) return { label: t.severe, color: 'text-rose-500', stroke: '#f43f5e', bgGlow: 'from-rose-950/40 to-black/90', borderColor: 'border-rose-500/30' };
   if (cape >= ALERTS.CAPE_STORM) return { label: t.high, color: 'text-amber-400', stroke: '#fbbf24', bgGlow: 'from-amber-950/30 to-black/90', borderColor: 'border-amber-400/30' };
   if (cape >= CAPE.MIN_STORM) return { label: t.moderate, color: 'text-yellow-300', stroke: '#fde047', bgGlow: 'from-yellow-950/20 to-black/90', borderColor: 'border-yellow-400/20' };
+  // Entre CAPE.WEAK i MIN_STORM l'aire és feblement inestable, no estable (vegeu weatherConfig.ts).
+  if (cape >= CAPE.WEAK) return { label: t.weak, color: 'text-lime-300', stroke: '#bef264', bgGlow: 'from-lime-950/20 to-black/90', borderColor: 'border-lime-400/20' };
   return { label: t.stable, color: 'text-emerald-400', stroke: '#34d399', bgGlow: 'from-emerald-950/20 to-black/90', borderColor: 'border-emerald-500/20' };
 }
 
