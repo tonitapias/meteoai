@@ -4,6 +4,7 @@ import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { normalizeModelData } from '../utils/normData';
 import { injectBaseRainEvidence } from '../utils/regionalModelEngine';
 import { injectEngineSnowfall } from '../utils/engineSnowfall';
+import { injectAifsTemperatureBlend } from '../utils/aifsTemperatureBlend';
 import { isRegionalModelActive, selectRegionalModel, type RegionalModel } from '../constants/regionalModels';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import { getRegionalHDData } from '../services/weatherApi';
@@ -118,7 +119,12 @@ export const WeatherRepository = {
         // (la pluja és d'un model determinista i la probabilitat, de l'ensemble d'ICON; vegeu injectBaseRainEvidence).
         processedData = injectBaseRainEvidence(processedData);
 
-        // 3c. Neu acumulada amb la mateixa pluja i el mateix motor que la icona de cada hora (vegeu engineSnowfall.ts).
+        // 3c. Temperatura dels dies 4-7 barrejada amb AIFS (vegeu aifsTemperatureBlend.ts). Va DESPRÉS de 3b, que
+        // reconeix les hores on la sèrie principal és ICON comparant-ne la temperatura, i ABANS de la neu, que ha de
+        // sortir de la mateixa temperatura que la icona.
+        processedData = injectAifsTemperatureBlend(processedData);
+
+        // 3d. Neu acumulada amb la mateixa pluja i el mateix motor que la icona de cada hora (vegeu engineSnowfall.ts).
         processedData = injectEngineSnowfall(processedData);
 
         // 4. Finalització i Normalització de lloc

@@ -128,3 +128,48 @@ describe('WeatherRepository — cache quan el model regional falla', () => {
         expect(result.data.current.source).toBe('AROME HD');
     });
 });
+
+describe('WeatherRepository — barreja amb AIFS dels dies 4-7', () => {
+    // 8 dies des de "ara". La sèrie principal ÉS ICON (mateixa temperatura, humitat i pluja) i plou 1 mm a les hores del
+    // dia 6 amb un 10 % de probabilitat; AIFS fa 4 °C menys.
+    const HOURS = Array.from({ length: 8 * 24 }, (_, i) => new Date(Date.UTC(2026, 8, 26, 0) + i * 3_600_000).toISOString().slice(0, 16));
+    const RAIN_HOUR = 5 * 24 + 12;
+    const response = (): FetchResult => {
+        const temp = HOURS.map(() => 20);
+        const rh = HOURS.map(() => 80);
+        const mm = HOURS.map((_, i) => (i === RAIN_HOUR ? 1 : 0));
+        return {
+            weatherRaw: {
+                current: { time: HOURS[0], temperature_2m: 20 },
+                hourly: {
+                    time: HOURS, temperature_2m: temp, relative_humidity_2m: rh, precipitation: mm,
+                    precipitation_probability: HOURS.map(() => 10),
+                    temperature_2m_icon_seamless: temp, relative_humidity_2m_icon_seamless: rh, precipitation_icon_seamless: mm,
+                    temperature_2m_ecmwf_aifs025_single: HOURS.map(() => 16)
+                },
+                daily: { time: [] }
+            } as unknown as WeatherData,
+            geoData: { city: 'Ciutat del Cap', country: 'ZA' },
+            aqiData: null as unknown as AirQualityData
+        };
+    };
+
+    beforeEach(() => {
+        store.clear();
+        vi.clearAllMocks();
+        vi.mocked(fetchAllWeatherData).mockImplementation(async () => response());
+    });
+
+    it('la temperatura dels dies 4-7 surt barrejada', async () => {
+        const { data } = await load(CAPE_TOWN, workerOk);
+        const t = (data.hourly as unknown as Record<string, number[]>).temperature_2m;
+        expect(t[48]).toBe(20);
+        expect(t[RAIN_HOUR]).toBeCloseTo(18, 10);
+    });
+
+    it('la barreja va després de l\'evidència de pluja: la sèrie segueix reconeixent-se com a ICON i no se n\'infla la probabilitat', async () => {
+        const { data } = await load(CAPE_TOWN, workerOk);
+        const prob = (data.hourly as unknown as Record<string, number[]>).precipitation_probability;
+        expect(prob[RAIN_HOUR]).toBe(10);
+    });
+});
