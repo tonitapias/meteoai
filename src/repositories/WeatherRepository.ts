@@ -4,7 +4,7 @@ import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { normalizeModelData } from '../utils/normData';
 import { injectBaseRainEvidence } from '../utils/regionalModelEngine';
 import { injectEngineSnowfall } from '../utils/engineSnowfall';
-import { selectRegionalModel, type RegionalModel } from '../constants/regionalModels';
+import { isRegionalModelActive, selectRegionalModel, type RegionalModel } from '../constants/regionalModels';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import { getRegionalHDData } from '../services/weatherApi';
 import { fetchAllWeatherData } from '../services/weatherService';
@@ -13,6 +13,16 @@ import { cacheService } from '../services/cacheService';
 import { SENTRY_TAGS } from '../constants/errorConstants';
 import type { Language } from '../translations';
 import { CACHE_TTL } from '../constants/cacheConfig';
+
+// Paquet desat a la cache. `regionalMissing`: el lloc té model regional però aquesta vegada no s'ha pogut fer servir
+// (vegeu CACHE_TTL.WEATHER_REGIONAL_RETRY); `cachedAt` permet aplicar-li el TTL curt. Els paquets antics no porten
+// cap dels dos camps i es tracten com sempre.
+interface WeatherCachePacket {
+    weather: ExtendedWeatherData;
+    aqi: AirQualityData | null;
+    regionalMissing?: boolean;
+    cachedAt?: number;
+}
 
 // Tipus de retorn
 interface WeatherRepositoryResponse {
@@ -43,8 +53,12 @@ export const WeatherRepository = {
 
         // 1. Intentar Cache Local
         try {
-            const cachedPacket = await cacheService.get<{ weather: ExtendedWeatherData; aqi: AirQualityData | null }>(cacheKey, CACHE_TTL.WEATHER);
-            if (cachedPacket) {
+            const cachedPacket = await cacheService.get<WeatherCachePacket>(cacheKey, CACHE_TTL.WEATHER);
+            // Sense model regional (fallada puntual o permanent) el paquet només val CACHE_TTL.WEATHER_REGIONAL_RETRY:
+            // passat aquest temps es torna a demanar tot per donar una altra oportunitat al model regional.
+            const regionalRetryDue = !!cachedPacket?.regionalMissing
+                && (typeof cachedPacket.cachedAt !== 'number' || Date.now() - cachedPacket.cachedAt > CACHE_TTL.WEATHER_REGIONAL_RETRY);
+            if (cachedPacket && !regionalRetryDue) {
                 return { 
                     success: true, 
                     data: cachedPacket.weather, 
@@ -117,9 +131,15 @@ export const WeatherRepository = {
             longitude: lon 
         };
 
-        const packet = {
+        // El lloc té model regional però la sèrie no en porta (petició fallida, worker fallit o esgotat —que torna les
+        // dades base—, o resposta sense dades): l'usuari veu igualment la previsió global ara mateix, però el paquet
+        // es marca perquè la cache només el reaprofiti uns minuts.
+        const regionalMissing = shouldFetchRegional && !isRegionalModelActive(processedData.current?.source);
+
+        const packet: WeatherCachePacket = {
             weather: processedData,
-            aqi: fetchedAqi
+            aqi: fetchedAqi,
+            ...(regionalMissing ? { regionalMissing: true, cachedAt: Date.now() } : {})
         };
         
         // 5. Guardar a Cache
