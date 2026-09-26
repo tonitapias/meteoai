@@ -6,6 +6,7 @@
 import type { ExtendedWeatherData, StrictDailyWeather } from '../types/weatherLogicTypes';
 import { calculateReliability } from './rules/reliabilityRules';
 import { extractValidArrayNum } from './weatherMath';
+import { resolveProbableRange } from './probableRange';
 
 export interface ModelRange {
     low: number;
@@ -19,6 +20,10 @@ export interface DailyModelSpread {
     minRange: ModelRange | null;
     /** Acord entre models (calculateReliability), o null si no es pot comparar cap model. */
     reliability: 'high' | 'medium' | 'low' | null;
+    /** Rang probable (80 %) de la màxima mostrada, calibrat contra observacions (probableRange.ts); null sense màxima. */
+    maxProbable: ModelRange | null;
+    /** Idem per a la mínima. */
+    minProbable: ModelRange | null;
 }
 
 // Un rang entre models de menys d'1° no s'ha de dibuixar: no aporta res i embruta la pantalla.
@@ -60,6 +65,14 @@ export const resolveDailySpread = (
     ];
 
     const maxValues = modelValues('temperature_2m_max');
+    const minValues = modelValues('temperature_2m_min');
+
+    // Desacord entre els models globals (sense la xifra mostrada), el mateix que jutja la fiabilitat i amb el qual s'ha
+    // calibrat el rang probable.
+    const modelSpread = (values: ReadonlyArray<number | null>): number | null => {
+        const nums = nonNull(values);
+        return nums.length >= 2 ? Math.max(...nums) - Math.min(...nums) : null;
+    };
 
     const reliability = daily && comparison && nonNull(maxValues).length >= 2
         ? calculateReliability(daily, comparison.gfs, comparison.icon, dayIndex, comparison.ecmwf).level
@@ -67,7 +80,9 @@ export const resolveDailySpread = (
 
     return {
         maxRange: spreadRange(maxValues, displayedMax),
-        minRange: spreadRange(modelValues('temperature_2m_min'), displayedMin),
-        reliability
+        minRange: spreadRange(minValues, displayedMin),
+        reliability,
+        maxProbable: resolveProbableRange('max', displayedMax, dayIndex, modelSpread(maxValues)),
+        minProbable: resolveProbableRange('min', displayedMin, dayIndex, modelSpread(minValues))
     };
 };

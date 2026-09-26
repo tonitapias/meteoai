@@ -22,9 +22,10 @@ const PRECIP_MED_DIFF = 3;
 //   - Normalitzar per termini no millora res (AUC 0,640 contra 0,662): es fa servir un valor típic constant.
 // El rang mesura ACORD entre models, no exactitud: l'error creix amb el termini (|error| 1,0 °C a 1 dia, 2,3 °C a 7)
 // mentre el rang gairebé no es mou.
-const TYPICAL_TEMP_SPREAD = { max: 1.9, min: 2.1 } as const;
-const TEMP_MEDIUM_FACTOR = 1.5;
-const TEMP_LOW_FACTOR = 3;
+// Exportats perquè el rang probable (utils/probableRange.ts) classifiqui l'acord entre models amb els mateixos llindars.
+export const TYPICAL_TEMP_SPREAD = { max: 1.9, min: 2.1 } as const;
+export const TEMP_MEDIUM_FACTOR = 1.5;
+export const TEMP_LOW_FACTOR = 3;
 
 /** Rang (màx − mín) dels valors que hi són. Amb menys de 2 valors reals no hi ha comparació: null, mai un 0 fals. */
 const spreadOf = (values: Array<number | null>): number | null => {

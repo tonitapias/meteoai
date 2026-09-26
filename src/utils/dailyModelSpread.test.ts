@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveDailySpread } from './dailyModelSpread';
+import { resolveProbableRange } from './probableRange';
 import type { ExtendedWeatherData, StrictDailyWeather } from '../types/weatherLogicTypes';
 
 type Comparison = NonNullable<ExtendedWeatherData['dailyComparison']>;
@@ -84,5 +85,19 @@ describe('resolveDailySpread — fiabilitat', () => {
         const d = daily([25], [12]);
         const cmp: Comparison = { ecmwf: model([25.3], [12.4]), gfs: model([24.8], [11.9]), icon: model([25], [12.2]) };
         expect(resolveDailySpread(0, 25, 12, d, cmp).reliability).toBe('high');
+    });
+});
+
+describe('resolveDailySpread — rang probable (80 %)', () => {
+    it('surt de la xifra mostrada i del desacord entre els models globals (sense comptar-hi la mostrada)', () => {
+        // Dijous (índex 4): màxima dels models 27,6 (best/ICON) a 31,3 (ECMWF/GFS) -> desacord 3,7°; mínima 14,1 a 18,6 -> 4,5°.
+        const s = resolveDailySpread(4, 27.6, 14.1, GIRONA_DAILY, GIRONA_CMP);
+        expect(s.maxProbable).toEqual(resolveProbableRange('max', 27.6, 4, 31.3 - 27.6));
+        expect(s.minProbable).toEqual(resolveProbableRange('min', 14.1, 4, 18.6 - 14.1));
+    });
+
+    it('sense comparació de models, rang calibrat només pel dia vista; sense xifra mostrada, cap rang', () => {
+        expect(resolveDailySpread(3, 30, 15, null, null).maxProbable).toEqual(resolveProbableRange('max', 30, 3, null));
+        expect(resolveDailySpread(3, null, null, GIRONA_DAILY, GIRONA_CMP)).toMatchObject({ maxProbable: null, minProbable: null });
     });
 });

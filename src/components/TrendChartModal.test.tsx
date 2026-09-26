@@ -130,22 +130,37 @@ describe('TrendChartModal — dades absents', () => {
     });
 });
 
-describe('TrendChartModal — desacord entre models i fiabilitat per dia', () => {
+describe('TrendChartModal — rang probable i fiabilitat per dia', () => {
     const levels = () => screen.getAllByTestId('reliability').map(e => e.getAttribute('data-level'));
+    const whiskers = () => screen.getAllByTestId('probable-range');
+    // "Rang probable (80 %): 27–33°" -> amplada en graus
+    const widthOf = (el: HTMLElement) => {
+        const m = (el.getAttribute('title') ?? '').match(/(-?\d+)–(-?\d+)°/);
+        return m ? Number(m[2]) - Number(m[1]) : NaN;
+    };
 
-    it('només dibuixa el bigoti del dia on els models discrepen de debò (< 1° no es dibuixa)', () => {
+    it('cada dia complet té el rang probable de la màxima i de la mínima', () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
-        expect(screen.getAllByTestId('model-range')).toHaveLength(1);
-        expect(screen.getByTitle('Rang entre models: 30–38°')).toBeTruthy();
+        expect(whiskers()).toHaveLength(14);
+        whiskers().forEach(w => expect(w.getAttribute('title')).toMatch(/^Rang probable \(80 %\): -?\d+–-?\d+°$/));
     });
 
-    it('el bigoti cap dins el gràfic: l\'escala el comptava i no queda tallat', () => {
+    it("el dia on els models discrepen té el rang de la màxima més ample que els dies d'acord", () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
-        const w = screen.getByTestId('model-range');
-        const top = parseFloat(w.style.top);
-        const bottom = top + parseFloat(w.style.height);
-        expect(top).toBeGreaterThanOrEqual(0);
-        expect(bottom).toBeLessThanOrEqual(100);
+        // Bigotis en ordre [màx, mín] per dia; el de desacord és l'índex 4 de daily, el 4t del gràfic (que comença al dia 1).
+        const maxWidths = whiskers().filter((_, i) => i % 2 === 0).map(widthOf);
+        const disagreeing = maxWidths[3];
+        maxWidths.filter((_, i) => i !== 3).forEach(w => expect(disagreeing).toBeGreaterThan(w));
+    });
+
+    it("els bigotis caben dins el gràfic: l'escala els compta i no queden tallats", () => {
+        renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
+        whiskers().forEach(w => {
+            const top = parseFloat(w.style.top);
+            const bottom = top + parseFloat(w.style.height);
+            expect(top).toBeGreaterThanOrEqual(0);
+            expect(bottom).toBeLessThanOrEqual(100);
+        });
     });
 
     it('cada dia té la seva fiabilitat: alta si els models coincideixen, baixa on n\'hi ha un que s\'allunya molt', () => {
@@ -156,21 +171,22 @@ describe('TrendChartModal — desacord entre models i fiabilitat per dia', () =>
 
     it('la llegenda explica el rang i la fiabilitat', () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
-        expect(screen.getByText('Rang entre models')).toBeTruthy();
+        expect(screen.getByText('Rang probable (80 %)')).toBeTruthy();
         expect(screen.getByText('Fiabilitat (acord entre models)')).toBeTruthy();
     });
 
-    it('sense comparació de models no hi ha bigotis, ni fiabilitat, ni llegenda (no s\'inventa cap acord)', () => {
+    it("sense comparació de models no s'inventa cap acord (ni fiabilitat ni la seva llegenda), però el rang probable hi és", () => {
         renderModal(makeDaily(SEPT));
-        expect(screen.queryAllByTestId('model-range')).toHaveLength(0);
         expect(screen.queryAllByTestId('reliability')).toHaveLength(0);
-        expect(screen.queryByText('Rang entre models')).toBeNull();
         expect(screen.queryByText('Fiabilitat (acord entre models)')).toBeNull();
+        // Calibrat només pel dia vista (probableRange.ts, fila `all`).
+        expect(whiskers()).toHaveLength(14);
+        expect(screen.getByText('Rang probable (80 %)')).toBeTruthy();
     });
 
     it('els textos surten en l\'idioma de l\'usuari', () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON, lang: 'en' });
-        expect(screen.getByText('Model range')).toBeTruthy();
+        expect(screen.getByText('Likely range (80%)')).toBeTruthy();
         expect(screen.getAllByLabelText('Low reliability')).toHaveLength(1);
     });
 });

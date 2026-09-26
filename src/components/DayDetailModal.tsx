@@ -7,7 +7,7 @@ import { DayPartsStrip } from './dayDetail/DayPartsStrip';
 import { SunTimesCard } from './dayDetail/SunTimesCard';
 import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale } from '../utils/formatters';
+import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale, formatTemp } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { hasVisibleRange, type ModelRange } from '../utils/dailyModelSpread';
@@ -312,11 +312,12 @@ export default function DayDetailModal({
   const labelMax = typeof tRecord.max === 'string' ? tRecord.max : 'Màx';
   const labelMin = typeof tRecord.min === 'string' ? tRecord.min : 'Mín';
 
-  // Fiabilitat, rang entre models i origen de les temperatures del dia: la mateixa informació que ja dóna
+  // Fiabilitat, rang probable i origen de les temperatures del dia: la mateixa informació que ja dóna
   // el gràfic de tendència, perquè una xifra sense aquest context sembla més segura del que és.
-  const formatRange = (r: ModelRange) => `${Math.round(r.low)}–${Math.round(r.high)}°`;
-  const maxRange = spread?.maxRange ?? null;
-  const minRange = spread?.minRange ?? null;
+  // El rang és en °C (com les xifres de useDayDetailData) i es passa a la unitat de l'usuari en mostrar-lo.
+  const formatRange = (r: ModelRange) => `${formatTemp(r.low, unit)}–${formatTemp(r.high, unit)}°`;
+  const maxRange = spread?.maxProbable ?? null;
+  const minRange = spread?.minProbable ?? null;
   const rangeParts = [
       hasVisibleRange(maxRange) ? `${labelMax} ${formatRange(maxRange)}` : null,
       hasVisibleRange(minRange) ? `${labelMin} ${formatRange(minRange)}` : null
@@ -468,10 +469,10 @@ export default function DayDetailModal({
                           )}
                           {rangeParts.length > 0 && (
                               <span
-                                  data-testid="day-model-range"
+                                  data-testid="day-probable-range"
                                   className="inline-block px-2.5 py-1.5 rounded-full border border-white/10 bg-black/40 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 tabular-nums backdrop-blur-md"
                               >
-                                  {confidenceText.rangeLegend}:{' '}
+                                  {confidenceText.probableRange}:{' '}
                                   {/* Si a mòbil no hi cap tot en una línia, el salt cau entre la màxima i la mínima, mai dins d'un rang. */}
                                   {rangeParts.map((part, i) => (
                                       <React.Fragment key={part}>

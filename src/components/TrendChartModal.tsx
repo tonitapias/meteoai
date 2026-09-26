@@ -103,10 +103,10 @@ const buildLinePath = (points: ReadonlyArray<{ x: number; y: number } | null>): 
 const fillTemplate = (template: string, vars: Record<string, number>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => (key in vars ? String(Math.round(vars[key])) : ''));
 
-/** Bigoti vertical (amb topalls) que marca el rang entre models d'una temperatura, a la dreta de la càpsula. */
-const ModelRangeWhisker = ({ x, top, height, title }: { x: number; top: number; height: number; title: string }) => (
+/** Bigoti vertical (amb topalls) que marca el rang probable (80 %) d'una temperatura, a la dreta de la càpsula. */
+const ProbableRangeWhisker = ({ x, top, height, title }: { x: number; top: number; height: number; title: string }) => (
   <div
-    data-testid="model-range"
+    data-testid="probable-range"
     title={title}
     className="absolute w-1.5 ml-3.5 md:ml-[18px] border-y border-slate-300/60"
     style={{ left: `${x}%`, top: `${top}%`, height: `${height}%` }}
@@ -292,9 +292,9 @@ const TrendChartModal = memo(function TrendChartModal({
   // L'escala només compta els dies complets: un dia sense dada no pot arrossegar-la cap a 0°.
   const completeDays = trendData.filter(isComplete);
   const hasScale = completeDays.length > 0;
-  // Els rangs entre models també hi entren: així cap bigoti no queda tallat pel marge del gràfic.
-  const chartMax = hasScale ? Math.max(...completeDays.map(d => Math.max(d.max, d.spread.maxRange?.high ?? d.max))) : 1;
-  const chartMin = hasScale ? Math.min(...completeDays.map(d => Math.min(d.min, d.spread.minRange?.low ?? d.min))) : 0;
+  // Els rangs probables també hi entren: així cap bigoti no queda tallat pel marge del gràfic.
+  const chartMax = hasScale ? Math.max(...completeDays.map(d => Math.max(d.max, d.spread.maxProbable?.high ?? d.max))) : 1;
+  const chartMin = hasScale ? Math.min(...completeDays.map(d => Math.min(d.min, d.spread.minProbable?.low ?? d.min))) : 0;
 
   const padding = chartMax === chartMin ? 2 : (chartMax - chartMin) * 0.25;
   const yMax = chartMax + padding;
@@ -310,7 +310,7 @@ const TrendChartModal = memo(function TrendChartModal({
   const maxPath = buildLinePath(trendData.map((d, i) => (isComplete(d) ? { x: getX(i), y: getY(d.max) } : null)));
   const minPath = buildLinePath(trendData.map((d, i) => (isComplete(d) ? { x: getX(i), y: getY(d.min) } : null)));
 
-  const showRangeLegend = completeDays.some(d => hasVisibleRange(d.spread.maxRange) || hasVisibleRange(d.spread.minRange));
+  const showRangeLegend = completeDays.some(d => hasVisibleRange(d.spread.maxProbable) || hasVisibleRange(d.spread.minProbable));
   const showReliabilityLegend = trendData.some(d => d.spread.reliability !== null);
   const showSourceStrip = trendData.some(d => d.regional);
   const formatRange = (r: { low: number; high: number }) => `${Math.round(r.low)}–${Math.round(r.high)}°`;
@@ -468,21 +468,22 @@ const TrendChartModal = memo(function TrendChartModal({
                 />
               </svg>
 
-              {/* BIGOTIS: rang de la màxima i de la mínima entre models, a la dreta de la càpsula */}
+              {/* BIGOTIS: rang probable (80 %) de la màxima i de la mínima, a la dreta de la càpsula. Abans era el rang entre
+                  models, que només contenia el valor real la meitat de les vegades (vegeu probableRange.ts). */}
               {completeDays.length > 0 && trendData.map((d, i) => {
                 if (!isComplete(d)) return null;
                 const whiskers = [
-                  { key: 'max', range: d.spread.maxRange },
-                  { key: 'min', range: d.spread.minRange }
+                  { key: 'max', range: d.spread.maxProbable },
+                  { key: 'min', range: d.spread.minProbable }
                 ];
                 return whiskers.map(({ key, range }) =>
                   hasVisibleRange(range) ? (
-                    <ModelRangeWhisker
+                    <ProbableRangeWhisker
                       key={`range-${key}-${i}`}
                       x={getX(i)}
                       top={getY(range.high)}
                       height={getY(range.low) - getY(range.high)}
-                      title={`${mDict.rangeLegend}: ${formatRange(range)}`}
+                      title={`${mDict.probableRange}: ${formatRange(range)}`}
                     />
                   ) : null
                 );
@@ -587,7 +588,7 @@ const TrendChartModal = memo(function TrendChartModal({
                   <span aria-hidden="true" className="relative inline-block w-1.5 h-3.5 border-y border-slate-300/60">
                     <span className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-300/60"></span>
                   </span>
-                  {mDict.rangeLegend}
+                  {mDict.probableRange}
                 </span>
               )}
               {showReliabilityLegend && (

@@ -124,10 +124,11 @@ describe('DayDetailModal — fiabilitat, rang i font', () => {
         expect(chip.getAttribute('data-level')).toBe('high');
         expect(chip.textContent).toContain('Fiabilitat alta');
 
-        const range = screen.getByTestId('day-model-range').textContent ?? '';
-        expect(range).toContain('Rang entre models');
-        expect(range).toContain('Màx 27–29°');
-        expect(range).toContain('Mín 17–21°');
+        const range = screen.getByTestId('day-probable-range').textContent ?? '';
+        expect(range).toContain('Rang probable (80 %)');
+        // Rang probable del dia 1 amb els models d'acord (probableRange.ts): 29,1 + [-1,7, +1,5] i 21,4 + [-2,3, +1,8].
+        expect(range).toContain('Màx 27–31°');
+        expect(range).toContain('Mín 19–23°');
     });
 
     it('diu quin model és el dia: el regional si en surt la temperatura, "Model global" si no', () => {
@@ -150,7 +151,7 @@ describe('DayDetailModal — fiabilitat, rang i font', () => {
     it("s'adapta a l'idioma (castellà)", () => {
         renderDetail(build(), 'es');
         expect(screen.getByTestId('day-reliability').textContent).toContain('Fiabilidad alta');
-        expect(screen.getByTestId('day-model-range').textContent).toContain('Rango entre modelos');
+        expect(screen.getByTestId('day-probable-range').textContent).toContain('Rango probable (80 %)');
     });
 });
 
