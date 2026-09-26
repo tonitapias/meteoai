@@ -142,8 +142,9 @@ describe('useWeatherCalculations — pluja d\'"ara" en mm/h', () => {
         }
     }) as unknown as ExtendedWeatherData;
 
-    // new Date('...T12:05') sense zona: el hook compara amb els temps de minutely_15 al mateix rellotge local.
-    const now = new Date('2023-10-10T12:05');
+    // Instant absolut: 10:05 UTC són les 12:05 a Madrid (CEST), dins del primer quart d'hora de minutely_15. Sense zona
+    // ('...T12:05') el test depenia del fus de la màquina: passava en hora de Madrid i fallava al CI (UTC).
+    const now = new Date('2023-10-10T10:05:00Z');
 
     it('0,5 mm per quart d\'hora (2 mm/h) és pluja moderada, igual que l\'hora de 2 mm', () => {
         const { result } = renderHook(() => useWeatherCalculations(rainyData([0.5, 0.5, 0.5, 0.5], 2), 'C', now));
