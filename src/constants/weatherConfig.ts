@@ -60,6 +60,17 @@ export const WEATHER_THRESHOLDS = {
     EXTREME: 3000      // Situació perillosa
   },
 
+  // Cisallament del vent en capa profunda (km/h): diferència vectorial entre el vent a 10 m i a 500 hPa (~5,5 km), el
+  // substitut habitual del cisallament 0–6 km. NO diu si hi haurà tempesta (això ho decideix la regla de CAPE, verificada
+  // a stormRules.ts) sinó com s'organitzaria si n'hi ha: < 10 m/s tempestes aïllades i de vida curta; 10–20 m/s
+  // multicèl·lules i sistemes organitzats; >= 20 m/s supercèl·lules possibles (llindars de la literatura operativa:
+  // Weisman i Klemp 1982, Thompson et al. 2003, ESSL). No verificat localment: en un any, 30 aeroports només registren
+  // 22 hores de calamarsa als METAR, massa poques per mesurar un senyal de severitat.
+  SHEAR: {
+    MODERATE: 36, // 10 m/s
+    STRONG: 72    // 20 m/s
+  },
+
   // Tendència baromètrica (hPa / 3h) — terminologia real dels butlletins marítims
   // (Met Office i similars): "lentament" / "" / "ràpidament" / "molt ràpidament".
   // >3 hPa/3h és el llindar operatiu clàssic que anuncia un front pertorbat en 6-12h.
@@ -112,7 +123,15 @@ export const WEATHER_THRESHOLDS = {
   SNOW: {
     TEMP_SNOW: 1,      // Temperatura aire <= 1ºC -> Neu segura
     TEMP_MIX: 4,       // Temperatura aire <= 4ºC -> Possible aiguaneu
-    FREEZING_BUFFER: 300 // Metres per sota de la cota 0 on pot nevar
+    // Metres per sota de la cota 0 on pot nevar (cota de neu = cota de gel − 300 m). Verificat, hivern 2025-26 (nov.–mar.),
+    // 30 aeroports europeus, previsió de curt termini de la sèrie de l'app contra el tipus de precipitació dels METAR (13.438
+    // hores de precipitació, 1.015 de neu o aiguaneu):
+    //  - 300 m és el millor marge fix, tant per a la cota sola (CSI 0,676; 250 m 0,651, 350 m 0,674) com dins de la regla de
+    //    neu de l'app (CSI 0,697; 200 m 0,672, 400 m 0,667);
+    //  - fer-lo dependre de la humitat de superfície (aire sec → cota més baixa pel refredament per evaporació:
+    //    300 + k·(100 − HR)) sempre ho empitjora (k = 5: 0,669; k = 10: 0,620). Prop de la cota, l'HR de superfície gairebé
+    //    no separa la neu de la pluja (mediana 90 % contra 88 %): el que compta és l'aire de sobre, que la superfície no veu.
+    FREEZING_BUFFER: 300
   },
 
   // Visibilitat (m). POOR/GOOD ja eren usats per visibilityRules.ts/weatherLogic.ts per

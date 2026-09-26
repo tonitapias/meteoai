@@ -4,13 +4,14 @@
 // dades (cape, freezing_level_height, precipitation_probability) ja arriben amb la petita
 // horària habitual — cap crida de xarxa addicional.
 import { useState, useRef, useMemo, memo } from 'react';
-import { X, Zap, Thermometer, Droplets, Clock3, AlertTriangle, CloudOff } from 'lucide-react';
+import { X, Zap, Thermometer, Clock3, AlertTriangle, CloudOff, Wind } from 'lucide-react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { classifyShear, getBulkShearKmh, type ShearClass } from '../utils/rules/shearRules';
 
 const { CAPE, ALERTS } = WEATHER_THRESHOLDS;
 
@@ -33,6 +34,8 @@ const T: Record<Language, Record<string, string>> = {
     in_: "D'aquí a", maxCape24: 'Màx. CAPE 24h', maxCape48: 'Màx. CAPE 48h', hoursAtRisk: 'Hores en Risc',
     unknown: 'Desconegut', stable: 'Estable', weak: 'Feble', moderate: 'Moderada', high: 'Alta', severe: 'Severa',
     rainChance: 'Prob. Pluja', now: 'ARA', hoursShort: 'h',
+    shear: 'Cisallament 0–6 km', shearNow: 'Cisallament ara', shearWeak: 'Tempestes aïllades, poc organitzades',
+    shearModerate: 'Tempestes organitzades possibles (multicèl·lules)', shearStrong: 'Supercèl·lules possibles',
   },
   es: {
     title: 'RIESGO DE TORMENTA', subtitle: 'Observatorio de Convección', noData: 'DATOS INSUFICIENTES',
@@ -42,6 +45,8 @@ const T: Record<Language, Record<string, string>> = {
     in_: 'Dentro de', maxCape24: 'Máx. CAPE 24h', maxCape48: 'Máx. CAPE 48h', hoursAtRisk: 'Horas en Riesgo',
     unknown: 'Desconocido', stable: 'Estable', weak: 'Débil', moderate: 'Moderada', high: 'Alta', severe: 'Severa',
     rainChance: 'Prob. Lluvia', now: 'AHORA', hoursShort: 'h',
+    shear: 'Cizalladura 0–6 km', shearNow: 'Cizalladura ahora', shearWeak: 'Tormentas aisladas, poco organizadas',
+    shearModerate: 'Posibles tormentas organizadas (multicélulas)', shearStrong: 'Posibles supercélulas',
   },
   en: {
     title: 'STORM RISK', subtitle: 'Convection Observatory', noData: 'INSUFFICIENT DATA',
@@ -51,6 +56,8 @@ const T: Record<Language, Record<string, string>> = {
     in_: 'In', maxCape24: 'Max CAPE 24h', maxCape48: 'Max CAPE 48h', hoursAtRisk: 'Hours at Risk',
     unknown: 'Unknown', stable: 'Stable', weak: 'Weak', moderate: 'Moderate', high: 'High', severe: 'Severe',
     rainChance: 'Rain Chance', now: 'NOW', hoursShort: 'h',
+    shear: '0–6 km shear', shearNow: 'Shear now', shearWeak: 'Isolated, poorly organised storms',
+    shearModerate: 'Organised storms possible (multicells)', shearStrong: 'Supercells possible',
   },
   fr: {
     title: 'RISQUE D\'ORAGE', subtitle: 'Observatoire de Convection', noData: 'DONNÉES INSUFFISANTES',
@@ -60,6 +67,8 @@ const T: Record<Language, Record<string, string>> = {
     in_: 'Dans', maxCape24: 'Max CAPE 24h', maxCape48: 'Max CAPE 48h', hoursAtRisk: 'Heures à Risque',
     unknown: 'Inconnu', stable: 'Stable', weak: 'Faible', moderate: 'Modérée', high: 'Élevée', severe: 'Sévère',
     rainChance: 'Prob. Pluie', now: 'MAINTENANT', hoursShort: 'h',
+    shear: 'Cisaillement 0–6 km', shearNow: 'Cisaillement actuel', shearWeak: 'Orages isolés, peu organisés',
+    shearModerate: 'Orages organisés possibles (multicellulaires)', shearStrong: 'Supercellules possibles',
   },
 };
 
@@ -79,6 +88,13 @@ function getSeverity(cape: number | null, t: Record<string, string>): Severity {
   if (cape >= CAPE.WEAK) return { label: t.weak, color: 'text-lime-300', stroke: '#bef264', bgGlow: 'from-lime-950/20 to-black/90', borderColor: 'border-lime-400/20' };
   return { label: t.stable, color: 'text-emerald-400', stroke: '#34d399', bgGlow: 'from-emerald-950/20 to-black/90', borderColor: 'border-emerald-500/20' };
 }
+
+// Organització potencial segons el cisallament (vegeu WEATHER_THRESHOLDS.SHEAR i shearRules.ts).
+const SHEAR_STYLE: Record<ShearClass, { color: string; key: 'shearWeak' | 'shearModerate' | 'shearStrong' }> = {
+  weak: { color: 'text-slate-300', key: 'shearWeak' },
+  moderate: { color: 'text-amber-300', key: 'shearModerate' },
+  strong: { color: 'text-rose-400', key: 'shearStrong' },
+};
 
 // Geometria del gràfic (mateix viewBox que la trajectòria solar, per coherència visual)
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140, PRECIP_STRIP_H = 18;
@@ -113,14 +129,16 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
         cape: getSafe(hourly?.cape, idx),
         precipProb: getSafe(hourly?.precipitation_probability, idx),
         freezingLevel: getSafe(hourly?.freezing_level_height, idx),
+        shear: getBulkShearKmh(weatherData.hourlyComparison, idx),
       };
     });
-  }, [hasData, hourly, currentHourIndex]);
+  }, [hasData, hourly, currentHourIndex, weatherData.hourlyComparison]);
 
   const N = windowEntries.length;
 
   const currentCape = N > 0 ? windowEntries[0].cape : null;
   const currentFreezingLevel = N > 0 ? windowEntries[0].freezingLevel : null;
+  const currentShear = N > 0 ? windowEntries[0].shear : null;
   const severity = getSeverity(currentCape, t);
 
   // --- Estadístiques de la finestra ---
@@ -148,7 +166,8 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
     const segment = runLength === -1 ? remaining : remaining.slice(0, runLength);
     const peak = Math.max(...segment.map(e => e.cape as number));
     const peakIdx = startIdx + segment.findIndex(e => e.cape === peak);
-    return { startIdx, peak, peakIdx };
+    // Cisallament a l'hora del pic de CAPE: com s'organitzarien les tempestes d'aquesta finestra.
+    return { startIdx, peak, peakIdx, peakShear: windowEntries[peakIdx]?.shear ?? null };
   }, [windowEntries]);
 
   // --- Scrub horitzontal sobre el gràfic (mateix patró RAF que l'arc solar) ---
@@ -307,6 +326,15 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
                 ) : (
                   <span className="text-sm font-bold text-emerald-400">{t.noRiskWindow}</span>
                 )}
+                {nextStormWindow && nextStormWindow.peakShear !== null && (() => {
+                  const style = SHEAR_STYLE[classifyShear(nextStormWindow.peakShear)];
+                  return (
+                    <span data-testid="storm-peak-shear" className="text-[11px] font-bold text-slate-400 mt-0.5">
+                      {t.shear} {Math.round(nextStormWindow.peakShear)} km/h{' · '}
+                      <span className={style.color}>{t[style.key]}</span>
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 
@@ -389,7 +417,7 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
               maxCape24={maxCape24}
               maxCape48={maxCape48}
               hoursAtRisk={hoursAtRisk}
-              currentFreezingLevel={currentFreezingLevel}
+              currentShear={currentShear}
             />
           </div>
         )}
@@ -403,16 +431,17 @@ interface StatsSectionProps {
   maxCape24: number | null;
   maxCape48: number | null;
   hoursAtRisk: number;
-  currentFreezingLevel: number | null;
+  currentShear: number | null;
 }
 
-const StatsSection = memo(function StatsSection({ t, maxCape24, maxCape48, hoursAtRisk, currentFreezingLevel }: StatsSectionProps) {
+const StatsSection = memo(function StatsSection({ t, maxCape24, maxCape48, hoursAtRisk, currentShear }: StatsSectionProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <StatCard label={t.maxCape24} value={maxCape24 !== null ? `${Math.round(maxCape24)}` : '--'} sub="J/kg" icon={<Zap className="w-3.5 h-3.5" />} />
       <StatCard label={t.maxCape48} value={maxCape48 !== null ? `${Math.round(maxCape48)}` : '--'} sub="J/kg" icon={<Zap className="w-3.5 h-3.5" />} />
       <StatCard label={t.hoursAtRisk} value={`${hoursAtRisk}${t.hoursShort}`} icon={<AlertTriangle className="w-3.5 h-3.5" />} />
-      <StatCard label={t.freezingLevel} value={currentFreezingLevel !== null ? `${Math.round(currentFreezingLevel)} m` : '--'} icon={<Droplets className="w-3.5 h-3.5" />} />
+      {/* Abans repetia el nivell de congelació, que ja surt a la capçalera del modal. */}
+      <StatCard label={t.shearNow} value={currentShear !== null ? `${Math.round(currentShear)}` : '--'} sub="km/h · 0–6 km" icon={<Wind className="w-3.5 h-3.5" />} />
     </div>
   );
 });

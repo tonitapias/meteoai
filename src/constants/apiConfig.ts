@@ -30,7 +30,9 @@ export const PARAMS_HOURLY = [
     "weather_code", "pressure_msl", "surface_pressure", "cloud_cover", "cloud_cover_low", 
     "cloud_cover_mid", "cloud_cover_high", "visibility", "evapotranspiration", 
     "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "uv_index", "uv_index_clear_sky", 
-    "is_day", "cape", "freezing_level_height"
+    "is_day", "cape", "freezing_level_height",
+    // Vent a 500 hPa: amb el de 10 m del MATEIX model, el cisallament del modal de tempesta (utils/rules/shearRules.ts)
+    "wind_speed_500hPa", "wind_direction_500hPa"
 ] as const;
 
 export const PARAMS_DAILY = [
