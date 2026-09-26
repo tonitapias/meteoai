@@ -3,6 +3,8 @@ import { getHourlyWeatherCode, getHourCodesByDate, resolveFreezingLevel, resolve
 import { buildRegionalHourlyRows } from './regionalHourlyRows';
 import { getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './rules/temperatureCorrections';
 import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { TROPICAL_RAIN_GATE_KEY } from './tropicalRainGate';
+import { resolveDailyCode } from './dailyWeatherCode';
 
 // Sèrie horària mínima de 3 hores (00:00, 01:00, 02:00 del 2026-09-19)
 const TIMES = ['2026-09-19T00:00', '2026-09-19T01:00', '2026-09-19T02:00'];
@@ -55,6 +57,19 @@ describe('getHourlyWeatherCode', () => {
         weather_code: [0, 0, 0],
         wind_speed_10m: [2, 2, 2]
     };
+
+    it('llegeix la marca del filtre de pluja tropical de la sèrie (plugim feble amb el cel trencat)', () => {
+        const drizzle = {
+            ...base, relative_humidity_2m: [70, 70, 70], precipitation: [0.1, 0.1, 0.1], weather_code: [51, 51, 51],
+            cloud_cover_low: [30, 30, 30]
+        };
+        expect(getHourlyWeatherCode({ ...drizzle, [TROPICAL_RAIN_GATE_KEY]: [1, 1, 1] }, 0, 500)).toBe(1);
+        expect(getHourlyWeatherCode(drizzle, 0, 500)).toBe(80);
+        // La previsió setmanal tria la icona del dia amb els mateixos codis: dia sec amb el filtre, ruixats sense.
+        const day = (h: Record<string, unknown>) => resolveDailyCode(51, 30, getHourCodesByDate(h, 500)['2026-09-19']);
+        expect(day({ ...drizzle, [TROPICAL_RAIN_GATE_KEY]: [1, 1, 1] })).toBe(1);
+        expect(day(drizzle)).toBe(80);
+    });
 
     it('retorna null si l\'hora no té temperatura real', () => {
         expect(getHourlyWeatherCode({ ...base, temperature_2m: [null, 14, 14] }, 0, 500)).toBeNull();

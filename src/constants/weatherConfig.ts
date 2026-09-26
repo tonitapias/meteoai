@@ -10,6 +10,25 @@ export const WEATHER_THRESHOLDS = {
     INTENSIFY_FACTOR: 1.5 // Factor per considerar que la pluja s'intensifica (AI)
   },
 
+  // FILTRE DE PLUJA TROPICAL (rules/precipitationRules.applyTropicalRainGate, zona a utils/tropicalRainGate.ts).
+  // Al tròpic, fora dels models regionals, la sèrie principal de l'app és l'ECMWF IFS 9 km (verificat: best_match
+  // idèntic a ecmwf_ifs a les 24 estacions de sota), que "plovisqueja" contínuament: 0,1-0,3 mm/h durant hores fins i
+  // tot amb el cel quasi serè. Amb el llindar general (TRACE) la setmana sortia plena de plugim (Natal: 7 de 7 dies).
+  // Verificat contra METAR de 24 aeroports tropicals (Brasil, Indonèsia, resta d'Àsia, Àfrica, Carib, Oceania),
+  // oct. 2025 - set. 2026, 118 passades de 7 dies per estació passades pel motor de l'app:
+  //  - el model pinta pluja al 34-40 % de les hores (dies 1-5) i en plou al 7,7-8 % (biaix 4,3-5,1); a les hores de
+  //    0,1 mm plou el 10 % de les vegades (19 % amb ±1 h); amb el cel <= 30 % plou tan poc com a les hores seques;
+  //  - la previsió setmanal pintava pluja el 85 % dels dies i en plovia (un sol informe ja compta) el 46 %;
+  //  - exigir >= 0,5 mm O cel quasi tapat (> CLOUDS.OVERCAST) puja el CSI horari (±1 h) +0,05 al dia 1 i +0,03 als
+  //    dies 3 i 5 (IC 95 % per blocs de dies sense el 0) i, a la setmana, els dies amb icona de pluja passen del 85 %
+  //    al 62 %, amb pluja real el 64 % de les vegades (abans el 53 %) i CSI 0,53 -> 0,58. Natal: 87 % -> 51 % dels dies
+  //    (en plou el 35 %). Altres regles (només núvol > 60 %, >= 0,3 mm, total diari >= 1-2 mm) quedaven iguals o pitjor.
+  // NOMÉS al tròpic (|latitud| <= MAX_ABS_LATITUDE) i sense model regional: fora no s'ha verificat.
+  TROPICAL_RAIN: {
+    MAX_ABS_LATITUDE: 23.44, // Tròpics de Càncer i Capricorn
+    MIN_MM: 0.5              // Sense el cel quasi tapat, per sota d'això no es pinta pluja
+  },
+
   // Cobertura de núvols (%)
   CLOUDS: {
     FEW: 15,       // 0-15%: Serè
@@ -17,6 +36,11 @@ export const WEATHER_THRESHOLDS = {
     BROKEN: 85,    // 45-85%: Molt ennuvolat
     OVERCAST: 85,  // >85%: Cobert
     STORM_BASE: 60, // Mínim de núvols per considerar tempesta
+    // Pluja o plugim amb el cel trencat (núvol efectiu <= SHOWER_MAX) es pinta com a RUIXAT (80-82: sol o lluna amb
+    // gotes), no com a núvol amb pluja: la pluja estratiforme i el plugim necessiten una capa contínua; si plou amb
+    // clarianes, és convectiva. Mateix llindar que STORM_BASE: per sobre, el CAPE decideix si és tempesta.
+    // (Al tròpic, dels informes de precipitació observada a les hores de pluja del model, només el 4-5 % eren plugim.)
+    SHOWER_MAX: 60,
     // Dins del codi 2 (45-85 %), a partir d'aquí el cel es pinta com a "molt ennuvolat"
     // (icona Cloudy) i no com a "parcialment ennuvolat" (sol amb núvol). Aprox. 5-6 oktes.
     MOSTLY_CLOUDY: 70,

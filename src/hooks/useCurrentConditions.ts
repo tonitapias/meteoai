@@ -6,6 +6,7 @@ import { calculateShortRangeAgreement } from '../utils/rules/shortRangeAgreement
 import { calculateEffectiveCloudCover } from '../utils/rules/cloudRules';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { getComparisonVal } from '../utils/weatherMappers';
+import { isTropicalRainGateHour } from '../utils/tropicalRainGate';
 
 // Definim un tipus bàsic per a les dades del gràfic que necessitem aquí
 type ChartDataSubset = { rain: number; snowLevel: number | null }[];
@@ -86,7 +87,9 @@ export function useCurrentConditions(
           relative_humidity_2m: currentRaw.relative_humidity_2m ?? getSafeArrNum(hRaw.relative_humidity_2m, idx, 50),
       } as unknown as StrictCurrentWeather;
 
-      return getRealTimeWeatherCode(enrichedCurrent, nowRatesMmPerHour, currentRainProbability, currentFreezingLevel, elevation);
+      // Mateix filtre de pluja tropical que l'hora actual de l'evolució horària (vegeu utils/tropicalRainGate.ts).
+      return getRealTimeWeatherCode(enrichedCurrent, nowRatesMmPerHour, currentRainProbability, currentFreezingLevel, elevation,
+          { tropicalRainGate: isTropicalRainGateHour(hRaw, idx) });
   }, [weatherData, nowRatesMmPerHour, currentRainProbability, currentFreezingLevel, currentHourlyIndex, currentCape]);
 
   // % efectiu de núvols d'"ara" (mateixa font i ponderació que el codi de cel): serveix perquè la icona i

@@ -5,7 +5,7 @@ import { safeNum, extractValidNum } from './weatherMath';
 
 // --- IMPORTS DE REGLES (Mòduls especialitzats) ---
 import { adjustBaseSkyCode, calculateEffectiveCloudCover } from './rules/cloudRules';
-import { getInstantaneousPrecipitation, checkForVirga, adjustRainIntensity } from './rules/precipitationRules';
+import { getInstantaneousPrecipitation, checkForVirga, adjustRainIntensity, applyTropicalRainGate, applyShowerSky } from './rules/precipitationRules';
 import { resolveFog } from './rules/visibilityRules';
 import { adjustForStorms } from './rules/stormRules';
 import { determineSnowCode, isSnowPossible } from './rules/winterRules';
@@ -57,6 +57,11 @@ const applyThermalLock = (code: number, temp: number, freezingLevel: number, ele
 // MOTOR PRINCIPAL (Orquestrador)
 // ==========================================
 
+export interface WeatherCodeOptions {
+    /** L'hora és a la zona del filtre de pluja tropical (vegeu utils/tropicalRainGate.ts). */
+    tropicalRainGate?: boolean;
+}
+
 /**
  * Orquestra els diferents mòduls de regles per determinar el codi de temps real.
  * Ara actua com la Única Font de Veritat absoluta per a tota l'App.
@@ -66,7 +71,8 @@ export const getRealTimeWeatherCode = (
     minutelyPrecipData: number[],
     _rainProb: number, // [FIX] Guió baix per ometre l'error
     freezingLevel: number,
-    elevation: number
+    elevation: number,
+    options: WeatherCodeOptions = {}
 ): number | null => {
 
     // 0. Estat Inicial
@@ -130,6 +136,13 @@ export const getRealTimeWeatherCode = (
     // Bloqueig Tèrmic (Erradica icones de neu/gel només on ni la temperatura
     // ni la cota de gel ho justifiquen — vegeu isSnowPossible)
     code = applyThermalLock(code, temp, freezingLevel, elevation);
+
+    // H. Filtre de pluja tropical: al tròpic sense model regional, pluja feble sense el cel quasi tapat no es pinta.
+    // Va després de la tempesta i de la neu perquè només toqui pluja líquida (vegeu applyTropicalRainGate).
+    if (options.tropicalRainGate) code = applyTropicalRainGate(code, precipInstantanea, cloudCover);
+
+    // I. Pluja o plugim amb el cel trencat: és un ruixat (vegeu applyShowerSky).
+    code = applyShowerSky(code, precipInstantanea, cloudCover);
 
     return code;
 };

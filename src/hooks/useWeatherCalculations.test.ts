@@ -166,3 +166,32 @@ describe('useWeatherCalculations — pluja d\'"ara" en mm/h', () => {
         expect(result.current.minutelyPreciseData).toEqual([0.5, 0.5, 0.5, 0.5]);
     });
 });
+
+// L'"ara" ha de passar pel mateix filtre de pluja tropical que l'hora actual de l'evolució horària (utils/tropicalRainGate.ts).
+describe('useWeatherCalculations — filtre de pluja tropical a l\'"ara"', () => {
+    const drizzleData = (gate: boolean) => ({
+        ...mockWeatherData,
+        current: { ...mockWeatherData.current, weather_code: 51, precipitation: 0.1, cloud_cover: 30, cloud_cover_low: 30, cloud_cover_mid: 0, cloud_cover_high: 0, relative_humidity_2m: 70 },
+        hourly: {
+            ...mockWeatherData.hourly,
+            precipitation: [0.1, 0.1],
+            weather_code: [51, 51],
+            relative_humidity_2m: [70, 70],
+            cloud_cover_low: [30, 30], cloud_cover_mid: [0, 0], cloud_cover_high: [0, 0],
+            ...(gate ? { tropical_rain_gate: [1, 1] } : {})
+        }
+    }) as unknown as ExtendedWeatherData;
+    const now = new Date('2023-10-10T10:05:00Z');
+
+    it('amb la marca, el plugim feble amb el cel trencat no es pinta a l\'"ara"', () => {
+        const { result } = renderHook(() => useWeatherCalculations(drizzleData(true), 'C', now));
+        expect(result.current.effectiveWeatherCode).toBe(1);
+        expect(result.current.dayHourCodes['2023-10-10']).toEqual([1, 1]);
+    });
+
+    it('sense la marca és un ruixat, igual que a les hores', () => {
+        const { result } = renderHook(() => useWeatherCalculations(drizzleData(false), 'C', now));
+        expect(result.current.effectiveWeatherCode).toBe(80);
+        expect(result.current.dayHourCodes['2023-10-10']).toEqual([80, 80]);
+    });
+});

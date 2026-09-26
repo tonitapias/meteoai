@@ -209,6 +209,40 @@ describe('weatherLogic - getRealTimeWeatherCode', () => {
     });
 });
 
+// Filtre de pluja tropical (WEATHER_THRESHOLDS.TROPICAL_RAIN) i ruixat amb el cel trencat (CLOUDS.SHOWER_MAX).
+describe('filtre de pluja tropical i ruixats', () => {
+    // Hora real de Natal (28-09-2026, 10:00): l'ECMWF dona "plugim" (51) amb 0,3 mm i el cel al 27 %.
+    const natalHour = (overrides: Record<string, number> = {}) => ({
+        time: '2026-09-28T10:00', weather_code: 51, temperature_2m: 28.3, precipitation: 0.3, relative_humidity_2m: 65,
+        cloud_cover_low: 23, cloud_cover_mid: 8, cloud_cover_high: 0, wind_speed_10m: 19, is_day: 1, cape: 100,
+        ...overrides
+    }) as unknown as StrictCurrentWeather;
+    const code = (c: StrictCurrentWeather, tropicalRainGate: boolean) =>
+        getRealTimeWeatherCode(c, [c.precipitation as number], 0, 4800, 36, { tropicalRainGate });
+
+    it('amb el filtre, el plugim feble amb el cel quasi serè no es pinta; sense, és un ruixat (no plugim)', () => {
+        expect(code(natalHour(), true)).toBe(1);
+        expect(code(natalHour(), false)).toBe(80);
+    });
+
+    it('amb el cel quasi tapat (> 85 %) el plugim feble es manté encara que hi hagi filtre', () => {
+        expect(code(natalHour({ cloud_cover_low: 95 }), true)).toBe(51);
+    });
+
+    it('a partir de 0,5 mm plou encara que el cel sigui trencat: ruixat', () => {
+        expect(code(natalHour({ precipitation: 0.6 }), true)).toBe(80);
+    });
+
+    it('la regla de tempesta queda igual: CAPE alt, cel > 60 % i 0,1 mm continuen sent tempesta amb el filtre', () => {
+        expect(code(natalHour({ precipitation: 0.1, cloud_cover_low: 70, cape: 1500 }), true)).toBe(95);
+    });
+
+    it('la neu no passa pel filtre ni es converteix en ruixat', () => {
+        const snow = natalHour({ weather_code: 61, temperature_2m: 0, precipitation: 0.2, relative_humidity_2m: 90 });
+        expect(getRealTimeWeatherCode(snow, [0.2], 0, 200, 500, { tropicalRainGate: true })).toBe(71);
+    });
+});
+
 describe('Noves Millores Físiques (AROME i Boira)', () => {
      it('hauria de detectar PLUJA FINA si la font és AROME (Sensibilitat TRACE 0.1mm)', () => {
          const current = { 

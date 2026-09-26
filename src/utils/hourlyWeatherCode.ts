@@ -17,6 +17,7 @@ import { getRealTimeWeatherCode } from './weatherLogic';
 import { calculateEffectiveCloudCover } from './rules/cloudRules';
 import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
 import { extractValidArrayNum, getSafeArrayNum, getSafeMonthFromIso } from './weatherMath';
+import { isTropicalRainGateHour } from './tropicalRainGate';
 import type { StrictCurrentWeather } from '../types/weatherLogicTypes';
 
 /** Sèries horàries en brut: cada clau és un array indexat per hora. */
@@ -97,7 +98,8 @@ export const getHourlyWeatherCode = (
         [precip],
         getSafeArrayNum(hourly.precipitation_probability, idx, 0),
         resolveFreezingLevel(hourly, idx, elevation, rawTemp, comparison),
-        elevation
+        elevation,
+        { tropicalRainGate: isTropicalRainGateHour(hourly, idx) }
     );
 };
 

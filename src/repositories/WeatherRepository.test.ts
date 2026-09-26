@@ -8,6 +8,7 @@ import { CACHE_TTL } from '../constants/cacheConfig';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import type { FetchResult } from '../services/weatherService';
+import { TROPICAL_RAIN_GATE_KEY } from '../utils/tropicalRainGate';
 
 // Cache en memòria: el TTL de 15 minuts el posa cacheService (aquí no es prova); el que es prova és el que decideix
 // el repositori (desar o no la marca i reaprofitar o no el paquet).
@@ -26,6 +27,7 @@ vi.mock('../services/weatherApi', () => ({ getRegionalHDData: vi.fn() }));
 
 const GIRONA = { lat: 41.98, lon: 2.82 };        // zona d'AROME HD
 const CAPE_TOWN = { lat: -33.92, lon: 18.42 };   // cap model regional
+const NATAL = { lat: -5.79, lon: -35.21 };       // tròpic, cap model regional
 
 // Resposta mínima del model global (objectes nous a cada crida: el repositori els transforma).
 const globalResponse = (): FetchResult => ({
@@ -171,5 +173,26 @@ describe('WeatherRepository — barreja amb AIFS dels dies 4-7', () => {
         const { data } = await load(CAPE_TOWN, workerOk);
         const prob = (data.hourly as unknown as Record<string, number[]>).precipitation_probability;
         expect(prob[RAIN_HOUR]).toBe(10);
+    });
+});
+
+describe('WeatherRepository — filtre de pluja tropical', () => {
+    beforeEach(() => {
+        store.clear();
+        vi.clearAllMocks();
+        vi.mocked(fetchAllWeatherData).mockImplementation(async () => globalResponse());
+    });
+
+    it('un lloc tropical sense model regional surt amb les hores marcades', async () => {
+        const { data } = await load(NATAL, workerOk);
+        expect((data.hourly as unknown as Record<string, unknown>)[TROPICAL_RAIN_GATE_KEY]).toEqual([1]);
+    });
+
+    it('fora del tròpic (i dins d\'un model regional) no hi ha cap marca', async () => {
+        for (const where of [CAPE_TOWN, GIRONA]) {
+            store.clear();
+            const { data } = await load(where, workerOk);
+            expect((data.hourly as unknown as Record<string, unknown>)[TROPICAL_RAIN_GATE_KEY]).toBeUndefined();
+        }
     });
 });

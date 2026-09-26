@@ -5,6 +5,7 @@ import { normalizeModelData } from '../utils/normData';
 import { injectBaseRainEvidence } from '../utils/regionalModelEngine';
 import { injectEngineSnowfall } from '../utils/engineSnowfall';
 import { injectAifsTemperatureBlend } from '../utils/aifsTemperatureBlend';
+import { injectTropicalRainGate } from '../utils/tropicalRainGate';
 import { isRegionalModelActive, selectRegionalModel, type RegionalModel } from '../constants/regionalModels';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import { getRegionalHDData } from '../services/weatherApi';
@@ -114,6 +115,10 @@ export const WeatherRepository = {
                 });
             }
         }
+
+        // 3a. Al tròpic sense model regional, les hores passen pel filtre de pluja tropical del motor (vegeu
+        // utils/tropicalRainGate.ts): la marca va a la sèrie perquè totes les pantalles l'apliquin igual.
+        processedData = injectTropicalRainGate(processedData, lat, lon);
 
         // 3b. Probabilitat de pluja coherent amb la pluja mostrada a les hores sense model regional
         // (la pluja és d'un model determinista i la probabilitat, de l'ensemble d'ICON; vegeu injectBaseRainEvidence).
