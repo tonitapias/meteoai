@@ -51,8 +51,8 @@ const injectCurrent = (target: ExtendedWeatherData, source: CleanedSource, model
         'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 
         'is_day', 'precipitation', 'rain', 'showers', 
         'weather_code', 'cloud_cover', 'cloud_cover_low', 
-        'cloud_cover_mid', 'cloud_cover_high', 
-        'wind_speed_10m', 'wind_gusts_10m', 'visibility'
+        'cloud_cover_mid', 'cloud_cover_high',
+        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m', 'visibility'
     ];
 
     const targetCurrent = target.current as Record<string, unknown>;
@@ -120,11 +120,14 @@ const injectHourly = (target: ExtendedWeatherData, source: CleanedSource, master
     const result: HourlyInjectionResult = { boostedByDate: new Map(), regionalPrecipDates: new Set() };
     if (!source.hourly || !target.hourly || !target.hourly.time) return result;
 
+    // El punt de rosada i la direcció del vent van amb la temperatura/humitat i la velocitat del MATEIX model: abans es
+    // demanaven al model regional però no s'hi copiaven, i el modal de confort dibuixava el punt de rosada del global al
+    // costat de la humitat regional (mesurat a 10 punts d'AROME, 26-09-2026: fins a 9,8 °C de diferència a Barcelona).
     const HOURLY_FIELDS: (keyof StrictHourlyWeather)[] = [
-        'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
+        'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
         'precipitation', 'weather_code',
         'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
-        'wind_speed_10m', 'wind_gusts_10m',
+        'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
         'cape', 'freezing_level_height', 'visibility'
     ];
 

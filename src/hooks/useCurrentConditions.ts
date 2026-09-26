@@ -51,6 +51,13 @@ export function useCurrentConditions(
     return preciseData.length > 0 ? preciseData : [0,0,0,0];
   }, [weatherData, currentHourlyIndex, shiftedNow]);
 
+  // El motor del codi (getRealTimeWeatherCode) i els seus llindars de pluja (TRACE/LIGHT/MODERATE/HEAVY, virga,
+  // tempesta, neu) treballen en mm/h: a les hores rep la pluja horària (getHourlyWeatherCode). minutely_15, en canvi,
+  // porta mm per quart d'hora (com ja llegeix el banner de radar, que el multiplica per 4). Sense passar-ho a mm/h,
+  // l'"ara" veia la pluja 4 vegades més feble que la mateixa hora a l'evolució horària: 2 mm/h eren "pluja feble" a
+  // dalt i "moderada" a la taula, i una tempesta amb CAPE alt no s'hi pintava fins als 0,4 mm/h.
+  const nowRatesMmPerHour = useMemo(() => minutelyPreciseData.map(v => v * 4), [minutelyPreciseData]);
+
   const currentRainProbability = useMemo(() => chartData24h[0]?.rain || 0, [chartData24h]);
   const currentFreezingLevel = useMemo(() => (chartData24h.length > 0 && chartData24h[0].snowLevel !== null) ? chartData24h[0].snowLevel + 300 : 2500, [chartData24h]);
   
@@ -79,8 +86,8 @@ export function useCurrentConditions(
           relative_humidity_2m: currentRaw.relative_humidity_2m ?? getSafeArrNum(hRaw.relative_humidity_2m, idx, 50),
       } as unknown as StrictCurrentWeather;
 
-      return getRealTimeWeatherCode(enrichedCurrent, minutelyPreciseData, currentRainProbability, currentFreezingLevel, elevation);
-  }, [weatherData, minutelyPreciseData, currentRainProbability, currentFreezingLevel, currentHourlyIndex, currentCape]);
+      return getRealTimeWeatherCode(enrichedCurrent, nowRatesMmPerHour, currentRainProbability, currentFreezingLevel, elevation);
+  }, [weatherData, nowRatesMmPerHour, currentRainProbability, currentFreezingLevel, currentHourlyIndex, currentCape]);
 
   // % efectiu de núvols d'"ara" (mateixa font i ponderació que el codi de cel): serveix perquè la icona i
   // l'etiqueta triïn la variant "molt ennuvolat" amb el mateix valor que va decidir el codi.

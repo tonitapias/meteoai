@@ -5,8 +5,10 @@ import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
 import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
 import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { getSafeLatitude } from '../utils/weatherMath';
+import { extractValidArrayNum, getSafeLatitude } from '../utils/weatherMath';
 import { isRegionalModelActive } from '../constants/regionalModels';
+import { generateHourlyChartData } from '../utils/weatherMappers';
+import { hoursOfDate, resolveDailyExtremes } from '../utils/dailyExtremes';
 
 const getStatusColor = (code: number | null) => {
     if (code === null) return 'bg-slate-600';
@@ -32,6 +34,21 @@ export const useCurrentWeatherLogic = ({
     
     const { current, location, daily } = data;
 
+    // Màxima i mínima d'avui: les mateixes que el detall "Avui", la llista i el gràfic de tendència (dailyExtremes.ts),
+    // amb el model regional a les hores on n'hi ha i la correcció d'inversió. daily.temperature_2m_max/min[0] és el diari
+    // del model global en brut: a la zona d'AROME la capçalera deia 27,8° de màxima mentre les hores d'avui arribaven a
+    // 30,8° (Girona, 26-09-2026), i a Barcelona la mínima diferia 4,7°. Sense hores d'avui es queda el diari (o "--").
+    // Temperatura crua i en °C a propòsit (vegeu weatherMappers): la conversió a °F la fa renderTemp.
+    const todayExtremes = useMemo(() => {
+        const today = typeof daily?.time?.[0] === 'string' ? daily.time[0].slice(0, 10) : null;
+        const rawMax = extractValidArrayNum(daily?.temperature_2m_max, 0);
+        const rawMin = extractValidArrayNum(daily?.temperature_2m_min, 0);
+        if (!today) return { max: rawMax, min: rawMin };
+        const dayHours = hoursOfDate(generateHourlyChartData(data, 0, 'C'), today);
+        const { max, min } = resolveDailyExtremes(rawMax, rawMin, dayHours, getSafeLatitude(location));
+        return { max, min };
+    }, [data, daily, location]);
+
     const formattedData = useMemo(() => {
         if (!current) return null;
 
@@ -54,9 +71,6 @@ export const useCurrentWeatherLogic = ({
             weekday: 'short', day: 'numeric', month: 'short' 
         }).toUpperCase().replace('.', '');
 
-        const maxTemp = daily?.temperature_2m_max?.[0];
-        const minTemp = daily?.temperature_2m_min?.[0];
-
         // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador (Risc Zero)
         const loc = location as LocationMeta | undefined;
 
@@ -64,8 +78,8 @@ export const useCurrentWeatherLogic = ({
             temps: {
                 // 3. ACTUALITZACIÓ: Usem 'realTemp' en lloc de 'current.temperature_2m'
                 main: renderTemp(realTemp), 
-                max: renderTemp(maxTemp),
-                min: renderTemp(minTemp),
+                max: renderTemp(todayExtremes.max),
+                min: renderTemp(todayExtremes.min),
                 apparent: renderTemp(current.apparent_temperature as number | undefined)
             },
             meta: {
@@ -90,7 +104,7 @@ export const useCurrentWeatherLogic = ({
                     : "---"
             }
         };
-    }, [current, location, daily, unit, lang, shiftedNow, effectiveCode, effectiveCloudCover]);
+    }, [current, location, unit, lang, shiftedNow, effectiveCode, effectiveCloudCover, todayExtremes]);
 
     return formattedData;
 };

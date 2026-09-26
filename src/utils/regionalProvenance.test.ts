@@ -93,3 +93,46 @@ describe('procedència de les extremes diàries (de la fusió a la previsió set
         expect(rows[0]).toMatchObject({ temp: 18, tempSource: 'ecmwf', regionalTemp: false });
     });
 });
+
+// El punt de rosada i la direcció del vent han de venir del mateix model que la temperatura/humitat i la velocitat.
+describe('injectHighResModels — punt de rosada i direcció del vent del mateix model', () => {
+    const withFields = () => {
+        const times = HOURS.slice(0, 30);
+        return {
+            current: { temperature_2m: 23, wind_speed_10m: 20, wind_direction_10m: 90 },
+            hourly: {
+                time: times,
+                temperature_2m: times.map(() => 25),
+                relative_humidity_2m: times.map(() => 80),
+                dew_point_2m: times.map(() => 21.4),
+                wind_speed_10m: times.map(() => 20),
+                wind_direction_10m: times.map(() => 90),
+            },
+        } as unknown as ExtendedWeatherData;
+    };
+    const base = () => {
+        const b = baseData() as unknown as { hourly: Record<string, unknown>; current: Record<string, unknown> };
+        b.hourly.dew_point_2m = HOURS.map(() => 12);
+        b.hourly.wind_direction_10m = HOURS.map(() => 270);
+        b.current.wind_direction_10m = 270;
+        return b as unknown as ExtendedWeatherData;
+    };
+
+    it('les hores amb model regional porten el seu punt de rosada i la seva direcció; la resta, les globals', () => {
+        const result = injectHighResModels(base(), withFields(), AROME_MODEL);
+        const h = result.hourly as unknown as Record<string, Array<number | null>>;
+        expect(h.dew_point_2m[0]).toBe(21.4);
+        expect(h.wind_direction_10m[0]).toBe(90);
+        expect(h.dew_point_2m[40]).toBe(12);
+        expect(h.wind_direction_10m[40]).toBe(270);
+        expect(result.current.wind_direction_10m).toBe(90);
+    });
+
+    it('un model regional sense aquests camps deixa els globals', () => {
+        const result = injectHighResModels(base(), regionalData(), AROME_MODEL);
+        const h = result.hourly as unknown as Record<string, Array<number | null>>;
+        expect(h.dew_point_2m[0]).toBe(12);
+        expect(h.wind_direction_10m[0]).toBe(270);
+        expect(result.current.wind_direction_10m).toBe(270);
+    });
+});

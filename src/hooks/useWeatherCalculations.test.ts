@@ -122,3 +122,46 @@ describe('useWeatherCalculations', () => {
         expect(result.current.weeklyExtremes.max).toBe(25);
     });
 });
+// L'"ara" i l'hora actual de l'evolució horària han de dir la mateixa intensitat de pluja: minutely_15 porta mm per
+// quart d'hora i el motor treballa en mm/h (com a les hores). Abans 2 mm/h (0,5 mm cada quart) eren "pluja feble"
+// a dalt i "moderada" a la taula.
+describe('useWeatherCalculations — pluja d\'"ara" en mm/h', () => {
+    const rainyData = (quarters: number[], hourlyMm: number) => ({
+        ...mockWeatherData,
+        current: { ...mockWeatherData.current, weather_code: 3, precipitation: quarters[0], cloud_cover: 100, cloud_cover_low: 100, cloud_cover_mid: 0, cloud_cover_high: 0, relative_humidity_2m: 90 },
+        hourly: {
+            ...mockWeatherData.hourly,
+            precipitation: [hourlyMm, hourlyMm],
+            weather_code: [3, 3],
+            relative_humidity_2m: [90, 90],
+            cloud_cover_low: [100, 100], cloud_cover_mid: [0, 0], cloud_cover_high: [0, 0]
+        },
+        minutely_15: {
+            time: ['2023-10-10T12:00', '2023-10-10T12:15', '2023-10-10T12:30', '2023-10-10T12:45'],
+            precipitation: quarters
+        }
+    }) as unknown as ExtendedWeatherData;
+
+    // new Date('...T12:05') sense zona: el hook compara amb els temps de minutely_15 al mateix rellotge local.
+    const now = new Date('2023-10-10T12:05');
+
+    it('0,5 mm per quart d\'hora (2 mm/h) és pluja moderada, igual que l\'hora de 2 mm', () => {
+        const { result } = renderHook(() => useWeatherCalculations(rainyData([0.5, 0.5, 0.5, 0.5], 2), 'C', now));
+        expect(result.current.effectiveWeatherCode).toBe(63);
+    });
+
+    it('1,2 mm en un quart d\'hora (4,8 mm/h) és pluja forta', () => {
+        const { result } = renderHook(() => useWeatherCalculations(rainyData([1.2, 0.8, 0.4, 0], 2.4), 'C', now));
+        expect(result.current.effectiveWeatherCode).toBe(65);
+    });
+
+    it('sense minutely amb pluja, la pluja horària repartida en quarts torna a donar la intensitat de l\'hora', () => {
+        const { result } = renderHook(() => useWeatherCalculations(rainyData([0, 0, 0, 0], 2), 'C', now));
+        expect(result.current.effectiveWeatherCode).toBe(63);
+    });
+
+    it('els valors minutals que es mostren (gràfic, banner de radar) continuen en mm per quart d\'hora', () => {
+        const { result } = renderHook(() => useWeatherCalculations(rainyData([0.5, 0.5, 0.5, 0.5], 2), 'C', now));
+        expect(result.current.minutelyPreciseData).toEqual([0.5, 0.5, 0.5, 0.5]);
+    });
+});
