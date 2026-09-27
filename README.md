@@ -46,9 +46,10 @@ MeteoToni AI és exclusivament una eina d'informació analítica. Proporciona da
 
 ### 1. La Doctrina "Risc Zero" (Fiabilitat de Codi)
 Aquest concepte s'aplica estrictament a l'**estabilitat del software**. En entorns complexos, necessites que la teva eina de dades no et deixi penjat ni et menteixi. El projecte està construït sota una arquitectura innegociable de tolerància a fallades tècniques:
-* **Zero Falsos Positius:** Si l'API perd connexió o no hi ha dades disponibles, l'app mostra un estat explícit de "sense dades" en lloc de xifres. Mai s'imprimeixen dades numèriques nul·les (`0 km/h`) que puguin portar a una mala interpretació de la situació.
+* **Zero Falsos Positius:** Si falta una dada (l'API no la dona o una font secundària no respon), l'app mostra un estat explícit de "sense dades" en lloc de xifres. Mai s'imprimeixen dades numèriques nul·les (`0 km/h`) que puguin portar a una mala interpretació de la situació.
 * **Validació Estricta (Zod):** Tot el trànsit de xarxa que entra al sistema és validat amb esquemes estrictes abans de tocar la interfície visual.
 * **Network Resilience:** Sistema de re-intents i timeouts personalitzats per combatre la intermitència de cobertura. Si el model regional falla puntualment (xarxa o càlcul), l'app mostra el global de seguida però només el reaprofita 2 minuts, perquè la càrrega següent torni a provar el regional en lloc de quedar-se un quart d'hora sense.
+* **Previsió desada quan no n'arriba cap de nova:** sense connexió, amb Open-Meteo caigut o amb una resposta de més de 8 segons, l'app mostra l'última previsió desada del lloc (fins a 24 h) en lloc de la pantalla d'error, amb un avís que diu de quina hora és i quant fa. No es mostra tal com es va desar: l'"ara" passa a ser l'hora actual, amb els valors previstos per a aquesta hora, i passada la mitjanit els dies tornen a començar avui. Si el GPS ha mogut el punt, es fa servir la desada més propera (fins a 20 km) i l'avís diu de quin lloc és i a quina distància. No es demana cap anàlisi nova a la IA sobre dades velles, i quan torna la connexió (o arriba la resposta lenta) la previsió nova la substitueix sola. Una fallada de l'API de qualitat de l'aire ja no deixa l'app sense previsió: només el giny es queda sense dades.
 * **Observabilitat Total:** Integració profunda amb `@sentry/react` per capturar excepcions silencioses i fallades de validació de dades a la capa de xarxa.
 
 ### 2. Motor de Consens Multi-Model
@@ -180,7 +181,7 @@ Una mirada ràpida a l'auditoria de producció:
 | **Build Tool** | Vite 6 | Configuració optimitzada per a PWA i compilació ultraràpida; en desplegar una versió nova, l'app avisa amb un banner en lloc de penjar-se amb codi obsolet. |
 | **Estils** | Tailwind CSS | Sistema utilitari (*Glassmorphism*, animacions CSS natives, mobile-first). |
 | **Protecció API** | Zod + Sentry | Interceptors tipats (Mur de Contenció) per evitar caigudes de UI per dades corruptes. |
-| **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`) per a funcionament offline-first. |
+| **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`): sense connexió o amb l'API caiguda es mostra l'última previsió desada (fins a 24 h), avançada fins a l'hora actual. |
 | **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, AIFS, GFS, ICON, Best Match) i de 14 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
 | **Radar i Satèl·lit** | LibreWXR + RainViewer (capa híbrida) + EUMETSAT | Radar Doppler: RainViewer (cobertura terrestre real) es renderitza per sobre de LibreWXR (cobertura global), que es veu per sota allà on RainViewer no arriba. Imatge satèl·lit (Meteosat, GOES, Himawari) servida per un proxy propi en Cloudflare Workers amb caché. |
 | **Alertes Oficials** | NWS + AEMET + Meteocat + Météo-França + IPMA + DWD + Protezione Civile | Consulta automàtica per ubicació via el mateix Worker de Cloudflare (Meteocat substitueix AEMET dins de Catalunya, mai els dos alhora), amb traducció IA i memòria cau quan la font no cobreix l'idioma de l'app. Salut comprovada diàriament contra les 7 fonts oficials. |
