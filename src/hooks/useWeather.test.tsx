@@ -3,36 +3,28 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import * as Sentry from '@sentry/react';
 import { useWeather } from './useWeather';
-// [CORRECCIÓ] Eliminat import de cacheService que no s'usava explícitament
 import { WeatherRepository } from '../repositories/WeatherRepository';
 import type { AirQualityData } from '../types/weather';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes'; // [FIX] Import correcte
 
 // --- MOCKS ---
+// (La cache no cal: el hook només parla amb WeatherRepository, que es mockeja sencer.)
 
-// 1. CacheService (Encara s'usa al useEffect per fer clean, així que el mockegem per path)
-vi.mock('../services/cacheService', () => ({
-    cacheService: {
-        clean: vi.fn().mockResolvedValue(undefined),
-        generateWeatherKey: vi.fn() 
-    }
-}));
-
-// 2. RegionalModelWorker (S'injecta des del hook)
+// 1. RegionalModelWorker (S'injecta des del hook)
 vi.mock('./useRegionalModelWorker', () => ({
     useRegionalModelWorker: () => ({
         runRegionalModelWorker: vi.fn((data) => Promise.resolve(data))
     })
 }));
 
-// 3. WeatherRepository (NOVA DEPENDÈNCIA PRINCIPAL)
+// 2. WeatherRepository (NOVA DEPENDÈNCIA PRINCIPAL)
 vi.mock('../repositories/WeatherRepository', () => ({
     WeatherRepository: {
         get: vi.fn()
     }
 }));
 
-// 4. Sentry (per comprovar què es reporta i què no)
+// 3. Sentry (per comprovar què es reporta i què no)
 vi.mock('@sentry/react', () => ({
     captureException: vi.fn()
 }));

@@ -3,10 +3,11 @@ import { get, set, del, entries, keys } from 'idb-keyval';
 import { CACHE_TTL } from '../constants/cacheConfig';
 
 // DEFINIM LA VERSIÓ ACTUAL DE LA MEMÒRIA
+// Cada entrada la porta: get, getEntry i la poda de previsions descarten les d'una altra versió.
 const CACHE_VERSION = 'v2_indexeddb_fast';
 
 const CACHE_PREFIX = 'meteoai_cache_';
-const VERSION_KEY = 'meteoai_version_control';
+const WEATHER_PREFIX = `${CACHE_PREFIX}weather_`;
 
 // Espai de noms comú a TOTA la persistència pròpia de l'app (cache
 // IndexedDB i preferències a LocalStorage — vegeu usePreferences.ts).
@@ -31,7 +32,7 @@ export interface CacheEntry<T> {
 }
 
 // Clau de previsió (generateWeatherKey) desglossada: lat, lon, unitat i idioma.
-const WEATHER_KEY_PATTERN = new RegExp(`^${CACHE_PREFIX}weather_(-?\\d+(?:\\.\\d+)?)_(-?\\d+(?:\\.\\d+)?)_(\\w+)_(\\w+)$`);
+const WEATHER_KEY_PATTERN = new RegExp(`^${WEATHER_PREFIX}(-?\\d+(?:\\.\\d+)?)_(-?\\d+(?:\\.\\d+)?)_(\\w+)_(\\w+)$`);
 
 // Distància ortodròmica (km) entre dos punts.
 const distanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -41,6 +42,31 @@ const distanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): num
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
     return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
 };
+
+// Entrada que getEntry encara torna: de la versió actual i desada fa com a molt CACHE_TTL.CLEANUP. La poda de previsions
+// esborra exactament les altres, així que mai treu una previsió que la desada sense connexió encara podria mostrar
+// (vegeu WeatherRepository.findOfflineSnapshot).
+const isWithinCleanup = (item: CacheItem<unknown> | undefined, now: number): boolean =>
+    !!item && item.version === CACHE_VERSION && typeof item.timestamp === 'number' && now - item.timestamp <= CACHE_TTL.CLEANUP;
+
+// PODA DE PREVISIONS VELLES: cada lloc consultat deixa a IndexedDB un paquet de previsió de centenars de kB, i getEntry
+// només l'esborra si es torna a llegir la MATEIXA clau passades 24 h: els llocs que no es tornaven a obrir s'hi quedaven
+// per sempre. Esborra les previsions que getEntry ja no tornaria (vegeu isWithinCleanup) i res més: ni preferències, ni
+// IA, ni cap altra clau. Es llegeixen d'una en una i no amb entries(), que carregaria de cop tots els paquets a memòria.
+const pruneOldWeather = async (): Promise<void> => {
+    try {
+        const now = Date.now();
+        const weatherKeys = (await keys()).filter((key): key is string => typeof key === 'string' && key.startsWith(WEATHER_PREFIX));
+        for (const key of weatherKeys) {
+            if (!isWithinCleanup(await get<CacheItem<unknown>>(key), now)) await del(key);
+        }
+    } catch (error) {
+        console.warn('⚠️ Cache Prune Error (IndexedDB):', error);
+    }
+};
+
+// Poda d'aquesta sessió (vegeu pruneOldWeatherOnce): una sola per càrrega de la pàgina.
+let weatherPruneRun: Promise<void> | null = null;
 
 // NETEJA D'ÀMBIT SEGUR: esborra només claus pròpies d'aquesta app (IndexedDB
 // + LocalStorage), mai la resta de l'origen. Exportat perquè el reinici
@@ -73,7 +99,7 @@ export const cacheService = {
     // el paquet cachejat porta el nom de lloc ja traduït (geoData.city): canviar
     // d'idioma dins del TTL retornava el nom de ciutat en l'idioma antic.
     generateWeatherKey: (lat: number, lon: number, unit: string, lang: string): string => {
-        return `${CACHE_PREFIX}weather_${lat.toFixed(4)}_${lon.toFixed(4)}_${unit}_${lang}`;
+        return `${WEATHER_PREFIX}${lat.toFixed(4)}_${lon.toFixed(4)}_${unit}_${lang}`;
     },
 
     generateAiKey: (elevation: string, lat: number, lon: number, lang: string): string => {
@@ -133,7 +159,7 @@ export const cacheService = {
             const item = await get<CacheItem<T>>(key);
             if (!item) return null;
 
-            if (item.version !== CACHE_VERSION || typeof item.timestamp !== 'number' || Date.now() - item.timestamp > CACHE_TTL.CLEANUP) {
+            if (!isWithinCleanup(item, Date.now())) {
                 await del(key);
                 return null;
             }
@@ -164,42 +190,20 @@ export const cacheService = {
         }
     },
 
-    // CLEAN: Neteja intel·ligent asíncrona
-    clean: async (): Promise<void> => {
-        try {
-            const storedVersion = await get<string>(VERSION_KEY);
-
-            // DETECCIÓ D'ACTUALITZACIÓ
-            if (storedVersion !== CACHE_VERSION) {
-                console.warn(`🚀 Nova arquitectura de Cache (${CACHE_VERSION}). Purgant dades antigues...`);
-
-                await clearAppStorage();
-
-                await set(VERSION_KEY, CACHE_VERSION);
-                return;
-            }
-
-            // MANTENIMENT RUTINARI (TTL)
-            const allEntries = await entries();
-            const ONE_DAY = 24 * 60 * 60 * 1000;
-            const now = Date.now();
-
-            for (const [key, value] of allEntries) {
-                if (typeof key === 'string' && key.startsWith(CACHE_PREFIX)) {
-                    const item = value as CacheItem<unknown>;
-                    if (!item.timestamp || (now - item.timestamp > ONE_DAY)) {
-                        await del(key);
-                    }
-                }
-            }
-
-        } catch (error) {
-            console.error('⚠️ Cache Cleanup Warning:', error);
-        }
+    // PODA UN COP PER SESSIÓ (vegeu pruneOldWeather). WeatherRepository la llança en desar la primera previsió nova, no a
+    // l'arrencada, perquè no competeixi amb la primera càrrega. Substitueix l'antic clean(), que ningú no cridava i que,
+    // en no trobar la clau de versió (mai escrita als usuaris nous), feia clearAppStorage(): la primera crida hauria
+    // esborrat també les preferències i els preferits. La versió ja la comprova cada entrada.
+    pruneOldWeatherOnce: (): Promise<void> => {
+        if (!weatherPruneRun) weatherPruneRun = pruneOldWeather();
+        return weatherPruneRun;
     },
 
-    // Reinici manual complet (botó de diagnòstic a Footer.tsx): mateixa
-    // neteja d'àmbit segur que la migració de versió, exposada perquè cap
-    // altre punt de l'app torni a fer un clear() global pel seu compte.
+    pruneOldWeather,
+
+    // Reinici manual complet (botó de diagnòstic a Footer.tsx): neteja
+    // d'àmbit segur (vegeu clearAppStorage), exposada perquè cap altre punt
+    // de l'app torni a fer un clear() global pel seu compte. Esborra també
+    // les preferències: només quan l'usuari ho demana.
     clearAppStorage
 };

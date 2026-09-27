@@ -168,6 +168,10 @@ const fetchFreshWeather = async (
     // 5. Guardar a Cache
     await cacheService.set(cacheKey, packet).catch(console.error);
 
+    // 5b. Un cop per sessió, s'esborren les previsions desades de fa més de 24 h (vegeu cacheService.pruneOldWeather).
+    // Sense esperar-la: no endarrereix la resposta.
+    cacheService.pruneOldWeatherOnce();
+
     return {
         success: true,
         data: processedData,

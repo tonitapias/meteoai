@@ -19,7 +19,8 @@ vi.mock('../services/cacheService', () => ({
         generateWeatherKey: (lat: number, lon: number, unit: string, lang: string) => `weather_${lat}_${lon}_${unit}_${lang}`,
         getEntry: vi.fn(async (key: string) => store.get(key) ?? null),
         set: vi.fn(async (key: string, data: unknown) => { store.set(key, { data, savedAt: Date.now() }); }),
-        findWeatherKeysNear: vi.fn(async () => [])
+        findWeatherKeysNear: vi.fn(async () => []),
+        pruneOldWeatherOnce: vi.fn(async () => {})
     }
 }));
 vi.mock('../services/weatherService', () => ({ fetchAllWeatherData: vi.fn() }));
@@ -330,5 +331,41 @@ describe('WeatherRepository — previsió desada quan no n\'arriba cap de nova',
         const result = await load(GIRONA, workerOk);
 
         expect(result.data.offlineSnapshot?.savedAt).toBe(SAVED_AT);
+    });
+});
+
+describe('WeatherRepository — poda de previsions velles', () => {
+    beforeEach(() => {
+        store.clear();
+        vi.clearAllMocks();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(T0);
+        vi.mocked(fetchAllWeatherData).mockImplementation(async () => globalResponse());
+        vi.mocked(getRegionalHDData).mockResolvedValue({} as WeatherData);
+        vi.mocked(cacheService.findWeatherKeysNear).mockResolvedValue([]);
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('es llança després de desar la previsió nova (el "un cop per sessió" el porta cacheService)', async () => {
+        await load(CAPE_TOWN, workerOk);
+
+        expect(cacheService.pruneOldWeatherOnce).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(cacheService.pruneOldWeatherOnce).mock.invocationCallOrder[0])
+            .toBeGreaterThan(vi.mocked(cacheService.set).mock.invocationCallOrder[0]);
+    });
+
+    it('no es llança amb la cache fresca ni quan la petició falla', async () => {
+        await load(CAPE_TOWN, workerOk);
+        vi.clearAllMocks();
+
+        vi.setSystemTime(T0 + 10 * MIN);
+        await load(CAPE_TOWN, workerOk);
+        expect(fetchAllWeatherData).not.toHaveBeenCalled();
+
+        vi.setSystemTime(T0 + CACHE_TTL.WEATHER + 1000);
+        vi.mocked(fetchAllWeatherData).mockRejectedValue(new Error('Failed to fetch'));
+        await expect(load(CAPE_TOWN, workerOk)).rejects.toThrow('Failed to fetch');
+
+        expect(cacheService.pruneOldWeatherOnce).not.toHaveBeenCalled();
     });
 });
