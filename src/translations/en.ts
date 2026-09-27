@@ -260,6 +260,14 @@ export const en = {
   notifLocationSuccess: "Location updated successfully.",
   notifLocationError: "Could not get location. Check permissions.",
   fetchError: "Could not load weather data.", 
+  offlineSnapshot: {
+    title: "Saved forecast",
+    body: "Couldn't update. This is the forecast from {time} ({age} ago).",
+    bodyNearby: "Couldn't update. This is the saved forecast for {place}, {km} km from here, from {time} ({age} ago).",
+    note: "It will update by itself when the connection is back.",
+    retry: "Retry",
+    retrying: "Trying…"
+  },
   geoNotSupported: "Geolocation not supported.", 
   radarShort: "Radar",
   

@@ -11,6 +11,7 @@ import CurrentWeather from '../CurrentWeather';
 import LoadingSkeleton from '../LoadingSkeleton';
 import ErrorBanner from '../ErrorBanner';
 import ErrorBoundary from '../ErrorBoundary';
+import OfflineSnapshotBanner from '../OfflineSnapshotBanner';
 import { MinutelyPreciseChart } from '../WeatherCharts';
 
 // Lazy loading
@@ -48,7 +49,18 @@ export const DashboardContent = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col gap-6 sm:gap-8 relative z-10 w-full max-w-7xl mx-auto">
-            
+
+            {/* 0. PREVISIÓ DESADA (no se n'ha pogut obtenir cap de nova): abans de cap número */}
+            {weatherData.offlineSnapshot && (
+                <OfflineSnapshotBanner
+                    info={weatherData.offlineSnapshot}
+                    place={loc?.name ?? null}
+                    text={t.offlineSnapshot}
+                    now={state.now.getTime()}
+                    onRetry={actions.refreshLoadedLocation}
+                />
+            )}
+
             {/* 1. SECCIÓ PRINCIPAL */}
             <CurrentWeather 
                 data={weatherData} 
@@ -162,7 +174,7 @@ export const DashboardContent = () => {
                                     lang={flags.lang}
                                     regionalModelLabel={isRegionalModelActive(weatherData.current?.source) ? (weatherData.current.source as string) : null}
                                     nowIndex={findNowIndex(calculations.chartSeries?.primary ?? [], weatherData.current?.time)}
-                                    updatedAt={weatherData.current?.time ?? null}
+                                    updatedAt={weatherData.offlineSnapshot?.issuedAt ?? weatherData.current?.time ?? null}
                                 />
                             </Suspense>
                         </div>

@@ -4,22 +4,22 @@ import { WeatherRepository } from './WeatherRepository';
 import { fetchAllWeatherData } from '../services/weatherService';
 import { getRegionalHDData } from '../services/weatherApi';
 import { cacheService } from '../services/cacheService';
-import { CACHE_TTL } from '../constants/cacheConfig';
+import { CACHE_TTL, OFFLINE_SNAPSHOT } from '../constants/cacheConfig';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import type { AirQualityData, WeatherData } from '../types/weather';
 import type { FetchResult } from '../services/weatherService';
 import { TROPICAL_RAIN_GATE_KEY } from '../utils/tropicalRainGate';
 
-// Cache en memòria: el TTL de 15 minuts el posa cacheService (aquí no es prova); el que es prova és el que decideix
-// el repositori (desar o no la marca i reaprofitar o no el paquet).
-const { store } = vi.hoisted(() => ({ store: new Map<string, unknown>() }));
+// Cache en memòria amb l'instant de desar (com cacheService.getEntry): el TTL de 15 minuts l'aplica el repositori.
+const { store } = vi.hoisted(() => ({ store: new Map<string, { data: unknown; savedAt: number }>() }));
 
 vi.mock('@sentry/react', () => ({ captureException: vi.fn(), addBreadcrumb: vi.fn() }));
 vi.mock('../services/cacheService', () => ({
     cacheService: {
         generateWeatherKey: (lat: number, lon: number, unit: string, lang: string) => `weather_${lat}_${lon}_${unit}_${lang}`,
-        get: vi.fn(async (key: string) => store.get(key) ?? null),
-        set: vi.fn(async (key: string, data: unknown) => { store.set(key, data); })
+        getEntry: vi.fn(async (key: string) => store.get(key) ?? null),
+        set: vi.fn(async (key: string, data: unknown) => { store.set(key, { data, savedAt: Date.now() }); }),
+        findWeatherKeysNear: vi.fn(async () => [])
     }
 }));
 vi.mock('../services/weatherService', () => ({ fetchAllWeatherData: vi.fn() }));
@@ -123,8 +123,16 @@ describe('WeatherRepository — cache quan el model regional falla', () => {
         expect(fetchAllWeatherData).toHaveBeenCalledTimes(1);
     });
 
+    it('passats els 15 minuts, es torna a demanar', async () => {
+        await load(CAPE_TOWN, workerOk);
+        vi.setSystemTime(T0 + CACHE_TTL.WEATHER + 1000);
+        const again = await load(CAPE_TOWN, workerOk);
+        expect(fetchAllWeatherData).toHaveBeenCalledTimes(2);
+        expect(again.data.offlineSnapshot).toBeUndefined();
+    });
+
     it('un paquet antic (d\'abans d\'aquest canvi, sense camps) es reaprofita com sempre', async () => {
-        store.set(`weather_${GIRONA.lat}_${GIRONA.lon}_C_ca`, { weather: { current: { source: 'AROME HD' } }, aqi: null });
+        store.set(`weather_${GIRONA.lat}_${GIRONA.lon}_C_ca`, { data: { weather: { current: { source: 'AROME HD' } }, aqi: null }, savedAt: T0 });
         const result = await load(GIRONA, workerOk);
         expect(fetchAllWeatherData).not.toHaveBeenCalled();
         expect(result.data.current.source).toBe('AROME HD');
@@ -194,5 +202,133 @@ describe('WeatherRepository — filtre de pluja tropical', () => {
             const { data } = await load(where, workerOk);
             expect((data.hourly as unknown as Record<string, unknown>)[TROPICAL_RAIN_GATE_KEY]).toBeUndefined();
         }
+    });
+});
+
+describe('WeatherRepository — previsió desada quan no n\'arriba cap de nova', () => {
+    // Ara són les 12:00 a Girona (UTC+2). La previsió es va desar a les 09:00 (fa 3 h) i cobreix 48 hores des de
+    // les 00:00 d'avui; cada temperatura horària és el seu índex.
+    const SAVED_AT = T0 - 3 * 60 * MIN;
+    const HOURS = Array.from({ length: 48 }, (_, i) => new Date(Date.UTC(2026, 8, 26) + i * 3_600_000).toISOString().slice(0, 16));
+    const savedWeather = (hours = HOURS) => ({
+        timezone: 'Europe/Madrid',
+        utc_offset_seconds: 7200,
+        current: { time: '2026-09-26T09:00', temperature_2m: 15 },
+        hourly: { time: hours, temperature_2m: hours.map((_, i) => i) },
+        daily: { time: ['2026-09-26', '2026-09-27'] },
+        location: { name: 'Girona', latitude: GIRONA.lat, longitude: GIRONA.lon }
+    });
+    const GIRONA_KEY = `weather_${GIRONA.lat}_${GIRONA.lon}_C_ca`;
+    const storeSaved = (key: string, weather = savedWeather()) =>
+        store.set(key, { data: { weather, aqi: { current: { european_aqi: 20 } } }, savedAt: SAVED_AT });
+
+    const networkDown = () => vi.mocked(fetchAllWeatherData).mockRejectedValue(new Error('Failed to fetch'));
+
+    beforeEach(() => {
+        store.clear();
+        vi.clearAllMocks();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(T0);
+        vi.mocked(fetchAllWeatherData).mockImplementation(async () => globalResponse());
+        vi.mocked(getRegionalHDData).mockResolvedValue({} as WeatherData);
+        vi.mocked(cacheService.findWeatherKeysNear).mockResolvedValue([]);
+    });
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+    });
+
+    it('la petició falla: es mostra la desada avançada fins a ara, marcada, sense qualitat de l\'aire i sense tornar-la a desar', async () => {
+        storeSaved(GIRONA_KEY);
+        networkDown();
+
+        const result = await load(GIRONA, workerOk);
+
+        expect(result.data.offlineSnapshot).toEqual({ savedAt: SAVED_AT, issuedAt: '2026-09-26T09:00', distanceKm: null });
+        expect(result.data.current.time).toBe('2026-09-26T12:00');
+        expect(result.data.current.temperature_2m).toBe(12);
+        expect(result.aqi).toBeNull();
+        expect(cacheService.set).not.toHaveBeenCalled();
+    });
+
+    it('sense cap previsió desada, l\'error arriba com abans', async () => {
+        networkDown();
+        await expect(load(GIRONA, workerOk)).rejects.toThrow('Failed to fetch');
+    });
+
+    it('una previsió desada que ja no arriba fins a ara no serveix: l\'error arriba com abans', async () => {
+        storeSaved(GIRONA_KEY, savedWeather(HOURS.slice(0, 6)));
+        networkDown();
+        await expect(load(GIRONA, workerOk)).rejects.toThrow('Failed to fetch');
+    });
+
+    it('el GPS dona un altre punt: es fa servir la desada més propera i es diu a quants km és', async () => {
+        const nearbyKey = 'weather_42_2.8_C_ca';
+        storeSaved(nearbyKey);
+        vi.mocked(cacheService.findWeatherKeysNear).mockResolvedValue([{ key: nearbyKey, distanceKm: 3 }]);
+        networkDown();
+
+        const result = await load(GIRONA, workerOk);
+
+        expect(cacheService.findWeatherKeysNear).toHaveBeenCalledWith(GIRONA.lat, GIRONA.lon, 'C', 'ca', OFFLINE_SNAPSHOT.MAX_DISTANCE_KM);
+        expect(result.data.offlineSnapshot?.distanceKm).toBe(3);
+        expect((result.data.location as { name: string }).name).toBe('Girona');
+    });
+
+    it('amb la desada caducada però la petició bé, es mostra la nova (sense marca) i es desa', async () => {
+        storeSaved(GIRONA_KEY);
+        const result = await load(GIRONA, workerOk);
+        expect(result.data.offlineSnapshot).toBeUndefined();
+        expect(result.data.current.source).toBe('AROME HD');
+        expect(cacheService.set).toHaveBeenCalledTimes(1);
+    });
+
+    it('petició lenta: passada l\'espera es mostra la desada; la nova, quan arriba, es lliura per onLateResult i es desa', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+        vi.setSystemTime(T0);
+        storeSaved(GIRONA_KEY);
+        let deliver!: (value: FetchResult) => void;
+        vi.mocked(fetchAllWeatherData).mockImplementation(() => new Promise<FetchResult>((resolve) => { deliver = resolve; }));
+        const onLateResult = vi.fn();
+
+        const pending = WeatherRepository.get(GIRONA.lat, GIRONA.lon, 'C', 'ca', 'Lloc', 'ES', workerOk as never, { onLateResult });
+        await vi.advanceTimersByTimeAsync(OFFLINE_SNAPSHOT.WAIT_BEFORE_FALLBACK_MS);
+        const result = await pending;
+
+        expect(result.data.offlineSnapshot?.savedAt).toBe(SAVED_AT);
+        expect(onLateResult).not.toHaveBeenCalled();
+
+        deliver(globalResponse());
+        await vi.waitFor(() => expect(onLateResult).toHaveBeenCalledTimes(1));
+        const late = onLateResult.mock.calls[0][0];
+        expect(late.data.offlineSnapshot).toBeUndefined();
+        expect(late.data.current.source).toBe('AROME HD');
+        expect(cacheService.set).toHaveBeenCalledTimes(1);
+    });
+
+    it('petició lenta sense cap previsió desada: s\'espera la nova com sempre', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+        vi.setSystemTime(T0);
+        let deliver!: (value: FetchResult) => void;
+        vi.mocked(fetchAllWeatherData).mockImplementation(() => new Promise<FetchResult>((resolve) => { deliver = resolve; }));
+
+        let settled = false;
+        const pending = load(GIRONA, workerOk).finally(() => { settled = true; });
+        await vi.advanceTimersByTimeAsync(OFFLINE_SNAPSHOT.WAIT_BEFORE_FALLBACK_MS * 2);
+        expect(settled).toBe(false);
+
+        deliver(globalResponse());
+        const result = await pending;
+        expect(result.data.offlineSnapshot).toBeUndefined();
+    });
+
+    it('sense connexió declarada no s\'espera: la desada surt de seguida encara que la petició no acabi mai', async () => {
+        storeSaved(GIRONA_KEY);
+        vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+        vi.mocked(fetchAllWeatherData).mockImplementation(() => new Promise<FetchResult>(() => {}));
+
+        const result = await load(GIRONA, workerOk);
+
+        expect(result.data.offlineSnapshot?.savedAt).toBe(SAVED_AT);
     });
 });

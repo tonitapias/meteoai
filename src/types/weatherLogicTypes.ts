@@ -169,6 +169,20 @@ export interface LocationMeta {
   [key: string]: unknown;
 }
 
+/**
+ * Marca d'una previsió desada que es mostra perquè no s'ha pogut obtenir la nova (sense connexió, API caiguda o massa
+ * lenta). Només la posa WeatherRepository sobre una còpia avançada fins a l'hora actual (vegeu utils/offlineSnapshot.ts);
+ * mai es desa a la cache.
+ */
+export interface OfflineSnapshotInfo {
+  /** Quan es va desar la previsió (ms epoch). */
+  savedAt: number;
+  /** `current.time` original ("2026-09-27T10:30", hora local del lloc): de quina hora és la previsió desada. */
+  issuedAt: string | null;
+  /** Km entre el lloc demanat i el de la previsió desada (el GPS s'ha mogut); null si és el mateix lloc. */
+  distanceKm: number | null;
+}
+
 export interface ExtendedWeatherData extends Omit<WeatherData, 'current' | 'hourly' | 'daily'> {
   current: StrictCurrentWeather;
   hourly: StrictHourlyWeather;
@@ -184,6 +198,7 @@ export interface ExtendedWeatherData extends Omit<WeatherData, 'current' | 'hour
     gfs: Record<string, unknown>;
     icon: Record<string, unknown>;
   };
+  offlineSnapshot?: OfflineSnapshotInfo;
   [key: string]: unknown;
 }
 

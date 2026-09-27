@@ -260,6 +260,14 @@ export const fr = {
   notifLocationSuccess: "Localisation mise à jour avec succès.",
   notifLocationError: "Impossible d'obtenir la localisation. Vérifiez les permissions.",
   fetchError: "Impossible de charger la météo.", 
+  offlineSnapshot: {
+    title: "Prévision enregistrée",
+    body: "Mise à jour impossible. Voici la prévision de {time} (il y a {age}).",
+    bodyNearby: "Mise à jour impossible. Voici la prévision enregistrée pour {place}, à {km} km d'ici, de {time} (il y a {age}).",
+    note: "Elle se mettra à jour toute seule au retour de la connexion.",
+    retry: "Réessayer",
+    retrying: "Essai…"
+  },
   geoNotSupported: "Géolocalisation non prise en charge.", 
   radarShort: "Radar",
   

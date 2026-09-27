@@ -19,3 +19,15 @@ export const CACHE_TTL = {
   WEATHER_REGIONAL_RETRY: 2 * 60 * 1000,
   CLEANUP: 24 * 60 * 60 * 1000   // 24 hores (Temps màxim per netejar brossa antiga de la DB)
 };
+
+// Previsió desada quan no n'arriba cap de nova (vegeu utils/offlineSnapshot.ts i WeatherRepository). Com a molt té
+// CACHE_TTL.CLEANUP (24 h): més vella ja s'esborra.
+export const OFFLINE_SNAPSHOT = {
+  // Espera màxima de la petició abans de mostrar la previsió desada (la petició continua i, si acaba bé, la substitueix).
+  // Una càrrega normal, amb el model regional i el seu worker (fins a 4 s), tarda uns 2-6 s; amb mala cobertura, els
+  // 3 intents de 10 s de fetchWithRetry deixaven l'esquelet de càrrega més de mig minut.
+  WAIT_BEFORE_FALLBACK_MS: 8000,
+  // Distància màxima fins a una previsió desada d'un altre punt (el GPS dona coordenades una mica diferents cada cop, o
+  // l'usuari s'ha mogut). L'avís diu de quin lloc és i a quants km.
+  MAX_DISTANCE_KM: 20
+};

@@ -189,3 +189,38 @@ describe("useWeatherAI — l'espera de 500 ms no es perd", () => {
         expect(generateAIPrediction.mock.calls[2][5]).toBe(3);
     });
 });
+
+describe('useWeatherAI — previsió desada (sense connexió o API caiguda)', () => {
+    const SNAPSHOT = { ...WEATHER, offlineSnapshot: { savedAt: 1, issuedAt: '2026-09-27T09:00', distanceKm: null } } as ExtendedWeatherData;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        generateAIPrediction.mockReset().mockReturnValue({ text: 'local', tips: [], alerts: [], confidence: 'x', confidenceLevel: 'high' });
+        getGeminiAnalysis.mockReset().mockResolvedValue({ text: 'remota', tips: [], engine: 'gemini' });
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    const flush = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(600); }); };
+
+    it('només l\'anàlisi local: no es demana cap anàlisi nova sobre la previsió desada', async () => {
+        const { result } = renderHook(() => useWeatherAI(SNAPSHOT, null, 'ca', 'C', null, 3));
+        await flush();
+
+        expect(generateAIPrediction).toHaveBeenCalledTimes(1);
+        expect(getGeminiAnalysis).not.toHaveBeenCalled();
+        expect(result.current.aiAnalysis?.text).toBe('local');
+    });
+
+    it('quan torna la previsió nova, l\'anàlisi remota es fa encara que la resta de la clau coincideixi', async () => {
+        const { result, rerender } = renderHook(
+            ({ data }: { data: ExtendedWeatherData }) => useWeatherAI(data, null, 'ca', 'C', null, 3),
+            { initialProps: { data: SNAPSHOT } }
+        );
+        await flush();
+        rerender({ data: WEATHER });
+        await flush();
+
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(1);
+        expect(result.current.aiAnalysis?.text).toBe('remota');
+    });
+});

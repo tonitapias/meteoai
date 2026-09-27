@@ -83,7 +83,7 @@ describe('useWeather Hook (Integration with Repository)', () => {
         
         // [FIX] Verifiquem que ha cridat al Repositori amb 'Barcelona'
         expect(WeatherRepository.get).toHaveBeenCalledWith(
-            41.38, 2.17, 'C', 'ca', 'Barcelona', undefined, expect.any(Function)
+            41.38, 2.17, 'C', 'ca', 'Barcelona', undefined, expect.any(Function), expect.objectContaining({ onLateResult: expect.any(Function) })
         );
     });
 
@@ -182,7 +182,7 @@ describe('useWeather — refresc silenciós de la ubicació carregada', () => {
         expect(res).toEqual({ success: true });
         expect(WeatherRepository.get).toHaveBeenCalledTimes(2);
         expect(WeatherRepository.get).toHaveBeenLastCalledWith(
-            41.38, 2.17, 'C', 'ca', 'Barcelona', 'Spain', expect.any(Function)
+            41.38, 2.17, 'C', 'ca', 'Barcelona', 'Spain', expect.any(Function), expect.any(Object)
         );
         expect(nameOf(result.current.weatherData)).toBe('Barcelona v2');
         expect(result.current.getLastLoadedAt()).toBeGreaterThan(firstLoadAt);
@@ -274,7 +274,7 @@ describe('useWeather — refresc silenciós de la ubicació carregada', () => {
         advanceMinutes(20);
         await act(async () => { await result.current.refreshLoadedLocation(); });
         expect(WeatherRepository.get).toHaveBeenLastCalledWith(
-            48.85, 2.35, 'C', 'ca', 'Paris', 'France', expect.any(Function)
+            48.85, 2.35, 'C', 'ca', 'Paris', 'France', expect.any(Function), expect.any(Object)
         );
     });
 
@@ -317,5 +317,73 @@ describe('useWeather — refresc silenciós de la ubicació carregada', () => {
         expect(nameOf(result.current.weatherData)).toBe('Paris');
         expect(result.current.loading).toBe(false);
         expect(result.current.getLastLoadedAt()).toBe(Date.now());
+    });
+});
+// --- PREVISIÓ DESADA (WeatherRepository torna `offlineSnapshot` si la nova falla o tarda) ---
+
+describe('useWeather — previsió desada', () => {
+    const T0 = new Date('2026-09-27T12:00:00Z').getTime();
+    const SAVED_AT = T0 - 3 * 60 * 60 * 1000;
+    const snapshotResponse = (name: string) => ({
+        success: true as const,
+        data: { ...weatherAt(name), offlineSnapshot: { savedAt: SAVED_AT, issuedAt: '2026-09-27T11:00', distanceKm: null } } as ExtendedWeatherData,
+        aqi: null
+    });
+    type RepoOptions = { onLateResult?: (response: ReturnType<typeof repoResponse>) => void };
+    const nameOf = (data: ExtendedWeatherData | null) => (data?.location as { name: string } | undefined)?.name;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(T0);
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('es mostra sense error ni esquelet, i "carregada" és quan es va desar (perquè es torni a provar tot sol)', async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(snapshotResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'ES'); });
+
+        expect(result.current.error).toBeNull();
+        expect(result.current.loading).toBe(false);
+        expect(result.current.weatherData?.offlineSnapshot?.savedAt).toBe(SAVED_AT);
+        expect(result.current.aqiData).toBeNull();
+        expect(result.current.getLastLoadedAt()).toBe(SAVED_AT);
+    });
+
+    it('la previsió nova que arriba tard substitueix la desada', async () => {
+        let late!: RepoOptions['onLateResult'];
+        vi.mocked(WeatherRepository.get).mockImplementation(async (...args: unknown[]) => {
+            late = (args[7] as RepoOptions).onLateResult;
+            return snapshotResponse('Girona desada');
+        });
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'ES'); });
+
+        vi.setSystemTime(T0 + 5000);
+        act(() => { late?.(repoResponse('Girona nova')); });
+
+        expect(nameOf(result.current.weatherData)).toBe('Girona nova');
+        expect(result.current.weatherData?.offlineSnapshot).toBeUndefined();
+        expect(result.current.aqiData).toEqual(MOCK_AQI);
+        expect(result.current.getLastLoadedAt()).toBe(T0 + 5000);
+    });
+
+    it('la que arriba tard es descarta si mentrestant l\'usuari ha demanat una altra ubicació', async () => {
+        let late!: RepoOptions['onLateResult'];
+        vi.mocked(WeatherRepository.get)
+            .mockImplementationOnce(async (...args: unknown[]) => {
+                late = (args[7] as RepoOptions).onLateResult;
+                return snapshotResponse('Girona desada');
+            })
+            .mockResolvedValueOnce(repoResponse('Paris'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'ES'); });
+        await act(async () => { await result.current.fetchWeatherByCoords(48.85, 2.35, 'Paris', 'France'); });
+
+        act(() => { late?.(repoResponse('Girona nova')); });
+
+        expect(nameOf(result.current.weatherData)).toBe('Paris');
     });
 });

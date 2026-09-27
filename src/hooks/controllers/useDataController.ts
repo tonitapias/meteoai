@@ -59,6 +59,8 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
     },
     actions: {
       fetchWeatherByCoords,
+      // Torna a demanar la ubicació carregada sense esquelet de càrrega (botó "Reintenta" de la previsió desada).
+      refreshLoadedLocation,
       getCoordinates
     },
     flags: {

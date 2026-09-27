@@ -11,7 +11,8 @@ import { SENTRY_TAGS } from '../constants/errorConstants';
 export interface FetchResult {
   weatherRaw: WeatherData;
   geoData: GeocodeResult;
-  aqiData: AirQualityData;
+  // null si l'API de qualitat de l'aire ha fallat: és un servidor a part i un giny secundari.
+  aqiData: AirQualityData | null;
 }
 
 /**
@@ -30,7 +31,10 @@ export const fetchAllWeatherData = async (
   try {
       // 1. Iniciem les peticions en paral·lel per màxima velocitat (Non-blocking)
       const weatherPromise = getWeatherData(lat, lon, unit);
-      const aqiPromise = getAirQualityData(lat, lon);
+      // La qualitat de l'aire ve d'un altre servidor d'Open-Meteo (air-quality-api): si falla, abans feia caure tot el
+      // Promise.all i l'usuari es quedava sense previsió per un giny secundari. Ara es mostra la previsió sense aquest
+      // giny (que ja sap pintar "sense dades"). L'error ja el reporta fetchWithRetry a Sentry.
+      const aqiPromise: Promise<AirQualityData | null> = getAirQualityData(lat, lon).catch(() => null);
       
       // 2. Lògica condicional per al nom de la ubicació
       // Si és "La Meva Ubicació" (GPS), fem geocoding invers. Si no, usem el text proporcionat.

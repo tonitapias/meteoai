@@ -259,6 +259,14 @@ export const es = {
   notifLocationSuccess: "Ubicación actualizada correctamente.",
   notifLocationError: "No se pudo obtener la ubicación. Revisa los permisos.",
   fetchError: "No se pudo cargar el tiempo.", 
+  offlineSnapshot: {
+    title: "Previsión guardada",
+    body: "No se ha podido actualizar. Es la previsión de las {time} (hace {age}).",
+    bodyNearby: "No se ha podido actualizar. Es la previsión guardada para {place}, a {km} km de aquí, de las {time} (hace {age}).",
+    note: "Se actualizará sola cuando vuelva la conexión.",
+    retry: "Reintentar",
+    retrying: "Probando…"
+  },
   geoNotSupported: "Geolocalización no soportada.", 
   radarShort: "Radar",
   

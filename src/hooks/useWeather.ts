@@ -78,6 +78,14 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     }
     lastFetchRef.current = { lat, lon, unit, time: now };
 
+    // Amb una previsió desada a la pantalla (`offlineSnapshot`), "carregada" vol dir quan es va desar: així
+    // useRefreshOnResume la torna a demanar en tornar la connexió, en tornar a l'app i amb el seu comprovador.
+    const applyResponse = (response: { data: ExtendedWeatherData; aqi: AirQualityData | null }) => {
+      setWeatherData(response.data);
+      setAqiData(response.aqi);
+      loadedRef.current = { lat, lon, name: locationName, country, at: response.data.offlineSnapshot?.savedAt ?? Date.now() };
+    };
+
     try {
       const response = await WeatherRepository.get(
           lat,
@@ -86,16 +94,21 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
           lang,
           locationName,
           country,
-          runRegionalModelWorker
+          runRegionalModelWorker,
+          {
+            // La petició tardava massa i s'ha mostrat la previsió desada: quan arriba la nova, la substitueix (si
+            // l'usuari no ha demanat res més mentrestant).
+            onLateResult: (late) => {
+              if (!isStale()) applyResponse(late);
+            }
+          }
       );
 
       // Una petició més nova ja ha començat: descartem aquest resultat obsolet
       // en lloc de sobreescriure la pantalla amb dades d'una ubicació antiga.
       if (isStale()) return { success: true };
 
-      setWeatherData(response.data);
-      setAqiData(response.aqi);
-      loadedRef.current = { lat, lon, name: locationName, country, at: Date.now() };
+      applyResponse(response);
 
       return { success: true };
 

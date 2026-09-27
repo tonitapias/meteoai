@@ -1,5 +1,6 @@
 // src/services/cacheService.ts
-import { get, set, del, entries } from 'idb-keyval';
+import { get, set, del, entries, keys } from 'idb-keyval';
+import { CACHE_TTL } from '../constants/cacheConfig';
 
 // DEFINIM LA VERSIÓ ACTUAL DE LA MEMÒRIA
 const CACHE_VERSION = 'v2_indexeddb_fast';
@@ -22,6 +23,24 @@ interface CacheItem<T> {
     timestamp: number;
     version: string;
 }
+
+/** Entrada llegida amb getEntry: les dades i quan es van desar. */
+export interface CacheEntry<T> {
+    data: T;
+    savedAt: number;
+}
+
+// Clau de previsió (generateWeatherKey) desglossada: lat, lon, unitat i idioma.
+const WEATHER_KEY_PATTERN = new RegExp(`^${CACHE_PREFIX}weather_(-?\\d+(?:\\.\\d+)?)_(-?\\d+(?:\\.\\d+)?)_(\\w+)_(\\w+)$`);
+
+// Distància ortodròmica (km) entre dos punts.
+const distanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const rad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * rad;
+    const dLon = (lon2 - lon1) * rad;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
+};
 
 // NETEJA D'ÀMBIT SEGUR: esborra només claus pròpies d'aquesta app (IndexedDB
 // + LocalStorage), mai la resta de l'origen. Exportat perquè el reinici
@@ -103,6 +122,45 @@ export const cacheService = {
             // En cas de corrupció de la BD, intentem netejar la clau problemàtica
             try { await del(key); } catch { /* ignore error */ } 
             return null;
+        }
+    },
+
+    // GET ENTRY: com get, però sense TTL: torna també les dades caducades (fins a CACHE_TTL.CLEANUP) amb l'instant en què
+    // es van desar, i és qui la crida qui decideix si encara són fresques. La previsió caducada ja no s'esborra en
+    // llegir-la: és la que es mostra si no n'arriba cap de nova (vegeu WeatherRepository).
+    getEntry: async <T>(key: string): Promise<CacheEntry<T> | null> => {
+        try {
+            const item = await get<CacheItem<T>>(key);
+            if (!item) return null;
+
+            if (item.version !== CACHE_VERSION || typeof item.timestamp !== 'number' || Date.now() - item.timestamp > CACHE_TTL.CLEANUP) {
+                await del(key);
+                return null;
+            }
+
+            return { data: item.data, savedAt: item.timestamp };
+        } catch (error) {
+            console.error('❌ Cache Read Error:', error);
+            try { await del(key); } catch { /* ignore error */ }
+            return null;
+        }
+    },
+
+    // Claus de previsió desades (mateixa unitat i idioma) a menys de `maxKm` del punt, de la més propera a la més llunyana.
+    // Serveix per trobar una previsió desada quan el GPS dona unes coordenades una mica diferents de les de la clau.
+    findWeatherKeysNear: async (lat: number, lon: number, unit: string, lang: string, maxKm: number): Promise<Array<{ key: string; distanceKm: number }>> => {
+        try {
+            const found: Array<{ key: string; distanceKm: number }> = [];
+            (await keys()).forEach(key => {
+                const match = typeof key === 'string' ? WEATHER_KEY_PATTERN.exec(key) : null;
+                if (!match || match[3] !== unit || match[4] !== lang) return;
+                const km = distanceKm(lat, lon, Number(match[1]), Number(match[2]));
+                if (km <= maxKm) found.push({ key: key as string, distanceKm: km });
+            });
+            return found.sort((a, b) => a.distanceKm - b.distanceKm);
+        } catch (error) {
+            console.warn('⚠️ Cache Keys Error (IndexedDB):', error);
+            return [];
         }
     },
 

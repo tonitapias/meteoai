@@ -69,6 +69,7 @@ export function useAppController() {
       actions: {
           // Accions de Dades
           fetchWeatherByCoords: data.actions.fetchWeatherByCoords,
+          refreshLoadedLocation: data.actions.refreshLoadedLocation,
           handleGetCurrentLocation: appActions.handleGetCurrentLocation,
 
           // Accions de Preferències
@@ -108,7 +109,8 @@ export function useAppController() {
   }), [
       data.state.weatherData, data.state.aqiData, data.state.loading, data.state.error,
       data.state.aiAnalysis, data.state.calculations, favorites, ui.state.notification, ui.state.now,
-      data.actions.fetchWeatherByCoords, appActions.handleGetCurrentLocation, appActions.handleToggleFavorite,
+      data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation,
+      appActions.handleGetCurrentLocation, appActions.handleToggleFavorite,
       setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,
       ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,

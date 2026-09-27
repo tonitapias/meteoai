@@ -85,7 +85,11 @@ export function useWeatherAI(
     const dustKind = resolveDustAdvisory(aqiData?.current, currentRecord.relative_humidity_2m as number | undefined, currentRecord.precipitation as number | undefined).kind;
     // Només la variant (no el % cru), perquè el cel no recalculi la IA a cada canvi de núvols.
     const mostlyCloudy = isMostlyCloudy(effectiveCode ?? Number(weatherCode), effectiveCloudCover);
-    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}`;
+    // Previsió desada (sense connexió o API caiguda, vegeu utils/offlineSnapshot.ts): només l'anàlisi local, feta amb
+    // les mateixes dades de la pantalla. No es demana cap anàlisi nova sobre dades velles, i la clau diferent fa que,
+    // quan torni la previsió nova, l'anàlisi remota s'hi faci encara que la resta de la clau coincideixi.
+    const isOfflineSnapshot = !!weatherData.offlineSnapshot;
+    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}-${isOfflineSnapshot ? 'desada' : 'nova'}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
     wantedKey.current = currentKey;
@@ -99,6 +103,7 @@ export function useWeatherAI(
           aqiVal, lang, effectiveCode, reliability, unit, dustKind
         );
         setAiAnalysis(local);
+        if (isOfflineSnapshot) return;
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
         const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover);

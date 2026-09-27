@@ -259,6 +259,15 @@ export const ca = {
   notifLocationSuccess: "Ubicació actualitzada correctament.",
   notifLocationError: "No s'ha pogut obtenir la ubicació. Revisa els permisos.",
   fetchError: "No s'ha pogut carregar el temps.", 
+  // Previsió desada quan no n'arriba cap de nova (OfflineSnapshotBanner)
+  offlineSnapshot: {
+    title: "Previsió desada",
+    body: "No s'ha pogut actualitzar. És la previsió de les {time} (fa {age}).",
+    bodyNearby: "No s'ha pogut actualitzar. És la previsió desada per a {place}, a {km} km d'aquí, de les {time} (fa {age}).",
+    note: "S'actualitzarà sola quan torni la connexió.",
+    retry: "Reintenta",
+    retrying: "Provant…"
+  },
   geoNotSupported: "Geolocalització no suportada.", 
   radarShort: "Radar",
   

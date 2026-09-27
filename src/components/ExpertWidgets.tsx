@@ -117,13 +117,18 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const activeRegionalModel = safeLat !== undefined && safeLon !== undefined ? selectRegionalModel(safeLat, safeLon) : null;
   const hasRegionalModel = !!activeRegionalModel;
 
+  // Amb la previsió desada a la pantalla (sense connexió) no es demana: fallaria. Quan torna la previsió nova es torna a
+  // demanar; sense aquesta dependència (la ubicació no canvia) la comparació es quedava "no disponible".
+  const isOfflineSnapshot = !!weatherData?.offlineSnapshot;
+
   useEffect(() => {
+    if (isOfflineSnapshot) return;
     if (hasRegionalModel && safeLat !== undefined && safeLon !== undefined) {
       fetchGlobalModelByCoords(safeLat, safeLon);
     } else {
       clearGlobalModel();
     }
-  }, [hasRegionalModel, safeLat, safeLon, fetchGlobalModelByCoords, clearGlobalModel]);
+  }, [hasRegionalModel, safeLat, safeLon, isOfflineSnapshot, fetchGlobalModelByCoords, clearGlobalModel]);
 
   const consensusMetrics = useMemo(() => {
     // [FIX PRECISIÓ] Passem la sèrie horària local (AROME) perquè el "Radar a
