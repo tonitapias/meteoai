@@ -222,4 +222,12 @@ describe('RadarMap', () => {
     // ...i cap no ha estat amagada en cap moment.
     expect([...hidden]).toEqual([]);
   }, 20000);
+
+  it("el panell d'informació mostra l'atribució obligatòria d'EUMETSAT", async () => {
+    await mountRadar();
+    expect(screen.queryByText(/EUMETSAT/)).toBeNull();
+    await act(async () => { fireEvent.click(screen.getByLabelText('radarData')); await sleep(20); });
+    const link = screen.getByText(/^Contains modified EUMETSAT Meteosat data \d{4}$/);
+    expect(link.closest('a')?.getAttribute('href')).toBe('https://www.eumetsat.int/');
+  });
 });

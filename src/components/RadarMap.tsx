@@ -30,6 +30,11 @@ import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
+// La imatge Meteosat de la capa HD és CC BY 4.0 (EUMETSAT Data Policy, art.
+// 6.3), que exigeix aquesta fórmula. "modified": l'app hi aplica saturació i
+// contrast.
+const EUMETSAT_ATTRIBUTION = `Contains modified EUMETSAT Meteosat data ${new Date().getFullYear()}`;
+
 if (MAPBOX_TOKEN) {
   mapboxgl.accessToken = MAPBOX_TOKEN;
 } else {
@@ -230,6 +235,15 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">© Mapbox</a>
               <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">© OpenStreetMap</a>
             </div>
+            {/* Atribució obligatòria de la imatge Meteosat (capa HD). */}
+            <a
+              href="https://www.eumetsat.int/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+            >
+              {EUMETSAT_ATTRIBUTION}
+            </a>
           </>
         )}
         <button
