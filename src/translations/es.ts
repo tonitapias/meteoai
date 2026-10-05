@@ -25,7 +25,7 @@ export const es = {
   layerHDTitle: "Satélites Alta Resolución",
   layerhdGoes: "GOES HD (América)",
   layerhdMeteosat: "Meteosat HD (Europa)",
-  layerhdHimawari: "Himawari HD (Ásia)",
+  layerhdHimawari: "Himawari HD (Asia)",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",

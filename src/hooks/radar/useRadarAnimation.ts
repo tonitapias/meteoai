@@ -389,9 +389,18 @@ export function useRadarAnimation({
         }
 
         const hdAgencies: HdAgency[] = ['goes', 'meteosat', 'himawari'];
+        // Mapbox demana tessel·les SENCERES que toquin els límits, així que
+        // la vora real depèn del zoom. Meteosat (disc centrat a 0°): 66.4°N
+        // queda just per sota del 66.51°N, que és frontera de tessel·la a
+        // tots els zooms, així que la vora nord és 66.51°N a z2–z8 (abans
+        // 61.6°N a z5–z6 i 60.2°N a z7–z8: sense Trondheim, Reykjavík ni
+        // Oulu, i sense Bergen a z7–z8).
+        // Més amunt no: de nit EUMETSAT pinta una franja blanca saturada a
+        // prop del limbe (no són núvols). Oest -40 (Açores senceres); est 60
+        // per la mateixa franja del limbe a l'est.
         const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
           goes: [-160, -60, -20, 60],
-          meteosat: [-30, -60, 70, 60],
+          meteosat: [-40, -60, 60, 66.4],
           himawari: [80, -60, 180, 60]
         };
         // CORRECCIÓ (diagnòstic en producció, 2026-09-15): el producte GIBS

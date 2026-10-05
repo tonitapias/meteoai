@@ -23,7 +23,7 @@ export const en = {
   layerNasa: "Satellite Image (NASA)",
   layerNasaFires: "Active Fires (NASA)",
   layerTerrain3D: "3D Terrain and Mountains",
-  layerHDTitle: "Hight-Res Satellites",
+  layerHDTitle: "High-Res Satellites",
   layerhdGoes: "GOES HD (America)",
   layerhdMeteosat: "Meteosat HD (Europe)",
   layerhdHimawari: "Himawari HD (Asia)",
