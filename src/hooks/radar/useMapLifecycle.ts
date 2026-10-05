@@ -38,6 +38,9 @@ interface MapboxErrorEventLike {
   sourceId?: string;
 }
 
+// Arguments d'executeSync (vegeu syncLayersState).
+type SyncArgs = [Overlays, BaseLayerType, (index: number) => void, number, number];
+
 interface UseMapLifecycleProps {
   mapContainerRef: RefObject<HTMLDivElement | null>;
   lat: number;
@@ -75,6 +78,7 @@ export function useMapLifecycle({
   // Tallafocs de Risc Zero per condicions de cursa i desmuntatge
   const isMountedRef = useRef<boolean>(true);
   const syncPendingRef = useRef<boolean>(false);
+  const pendingSyncArgsRef = useRef<SyncArgs | null>(null);
 
   // CORRECCIÓ (deadlock LibreWXR caigut): `map.isStyleLoaded()` requereix
   // que TOTES les fonts de tessel·les del mapa hagin acabat de carregar, no
@@ -92,11 +96,30 @@ export function useMapLifecycle({
     return () => { isMountedRef.current = false; };
   }, []);
 
+  // PERF (fluïdesa): RadarMap passa syncAtmosphere/syncLighting com a
+  // fletxes noves a cada render (useAstroEngine, que les crea, necessita el
+  // mapRef d'aquest hook i es crida després). Si executeSync en depengués,
+  // canviaria a cada render i l'efecte de sincronització de RadarMap faria
+  // una sincronització completa (setFog, setTerrain, totes les capes) a cada
+  // tick de l'animació, anul·lant el camí lleuger d'applyFrameVisibility. Es
+  // guarden en refs i sempre es crida la versió més recent.
+  const syncAtmosphereRef = useRef(syncAtmosphere);
+  const syncLightingRef = useRef(syncLighting);
+  useEffect(() => {
+    syncAtmosphereRef.current = syncAtmosphere;
+    syncLightingRef.current = syncLighting;
+  });
+
   // El Hook de Cicle de Vida s'encarrega d'instanciar i destruir.
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     styleReadyRef.current = false;
+    // Un `once('load')` pendent del mapa anterior (destruït per pèrdua de
+    // context WebGL) ja no dispararà mai: sense això syncLayersState no
+    // tornaria a programar cap sincronització en el mapa nou.
+    syncPendingRef.current = false;
+    pendingSyncArgsRef.current = null;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
@@ -185,12 +208,12 @@ export function useMapLifecycle({
       const elapsed = now - atmosphereThrottle.last;
       if (elapsed >= ATMOSPHERE_THROTTLE_MS) {
         atmosphereThrottle.last = now;
-        syncAtmosphere();
+        syncAtmosphereRef.current();
       } else if (!atmosphereThrottle.timer) {
         atmosphereThrottle.timer = setTimeout(() => {
           atmosphereThrottle.timer = null;
           atmosphereThrottle.last = Date.now();
-          syncAtmosphere();
+          syncAtmosphereRef.current();
         }, ATMOSPHERE_THROTTLE_MS - elapsed);
       }
     };
@@ -206,8 +229,8 @@ export function useMapLifecycle({
       if (!isMountedRef.current) return;
 
       try {
-        syncAtmosphere();
-        syncLighting(null);
+        syncAtmosphereRef.current();
+        syncLightingRef.current(null);
 
         map.addSource('mapbox-dem', {
           type: 'raster-dem',
@@ -321,7 +344,7 @@ export function useMapLifecycle({
     if (!map || !styleReadyRef.current || !isMountedRef.current) return;
 
     try {
-      syncAtmosphere();
+      syncAtmosphereRef.current();
 
       // NASA REAL (Injecció asíncrona sota els núvols)
       // CORRECCIÓ: abans es demanava una data fixa (avui-N) directament a
@@ -444,7 +467,7 @@ export function useMapLifecycle({
     } catch (error) {
       console.error("[Zero Risk] Error sincronitzant capes:", error);
     }
-  }, [syncAtmosphere, BASE_LAYERS]);
+  }, [BASE_LAYERS]);
 
   // Gestor Anti-Race-Conditions
   const syncLayersState = useCallback((
@@ -460,6 +483,12 @@ export function useMapLifecycle({
     if (styleReadyRef.current) {
       executeSync(currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength);
     } else {
+      // Mentre el mapa no ha carregat, cada crida substitueix els arguments
+      // pendents: si l'usuari canvia el mapa base o una capa abans del
+      // 'load', la sincronització diferida ha d'aplicar l'últim estat, no el
+      // de la primera crida (abans ho tapava que RadarMap tornava a
+      // sincronitzar a cada render).
+      pendingSyncArgsRef.current = [currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength];
       if (!syncPendingRef.current) {
         syncPendingRef.current = true;
         // CORRECCIÓ: `once('load', ...)` en lloc de `once('idle', ...)` —
@@ -467,9 +496,9 @@ export function useMapLifecycle({
         // afegida després es quedi penjada per sempre (vegeu styleReadyRef).
         map.once('load', () => {
           syncPendingRef.current = false;
-          if (isMountedRef.current) {
-            executeSync(currentOverlays, currentActiveBase, applyFrameVisibility, currentFrameIndex, radarFramesLength);
-          }
+          const args = pendingSyncArgsRef.current;
+          pendingSyncArgsRef.current = null;
+          if (isMountedRef.current && args) executeSync(...args);
         });
       }
     }

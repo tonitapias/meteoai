@@ -7,7 +7,9 @@ import {
   Overlays,
   getRadOpacityExp,
   getSatOpacityExp,
-  Z_LAYERS
+  Z_LAYERS,
+  HD_BOUNDS,
+  type HdAgency
 } from '../../utils/radarPhysics';
 
 interface UseRadarAnimationProps {
@@ -20,8 +22,6 @@ interface UseRadarAnimationProps {
   syncAtmosphere: () => void;
   styleReadyRef: MutableRefObject<boolean>;
 }
-
-type HdAgency = 'goes' | 'meteosat' | 'himawari';
 
 // PERF (fluïdesa): les capes HD ("Alta Resolució") no caduquen fins que
 // l'API de RainViewer rota el frame de satèl·lit sencer (minuts). Com que
@@ -365,13 +365,20 @@ export function useRadarAnimation({
               maxzoom: 6
             });
 
-            const targetSatOpacity = (isTarget && overlaysRef.current.satIR) ? 0.85 : 0.000001;
+            // Mateixa regla que `showSat` a applyFrameVisibility: amb un
+            // satèl·lit HD actiu, l'IR global també es dibuixa (fora de la
+            // zona HD). Si la capa nasqués amagada, el camí lleuger de
+            // l'animació no la mostraria fins al tick en què és l'objectiu,
+            // sense haver precarregat les tessel·les.
+            const o = overlaysRef.current;
+            const showSat = o.satIR || o.hdGoes || o.hdMeteosat || o.hdHimawari;
+            const targetSatOpacity = (isTarget && showSat) ? 0.85 : 0.000001;
 
             map.addLayer({
               id: satLayerId,
               type: 'raster',
               source: satSourceId,
-              layout: { visibility: overlaysRef.current.satIR ? 'visible' : 'none' },
+              layout: { visibility: showSat ? 'visible' : 'none' },
               paint: {
                 'raster-opacity': getSatOpacityExp(targetSatOpacity),
                 'raster-opacity-transition': { duration: 0, delay: 0 },
@@ -389,20 +396,6 @@ export function useRadarAnimation({
         }
 
         const hdAgencies: HdAgency[] = ['goes', 'meteosat', 'himawari'];
-        // Mapbox demana tessel·les SENCERES que toquin els límits, així que
-        // la vora real depèn del zoom. Meteosat (disc centrat a 0°): 66.4°N
-        // queda just per sota del 66.51°N, que és frontera de tessel·la a
-        // tots els zooms, així que la vora nord és 66.51°N a z2–z8 (abans
-        // 61.6°N a z5–z6 i 60.2°N a z7–z8: sense Trondheim, Reykjavík ni
-        // Oulu, i sense Bergen a z7–z8).
-        // Més amunt no: de nit EUMETSAT pinta una franja blanca saturada a
-        // prop del limbe (no són núvols). Oest -40 (Açores senceres); est 60
-        // per la mateixa franja del limbe a l'est.
-        const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
-          goes: [-160, -60, -20, 60],
-          meteosat: [-40, -60, 60, 66.4],
-          himawari: [80, -60, 180, 60]
-        };
         // CORRECCIÓ (diagnòstic en producció, 2026-09-15): el producte GIBS
         // "Band13_Clean_Infrared" de GOES i Himawari ve amb una paleta
         // realçada (verd/blau/vermell per a tempestes fortes), a diferència
@@ -488,6 +481,23 @@ export function useRadarAnimation({
     sat: null,
     hd: { goes: null, meteosat: null, himawari: null }
   });
+
+  // CORRECCIÓ: quan el dispositiu perd el context WebGL, useMapLifecycle
+  // destrueix el mapa i en crea un de nou, però aquest hook no es remunta:
+  // els registres de capes "ja carregades" seguien plens amb les del mapa
+  // destruït i ensureFrameLoaded no tornava a afegir el radar ni l'IR global
+  // (només l'HD, que comprova map.getSource). Es buiden en crear un mapa nou;
+  // les línies temporals (frames) continuen sent vàlides.
+  const resetLayerBookkeeping = useCallback(() => {
+    loadedRadarIdsRef.current = {};
+    loadedRvRadarIdsRef.current = {};
+    loadedSatIdsRef.current = {};
+    radarLoadOrderRef.current = [];
+    rvRadarLoadOrderRef.current = [];
+    hdLoadOrderRef.current = { goes: [], meteosat: [], himawari: [] };
+    prevHdEnabledRef.current = { goes: false, meteosat: false, himawari: false };
+    lastTargetIdsRef.current = { radar: null, rvRadar: null, sat: null, hd: { goes: null, meteosat: null, himawari: null } };
+  }, []);
 
   const applyFrameVisibility = useCallback((index: number, animationTick: boolean = false) => {
     const map = mapRef.current;
@@ -777,6 +787,7 @@ export function useRadarAnimation({
     togglePlay,
     setAnimationActive,
     applyFrameVisibility,
+    resetLayerBookkeeping,
     radarFramesRef,
     currentFrameIndexRef
   };

@@ -1,6 +1,6 @@
 import { useEffect, useRef, MutableRefObject, useCallback } from 'react';
 import type { Map } from 'mapbox-gl';
-import { BaseLayerType, Overlays } from '../../utils/radarPhysics';
+import { BaseLayerType, Overlays, HD_BOUNDS, type HdAgency } from '../../utils/radarPhysics';
 
 interface UseCameraFlightProps {
   mapRef: MutableRefObject<Map | null>;
@@ -27,7 +27,11 @@ export function useCameraFlight({
   // silenci. Ara és una cua: totes les accions pendents s'executen en ordre
   // quan arriba el proper 'idle'.
   const pendingActionsRef = useRef<Array<() => void>>([]);
-  const idleListenerAttachedRef = useRef<boolean>(false);
+  // Mapa on hi ha el `once('load')` pendent. Abans era un booleà: si aquell
+  // mapa es destruïa abans del 'load' (pèrdua de context WebGL, o el doble
+  // muntatge de StrictMode en dev), quedava a `true` per sempre i cap acció
+  // de càmera del mapa nou s'executava.
+  const loadListenerMapRef = useRef<Map | null>(null);
 
   const prevHdRef = useRef({
     goes: overlays.hdGoes,
@@ -55,12 +59,12 @@ export function useCameraFlight({
 
     pendingActionsRef.current.push(action);
 
-    if (!idleListenerAttachedRef.current) {
-      idleListenerAttachedRef.current = true;
+    if (loadListenerMapRef.current !== map) {
+      loadListenerMapRef.current = map;
       // CORRECCIÓ: `once('load', ...)` en lloc de `once('idle', ...)` —
       // vegeu styleReadyRef a useMapLifecycle.ts.
       map.once('load', () => {
-        idleListenerAttachedRef.current = false;
+        if (loadListenerMapRef.current === map) loadListenerMapRef.current = null;
         const actions = pendingActionsRef.current;
         pendingActionsRef.current = [];
         if (isMountedRef.current) {
@@ -94,9 +98,20 @@ export function useCameraFlight({
       himawari: overlays.hdHimawari
     };
 
-    const executeCamera = (center: [number, number]) => {
-      if (!mapRef.current) return;
-      mapRef.current.flyTo({
+    // Si l'usuari ja mira dins la zona del satèl·lit (p. ex. Girona amb
+    // Meteosat), no se l'envia al centre de la regió a z3: es manté el lloc i
+    // només s'allunya fins a z5 si estava més a prop, com fan les capes NASA.
+    // Fora de la zona, vol transoceànic al centre de la regió com sempre.
+    const executeCamera = (agency: HdAgency, center: [number, number]) => {
+      const map = mapRef.current;
+      if (!map) return;
+      const [west, south, east, north] = HD_BOUNDS[agency];
+      const { lng, lat: centerLat } = map.getCenter();
+      if (lng >= west && lng <= east && centerLat >= south && centerLat <= north) {
+        if (map.getZoom() > 5) map.flyTo({ zoom: 5, pitch: 0, speed: 1.4, essential: true });
+        return;
+      }
+      map.flyTo({
         center,
         zoom: 3.0,
         pitch: 0,
@@ -105,9 +120,9 @@ export function useCameraFlight({
       });
     };
 
-    if (goesTurnedOn) safeCameraExecute(() => executeCamera([-95, 38]));
-    else if (metTurnedOn) safeCameraExecute(() => executeCamera([15, 45]));
-    else if (himaTurnedOn) safeCameraExecute(() => executeCamera([135, 20]));
+    if (goesTurnedOn) safeCameraExecute(() => executeCamera('goes', [-95, 38]));
+    else if (metTurnedOn) safeCameraExecute(() => executeCamera('meteosat', [15, 45]));
+    else if (himaTurnedOn) safeCameraExecute(() => executeCamera('himawari', [135, 20]));
 
   }, [overlays.hdGoes, overlays.hdMeteosat, overlays.hdHimawari, mapRef, safeCameraExecute]);
 

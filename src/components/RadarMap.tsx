@@ -139,7 +139,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   const {
     isPlaying, setIsPlaying, framesCount, currentFrameTimestamp,
     injectLayersIntoMap, togglePlay, setAnimationActive, applyFrameVisibility,
-    radarFramesRef, currentFrameIndexRef
+    resetLayerBookkeeping, radarFramesRef, currentFrameIndexRef
   } = useRadarAnimation({
     mapRef,
     overlaysRef,
@@ -162,6 +162,13 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
 
   // --- CONNECTORS FILLS (PONT ENTRE HOOKS) ---
 
+  // 0. Mapa nou (pèrdua de context WebGL): les capes del mapa destruït ja no
+  // existeixen. L'efecte 2 també depèn de webglKey i, quan el mapa nou acaba
+  // de carregar, torna a crear les capes de la finestra actual.
+  useEffect(() => {
+    resetLayerBookkeeping();
+  }, [webglKey, resetLayerBookkeeping]);
+
   // 1. Dades Noves (Injecció)
   useEffect(() => {
     if (radarData && mapRef.current) {
@@ -169,7 +176,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     }
   }, [radarData, rainviewerData, injectLayersIntoMap, mapRef]);
 
-  // 2. Sincronització global quan canvien els overlays o la baseLayer
+  // 2. Sincronització global quan canvien els overlays, la baseLayer o el
+  // mapa (webglKey). syncLayersState és estable: no s'executa a cada render.
   useEffect(() => {
     syncLayersState(
       overlays,
@@ -178,7 +186,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
       currentFrameIndexRef.current,
       radarFramesRef.current.length
     );
-  }, [activeBaseLayer, overlays, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
+  }, [activeBaseLayer, overlays, webglKey, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
 
   // 3. Gestió del Cicle de Vida Play/Pause vinculat a `isActive`
   useEffect(() => {
