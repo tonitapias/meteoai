@@ -45,3 +45,13 @@ jobs:
           AEMET_API_KEY: ${{ secrets.AEMET_API_KEY }}
           METEOCAT_API_KEY: ${{ secrets.METEOCAT_API_KEY }}
         run: npx vitest run src/test/alerts-api-contract.test.ts
+
+      # 6. SATÈL·LIT METEOSAT HD (capa del radar)
+      # Avisa si EUMETSAT deixa d'actualitzar msg_fes:ir108 (fi del servei MSG
+      # 0°, prevista ~T1 2027: cal migrar a mtg_fd:ir105_hrfi) o si el worker
+      # meteo-sat-proxy serveix el fallback transparent. S'executa encara que
+      # un pas anterior hagi fallat (p. ex. un timeout d'IPMA), perquè una
+      # caiguda d'una altra font no amagui aquest avís.
+      - name: Run Satellite Source Contract Test
+        if: ${{ !cancelled() }}
+        run: npx vitest run src/test/satellite-api-contract.test.ts
