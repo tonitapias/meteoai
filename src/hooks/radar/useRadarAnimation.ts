@@ -761,6 +761,16 @@ export function useRadarAnimation({
     }
   }, [applyFrameVisibility]);
 
+  // Pausa des de fora (p. ex. en passar a la pestanya de vent). Ha d'actualitzar
+  // també isPlayingRef: togglePlay decideix a partir de la ref, i si quedava a
+  // true el primer clic a Play en tornar al radar tornava a "pausar".
+  const pausePlayback = useCallback(() => {
+    if (!isPlayingRef.current) return;
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    applyFrameVisibility(currentFrameIndexRef.current);
+  }, [applyFrameVisibility]);
+
   const setAnimationActive = useCallback((active: boolean) => {
     if (active && isPlayingRef.current && radarFramesRef.current.length > 0) {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
@@ -779,7 +789,7 @@ export function useRadarAnimation({
 
   return {
     isPlaying,
-    setIsPlaying,
+    pausePlayback,
     isPlayingRef,
     framesCount,
     currentFrameTimestamp,

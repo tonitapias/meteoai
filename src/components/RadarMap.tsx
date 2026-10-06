@@ -142,7 +142,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   });
 
   const {
-    isPlaying, setIsPlaying, framesCount, currentFrameTimestamp,
+    isPlaying, pausePlayback, framesCount, currentFrameTimestamp,
     injectLayersIntoMap, togglePlay, setAnimationActive, applyFrameVisibility,
     resetLayerBookkeeping, radarFramesRef, currentFrameIndexRef
   } = useRadarAnimation({
@@ -196,10 +196,10 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   // 3. Gestió del Cicle de Vida Play/Pause vinculat a `isActive`
   useEffect(() => {
     if (!isActive) {
-      const t = setTimeout(() => { setIsPlaying(false); }, 0);
+      const t = setTimeout(() => { pausePlayback(); }, 0);
       return () => clearTimeout(t);
     }
-  }, [isActive, setIsPlaying]);
+  }, [isActive, pausePlayback]);
 
   useEffect(() => {
     setAnimationActive(isPlaying && isActive);

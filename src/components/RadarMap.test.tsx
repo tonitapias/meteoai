@@ -223,6 +223,33 @@ describe('RadarMap', () => {
     expect([...hidden]).toEqual([]);
   }, 20000);
 
+  it('després de passar per la pestanya de vent, un sol clic a Play torna a reproduir', async () => {
+    const props = { lat: 41.4, lon: 2.17, showLayerMenu: true, setShowLayerMenu: () => {} };
+    const { rerender } = render(<RadarMap {...props} isActive={true} />);
+    const map = maps()[maps().length - 1];
+    await act(async () => { map.emit('load'); await sleep(30); });
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    expect(screen.getByLabelText('btnPause')).toBeTruthy();
+
+    // Radar → vent: l'animació es pausa.
+    rerender(<RadarMap {...props} isActive={false} />);
+    await act(async () => { await sleep(20); });
+    expect(screen.getByLabelText('btnPlay')).toBeTruthy();
+
+    // Vent → radar: un sol clic ha de tornar a reproduir.
+    rerender(<RadarMap {...props} isActive={true} />);
+    await act(async () => { await sleep(20); });
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    expect(screen.getByLabelText('btnPause')).toBeTruthy();
+    const targets = new Set<string>();
+    for (let i = 0; i < 2; i++) {
+      await act(async () => { await sleep(650); });
+      targets.add(visibleTargets(map, 'rad-layer-', 0.5).join('+'));
+    }
+    expect(targets.size).toBeGreaterThan(1);
+    expect(map.errors).toEqual([]);
+  }, 20000);
+
   it("el panell d'informació mostra l'atribució obligatòria d'EUMETSAT", async () => {
     await mountRadar();
     expect(screen.queryByText(/EUMETSAT/)).toBeNull();
