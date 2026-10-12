@@ -31,6 +31,13 @@
     @apply border-white/25 bg-slate-950/60 shadow-2xl scale-[1.002];
   }
 
+  /* --- TARGETES DELS MODALS EXPERTS ---
+     Farcit opac en lloc de bg-black/30 + backdrop-blur: un backdrop-filter dins el contenidor
+     de scroll es recalcula a cada frame. El to el fixa cada full amb astroSheetVars(). */
+  .astro-card-fill {
+    background-color: var(--astro-card-fill, #09090b);
+  }
+
   /* --- TYPOGRAPHY --- */
   .text-glow {
     /* Afegim una ombra negra subtil (0 2px 4px) darrere la brillantor blanca.

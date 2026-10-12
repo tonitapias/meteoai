@@ -1,5 +1,7 @@
 // src/components/AstroStatCard.tsx
-// Targeta d'estadística compartida pels modals "planetaris" (Solar, Lunar).
+// Targeta d'estadística compartida pels modals "planetaris" (Solar, Lunar) i els experts.
+// Farcit opac (.astro-card-fill, to del full via astroSheetVars), sense backdrop-filter: la
+// fan servir 11 modals i dins el contenidor de scroll el desenfocament es recalculava a cada frame.
 interface AstroStatCardProps {
   label: string;
   value: string;
@@ -10,7 +12,7 @@ interface AstroStatCardProps {
 }
 
 export const StatCard = ({ label, value, sub, icon, valueClassName, trendIcon }: AstroStatCardProps) => (
-  <div className="rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col gap-1">
+  <div className="rounded-xl border border-white/5 astro-card-fill p-3 flex flex-col gap-1">
     <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
       {icon}{label}
     </span>

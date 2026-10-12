@@ -10,6 +10,7 @@ import { X, Wind, Navigation2, Zap, CloudOff } from 'lucide-react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
@@ -291,7 +292,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
   const bgGradient = severity.bgGlow;
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="wind-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-labelledby="wind-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
       <style>{`
         .wind-scrollbar { -webkit-overflow-scrolling: touch; }
         .wind-scrollbar::-webkit-scrollbar { width: 5px; }
@@ -304,9 +305,9 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
           creixia fins al contingut i la capçalera quedava fora de pantalla. Els calc() sumen el
           90 % del padding de l'overlay (1rem a sm i en apaïsat, 1.5rem a md) perquè el sostre
           segueixi sent el 90 % de la pantalla. */}
-      <div className={`w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b ${bgGradient} rounded-t-[24px] sm:rounded-[32px] border-t sm:border ${severity.borderColor} shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300`}>
+      <div className={`w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b ${bgGradient} rounded-t-[24px] sm:rounded-[32px] border-t sm:border ${severity.borderColor} shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative`} style={astroSheetVars(bgGradient)}>
         <div className={MATRIX_BG}></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[130%] h-56 bg-gradient-to-b from-cyan-500/10 via-slate-900/5 to-transparent blur-[80px] pointer-events-none z-0"></div>
+        <div className={SHEET_HALO} style={sheetHaloStyle('cyan', 'slate')}></div>
 
         {/* Capçalera */}
         <div className="flex justify-between items-center shrink-0 relative z-20 p-4 md:p-6 border-b border-white/[0.04]">
@@ -315,11 +316,11 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
               <Wind className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <h2 id="wind-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
+              <h2 id="wind-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter leading-none">{t.title}</h2>
               <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t.subtitle}</span>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md">
+          <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
             <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
@@ -334,9 +335,9 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain wind-scrollbar relative z-10 p-4 md:p-6 space-y-6">
 
             {/* HEROI: brúixola gran + Beaufort */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col items-center gap-3">
+            <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col items-center gap-3">
               <div className="relative w-60 h-60 sm:w-64 sm:h-64 flex items-center justify-center">
-                <svg width="100%" height="100%" viewBox="0 0 200 200" className="absolute inset-0 drop-shadow-xl">
+                <svg width="100%" height="100%" viewBox="0 0 200 200" className="absolute inset-0">
                   <circle cx="100" cy="100" r="82" fill="none" stroke="#131722" strokeWidth="14" />
                   {[...Array(36)].map((_, i) => {
                     const angle = i * 10;
@@ -374,7 +375,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                   <span className="text-[10px] font-mono font-bold text-slate-400 mb-1">
                     {currentDir !== null ? `${Math.round(currentDir)}° ${directionText}` : '--'}
                   </span>
-                  <span className={`text-5xl font-mono font-black tabular-nums leading-none drop-shadow-2xl ${severity.color}`}>
+                  <span className={`text-5xl font-mono font-black tabular-nums leading-none ${severity.color}`}>
                     {currentSpeed !== null ? Math.round(currentSpeed) : '--'}
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">{t.kmh}</span>
@@ -389,7 +390,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
               </div>
 
               {beaufort && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border backdrop-blur-md bg-black/40 w-fit ${severity.borderColor}`}>
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${severity.borderColor}`}>
                   <span className={`text-xs font-black uppercase tracking-wider ${severity.color}`}>
                     {safeLang === 'ca' ? 'Força' : safeLang === 'es' ? 'Fuerza' : safeLang === 'fr' ? 'Force' : 'Force'} {beaufort.force} · {beaufort.label}
                   </span>
@@ -416,7 +417,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
             </div>
 
             {/* GRÀFIC D'EVOLUCIÓ (scrubbable) + franja de direcció */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4 overflow-hidden">
+            <div className="relative rounded-2xl border border-white/5 astro-card-fill p-4 overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-1 relative z-10 gap-0.5 sm:gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">
                   {t.evolution} · {WINDOW_HOURS}h

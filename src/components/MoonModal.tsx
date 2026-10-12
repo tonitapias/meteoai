@@ -2,11 +2,12 @@
 // Modal de detall del cicle lunar — direcció visual "planetari/astronòmic": starfield dens,
 // icona de fase gran (mirall per a l'hemisferi sud), azimut de sortida/posta, distància i
 // insígnia de superlluna, pròxima lluna plena/nova, selecció de dia i 14 dies vista.
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type CSSProperties } from 'react';
 import { X, ArrowUpCircle, ArrowDownCircle, Orbit, Sparkles, CalendarClock } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import { SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { MoonPhaseIcon } from './MoonPhaseIcon';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { StatCard } from './AstroStatCard';
@@ -27,6 +28,16 @@ import {
 // Pura astronomia (suncalc) — no depèn de cap dada d'Open-Meteo, així que la tira pot anar
 // tan lluny com calgui sense perdre precisió ni fer cap crida de xarxa addicional.
 const STRIP_DAYS = 14;
+
+// Farcit opac de les targetes: el 70 % del full (#0a0a1a → #050510) a un 40 % d'alçada, com
+// feia l'antic bg-black/30 + backdrop-blur (vegeu astroSheetVars a astroModalStyles.ts).
+const SHEET_VARS = { '--astro-card-fill': 'rgb(5 5 14)' } as CSSProperties;
+
+// Resplendor de l'heroi: l'antic disc bg-indigo-500/20 amb blur-[50px], integrat numèricament
+// com a degradat radial. La caixa fa 3 vegades la lluna, així que les parades van de 0 a 3 radis.
+const HERO_GLOW: CSSProperties = {
+  backgroundImage: 'radial-gradient(circle closest-side, rgb(99 102 241 / 0.144), rgb(99 102 241 / 0.123) 16.7%, rgb(99 102 241 / 0.073) 33.3%, rgb(99 102 241 / 0.029) 50%, rgb(99 102 241 / 0.007) 66.7%, transparent)',
+};
 
 interface MoonModalProps {
   weatherData: ExtendedWeatherData;
@@ -212,7 +223,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="moon-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-labelledby="moon-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
       <style>{`
         .astro-scrollbar { -webkit-overflow-scrolling: touch; }
         .astro-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -220,37 +231,32 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
         .astro-scrollbar::-webkit-scrollbar-thumb { background: rgba(129,140,248,0.25); border-radius: 8px; }
         .astro-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(129,140,248,0.45); }
         .astro-hscroll { overscroll-behavior-x: contain; touch-action: pan-x; }
-        @keyframes moon-hero-levitate {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        .moon-hero-float { animation: moon-hero-levitate 8s ease-in-out infinite; }
       `}</style>
 
       {/* Alçades en % de l'overlay (fixed inset-0) i no en dvh: als motors sense dvh el full
           creixia fins al contingut i la capçalera quedava fora de pantalla. Els calc() sumen el
           90 % del padding de l'overlay (1rem a sm i en apaïsat, 1.5rem a md) perquè el sostre
           segueixi sent el 90 % de la pantalla. */}
-      <div className="w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b from-[#0a0a1a] via-[#050510] to-black rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-indigo-500/10 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+      <div className="w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b from-[#0a0a1a] via-[#050510] to-black rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-indigo-500/10 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative" style={SHEET_VARS}>
         <StarfieldBackdrop tint="#a5b4fc" density={90} />
         <div className={MATRIX_BG}></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[130%] h-56 bg-gradient-to-b from-indigo-500/10 via-violet-900/5 to-transparent blur-[80px] pointer-events-none z-0"></div>
+        <div className={SHEET_HALO} style={sheetHaloStyle('indigo', 'violet')}></div>
 
         <div className="flex justify-between items-center shrink-0 relative z-20 p-4 md:p-6 border-b border-white/[0.04]">
           <div className="flex items-center gap-3">
             <div className="relative flex items-center justify-center w-10 h-10 rounded-full border bg-indigo-500/10 border-indigo-500/30 text-indigo-300">
               <Orbit className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-indigo-400"></span>
+                <span className="absolute inline-flex h-full w-full rounded-full opacity-30 scale-[1.8] bg-indigo-400"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
               </span>
             </div>
             <div className="flex flex-col">
-              <h2 id="moon-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
+              <h2 id="moon-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter leading-none">{t.title}</h2>
               <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t.subtitle}</span>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md">
+          <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
             <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
@@ -259,13 +265,15 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
         {!hasValidCoords ? (
           <div className="flex-1 flex items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center">{t.noData}</div>
         ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain astro-scrollbar relative z-10 p-4 md:p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain astro-scrollbar relative z-10 p-4 md:p-6 space-y-6">
 
           {/* HEROI: icona de fase gran + lectura en viu */}
-          <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
+          <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
             <div className={`w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative ${isSouth ? 'scale-x-[-1]' : ''}`}>
-              <div className="moon-hero-float relative w-full h-full">
-                <div className="absolute inset-0 rounded-full blur-[50px] bg-indigo-500/20 pointer-events-none"></div>
+              <div className="relative w-full h-full">
+                {/* Caixa 3× la lluna: a diferència de l'antic blur, sí que desborda el layout, per
+                    això el contenidor de scroll porta overflow-x-hidden (sense scroll horitzontal). */}
+                <div className="absolute -inset-full pointer-events-none" style={HERO_GLOW}></div>
                 <MoonPhaseIcon phase={phase} className="w-full h-full relative z-10" />
               </div>
             </div>
@@ -311,7 +319,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
               icon={<ArrowDownCircle className="w-3.5 h-3.5" />}
               valueClassName="text-amber-300"
             />
-            <div className="rounded-xl border border-white/5 bg-black/30 backdrop-blur-md p-3 flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+            <div className="rounded-xl border border-white/5 astro-card-fill p-3 flex flex-col gap-1.5 col-span-2 sm:col-span-1">
               <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><Orbit className="w-3.5 h-3.5" />{t.distance}</span>
               <span className="text-lg font-black tabular-nums text-white leading-none">{viewMoonPos ? `${Math.round(viewMoonPos.distanceKm).toLocaleString(dateLocale)} km` : '--'}</span>
               <div className="relative h-1.5 rounded-full bg-gradient-to-r from-cyan-500/40 via-slate-600/40 to-violet-500/40 mt-1">

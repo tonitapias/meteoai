@@ -11,6 +11,7 @@ import { X, Mountain, Snowflake, Thermometer, CloudOff } from 'lucide-react';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import type { ChartDataPoint } from './ForecastSection';
@@ -67,6 +68,8 @@ const getSnowLevel = (entry: ChartDataPoint | undefined): number | null => {
 
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 const STROKE = '#38bdf8';
+const SHEET_GRADIENT = 'from-sky-950/20 to-black/90';
+const SHEET_VARS = astroSheetVars(SHEET_GRADIENT);
 
 export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onClose, lang = 'ca' }: SnowLevelModalProps) {
   const safeLang: Language = T[lang] ? lang : 'ca';
@@ -201,7 +204,7 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
   }, [windowEntries]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="snowlevel-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-labelledby="snowlevel-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
       <style>{`
         .snowlevel-scrollbar { -webkit-overflow-scrolling: touch; }
         .snowlevel-scrollbar::-webkit-scrollbar { width: 5px; }
@@ -214,9 +217,9 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
           creixia fins al contingut i la capçalera quedava fora de pantalla. Els calc() sumen el
           90 % del padding de l'overlay (1rem a sm i en apaïsat, 1.5rem a md) perquè el sostre
           segueixi sent el 90 % de la pantalla. */}
-      <div className="w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b from-sky-950/20 to-black/90 rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-sky-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+      <div className={`w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b ${SHEET_GRADIENT} rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-sky-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative`} style={SHEET_VARS}>
         <div className={MATRIX_BG}></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[130%] h-56 bg-gradient-to-b from-sky-500/10 via-slate-900/5 to-transparent blur-[80px] pointer-events-none z-0"></div>
+        <div className={SHEET_HALO} style={sheetHaloStyle('sky', 'slate')}></div>
 
         {/* Capçalera */}
         <div className="flex justify-between items-center shrink-0 relative z-20 p-4 md:p-6 border-b border-white/[0.04]">
@@ -225,11 +228,11 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
               <Mountain className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <h2 id="snowlevel-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
+              <h2 id="snowlevel-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter leading-none">{t.title}</h2>
               <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t.subtitle}</span>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md">
+          <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
             <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
@@ -244,17 +247,17 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain snowlevel-scrollbar relative z-10 p-4 md:p-6 space-y-6">
 
             {/* HEROI: cota de neu actual */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
+            <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="flex flex-col items-center sm:items-start gap-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.levelNow}</span>
-                <span className="text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none drop-shadow-xl text-white">
+                <span className="text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none text-white">
                   {currentSnowLevel !== null ? toDisplay(currentSnowLevel) : '--'}
                 </span>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{unitLabel}</span>
               </div>
               {typeof freezingLevel === 'number' && (
                 <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-sky-500/20 backdrop-blur-md bg-black/40 w-fit">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-sky-500/20 bg-black/40 w-fit">
                     <Thermometer className="w-3.5 h-3.5 text-sky-300" />
                     <span className="text-xs font-bold text-sky-100">{t.freezingSub}: {toDisplay(freezingLevel)} {unitLabel.toLowerCase()}</span>
                   </div>
@@ -279,7 +282,7 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
             )}
 
             {/* GRÀFIC D'EVOLUCIÓ (scrubbable) */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4 overflow-hidden">
+            <div className="relative rounded-2xl border border-white/5 astro-card-fill p-4 overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-1 relative z-10 gap-0.5 sm:gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">
                   {t.evolution} · {WINDOW_HOURS}h

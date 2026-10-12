@@ -1,20 +1,13 @@
 // src/components/StarfieldBackdrop.tsx
 // Fons estelat compartit pels modals Solar i Lunar (direcció visual "planetari/astronòmic").
-// SVG pur, sense dependències noves (sense WebGL/canvas), llavor fixa per no rebarrejar-se
-// a cada render.
+// Estàtic i pensat per a mòbils modestos: les estrelles van en un SVG com a data-URI de
+// background-image, que el navegador rasteritza una sola vegada. Abans eren 30-100 <circle> amb
+// una animació d'opacitat infinita cadascun (no composable: repintava tot el full a cada frame)
+// i un preserveAspectRatio="none" que les estirava en el·lipses.
 import { useMemo } from 'react';
 
-interface Star {
-  cx: number;
-  cy: number;
-  r: number;
-  baseOpacity: number;
-  twinkleDelay: number;
-  twinkleDuration: number;
-}
-
 interface StarfieldBackdropProps {
-  density?: number;   // nombre de punts, per defecte 70, tope ~100 per rendiment
+  density?: number;   // estrelles en un full de mòbil (~390×800 px), per defecte 70, tope 100
   tint?: string;       // color dels punts, p.ex. '#fbbf24' (Solar) o '#818cf8' (Lluna)
   className?: string;
 }
@@ -30,47 +23,38 @@ function mulberry32(seed: number) {
   };
 }
 
-function generateStars(density: number): Star[] {
-  const rand = mulberry32(20260906);
-  const count = Math.max(0, Math.min(100, density));
-  return Array.from({ length: count }, () => ({
-    cx: rand() * 100,
-    cy: rand() * 100,
-    r: 0.15 + rand() * 0.45,
-    baseOpacity: 0.25 + rand() * 0.6,
-    twinkleDelay: rand() * 6,
-    twinkleDuration: 3 + rand() * 4,
-  }));
+// Àrea de referència: un full de mòbil, on `density` conserva el nombre d'estrelles d'abans.
+const REFERENCE_AREA = 390 * 800;
+
+// Dues capes de mosaic amb mides sense divisors comuns: la combinació no es repeteix de manera
+// visible ni en un full d'escriptori (fins a ~1024 px d'amplada).
+const TILES = [{ size: 397, seed: 20260906 }, { size: 541, seed: 20261007 }];
+
+function buildTile(size: number, seed: number, stars: number, tint: string): string {
+  const rand = mulberry32(seed);
+  let circles = '';
+  for (let i = 0; i < stars; i++) {
+    const r = 0.5 + rand() * 1.3;
+    // Dins del mosaic sencer: una estrella tallada a la vora no continuaria a la peça del costat.
+    const cx = r + rand() * (size - 2 * r);
+    const cy = r + rand() * (size - 2 * r);
+    const opacity = 0.25 + rand() * 0.6;
+    circles += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(2)}" fill-opacity="${opacity.toFixed(2)}"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" fill="${tint}">${circles}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
 export const StarfieldBackdrop = ({ density = 70, tint = '#e2e8f0', className = '' }: StarfieldBackdropProps) => {
-  const stars = useMemo(() => generateStars(density), [density]);
+  const style = useMemo(() => {
+    const perLayer = Math.max(0, Math.min(100, density)) / TILES.length;
+    return {
+      backgroundImage: TILES.map(({ size, seed }) => buildTile(size, seed, Math.round(perLayer * (size * size) / REFERENCE_AREA), tint)).join(', '),
+      backgroundSize: TILES.map(({ size }) => `${size}px ${size}px`).join(', '),
+    };
+  }, [density, tint]);
 
   return (
-    <div className={`absolute inset-0 overflow-hidden pointer-events-none select-none ${className}`} aria-hidden="true">
-      <style>{`
-        @keyframes astro-star-twinkle {
-          0%, 100% { opacity: var(--star-base-opacity, 0.5); }
-          50% { opacity: calc(var(--star-base-opacity, 0.5) * 0.25); }
-        }
-      `}</style>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-        {stars.map((s, i) => (
-          <circle
-            key={i}
-            cx={s.cx}
-            cy={s.cy}
-            r={s.r}
-            fill={tint}
-            style={{
-              // @ts-expect-error custom CSS property per l'animació de twinkle
-              '--star-base-opacity': s.baseOpacity,
-              opacity: s.baseOpacity,
-              animation: `astro-star-twinkle ${s.twinkleDuration}s ease-in-out ${s.twinkleDelay}s infinite`,
-            }}
-          />
-        ))}
-      </svg>
-    </div>
+    <div className={`absolute inset-0 pointer-events-none select-none ${className}`} style={style} aria-hidden="true" />
   );
 };
