@@ -1,29 +1,52 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Sunrise, CloudOff } from 'lucide-react';
+import type { Language } from '../../translations';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans, timeStringToSeconds, secondsToTime } from './widgetHelpers';
 
-export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) => {
+// Textos propis de la targeta en els 4 idiomes. El títol és el mateix que el del modal Cicle solar i les
+// etiquetes del compte enrere, les mateixes que les seves (sense el temps). Còpia local a propòsit: el
+// diccionari del modal (solarI18n) viu al seu tros de codi diferit i no s'ha d'arrossegar fins aquí.
+const SUN_ARC_TEXT: Readonly<Record<Language, { title: string; sunriseIn: string; sunsetIn: string; noData: string }>> = {
+    ca: { title: 'CICLE SOLAR', sunriseIn: 'Sortida en', sunsetIn: 'Posta de sol en', noData: 'SENSE DADES' },
+    es: { title: 'CICLO SOLAR', sunriseIn: 'Salida del sol en', sunsetIn: 'Puesta de sol en', noData: 'SIN DATOS' },
+    en: { title: 'SUN CYCLE', sunriseIn: 'Sunrise in', sunsetIn: 'Sunset in', noData: 'NO DATA' },
+    fr: { title: 'CYCLE SOLAIRE', sunriseIn: 'Lever du soleil dans', sunsetIn: 'Coucher du soleil dans', noData: 'PAS DE DONNÉES' },
+};
+
+// nextSunrise: sortida de demà (daily.sunrise[1]). Després de la posta, el compte enrere hi apunta.
+export const SunArcWidget = ({ sunrise, sunset, nextSunrise, lang, utcOffset }: WidgetProps) => {
     // DOCTRINA RISC ZERO: Erradicació del "@ts-expect-error" i blindatge de textos
     const t = getTrans(lang) as Record<string, unknown>;
-    const titleSunCycle = typeof t.sunCycle === 'string' ? t.sunCycle : "CICLE SOLAR";
+    const text = SUN_ARC_TEXT[lang] ?? SUN_ARC_TEXT.ca;
+    const titleSunCycle = text.title;
     const labelSunrise = typeof t.sunrise === 'string' ? t.sunrise : "SORTIDA";
     const labelSunset = typeof t.sunset === 'string' ? t.sunset : "POSTA";
-    const tNoData = lang === 'ca' ? "SENSE DADES" : (lang === 'en' ? "NO DATA" : "SIN DATOS");
+    const tNoData = text.noData;
 
     const [currentTimeSeconds, setCurrentTimeSeconds] = useState<number>(() => Math.floor(Date.now() / 1000));
 
+    // Rellotge alineat amb el canvi de minut: les hores d'Open-Meteo són minuts sencers i el compte enrere
+    // arrodoneix avall, així que només canvia a hh:mm:00. Amb un interval des del muntatge la targeta anava
+    // fins a 59 s endarrerida i, en obrir el modal Cicle solar (que calcula des d'ara mateix), la meitat de
+    // les vegades s'hi veia un minut menys. Cada tic es torna a alinear (+50 ms de marge per si s'avança).
     useEffect(() => {
-        const timer = setInterval(() => {
-             setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
-        }, 60000); 
-        return () => clearInterval(timer);
+        let timer: ReturnType<typeof setTimeout>;
+        const schedule = () => {
+            timer = setTimeout(() => {
+                setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
+                schedule();
+            }, 60000 - (Date.now() % 60000) + 50);
+        };
+        schedule();
+        return () => clearTimeout(timer);
     }, []);
 
     // Risc Zero: Validació estricta de format d'hora abans d'operar matemàticament
     const isValidTime = (tStr?: string) => typeof tStr === 'string' && tStr.includes(':') && tStr.length >= 4;
     const hasValidData = isValidTime(sunrise) && isValidTime(sunset);
+    const tomorrowSunrise: string | undefined = isValidTime(nextSunrise) ? nextSunrise : undefined;
 
     const { sunPosition, progressPercent, statusText, countdown, isDaytime, displaySunrise, displaySunset } = useMemo(() => {
         // Fallback robust d'interfície si falla l'API
@@ -57,19 +80,22 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
 
         if (currentSecondsOfDay >= sunriseSeconds && currentSecondsOfDay < sunsetSeconds) {
             isDay = true;
-            nextEventLabel = lang === 'ca' ? "Posta de sol en" : "Sunset in";
+            nextEventLabel = text.sunsetIn;
             diffSeconds = sunsetSeconds - currentSecondsOfDay;
             // Risc Zero: Protegim contra divisió per zero si sortida i posta fossin idèntiques
             const dayDuration = Math.max(1, sunsetSeconds - sunriseSeconds);
             pct = (currentSecondsOfDay - sunriseSeconds) / dayDuration;
         } else {
             isDay = false;
-            nextEventLabel = lang === 'ca' ? "Sortida en" : "Sunrise in";
+            nextEventLabel = text.sunriseIn;
             if (currentSecondsOfDay < sunriseSeconds) {
                 diffSeconds = sunriseSeconds - currentSecondsOfDay;
                 pct = 0; 
             } else {
-                diffSeconds = (86400 - currentSecondsOfDay) + sunriseSeconds;
+                // Després de la posta compta fins a la sortida de DEMÀ (abans reutilitzava la d'avui, 1-2 min
+                // de diferència amb el modal). Sense l'hora de demà, es manté la d'avui com a aproximació.
+                const tomorrowSeconds = tomorrowSunrise ? timeStringToSeconds(tomorrowSunrise) : NaN;
+                diffSeconds = (86400 - currentSecondsOfDay) + (isNaN(tomorrowSeconds) ? sunriseSeconds : tomorrowSeconds);
                 pct = 1; 
             }
         }
@@ -97,7 +123,7 @@ export const SunArcWidget = ({ sunrise, sunset, lang, utcOffset }: WidgetProps) 
             displaySunrise: secondsToTime(sunriseSeconds),
             displaySunset: secondsToTime(sunsetSeconds)
         };
-    }, [currentTimeSeconds, sunrise, sunset, lang, utcOffset, hasValidData, tNoData]);
+    }, [currentTimeSeconds, sunrise, sunset, tomorrowSunrise, utcOffset, hasValidData, tNoData, text]);
 
     // SPATIAL UI BASE AMB MOTOR 3D ACTIVAT
     const bgGlow = hasValidData 

@@ -1,5 +1,5 @@
 // src/components/StarfieldBackdrop.tsx
-// Fons estelat compartit pels modals Solar i Lunar (direcció visual "planetari/astronòmic").
+// Fons estelat del modal Lunar (direcció visual "planetari/astronòmic"); el Cicle solar en té un de propi.
 // Estàtic i pensat per a mòbils modestos: les estrelles van en un SVG com a data-URI de
 // background-image, que el navegador rasteritza una sola vegada. Abans eren 30-100 <circle> amb
 // una animació d'opacitat infinita cadascun (no composable: repintava tot el full a cada frame)
@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 
 interface StarfieldBackdropProps {
   density?: number;   // estrelles en un full de mòbil (~390×800 px), per defecte 70, tope 100
-  tint?: string;       // color dels punts, p.ex. '#fbbf24' (Solar) o '#818cf8' (Lluna)
+  tint?: string;       // color dels punts, p.ex. '#818cf8' (Lluna)
   className?: string;
 }
 

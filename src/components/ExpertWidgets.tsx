@@ -17,6 +17,7 @@ import { ConsensusLoadingWidget } from './widgets/ConsensusLoadingWidget';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
 import { getCurrentUV } from '../utils/uvIndexUtils';
 import { resolveCurrentDisplayVisibility } from '../utils/visibilityDisplay';
+import { preloadSolarModal } from './solar/preloadSolarModal';
 import {
   CompassGauge,
   SnowLevelWidget,
@@ -30,12 +31,15 @@ import {
   VisibilityWidget
 } from './widgets';
 
-interface WidgetCardProps { children: React.ReactNode; cols?: number; onClick?: () => void; }
+// onIntent: el dit toca o el focus arriba a la targeta, abans del clic; serveix per precarregar el modal.
+interface WidgetCardProps { children: React.ReactNode; cols?: number; onClick?: () => void; onIntent?: () => void; }
 
-const WidgetCard = ({ children, cols = 1, onClick }: WidgetCardProps) => (
+const WidgetCard = ({ children, cols = 1, onClick, onIntent }: WidgetCardProps) => (
   <div
     className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
     onClick={onClick}
+    onPointerDown={onIntent}
+    onFocus={onIntent}
     role={onClick ? 'button' : undefined}
     tabIndex={onClick ? 0 : undefined}
     onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
@@ -222,6 +226,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
 
   const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';
   const safeSunset = Array.isArray(daily?.sunset) && typeof daily.sunset[0] === 'string' ? daily.sunset[0] : '';
+  // Sortida de demà: després de la posta, el compte enrere de la targeta va cap a aquesta (com el modal).
+  const safeNextSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[1] === 'string' ? daily.sunrise[1] : '';
 
   return (
     <>
@@ -324,8 +330,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
               />
           </WidgetCard>
 
-          <WidgetCard cols={2} onClick={onShowSolarModal}>
-              <SunArcWidget sunrise={safeSunrise} sunset={safeSunset} lang={lang} utcOffset={targetOffsetSeconds} />
+          <WidgetCard cols={2} onClick={onShowSolarModal} onIntent={preloadSolarModal}>
+              <SunArcWidget sunrise={safeSunrise} sunset={safeSunset} nextSunrise={safeNextSunrise} lang={lang} utcOffset={targetOffsetSeconds} />
           </WidgetCard>
 
           {showSnowWidget && freezingLevel !== null && (

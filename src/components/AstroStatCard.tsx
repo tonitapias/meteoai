@@ -1,5 +1,5 @@
 // src/components/AstroStatCard.tsx
-// Targeta d'estadística compartida pels modals "planetaris" (Solar, Lunar) i els experts.
+// Targeta d'estadística compartida pel modal Lunar i els experts (el Cicle solar té les seves seccions).
 // Farcit opac (.astro-card-fill, to del full via astroSheetVars), sense backdrop-filter: la
 // fan servir 11 modals i dins el contenidor de scroll el desenfocament es recalculava a cada frame.
 interface AstroStatCardProps {

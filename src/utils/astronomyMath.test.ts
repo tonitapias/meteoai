@@ -7,9 +7,7 @@ import {
   getMoonRiseSetForDate,
   getNextMoonEvent,
   estimateSunsetQuality,
-  getSunCompassPosition,
   getMoonCompassPosition,
-  getSunDayTimesSafe,
 } from './astronomyMath';
 
 describe('addDaysToDateStr', () => {
@@ -62,39 +60,15 @@ describe('getCardinalLabel', () => {
   });
 });
 
-describe('getSunCompassPosition / getMoonCompassPosition', () => {
+describe('getMoonCompassPosition', () => {
   it('returns a plausible reading for a real location/date and null for invalid coords', () => {
     const noon = new Date(Date.UTC(2026, 5, 21, 12, 0, 0));
-    const sun = getSunCompassPosition(noon, 41.39, 2.16); // Barcelona
-    expect(sun).not.toBeNull();
-    expect(sun!.azimuthDeg).toBeGreaterThanOrEqual(0);
-    expect(sun!.azimuthDeg).toBeLessThan(360);
-    expect(sun!.altitudeDeg).toBeGreaterThan(0); // sol alt a migdia d'estiu
-
-    expect(getSunCompassPosition(noon, NaN, 2.16)).toBeNull();
+    expect(getMoonCompassPosition(noon, NaN, 2.16)).toBeNull();
 
     const moon = getMoonCompassPosition(noon, 41.39, 2.16);
     expect(moon).not.toBeNull();
     expect(moon!.distanceKm).toBeGreaterThan(300000);
     expect(moon!.distanceKm).toBeLessThan(410000);
-  });
-});
-
-describe('getSunDayTimesSafe', () => {
-  it('returns an internally consistent chronological order for a valid day/location', () => {
-    const t = getSunDayTimesSafe('2026-06-21', 41.39, 2.16);
-    expect(t.sunrise).not.toBeNull();
-    expect(t.sunset).not.toBeNull();
-    expect(t.sunrise!.getTime()).toBeLessThan(t.solarNoon!.getTime());
-    expect(t.solarNoon!.getTime()).toBeLessThan(t.sunset!.getTime());
-    expect(t.astronomicalDawn!.getTime()).toBeLessThan(t.civilDawn!.getTime());
-    expect(t.civilDawn!.getTime()).toBeLessThan(t.sunrise!.getTime());
-  });
-
-  it('returns all-null for invalid input instead of throwing', () => {
-    expect(getSunDayTimesSafe(undefined, 41.39, 2.16).sunrise).toBeNull();
-    expect(getSunDayTimesSafe('2026-06-21', NaN, 2.16).sunrise).toBeNull();
-    expect(getSunDayTimesSafe('not-a-date', 41.39, 2.16).sunrise).toBeNull();
   });
 });
 

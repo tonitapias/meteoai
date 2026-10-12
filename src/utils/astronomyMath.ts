@@ -1,5 +1,6 @@
 // src/utils/astronomyMath.ts
-// Càlculs astronòmics purs per als modals Solar i Lunar. Sense React, sense i18n runtime.
+// Càlculs astronòmics purs per al modal Lunar (i el formatador d'hora i els punts cardinals que també fa
+// servir el modal Cicle solar, que té els seus propis càlculs del sol a utils/solar/). Sense React ni i18n runtime.
 //
 // NOTA CRÍTICA DE VERSIÓ: el `suncalc` instal·lat (2.0.1) ja retorna azimut/altitud en GRAUS,
 // amb azimut ja orientat des del NORD en sentit horari (0=N, 90=E, 180=S, 270=O) — vegeu
@@ -39,16 +40,6 @@ export interface MoonCompassReading extends CompassReading {
 const isValidCoord = (lat: number, lon: number) =>
   typeof lat === 'number' && !isNaN(lat) && typeof lon === 'number' && !isNaN(lon);
 
-export function getSunCompassPosition(instant: Date, lat: number, lon: number): CompassReading | null {
-  if (!isValidCoord(lat, lon) || isNaN(instant.getTime())) return null;
-  try {
-    const p = SunCalc.getPosition(instant, lat, lon);
-    return { azimuthDeg: p.azimuth, altitudeDeg: p.altitude };
-  } catch {
-    return null;
-  }
-}
-
 export function getMoonCompassPosition(instant: Date, lat: number, lon: number): MoonCompassReading | null {
   if (!isValidCoord(lat, lon) || isNaN(instant.getTime())) return null;
   try {
@@ -87,63 +78,6 @@ export function formatClockTime(date: Date | null | undefined, timezone?: string
     return new Intl.DateTimeFormat('ca-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
   } catch {
     return null;
-  }
-}
-
-// --- Cronologia solar completa del dia (crepuscles, hora daurada, migdia solar) ---
-
-export interface SunDayTimes {
-  astronomicalDawn: Date | null;   // suncalc "nightEnd"
-  nauticalDawn: Date | null;
-  civilDawn: Date | null;          // suncalc "dawn"
-  sunrise: Date | null;
-  sunriseEnd: Date | null;
-  goldenHourEndMorning: Date | null; // suncalc "goldenHourEnd"
-  solarNoon: Date | null;
-  goldenHourStartEvening: Date | null; // suncalc "goldenHour"
-  sunsetStart: Date | null;
-  sunset: Date | null;
-  civilDusk: Date | null;          // suncalc "dusk"
-  nauticalDusk: Date | null;
-  astronomicalDusk: Date | null;   // suncalc "night"
-  nadir: Date | null;
-}
-
-const EMPTY_SUN_DAY_TIMES: SunDayTimes = {
-  astronomicalDawn: null, nauticalDawn: null, civilDawn: null, sunrise: null, sunriseEnd: null,
-  goldenHourEndMorning: null, solarNoon: null, goldenHourStartEvening: null, sunsetStart: null,
-  sunset: null, civilDusk: null, nauticalDusk: null, astronomicalDusk: null, nadir: null,
-};
-
-// localDateStr: "YYYY-MM-DD" (el mateix format que daily.time[] d'Open-Meteo, ja en dia local).
-export function getSunDayTimesSafe(localDateStr: string | undefined, lat: number, lon: number): SunDayTimes {
-  if (!isValidCoord(lat, lon)) return EMPTY_SUN_DAY_TIMES;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(localDateStr || '');
-  if (!m) return EMPTY_SUN_DAY_TIMES;
-  try {
-    // Ancorem a migdia UTC del dia local demanat: suncalc arrodoneix a la seva pròpia
-    // "jornada solar UTC", i migdia allunya prou l'ancoratge dels dos límits de dia com
-    // perquè qualsevol longitud raonable resolgui la mateixa jornada local demanada.
-    const anchor = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0));
-    const t = SunCalc.getTimes(anchor, lat, lon);
-    return {
-      astronomicalDawn: t.nightEnd ?? null,
-      nauticalDawn: t.nauticalDawn ?? null,
-      civilDawn: t.dawn ?? null,
-      sunrise: t.sunrise ?? null,
-      sunriseEnd: t.sunriseEnd ?? null,
-      goldenHourEndMorning: t.goldenHourEnd ?? null,
-      solarNoon: t.solarNoon ?? null,
-      goldenHourStartEvening: t.goldenHour ?? null,
-      sunsetStart: t.sunsetStart ?? null,
-      sunset: t.sunset ?? null,
-      civilDusk: t.dusk ?? null,
-      nauticalDusk: t.nauticalDusk ?? null,
-      astronomicalDusk: t.night ?? null,
-      nadir: t.nadir ?? null,
-    };
-  } catch {
-    return EMPTY_SUN_DAY_TIMES;
   }
 }
 

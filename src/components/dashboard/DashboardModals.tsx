@@ -6,12 +6,15 @@ import { useAppContext } from '../../context/AppContext';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 import { getCurrentUV } from '../../utils/uvIndexUtils';
 import { getCurrentDewPoint } from '../../utils/weatherMath';
+import { loadSolarModal } from '../solar/preloadSolarModal';
+import { SolarModalSkeleton } from '../solar/SolarModalSkeleton';
 
 // Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
 const RadarModal = lazy(() => import('../RadarModal'));
 const RegionalModelModal = lazy(() => import('../RegionalModelModal'));
-const SolarModal = lazy(() => import('../SolarModal'));
+// Cicle solar: el mateix import() memoritzat que la precàrrega de la targeta (pointerdown/focus).
+const SolarModal = lazy(loadSolarModal);
 const MoonModal = lazy(() => import('../MoonModal'));
 const StormModal = lazy(() => import('../StormModal'));
 const AqiModal = lazy(() => import('../AqiModal'));
@@ -77,11 +80,14 @@ export const DashboardModals = () => {
                 />
             )}
             {modals.showSolarModal && (
-                <SolarModal
-                    weatherData={weatherData}
-                    onClose={() => actions.setShowSolarModal(false)}
-                    lang={flags.lang}
-                />
+                // Només el Solar té esquelet propi: la resta segueix amb fallback={null}.
+                <Suspense fallback={<SolarModalSkeleton lang={flags.lang} onClose={() => actions.setShowSolarModal(false)} />}>
+                    <SolarModal
+                        weatherData={weatherData}
+                        onClose={() => actions.setShowSolarModal(false)}
+                        lang={flags.lang}
+                    />
+                </Suspense>
             )}
             {modals.showMoonModal && (
                 <MoonModal

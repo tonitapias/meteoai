@@ -1,28 +1,46 @@
 // src/components/SolarModal.tsx
-// Modal de detall del cicle solar — direcció visual "planetari/astronòmic": starfield,
-// arc real d'altitud/azimut amb scrubbing horari, cronologia completa de crepuscles i hora
-// daurada, selecció de dia i 14 dies vista.
-import { useState, useRef, useCallback, useMemo, memo } from 'react';
-import { X, Sunrise, Sunset, Gauge, Zap, CloudSun, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
-import { Language } from '../translations';
-import { MATRIX_BG } from './widgets/widgetStyles';
-import { getUVCategory, UVCategory } from '../utils/uvIndexUtils';
-import { formatHoursMinutes as minutesToHM } from '../utils/formatters';
-import { StarfieldBackdrop } from './StarfieldBackdrop';
-import { SunOrb } from './SunOrb';
-import { StatCard } from './AstroStatCard';
-import { useAstroModalShell } from '../hooks/useAstroModalShell';
+// Modal "Cicle solar", pensat per a mòbils de gamma baixa: cap filtre ni animació en bucle, superfícies
+// opaques i un sol SVG estàtic per dia. Arrel: closca (Escape, scroll, rellotge de 30 s), focus del diàleg,
+// dia triat i minut fixat, models del dia (memòria cau de mòdul), valors derivats de "ara", graella,
+// tecles ←/→ i lliscament per canviar de dia. Cada secció és memo i rep props estables.
+//
+// Fonts: hores, posicions i durades són càlcul astronòmic (suncalc) en el fus de la UBICACIÓ; la sortida i
+// la posta dels dies que té Open-Meteo són les seves mateixes hores (paritat amb la targeta del tauler) si
+// quadren amb l'astronomia; UV, hores de sol i radiació són previsió d'Open-Meteo.
 import {
-  getSunDayTimesSafe,
-  getSunCompassPosition,
-  getCardinalLabel,
-  formatClockTime,
-  estimateSunsetQuality,
-  addDaysToDateStr,
-  SunDayTimes,
-  CompassReading,
-} from '../utils/astronomyMath';
+  useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent,
+} from 'react';
+import * as SunCalc from 'suncalc';
+import type { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
+import type { Language } from '../translations';
+import { useAstroModalShell } from '../hooks/useAstroModalShell';
+import { useDialogFocus } from '../hooks/useDialogFocus';
+import { swipeDirection } from '../utils/dayNavigation';
+import {
+  addDays, diffDays, formatDateStr, formatUtcOffset, localClock, localDateOf, makeZoneCtx,
+} from '../utils/solar/solarTime';
+import {
+  type CellId, type CellState, RISE_SET_GEO, astroLengthFor, buildSolarDay, ephemerisCellStates, geometricAltitude,
+  nextEvent, noonAltFor, rangeAltMax, upcomingRiseSet,
+} from '../utils/solar/solarDay';
+import { capitalize, formatCountdown, formatDeltaLong, formatLatLon, untilDateText } from '../utils/solar/solarFormat';
+import {
+  type SolarDaily, type SolarHourly, forecastFor, lastDailyDate, lastForecastDate, omEdgesFor,
+} from '../utils/solar/solarForecast';
+import { STARS_DAY, STARS_NIGHT } from '../utils/solar/solarSky';
+import { EVENT_KEY, SOLAR_LOCALE, SOLAR_T, fill, solarLang } from './solar/solarI18n';
+import { SolarHeader } from './solar/SolarHeader';
+import { SolarDayNav } from './solar/SolarDayNav';
+import { SolarHero, type HeroDelta } from './solar/SolarHero';
+import { SolarTrajectoryCard } from './solar/SolarTrajectoryCard';
+import { SolarForecastCard } from './solar/SolarForecastCard';
+import { SolarEphemeris } from './solar/SolarEphemeris';
+import { SolarAlmanac } from './solar/SolarAlmanac';
+import { SolarCompass } from './solar/SolarCompass';
+import { createScrubChannel } from './solar/scrubChannel';
+import { useMinWidth } from './solar/useMinWidth';
+import { isSolarSkeletonOnScreen } from './solar/preloadSolarModal';
+import './solar/solarModal.css';
 
 interface SolarModalProps {
   weatherData: ExtendedWeatherData;
@@ -30,798 +48,296 @@ interface SolarModalProps {
   lang?: Language;
 }
 
-// Sortida/posta/durada del dia són pura astronomia (suncalc) i van a 14 dies sense perdre
-// precisió ni fer cap crida de xarxa addicional. L'UV, en canvi, depèn del núvol previst per
-// Open-Meteo — només es mostra als dies pels quals l'API realment ha retornat una dada.
-const STRIP_DAYS = 14;
+type Theme = 'day' | 'night';
+type Pin = { date: string; minute: number };
 
-const T: Record<Language, Record<string, string>> = {
-  ca: {
-    title: 'SISTEMA SOLAR', subtitle: 'Observatori de Cicle Solar', noData: 'SENSE DADES SUFICIENTS',
-    day: 'DIA', night: 'NIT', solarNoon: 'Migdia Solar', maxElevation: 'Elevació Màx.',
-    dayLength: 'Durada del Dia', realSun: 'Sol Real vs Teòric', uvMax: 'Índex UV Màx.',
-    uvClear: 'UV Cel Clar', radiation: 'Radiació Solar', sunriseAz: 'Azimut Sortida', sunsetAz: 'Azimut Posta',
-    sunsetQuality: 'Qualitat de Posta', estimate: 'ESTIMAT', week: 'Pròxims 14 Dies', sunrise: 'SORTIDA', sunset: 'POSTA',
-    todayCard: 'Avui', backToToday: 'Torna a avui', scrubHint: 'Toca, arrossega o usa les fletxes',
-    timeline: 'Cronologia', trajectory: 'Trajectòria Solar',
-    astroDawn: 'Crep. Astronòmic (sortida)', nauticalDawn: 'Crep. Nàutic (sortida)', civilDawn: 'Crep. Civil (sortida)',
-    goldenHourMorning: 'Hora Daurada (matí)', goldenHourEvening: 'Hora Daurada (tarda)',
-    civilDusk: 'Crep. Civil (posta)', nauticalDusk: 'Crep. Nàutic (posta)', astroDusk: 'Crep. Astronòmic (posta)',
-    in_: 'en', lengthening: 'Els dies s\'allarguen', shortening: 'Els dies s\'escurcen',
-  },
-  es: {
-    title: 'SISTEMA SOLAR', subtitle: 'Observatorio de Ciclo Solar', noData: 'DATOS INSUFICIENTES',
-    day: 'DÍA', night: 'NOCHE', solarNoon: 'Mediodía Solar', maxElevation: 'Elevación Máx.',
-    dayLength: 'Duración del Día', realSun: 'Sol Real vs Teórico', uvMax: 'Índice UV Máx.',
-    uvClear: 'UV Cielo Claro', radiation: 'Radiación Solar', sunriseAz: 'Azimut Salida', sunsetAz: 'Azimut Puesta',
-    sunsetQuality: 'Calidad de Puesta', estimate: 'ESTIMADO', week: 'Próximos 14 Días', sunrise: 'SALIDA', sunset: 'PUESTA',
-    todayCard: 'Hoy', backToToday: 'Volver a hoy', scrubHint: 'Toca, arrastra o usa las flechas',
-    timeline: 'Cronología', trajectory: 'Trayectoria Solar',
-    astroDawn: 'Crep. Astronómico (salida)', nauticalDawn: 'Crep. Náutico (salida)', civilDawn: 'Crep. Civil (salida)',
-    goldenHourMorning: 'Hora Dorada (mañana)', goldenHourEvening: 'Hora Dorada (tarde)',
-    civilDusk: 'Crep. Civil (puesta)', nauticalDusk: 'Crep. Náutico (puesta)', astroDusk: 'Crep. Astronómico (puesta)',
-    in_: 'en', lengthening: 'Los días se alargan', shortening: 'Los días se acortan',
-  },
-  en: {
-    title: 'SOLAR SYSTEM', subtitle: 'Solar Cycle Observatory', noData: 'INSUFFICIENT DATA',
-    day: 'DAY', night: 'NIGHT', solarNoon: 'Solar Noon', maxElevation: 'Max. Elevation',
-    dayLength: 'Day Length', realSun: 'Real vs Theoretical Sun', uvMax: 'Max UV Index',
-    uvClear: 'Clear-Sky UV', radiation: 'Solar Radiation', sunriseAz: 'Sunrise Azimuth', sunsetAz: 'Sunset Azimuth',
-    sunsetQuality: 'Sunset Quality', estimate: 'ESTIMATE', week: 'Next 14 Days', sunrise: 'SUNRISE', sunset: 'SUNSET',
-    todayCard: 'Today', backToToday: 'Back to today', scrubHint: 'Tap, drag, or use the arrow keys',
-    timeline: 'Timeline', trajectory: 'Solar Trajectory',
-    astroDawn: 'Astronomical Dawn', nauticalDawn: 'Nautical Dawn', civilDawn: 'Civil Dawn',
-    goldenHourMorning: 'Golden Hour (AM)', goldenHourEvening: 'Golden Hour (PM)',
-    civilDusk: 'Civil Dusk', nauticalDusk: 'Nautical Dusk', astroDusk: 'Astronomical Dusk',
-    in_: 'in', lengthening: 'Days are getting longer', shortening: 'Days are getting shorter',
-  },
-  fr: {
-    title: 'SYSTÈME SOLAIRE', subtitle: 'Observatoire du Cycle Solaire', noData: 'DONNÉES INSUFFISANTES',
-    day: 'JOUR', night: 'NUIT', solarNoon: 'Midi Solaire', maxElevation: 'Élévation Max.',
-    dayLength: 'Durée du Jour', realSun: 'Soleil Réel vs Théorique', uvMax: 'Indice UV Max.',
-    uvClear: 'UV Ciel Clair', radiation: 'Radiation Solaire', sunriseAz: 'Azimut Lever', sunsetAz: 'Azimut Coucher',
-    sunsetQuality: 'Qualité du Coucher', estimate: 'ESTIMÉ', week: '14 Prochains Jours', sunrise: 'LEVER', sunset: 'COUCHER',
-    todayCard: "Aujourd'hui", backToToday: "Retour à aujourd'hui", scrubHint: "Touchez, glissez ou utilisez les flèches",
-    timeline: 'Chronologie', trajectory: 'Trajectoire Solaire',
-    astroDawn: 'Crép. Astro. (matin)', nauticalDawn: 'Crép. Nautique (matin)', civilDawn: 'Crép. Civil (matin)',
-    goldenHourMorning: 'Heure Dorée (matin)', goldenHourEvening: 'Heure Dorée (soir)',
-    civilDusk: 'Crép. Civil (soir)', nauticalDusk: 'Crép. Nautique (soir)', astroDusk: 'Crép. Astro. (soir)',
-    in_: 'dans', lengthening: 'Les jours rallongent', shortening: 'Les jours raccourcissent',
-  },
+/** Últim dia navegable: avui + 14 (la finestra del calendari). */
+const LAST_OFFSET = 14;
+const LG_QUERY = '(min-width:1024px) and (min-height:481px)';
+
+// Fons del full: estrelles estàtiques (rajola SVG), resplendor de dalt i degradat. Constants de mòdul:
+// la identitat de l'estil no canvia mai i es pinta un sol cop.
+const sheetStyle = (stars: string, glow: string, glow0: string, g: readonly string[]): CSSProperties => ({
+  backgroundImage: `${stars},radial-gradient(70% 100% at 50% 0%,${glow},${glow0} 100%),`
+    + `linear-gradient(180deg,${g[0]} 0%,${g[1]} 30%,${g[2]} 65%,${g[3]} 100%)`,
+  backgroundSize: '360px 220px,100% 320px,100% 100%',
+  backgroundRepeat: 'repeat-x,no-repeat,no-repeat',
+  backgroundPosition: '50% 0,50% 0,0 0',
+});
+const SHEET_STYLE: Readonly<Record<Theme, CSSProperties>> = {
+  day: sheetStyle(STARS_DAY, 'rgba(251,191,36,.14)', 'rgba(251,191,36,0)', ['#1c1307', '#110c05', '#08080a', '#060609']),
+  night: sheetStyle(STARS_NIGHT, 'rgba(129,140,248,.12)', 'rgba(129,140,248,0)', ['#0e1222', '#090b16', '#07080d', '#060609']),
 };
-
-const localeMap: Record<string, string> = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
-
-// Mapa d'altitud (-18..90 graus) a coordenada Y de l'SVG (150=horitzó/nadir, 10=zenit)
-const MIN_ALT = -18, MAX_ALT = 90, TOP_Y = 12, BOTTOM_Y = 150;
-const altToY = (alt: number) => {
-  const clamped = Math.max(MIN_ALT, Math.min(MAX_ALT, alt));
-  return BOTTOM_Y - ((clamped - MIN_ALT) / (MAX_ALT - MIN_ALT)) * (BOTTOM_Y - TOP_Y);
-};
-const HORIZON_Y = altToY(0);
 
 export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarModalProps) {
-  const safeLang: Language = T[lang] ? lang : 'ca';
-  const t = T[safeLang];
-  const dateLocale = localeMap[safeLang] || 'ca-ES';
+  const language = solarLang(lang);
+  const t = SOLAR_T[language];
+  const locale = SOLAR_LOCALE[language];
 
   const loc = weatherData.location as LocationMeta | undefined;
   const lat = typeof loc?.latitude === 'number' ? loc.latitude : NaN;
   const lon = typeof loc?.longitude === 'number' ? loc.longitude : NaN;
-  const hasValidCoords = !isNaN(lat) && !isNaN(lon);
-  const timezone = typeof weatherData.timezone === 'string' ? weatherData.timezone : undefined;
-  const utcOffsetSeconds = typeof weatherData.utc_offset_seconds === 'number' ? weatherData.utc_offset_seconds : 0;
-  const daily = weatherData.daily;
+  const coordsOk = Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+  const timezone = typeof weatherData.timezone === 'string' ? weatherData.timezone : null;
+  const utcOffsetSec = typeof weatherData.utc_offset_seconds === 'number' ? weatherData.utc_offset_seconds : 0;
+  const daily = weatherData.daily as SolarDaily | undefined;
+  const hourly = weatherData.hourly as SolarHourly | undefined;
+  const location = typeof loc?.name === 'string' && loc.name.trim() !== '' ? loc.name : t.subtitleFallback;
 
-  // --- Tancament (Escape + bloqueig de scroll) i rellotge viu de 30s ---
+  // --- Closca: Escape, bloqueig de scroll i rellotge de 30 s; focus atrapat i retornat a la targeta ---
   const { handleClose, now } = useAstroModalShell(onClose);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, rootRef);
+  // Lectura pura (segura amb StrictMode): si aquest render pren el relleu de l'esquelet de càrrega (encara
+  // a la pantalla), ni el full ni el vel tornen a fer l'entrada, per molt que hagi trigat la càrrega.
+  const [skipEnter] = useState(isSolarSkeletonOnScreen);
+  const [channel] = useState(createScrubChannel);
+  const isLg = useMinWidth(LG_QUERY);
 
-  // --- Selecció de dia: la tira de 14 dies és un selector real, no només informativa ---
-  const [selectedDayOffset, setSelectedDayOffset] = useState(0); // 0 = avui
-  const isToday = selectedDayOffset === 0;
+  const titleId = useId();
+  const dateId = useId();
+  const trajTitleId = useId();
+  const hintId = useId();
+  const trajIds = useMemo(() => ({ trajTitle: trajTitleId, hint: hintId }), [trajTitleId, hintId]);
 
-  const todayStr = Array.isArray(daily?.time) ? daily.time[0] : undefined;
-  const viewDateStr = isToday ? todayStr : addDaysToDateStr(todayStr, selectedDayOffset);
+  // --- Dia consultat ---
+  const zone = useMemo(() => makeZoneCtx(timezone, utcOffsetSec), [timezone, utcOffsetSec]);
+  const nowMs = now.getTime();
+  const liveDate = useMemo(() => localDateOf(nowMs, zone), [nowMs, zone]);
 
-  // Sempre avui de veritat — independent de la selecció — per llavors la tendència de la
-  // tira (cada dia comparat amb l'anterior) i per la lectura "ara mateix" del fons visual.
-  const todaySunTimes: SunDayTimes = useMemo(
-    () => hasValidCoords ? getSunDayTimesSafe(todayStr, lat, lon) : getSunDayTimesSafe(undefined, 0, 0),
-    [todayStr, lat, lon, hasValidCoords]
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);   // null = avui (viu)
+  const [pin, setPin] = useState<Pin | null>(null);
+
+  // Una data guardada que ja ha passat (modal obert de nit) torna a avui; mai més enllà de la finestra.
+  const viewDate = useMemo(() => {
+    if (selectedDate === null || selectedDate <= liveDate) return liveDate;
+    return diffDays(liveDate, selectedDate) > LAST_OFFSET ? addDays(liveDate, LAST_OFFSET) : selectedDate;
+  }, [selectedDate, liveDate]);
+  const offset = diffDays(liveDate, viewDate);
+  const isLive = offset === 0;
+  // Només val per al seu dia (p. ex. si avui passa a ser un altre dia a mitjanit); en navegar es descarta.
+  const pinMinute = pin !== null && pin.date === viewDate ? pin.minute : null;
+
+  // --- Models del dia (memòria cau LRU de mòdul: anar i tornar entre dies no recalcula res) ---
+  const liveModel = useMemo(
+    () => (coordsOk ? buildSolarDay({ dateStr: liveDate, lat, lon, zone, ...omEdgesFor(daily, liveDate) }) : null),
+    [coordsOk, liveDate, lat, lon, zone, daily],
+  );
+  const viewModel = useMemo(() => {
+    if (!coordsOk) return null;
+    if (viewDate === liveDate) return liveModel;
+    return buildSolarDay({ dateStr: viewDate, lat, lon, zone, ...omEdgesFor(daily, viewDate) });
+  }, [coordsOk, viewDate, liveDate, liveModel, lat, lon, zone, daily]);
+  // Demà (només hores): compte enrere després de la posta i "Pròxim:" de nit.
+  const tomorrowLite = useMemo(() => {
+    if (!coordsOk) return null;
+    const d = addDays(liveDate, 1);
+    return buildSolarDay({ dateStr: d, lat, lon, zone, ...omEdgesFor(daily, d) }, { lite: true });
+  }, [coordsOk, liveDate, lat, lon, zone, daily]);
+  // Ahir (només hores): a latituds altes a l'estiu la seva posta o els crepuscles cauen passada la mitjanit.
+  const yesterdayLite = useMemo(() => {
+    if (!coordsOk) return null;
+    const d = addDays(liveDate, -1);
+    return buildSolarDay({ dateStr: d, lat, lon, zone, ...omEdgesFor(daily, d) }, { lite: true });
+  }, [coordsOk, liveDate, lat, lon, zone, daily]);
+  const prevAstro = useMemo(
+    () => (coordsOk ? astroLengthFor(addDays(viewDate, -1), lat, lon, zone) : null),
+    [coordsOk, viewDate, lat, lon, zone],
+  );
+  // Sostre de l'eix Y per a tota la finestra: la geometria del gràfic no salta en canviar de dia.
+  const altMax = useMemo(
+    () => (coordsOk ? rangeAltMax([0, 7, LAST_OFFSET].map(k => noonAltFor(addDays(liveDate, k), lat, lon, zone))) : 30),
+    [coordsOk, liveDate, lat, lon, zone],
   );
 
-  // El dia que s'està consultant (avui o el seleccionat a la tira) — determina l'heroi,
-  // la trajectòria, la cronologia i les targetes d'estadístiques.
-  const sunDayTimes: SunDayTimes = useMemo(
-    () => hasValidCoords ? getSunDayTimesSafe(viewDateStr, lat, lon) : getSunDayTimesSafe(undefined, 0, 0),
-    [viewDateStr, lat, lon, hasValidCoords]
+  // --- Previsió ---
+  const forecast = useMemo(
+    () => forecastFor(daily, hourly, viewDate, viewModel?.dayLengthSec ?? null),
+    [daily, hourly, viewDate, viewModel],
   );
+  const hasDaily = Array.isArray(daily?.time) && daily.time.length > 0;
+  const lastFcLabel = useMemo(() => {
+    const d = lastForecastDate(daily);
+    return d ? untilDateText(d, language, locale) : null;
+  }, [daily, locale, language]);
 
-  // Posició real "ara mateix" — sempre en temps real, mai depèn del dia consultat. Defineix
-  // el tema visual dia/nit i només es mostra a l'heroi quan s'està consultant avui.
-  const sunNowPos = useMemo(
-    () => hasValidCoords ? getSunCompassPosition(now, lat, lon) : null,
-    [now, lat, lon, hasValidCoords]
+  // --- Derivats de "ara" (cada 30 s) ---
+  const nowMinute = liveModel && nowMs >= liveModel.startMs && nowMs < liveModel.endMs
+    ? Math.floor((nowMs - liveModel.startMs) / 60000) : null;
+  const geoNow = useMemo(
+    () => (coordsOk ? geometricAltitude(SunCalc.getPosition(new Date(nowMs), lat, lon).altitude) : -90),
+    [coordsOk, nowMs, lat, lon],
   );
+  const theme: Theme = geoNow > RISE_SET_GEO ? 'day' : 'night';
 
-  const isDaytime = (sunNowPos?.altitudeDeg ?? -1) > 0;
+  // Compte enrere idèntic al de la targeta (arrodonit avall, "3h 13m"); després de la posta, la sortida real de demà.
+  const upcoming = liveModel ? upcomingRiseSet(nowMs, liveModel, tomorrowLite, yesterdayLite) : null;
+  const cdKind = upcoming?.kind ?? null;
+  const cdText = upcoming ? formatCountdown(upcoming.ms - nowMs) : null;
+  const countdown = useMemo(() => (cdKind && cdText ? { kind: cdKind, text: cdText } : null), [cdKind, cdText]);
 
-  const viewedDayLabel = useMemo(() => {
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(viewDateStr || '');
-    if (!m) return '';
-    const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-    return `${weekday} ${Number(m[3])}`;
-  }, [viewDateStr, dateLocale]);
+  // "Pròxim:" — el primer dels 13 esdeveniments que ve (ahir passada la mitjanit, avui o demà); s'amaga si és
+  // el mateix que el compte enrere.
+  let nextLine: string | null = null;
+  const next = liveModel ? nextEvent(nowMs, liveModel, tomorrowLite, yesterdayLite) : null;
+  if (next && !(upcoming && upcoming.ms === next.ms)) {
+    const d = formatCountdown(next.ms - nowMs);
+    if (d) nextLine = fill(t.nextEvent, { event: t[EVENT_KEY[next.key]], time: localClock(next.ms, zone), t: d });
+  }
 
-  // Instant UTC de la mitjanit local del dia consultat — ancoratge compartit pel mostreig
-  // de l'arc i per convertir una fracció de dia (scrubbing) en una hora real.
-  const dayMidnightUtcMs = useMemo(() => {
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(viewDateStr || '');
-    if (!m) return null;
-    return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0) - utcOffsetSeconds * 1000;
-  }, [viewDateStr, utcOffsetSeconds]);
-
-  // --- Mostreig de l'arc real (cada 15 min, dia complet del dia consultat) ---
-  const arcSamples = useMemo(() => {
-    if (!hasValidCoords || dayMidnightUtcMs === null) return [];
-    const points: { fraction: number; altitude: number; azimuth: number }[] = [];
-    for (let i = 0; i <= 96; i++) {
-      const sampleMs = dayMidnightUtcMs + i * 15 * 60 * 1000;
-      const pos = getSunCompassPosition(new Date(sampleMs), lat, lon);
-      if (pos) points.push({ fraction: i / 96, altitude: pos.altitudeDeg, azimuth: pos.azimuthDeg });
+  // Estats de les efemèrides: la identitat només canvia quan canvia algun estat (poques vegades al dia).
+  const cellKey = isLive && liveModel
+    ? Object.entries(ephemerisCellStates(liveModel, nowMs)).map(([k, v]) => `${k}:${v}`).join(',')
+    : null;
+  const cellStates = useMemo(() => {
+    if (cellKey === null) return null;
+    const out: Partial<Record<CellId, CellState>> = {};
+    if (cellKey) for (const pair of cellKey.split(',')) {
+      const [k, v] = pair.split(':');
+      out[k as CellId] = v as CellState;
     }
-    return points;
-  }, [hasValidCoords, dayMidnightUtcMs, lat, lon]);
+    return out;
+  }, [cellKey]);
 
-  const arcPath = useMemo(() => {
-    if (arcSamples.length === 0) return '';
-    return arcSamples.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.fraction * 400} ${altToY(p.altitude)}`).join(' ');
-  }, [arcSamples]);
-
-  // Fracció del dia (0-1) en què cauen la sortida i la posta — per marcar-les clarament
-  // sobre la corba (degradat nit/dia + punts) en lloc de deixar que es confonguin amb la resta.
-  const sunriseFraction = useMemo(() => {
-    if (!sunDayTimes.sunrise || dayMidnightUtcMs === null) return null;
-    return (sunDayTimes.sunrise.getTime() - dayMidnightUtcMs) / 86400000;
-  }, [sunDayTimes.sunrise, dayMidnightUtcMs]);
-  const sunsetFraction = useMemo(() => {
-    if (!sunDayTimes.sunset || dayMidnightUtcMs === null) return null;
-    return (sunDayTimes.sunset.getTime() - dayMidnightUtcMs) / 86400000;
-  }, [sunDayTimes.sunset, dayMidnightUtcMs]);
-
-  const nowFraction = useMemo(() => {
-    const localSeconds = ((Math.floor(now.getTime() / 1000) + utcOffsetSeconds) % 86400 + 86400) % 86400;
-    return localSeconds / 86400;
-  }, [now, utcOffsetSeconds]);
-
-  // --- Scrubbing horari a la trajectòria: passar/arrossegar el dit per l'arc mostra
-  // l'azimut/elevació real en qualsevol moment del dia consultat, no només "ara" ---
-  const [scrubFraction, setScrubFraction] = useState<number | null>(null);
-
-  const activeSample = useMemo(() => {
-    if (arcSamples.length === 0) return null;
-    if (scrubFraction !== null) {
-      const idx = Math.max(0, Math.min(96, Math.round(scrubFraction * 96)));
-      return arcSamples[idx];
+  // Marca "ara" a la barra sortida→posta: només avui i amb el sol fora.
+  let dbarFrac: number | null = null;
+  if (isLive && liveModel && liveModel.polar === 'none') {
+    const { sunrise, sunset } = liveModel.t;
+    if (sunrise !== null && sunset !== null && sunset > sunrise && nowMs >= sunrise && nowMs <= sunset) {
+      dbarFrac = Math.round(((nowMs - sunrise) / (sunset - sunrise)) * 1000) / 1000;
     }
-    return isToday
-      ? arcSamples[Math.min(96, Math.round(nowFraction * 96))]
-      : arcSamples.reduce((max, s) => (s.altitude > max.altitude ? s : max), arcSamples[0]);
-  }, [arcSamples, scrubFraction, isToday, nowFraction]);
+  }
 
-  const activeTimeStr = useMemo(() => {
-    if (!activeSample || dayMidnightUtcMs === null) return null;
-    return formatClockTime(new Date(dayMidnightUtcMs + activeSample.fraction * 86400000), timezone);
-  }, [activeSample, dayMidnightUtcMs, timezone]);
+  // Δ respecte del dia anterior: sempre astronòmica (suncalc), la mateixa definició al calendari.
+  const astroLen = viewModel?.astroLengthSec ?? null;
+  const deltaSec = astroLen !== null && prevAstro !== null ? astroLen - prevAstro : null;
+  const deltaText = useMemo((): HeroDelta => {
+    if (deltaSec === null) return { cls: 'sm-tr-flat', mag: '', rest: '' };
+    const { sign, text } = formatDeltaLong(deltaSec);
+    if (sign === 0) return { cls: 'sm-tr-flat', mag: '', rest: isLive ? t.sameAsYesterday : t.sameAsPrev };
+    const longer = sign > 0;
+    return {
+      cls: longer ? 'sm-tr-up' : 'sm-tr-down',
+      mag: text,
+      rest: isLive ? (longer ? t.vsYesterdayLonger : t.vsYesterdayShorter) : (longer ? t.vsPrevLonger : t.vsPrevShorter),
+    };
+  }, [deltaSec, isLive, t]);
 
-  const isScrubbing = scrubFraction !== null;
-
-  // El ratolí genera onPointerMove a una freqüència molt més alta que el dit (que l'engavatxa
-  // sol al ritme de fotogrames) — sense llindar, cada moviment de ratolí força un re-render
-  // complet del modal i es percep a batzegades a PC. Agrupem les actualitzacions a com a molt
-  // una per fotograma amb requestAnimationFrame, igual de fluid a PC que al mòbil.
-  const scrubRafRef = useRef<number | null>(null);
-  const latestPointerRef = useRef<{ clientX: number; rect: DOMRect } | null>(null);
-  const handleArcPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    // Sempre desem la posició MÉS RECENT — el fotograma pot trigar a arribar, però quan ho
-    // fa ha de reflectir on és el punter ara, no on era quan es va rebre el primer event.
-    latestPointerRef.current = { clientX: e.clientX, rect: e.currentTarget.getBoundingClientRect() };
-    if (scrubRafRef.current !== null) return;
-    scrubRafRef.current = requestAnimationFrame(() => {
-      scrubRafRef.current = null;
-      const latest = latestPointerRef.current;
-      if (!latest) return;
-      const fraction = Math.max(0, Math.min(1, (latest.clientX - latest.rect.left) / latest.rect.width));
-      setScrubFraction(fraction);
-    });
-  };
-  const clearScrub = () => {
-    if (scrubRafRef.current !== null) {
-      cancelAnimationFrame(scrubRafRef.current);
-      scrubRafRef.current = null;
-    }
-    setScrubFraction(null);
-  };
-
-  // Alternativa de teclat a l'scrub de punter: mateix estat (scrubFraction), així que l'orbe,
-  // el marcador i la lectura reaccionen exactament igual que arrossegant. Convenció estàndard
-  // ARIA d'slider horitzontal: Dreta/Amunt avancen, Esquerra/Avall retrocedeixen.
-  const ARC_STEP = 1 / 96; // 15 minuts, un mostreig
-  const handleArcKeyDown = (e: React.KeyboardEvent<SVGSVGElement>) => {
-    const current = scrubFraction ?? (activeSample ? activeSample.fraction : (isToday ? nowFraction : 0.5));
-    let next: number | null = null;
-    switch (e.key) {
-      case 'ArrowRight':
-      case 'ArrowUp':
-        next = Math.min(1, current + ARC_STEP);
-        break;
-      case 'ArrowLeft':
-      case 'ArrowDown':
-        next = Math.max(0, current - ARC_STEP);
-        break;
-      case 'PageUp':
-        next = Math.min(1, current + ARC_STEP * 4); // 1 hora
-        break;
-      case 'PageDown':
-        next = Math.max(0, current - ARC_STEP * 4);
-        break;
-      case 'Home':
-        next = 0;
-        break;
-      case 'End':
-        next = 1;
-        break;
-      default:
-        return;
-    }
-    e.preventDefault();
-    setScrubFraction(next);
-  };
-
-  // Un scrub d'un dia no té sentit conservat en canviar de dia consultat. Memoitzada (deps
-  // buides, els setters de useState són estables) perquè WeekStripSection (React.memo) no es
-  // torni a renderitzar només perquè aquesta funció canviaria de referència cada render.
-  const selectDay = useCallback((offset: number) => {
-    setSelectedDayOffset(offset);
-    setScrubFraction(null);
-  }, []);
-
-  // Cronologia de demà (real, no la del dia consultat), només per poder oferir un "proper
-  // esdeveniment" honest durant les hores de nit posteriors al crepuscle astronòmic d'avui
-  // quan s'està consultant avui mateix (a un dia futur seleccionat, tots els seus
-  // esdeveniments ja són posteriors a "ara" per definició, així que mai cal aquest fallback).
-  const tomorrowStr = Array.isArray(daily?.time) ? daily.time[1] : undefined;
-  const tomorrowSunTimes = useMemo(
-    () => hasValidCoords && tomorrowStr ? getSunDayTimesSafe(tomorrowStr, lat, lon) : null,
-    [hasValidCoords, tomorrowStr, lat, lon]
+  const relLabel = offset === 0 ? t.today : offset === 1 ? t.tomorrow : fill(t.inDays, { n: offset });
+  const dateLabel = useMemo(
+    () => capitalize(formatDateStr(viewDate, locale, isLive ? 'long' : 'short'), locale),
+    [viewDate, locale, isLive],
   );
 
-  // --- Cronologia d'esdeveniments del dia consultat (per al comptador i la barra segmentada) ---
-  const timelineEvents = useMemo(() => {
-    const raw: { key: string; label: string }[] = [
-      { key: 'astronomicalDawn', label: t.astroDawn },
-      { key: 'nauticalDawn', label: t.nauticalDawn },
-      { key: 'civilDawn', label: t.civilDawn },
-      { key: 'sunrise', label: t.sunrise },
-      { key: 'goldenHourEndMorning', label: t.goldenHourMorning },
-      { key: 'solarNoon', label: t.solarNoon },
-      { key: 'goldenHourStartEvening', label: t.goldenHourEvening },
-      { key: 'sunset', label: t.sunset },
-      { key: 'civilDusk', label: t.civilDusk },
-      { key: 'nauticalDusk', label: t.nauticalDusk },
-      { key: 'astronomicalDusk', label: t.astroDusk },
-    ];
-    return raw
-      .map(r => ({ ...r, date: sunDayTimes[r.key as keyof SunDayTimes] as Date | null }))
-      .filter((r): r is { key: string; label: string; date: Date } => r.date instanceof Date);
-  }, [sunDayTimes, t]);
+  const footnote = useMemo(() => {
+    if (!coordsOk) return '';
+    let s = fill(t.sourceAstro, { coords: formatLatLon(lat, lon, language), tz: zone.tz ?? formatUtcOffset(zone.fixedOffsetSec) });
+    const last = lastDailyDate(daily);
+    if (last) s += ` ${fill(t.sourceForecast, { date: untilDateText(last, language, locale) })}`;
+    return s;
+  }, [coordsOk, t, lat, lon, language, zone, daily, locale]);
 
-  // Primer esdeveniment de demà disponible (normalment l'alba astronòmica, però a
-  // latituds altes pot no existir-hi — provem en cascada fins a la sortida de sol).
-  const tomorrowFirstEvent = useMemo(() => {
-    if (!tomorrowSunTimes) return null;
-    const candidates: { key: string; label: string; date: Date | null }[] = [
-      { key: 'astronomicalDawn', label: t.astroDawn, date: tomorrowSunTimes.astronomicalDawn },
-      { key: 'nauticalDawn', label: t.nauticalDawn, date: tomorrowSunTimes.nauticalDawn },
-      { key: 'civilDawn', label: t.civilDawn, date: tomorrowSunTimes.civilDawn },
-      { key: 'sunrise', label: t.sunrise, date: tomorrowSunTimes.sunrise },
-    ];
-    const found = candidates.find((c): c is { key: string; label: string; date: Date } => c.date instanceof Date);
-    return found ?? null;
-  }, [tomorrowSunTimes, t]);
-
-  const nextEvent = useMemo(() => {
-    const upcoming = timelineEvents.filter(e => e.date.getTime() > now.getTime());
-    if (upcoming.length > 0) return upcoming[0];
-    return isToday ? tomorrowFirstEvent : null;
-  }, [timelineEvents, now, tomorrowFirstEvent, isToday]);
-
-  const countdownStr = useMemo(() => {
-    if (!nextEvent) return '--';
-    const diffMs = nextEvent.date.getTime() - now.getTime();
-    const totalMin = Math.max(0, Math.round(diffMs / 60000));
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}h ${m}m`;
-  }, [nextEvent, now]);
-
-  // --- Estadístiques del dia consultat (índex = selectedDayOffset dins els arrays d'Open-Meteo) ---
-  const getDailyNum = (arr: (number | null)[] | undefined, idx: number = selectedDayOffset): number | null => {
-    const v = Array.isArray(arr) ? arr[idx] : undefined;
-    return typeof v === 'number' && !isNaN(v) ? v : null;
-  };
-
-  const uvMax = getDailyNum(daily?.uv_index_max);
-  const uvClear = getDailyNum(daily?.uv_index_clear_sky_max);
-  const sunshineSec = getDailyNum(daily?.sunshine_duration);
-  const radiationSum = getDailyNum(daily?.shortwave_radiation_sum);
-
-  // Durada del dia real (astronomia local, no Open-Meteo) — disponible per als 14 dies,
-  // no només pels ~7 que l'API arriba a cobrir.
-  const viewDaylightSec = useMemo(
-    () => (sunDayTimes.sunrise && sunDayTimes.sunset) ? (sunDayTimes.sunset.getTime() - sunDayTimes.sunrise.getTime()) / 1000 : null,
-    [sunDayTimes]
+  // --- Accions (estables) ---
+  // Dia que es veu, per a les accions (mai es llegeix durant el render).
+  const viewDateRef = useRef(viewDate);
+  useLayoutEffect(() => { viewDateRef.current = viewDate; }, [viewDate]);
+  /** Va a un dia (null = avui). Si canvia de dia, el minut fixat es descarta: no reapareix en tornar-hi. */
+  const goToDate = useCallback((date: string | null) => {
+    const target = date === null || date <= liveDate ? liveDate : date;
+    if (target === viewDateRef.current) return;
+    setSelectedDate(target === liveDate ? null : target);
+    setPin(null);
+  }, [liveDate]);
+  const shiftDay = useCallback((delta: number) => {
+    const cur = Math.max(0, Math.min(LAST_OFFSET, diffDays(liveDate, viewDateRef.current)));
+    goToDate(addDays(liveDate, Math.max(0, Math.min(LAST_OFFSET, cur + delta))));
+  }, [liveDate, goToDate]);
+  const goPrev = useCallback(() => shiftDay(-1), [shiftDay]);
+  const goNext = useCallback(() => shiftDay(1), [shiftDay]);
+  const goToday = useCallback(() => goToDate(null), [goToDate]);
+  const selectDate = useCallback((date: string, viaPointer: boolean) => {
+    goToDate(date);
+    // Amb el dit o el ratolí es torna a dalt (instantani) per veure el dia triat; amb teclat el focus es queda.
+    const scroller = scrollRef.current;
+    if (viaPointer && scroller) scroller.scrollTop = 0;
+  }, [goToDate]);
+  const commitPin = useCallback(
+    (minute: number | null) => setPin(minute === null ? null : { date: viewDate, minute }),
+    [viewDate],
   );
 
-  const realSunPct = (viewDaylightSec && sunshineSec !== null) ? Math.round((sunshineSec / viewDaylightSec) * 100) : null;
-  // Memoitzat perquè és un objecte (referència nova cada render si no) que StatsSection
-  // (React.memo) rep com a prop — sense memoitzar, trencaria la memoització durant l'scrub.
-  const uvCategory = useMemo(() => uvMax !== null ? getUVCategory(uvMax) : null, [uvMax]);
+  const hasData = liveModel !== null && viewModel !== null;
 
-  const solarNoonAlt = useMemo(
-    () => sunDayTimes.solarNoon && hasValidCoords ? getSunCompassPosition(sunDayTimes.solarNoon, lat, lon)?.altitudeDeg ?? null : null,
-    [sunDayTimes.solarNoon, hasValidCoords, lat, lon]
-  );
-  const sunriseAz = useMemo(
-    () => sunDayTimes.sunrise && hasValidCoords ? getSunCompassPosition(sunDayTimes.sunrise, lat, lon) : null,
-    [sunDayTimes.sunrise, hasValidCoords, lat, lon]
-  );
-  const sunsetAz = useMemo(
-    () => sunDayTimes.sunset && hasValidCoords ? getSunCompassPosition(sunDayTimes.sunset, lat, lon) : null,
-    [sunDayTimes.sunset, hasValidCoords, lat, lon]
-  );
-
-  // --- Heurística experimental de qualitat de posta del dia consultat ---
-  const sunsetQuality = useMemo(() => {
-    const hourly = weatherData.hourly;
-    const sunsetStr = Array.isArray(daily?.sunset) ? daily.sunset[selectedDayOffset] : undefined;
-    if (!hourly || !Array.isArray(hourly.time) || !sunsetStr) return null;
-    const targetHourKey = sunsetStr.slice(0, 13); // "YYYY-MM-DDTHH"
-    const idx = hourly.time.findIndex(ts => typeof ts === 'string' && ts.slice(0, 13) === targetHourKey);
-    if (idx === -1) return null;
-    return estimateSunsetQuality(hourly.cloud_cover_mid?.[idx], hourly.cloud_cover_high?.[idx], hourly.relative_humidity_2m?.[idx]);
-  }, [weatherData.hourly, daily, selectedDayOffset]);
-
-  // --- Tira de 14 dies (a partir de demà) ---
-  // Sortida/posta/durada calculades amb astronomia local (suncalc) per a cada dia, no amb
-  // daily.time.length — així no cal ampliar el fetch d'Open-Meteo per allargar la tira.
-  // L'UV manté la font real d'Open-Meteo i només es mostra on l'API l'ha donat de veritat.
-  // Sempre ancorada a avui (todaySunTimes), no al dia seleccionat — la tira no canvia de
-  // contingut quan es tria un dia, només es ressalta la targeta triada.
-  const weekDays = useMemo(() => {
-    if (!todayStr || !hasValidCoords) return [];
-    const uvArr = daily?.uv_index_max;
-    const openMeteoDayCount = Array.isArray(daily?.time) ? daily.time.length : 0;
-
-    let prevDaylightSec = (todaySunTimes.sunrise && todaySunTimes.sunset)
-      ? (todaySunTimes.sunset.getTime() - todaySunTimes.sunrise.getTime()) / 1000
-      : null;
-
-    return Array.from({ length: STRIP_DAYS }, (_, idx) => {
-      const i = idx + 1; // comença demà
-      const dateStr = addDaysToDateStr(todayStr, i);
-      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
-      const weekdayLabel = m ? new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : '--';
-      const dayNum = m ? Number(m[3]) : null;
-
-      const dayTimes = getSunDayTimesSafe(dateStr, lat, lon);
-      const daylightSecForDay = (dayTimes.sunrise && dayTimes.sunset)
-        ? (dayTimes.sunset.getTime() - dayTimes.sunrise.getTime()) / 1000
-        : null;
-
-      let trend: 'up' | 'down' | 'flat' | null = null;
-      if (typeof daylightSecForDay === 'number' && typeof prevDaylightSec === 'number') {
-        const diffMin = Math.round((daylightSecForDay - prevDaylightSec) / 60);
-        trend = diffMin > 0 ? 'up' : diffMin < 0 ? 'down' : 'flat';
+  // ←/→ a qualsevol lloc del diàleg canvien de dia, llevat que algú ja hagi fet servir la tecla (el control
+  // lliscant fa preventDefault), hi hagi un modificador o s'estigui escrivint.
+  useEffect(() => {
+    if (!hasData) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
+      // El botó "Avui" i el de tornar a l'hora desapareixen en canviar de dia: si tenien el focus, passa
+      // abans a la data (o al gràfic) perquè no caigui al <body>.
+      if (el?.closest('.sm-pill')) {
+        const dest = el.closest('.sm-traj')?.querySelector<HTMLElement>('.sm-plot') ?? document.getElementById(dateId);
+        dest?.focus();
       }
-      prevDaylightSec = daylightSecForDay;
+      if (e.key === 'ArrowLeft') goPrev(); else goNext();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [hasData, goPrev, goNext, dateId]);
 
-      // Risc Zero: mai extrapolem l'UV més enllà del que Open-Meteo ha retornat de veritat
-      const uvMaxForDay = i < openMeteoDayCount && typeof uvArr?.[i] === 'number' ? Math.round(uvArr[i] as number) : null;
-
-      return {
-        dateStr: dateStr || '', offset: i, weekdayLabel, dayNum,
-        sunrise: formatClockTime(dayTimes.sunrise, timezone) || '--:--',
-        sunset: formatClockTime(dayTimes.sunset, timezone) || '--:--',
-        dayLength: minutesToHM(daylightSecForDay),
-        uvMax: uvMaxForDay,
-        trend,
-      };
-    });
-  }, [todayStr, hasValidCoords, lat, lon, timezone, dateLocale, daily, todaySunTimes]);
-
-  // "Durada del dia" a la targeta d'estadístiques: per avui, compara amb demà (Open-Meteo,
-  // com sempre); per un dia seleccionat, reutilitza la tendència ja calculada a la tira
-  // (aquell dia comparat amb l'anterior).
-  const displayTrend = useMemo(() => {
-    if (isToday) {
-      const arr = daily?.daylight_duration;
-      const todayOM = Array.isArray(arr) && typeof arr[0] === 'number' ? arr[0] : null;
-      const tomorrowOM = Array.isArray(arr) && typeof arr[1] === 'number' ? arr[1] : null;
-      if (todayOM === null || tomorrowOM === null) return null;
-      return tomorrowOM > todayOM ? t.lengthening : tomorrowOM < todayOM ? t.shortening : null;
+  // Lliscament horitzontal d'un dit per canviar de dia (mai des del gràfic, que és un control lliscant).
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (e.touches.length !== 1 || target?.closest('[data-no-swipe]')) {
+      touchStartRef.current = null;
+      return;
     }
-    const dayTrend = weekDays[selectedDayOffset - 1]?.trend;
-    return dayTrend === 'up' ? t.lengthening : dayTrend === 'down' ? t.shortening : null;
-  }, [isToday, daily, weekDays, selectedDayOffset, t]);
-
-  const bgGradient = isDaytime
-    ? 'from-[#241708] via-[#120b03] to-black'
-    : 'from-[#0d1120] via-[#080a14] to-black';
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+  const onTouchEnd = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    const end = e.changedTouches[0];
+    if (!start || !end) return;
+    const dir = swipeDirection(end.clientX - start.x, end.clientY - start.y);
+    if (dir < 0) goPrev();
+    else if (dir > 0) goNext();
+  }, [goPrev, goNext]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="solar-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black/95 backdrop-blur-3xl backdrop-saturate-150 animate-in fade-in duration-200">
-      <style>{`
-        .astro-scrollbar { -webkit-overflow-scrolling: touch; }
-        .astro-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-        .astro-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .astro-scrollbar::-webkit-scrollbar-thumb { background: rgba(251,191,36,0.2); border-radius: 8px; }
-        .astro-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(251,191,36,0.4); }
-        .astro-hscroll { overscroll-behavior-x: contain; touch-action: pan-x; }
-      `}</style>
-
-      <div className={`w-full h-[96dvh] sm:h-auto sm:max-h-[90dvh] landscape:h-[100dvh] landscape:sm:h-auto max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b ${bgGradient} rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-amber-500/10 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300`}>
-        <StarfieldBackdrop tint="#fbbf24" density={isDaytime ? 30 : 55} />
-        <div className={MATRIX_BG}></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[130%] h-56 bg-gradient-to-b from-amber-500/10 via-orange-900/5 to-transparent blur-[80px] pointer-events-none z-0"></div>
-
-        {/* Capçalera */}
-        <div className="flex justify-between items-center shrink-0 relative z-20 p-4 md:p-6 border-b border-white/[0.04]">
-          <div className="flex items-center gap-3">
-            <div className={`relative flex items-center justify-center w-10 h-10 rounded-full border ${isDaytime ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'}`}>
-              <CloudSun className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isDaytime ? 'bg-amber-400' : 'bg-indigo-400'}`}></span>
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isDaytime ? 'bg-amber-500' : 'bg-indigo-500'}`}></span>
-              </span>
+    <div ref={rootRef} className="sm-root" role="dialog" aria-modal="true" aria-labelledby={titleId}
+      data-enter={skipEnter ? 'none' : undefined}>
+      <div className="sm-scrim" aria-hidden="true" />
+      <div className="sm-sheet" data-theme={theme} style={SHEET_STYLE[theme]}>
+        <SolarHeader titleId={titleId} title={t.title} location={location} closeLabel={t.close} onClose={handleClose} />
+        <div ref={scrollRef} className="sm-scroll" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          {liveModel && viewModel ? (
+            <div className="sm-grid">
+              <SolarDayNav relLabel={relLabel} dateLabel={dateLabel} dateId={dateId} isLive={isLive}
+                canPrev={offset > 0} canNext={offset < LAST_OFFSET} onPrev={goPrev} onNext={goNext} onToday={goToday} t={t} />
+              <SolarHero model={viewModel} isLive={isLive} theme={theme} countdown={countdown} nextLine={nextLine}
+                dbarFrac={dbarFrac} deltaText={deltaText} dateId={dateId} t={t} lang={language} />
+              <SolarTrajectoryCard model={viewModel} altMax={altMax} isLive={isLive} nowMinute={isLive ? nowMinute : null}
+                pinMinute={pinMinute} onCommit={commitPin} channel={channel} lang={language} t={t} ids={trajIds} />
+              <SolarForecastCard forecast={forecast} lastDateLabel={lastFcLabel} hasDaily={hasDaily}
+                dayLengthSec={viewModel.dayLengthSec} t={t} lang={language} />
+              {isLg && <SolarCompass model={viewModel} channel={channel} t={t} lang={language} />}
+              <SolarEphemeris model={viewModel} cellStates={isLive ? cellStates : null} t={t} lang={language} />
+              <SolarAlmanac liveDate={liveDate} zone={zone} lat={lat} lon={lon} daily={daily} viewDate={viewDate}
+                isLg={isLg} onSelect={selectDate} t={t} lang={language} />
+              <p className="sm-a-foot px-1 text-[11px] leading-relaxed text-slate-400">{footnote}</p>
             </div>
-            <div className="flex flex-col">
-              <h2 id="solar-modal-title" className="text-lg md:text-2xl font-black text-white tracking-tighter drop-shadow-md leading-none">{t.title}</h2>
-              <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t.subtitle}</span>
-            </div>
-          </div>
-          <button onClick={handleClose} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md">
-            <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
-          </button>
+          ) : (
+            <p className="p-8 text-center text-[13px] leading-relaxed text-slate-300">{t.noData}</p>
+          )}
         </div>
-
-        {!hasValidCoords ? (
-          <div className="flex-1 flex items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center">{t.noData}</div>
-        ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain astro-scrollbar relative z-10 p-4 md:p-6 space-y-6">
-
-            {/* HEROI: El Sol, protagonista */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-5 flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 relative">
-                <div className={`absolute inset-0 rounded-full blur-[50px] pointer-events-none transition-colors duration-1000 ${isDaytime ? 'bg-amber-500/25' : 'bg-indigo-500/10'}`}></div>
-                <SunOrb elevationDeg={activeSample ? activeSample.altitude : (isToday ? (sunNowPos?.altitudeDeg ?? -90) : (solarNoonAlt ?? -90))} className="w-full h-full relative z-10" isScrubbing={isScrubbing} />
-              </div>
-              <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
-                <span className="text-3xl font-black text-white tracking-tight leading-none">
-                  {isToday ? (isDaytime ? t.day : t.night) : viewedDayLabel}
-                </span>
-                {isToday && sunNowPos ? (
-                  <span className="text-sm font-bold text-amber-300">
-                    {Math.round(sunNowPos.azimuthDeg)}° {getCardinalLabel(sunNowPos.azimuthDeg, safeLang)} · {sunNowPos.altitudeDeg >= 0 ? '+' : ''}{Math.round(sunNowPos.altitudeDeg)}°
-                  </span>
-                ) : !isToday && solarNoonAlt !== null ? (
-                  <span className="text-sm font-bold text-amber-300">{t.maxElevation} {Math.round(solarNoonAlt)}°</span>
-                ) : null}
-                {nextEvent && (
-                  <div className="flex items-center gap-3 mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{nextEvent.label}</span>
-                    <span className="text-xs font-mono font-bold text-amber-200">{t.in_} {countdownStr}</span>
-                  </div>
-                )}
-                {!isToday && (
-                  <button
-                    onClick={() => selectDay(0)}
-                    className="mt-1 text-[10px] font-black uppercase tracking-widest text-amber-400/80 hover:text-amber-300 underline underline-offset-2 transition-colors"
-                  >
-                    ← {t.backToToday}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Trajectòria del dia consultat — toca o arrossega per explorar qualsevol hora */}
-            <div className="relative rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4 overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-1 relative z-10 gap-0.5 sm:gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">
-                  {t.trajectory} · {isToday ? t.todayCard : viewedDayLabel}
-                </span>
-                {isScrubbing && activeSample && activeTimeStr ? (
-                  <span className="text-[11px] font-mono font-bold text-amber-200">
-                    {activeTimeStr} · {Math.round(activeSample.azimuth)}° {getCardinalLabel(activeSample.azimuth, safeLang)} · {activeSample.altitude >= 0 ? '+' : ''}{Math.round(activeSample.altitude)}°
-                  </span>
-                ) : (
-                  <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
-                )}
-              </div>
-              <svg
-                viewBox="0 0 400 160"
-                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                style={{ touchAction: 'none' }}
-                onPointerMove={handleArcPointerMove}
-                onPointerDown={handleArcPointerMove}
-                onPointerUp={clearScrub}
-                onPointerLeave={clearScrub}
-                onPointerCancel={clearScrub}
-                tabIndex={0}
-                role="slider"
-                aria-label={`${t.trajectory} · ${isToday ? t.todayCard : viewedDayLabel}`}
-                aria-valuemin={0}
-                aria-valuemax={96}
-                aria-valuenow={activeSample ? Math.round(activeSample.fraction * 96) : undefined}
-                aria-valuetext={activeSample && activeTimeStr ? `${activeTimeStr} · ${Math.round(activeSample.azimuth)}° ${getCardinalLabel(activeSample.azimuth, safeLang)} · ${activeSample.altitude >= 0 ? '+' : ''}${Math.round(activeSample.altitude)}°` : undefined}
-                onKeyDown={handleArcKeyDown}
-              >
-                <defs>
-                  <filter id="solarGlow" x="-60%" y="-60%" width="220%" height="220%">
-                    <feGaussianBlur stdDeviation="4" result="b" />
-                    <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-                  </filter>
-                  <linearGradient id="dayNightStroke" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="0">
-                    {sunriseFraction !== null && sunsetFraction !== null ? (() => {
-                      // Marges petits al voltant de sortida/posta perquè el degradat es vegi
-                      // com una transició de crepuscle, no un tall sec — amb guàrdia per si
-                      // mai queden desordenats (dies polars extrems, marges massa junts).
-                      const m = 0.01;
-                      const rise0 = Math.max(0, sunriseFraction - m);
-                      const rise1 = Math.min(1, Math.max(rise0, sunriseFraction + m));
-                      const set0 = Math.max(rise1, sunsetFraction - m);
-                      const set1 = Math.min(1, Math.max(set0, sunsetFraction + m));
-                      return (
-                        <>
-                          <stop offset={0} stopColor="#818cf8" />
-                          <stop offset={rise0} stopColor="#818cf8" />
-                          <stop offset={rise1} stopColor="#fbbf24" />
-                          <stop offset={set0} stopColor="#fbbf24" />
-                          <stop offset={set1} stopColor="#818cf8" />
-                          <stop offset={1} stopColor="#818cf8" />
-                        </>
-                      );
-                    })() : (
-                      <stop offset={0} stopColor={isDaytime ? '#fbbf24' : '#818cf8'} />
-                    )}
-                  </linearGradient>
-                </defs>
-                <line x1="0" y1={HORIZON_Y} x2="400" y2={HORIZON_Y} stroke="#1e293b" strokeWidth="1" strokeDasharray="2 3" />
-                {arcPath && <path d={arcPath} fill="none" stroke="url(#dayNightStroke)" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />}
-                {/* Punts de sortida i posta: marquen exactament on la corba creua l'horitzó */}
-                {sunriseFraction !== null && (
-                  <circle cx={sunriseFraction * 400} cy={HORIZON_Y} r="3.5" fill="#fbbf24" stroke="#1a1206" strokeWidth="1.5" />
-                )}
-                {sunsetFraction !== null && (
-                  <circle cx={sunsetFraction * 400} cy={HORIZON_Y} r="3.5" fill="#fbbf24" stroke="#1a1206" strokeWidth="1.5" />
-                )}
-                {activeSample && (() => {
-                  const p = activeSample;
-                  const isLive = isScrubbing || isToday;
-                  return (
-                    <g>
-                      {isScrubbing && (
-                        <line x1={p.fraction * 400} y1="10" x2={p.fraction * 400} y2="150" stroke="#fbbf24" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
-                      )}
-                      <g style={{ transform: `translate(${p.fraction * 400}px, ${altToY(p.altitude)}px)`, transition: isScrubbing ? 'none' : 'transform 0.6s ease-out' }}>
-                        <circle r="8" fill={p.altitude > 0 ? '#fbbf24' : '#818cf8'} opacity={isLive ? 0.25 : 0.15} />
-                        <circle r="4" fill="#fff" filter="url(#solarGlow)" opacity={isLive ? 1 : 0.8} />
-                      </g>
-                    </g>
-                  );
-                })()}
-              </svg>
-            </div>
-
-            {/* Barra de cronologia segmentada — extreta i memoitzada: no depèn de l'scrub */}
-            <TimelineSection
-              label={t.timeline}
-              dayLabel={isToday ? t.todayCard : viewedDayLabel}
-              timelineEvents={timelineEvents}
-              nowFraction={nowFraction}
-              timezone={timezone}
-            />
-
-            {/* Targetes d'estadístiques — extretes i memoitzades: no depenen de l'scrub */}
-            <StatsSection
-              t={t}
-              safeLang={safeLang}
-              solarNoon={sunDayTimes.solarNoon}
-              timezone={timezone}
-              solarNoonAlt={solarNoonAlt}
-              viewDaylightSec={viewDaylightSec}
-              displayTrend={displayTrend}
-              realSunPct={realSunPct}
-              uvMax={uvMax}
-              uvClear={uvClear}
-              uvCategory={uvCategory}
-              radiationSum={radiationSum}
-              sunriseAz={sunriseAz}
-              sunsetAz={sunsetAz}
-              sunsetQuality={sunsetQuality}
-            />
-
-            {/* Tira de 14 dies — extreta i memoitzada: no depèn de l'scrub, només es re-renderitza
-                quan canvia el dia seleccionat */}
-            <WeekStripSection
-              label={t.week}
-              todayLabel={t.todayCard}
-              isToday={isToday}
-              weekDays={weekDays}
-              selectedDayOffset={selectedDayOffset}
-              onSelectDay={selectDay}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-// --- Seccions pesades extretes i memoitzades (React.memo) ---
-// Cap d'aquestes tres depèn de l'scrub — sense aquesta separació, cada moviment de l'arc
-// (fins a 60 cops/segon) forçava React a re-renderitzar també la tira de 14 dies, les ~9
-// targetes d'estadístiques i els 11 esdeveniments de la cronologia, cosa que es notava a
-// batzegades en mòbils de gamma baixa. Amb React.memo, mentre les seves props es mantinguin
-// amb la mateixa referència (garantit perquè totes venen de useMemo/useCallback o de l'objecte
-// estàtic `t`), React salta per complet el seu re-render durant l'scrub.
-
-interface TimelineSectionProps {
-  label: string;
-  dayLabel: string;
-  timelineEvents: { key: string; label: string; date: Date }[];
-  nowFraction: number;
-  timezone?: string;
-}
-
-const TimelineSection = memo(function TimelineSection({ label, dayLabel, timelineEvents, nowFraction, timezone }: TimelineSectionProps) {
-  return (
-    <div className="rounded-2xl border border-white/5 bg-black/30 backdrop-blur-md p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          {label} · {dayLabel}
-        </span>
-      </div>
-      <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-indigo-950 via-amber-400 to-indigo-950">
-        {timelineEvents.length > 0 && (
-          <div
-            className="absolute top-[-3px] w-[2px] h-[18px] bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]"
-            style={{ left: `${nowFraction * 100}%` }}
-          />
-        )}
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-        {timelineEvents.map(e => (
-          <div key={e.key} className="rounded-lg border border-white/5 bg-black/25 px-2.5 py-2 flex flex-col gap-0.5">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wide leading-tight">{e.label}</span>
-            <span className="text-sm font-mono font-bold text-slate-100">{formatClockTime(e.date, timezone)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-interface StatsSectionProps {
-  t: Record<string, string>;
-  safeLang: Language;
-  solarNoon: Date | null;
-  timezone?: string;
-  solarNoonAlt: number | null;
-  viewDaylightSec: number | null;
-  displayTrend: string | null;
-  realSunPct: number | null;
-  uvMax: number | null;
-  uvClear: number | null;
-  uvCategory: UVCategory | null;
-  radiationSum: number | null;
-  sunriseAz: CompassReading | null;
-  sunsetAz: CompassReading | null;
-  sunsetQuality: number | null;
-}
-
-const StatsSection = memo(function StatsSection({
-  t, safeLang, solarNoon, timezone, solarNoonAlt, viewDaylightSec, displayTrend,
-  realSunPct, uvMax, uvClear, uvCategory, radiationSum, sunriseAz, sunsetAz, sunsetQuality,
-}: StatsSectionProps) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <StatCard label={t.solarNoon} value={formatClockTime(solarNoon, timezone) || '--:--'} sub={solarNoonAlt !== null ? `${t.maxElevation} ${Math.round(solarNoonAlt)}°` : undefined} icon={<Sunrise className="w-3.5 h-3.5" />} />
-      <StatCard
-        label={t.dayLength}
-        value={minutesToHM(viewDaylightSec)}
-        sub={displayTrend || undefined}
-        trendIcon={displayTrend === t.lengthening ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : displayTrend === t.shortening ? <TrendingDown className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3 text-slate-500" />}
-        icon={<Gauge className="w-3.5 h-3.5" />}
-      />
-      <StatCard label={t.realSun} value={realSunPct !== null ? `${realSunPct}%` : '--'} icon={<CloudSun className="w-3.5 h-3.5" />} />
-      <StatCard
-        label={t.uvMax}
-        value={uvMax !== null ? uvMax.toFixed(1) : '--'}
-        sub={uvCategory ? uvCategory.label[safeLang] : undefined}
-        valueClassName={uvCategory?.color}
-        icon={<Zap className="w-3.5 h-3.5" />}
-      />
-      <StatCard label={t.uvClear} value={uvClear !== null ? uvClear.toFixed(1) : '--'} icon={<Zap className="w-3.5 h-3.5" />} />
-      <StatCard label={t.radiation} value={radiationSum !== null ? `${radiationSum.toFixed(1)} MJ/m²` : '--'} icon={<Zap className="w-3.5 h-3.5" />} />
-      <StatCard
-        label={t.sunriseAz}
-        value={sunriseAz ? `${Math.round(sunriseAz.azimuthDeg)}° ${getCardinalLabel(sunriseAz.azimuthDeg, safeLang)}` : '--'}
-        icon={<Sunrise className="w-3.5 h-3.5" />}
-      />
-      <StatCard
-        label={t.sunsetAz}
-        value={sunsetAz ? `${Math.round(sunsetAz.azimuthDeg)}° ${getCardinalLabel(sunsetAz.azimuthDeg, safeLang)}` : '--'}
-        icon={<Sunset className="w-3.5 h-3.5" />}
-      />
-      {sunsetQuality !== null && (
-        <StatCard label={t.sunsetQuality} value={`${sunsetQuality}%`} sub={t.estimate} icon={<Sunset className="w-3.5 h-3.5" />} />
-      )}
-    </div>
-  );
-});
-
-interface WeekDayEntry {
-  dateStr: string;
-  offset: number;
-  weekdayLabel: string;
-  dayNum: number | null;
-  sunrise: string;
-  sunset: string;
-  dayLength: string;
-  uvMax: number | null;
-  trend: 'up' | 'down' | 'flat' | null;
-}
-
-interface WeekStripSectionProps {
-  label: string;
-  todayLabel: string;
-  isToday: boolean;
-  weekDays: WeekDayEntry[];
-  selectedDayOffset: number;
-  onSelectDay: (offset: number) => void;
-}
-
-const WeekStripSection = memo(function WeekStripSection({ label, todayLabel, isToday, weekDays, selectedDayOffset, onSelectDay }: WeekStripSectionProps) {
-  return (
-    <div>
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{label}</span>
-      <div className="flex gap-2 overflow-x-auto astro-scrollbar astro-hscroll pb-2">
-        <button
-          onClick={() => onSelectDay(0)}
-          className={`flex-shrink-0 w-20 rounded-xl border p-3 flex flex-col items-center justify-center gap-1 transition-colors ${isToday ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
-        >
-          <span className={`text-[11px] font-black uppercase ${isToday ? 'text-amber-300' : 'text-slate-400'}`}>{todayLabel}</span>
-        </button>
-        {weekDays.map((d) => (
-          <button
-            key={d.dateStr}
-            onClick={() => onSelectDay(d.offset)}
-            className={`flex-shrink-0 w-28 rounded-xl border p-3 flex flex-col items-center gap-1.5 text-left transition-colors ${selectedDayOffset === d.offset ? 'border-amber-400/60 bg-amber-950/40 ring-1 ring-amber-400/40' : 'border-white/5 bg-[#0c0a08] hover:border-white/20'}`}
-          >
-            <span className={`text-[10px] font-black uppercase ${selectedDayOffset === d.offset ? 'text-amber-300' : 'text-slate-400'}`}>{d.weekdayLabel} {d.dayNum}</span>
-            <div className="flex items-center gap-1 text-[11px] font-mono text-amber-300"><Sunrise className="w-3 h-3" />{d.sunrise}</div>
-            <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-300"><Sunset className="w-3 h-3" />{d.sunset}</div>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-300">
-              {d.dayLength}
-              {d.trend === 'up' && <TrendingUp className="w-3 h-3 text-emerald-400" />}
-              {d.trend === 'down' && <TrendingDown className="w-3 h-3 text-rose-400" />}
-            </div>
-            {d.uvMax !== null && <span className="text-[9px] font-bold text-slate-500">UV {d.uvMax}</span>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-});
