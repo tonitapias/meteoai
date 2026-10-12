@@ -245,7 +245,11 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
         .pressure-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(129,140,248,0.4); }
       `}</style>
 
-      <div className="w-full h-[96dvh] sm:h-auto sm:max-h-[90dvh] landscape:h-[100dvh] landscape:sm:h-auto max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b from-indigo-950/30 to-black/90 rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-indigo-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+      {/* Alçades en % de l'overlay (fixed inset-0) i no en dvh: als motors sense dvh el full
+          creixia fins al contingut i la capçalera quedava fora de pantalla. Els calc() sumen el
+          90 % del padding de l'overlay (1rem a sm i en apaïsat, 1.5rem a md) perquè el sostre
+          segueixi sent el 90 % de la pantalla. */}
+      <div className="w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-b from-indigo-950/30 to-black/90 rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-indigo-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
         <div className={MATRIX_BG}></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[130%] h-56 bg-gradient-to-b from-indigo-500/10 via-slate-900/5 to-transparent blur-[80px] pointer-events-none z-0"></div>
 

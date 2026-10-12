@@ -111,7 +111,9 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col sm:p-4 md:p-6 lg:p-8 bg-[#020308]/95 sm:bg-[#020308]/85 backdrop-blur-2xl animate-in fade-in duration-300 select-none [transform:translateZ(0)]">
       
-      <div className="w-full h-[100dvh] sm:h-full max-w-7xl mx-auto flex flex-col bg-[#020308] sm:bg-[#050810] sm:rounded-[2rem] border-0 sm:border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.95)] relative overflow-hidden ring-1 ring-white/5">
+      {/* h-full (100 % de l'overlay) i no 100dvh: als motors sense dvh el full es col·lapsava a la
+          capçalera i el mapa quedava a 0 px d'alçada. */}
+      <div className="w-full h-full max-w-7xl mx-auto flex flex-col bg-[#020308] sm:bg-[#050810] sm:rounded-[2rem] border-0 sm:border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.95)] relative overflow-hidden ring-1 ring-white/5">
         
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <div className={MATRIX_BG}></div>

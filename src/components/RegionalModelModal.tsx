@@ -206,8 +206,12 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
         `}
       </style>
 
-      {/* TÀCTICA DVH + LANDSCAPE + PROTECCIÓ MIN-H-0 per evitar overflow a iOS/Safari */}
-      <div className="w-full h-[96dvh] sm:h-auto sm:max-h-[88dvh] landscape:h-[100dvh] landscape:max-h-[100dvh] landscape:sm:h-auto landscape:rounded-none landscape:sm:rounded-[32px] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-br from-[#0f111a]/90 to-black/80 rounded-t-[24px] sm:rounded-[32px] border-t landscape:border-t-0 sm:border border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+      {/* Alçades en % de l'overlay (fixed inset-0) i no en dvh: als motors sense dvh el full
+          creixia fins al contingut i la capçalera quedava fora de pantalla. Els calc() sumen la
+          part proporcional del padding de l'overlay (1rem a sm i en apaïsat, 1.5rem a md) perquè
+          els sostres segueixin sent el 88 % (retrat) i el 100 % (apaïsat) de la pantalla.
+          MIN-H-0 evita l'overflow a iOS/Safari. */}
+      <div className="w-full h-[96%] sm:h-auto sm:max-h-[calc(88%+1.76rem)] md:max-h-[calc(88%+2.64rem)] landscape:h-full landscape:max-h-full landscape:sm:h-auto landscape:sm:max-h-[calc(100%+2rem)] landscape:rounded-none landscape:sm:rounded-[32px] max-w-sm md:max-w-3xl lg:max-w-5xl flex flex-col min-h-0 bg-gradient-to-br from-[#0f111a]/90 to-black/80 rounded-t-[24px] sm:rounded-[32px] border-t landscape:border-t-0 sm:border border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden transform-gpu translate-z-0 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
 
         {/* Matriu de fons espacial */}
         <div className={MATRIX_BG}></div>
