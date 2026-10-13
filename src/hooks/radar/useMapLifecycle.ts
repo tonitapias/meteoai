@@ -355,11 +355,14 @@ export function useMapLifecycle({
       // finestra de dates (la més recent primer) per a cada tessel·la
       // concreta i cau a transparent si totes fallen — mateixa doctrina
       // "Risc Zero" que ja s'usa per a GOES/Meteosat/Himawari.
+      // `?v=2`: el worker l'ignora; només força el navegador a no reaprofitar
+      // les tessel·les negres que el worker servia abans (cache de 6 h) quan
+      // GIBS va començar a respondre 200 amb negre per als dies incomplets.
       if (currentOverlays.nasaReal && !map.getSource('source-nasa-real')) {
         map.addSource('source-nasa-real', {
           type: 'raster',
           tiles: [
-            'https://meteo-sat-proxy.tonitapias.workers.dev/nasa-truecolor/{z}/{x}/{y}.jpg'
+            'https://meteo-sat-proxy.tonitapias.workers.dev/nasa-truecolor/{z}/{x}/{y}.jpg?v=2'
           ],
           tileSize: 256,
           maxzoom: 8,
