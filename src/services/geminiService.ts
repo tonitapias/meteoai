@@ -283,19 +283,19 @@ const getTacticalComfortDescription = (
 
     if (temp >= 24 && diff >= 2.0) {
         if (apparentTemp >= 38) {
-            return `ALERTA PER CALOR INTENSA (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
+            return `ALERTA PER CALOR INTENSA (Sensació: ${apparentTemp.toFixed(1)}°C | Humitat: ${humStr})`;
         }
         if (apparentTemp >= 32) {
-            return `CALOR I XAFOGOR (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
+            return `CALOR I XAFOGOR (Sensació: ${apparentTemp.toFixed(1)}°C | Humitat: ${humStr})`;
         }
-        return `Calor humida (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
+        return `Calor humida (Sensació: ${apparentTemp.toFixed(1)}°C | Humitat: ${humStr})`;
     }
 
     if (temp <= 12 && diff <= -2.5) {
-        return `FRED INTENS PEL VENT (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
+        return `FRED INTENS PEL VENT (Sensació: ${apparentTemp.toFixed(1)}°C | Humitat: ${humStr})`;
     }
 
-    return `Confort tèrmic normal (Sensació: ${apparentTemp.toFixed(1)}ºC | Humitat: ${humStr})`;
+    return `Confort tèrmic normal (Sensació: ${apparentTemp.toFixed(1)}°C | Humitat: ${humStr})`;
 };
 
 /**
@@ -438,7 +438,7 @@ const evaluateDeterministicRisk = (
             if (typeof temp === 'number') {
                 if (temp >= FIREWALL_THRESHOLDS.HEAT_RED) upgradeRisk('RED', 'HEAT', i);
                 else if (temp >= FIREWALL_THRESHOLDS.HEAT_AMBER) upgradeRisk('AMBER', 'HEAT', i);
-                // -10 °C: el llindar RED del prompt del worker (T <= -10ºC). Aquí hi havia -8, més antic que el prompt.
+                // -10 °C: el llindar RED del prompt del worker (T <= -10°C). Aquí hi havia -8, més antic que el prompt.
                 else if (temp <= FIREWALL_THRESHOLDS.COLD_RED) upgradeRisk('RED', 'COLD', i);
                 else if (temp <= FIREWALL_THRESHOLDS.COLD_AMBER) upgradeRisk('AMBER', 'COLD', i);
             }
@@ -540,7 +540,7 @@ const buildWindowSummary = (rows: WindowRow[]): string => {
     if (temps.length > 0) {
         const lo = temps.reduce((a, b) => (b.v < a.v ? b : a));
         const hi = temps.reduce((a, b) => (b.v > a.v ? b : a));
-        lines.push(`Temperatura: mínima ${lo.v}ºC (${at(lo.i)}) | màxima ${hi.v}ºC (${at(hi.i)})`);
+        lines.push(`Temperatura: mínima ${lo.v}°C (${at(lo.i)}) | màxima ${hi.v}°C (${at(hi.i)})`);
     }
 
     const gusts = rows.map((r, i) => ({ i, v: r.gust })).filter((x): x is { i: number; v: number } => x.v !== null);
@@ -820,7 +820,7 @@ export const getGeminiAnalysis = async (
                 const apparentArr = (hourlyObj.apparent_temperature) as (number | null)[] | undefined;
                 const rawTempArr = hourlyObj.temperature_2m as (number | null)[] | undefined;
                 const apparentHour = getInversionCorrectedApparent(apparentArr?.[i], rawTempArr?.[i], tempDisplay);
-                const apparentStr = apparentHour !== null ? `${round1(apparentHour)}ºC` : "--ºC";
+                const apparentStr = apparentHour !== null ? `${round1(apparentHour)}°C` : "--°C";
 
                 const humArr = (hourlyObj.relative_humidity_2m ?? hourlyObj.humidity) as (number | null)[] | undefined;
                 const humHour = humArr?.[i] ?? null;
@@ -835,7 +835,7 @@ export const getGeminiAnalysis = async (
                 const aqiHour = aqiArr?.[i] ?? (aqiJ !== undefined ? aqiSeries?.[aqiJ] : null) ?? null;
                 const aqiStr = getTacticalAqiDescription(aqiHour, aqiScale);
 
-                tableRows.push(`| ${hourStr} | ${wmoDesc} | ${tempStr}ºC | ${apparentStr} | ${humStr} | ${precipStr}mm (${probStr}%) | ${windStr}km/h (${gustsStr}km/h) | ${uvStr} | ${aqiStr} |`);
+                tableRows.push(`| ${hourStr} | ${wmoDesc} | ${tempStr}°C | ${apparentStr} | ${humStr} | ${precipStr}mm (${probStr}%) | ${windStr}km/h (${gustsStr}km/h) | ${uvStr} | ${aqiStr} |`);
                 windowRows.push({
                     hour: hourStr,
                     temp: tempNum,
@@ -854,7 +854,7 @@ export const getGeminiAnalysis = async (
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
           Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
-          Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}ºC` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
+          Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentDisplayTemp, currentDisplayApparent, currentHumidity)}
           Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}
           MODEL EN ÚS: ${modelInfo.name}

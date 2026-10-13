@@ -225,23 +225,30 @@ describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió t�
     // (correcció d'inversió de 1,75 °C). La IA rebia els graus crus i deia "cap fenomen advers" en una nit de gelada.
     it('a l\'hivern, en una nit serena i en calma, la IA rep la temperatura corregida que veu l\'usuari', async () => {
         const { prompt } = await run(calm({ date: '2027-01-15', temp: 1.25 }), 0);
-        expect(prompt).toContain('Temperatura Real: -0.5ºC');
+        expect(prompt).toContain('Temperatura Real: -0.5°C');
         // columna TEMP (3a) i SENSACIÓ (4a): totes dues corregides, com a la capçalera (sensació = temperatura al fixture)
-        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -0\.5ºC \| -0\.5ºC \|/);
-        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| 1\.3ºC \|/);
-        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| -0\.5ºC \| 1\.25ºC \|/);
+        expect(prompt).toMatch(/\| 00:00 \|[^|]*\| -0\.5°C \| -0\.5°C \|/);
+        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| 1\.3°C \|/);
+        expect(prompt).not.toMatch(/\| 00:00 \|[^|]*\| -0\.5°C \| 1\.25°C \|/);
         // i la línia de confort d'"ara" cita la sensació corregida
-        expect(prompt).toContain('Sensació: -0.5ºC');
+        expect(prompt).toContain('Sensació: -0.5°C');
+    });
+
+    // Amb "ºC" (l'indicador ordinal, U+00BA) al prompt, la IA el copiava al text: "fa 10 ºC" en lloc de "10 °C".
+    it('el prompt escriu els graus amb el signe de grau (°), mai amb l\'indicador ordinal (º)', async () => {
+        const { prompt } = await run(calm({ date: '2027-01-15', temp: 1.25 }), 0);
+        expect(prompt).toContain('°C');
+        expect(prompt).not.toContain('º');
     });
 
     it('la mateixa nit al setembre (fora de la temporada d\'inversió) no es corregeix', async () => {
         const { prompt } = await run(calm({ date: '2026-09-15', temp: 2 }), 0);
-        expect(prompt).toContain('Temperatura Real: 2ºC');
+        expect(prompt).toContain('Temperatura Real: 2°C');
     });
 
     it('amb vent (>6 km/h) la inversió es trenca i tampoc no es corregeix', async () => {
         const { prompt } = await run(calm({ date: '2027-01-15', temp: 2, wind: 10 }), 0);
-        expect(prompt).toContain('Temperatura Real: 2ºC');
+        expect(prompt).toContain('Temperatura Real: 2°C');
     });
 
     it('el tallafocs de gelada usa la temperatura mostrada: +1,25 °C al model però -0,5 °C a la pantalla → AMBER / COLD', async () => {
@@ -255,7 +262,7 @@ describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió t�
         expect(result?.risk_level).toBe('GREEN');
     });
 
-    // El prompt del worker diu RED a T <= -10 ºC; el tallafocs tenia -8 (més antic), i a -9 forçava RED contra el prompt.
+    // El prompt del worker diu RED a T <= -10 °C; el tallafocs tenia -8 (més antic), i a -9 forçava RED contra el prompt.
     it('el fred passa a RED a -10 °C (llindar del prompt del worker), no a -8', async () => {
         const at = async (temp: number) => (await run(calm({ date: '2026-09-15', temp, wind: 10, day: 1 }), 0)).result;
         expect((await at(-9))?.risk_level).toBe('AMBER');
@@ -276,7 +283,7 @@ describe('getGeminiAnalysis — resum calculat de la finestra', () => {
         h.wind_gusts_10m = [10, 12, 30, 18, 12, 10, 9, 9];
         const { prompt } = await run(weather, 0);
         const s = summaryOf(prompt);
-        expect(s).toContain('Temperatura: mínima 20ºC (00:00, ara) | màxima 24ºC (03:00)');
+        expect(s).toContain('Temperatura: mínima 20°C (00:00, ara) | màxima 24°C (03:00)');
         expect(s).toContain('Ràfega màxima: 30km/h (02:00)');
         expect(s).toContain('Pluja: cap hora amb pluja apreciable (totes < 0.2mm/h)');
     });

@@ -17,6 +17,7 @@ import { TypewriterText } from './TypewriterText';
 import { TRANSLATIONS, Language } from '../translations';
 import { AICacheData, TacticalTip, TacticalRiskLevel, TacticalHazardType } from '../services/geminiService';
 import { formatRiskDetail } from '../utils/riskDetailText';
+import { getHazardFallbackTips } from '../utils/hazardTips';
 
 // --- INTERFÍCIES ESTRICTES I DE COMPATIBILITAT (DOCTRINA RISC ZERO) ---
 
@@ -447,6 +448,10 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
         && riskDetail.level === analysis.risk_level && riskDetail.hazard === analysis.hazard_type
         ? formatRiskDetail(riskDetail, lang)
         : null;
+    // Un avís sense cap consell (el tallafocs ha pujat un GREEN de la IA, o la IA no n'ha donat cap) en rep un de fix.
+    const tips = Array.isArray(analysis.tips) && analysis.tips.length > 0
+        ? analysis.tips
+        : getHazardFallbackTips(analysis.risk_level, analysis.hazard_type, lang);
 
     // Només el contenidor pare utilitza backdrop-blur per salvaguardar la GPU
     return (
@@ -532,14 +537,14 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                 </div>
                 
                 {/* 3. Píndoles d'informació clau */}
-                {Array.isArray(analysis.tips) && analysis.tips.length > 0 && (
+                {tips.length > 0 && (
                     <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
                         <div className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-400">
                             <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0 drop-shadow-[0_0_4px_rgba(6,182,212,0.6)]" />
                             <span>{ui.tipsHeader}</span>
                         </div>
                         <div className="flex flex-wrap gap-2.5 items-center">
-                            {analysis.tips.map((tip, i) => (
+                            {tips.map((tip, i) => (
                                 <InsightTip key={i} tip={tip} index={i} />
                             ))}
                         </div>
