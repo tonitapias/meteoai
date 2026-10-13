@@ -1,5 +1,6 @@
 // src/components/widgets/ConsensusWidget.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ConsensusMetrics, HourlySeriesBundle } from '../../utils/consensusMath';
 import { Language } from '../../translations';
 import { ConsensusModal } from './ConsensusModal';
@@ -152,6 +153,15 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     };
   }, [activeModal, closeModal]);
 
+  // Bloqueig del scroll de la pàgina de darrere mentre un modal és obert (com la resta de modals).
+  const isModalOpen = activeModal !== null;
+  useEffect(() => {
+      if (!isModalOpen) return;
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = original; };
+  }, [isModalOpen]);
+
   return (
     <>
       <div className="w-full relative perspective-[2000px]">
@@ -279,7 +289,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
         </div>
       </div>
 
-      {activeModal && activeModal !== 'charts' && (
+      {/* Els modals van a document.body: dins del tauler, algun contenidor amb transform crea un context d'apilament
+          propi i la capçalera de la pàgina (z-50) es pintava per sobre del modal (z-100) quan era visible. */}
+      {activeModal && activeModal !== 'charts' && createPortal(
         <ConsensusModal
           activeModal={activeModal}
           closeModal={closeModal}
@@ -290,10 +302,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           hourlyGlobalTimes={hourlyGlobalTimes}
           hourlyLocal={hourlyLocal}
           hourlyGlobal={hourlyGlobal}
-        />
+        />,
+        document.body
       )}
       
-      {activeModal === 'charts' && (
+      {activeModal === 'charts' && createPortal(
         <ConsensusChartsModal
           closeModal={closeModal}
           lang={lang}
@@ -308,7 +321,8 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           hourlyGfs={hourlyGfs}
           hourlyIcon={hourlyIcon}
           hourlyAifs={hourlyAifs}
-        />
+        />,
+        document.body
       )}
     </>
   );
