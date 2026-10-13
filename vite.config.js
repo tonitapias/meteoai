@@ -73,14 +73,14 @@ export default defineConfig({
         screenshots: [
           {
             src: 'screenshot-mobile.png', //[cite: 3]
-            sizes: '390x844', //[cite: 3]
+            sizes: '600x1298', //[cite: 3]
             type: 'image/png', //[cite: 3]
             form_factor: 'narrow', //[cite: 3]
             label: 'Previsió al detall' //[cite: 3]
           },
           {
             src: 'screenshot-desktop.png', //[cite: 3]
-            sizes: '1280x800', //[cite: 3]
+            sizes: '1440x780', //[cite: 3]
             type: 'image/png', //[cite: 3]
             form_factor: 'wide', //[cite: 3]
             label: 'Panell de control' //[cite: 3]
