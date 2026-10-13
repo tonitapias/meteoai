@@ -16,6 +16,7 @@ import {
 import { TypewriterText } from './TypewriterText';
 import { TRANSLATIONS, Language } from '../translations';
 import { AICacheData, TacticalTip, TacticalRiskLevel, TacticalHazardType } from '../services/geminiService';
+import { formatRiskDetail } from '../utils/riskDetailText';
 
 // --- INTERFÍCIES ESTRICTES I DE COMPATIBILITAT (DOCTRINA RISC ZERO) ---
 
@@ -239,7 +240,7 @@ const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => 
 /**
  * BÀNER DE PERILL ATMOSFÈRIC CLAR
  */
-const TacticalHazardBanner = ({ hazardType, riskLevel, ui }: { hazardType?: TacticalHazardType; riskLevel?: TacticalRiskLevel; ui: LocalUIText }) => {
+const TacticalHazardBanner = ({ hazardType, riskLevel, ui, detail }: { hazardType?: TacticalHazardType; riskLevel?: TacticalRiskLevel; ui: LocalUIText; detail?: string | null }) => {
     if (!hazardType || hazardType === 'NONE') return null;
 
     const isSevere = riskLevel === 'RED';
@@ -270,6 +271,11 @@ const TacticalHazardBanner = ({ hazardType, riskLevel, ui }: { hazardType?: Tact
                         {hazardText}
                     </span>
                 </p>
+                {detail && (
+                    <p data-testid="hazard-detail" className="mt-1 text-xs sm:text-sm leading-snug font-sans opacity-90">
+                        {detail}
+                    </p>
+                )}
             </div>
         </div>
     );
@@ -435,6 +441,12 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
     const isGemini = analysis.engine === 'gemini' || analysis.engine === 'groq';
     const hasLegacyAlerts = Array.isArray(analysis.alerts) && analysis.alerts.length > 0;
     const hasNewHazard = analysis.hazard_type && analysis.hazard_type !== 'NONE';
+    // Xifra i hora del tallafocs, només si expliquen exactament el nivell i el perill que es mostren.
+    const riskDetail = analysis.risk_detail;
+    const hazardDetail = hasNewHazard && riskDetail
+        && riskDetail.level === analysis.risk_level && riskDetail.hazard === analysis.hazard_type
+        ? formatRiskDetail(riskDetail, lang)
+        : null;
 
     // Només el contenidor pare utilitza backdrop-blur per salvaguardar la GPU
     return (
@@ -495,8 +507,9 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                     {hasNewHazard && (
                         <TacticalHazardBanner 
                             hazardType={analysis.hazard_type} 
-                            riskLevel={analysis.risk_level} 
+                            riskLevel={analysis.risk_level}
                             ui={ui}
+                            detail={hazardDetail}
                         />
                     )}
                     

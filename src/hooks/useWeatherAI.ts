@@ -14,7 +14,8 @@ import {
     TacticalTip, 
     TacticalRiskLevel, 
     TacticalHazardType,
-    type AiAirQualityInput
+    type AiAirQualityInput,
+    type RiskDetail
 } from '../services/geminiService';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
@@ -26,6 +27,7 @@ export interface AIAnalysisState extends Omit<AIPredictionResult, 'tips'> {
     risk_level?: TacticalRiskLevel;
     hazard_type?: TacticalHazardType;
     tactical_reasoning?: string;
+    risk_detail?: RiskDetail;
     source?: string;
     // Procedència real de l'anàlisi (gemini/groq/emergency), independent
     // del text decoratiu de 'source'. Absent mentre només hi ha el fallback local.
@@ -122,6 +124,8 @@ export function useWeatherAI(
                 risk_level: gemini.risk_level || prev.risk_level,
                 hazard_type: gemini.hazard_type || prev.hazard_type,
                 tactical_reasoning: gemini.tactical_reasoning || prev.tactical_reasoning,
+                // Sense recurs a 'prev': un detall d'una altra anàlisi no explica aquesta.
+                risk_detail: gemini.risk_detail,
                 source: 'MeteoToni AI Network',
                 engine: gemini.engine
               };

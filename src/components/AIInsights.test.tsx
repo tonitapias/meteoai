@@ -38,3 +38,33 @@ describe('AIInsights — insígnia de confiança', () => {
         expect(screen.queryByTestId('ai-confidence')).toBeNull();
     });
 });
+
+describe('AIInsights — detall del motiu', () => {
+    const WIND_DETAIL = { level: 'AMBER', hazard: 'WIND', hour: '17:00', value: 62, threshold: 50, event: null } as const;
+
+    it('sota el bàner "Motiu" hi ha la xifra i l\'hora del tallafocs', () => {
+        render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND', risk_detail: WIND_DETAIL })} />);
+        expect(screen.getByTestId('hazard-detail').textContent)
+            .toBe('Ràfegues de fins a 62 km/h cap a les 17:00 (precaució a partir de 50 km/h)');
+    });
+
+    it('en un altre idioma, el detall també', () => {
+        render(<AIInsights lang="en" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND', risk_detail: WIND_DETAIL })} />);
+        expect(screen.getByTestId('hazard-detail').textContent).toBe('Gusts up to 62 km/h around 17:00 (caution from 50 km/h)');
+    });
+
+    it('si el detall és d\'un altre perill o d\'un altre nivell, no es mostra (el bàner sí)', () => {
+        const { unmount } = render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'RAIN', risk_detail: WIND_DETAIL })} />);
+        expect(screen.queryByTestId('hazard-detail')).toBeNull();
+        expect(screen.getByText('PLUJA INTENSA SOSTINGUDA')).toBeTruthy();
+        unmount();
+        render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'RED', hazard_type: 'WIND', risk_detail: WIND_DETAIL })} />);
+        expect(screen.queryByTestId('hazard-detail')).toBeNull();
+    });
+
+    it('sense detall (anàlisi antiga en cache, o la IA veu un perill que les regles no cobreixen), només el bàner', () => {
+        render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND' })} />);
+        expect(screen.queryByTestId('hazard-detail')).toBeNull();
+        expect(screen.getByText('VENT FORT I RÀFEGUES')).toBeTruthy();
+    });
+});

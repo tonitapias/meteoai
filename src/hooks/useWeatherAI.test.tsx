@@ -224,3 +224,32 @@ describe('useWeatherAI — previsió desada (sense connexió o API caiguda)', ()
         expect(result.current.aiAnalysis?.text).toBe('remota');
     });
 });
+
+describe('useWeatherAI — detall del motiu', () => {
+    const DETAIL = { level: 'AMBER', hazard: 'WIND', hour: '17:00', value: 62, threshold: 50, event: null };
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        generateAIPrediction.mockReset().mockReturnValue({ text: 'local', tips: [], alerts: [], confidence: 'x', confidenceLevel: 'high' });
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    const flush = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(600); }); };
+
+    it("arriba a l'anàlisi, i una anàlisi nova sense detall no hereta el de l'anterior", async () => {
+        getGeminiAnalysis.mockReset()
+            .mockResolvedValueOnce({ text: 'vent', tips: [], risk_level: 'AMBER', hazard_type: 'WIND', risk_detail: DETAIL, engine: 'gemini' })
+            .mockResolvedValueOnce({ text: 'pluja', tips: [], risk_level: 'AMBER', hazard_type: 'RAIN', engine: 'gemini' });
+        const { result, rerender } = renderHook(
+            ({ code }: { code: number }) => useWeatherAI(WEATHER, null, 'ca', 'C', null, code),
+            { initialProps: { code: 3 } }
+        );
+        await flush();
+        expect(result.current.aiAnalysis?.risk_detail).toEqual(DETAIL);
+
+        rerender({ code: 61 });
+        await flush();
+        expect(result.current.aiAnalysis?.text).toBe('pluja');
+        expect(result.current.aiAnalysis?.risk_detail).toBeUndefined();
+    });
+});

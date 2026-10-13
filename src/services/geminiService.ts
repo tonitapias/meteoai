@@ -25,6 +25,25 @@ export interface TacticalTip {
     text: string;
 }
 
+/** Fenomen concret darrere d'un perill de codi (tempesta, neu, boira...) o de l'avís d'aerosols. */
+export type RiskDetailEvent = 'storm' | 'storm_hail' | 'snow' | 'sleet' | 'freezing' | 'rime' | 'fog' | 'dust' | 'particles';
+
+/**
+ * Per què el tallafocs veu aquest nivell: el valor pic de la finestra (ràfega, mm/h, temperatura) i la seva hora, o la
+ * primera hora del fenomen. El bàner "Motiu" en fa una línia amb xifres que no surten de la IA.
+ */
+export interface RiskDetail {
+    level: TacticalRiskLevel;
+    hazard: TacticalHazardType;
+    /** "17:00"; null si l'avís és d'ara mateix (aerosols). */
+    hour: string | null;
+    /** km/h, mm/h o °C; null en els perills de codi. */
+    value: number | null;
+    /** Llindar del tallafocs que fa saltar aquest nivell (mateixes unitats que `value`). */
+    threshold: number | null;
+    event: RiskDetailEvent | null;
+}
+
 export interface AICacheData {
     risk_level: TacticalRiskLevel;
     hazard_type: TacticalHazardType;
@@ -34,6 +53,9 @@ export interface AICacheData {
     // Quin motor ha generat aquesta anàlisi. Es guarda també a la cache,
     // així una resposta servida des de cache manté la seva procedència real.
     engine?: 'gemini' | 'groq' | 'emergency' | 'unknown';
+    // Només si el tallafocs ha vist el perill final al nivell final: si la IA en veu un altre (o més greu),
+    // aquestes xifres no l'expliquen. Es guarda amb la resposta perquè quadri amb el text de la mateixa finestra.
+    risk_detail?: RiskDetail;
 }
 
 interface RawLLMResponse {
@@ -295,6 +317,31 @@ const round1 = (n: number): number => Math.round(n * 10) / 10;
 /** Pluja horària mínima per comptar l'hora com "amb pluja": el mateix 0,2 mm que usa l'app per dir que plou (aiContext.calculateIsRaining). */
 const RAIN_HOUR_MIN_MM = 0.2;
 
+/** Llindars del tallafocs: els mateixos que el prompt del worker. El detall del bàner "Motiu" els cita. */
+const FIREWALL_THRESHOLDS = {
+    GUST_AMBER: 50, GUST_RED: 80,       // km/h, >=
+    RAIN_AMBER: 5, RAIN_RED: 20,        // mm/h, >= AMBER, > RED
+    HEAT_AMBER: 35, HEAT_RED: 40,       // °C, >=
+    COLD_AMBER: 0, COLD_RED: -10        // °C, <=
+} as const;
+
+interface DeterministicRisk {
+    risk: TacticalRiskLevel;
+    hazard: TacticalHazardType | null;
+    /**
+     * Un detall per a CADA perill que el tallafocs ha vist, al nivell màxim d'aquell perill. No només el que guanya:
+     * amb neu i temperatura sota zero alhora, el tallafocs es queda la neu (es mira abans a cada hora) però la IA pot
+     * triar el fred al mateix nivell, i el bàner "Motiu: fred" també s'ha de poder explicar.
+     */
+    details: Partial<Record<TacticalHazardType, RiskDetail>>;
+}
+
+/** El detall del tallafocs només explica la resposta final si n'ha vist el mateix perill al mateix nivell. */
+const matchingRiskDetail = (evaluation: DeterministicRisk, level: TacticalRiskLevel, hazard: TacticalHazardType): RiskDetail | undefined => {
+    const detail = evaluation.details[hazard];
+    return detail && detail.level === level ? detail : undefined;
+};
+
 /**
  * `dustKind`: l'avís de pols/partícules d'ARA (resolveDustAdvisory). El prompt del worker diu que amb la línia
  * "Aerosols" el risc és AMBER / AIR_QUALITY, però Gemini Flash-Lite no ho complia de manera estable: amb les
@@ -306,13 +353,16 @@ const evaluateDeterministicRisk = (
     startIndex: number,
     endIndex: number,
     dustKind: DustKind = null
-): { risk: TacticalRiskLevel, hazard: TacticalHazardType | null } => {
+): DeterministicRisk => {
     let maxRisk: TacticalRiskLevel = 'GREEN';
     let detectedHazard: TacticalHazardType | null = null;
+    // Per a cada perill vist: el seu nivell màxim i la primera hora (i fenomen) amb aquest nivell.
+    const seen: Partial<Record<TacticalHazardType, { level: TacticalRiskLevel; index: number | null; event: RiskDetailEvent | null }>> = {};
+    const details: Partial<Record<TacticalHazardType, RiskDetail>> = {};
 
     try {
         const hourly = weatherData.hourly as unknown as HourlySeries | undefined;
-        if (!hourly) return { risk: 'GREEN', hazard: null };
+        if (!hourly) return { risk: 'GREEN', hazard: null, details };
 
         const wmoArr = (hourly.weather_code ?? hourly.weathercode) as (number | null)[] | undefined;
         const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
@@ -320,7 +370,7 @@ const evaluateDeterministicRisk = (
         const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
         const latitude = resolveLatitude(weatherData);
 
-        const upgradeRisk = (newRisk: TacticalRiskLevel, newHazard: TacticalHazardType) => {
+        const upgradeRisk = (newRisk: TacticalRiskLevel, newHazard: TacticalHazardType, index: number | null, event: RiskDetailEvent | null = null) => {
             const hierarchy = { 'GREEN': 0, 'AMBER': 1, 'RED': 2 };
             // Només sobreescrivim l'hazard quan la severitat puja estrictament,
             // o quan encara no n'hi ha cap assignat. Abans, un '>=' feia que
@@ -332,6 +382,10 @@ const evaluateDeterministicRisk = (
                 detectedHazard = newHazard;
             } else if (detectedHazard === null && hierarchy[newRisk] === hierarchy[maxRisk]) {
                 detectedHazard = newHazard;
+            }
+            const previous = seen[newHazard];
+            if (!previous || hierarchy[newRisk] > hierarchy[previous.level]) {
+                seen[newHazard] = { level: newRisk, index, event };
             }
         };
 
@@ -346,8 +400,10 @@ const evaluateDeterministicRisk = (
             // Tempesta i neu/gel: es mantenen sobre el codi BRUT del model (doctrina "les dades
             // crues sempre guanyen": és millor un avís de més que un de menys).
             const rawSevere = wmo !== undefined && wmo !== null;
-            if (rawSevere && (wmo === 95 || wmo === 96 || wmo === 99)) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE');
-            else if (rawSevere && [56, 57, 66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) upgradeRisk('AMBER', 'SNOW_ICE');
+            if (rawSevere && (wmo === 95 || wmo === 96 || wmo === 99)) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE', i, wmo === 95 ? 'storm' : 'storm_hail');
+            else if (rawSevere && [56, 57, 66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) {
+                upgradeRisk('AMBER', 'SNOW_ICE', i, [56, 57, 66, 67].includes(wmo as number) ? 'freezing' : 'snow');
+            }
             else {
                 // Boira: NOMÉS si la política de boira la confirma (senyal del model + saturació
                 // de superfície, vegeu visibilityRules.resolveFog). El codi 45/48 brut d'ICON
@@ -355,12 +411,12 @@ const evaluateDeterministicRisk = (
                 // amb el cel serè; el mateix codi que veu l'usuari a la icona és el que compta.
                 const engineCode = getHourlyWeatherCode(hourly, i, elevation, weatherData.hourlyComparison);
                 // La gebradora (48) diposita gebre i deixa gel a terra: el risc dominant és el de gel.
-                if (engineCode === 48) upgradeRisk('AMBER', 'SNOW_ICE');
-                else if (engineCode === 45) upgradeRisk('AMBER', 'VISIBILITY');
+                if (engineCode === 48) upgradeRisk('AMBER', 'SNOW_ICE', i, 'rime');
+                else if (engineCode === 45) upgradeRisk('AMBER', 'VISIBILITY', i, 'fog');
                 // Aiguaneu (68/69): el deriva l'app a partir d'un codi de pluja brut (Open-Meteo no el publica),
                 // així que el filtre del codi brut d'aquí dalt no el veu. Pluja i neu barrejades a 1-4 °C deixen
                 // les superfícies relliscoses (mateix perill que la neu o el gel), i és el que veu l'usuari.
-                else if (engineCode !== null && isSleetCode(engineCode)) upgradeRisk('AMBER', 'SNOW_ICE');
+                else if (engineCode !== null && isSleetCode(engineCode)) upgradeRisk('AMBER', 'SNOW_ICE', i, 'sleet');
             }
 
             // Pluja en mm/h independent del codi WMO (abans no hi havia cap
@@ -370,31 +426,95 @@ const evaluateDeterministicRisk = (
             // CONVECTIVE/SNOW_ICE/VISIBILITY, aquell hazard més específic té
             // preferència sobre un "RAIN" genèric quan empaten en severitat.
             if (typeof precip === 'number') {
-                if (precip > 20) upgradeRisk('RED', 'RAIN');
-                else if (precip >= 5) upgradeRisk('AMBER', 'RAIN');
+                if (precip > FIREWALL_THRESHOLDS.RAIN_RED) upgradeRisk('RED', 'RAIN', i);
+                else if (precip >= FIREWALL_THRESHOLDS.RAIN_AMBER) upgradeRisk('AMBER', 'RAIN', i);
             }
 
             if (typeof gust === 'number') {
-                if (gust >= 80) upgradeRisk('RED', 'WIND');
-                else if (gust >= 50) upgradeRisk('AMBER', 'WIND');
+                if (gust >= FIREWALL_THRESHOLDS.GUST_RED) upgradeRisk('RED', 'WIND', i);
+                else if (gust >= FIREWALL_THRESHOLDS.GUST_AMBER) upgradeRisk('AMBER', 'WIND', i);
             }
 
             if (typeof temp === 'number') {
-                if (temp >= 40) upgradeRisk('RED', 'HEAT');
-                else if (temp >= 35) upgradeRisk('AMBER', 'HEAT');
+                if (temp >= FIREWALL_THRESHOLDS.HEAT_RED) upgradeRisk('RED', 'HEAT', i);
+                else if (temp >= FIREWALL_THRESHOLDS.HEAT_AMBER) upgradeRisk('AMBER', 'HEAT', i);
                 // -10 °C: el llindar RED del prompt del worker (T <= -10ºC). Aquí hi havia -8, més antic que el prompt.
-                else if (temp <= -10) upgradeRisk('RED', 'COLD');
-                else if (temp <= 0) upgradeRisk('AMBER', 'COLD');
+                else if (temp <= FIREWALL_THRESHOLDS.COLD_RED) upgradeRisk('RED', 'COLD', i);
+                else if (temp <= FIREWALL_THRESHOLDS.COLD_AMBER) upgradeRisk('AMBER', 'COLD', i);
             }
         }
 
         // Després del bucle: en un empat d'AMBER, un perill meteorològic (vent, pluja...) té preferència sobre l'aire.
-        if (dustKind !== null) upgradeRisk('AMBER', 'AIR_QUALITY');
+        if (dustKind !== null) upgradeRisk('AMBER', 'AIR_QUALITY', null, dustKind);
+
+        for (const [hazard, s] of Object.entries(seen) as [TacticalHazardType, NonNullable<typeof seen[TacticalHazardType]>][]) {
+            details[hazard] = buildRiskDetail(weatherData, hourly, startIndex, endIndex, s.level, hazard, s.index, s.event);
+        }
     } catch (e) {
         console.warn("⚠️ Error en l'avaluació matemàtica del tallafocs", e);
     }
 
-    return { risk: maxRisk, hazard: detectedHazard };
+    return { risk: maxRisk, hazard: detectedHazard, details };
+};
+
+/**
+ * Xifra i hora d'un perill que ha vist el tallafocs. Vent, pluja i temperatura citen el PIC de la finestra (el que
+ * també dona el "RESUM CALCULAT" a la IA, així el text i el bàner diuen el mateix número); els perills de codi
+ * (tempesta, neu, boira...) citen la primera hora del fenomen.
+ */
+const buildRiskDetail = (
+    weatherData: ExtendedWeatherData,
+    hourly: HourlySeries,
+    startIndex: number,
+    endIndex: number,
+    level: TacticalRiskLevel,
+    hazard: TacticalHazardType,
+    firstIndex: number | null,
+    event: RiskDetailEvent | null
+): RiskDetail => {
+    const located = weatherData as unknown as LocatableData;
+    const times = (weatherData.hourly as { time?: unknown[] } | undefined)?.time;
+    const hourAt = (i: number | null): string | null => {
+        const t = i !== null ? times?.[i] : undefined;
+        return typeof t === 'string' || typeof t === 'number' ? getTacticalHourStr(t, located.timezone, located.utc_offset_seconds) : null;
+    };
+    const isRed = level === 'RED';
+
+    /** Primer índex amb el valor extrem de la finestra (`pick` retorna true si `a` és més extrem que `b`). */
+    const peak = (valueAt: (i: number) => number | null, pick: (a: number, b: number) => boolean) => {
+        let best: { i: number; v: number } | null = null;
+        for (let i = startIndex; i < endIndex; i++) {
+            const v = valueAt(i);
+            if (v !== null && (best === null || pick(v, best.v))) best = { i, v };
+        }
+        return best;
+    };
+    const numAt = (arr: unknown) => (i: number): number | null => {
+        const v = (arr as (number | null)[] | undefined)?.[i];
+        return typeof v === 'number' ? v : null;
+    };
+    const latitude = resolveLatitude(weatherData);
+    const max = (a: number, b: number) => a > b;
+    const min = (a: number, b: number) => a < b;
+
+    const fromPeak = (best: { i: number; v: number } | null, threshold: number): RiskDetail => ({
+        level, hazard, event: null, threshold,
+        hour: best ? hourAt(best.i) : null,
+        value: best ? round1(best.v) : null
+    });
+
+    switch (hazard) {
+        case 'WIND':
+            return fromPeak(peak(numAt(hourly.wind_gusts_10m), max), isRed ? FIREWALL_THRESHOLDS.GUST_RED : FIREWALL_THRESHOLDS.GUST_AMBER);
+        case 'RAIN':
+            return fromPeak(peak(numAt(hourly.precipitation), max), isRed ? FIREWALL_THRESHOLDS.RAIN_RED : FIREWALL_THRESHOLDS.RAIN_AMBER);
+        case 'HEAT':
+            return fromPeak(peak(i => getHourlyDisplayTemp(hourly, i, latitude), max), isRed ? FIREWALL_THRESHOLDS.HEAT_RED : FIREWALL_THRESHOLDS.HEAT_AMBER);
+        case 'COLD':
+            return fromPeak(peak(i => getHourlyDisplayTemp(hourly, i, latitude), min), isRed ? FIREWALL_THRESHOLDS.COLD_RED : FIREWALL_THRESHOLDS.COLD_AMBER);
+        default:
+            return { level, hazard, event, hour: hourAt(firstIndex), value: null, threshold: null };
+    }
 };
 
 interface WindowRow {
@@ -626,7 +746,9 @@ export const getGeminiAnalysis = async (
                         return {
                             ...cachedData,
                             risk_level: deterministicEval.risk,
-                            hazard_type: deterministicEval.hazard ?? cachedData.hazard_type
+                            hazard_type: deterministicEval.hazard ?? cachedData.hazard_type,
+                            // El perill ha canviat: el detall desat (el de la resposta en cache) ja no l'explica.
+                            risk_detail: deterministicEval.hazard ? deterministicEval.details[deterministicEval.hazard] : undefined
                         };
                     }
                 } catch (evalError) {
@@ -835,7 +957,8 @@ ${windowSummary ? `
                         tips: safeTips,
                         engine: (engineUsed === 'gemini' || engineUsed === 'groq' || engineUsed === 'emergency')
                             ? engineUsed
-                            : 'unknown'
+                            : 'unknown',
+                        risk_detail: matchingRiskDetail(deterministicEval, finalRiskLevel, finalHazardType)
                     };
 
                     // L'escut d'emergència del worker (Gemini i Groq caiguts) no és una anàlisi: si es guardés, un error
