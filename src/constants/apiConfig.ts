@@ -1,7 +1,14 @@
 // src/constants/apiConfig.ts
 
 export const API_TIMEOUT_DEFAULT = 10000;
-export const API_MAX_RETRIES = 2;
+// Peticions a api.open-meteo.com (la principal i el model regional): UN sol intent llarg. Amb el servidor lent
+// (13-10-2026: 13-16 s) els 3 intents tallats als 10 s no arribaven mai a la resposta i l'app es quedava sense dades.
+// El regional va al mateix servidor, que per defecte serveix d'una en una les peticions d'una mateixa IP
+// (ConcurrencyGroupLimiter d'Open-Meteo): pot fer cua darrere la principal i necessita el mateix marge.
+export const API_FORECAST_TIMEOUT = 25000;
+// Espera abans de cada reintent quan Open-Meteo torna 5xx o la xarxa cau (un 4xx, com el 429 de quota, no es
+// reintenta). Amb 1 s i 2 s, durant una sobrecàrrega (503, Sentry 14-10-2026) els tres intents queien en 3 s.
+export const API_RETRY_DELAYS_MS = [3000, 8000] as const;
 
 // --- PARÀMETRES GENERALS DE LA PETICIÓ ---
 export const API_FORECAST_DAYS = "8"; // Dies de previsió
