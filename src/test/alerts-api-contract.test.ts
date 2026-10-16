@@ -74,17 +74,30 @@ describe('DWD (Alemanya) Contract Check', () => {
         expect(data.records[0].fields).toHaveProperty('geo_point_2d');
     }, TIMEOUT_MS);
 
-    it('hauria de donar el JSONP d\'avisos amb l\'embolcall esperat', async () => {
-        const response = await fetch('https://www.dwd.de/DWD/warnungen/warnapp_landkreise/json/warnings.json');
+    it('hauria de donar els avisos del WFS (GeoServer de DWD) amb els camps del CAP', async () => {
+        const response = await fetch('https://maps.dwd.de/geoserver/dwd/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=dwd:Warnungen_Landkreise&outputFormat=application/json&propertyName=GC_WARNCELLID,EVENT,SEVERITY,URGENCY,EXPIRES,HEADLINE,DESCRIPTION,INSTRUCTION');
         expect(response.ok, `DWD (avisos) ha fallat amb status: ${response.status}`).toBe(true);
+        // Un captcha o un ExceptionReport de GeoServer també poden tornar 200.
+        expect(response.headers.get('content-type') || '').toContain('json');
 
-        const raw = await response.text();
-        expect(raw.includes('warnWetter.loadWarnings'), 'L\'embolcall JSONP esperat ha canviat').toBe(true);
+        const data = await response.json();
+        expect(Array.isArray(data.features)).toBe(true);
+        // Sense avisos vigents la llista ve buida: llavors només es pot
+        // comprovar l'estructura de la resposta.
+        if (data.features.length > 0) {
+            expect(data.features[0].properties).toHaveProperty('GC_WARNCELLID');
+            expect(data.features[0].properties).toHaveProperty('SEVERITY');
+        }
+    }, TIMEOUT_MS);
 
-        const jsonStart = raw.indexOf('{');
-        const jsonEnd = raw.lastIndexOf('}');
-        const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
-        expect(parsed).toHaveProperty('warnings');
+    it('hauria d\'ubicar un punt a la seva zona d\'avís (Offenburg -> Ortenaukreis)', async () => {
+        const response = await fetch('https://maps.dwd.de/geoserver/dwd/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=dwd:Warngebiete_Kreise&outputFormat=application/json&propertyName=WARNCELLID&CQL_FILTER=' + encodeURIComponent('INTERSECTS(SHAPE,POINT(48.470 7.940))'));
+        expect(response.ok, `DWD (zona d'avís per punt) ha fallat amb status: ${response.status}`).toBe(true);
+        expect(response.headers.get('content-type') || '').toContain('json');
+
+        const data = await response.json();
+        expect(Array.isArray(data.features)).toBe(true);
+        expect(String(data.features[0]?.properties?.WARNCELLID)).toBe('108317000');
     }, TIMEOUT_MS);
 });
 
