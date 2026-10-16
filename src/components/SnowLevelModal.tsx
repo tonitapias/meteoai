@@ -15,6 +15,7 @@ import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import type { ChartDataPoint } from './ForecastSection';
+import { buildSnowLevelWindow, SNOW_LEVEL_WINDOW_HOURS } from '../utils/snowLevelWindow';
 
 interface SnowLevelModalProps {
   // Mateixa font que SnowLevelWidget al dashboard (calculations.currentFreezingLevel) —
@@ -27,7 +28,7 @@ interface SnowLevelModalProps {
   lang?: Language;
 }
 
-const WINDOW_HOURS = 48;
+const WINDOW_HOURS = SNOW_LEVEL_WINDOW_HOURS;
 const SNOW_BUFFER_M = 300;
 
 const T: Record<Language, Record<string, string>> = {
@@ -61,11 +62,6 @@ const T: Record<Language, Record<string, string>> = {
   },
 };
 
-const getSnowLevel = (entry: ChartDataPoint | undefined): number | null => {
-  const v = entry?.snowLevel;
-  return typeof v === 'number' && !isNaN(v) ? v : null;
-};
-
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 const STROKE = '#38bdf8';
 const SHEET_GRADIENT = 'from-sky-950/20 to-black/90';
@@ -83,13 +79,12 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
 
   const hasData = Array.isArray(chartDataFull) && chartDataFull.length > 0;
 
-  const windowEntries = useMemo(() => {
-    if (!hasData) return [];
-    return chartDataFull.slice(0, WINDOW_HOURS).map(e => ({
-      timeStr: typeof e.time === 'string' ? e.time : '',
-      snowLevel: getSnowLevel(e),
-    }));
-  }, [hasData, chartDataFull]);
+  // Mateixa finestra que el giny (utils/snowLevelWindow.ts): la mínima i la màxima de 48 h coincideixen.
+  const { entries: windowEntries, min: minWindow, max: maxSnowLevel } = useMemo(
+    () => buildSnowLevelWindow(hasData ? chartDataFull : [], WINDOW_HOURS),
+    [hasData, chartDataFull]
+  );
+  const minSnowLevel = minWindow?.value ?? null;
 
   const N = windowEntries.length;
 
@@ -99,26 +94,6 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
   const currentSnowLevel = typeof freezingLevel === 'number'
     ? Math.max(0, freezingLevel - SNOW_BUFFER_M)
     : (N > 0 ? windowEntries[0].snowLevel : null);
-
-  const minSnowLevel = useMemo(() => {
-    const vals = windowEntries.map(e => e.snowLevel).filter((v): v is number => v !== null);
-    return vals.length > 0 ? Math.min(...vals) : null;
-  }, [windowEntries]);
-  const maxSnowLevel = useMemo(() => {
-    const vals = windowEntries.map(e => e.snowLevel).filter((v): v is number => v !== null);
-    return vals.length > 0 ? Math.max(...vals) : null;
-  }, [windowEntries]);
-
-  // --- Moment en què la cota serà més baixa (més rellevant: quan la neu arriba més avall) ---
-  const minWindow = useMemo(() => {
-    let best: { idx: number; value: number } | null = null;
-    for (let i = 0; i < N; i++) {
-      const value = windowEntries[i].snowLevel;
-      if (value === null) continue;
-      if (!best || value < best.value) best = { idx: i, value };
-    }
-    return best;
-  }, [windowEntries, N]);
 
   // --- Scrub horitzontal (mateix patró RAF que la resta de modals experts) ---
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
@@ -175,6 +150,9 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
     return BOTTOM_Y - ((Math.max(yBounds.min, Math.min(yBounds.max, v)) - yBounds.min) / range) * (BOTTOM_Y - TOP_Y);
   };
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
+  // Mateixes coordenades en % de la capa HTML (punts i dates) que va per sobre del SVG estirat.
+  const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
+  const pctY = (v: number) => (levelToY(v) / CHART_H) * 100;
 
   const linePath = useMemo(() => {
     if (N === 0) return '';
@@ -297,43 +275,58 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
                 )}
               </div>
 
-              <svg
-                viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-                style={{ touchAction: 'none' }}
-                onPointerMove={handlePointerMove}
-                onPointerDown={handlePointerMove}
-                onPointerUp={clearScrub}
-                onPointerLeave={clearScrub}
-                onPointerCancel={clearScrub}
-                tabIndex={0}
-                role="slider"
-                aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
-                aria-valuemin={0}
-                aria-valuemax={N - 1}
-                aria-valuenow={activeIndex}
-                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.snowLevel ?? '--'} m` : undefined}
-                onKeyDown={handleKeyDown}
-              >
-                {dayMarkers.map(m => (
-                  <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" />
-                ))}
+              {/* El SVG s'estira a tota l'amplada (preserveAspectRatio none + traços sense escalar): amb l'escalat
+                  proporcional d'abans, a PC el gràfic quedava estret al mig i el scrub, que llegeix la posició sobre
+                  tota l'amplada, no coincidia amb la línia. Punts i dates en HTML perquè no es deformin. */}
+              <div className="relative h-40 md:h-52">
+                <svg
+                  viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 w-full h-full overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+                  style={{ touchAction: 'none' }}
+                  onPointerMove={handlePointerMove}
+                  onPointerDown={handlePointerMove}
+                  onPointerUp={clearScrub}
+                  onPointerLeave={clearScrub}
+                  onPointerCancel={clearScrub}
+                  tabIndex={0}
+                  role="slider"
+                  aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
+                  aria-valuemin={0}
+                  aria-valuemax={N - 1}
+                  aria-valuenow={activeIndex}
+                  aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.snowLevel ?? '--'} m` : undefined}
+                  onKeyDown={handleKeyDown}
+                >
+                  {dayMarkers.map(m => (
+                    <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
+                  ))}
 
-                {areaPath && <path d={areaPath} fill={STROKE} fillOpacity="0.12" />}
-                {linePath && <path d={linePath} fill="none" stroke={STROKE} strokeWidth="2" strokeLinecap="round" opacity="0.95" />}
+                  {areaPath && <path d={areaPath} fill={STROKE} fillOpacity="0.12" />}
+                  {linePath && <path d={linePath} fill="none" stroke={STROKE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" vectorEffect="non-scaling-stroke" />}
 
-                {minWindow && (
-                  <circle cx={idxToX(minWindow.idx)} cy={levelToY(minWindow.value)} r="4" fill="#f43f5e" opacity="0.9" />
-                )}
+                  {isScrubbing && activeEntry && (
+                    <line x1={idxToX(activeIndex)} x2={idxToX(activeIndex)} y1={TOP_Y} y2={BOTTOM_Y} stroke={STROKE} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" vectorEffect="non-scaling-stroke" />
+                  )}
+                </svg>
 
-                {activeEntry && activeEntry.snowLevel !== null && (
-                  <g style={{ transform: `translate(${idxToX(activeIndex)}px, ${levelToY(activeEntry.snowLevel)}px)` }}>
-                    {isScrubbing && <line y1={TOP_Y - levelToY(activeEntry.snowLevel)} y2={BOTTOM_Y - levelToY(activeEntry.snowLevel)} stroke={STROKE} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />}
-                    <circle r="6" fill={STROKE} opacity="0.25" />
-                    <circle r="3.5" fill="#fff" opacity="0.95" />
-                  </g>
-                )}
-              </svg>
+                {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {dayMarkers.map(m => (
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                      {m.label}
+                    </span>
+                  ))}
+                  {minWindow && (
+                    <span className="absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500/90" style={{ left: `${pctX(minWindow.idx)}%`, top: `${pctY(minWindow.value)}%` }} />
+                  )}
+                  {activeEntry && activeEntry.snowLevel !== null && (
+                    <span className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/25 flex items-center justify-center" style={{ left: `${pctX(activeIndex)}%`, top: `${pctY(activeEntry.snowLevel)}%` }}>
+                      <span className="w-[7px] h-[7px] rounded-full bg-white/95" />
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* TARGETES D'ESTADÍSTIQUES */}

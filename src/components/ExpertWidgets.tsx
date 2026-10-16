@@ -18,6 +18,7 @@ import { UVIndexWidget } from './widgets/UVIndexWidget';
 import { getCurrentUV } from '../utils/uvIndexUtils';
 import { resolveCurrentDisplayVisibility } from '../utils/visibilityDisplay';
 import { preloadSolarModal } from './solar/preloadSolarModal';
+import type { ChartDataPoint } from './ForecastSection';
 import {
   CompassGauge,
   SnowLevelWidget,
@@ -32,11 +33,13 @@ import {
 } from './widgets';
 
 // onIntent: el dit toca o el focus arriba a la targeta, abans del clic; serveix per precarregar el modal.
-interface WidgetCardProps { children: React.ReactNode; cols?: number; onClick?: () => void; onIntent?: () => void; }
+// fullRow: ocupa tota la fila a qualsevol amplada. És per a la cota de neu, que només surt de vegades i
+// sempre queda l'última: sense això a PC es quedava sola en 1 de 4 columnes (i en 1 de 2 a tauleta).
+interface WidgetCardProps { children: React.ReactNode; cols?: number; fullRow?: boolean; onClick?: () => void; onIntent?: () => void; }
 
-const WidgetCard = ({ children, cols = 1, onClick, onIntent }: WidgetCardProps) => (
+const WidgetCard = ({ children, cols = 1, fullRow = false, onClick, onIntent }: WidgetCardProps) => (
   <div
-    className={`col-span-1 ${cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
+    className={`col-span-1 ${fullRow ? 'sm:col-span-2 lg:col-span-4' : cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
     onClick={onClick}
     onPointerDown={onIntent}
     onFocus={onIntent}
@@ -54,6 +57,9 @@ interface ExpertWidgetsProps {
   lang: Language;
   unit: WeatherUnit;
   freezingLevel: number | null;
+  // calculations.chartDataFull (comença a l'hora actual): l'evolució de 48 h del giny de cota de neu,
+  // la mateixa sèrie que llegeix SnowLevelModal.
+  chartDataFull?: ChartDataPoint[];
   onShowSolarModal: () => void;
   onShowMoonModal: () => void;
   onShowStormModal: () => void;
@@ -70,7 +76,7 @@ interface ExpertWidgetsProps {
   effectiveCode?: number | null;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, effectiveCode = null }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, effectiveCode = null }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
   const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
@@ -335,8 +341,14 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           {showSnowWidget && freezingLevel !== null && (
-              <WidgetCard onClick={onShowSnowLevelModal}>
-                  <SnowLevelWidget freezingLevel={freezingLevel} unit={unit} lang={lang} />
+              <WidgetCard fullRow onClick={onShowSnowLevelModal}>
+                  <SnowLevelWidget
+                      freezingLevel={freezingLevel}
+                      chartData={chartDataFull}
+                      elevation={typeof weatherData.elevation === 'number' ? weatherData.elevation : null}
+                      unit={unit}
+                      lang={lang}
+                  />
               </WidgetCard>
           )}
       </div>
