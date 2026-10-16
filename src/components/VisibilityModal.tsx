@@ -214,6 +214,9 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
   const CHART_MAX_M = 15000;
   const visToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(CHART_MAX_M, v)) / CHART_MAX_M) * (BOTTOM_Y - TOP_Y);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
+  // Mateixes coordenades en % de la capa HTML (punt i dates) que va per sobre del SVG estirat.
+  const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
+  const pctY = (v: number) => (visToY(v) / CHART_H) * 100;
 
   const areaPath = useMemo(() => {
     if (N === 0) return '';
@@ -338,43 +341,59 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
                 )}
               </div>
 
-              <svg
-                viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-                style={{ touchAction: 'none' }}
-                onPointerMove={handlePointerMove}
-                onPointerDown={handlePointerMove}
-                onPointerUp={clearScrub}
-                onPointerLeave={clearScrub}
-                onPointerCancel={clearScrub}
-                tabIndex={0}
-                role="slider"
-                aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
-                aria-valuemin={0}
-                aria-valuemax={N - 1}
-                aria-valuenow={activeIndex}
-                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.bound === 'min' ? '≥ ' : activeEntry.bound === 'max' ? '≤ ' : ''}${activeEntry.visibility ?? '--'} m` : undefined}
-                onKeyDown={handleKeyDown}
-              >
-                <line x1="0" y1={visToY(VISIBILITY.FOG)} x2={CHART_W} y2={visToY(VISIBILITY.FOG)} stroke="#f43f5e" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1={visToY(VISIBILITY.HAZE)} x2={CHART_W} y2={visToY(VISIBILITY.HAZE)} stroke="#fbbf24" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1={visToY(VISIBILITY.GOOD)} x2={CHART_W} y2={visToY(VISIBILITY.GOOD)} stroke="#38bdf8" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" />
+              {/* SVG estirat a tota l'amplada (preserveAspectRatio none + traços sense escalar), com SnowLevelModal:
+                  amb l'escalat proporcional, a PC el gràfic quedava estret al mig i el scrub no coincidia amb la línia. */}
+              <div className="relative h-40 md:h-52">
+                <svg
+                  viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 w-full h-full overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+                  style={{ touchAction: 'none' }}
+                  onPointerMove={handlePointerMove}
+                  onPointerDown={handlePointerMove}
+                  onPointerUp={clearScrub}
+                  onPointerLeave={clearScrub}
+                  onPointerCancel={clearScrub}
+                  tabIndex={0}
+                  role="slider"
+                  aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
+                  aria-valuemin={0}
+                  aria-valuemax={N - 1}
+                  aria-valuenow={activeIndex}
+                  aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.bound === 'min' ? '≥ ' : activeEntry.bound === 'max' ? '≤ ' : ''}${activeEntry.visibility ?? '--'} m` : undefined}
+                  onKeyDown={handleKeyDown}
+                >
+                  <line x1="0" y1={visToY(VISIBILITY.FOG)} x2={CHART_W} y2={visToY(VISIBILITY.FOG)} stroke="#f43f5e" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1={visToY(VISIBILITY.HAZE)} x2={CHART_W} y2={visToY(VISIBILITY.HAZE)} stroke="#fbbf24" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1={visToY(VISIBILITY.GOOD)} x2={CHART_W} y2={visToY(VISIBILITY.GOOD)} stroke="#38bdf8" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
 
-                {dayMarkers.map(m => (
-                  <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" />
-                ))}
+                  {dayMarkers.map(m => (
+                    <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
+                  ))}
 
-                {areaPath && <path d={areaPath} fill={severity.stroke} fillOpacity="0.12" />}
-                {linePath && <path d={linePath} fill="none" stroke={severity.stroke} strokeWidth="2" strokeLinecap="round" opacity="0.95" />}
+                  {areaPath && <path d={areaPath} fill={severity.stroke} fillOpacity="0.12" />}
+                  {linePath && <path d={linePath} fill="none" stroke={severity.stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" vectorEffect="non-scaling-stroke" />}
 
-                {activeEntry && activeEntry.visibility !== null && (
-                  <g style={{ transform: `translate(${idxToX(activeIndex)}px, ${visToY(activeEntry.visibility)}px)` }}>
-                    {isScrubbing && <line y1={TOP_Y - visToY(activeEntry.visibility)} y2={BOTTOM_Y - visToY(activeEntry.visibility)} stroke={severity.stroke} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />}
-                    <circle r="6" fill={severity.stroke} opacity="0.25" />
-                    <circle r="3.5" fill="#fff" opacity="0.95" />
-                  </g>
-                )}
-              </svg>
+                  {isScrubbing && activeEntry && (
+                    <line x1={idxToX(activeIndex)} x2={idxToX(activeIndex)} y1={TOP_Y} y2={BOTTOM_Y} stroke={severity.stroke} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" vectorEffect="non-scaling-stroke" />
+                  )}
+                </svg>
+
+                {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {dayMarkers.map(m => (
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                      {m.label}
+                    </span>
+                  ))}
+                  {activeEntry && activeEntry.visibility !== null && (
+                    <span className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center" style={{ left: `${pctX(activeIndex)}%`, top: `${pctY(activeEntry.visibility)}%` }}>
+                      <span className="absolute inset-0 rounded-full opacity-25" style={{ backgroundColor: severity.stroke }} />
+                      <span className="relative w-[7px] h-[7px] rounded-full bg-white/95" />
+                    </span>
+                  )}
+                </div>
+              </div>
               {anyBounded && (
                 <p className="mt-3 text-[10px] leading-snug text-slate-500 font-medium">{t.cappedHint}</p>
               )}

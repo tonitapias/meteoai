@@ -210,6 +210,9 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
     return BOTTOM_Y - ((Math.max(yBounds.min, Math.min(yBounds.max, v)) - yBounds.min) / range) * (BOTTOM_Y - TOP_Y);
   };
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
+  // Mateixes coordenades en % de la capa HTML (punts i dates) que va per sobre del SVG estirat.
+  const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
+  const pctY = (v: number) => (pressureToY(v) / CHART_H) * 100;
 
   const linePath = useMemo(() => {
     if (N === 0) return '';
@@ -339,43 +342,57 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
                 )}
               </div>
 
-              <svg
-                viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
-                style={{ touchAction: 'none' }}
-                onPointerMove={handlePointerMove}
-                onPointerDown={handlePointerMove}
-                onPointerUp={clearScrub}
-                onPointerLeave={clearScrub}
-                onPointerCancel={clearScrub}
-                tabIndex={0}
-                role="slider"
-                aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
-                aria-valuemin={0}
-                aria-valuemax={N - 1}
-                aria-valuenow={activeIndex}
-                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.pressure ?? '--'} hPa` : undefined}
-                onKeyDown={handleKeyDown}
-              >
-                {dayMarkers.map(m => (
-                  <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" />
-                ))}
+              {/* SVG estirat a tota l'amplada (preserveAspectRatio none + traços sense escalar), com SnowLevelModal:
+                  amb l'escalat proporcional, a PC el gràfic quedava estret al mig i el scrub no coincidia amb la línia. */}
+              <div className="relative h-40 md:h-52">
+                <svg
+                  viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 w-full h-full overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+                  style={{ touchAction: 'none' }}
+                  onPointerMove={handlePointerMove}
+                  onPointerDown={handlePointerMove}
+                  onPointerUp={clearScrub}
+                  onPointerLeave={clearScrub}
+                  onPointerCancel={clearScrub}
+                  tabIndex={0}
+                  role="slider"
+                  aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
+                  aria-valuemin={0}
+                  aria-valuemax={N - 1}
+                  aria-valuenow={activeIndex}
+                  aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.pressure ?? '--'} hPa` : undefined}
+                  onKeyDown={handleKeyDown}
+                >
+                  {dayMarkers.map(m => (
+                    <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
+                  ))}
 
-                {areaPath && <path d={areaPath} fill="#818cf8" fillOpacity="0.12" />}
-                {linePath && <path d={linePath} fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" opacity="0.95" />}
+                  {areaPath && <path d={areaPath} fill="#818cf8" fillOpacity="0.12" />}
+                  {linePath && <path d={linePath} fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" vectorEffect="non-scaling-stroke" />}
 
-                {steepestChange && (
-                  <circle cx={idxToX(steepestChange.idx)} cy={pressureToY(windowEntries[steepestChange.idx].pressure ?? 0)} r="4" fill="#f43f5e" opacity="0.9" />
-                )}
+                  {isScrubbing && activeEntry && (
+                    <line x1={idxToX(activeIndex)} x2={idxToX(activeIndex)} y1={TOP_Y} y2={BOTTOM_Y} stroke="#818cf8" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" vectorEffect="non-scaling-stroke" />
+                  )}
+                </svg>
 
-                {activeEntry && activeEntry.pressure !== null && (
-                  <g style={{ transform: `translate(${idxToX(activeIndex)}px, ${pressureToY(activeEntry.pressure)}px)` }}>
-                    {isScrubbing && <line y1={TOP_Y - pressureToY(activeEntry.pressure)} y2={BOTTOM_Y - pressureToY(activeEntry.pressure)} stroke="#818cf8" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />}
-                    <circle r="6" fill="#818cf8" opacity="0.25" />
-                    <circle r="3.5" fill="#fff" opacity="0.95" />
-                  </g>
-                )}
-              </svg>
+                {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {dayMarkers.map(m => (
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                      {m.label}
+                    </span>
+                  ))}
+                  {steepestChange && (
+                    <span className="absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500/90" style={{ left: `${pctX(steepestChange.idx)}%`, top: `${pctY(windowEntries[steepestChange.idx].pressure ?? 0)}%` }} />
+                  )}
+                  {activeEntry && activeEntry.pressure !== null && (
+                    <span className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-400/25 flex items-center justify-center" style={{ left: `${pctX(activeIndex)}%`, top: `${pctY(activeEntry.pressure)}%` }}>
+                      <span className="w-[7px] h-[7px] rounded-full bg-white/95" />
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* TARGETES D'ESTADÍSTIQUES */}

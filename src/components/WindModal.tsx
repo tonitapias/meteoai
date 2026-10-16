@@ -252,6 +252,9 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
 
   const valToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(yMax, v)) / yMax) * (BOTTOM_Y - TOP_Y);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
+  // Mateixes coordenades en % de la capa HTML (punts i dates) que va per sobre del SVG estirat.
+  const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
+  const pctY = (v: number) => (valToY(v) / CHART_H) * 100;
 
   const speedArea = useMemo(() => {
     if (N === 0) return '';
@@ -434,44 +437,59 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                 )}
               </div>
 
-              <svg
-                viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
-                style={{ touchAction: 'none' }}
-                onPointerMove={handlePointerMove}
-                onPointerDown={handlePointerMove}
-                onPointerUp={clearScrub}
-                onPointerLeave={clearScrub}
-                onPointerCancel={clearScrub}
-                tabIndex={0}
-                role="slider"
-                aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
-                aria-valuemin={0}
-                aria-valuemax={N - 1}
-                aria-valuenow={activeIndex}
-                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.speed ?? '--'} km/h` : undefined}
-                onKeyDown={handleKeyDown}
-              >
-                {dayMarkers.map(m => (
-                  <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" />
-                ))}
+              {/* SVG estirat a tota l'amplada (preserveAspectRatio none + traços sense escalar), com SnowLevelModal:
+                  amb l'escalat proporcional, a PC el gràfic quedava estret al mig i el scrub no coincidia amb la línia. */}
+              <div className="relative h-40 md:h-52">
+                <svg
+                  viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 w-full h-full overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                  style={{ touchAction: 'none' }}
+                  onPointerMove={handlePointerMove}
+                  onPointerDown={handlePointerMove}
+                  onPointerUp={clearScrub}
+                  onPointerLeave={clearScrub}
+                  onPointerCancel={clearScrub}
+                  tabIndex={0}
+                  role="slider"
+                  aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
+                  aria-valuemin={0}
+                  aria-valuemax={N - 1}
+                  aria-valuenow={activeIndex}
+                  aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.speed ?? '--'} km/h` : undefined}
+                  onKeyDown={handleKeyDown}
+                >
+                  {dayMarkers.map(m => (
+                    <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
+                  ))}
 
-                {speedArea && <path d={speedArea} fill={severity.stroke} fillOpacity="0.12" />}
-                {gustLine && <path d={gustLine} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3" strokeLinecap="round" opacity="0.7" />}
-                {speedLine && <path d={speedLine} fill="none" stroke={severity.stroke} strokeWidth="2" strokeLinecap="round" opacity="0.95" />}
+                  {speedArea && <path d={speedArea} fill={severity.stroke} fillOpacity="0.12" />}
+                  {gustLine && <path d={gustLine} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" vectorEffect="non-scaling-stroke" />}
+                  {speedLine && <path d={speedLine} fill="none" stroke={severity.stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" vectorEffect="non-scaling-stroke" />}
 
-                {maxGustWindow && (
-                  <circle cx={idxToX(maxGustWindow.idx)} cy={valToY(maxGustWindow.value)} r="4" fill="#f43f5e" opacity="0.9" />
-                )}
+                  {isScrubbing && activeEntry && (
+                    <line x1={idxToX(activeIndex)} x2={idxToX(activeIndex)} y1={TOP_Y} y2={BOTTOM_Y} stroke={severity.stroke} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" vectorEffect="non-scaling-stroke" />
+                  )}
+                </svg>
 
-                {activeEntry && activeEntry.speed !== null && (
-                  <g style={{ transform: `translate(${idxToX(activeIndex)}px, ${valToY(activeEntry.speed)}px)` }}>
-                    {isScrubbing && <line y1={TOP_Y - valToY(activeEntry.speed)} y2={BOTTOM_Y - valToY(activeEntry.speed)} stroke={severity.stroke} strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />}
-                    <circle r="6" fill={severity.stroke} opacity="0.25" />
-                    <circle r="3.5" fill="#fff" opacity="0.95" />
-                  </g>
-                )}
-              </svg>
+                {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {dayMarkers.map(m => (
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                      {m.label}
+                    </span>
+                  ))}
+                  {maxGustWindow && (
+                    <span className="absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500/90" style={{ left: `${pctX(maxGustWindow.idx)}%`, top: `${pctY(maxGustWindow.value)}%` }} />
+                  )}
+                  {activeEntry && activeEntry.speed !== null && (
+                    <span className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center" style={{ left: `${pctX(activeIndex)}%`, top: `${pctY(activeEntry.speed)}%` }}>
+                      <span className="absolute inset-0 rounded-full opacity-25" style={{ backgroundColor: severity.stroke }} />
+                      <span className="relative w-[7px] h-[7px] rounded-full bg-white/95" />
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {/* Franja de direcció */}
               <div className="flex items-center justify-between mt-2 px-1">

@@ -187,6 +187,9 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
   // --- Geometria del gràfic: percentatge 0-100 directe ---
   const valToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(100, v)) / 100) * (BOTTOM_Y - TOP_Y);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
+  // Mateixes coordenades en % de la capa HTML (punts i dates) que va per sobre del SVG estirat.
+  const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
+  const pctY = (v: number) => (valToY(v) / CHART_H) * 100;
 
   const buildLinePath = (key: LayerKey) => windowEntries
     .map((e, i) => (e[key] !== null ? `${i === 0 ? 'M' : 'L'} ${idxToX(i)} ${valToY(e[key] as number)}` : null))
@@ -296,45 +299,57 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                 )}
               </div>
 
-              <svg
-                viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                className="w-full h-40 overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-                style={{ touchAction: 'none' }}
-                onPointerMove={handlePointerMove}
-                onPointerDown={handlePointerMove}
-                onPointerUp={clearScrub}
-                onPointerLeave={clearScrub}
-                onPointerCancel={clearScrub}
-                tabIndex={0}
-                role="slider"
-                aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
-                aria-valuemin={0}
-                aria-valuemax={N - 1}
-                aria-valuenow={activeIndex}
-                aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${t.high} ${activeEntry.high ?? '--'}% · ${t.mid} ${activeEntry.mid ?? '--'}% · ${t.low} ${activeEntry.low ?? '--'}%` : undefined}
-                onKeyDown={handleKeyDown}
-              >
-                <line x1="0" y1={valToY(CLOUDS.FEW)} x2={CHART_W} y2={valToY(CLOUDS.FEW)} stroke="#34d399" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1={valToY(CLOUDS.SCATTERED)} x2={CHART_W} y2={valToY(CLOUDS.SCATTERED)} stroke="#38bdf8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1={valToY(CLOUDS.OVERCAST)} x2={CHART_W} y2={valToY(CLOUDS.OVERCAST)} stroke="#818cf8" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" />
+              {/* SVG estirat a tota l'amplada (preserveAspectRatio none + traços sense escalar), com SnowLevelModal:
+                  amb l'escalat proporcional, a PC el gràfic quedava estret al mig i el scrub no coincidia amb les línies. */}
+              <div className="relative h-40 md:h-52">
+                <svg
+                  viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 w-full h-full overflow-visible cursor-crosshair rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+                  style={{ touchAction: 'none' }}
+                  onPointerMove={handlePointerMove}
+                  onPointerDown={handlePointerMove}
+                  onPointerUp={clearScrub}
+                  onPointerLeave={clearScrub}
+                  onPointerCancel={clearScrub}
+                  tabIndex={0}
+                  role="slider"
+                  aria-label={`${t.evolution} · ${WINDOW_HOURS}h`}
+                  aria-valuemin={0}
+                  aria-valuemax={N - 1}
+                  aria-valuenow={activeIndex}
+                  aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${t.high} ${activeEntry.high ?? '--'}% · ${t.mid} ${activeEntry.mid ?? '--'}% · ${t.low} ${activeEntry.low ?? '--'}%` : undefined}
+                  onKeyDown={handleKeyDown}
+                >
+                  <line x1="0" y1={valToY(CLOUDS.FEW)} x2={CHART_W} y2={valToY(CLOUDS.FEW)} stroke="#34d399" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1={valToY(CLOUDS.SCATTERED)} x2={CHART_W} y2={valToY(CLOUDS.SCATTERED)} stroke="#38bdf8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1={valToY(CLOUDS.OVERCAST)} x2={CHART_W} y2={valToY(CLOUDS.OVERCAST)} stroke="#818cf8" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
 
-                {dayMarkers.map(m => (
-                  <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" />
-                ))}
+                  {dayMarkers.map(m => (
+                    <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
+                  ))}
 
-                {lineHigh && <path d={lineHigh} fill="none" stroke={LAYER_STROKE.high} strokeWidth="2" strokeLinecap="round" opacity="0.9" />}
-                {lineMid && <path d={lineMid} fill="none" stroke={LAYER_STROKE.mid} strokeWidth="2" strokeLinecap="round" opacity="0.9" />}
-                {lineLow && <path d={lineLow} fill="none" stroke={LAYER_STROKE.low} strokeWidth="2" strokeLinecap="round" opacity="0.9" />}
+                  {lineHigh && <path d={lineHigh} fill="none" stroke={LAYER_STROKE.high} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" vectorEffect="non-scaling-stroke" />}
+                  {lineMid && <path d={lineMid} fill="none" stroke={LAYER_STROKE.mid} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" vectorEffect="non-scaling-stroke" />}
+                  {lineLow && <path d={lineLow} fill="none" stroke={LAYER_STROKE.low} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" vectorEffect="non-scaling-stroke" />}
 
-                {activeEntry && (
-                  <g>
-                    {isScrubbing && <line x1={idxToX(activeIndex)} x2={idxToX(activeIndex)} y1={TOP_Y} y2={BOTTOM_Y} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" opacity="0.3" />}
-                    {activeEntry.high !== null && <circle cx={idxToX(activeIndex)} cy={valToY(activeEntry.high)} r="3.5" fill={LAYER_STROKE.high} opacity="0.95" />}
-                    {activeEntry.mid !== null && <circle cx={idxToX(activeIndex)} cy={valToY(activeEntry.mid)} r="3.5" fill={LAYER_STROKE.mid} opacity="0.95" />}
-                    {activeEntry.low !== null && <circle cx={idxToX(activeIndex)} cy={valToY(activeEntry.low)} r="3.5" fill={LAYER_STROKE.low} opacity="0.95" />}
-                  </g>
-                )}
-              </svg>
+                  {isScrubbing && activeEntry && (
+                    <line x1={idxToX(activeIndex)} x2={idxToX(activeIndex)} y1={TOP_Y} y2={BOTTOM_Y} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" opacity="0.3" vectorEffect="non-scaling-stroke" />
+                  )}
+                </svg>
+
+                {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {dayMarkers.map(m => (
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                      {m.label}
+                    </span>
+                  ))}
+                  {activeEntry && (['high', 'mid', 'low'] as LayerKey[]).map(key => activeEntry[key] !== null && (
+                    <span key={key} className="absolute w-[7px] h-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-95" style={{ left: `${pctX(activeIndex)}%`, top: `${pctY(activeEntry[key] as number)}%`, backgroundColor: LAYER_STROKE[key] }} />
+                  ))}
+                </div>
+              </div>
 
               {/* Llegenda de colors */}
               <div className="flex items-center justify-center gap-4 mt-2 relative z-10">
