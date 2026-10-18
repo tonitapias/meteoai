@@ -155,7 +155,9 @@ Un vuitè modal de detall, accessible tocant el giny de Visibilitat en Mode Expe
 * Reutilitza `hourly.visibility`, ja demanat a Open-Meteo — cap crida de xarxa nova.
 
 ### 10. Núvols: Perfil de Capes
-Un novè modal de detall, accessible tocant el giny de Núvols en Mode Expert:
+* **Giny Capes de núvols** (abans «Profunditat de núvols»): un perfil vertical del cel amb les tres capes apilades com al cel —alts a dalt, baixos a baix—, cadascuna amb una barra horitzontal i el seu percentatge, i les fronteres d'Open-Meteo (3 i 8 km) marcades a les línies que les separen. Al costat, la cobertura efectiva i el seu estat, els mateixos números i paraules que el modal. Es llegeix bé a totes les mides: a PC (targeta estreta) la xifra i el perfil van apilats; a mòbil i tauleta, l'un al costat de l'altre. Abans eren tres barres verticals que a PC no hi cabien (les xifres es tocaven i el títol es tallava). Una capa sense dada surt com a «--», mai com a 0 %.
+
+Un novè modal de detall, accessible tocant el giny Capes de núvols en Mode Expert:
 * **Cobertura efectiva actual:** ponderació de les tres capes (baixos×1.0 + mitjans×0.6 + alts×0.3 — el mateix càlcul que ja determina la icona de cel a la resta de l'app) classificada en 4 estats (Serè/Parcialment Ennuvolat/Molt Ennuvolat/Cobert).
 * **Evolució de 48h per capa:** gràfic *scrubbable* amb les tres capes (alts/mitjans/baixos) superposades, per veure com evoluciona el perfil vertical del cel al llarg del temps, no només un percentatge global.
 * **Estadístiques:** capa dominant de la finestra (la de major cobertura mitjana) i hores amb cel cobert.
