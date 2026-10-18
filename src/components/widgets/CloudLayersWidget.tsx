@@ -1,96 +1,119 @@
+// src/components/widgets/CloudLayersWidget.tsx
+// Giny "Capes de núvols" (abans "Profunditat de núvols": no mostra el gruix dels núvols, i el títol no cabia a
+// PC): el perfil vertical del cel ara mateix. La cobertura efectiva i el seu nivell (els mateixos que el modal i
+// que la icona de cel, utils/cloudCoverLevel.ts) i les tres capes apilades com al cel (alts a dalt, baixos a
+// baix), amb les alçades que les defineixen a Open-Meteo (< 3 km, 3-8 km, > 8 km) marcades a les línies que les
+// separen i una barra horitzontal per capa.
+// Abans eren tres barres verticals l'una al costat de l'altra: a PC (226 px d'ample i 354 d'alt) les xifres
+// "100%" es tocaven i les etiquetes quedaven apretades; al mòbil les línies de fons travessaven les xifres.
+// Sense blur, filtres ni animacions infinites (mòbils modestos).
 import { Layers, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
+import { cloudCoverLevel, effectiveCloudCoverNow, CLOUD_LEVEL_LABEL, CloudCoverLevel } from '../../utils/cloudCoverLevel';
+import type { Language } from '../../translations';
+
+type LayerKey = 'high' | 'mid' | 'low';
+
+// De dalt a baix, com al cel. `base`: alçada de la línia que la separa de la capa de sota (Open-Meteo: baixos fins
+// a 3 km, mitjans de 3 a 8 km, alts des de 8 km). Colors = LAYER_STROKE del modal.
+const LAYERS: { key: LayerKey; color: string; base: string | null }[] = [
+  { key: 'high', color: '#7dd3fc', base: '8 km' },
+  { key: 'mid', color: '#3b82f6', base: '3 km' },
+  { key: 'low', color: '#4f46e5', base: null },
+];
+
+// Mateixos colors que el número i l'etiqueta del modal (getCloudSeverity).
+const LEVEL_TEXT: Record<CloudCoverLevel | 'unknown', string> = {
+  clear: 'text-emerald-400',
+  partial: 'text-sky-400',
+  veryCloudy: 'text-indigo-400',
+  overcast: 'text-slate-300',
+  unknown: 'text-slate-500',
+};
+
+// Xifra al costat del perfil només quan la targeta fa >= 340 px; més estreta, apilats (si no, "MITJANS" no hi cabia).
+// Amplada de la targeta a la graella d'ExpertWidgets segons la pantalla: < 372 px → 288-339 (apilat) · 372-639 →
+// 340-607 (costat) · sm → 292-348 (apilat) · md → 348-483 (costat) · lg, 4 columnes → ~226 (apilat).
+const BODY_LAYOUT = 'flex-col gap-3 min-[372px]:flex-row min-[372px]:gap-4 sm:flex-col sm:gap-3 md:flex-row md:gap-4 lg:flex-col lg:gap-3';
+const HERO_BOX = 'w-auto gap-1 min-[372px]:w-[6.5rem] min-[372px]:gap-1.5 sm:w-auto sm:gap-1 md:w-[6.5rem] md:gap-1.5 lg:w-auto lg:gap-1';
+const HERO_VALUE = 'flex-row items-center gap-3 min-[372px]:flex-col min-[372px]:items-start min-[372px]:gap-1.5 sm:flex-row sm:items-center sm:gap-3 md:flex-col md:items-start md:gap-1.5 lg:flex-row lg:items-center lg:gap-3';
+
+const asPercent = (v: unknown): number | null =>
+  typeof v === 'number' && !isNaN(v) ? Math.max(0, Math.min(v, 100)) : null;
 
 export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
   // DOCTRINA RISC ZERO: Extracció segura de traduccions sense "any"
   const t = getTrans(lang) as Record<string, unknown>;
-  let title = "NÚVOLS";
-  let lHigh = "Alts", lMid = "Mitjans", lLow = "Baixos";
-  
-  if (t && typeof t.cloudLayers === 'object' && t.cloudLayers !== null) {
-      const cl = t.cloudLayers as Record<string, string>;
-      title = (cl.title || title).toUpperCase();
-      lHigh = cl.high || lHigh;
-      lMid = cl.mid || lMid;
-      lLow = cl.low || lLow;
-  }
+  const cl = (t && typeof t.cloudLayers === 'object' && t.cloudLayers !== null ? t.cloudLayers : {}) as Record<string, string>;
+  const title = (cl.title || 'Núvols').toUpperCase();
+  const labels: Record<LayerKey, string> = { high: cl.high || 'Alts', mid: cl.mid || 'Mitjans', low: cl.low || 'Baixos' };
+  const levelLabels = CLOUD_LEVEL_LABEL[lang as Language] ?? CLOUD_LEVEL_LABEL.ca;
 
-  // DOCTRINA RISC ZERO: Separació estricta entre 0% (Cel Clar) i null (Pèrdua de Telemetria)
-  const parseLayer = (val: unknown, label: string, colorClass: string, glowClass: string) => {
-      const isValid = typeof val === 'number' && !isNaN(val);
-      // Limitem matemàticament entre 0 i 100 només si tenim dades reals
-      const safeNum = isValid ? Math.max(0, Math.min(val as number, 100)) : 0;
-      
-      return {
-          label,
-          isValid,
-          value: safeNum,
-          display: isValid ? Math.round(safeNum).toString() : '--',
-          bgClass: isValid ? colorClass : 'from-slate-700/50 to-slate-800/50',
-          glowClass: isValid && safeNum > 0 ? glowClass : '', // Només brilla si hi ha dades I hi ha núvols
-          textClass: isValid ? 'text-white' : 'text-slate-500'
-      };
-  };
-
-  // Lògica de dades amb colors aeris i efectes de resplendor tàctic
-  const layers = [
-      parseLayer(high, lHigh, 'from-sky-300 to-sky-100', 'shadow-[0_0_12px_rgba(186,230,253,0.8)]'),
-      parseLayer(mid, lMid, 'from-blue-500 to-sky-400', 'shadow-[0_0_12px_rgba(56,189,248,0.8)]'),
-      parseLayer(low, lLow, 'from-indigo-600 to-blue-500', 'shadow-[0_0_12px_rgba(79,70,229,0.8)]'),
-  ];
-
-  // Dark Dashboard Spatial UI
-  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} relative overflow-hidden bg-gradient-to-br from-indigo-950/20 to-black/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col p-3 sm:p-4 transition-colors duration-700`;
+  // DOCTRINA RISC ZERO: 0 % (cel net) i null (sense dada) són coses diferents.
+  const values: Record<LayerKey, number | null> = { high: asPercent(high), mid: asPercent(mid), low: asPercent(low) };
+  const effective = effectiveCloudCoverNow(low, mid, high);
+  const level = effective === null ? 'unknown' : cloudCoverLevel(effective);
 
   return (
-    <div className={SPATIAL_WIDGET_STYLE}>
-       {/* Capa de fons espacial */}
-       <div className={MATRIX_BG}></div>
+    <div className={`${WIDGET_BASE_STYLE} ${CARD_VEIL} bg-gradient-to-br from-indigo-950/20 to-black/80 !justify-start gap-3 select-none`}>
+      <div className={MATRIX_BG}></div>
 
-       <div className={`${TITLE_STYLE.replace('mb-4', 'mb-3')} flex items-center gap-1.5 z-10 relative`}>
-           <Layers className="w-4 h-4 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" /> 
-           <span className="tracking-wider">{title}</span>
-       </div>
-       
-       <div className="flex-1 flex items-end justify-between gap-3 sm:gap-4 px-1 relative min-h-[140px] mt-2 z-10">
-          {/* Graella espacial de radar atmosfèric */}
-          <div className="absolute inset-0 flex flex-col justify-between py-6 pointer-events-none opacity-30 z-0">
-              <div className="w-full border-t border-dashed border-slate-400/50"></div>
-              <div className="w-full border-t border-dashed border-slate-400/50"></div>
-              <div className="w-full border-t border-dashed border-slate-400/50"></div>
+      <div className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} min-w-0`}>
+        <Layers className="w-4 h-4 text-sky-400 shrink-0" />
+        <span className="truncate">{title}</span>
+      </div>
+
+      {/* Targeta ampla (mòbil, tauleta): xifra a l'esquerra i perfil a la dreta. Estreta (PC, mòbil petit): apilats. */}
+      <div className={`relative z-10 flex-1 flex min-h-0 ${BODY_LAYOUT}`}>
+        {/* Cobertura efectiva ara: el mateix número i nivell que el modal */}
+        <div className={`shrink-0 flex flex-col justify-center ${HERO_BOX}`}>
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-snug">{cl.effective || 'Cobertura efectiva'}</span>
+          <div className={`flex min-w-0 ${HERO_VALUE}`}>
+            <span className={`flex items-start leading-none shrink-0 ${LEVEL_TEXT[level]}`}>
+              <span className="text-4xl font-black tracking-tighter tabular-nums">{effective === null ? '--' : Math.round(effective)}</span>
+              {effective !== null && <span className="text-xs font-bold text-slate-400 mt-0.5 ml-0.5">%</span>}
+            </span>
+            <span className={`min-w-0 text-[11px] font-black uppercase tracking-wider leading-tight ${LEVEL_TEXT[level]}`}>{levelLabels[level]}</span>
           </div>
+        </div>
 
-          {layers.map((layer, i) => (
-             <div key={i} className="flex flex-col items-center justify-end w-full h-full relative group/beam z-10">
-                 {/* Cilindre contenidor de la barra */}
-                 <div className={`w-full relative rounded-t-lg overflow-hidden border-x border-t h-full flex items-end shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-500 ${layer.isValid ? 'bg-[#0f111a]/60 border-white/5' : 'bg-slate-900/40 border-slate-500/10'}`}>
-                     <div 
-                        className={`w-full transition-all duration-1000 ease-out bg-gradient-to-t ${layer.bgClass} relative opacity-90`}
-                        // Altura mínima del 4% només per mantenir la geometria si hi ha dades. Si no hi ha dades, es queda pla.
-                        style={{ height: layer.isValid ? `${Math.max(4, layer.value)}%` : '2%' }}
-                     >
-                        {/* Emissor de llum superior (Glow) */}
-                        <div className={`absolute top-0 w-full h-[3px] ${layer.isValid ? 'bg-white' : 'bg-slate-600'} ${layer.glowClass}`}></div>
-                     </div>
-                 </div>
-                 
-                 {/* Dades emmarcades (Spatial UI) */}
-                 <div className={`mt-2.5 text-center z-20 w-full py-1.5 rounded-md border shadow-lg transition-colors duration-500 ${layer.isValid ? 'bg-black/55 border-white/5' : 'bg-slate-900/55 border-slate-500/20'}`}>
-                     <span className={`block text-xl sm:text-2xl font-black tabular-nums leading-none mb-1 drop-shadow-md ${layer.textClass}`}>
-                        {layer.display}
-                        {layer.isValid && <span className="text-[10px] align-top text-slate-400 ml-0.5">%</span>}
-                     </span>
-                     <div className="flex items-center justify-center gap-1">
-                        {!layer.isValid && <CloudOff className="w-2.5 h-2.5 text-slate-500" />}
-                        <span className={`block text-[9px] font-black uppercase tracking-widest ${layer.isValid ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {layer.label}
-                        </span>
-                     </div>
-                 </div>
-             </div>
-          ))}
+        {/* Perfil vertical: una franja per capa, amb l'alçada de cada frontera marcada a la línia */}
+        <div className="relative flex-1 min-w-0 flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-black/50 to-indigo-950/40">
+          {LAYERS.map(({ key, color, base }, i) => {
+            const value = values[key];
+            const isValid = value !== null;
+            return (
+              <div key={key} className={`relative flex-1 flex flex-col justify-center gap-2 px-3 py-3 ${i > 0 ? 'border-t border-dashed border-white/10' : ''}`}>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {isValid
+                    ? <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
+                    : <CloudOff className="w-3 h-3 text-slate-500 shrink-0" />}
+                  <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isValid ? 'text-slate-200' : 'text-slate-500'}`}>{labels[key]}</span>
+                  <span className={`ml-auto pl-1 flex items-start leading-none shrink-0 ${isValid ? 'text-white' : 'text-slate-500'}`}>
+                    <span className="text-[15px] font-black tabular-nums">{isValid ? Math.round(value) : '--'}</span>
+                    {isValid && <span className="text-[9px] font-bold text-slate-400 ml-0.5">%</span>}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                  {isValid && value > 0 && (
+                    <div
+                      className="h-full rounded-full transition-[width] duration-700 ease-out"
+                      // Mínim visible del 3 % perquè un 1-2 % no desaparegui; el número diu el valor exacte.
+                      style={{ width: `${Math.max(3, value)}%`, backgroundImage: `linear-gradient(90deg, ${color}80, ${color})` }}
+                    ></div>
+                  )}
+                </div>
+                {base && (
+                  <span className="absolute right-2.5 bottom-0 translate-y-1/2 z-10 px-1.5 rounded-full border border-white/10 bg-[#0c0f1c] text-[8px] leading-[14px] font-bold tabular-nums text-slate-400">
+                    {base}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

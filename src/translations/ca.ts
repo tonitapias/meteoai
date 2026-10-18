@@ -273,10 +273,11 @@ export const ca = {
   
   // --- GINY NÚVOLS ---
   cloudLayers: {
-    title: "Profunditat de Núvols",
+    title: "Capes de Núvols",
     high: "Alts",
     mid: "Mitjans",
-    low: "Baixos"
+    low: "Baixos",
+    effective: "Cobertura efectiva"
   },
   
   aiRainLight: "Cau un plugim feble o quatre gotes ara mateix. ",

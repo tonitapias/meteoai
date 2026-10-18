@@ -273,10 +273,11 @@ export const fr = {
   
   // --- GINY NÚVOLS ---
   cloudLayers: {
-    title: "Profondeur des Nuages",
+    title: "Étages Nuageux",
     high: "Élevés",
     mid: "Moyens",
-    low: "Bas"
+    low: "Bas",
+    effective: "Couverture effective"
   },
   
   aiRainLight: "Une bruine très légère ou quelques gouttes tombent en ce moment. ",

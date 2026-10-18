@@ -13,6 +13,7 @@ import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { calculateEffectiveCloudCover } from '../utils/rules/cloudRules';
+import { cloudCoverLevel, effectiveCloudCoverNow, CLOUD_LEVEL_LABEL } from '../utils/cloudCoverLevel';
 
 const { CLOUDS } = WEATHER_THRESHOLDS;
 
@@ -30,28 +31,28 @@ const T: Record<Language, Record<string, string>> = {
     coverNow: 'Cobertura Efectiva', evolution: 'Evolució per Capes', scrubHint: 'Toca o arrossega per explorar',
     dominantLayer: 'Capa Dominant', hoursOvercast: 'Hores amb Cel Cobert', now: 'ARA', hoursShort: 'h',
     high: 'Alts', mid: 'Mitjans', low: 'Baixos',
-    clear: 'Serè', partial: 'Parcialment Ennuvolat', veryCloudy: 'Molt Ennuvolat', overcast: 'Cobert', unknown: 'Desconegut',
+    ...CLOUD_LEVEL_LABEL.ca,
   },
   es: {
     title: 'NUBES', subtitle: 'Perfil Vertical del Cielo', noData: 'DATOS INSUFICIENTES',
     coverNow: 'Cobertura Efectiva', evolution: 'Evolución por Capas', scrubHint: 'Toca o arrastra para explorar',
     dominantLayer: 'Capa Dominante', hoursOvercast: 'Horas con Cielo Cubierto', now: 'AHORA', hoursShort: 'h',
     high: 'Altas', mid: 'Medias', low: 'Bajas',
-    clear: 'Despejado', partial: 'Parcialmente Nublado', veryCloudy: 'Muy Nublado', overcast: 'Cubierto', unknown: 'Desconocido',
+    ...CLOUD_LEVEL_LABEL.es,
   },
   en: {
     title: 'CLOUDS', subtitle: 'Vertical Sky Profile', noData: 'INSUFFICIENT DATA',
     coverNow: 'Effective Coverage', evolution: 'Layer Evolution', scrubHint: 'Tap or drag to explore',
     dominantLayer: 'Dominant Layer', hoursOvercast: 'Hours with Overcast Sky', now: 'NOW', hoursShort: 'h',
     high: 'High', mid: 'Mid', low: 'Low',
-    clear: 'Clear', partial: 'Partly Cloudy', veryCloudy: 'Very Cloudy', overcast: 'Overcast', unknown: 'Unknown',
+    ...CLOUD_LEVEL_LABEL.en,
   },
   fr: {
     title: 'NUAGES', subtitle: 'Profil Vertical du Ciel', noData: 'DONNÉES INSUFFISANTES',
     coverNow: 'Couverture Effective', evolution: 'Évolution par Couches', scrubHint: 'Touchez ou glissez pour explorer',
     dominantLayer: 'Couche Dominante', hoursOvercast: 'Heures de Ciel Couvert', now: 'MAINTENANT', hoursShort: 'h',
     high: 'Hautes', mid: 'Moyennes', low: 'Basses',
-    clear: 'Dégagé', partial: 'Partiellement Nuageux', veryCloudy: 'Très Nuageux', overcast: 'Couvert', unknown: 'Inconnu',
+    ...CLOUD_LEVEL_LABEL.fr,
   },
 };
 
@@ -62,11 +63,13 @@ const getSafe = (arr: (number | null)[] | undefined, idx: number): number | null
 
 interface Severity { label: string; color: string; stroke: string; borderColor: string; bgGlow: string; }
 
+// Nivell i etiqueta compartits amb el giny del tauler (utils/cloudCoverLevel.ts): targeta i modal diuen el mateix.
 function getCloudSeverity(effectiveCover: number | null, t: Record<string, string>): Severity {
   if (effectiveCover === null) return { label: t.unknown, color: 'text-slate-500', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
-  if (effectiveCover < CLOUDS.FEW) return { label: t.clear, color: 'text-emerald-400', stroke: '#34d399', borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' };
-  if (effectiveCover < CLOUDS.SCATTERED) return { label: t.partial, color: 'text-sky-400', stroke: '#38bdf8', borderColor: 'border-sky-500/20', bgGlow: 'from-sky-950/20 to-black/90' };
-  if (effectiveCover < CLOUDS.OVERCAST) return { label: t.veryCloudy, color: 'text-indigo-400', stroke: '#818cf8', borderColor: 'border-indigo-500/20', bgGlow: 'from-indigo-950/25 to-black/90' };
+  const level = cloudCoverLevel(effectiveCover);
+  if (level === 'clear') return { label: t.clear, color: 'text-emerald-400', stroke: '#34d399', borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' };
+  if (level === 'partial') return { label: t.partial, color: 'text-sky-400', stroke: '#38bdf8', borderColor: 'border-sky-500/20', bgGlow: 'from-sky-950/20 to-black/90' };
+  if (level === 'veryCloudy') return { label: t.veryCloudy, color: 'text-indigo-400', stroke: '#818cf8', borderColor: 'border-indigo-500/20', bgGlow: 'from-indigo-950/25 to-black/90' };
   return { label: t.overcast, color: 'text-slate-300', stroke: '#cbd5e1', borderColor: 'border-slate-400/20', bgGlow: 'from-slate-800/30 to-black/90' };
 }
 
@@ -118,8 +121,7 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
   const currentMid = typeof current?.cloud_cover_mid === 'number' ? current.cloud_cover_mid : (N > 0 ? windowEntries[0].mid : null);
   const currentHigh = typeof current?.cloud_cover_high === 'number' ? current.cloud_cover_high : (N > 0 ? windowEntries[0].high : null);
 
-  const hasAnyCurrent = currentLow !== null || currentMid !== null || currentHigh !== null;
-  const effectiveNow = hasAnyCurrent ? calculateEffectiveCloudCover(currentLow ?? 0, currentMid ?? 0, currentHigh ?? 0) : null;
+  const effectiveNow = effectiveCloudCoverNow(currentLow, currentMid, currentHigh);
   const severity = getCloudSeverity(effectiveNow, t);
 
   // --- Capa dominant: la de major cobertura mitjana durant la finestra ---

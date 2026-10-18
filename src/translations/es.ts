@@ -272,10 +272,11 @@ export const es = {
   
   // --- GINY NÚVOLS ---
   cloudLayers: {
-    title: "Profundidad de Nubes",
+    title: "Capas de Nubes",
     high: "Altos",
     mid: "Medios",
-    low: "Bajos"
+    low: "Bajos",
+    effective: "Cobertura efectiva"
   },
   
   aiRainLight: "Cae una llovizna débil o cuatro gotas ahora mismo. ",

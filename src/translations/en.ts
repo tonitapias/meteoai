@@ -273,10 +273,11 @@ export const en = {
   
   // --- GINY NÚVOLS ---
   cloudLayers: {
-    title: "Cloud Depth",
+    title: "Cloud Layers",
     high: "High",
     mid: "Mid",
-    low: "Low"
+    low: "Low",
+    effective: "Effective cover"
   },
   
   aiRainLight: "Light drizzle or a few drops falling right now. ",
