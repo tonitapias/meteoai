@@ -1,6 +1,6 @@
 import { Wind, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WIDGET_BASE_STYLE, CARD_VEIL, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 
 type AqiResult = { 
@@ -168,7 +168,7 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
     const hasMicroTelemetry = pm25 !== null || pm10 !== null;
 
     // SPATIAL UI BASE AMB MATRIU DE FONS
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} !flex-row items-center gap-6 backdrop-blur-md transition-colors duration-700 relative overflow-hidden border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 ${hasValidData ? 'bg-gradient-to-br from-[#0f111a]/90 to-black/80 border-white/10' : 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50'}`;
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} !flex-row items-center gap-6 transition-colors duration-700 relative overflow-hidden border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 ${hasValidData ? 'bg-gradient-to-br from-[#0f111a]/90 to-black/80 border-white/10' : 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50'}`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>
@@ -176,7 +176,7 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
             <div className={MATRIX_BG}></div>
 
             {/* Contenidor Icona */}
-            <div className={`relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-xl border shadow-inner group backdrop-blur-sm z-10 transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a]/80 border-white/10' : 'bg-slate-800/40 border-slate-700/50'}`}>
+            <div className={`relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-xl border shadow-inner group z-10 transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a]/80 border-white/10' : 'bg-slate-800/40 border-slate-700/50'}`}>
                 {!hasValidData ? (
                     <CloudOff className="w-8 h-8 sm:w-10 sm:h-10 text-slate-500 opacity-80" />
                 ) : (

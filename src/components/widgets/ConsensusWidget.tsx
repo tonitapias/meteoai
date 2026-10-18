@@ -173,7 +173,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           `}
         </style>
 
-        <div className={`w-full relative bg-[#060913]/90 backdrop-blur-2xl backdrop-saturate-150 border ${theme.border} rounded-[24px] md:rounded-[32px] ${theme.shadow} preserve-3d md:animate-[spatial-float-pc_10s_ease-in-out_infinite] transition-transform duration-500`}>
+        <div className={`w-full relative bg-[#060913]/90 border ${theme.border} rounded-[24px] md:rounded-[32px] ${theme.shadow} preserve-3d md:animate-[spatial-float-pc_10s_ease-in-out_infinite] transition-transform duration-500`}>
            <div className="absolute inset-0 overflow-hidden rounded-[24px] md:rounded-[32px]">
               <div className={`absolute inset-0 bg-[linear-gradient(currentColor_1px,transparent_1px),linear-gradient(90deg,currentColor_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] opacity-[0.03] [transform:translateZ(-50px)] ${theme.accent}`}></div>
               <div className={`absolute inset-0 bg-gradient-to-br ${theme.glow} to-transparent opacity-60 md:opacity-40`}></div>
@@ -182,7 +182,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
            <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 md:gap-8 relative z-10 preserve-3d">
               <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-4 sm:gap-0 [transform:translateZ(30px)]">
                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className={`w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#0a0f1c] border ${theme.border} flex items-center justify-center shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] relative overflow-hidden backdrop-blur-md`}>
+                    <div className={`w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#0a0f1c] border ${theme.border} flex items-center justify-center shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] relative overflow-hidden`}>
                        <Cpu className={`w-4 h-4 md:w-5 md:h-5 ${theme.accent} relative z-10 drop-shadow-[0_0_8px_currentColor]`} />
                        {/* Animació pulse només visible a Desktop o evitada si es vol màxim estalvi */}
                        <div className={`absolute inset-0 opacity-20 md:animate-pulse ${theme.bg}`}></div>
@@ -199,7 +199,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
 
-                 <div className="flex items-center gap-3 md:gap-4 bg-black/50 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-md shadow-[inset_0_0_15px_rgba(0,0,0,0.5)] self-end sm:self-auto">
+                 <div className="flex items-center gap-3 md:gap-4 bg-black/50 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl border border-white/10 shadow-[inset_0_0_15px_rgba(0,0,0,0.5)] self-end sm:self-auto">
                     <div className="flex flex-col items-end">
                        <span className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-widest">{t.affinity}</span>
                        <span className="text-2xl sm:text-3xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{safeScore}<span className={`text-sm md:text-base ml-0.5 md:ml-1 ${theme.accent}`}>%</span></span>
@@ -226,7 +226,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
 
               <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 w-full preserve-3d [transform:translateZ(40px)]">
                  {/* MIDES DE TEXT I CONTRAST MILLORATS PER A LECTURA EXTERIOR */}
-                 <div onClick={() => openModal('temp')} className="cursor-pointer group relative bg-black/40 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-rose-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95">
+                 <div onClick={() => openModal('temp')} className="cursor-pointer group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-rose-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95">
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
                         <Thermometer className="w-4 h-4 md:w-5 md:h-5 group-hover:text-rose-500 transition-colors duration-300 drop-shadow-md" />
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.temp}</span>
@@ -241,7 +241,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
 
-                 <div onClick={() => openModal('rain')} className={`cursor-pointer group relative bg-black/40 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-black/60 md:hover:-translate-y-1 active:scale-95 ${isSnowRisk ? 'border-sky-500/30' : 'border-white/10 hover:border-sky-500/30'}`}>
+                 <div onClick={() => openModal('rain')} className={`cursor-pointer group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-black/60 md:hover:-translate-y-1 active:scale-95 ${isSnowRisk ? 'border-sky-500/30' : 'border-white/10 hover:border-sky-500/30'}`}>
                     {isSnowRisk && <div className="absolute inset-0 bg-sky-500/10 rounded-[20px] md:rounded-[24px] animate-pulse pointer-events-none"></div>}
                     <div className={`flex items-center gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4 ${isSnowRisk ? 'text-sky-300 drop-shadow-[0_0_8px_currentColor]' : 'text-slate-300'}`}>
                         {isSnowRisk ? <CloudSnow className="w-4 h-4 md:w-5 md:h-5 text-white transition-colors duration-300" /> : <CloudRain className="w-4 h-4 md:w-5 md:h-5 group-hover:text-sky-400 transition-colors duration-300 drop-shadow-md" />}
@@ -257,7 +257,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
 
-                 <div onClick={() => openModal('wind')} className="cursor-pointer group relative bg-black/40 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95">
+                 <div onClick={() => openModal('wind')} className="cursor-pointer group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95">
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
                         <Wind className="w-4 h-4 md:w-5 md:h-5 group-hover:text-amber-400 transition-colors duration-300 drop-shadow-md" />
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.wind}</span>
@@ -276,7 +276,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
               <div className="w-full [transform:translateZ(20px)] mt-[-10px] md:mt-[-15px]">
                   <button 
                      onClick={() => openModal('charts')}
-                     className="w-full relative group overflow-hidden bg-black/60 backdrop-blur-md border border-white/10 hover:border-cyan-500/40 rounded-xl md:rounded-2xl py-3 md:py-4 flex items-center justify-center gap-3 transition-all duration-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] active:scale-[0.98]"
+                     className="w-full relative group overflow-hidden bg-black/60 border border-white/10 hover:border-cyan-500/40 rounded-xl md:rounded-2xl py-3 md:py-4 flex items-center justify-center gap-3 transition-all duration-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] active:scale-[0.98]"
                   >
                      <LineChart className="w-4 h-4 md:w-5 md:h-5 text-cyan-400 group-hover:text-cyan-300 drop-shadow-[0_0_8px_currentColor] transition-colors relative z-10" />
                      <span className="text-[11px] sm:text-xs md:text-sm font-black text-cyan-100 group-hover:text-white uppercase tracking-[0.2em] relative z-10 transition-colors drop-shadow-md">

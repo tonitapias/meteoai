@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUpRight, AlertTriangle } from 'lucide-react';
-import { MATRIX_BG } from './widgetStyles';
+import { MATRIX_BG, CARD_VEIL } from './widgetStyles';
 
 interface CircularGaugeProps {
     icon: React.ReactNode;
@@ -111,7 +111,7 @@ export const CircularGauge = ({
     };
 
     // SPATIAL UI BASE AMB MATRIU DE FONS
-    const SPATIAL_WIDGET_STYLE = `w-full h-full transform-gpu p-3 sm:p-4 flex flex-col rounded-2xl relative overflow-hidden backdrop-blur-md bg-gradient-to-br from-indigo-950/40 to-black/60 border border-indigo-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]`;
+    const SPATIAL_WIDGET_STYLE = `w-full h-full transform-gpu p-3 sm:p-4 flex flex-col rounded-2xl relative overflow-hidden ${CARD_VEIL} bg-gradient-to-br from-indigo-950/40 to-black/60 border border-indigo-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]`;
 
     return (
         <div className={SPATIAL_WIDGET_STYLE}>
@@ -176,7 +176,7 @@ export const CircularGauge = ({
             {/* Capa 3: TELEMETRIA - Càpsula de Tendència (ΔP) */}
             <div className="mt-auto pt-2 z-10 w-full h-8 flex items-end">
                 {showTrend && safeTrendValue !== null ? (
-                    <div className={`w-full flex items-center justify-between px-2 py-1.5 rounded border backdrop-blur-sm ${trendBg} transition-colors duration-500`}>
+                    <div className={`w-full flex items-center justify-between px-2 py-1.5 rounded border ${trendBg} transition-colors duration-500`}>
                         <div className={`flex items-center gap-1.5 ${trendColor}`}>
                             {trendIcon}
                             <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider leading-none">

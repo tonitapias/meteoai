@@ -53,7 +53,7 @@ export default function OfflineSnapshotBanner({ info, place, text, now, onRetry 
         <div
             role="status"
             data-testid="offline-snapshot-banner"
-            className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 backdrop-blur-md flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-lg shadow-amber-900/10"
+            className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-lg shadow-amber-900/10"
         >
             <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="p-2 rounded-full bg-amber-500/10 text-amber-300 shrink-0">

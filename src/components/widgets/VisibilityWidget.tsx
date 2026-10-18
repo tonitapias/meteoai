@@ -1,6 +1,6 @@
 import { Eye, Mountain, CloudOff } from 'lucide-react';
 import { VisibilityWidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 import { formatVisibilityKm } from '../../utils/visibilityDisplay';
 
@@ -66,7 +66,7 @@ export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: Visi
   }
 
   // SPATIAL UI BASE AMB MATRIU DE FONS
-  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br transition-colors duration-700 ${bgGlow} border ${hasValidData ? borderColor : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 flex flex-col justify-between select-none`;
+  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} relative overflow-hidden bg-gradient-to-br transition-colors duration-700 ${bgGlow} border ${hasValidData ? borderColor : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 flex flex-col justify-between select-none`;
 
   return (
     <div className={SPATIAL_WIDGET_STYLE}>
@@ -86,7 +86,7 @@ export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: Visi
       </div>
 
       {/* DADA PRINCIPAL */}
-      <div className={`relative z-20 flex flex-col items-center mt-2 py-3 rounded-xl border backdrop-blur-sm flex-1 justify-center transition-colors duration-500 ${hasValidData ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
+      <div className={`relative z-20 flex flex-col items-center mt-2 py-3 rounded-xl border flex-1 justify-center transition-colors duration-500 ${hasValidData ? 'bg-black/55 border-white/5' : 'bg-slate-900/55 border-slate-700/50'}`}>
         <div className="flex items-baseline gap-1.5">
           <span className={`text-4xl sm:text-5xl font-black tabular-nums tracking-tighter leading-none transition-colors duration-500 ${hasValidData ? colorClass + ' drop-shadow-[0_0_12px_currentColor]' : 'text-slate-600'}`}>
             {visibilityKm}

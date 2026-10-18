@@ -110,7 +110,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         Reduïm el padding en mòbil (p-4 sm:p-6) per alliberar espai.
         Mantenim `transform-gpu` però desactivem les transicions constants a mòbil per estalviar bateria.
       */}
-      <div className="w-full flex flex-col md:flex-row items-stretch justify-between p-4 sm:p-6 md:p-10 bg-gradient-to-br from-[#060913]/95 to-black/95 backdrop-blur-xl rounded-[2rem] md:rounded-[3rem] border border-white/5 relative overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.6)] md:shadow-[0_20px_50px_rgba(0,0,0,0.5)] gap-6 md:gap-8 ring-1 ring-white/5 transform-gpu transition-colors duration-700 preserve-3d">
+      <div className="w-full flex flex-col md:flex-row items-stretch justify-between p-4 sm:p-6 md:p-10 bg-gradient-to-br from-[#060913]/95 to-black/95 rounded-[2rem] md:rounded-[3rem] border border-white/5 relative overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.6)] md:shadow-[0_20px_50px_rgba(0,0,0,0.5)] gap-6 md:gap-8 ring-1 ring-white/5 transform-gpu transition-colors duration-700 preserve-3d">
         
         {/* Matriu Tàctica de Fons */}
         <div className={MATRIX_BG}></div>
@@ -166,7 +166,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
                 props.effectiveCloudCover
               )}
               {dustAdvisory.kind && (
-                <span role="img" aria-label={advisoryLabel ? `${advisoryLabel} · ${advisoryValue}` : undefined} title={advisoryText} className="absolute bottom-1 right-1 md:bottom-2 md:right-2 z-30 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-amber-400/40 backdrop-blur-sm shadow-[0_0_14px_rgba(251,191,36,0.35)]">
+                <span role="img" aria-label={advisoryLabel ? `${advisoryLabel} · ${advisoryValue}` : undefined} title={advisoryText} className="absolute bottom-1 right-1 md:bottom-2 md:right-2 z-30 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-amber-400/40 shadow-[0_0_14px_rgba(251,191,36,0.35)]">
                   <Haze className="w-6 h-6 md:w-7 md:h-7 text-amber-300" aria-hidden="true" />
                 </span>
               )}

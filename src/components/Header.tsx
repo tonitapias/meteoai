@@ -312,10 +312,9 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
       
       {/* CSS INTERN PEL GLASSMORPHISM AVANÇAT I SKEUOMORFISME */}
       <style>{`
+        /* Sense backdrop-filter: sobre el fons fosc no es veia i en mòbils modestos costava a cada fotograma. */
         .header-glass {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
         }
         .physical-switch-track {
           background-color: #020617;
@@ -332,7 +331,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
         className="flex items-center gap-3 opacity-90 hover:opacity-100 select-none cursor-pointer group transition-all w-full justify-center md:w-auto md:justify-start order-0 relative z-10"
       >
           {/* Contenidor Insígnia Físic */}
-          <div className="relative p-1.5 sm:p-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/10 to-transparent border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_4px_10px_rgba(0,0,0,0.5)] backdrop-blur-md group-hover:border-sky-400/50 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-all duration-500">
+          <div className="relative p-1.5 sm:p-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/10 to-transparent border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_4px_10px_rgba(0,0,0,0.5)] group-hover:border-sky-400/50 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-all duration-500">
              <div className="absolute inset-0 bg-sky-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
              <img 
                 src={`${import.meta.env.BASE_URL}maskable-icon.png`}

@@ -39,7 +39,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
         <div className="flex flex-col gap-4 pb-6 md:pb-10 min-w-[140px] z-10 relative">
             
             {/* Càpsula d'Estat Meteorològic (Spatial UI) */}
-            <div className={`flex items-center gap-3 px-3 py-1.5 rounded-full border backdrop-blur-md w-fit shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] transition-colors duration-500 ${isValidTemp ? 'bg-black/40 border-white/10' : 'bg-slate-900/50 border-slate-700/50'}`}>
+            <div className={`flex items-center gap-3 px-3 py-1.5 rounded-full border w-fit shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] transition-colors duration-500 ${isValidTemp ? 'bg-black/40 border-white/10' : 'bg-slate-900/50 border-slate-700/50'}`}>
                 <span className={`w-2 h-2 rounded-full transition-colors duration-500 ${isValidTemp ? statusColor : 'bg-slate-600'}`}></span>
                 <span className={`text-xs font-black uppercase tracking-wider transition-colors duration-500 ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>
                     {weatherLabel}
@@ -48,7 +48,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
 
             {/* Avís d'aerosols: només informa de la càrrega de pols/partícules (CAMS), mai de la visibilitat */}
             {advisoryLabel && (
-                <div role="status" title={advisoryTitle} className="flex items-center gap-2 px-3 py-1 rounded-full border border-amber-400/30 bg-amber-950/40 backdrop-blur-md w-fit">
+                <div role="status" title={advisoryTitle} className="flex items-center gap-2 px-3 py-1 rounded-full border border-amber-400/30 bg-amber-950/40 w-fit">
                     <Haze className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
                     <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">{advisoryLabel}</span>
                     {advisoryValue && <span className="text-[11px] font-bold normal-case tracking-normal text-amber-200/90">{advisoryValue}</span>}

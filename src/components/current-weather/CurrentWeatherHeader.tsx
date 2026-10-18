@@ -32,7 +32,7 @@ export const CurrentWeatherHeader = ({
         
         {/* Badges Superiors (Spatial UI) */}
         <div className="flex items-center gap-3 mb-1">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border backdrop-blur-md shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] transition-colors duration-500 ${safeCountry !== '--' ? 'bg-[#0f111a]/80 border-white/10' : 'bg-slate-900/50 border-slate-700/50'}`}>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] transition-colors duration-500 ${safeCountry !== '--' ? 'bg-[#0f111a]/80 border-white/10' : 'bg-slate-900/50 border-slate-700/50'}`}>
             {safeCountry !== '--' ? (
                 <Navigation className="w-3 h-3 text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.5)]" />
             ) : (

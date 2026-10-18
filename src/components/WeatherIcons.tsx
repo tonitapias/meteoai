@@ -1,5 +1,5 @@
 // src/components/WeatherIcons.tsx
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import {
   Sun, Moon, CloudLightning, CloudRain, CloudSun, CloudMoon,
   Cloud, Cloudy, CloudFog, CloudDrizzle, Snowflake, CloudOff
@@ -146,6 +146,11 @@ const FewCloudsIcon = ({ isDay, className, windClass }: { isDay: boolean; classN
   </div>
 );
 
+// Floc de neu: disc tou de 14 px pintat amb un degradat, sense filter. Abans era un punt de 6 px amb
+// blur(1px) i ombra blanca: un filtre per partícula animada. Mateix aspecte (desviació ≤ 11/255 al màxim
+// d'opacitat, mateixa lluminositat total); el -ml-1/top-[-24px] del floc manté el centre on era.
+const SNOW_FLAKE_BG = 'radial-gradient(circle closest-side, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.72) 28%, rgba(255,255,255,0.28) 52%, rgba(255,255,255,0.06) 78%, rgba(255,255,255,0) 100%)';
+
 export const WeatherParticles = memo(({ code, temp: _t, precipAmt: _p = 0 }: { code: number, temp?: number | null, precipAmt?: number }) => {
   // L'Orquestrador ja ens envia el codi net i purificat. Confiança cega.
   const safeCode = code; 
@@ -182,18 +187,52 @@ export const WeatherParticles = memo(({ code, temp: _t, precipAmt: _p = 0 }: { c
       return () => clearTimeout(timer);
   }, [isSnow, isRain, isSleet]);
 
-  if (!isSnow && !isRain && !isSleet) return null;
+  const hasParticles = isSnow || isRain || isSleet;
 
+  // Les partícules només cauen pels primers 110vh de la pàgina: quan aquesta franja no es veu (scroll avall), es
+  // pausen i deixen de demanar fotogrames. Es fa amb l'API d'animacions (no amb animation-play-state) perquè
+  // useAstroModalShell també les pausa i reprèn així en obrir i tancar un modal, i després d'un play()/pause()
+  // el navegador ja no fa cas d'animation-play-state.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const offscreenRef = useRef(false);
+  const setPaused = useCallback((paused: boolean) => {
+      const el = containerRef.current;
+      if (!el || typeof el.getAnimations !== 'function') return;
+      for (const a of el.getAnimations({ subtree: true })) {
+          if (paused) a.pause(); else a.play();
+      }
+  }, []);
+
+  useEffect(() => {
+      const el = containerRef.current;
+      if (!hasParticles || !el || typeof IntersectionObserver === 'undefined') return;
+      const io = new IntersectionObserver(([entry]) => {
+          const offscreen = !entry.isIntersecting;
+          if (offscreen === offscreenRef.current) return;
+          offscreenRef.current = offscreen;
+          setPaused(offscreen);
+      });
+      io.observe(el);
+      return () => { io.disconnect(); offscreenRef.current = false; };
+  }, [hasParticles, setPaused]);
+
+  // Partícules noves (canvi de temps) amb la franja fora de vista: neixen en marxa, s'han de pausar.
+  useEffect(() => { if (offscreenRef.current) setPaused(true); }, [particles, setPaused]);
+
+  if (!hasParticles) return null;
+
+  // motion-reduce: qui demana menys moviment al sistema no veu la pluja ni la neu que cau.
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 transform-gpu" style={{ transform: 'translateZ(0)' }}>
+    <div ref={containerRef} className="absolute inset-0 max-h-[110vh] overflow-hidden pointer-events-none z-0 transform-gpu motion-reduce:hidden" style={{ transform: 'translateZ(0)' }}>
       {particles.map((p) => (
           <div 
             key={p.id}
-            className={`absolute top-[-20px] ${p.kind === 'rain' ? 'w-[1.5px] h-6 bg-gradient-to-b from-transparent to-cyan-400/60' : 'w-1.5 h-1.5 bg-white/80 rounded-full blur-[1px] shadow-[0_0_4px_white]'}`}
+            className={p.kind === 'rain' ? 'absolute top-[-20px] w-[1.5px] h-6 bg-gradient-to-b from-transparent to-cyan-400/60' : 'absolute top-[-24px] -ml-1 w-3.5 h-3.5'}
             style={{ 
                 left: `${p.left}%`, 
                 animation: `fall ${p.duration}s linear ${p.delay}s infinite`, 
-                opacity: p.opacity 
+                opacity: p.opacity,
+                ...(p.kind === 'snow' ? { background: SNOW_FLAKE_BG } : null)
             }}
           />
       ))}

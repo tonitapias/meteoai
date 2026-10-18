@@ -2,7 +2,7 @@
 import React from 'react';
 import { Sun, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Language } from '../../translations';
-import { MATRIX_BG } from './widgetStyles';
+import { MATRIX_BG, CARD_VEIL } from './widgetStyles';
 import { getUVCategory } from '../../utils/uvIndexUtils';
 
 interface UVIndexWidgetProps {
@@ -42,7 +42,7 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
 
 
   return (
-    <div className={`flex flex-col h-full p-4 md:p-5 relative group overflow-hidden backdrop-blur-md rounded-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700 ${isDataMissing ? 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50' : 'bg-gradient-to-br from-black/60 to-[#0f111a]/80 border-white/5'}`}>
+    <div className={`flex flex-col h-full p-4 md:p-5 relative group overflow-hidden ${CARD_VEIL} rounded-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700 ${isDataMissing ? 'bg-gradient-to-br from-slate-900/50 to-black/80 border-slate-700/50' : 'bg-gradient-to-br from-black/60 to-[#0f111a]/80 border-white/5'}`}>
       
       <div className={MATRIX_BG}></div>
 
@@ -118,7 +118,7 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
           {/* Etiqueta d'Acció (Ancorada al buit inferior) */}
           <div className="absolute -bottom-2 w-full flex justify-center z-20">
             {!isDataMissing && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0a0b10] border border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-md">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0a0b10] border border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
                 {requiresShield ? (
                   <ShieldAlert className={`w-3.5 h-3.5 ${category.color}`} />
                 ) : (

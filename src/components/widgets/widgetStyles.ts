@@ -2,6 +2,13 @@
 
 export const WIDGET_BASE_STYLE = "bg-gradient-to-br from-[#1a1d2d] to-[#11131f] border border-white/10 p-5 md:p-6 rounded-[2rem] relative group transition-all duration-500 hover:border-indigo-500/30 hover:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] h-full flex flex-col justify-between overflow-hidden ring-1 ring-white/5";
 
+// Vel del marc (bg-white/5 de WidgetCard) que deixen veure els ginys de fons translúcid. Abans l'arrel del giny
+// tenia backdrop-blur, i un backdrop-filter dins d'un altre torna a pintar el fons del pare a dins: aquest vel
+// sortia dues vegades. Sense el blur (car en mòbils modestos) els ginys quedaven 6-8 nivells més foscos; amb
+// aquest background-color (va sota el degradat) queden del mateix color que abans. Els xips foscos de dins
+// (bg-black/55 i bg-slate-900/55, abans /40 amb blur) deixen passar menys vel i també queden com eren.
+export const CARD_VEIL = "bg-white/5";
+
 export const TITLE_STYLE = "text-[10px] font-black text-indigo-200/60 uppercase tracking-[0.25em] mb-4 flex items-center gap-2 relative z-10";
 
 // [NETEJA] Abans hi havia 19 còpies idèntiques d'aquesta mateixa capa de fons

@@ -1,6 +1,6 @@
 import { Wind, Zap, Navigation2, AlertTriangle, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans, getWindDirectionText } from './widgetHelpers';
 
 // Funció helper matemàticament segura per dibuixar arcs SVG (Risc Zero: Protecció contra NaN i Infinity)
@@ -67,7 +67,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
   const tacticalLabel = getTacticalLabel(safeSpeed, isValidSpeed, t);
 
   // SPATIAL UI BASE
-  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-[#0c0e15]/95 to-[#05060a]/95 border border-white/10 shadow-[0_16px_32px_rgba(0,0,0,0.6)] transform-gpu flex flex-col transition-colors duration-700`;
+  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} relative overflow-hidden bg-gradient-to-br from-[#0c0e15]/95 to-[#05060a]/95 border border-white/10 shadow-[0_16px_32px_rgba(0,0,0,0.6)] transform-gpu flex flex-col transition-colors duration-700`;
 
   return (
     <div className={SPATIAL_WIDGET_STYLE}>
@@ -182,7 +182,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
              <div className="absolute flex flex-col items-center justify-center z-30 w-40 h-40 rounded-full mt-2">
                 
                 {/* Etiqueta Tàctica (Beaufort o Error) */}
-                <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 px-2 py-0.5 rounded-full border backdrop-blur-sm transition-colors duration-500 ${isValidSpeed ? 'text-slate-400 bg-white/5 border-white/5' : 'text-slate-500 bg-black/40 border-slate-700/50'}`}>
+                <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 px-2 py-0.5 rounded-full border transition-colors duration-500 ${isValidSpeed ? 'text-slate-400 bg-white/5 border-white/5' : 'text-slate-500 bg-black/40 border-slate-700/50'}`}>
                     {tacticalLabel}
                 </span>
 
@@ -198,7 +198,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
 
                 {/* Ratxes (Text clar amb iconografia d'alerta si cal, ocult si no hi ha dades) */}
                 {isValidGusts && hasGusts && (
-                    <div className={`mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 border border-white/10 shadow-inner ${gustColorText} backdrop-blur-sm`}>
+                    <div className={`mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 border border-white/10 shadow-inner ${gustColorText}`}>
                         {isDanger ? <AlertTriangle className="w-3.5 h-3.5 fill-current" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
                         <span className="text-[10px] font-black uppercase tracking-widest">
                             {String(t.gustsLabel || 'Gusts')}:

@@ -1,6 +1,6 @@
 import { Layers, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 
 export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
@@ -42,7 +42,7 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
   ];
 
   // Dark Dashboard Spatial UI
-  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br from-indigo-950/20 to-black/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col p-3 sm:p-4 transition-colors duration-700`;
+  const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} relative overflow-hidden bg-gradient-to-br from-indigo-950/20 to-black/80 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col p-3 sm:p-4 transition-colors duration-700`;
 
   return (
     <div className={SPATIAL_WIDGET_STYLE}>
@@ -65,7 +65,7 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
           {layers.map((layer, i) => (
              <div key={i} className="flex flex-col items-center justify-end w-full h-full relative group/beam z-10">
                  {/* Cilindre contenidor de la barra */}
-                 <div className={`w-full relative rounded-t-lg overflow-hidden border-x border-t h-full flex items-end shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-colors duration-500 ${layer.isValid ? 'bg-[#0f111a]/60 border-white/5' : 'bg-slate-900/40 border-slate-500/10'}`}>
+                 <div className={`w-full relative rounded-t-lg overflow-hidden border-x border-t h-full flex items-end shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-500 ${layer.isValid ? 'bg-[#0f111a]/60 border-white/5' : 'bg-slate-900/40 border-slate-500/10'}`}>
                      <div 
                         className={`w-full transition-all duration-1000 ease-out bg-gradient-to-t ${layer.bgClass} relative opacity-90`}
                         // Altura mínima del 4% només per mantenir la geometria si hi ha dades. Si no hi ha dades, es queda pla.
@@ -77,7 +77,7 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
                  </div>
                  
                  {/* Dades emmarcades (Spatial UI) */}
-                 <div className={`mt-2.5 text-center z-20 w-full py-1.5 rounded-md border backdrop-blur-md shadow-lg transition-colors duration-500 ${layer.isValid ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-500/20'}`}>
+                 <div className={`mt-2.5 text-center z-20 w-full py-1.5 rounded-md border shadow-lg transition-colors duration-500 ${layer.isValid ? 'bg-black/55 border-white/5' : 'bg-slate-900/55 border-slate-500/20'}`}>
                      <span className={`block text-xl sm:text-2xl font-black tabular-nums leading-none mb-1 drop-shadow-md ${layer.textClass}`}>
                         {layer.display}
                         {layer.isValid && <span className="text-[10px] align-top text-slate-400 ml-0.5">%</span>}

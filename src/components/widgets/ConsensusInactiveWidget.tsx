@@ -102,7 +102,7 @@ export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = (
         `}
       </style>
 
-      <div className="w-full bg-[#030712]/80 backdrop-blur-xl border border-amber-900/40 rounded-[24px] p-6 shadow-[0_20px_50px_rgba(245,158,11,0.15)] relative overflow-hidden flex flex-col sm:flex-row items-center gap-8 preserve-3d animate-[float3d_6s_ease-in-out_infinite]">
+      <div className="w-full bg-[#030712]/80 border border-amber-900/40 rounded-[24px] p-6 shadow-[0_20px_50px_rgba(245,158,11,0.15)] relative overflow-hidden flex flex-col sm:flex-row items-center gap-8 preserve-3d animate-[float3d_6s_ease-in-out_infinite]">
 
          <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.03)_1px,transparent_1px)] bg-[size:24px_24px] opacity-40 [transform:translateZ(-50px)]"></div>
 
@@ -128,7 +128,7 @@ export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = (
                <h2 className="text-[11px] sm:text-xs font-bold text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] uppercase tracking-[0.2em]">
                  {t.title}
                </h2>
-               <div className="inline-flex items-center self-center sm:self-auto gap-1.5 text-[9px] font-black uppercase px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 tracking-widest backdrop-blur-md">
+               <div className="inline-flex items-center self-center sm:self-auto gap-1.5 text-[9px] font-black uppercase px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 tracking-widest">
                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                  {t.badge}
                </div>

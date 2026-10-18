@@ -270,12 +270,12 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full group select-none overflow-hidden rounded-xl border border-white/5 bg-black/60 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-md" style={{ transform: 'translateZ(0)' }}>
+    <div ref={containerRef} className="relative w-full h-full group select-none overflow-hidden rounded-xl border border-white/5 bg-black/60 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]" style={{ transform: 'translateZ(0)' }}>
 
       <div className={MATRIX_BG}></div>
 
       {/* Etiqueta Tàctica (Capa z-10): comença just després de l'eix Y perquè no tapi les xifres */}
-      <div className="absolute top-3 text-[10px] font-bold text-slate-300 uppercase tracking-widest z-10 flex items-center gap-2 bg-[#050608]/90 px-3 py-1.5 rounded-md backdrop-blur-md border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{ left: paddingLeft + 8 }}>
+      <div className="absolute top-3 text-[10px] font-bold text-slate-300 uppercase tracking-widest z-10 flex items-center gap-2 bg-[#050608]/90 px-3 py-1.5 rounded-md border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{ left: paddingLeft + 8 }}>
          <span className="w-2 h-2 rounded-full" style={{backgroundColor: currentConfig.color, boxShadow: `0 0 10px ${currentConfig.color}`}}></span>
          {title ?? currentConfig.title}
       </div>
@@ -283,7 +283,7 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
       {/* Cartell Emergent HUD (escriptori; a mòbil, la franja de lectura de sobre del gràfic) */}
       {showTooltip && hoverData && hoverData.value !== null && (
         <div
-          className="absolute z-20 pointer-events-none flex flex-col rounded-xl bg-[#050608]/95 backdrop-blur-xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-75 ease-out overflow-hidden"
+          className="absolute z-20 pointer-events-none flex flex-col rounded-xl bg-[#050608]/95 border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-75 ease-out overflow-hidden"
           style={{
             left: `${Math.min(width - 80, Math.max(80, hoverData.x))}px`,
             top: '12px',
@@ -784,7 +784,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
   return (
     <div className="w-full flex flex-col gap-4">
       {/* SPATIAL UI: Segmented Control Tàctic (Coherent amb el Header i Radar) */}
-      <div className="flex md:hidden bg-[#050608]/90 p-1.5 rounded-xl border border-white/5 backdrop-blur-md overflow-x-auto no-scrollbar shadow-[inset_0_4px_10px_rgba(0,0,0,0.8)] relative z-10">
+      <div className="flex md:hidden bg-[#050608]/90 p-1.5 rounded-xl border border-white/5 overflow-x-auto no-scrollbar shadow-[inset_0_4px_10px_rgba(0,0,0,0.8)] relative z-10">
           {tabs.map((tab) => (
               <button
                   key={tab.id}

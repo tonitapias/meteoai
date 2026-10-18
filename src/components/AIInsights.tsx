@@ -401,7 +401,7 @@ const InsightError = ({ ui, onRetry }: { ui: LocalUIText; onRetry?: () => void }
         {onRetry && (
             <button 
                 onClick={onRetry}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 text-xs font-mono font-bold uppercase tracking-widest rounded-xl transition-all border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.15)] active:scale-95 min-h-[40px] w-full sm:w-auto backdrop-blur-md"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 text-xs font-mono font-bold uppercase tracking-widest rounded-xl transition-all border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.15)] active:scale-95 min-h-[40px] w-full sm:w-auto"
             >
                 <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
                 {ui.retry}
@@ -419,7 +419,7 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
     
     if (hasError) {
         return (
-            <div className="flex-1 w-full bg-slate-950/60 border border-white/10 rounded-2xl sm:rounded-3xl backdrop-blur-2xl min-h-[200px] sm:min-h-[220px] flex items-center justify-center transform-gpu translate-z-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="flex-1 w-full bg-slate-950/60 border border-white/10 rounded-2xl sm:rounded-3xl min-h-[200px] sm:min-h-[220px] flex items-center justify-center transform-gpu translate-z-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                 <InsightError ui={ui} onRetry={onRetry} />
             </div>
         );
@@ -427,7 +427,7 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
 
     if (isLoading || !analysis) {
         return (
-            <div className="flex-1 w-full bg-slate-950/60 border border-white/10 rounded-2xl sm:rounded-3xl backdrop-blur-2xl min-h-[200px] sm:min-h-[220px] transform-gpu translate-z-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="flex-1 w-full bg-slate-950/60 border border-white/10 rounded-2xl sm:rounded-3xl min-h-[200px] sm:min-h-[220px] transform-gpu translate-z-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                 <InsightSkeleton />
             </div>
         );
@@ -453,9 +453,10 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
         ? analysis.tips
         : getHazardFallbackTips(analysis.risk_level, analysis.hazard_type, lang);
 
-    // Només el contenidor pare utilitza backdrop-blur per salvaguardar la GPU
+    // Sense backdrop-blur (tampoc al contenidor pare): sobre el fons gairebé negre del tauler no es veia i
+    // cada targeta difuminada es tornava a calcular a cada fotograma en mòbils modestos.
     return (
-        <div className={`flex flex-col w-full h-full min-h-[200px] sm:min-h-[220px] rounded-2xl sm:rounded-3xl backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden transition-all duration-700 transform-gpu translate-z-0 ring-1 ring-inset ${
+        <div className={`flex flex-col w-full h-full min-h-[200px] sm:min-h-[220px] rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden transition-all duration-700 transform-gpu translate-z-0 ring-1 ring-inset ${
             isGemini 
                 ? 'bg-gradient-to-br from-slate-900/90 via-indigo-950/40 to-slate-950/90 ring-indigo-500/20' 
                 : 'bg-slate-950/80 ring-white/10'

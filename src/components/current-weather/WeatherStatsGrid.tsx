@@ -81,7 +81,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
   };
 
   // SPATIAL UI BASE (Bateria optimitzada per a mòbil)
-  const BASE_CARD = "relative overflow-hidden backdrop-blur-md bg-gradient-to-br border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-500";
+  const BASE_CARD = "relative overflow-hidden bg-gradient-to-br border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-500";
 
   return (
     <div className="flex flex-col gap-3 md:gap-4 relative z-10 w-full">

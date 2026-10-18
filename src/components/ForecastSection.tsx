@@ -160,7 +160,7 @@ const ForecastSection = memo(function ForecastSection({
   // no hi és, cal distingir-ho amb "--" en lloc de fer-ho passar per un 0 real.
   const NO_DATA_LABEL = '--';
 
-  const PANEL_STYLE = `p-4 md:p-8 bg-gradient-to-br from-[#0f111a]/95 to-black/90 border border-white/5 rounded-[2rem] relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md transform-gpu transition-colors duration-700`;
+  const PANEL_STYLE = `p-4 md:p-8 bg-gradient-to-br from-[#0f111a]/95 to-black/90 border border-white/5 rounded-[2rem] relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700`;
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto z-10 relative">
@@ -182,7 +182,7 @@ const ForecastSection = memo(function ForecastSection({
             data-testid="open-today"
             onClick={() => onDayClick(0)}
             aria-label={todayAriaLabel}
-            className="group flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-indigo-500/30 hover:bg-indigo-950/40 hover:border-indigo-400 transition-all duration-300 backdrop-blur-md cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
+            className="group flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-indigo-500/30 hover:bg-indigo-950/40 hover:border-indigo-400 transition-all duration-300 cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
           >
             <CalendarCheck className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-300 group-hover:text-white transition-colors" />
             <span className="text-[10px] md:text-xs font-black text-indigo-100 group-hover:text-white tracking-widest uppercase">
@@ -193,7 +193,7 @@ const ForecastSection = memo(function ForecastSection({
           {/* BOTÓ DE MICRO-GRÀFIC AMB TRADUCCIÓ */}
           <button 
             onClick={openTrendModal}
-            className="group relative flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-cyan-500/30 hover:bg-cyan-950/40 hover:border-cyan-400 transition-all duration-300 backdrop-blur-md cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+            className="group relative flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-cyan-500/30 hover:bg-cyan-950/40 hover:border-cyan-400 transition-all duration-300 cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
             aria-label={btnAriaLabel}
           >
             {/* Escombrada de Llum (Sweep Effect) */}
@@ -218,7 +218,7 @@ const ForecastSection = memo(function ForecastSection({
               <button
                 key={`daily-row-${day.rawDate}`}
                 onClick={() => onDayClick(day.i)}
-                className="group flex items-center justify-between p-3 md:p-4 rounded-[1.25rem] bg-black/40 border border-white/5 hover:bg-white/[0.04] hover:border-indigo-500/40 hover:shadow-[0_4px_20px_rgba(99,102,241,0.15)] transition-all duration-300 w-full backdrop-blur-md"
+                className="group flex items-center justify-between p-3 md:p-4 rounded-[1.25rem] bg-black/40 border border-white/5 hover:bg-white/[0.04] hover:border-indigo-500/40 hover:shadow-[0_4px_20px_rgba(99,102,241,0.15)] transition-all duration-300 w-full"
               >
                 <div className="flex items-center gap-3 w-auto min-w-[100px] md:w-[180px]">
                   <div className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl bg-[#050608]/80 border border-white/5 text-slate-400 group-hover:bg-indigo-900/40 group-hover:border-indigo-500/40 group-hover:text-indigo-300 transition-all duration-300 shrink-0 shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)] group-hover:shadow-[inset_0_1px_4px_rgba(99,102,241,0.3)]">

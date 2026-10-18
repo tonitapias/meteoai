@@ -11,8 +11,9 @@
 @layer components {
   /* --- BENTO GRID SYSTEM --- */
   .bento-card {
-    /* MILLORA: Blur més intens (2xl) per difuminar detalls del fons que distreguin */
-    @apply relative overflow-hidden rounded-[2rem] backdrop-blur-2xl transition-all duration-500;
+    /* Sense backdrop-blur: sobre el fons gairebé negre del tauler no es veia, i cada targeta difuminada es
+       tornava a calcular a cada fotograma en mòbils modestos. */
+    @apply relative overflow-hidden rounded-[2rem] transition-all duration-500;
     
     /* MILLORA CRÍTICA DE CONTRAST (Pas 2): 
        Augmentem la base de 0.3 a 0.5 per garantir que el text blanc es llegeixi bé 

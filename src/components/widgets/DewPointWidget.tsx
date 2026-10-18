@@ -1,7 +1,7 @@
 // src/components/DewPointWidget.tsx
 import { Droplets, CloudOff, AlertTriangle } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 
 export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
@@ -60,7 +60,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
     }
 
     // SPATIAL UI BASE AMB MATRIU DE FONS
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} backdrop-blur-md bg-gradient-to-br transition-colors duration-700 ${hasData ? bgGlow : 'from-slate-900/40 to-black/80'} border ${hasData ? borderColor : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col justify-between p-3 sm:p-4 relative overflow-hidden`;
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} bg-gradient-to-br transition-colors duration-700 ${hasData ? bgGlow : 'from-slate-900/40 to-black/80'} border ${hasData ? borderColor : 'border-slate-700/50'} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu flex flex-col justify-between p-3 sm:p-4 relative overflow-hidden`;
 
     return (
       <div className={SPATIAL_WIDGET_STYLE}>
@@ -82,7 +82,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-2 flex-1 pb-3 pt-1 sm:pt-2 relative z-10 w-full min-w-0">
               
               {/* Targeta Punt de Rosada */}
-              <div className={`flex flex-col items-start px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg border backdrop-blur-sm transform transition-colors duration-500 w-full min-w-0 overflow-hidden ${hasValue ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
+              <div className={`flex flex-col items-start px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg border transform transition-colors duration-500 w-full min-w-0 overflow-hidden ${hasValue ? 'bg-black/55 border-white/5' : 'bg-slate-900/55 border-slate-700/50'}`}>
                   {/* Tipografia escalada a xl:text-4xl (màxim 3 caràcters segurs) + whitespace-nowrap per bloquejar salts de línia */}
                   <span className={`text-2xl sm:text-3xl xl:text-4xl font-black tabular-nums tracking-tighter leading-none whitespace-nowrap w-full ${hasValue ? 'text-white drop-shadow-xl' : 'text-slate-600'}`}>
                       {displayVal}{hasValue ? '°' : ''}
@@ -99,7 +99,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
               <div className="h-9 sm:h-11 w-px bg-gradient-to-b from-transparent via-slate-500/30 to-transparent shrink-0"></div>
               
               {/* Targeta Humitat */}
-              <div className={`flex flex-col items-end px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg border backdrop-blur-sm transform transition-colors duration-500 w-full min-w-0 overflow-hidden ${hasHumidity ? 'bg-black/40 border-white/5' : 'bg-slate-900/40 border-slate-700/50'}`}>
+              <div className={`flex flex-col items-end px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-lg border transform transition-colors duration-500 w-full min-w-0 overflow-hidden ${hasHumidity ? 'bg-black/55 border-white/5' : 'bg-slate-900/55 border-slate-700/50'}`}>
                   {/* Tipografia asimètrica escalada a xl:text-3xl (blindatge per a 4 caràcters "100%") + whitespace-nowrap */}
                   <span className={`text-2xl sm:text-3xl xl:text-3xl font-black tabular-nums tracking-tighter leading-none whitespace-nowrap w-full text-right ${hasHumidity ? 'text-cyan-400 drop-shadow-md' : 'text-slate-600'}`}>
                       {displayHum}{hasHumidity ? '%' : ''}

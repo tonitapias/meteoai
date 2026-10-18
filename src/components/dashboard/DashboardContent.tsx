@@ -79,7 +79,7 @@ export const DashboardContent = () => {
 
             {/* 2. GRÀFIC PRECIPITACIÓ MINUTAL */}
             {calculations.minutelyPreciseData && (
-                <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border border-indigo-500/30 bg-[#060913]/90 shadow-[0_10px_30px_rgba(30,27,75,0.6)] backdrop-blur-xl relative overflow-hidden preserve-3d">
+                <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border border-indigo-500/30 bg-[#060913]/90 shadow-[0_10px_30px_rgba(30,27,75,0.6)] relative overflow-hidden preserve-3d">
                     <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none"></div>
                     <div className="relative z-10 [transform:translateZ(10px)]">
                         <MinutelyPreciseChart 
@@ -167,7 +167,7 @@ export const DashboardContent = () => {
 
                     {/* 7. GRÀFICS AVANÇATS (MODE EXPERT) */}
                     {isExpert && (
-                        <div className="bento-card p-4 sm:p-6 md:p-8 bg-[#0B0C15]/90 border border-white/10 shadow-2xl backdrop-blur-xl">
+                        <div className="bento-card p-4 sm:p-6 md:p-8 bg-[#0B0C15]/90 border border-white/10 shadow-2xl">
                             <Suspense fallback={<SectionSkeleton />}>
                                 <SmartForecastCharts
                                     data={calculations.chartSeries?.primary ?? []}

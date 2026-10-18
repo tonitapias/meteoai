@@ -136,7 +136,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             
             {/* ETiqueta Tàctica de Model (Spatial UI) */}
             <div className={`
-                absolute -top-3.5 right-4 md:right-6 z-30 flex items-center gap-1.5 px-3 py-1 rounded-md backdrop-blur-md 
+                absolute -top-3.5 right-4 md:right-6 z-30 flex items-center gap-1.5 px-3 py-1 rounded-md 
                 shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] transition-colors duration-500
                 ${isRegionalModel
                     ? 'bg-emerald-950/90 border border-emerald-500/30'

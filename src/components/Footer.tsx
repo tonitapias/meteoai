@@ -35,7 +35,7 @@ export default function Footer({ simple = false, transparent = false, className 
   const footerBaseStyle = `w-full py-6 px-6 z-30 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-mono text-slate-500 uppercase tracking-widest relative transition-colors duration-500 ${className}`;
   const footerBgStyle = transparent 
     ? 'bg-transparent border-none' 
-    : 'mt-12 border-t border-white/5 bg-[#0B0C15]/80 backdrop-blur-md shadow-[0_-10px_30px_rgba(0,0,0,0.5)]';
+    : 'mt-12 border-t border-white/5 bg-[#0B0C15]/80 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]';
 
   return (
     <footer className={`${footerBaseStyle} ${footerBgStyle}`}>

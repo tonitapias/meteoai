@@ -55,7 +55,7 @@ export default function ErrorBanner({ message }: ErrorBannerProps) {
   }, [message]);
 
   return (
-    <div className="w-full p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 backdrop-blur-md flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-lg shadow-rose-900/5 select-none">
+    <div className="w-full p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-lg shadow-rose-900/5 select-none">
       <div className="p-2 rounded-full bg-rose-500/10 text-rose-400 shrink-0">
         <Icon className="w-5 h-5" />
       </div>

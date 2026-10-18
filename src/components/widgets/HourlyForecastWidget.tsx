@@ -26,7 +26,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
       <div className={MATRIX_BG}></div>
 
       {/* Capçalera Tàctica (Spatial UI) */}
-      <div className={`px-6 py-4 flex items-center justify-between border-b bg-slate-950/80 backdrop-blur-md sticky top-0 z-20 transition-colors duration-700 ${hasValidData ? 'border-white/5 shadow-sm' : 'border-slate-700/50 shadow-none'}`}>
+      <div className={`px-6 py-4 flex items-center justify-between border-b bg-slate-950/80 sticky top-0 z-20 transition-colors duration-700 ${hasValidData ? 'border-white/5 shadow-sm' : 'border-slate-700/50 shadow-none'}`}>
          <div className="flex items-center gap-2">
             {hasValidData ? (
                 <Clock className="w-3.5 h-3.5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)] transition-colors duration-500" />
@@ -76,7 +76,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
                 return (
                   <div 
                     key={`hourly-node-${idx}`} 
-                    className={`flex-shrink-0 flex flex-col items-center justify-between w-[72px] h-[145px] py-3 rounded-[1.25rem] border backdrop-blur-sm ${cardClass} transition-all duration-300 snap-start group`}
+                    className={`flex-shrink-0 flex flex-col items-center justify-between w-[72px] h-[145px] py-3 rounded-[1.25rem] border ${cardClass} transition-all duration-300 snap-start group`}
                   >
                     <span className={`text-[10px] font-bold tracking-wider transition-colors duration-300 ${hour.isNow ? 'text-cyan-300 drop-shadow-[0_0_5px_rgba(103,232,249,0.5)]' : 'text-slate-400 group-hover:text-slate-200'}`}>
                         {hour.time || '--:--'}

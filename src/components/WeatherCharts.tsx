@@ -32,7 +32,7 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPreci
 
 
     return (
-        <div className="w-full mt-3 bg-[#0a0b10]/90 rounded-2xl p-4 border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-md animate-in fade-in relative transform-gpu overflow-hidden">
+        <div className="w-full mt-3 bg-[#0a0b10]/90 rounded-2xl p-4 border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] animate-in fade-in relative transform-gpu overflow-hidden">
             <div className={MATRIX_BG}></div>
             <div className="flex items-center justify-between mb-3 relative z-10">
                 <div className="flex items-center gap-2">

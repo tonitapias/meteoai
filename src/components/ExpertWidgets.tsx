@@ -41,7 +41,7 @@ interface WidgetCardProps { children: React.ReactNode; cols?: number; fullRow?: 
 
 const WidgetCard = ({ children, cols = 1, fullRow = false, onClick, onIntent }: WidgetCardProps) => (
   <div
-    className={`col-span-1 ${fullRow ? 'sm:col-span-2 lg:col-span-4' : cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
+    className={`col-span-1 ${fullRow ? 'sm:col-span-2 lg:col-span-4' : cols === 2 ? 'md:col-span-2' : ''} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
     onClick={onClick}
     onPointerDown={onIntent}
     onFocus={onIntent}

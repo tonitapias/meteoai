@@ -1,6 +1,6 @@
 import { Zap, AlertTriangle, Activity, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
+import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { WEATHER_THRESHOLDS } from '../../constants/weatherConfig';
 
@@ -78,7 +78,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
     }
 
     // SPATIAL UI BASE AMB MATRIU DE FONS
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br ${bgGlow} border ${borderColor} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700`;
+    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} relative overflow-hidden bg-gradient-to-br ${bgGlow} border ${borderColor} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-700`;
 
     return (
       <div className={SPATIAL_WIDGET_STYLE}>
@@ -110,7 +110,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
 
           <div className="flex-1 flex items-stretch gap-4 relative mt-2 z-10">
               {/* Instrument Analògic: Barra de progrés amb llindars absoluts */}
-              <div className="w-4 bg-black/60 rounded-full border border-white/5 relative overflow-hidden flex flex-col justify-end shadow-inner backdrop-blur-md">
+              <div className="w-4 bg-black/70 rounded-full border border-white/5 relative overflow-hidden flex flex-col justify-end shadow-inner">
                   {/* Línies de calibratge (Ticks) dels llindars */}
                   <div className="absolute inset-0 z-10 pointer-events-none">
                       <div className="absolute w-full h-px bg-rose-500/50" style={{ bottom: `${(CAPE.HIGH_STORM / MAX_CAPE) * 100}%` }}></div>
@@ -132,7 +132,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                       {hasValidData ? 'J/kg' : String(t.capeNoData || 'SENSE DADES')}
                   </span>
                   
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border backdrop-blur-md bg-black/40 w-fit transition-colors duration-500 ${hasValidData && safeCape >= CAPE.MIN_STORM ? borderColor : 'border-white/5'}`}>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border bg-black/55 w-fit transition-colors duration-500 ${hasValidData && safeCape >= CAPE.MIN_STORM ? borderColor : 'border-white/5'}`}>
                       {hasValidData && safeCape >= CAPE.MIN_STORM && <AlertTriangle className={`w-3.5 h-3.5 ${color}`} />}
                       {!hasValidData && <CloudOff className="w-3.5 h-3.5 text-slate-500" />}
                       <span className={`text-[10px] font-black uppercase tracking-wider ${color}`}>
