@@ -3,6 +3,7 @@ import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
 import { getMoonPhase, getCurrentDewPoint } from '../utils/weatherMath';
 import { getMoonAgeDays } from '../utils/lunarPhases';
+import type { SolarDaily } from '../utils/solar/solarForecast';
 import { selectRegionalModel } from '../constants/regionalModels';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
@@ -229,10 +230,6 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
   const hourlyIcon = extractComparisonSeries(weatherData.hourlyComparison?.icon);
   const hourlyAifs = extractComparisonSeries(weatherData.hourlyComparison?.aifs);
 
-  const safeSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[0] === 'string' ? daily.sunrise[0] : '';
-  const safeSunset = Array.isArray(daily?.sunset) && typeof daily.sunset[0] === 'string' ? daily.sunset[0] : '';
-  // Sortida de demà: després de la posta, el compte enrere de la targeta va cap a aquesta (com el modal).
-  const safeNextSunrise = Array.isArray(daily?.sunrise) && typeof daily.sunrise[1] === 'string' ? daily.sunrise[1] : '';
 
   return (
     <>
@@ -338,7 +335,15 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           </WidgetCard>
 
           <WidgetCard cols={2} onClick={onShowSolarModal} onIntent={preloadSolarModal}>
-              <SunArcWidget sunrise={safeSunrise} sunset={safeSunset} nextSunrise={safeNextSunrise} lang={lang} utcOffset={targetOffsetSeconds} />
+              {/* El mateix model del dia que el modal: hores d'Open-Meteo si quadren amb l'astronomia (daily), si no suncalc. */}
+              <SunArcWidget
+                  lang={lang}
+                  lat={safeLat}
+                  lon={safeLon}
+                  timezone={typeof timezone === 'string' ? timezone : null}
+                  utcOffset={targetOffsetSeconds}
+                  daily={daily as SolarDaily | undefined}
+              />
           </WidgetCard>
 
           {showSnowWidget && freezingLevel !== null && (

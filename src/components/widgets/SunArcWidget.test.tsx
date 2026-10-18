@@ -1,143 +1,162 @@
 // src/components/widgets/SunArcWidget.test.tsx
-// Paritat de la targeta Cicle solar amb el modal: després de la posta el compte enrere va cap a la sortida de
-// DEMÀ, i el títol i les etiquetes surten en l'idioma de l'usuari (abans: es/fr en anglès o castellà).
+// Targeta Cicle solar ("Cel viu"): paritat del compte enrere amb el modal (també després de cada tic de minut),
+// textos en els 4 idiomes, el sol a la seva hora sobre la corba real, estrelles només de nit i dies polars.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { SunArcWidget } from './SunArcWidget';
+import { clearSolarDayCache } from '../../utils/solar/solarDay';
 import type { Language } from '../../translations';
 
-// Girona, 2026-10-07 (CEST, UTC+2): hores locals d'Open-Meteo.
-const OFFSET = 7200;
-const RISE = '2026-10-07T07:51';
-const SET = '2026-10-07T19:20';
-const NEXT_RISE = '2026-10-08T07:52';
+// Girona, 2026-10-07 (CEST, UTC+2): hores locals d'Open-Meteo (a menys de 10 min de suncalc: es fan servir).
+const DAILY = {
+  time: ['2026-10-07', '2026-10-08'],
+  sunrise: ['2026-10-07T07:51', '2026-10-08T07:52'],
+  sunset: ['2026-10-07T19:20', '2026-10-08T19:18'],
+};
 
-const renderCard = (lang: Language, extra: { sunrise?: string; sunset?: string; nextSunrise?: string } = {}) =>
+const renderCard = (lang: Language, extra: { lat?: number; lon?: number; daily?: typeof DAILY | undefined; timezone?: string; utcOffset?: number } = {}) =>
   render(
     <SunArcWidget
-      sunrise={extra.sunrise ?? RISE}
-      sunset={extra.sunset ?? SET}
-      nextSunrise={extra.nextSunrise}
       lang={lang}
-      utcOffset={OFFSET}
+      lat={'lat' in extra ? extra.lat : 41.98}
+      lon={'lon' in extra ? extra.lon : 2.82}
+      timezone={extra.timezone ?? 'Europe/Madrid'}
+      utcOffset={extra.utcOffset ?? 7200}
+      daily={'daily' in extra ? extra.daily : DAILY}
     />,
   );
 
-describe('SunArcWidget — compte enrere', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+beforeEach(() => { vi.useFakeTimers(); clearSolarDayCache(); });
+afterEach(() => { vi.useRealTimers(); });
 
-  it('de dia compta fins a la posta d\'avui (mateix text que el modal: "3h 13m")', () => {
+describe('SunArcWidget — compte enrere (idèntic al del modal)', () => {
+  it('de dia compta fins a la posta d\'avui: "3h 13m"', () => {
     vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));   // 16:07 local
-    renderCard('ca', { nextSunrise: NEXT_RISE });
+    renderCard('ca');
     expect(screen.getByText('Posta de sol en')).toBeTruthy();
     expect(screen.getByText('3h 13m')).toBeTruthy();
   });
 
   it('abans de la sortida compta fins a la sortida d\'avui, no la de demà', () => {
     vi.setSystemTime(new Date('2026-10-07T03:00:00Z'));   // 05:00 local
-    renderCard('ca', { nextSunrise: NEXT_RISE });
+    renderCard('ca');
     expect(screen.getByText('Sortida en')).toBeTruthy();
     expect(screen.getByText('2h 51m')).toBeTruthy();
   });
 
   it('després de la posta compta fins a la sortida de DEMÀ (07:52), no la d\'avui (07:51)', () => {
     vi.setSystemTime(new Date('2026-10-07T19:30:00Z'));   // 21:30 local
-    renderCard('ca', { nextSunrise: NEXT_RISE });
+    renderCard('ca');
     expect(screen.getByText('Sortida en')).toBeTruthy();
-    // 2h 30m fins a mitjanit + 7h 52m = 10h 22m (amb la d'avui serien 10h 21m).
     expect(screen.getByText('10h 22m')).toBeTruthy();
-    expect(screen.queryByText('10h 21m')).toBeNull();
   });
 
-  it('arrodoneix cap avall i sense zeros a l\'esquerra, igual que abans', () => {
-    vi.setSystemTime(new Date('2026-10-07T19:30:59Z'));   // 21:30:59 local
-    renderCard('ca', { nextSunrise: NEXT_RISE });
-    // 37 261 s => 10h 21m (floor), no 10h 22m.
+  it('arrodoneix cap avall: a les 21:30:59 queden 10h 21m', () => {
+    vi.setSystemTime(new Date('2026-10-07T19:30:59Z'));
+    renderCard('ca');
     expect(screen.getByText('10h 21m')).toBeTruthy();
   });
 
-  it('sense la sortida de demà (o mal formada) manté el comportament antic: la sortida d\'avui', () => {
-    vi.setSystemTime(new Date('2026-10-07T19:30:00Z'));
-    const { unmount } = renderCard('ca');
-    expect(screen.getByText('10h 21m')).toBeTruthy();
-    unmount();
-    renderCard('ca', { nextSunrise: 'n/a' });
-    expect(screen.getByText('10h 21m')).toBeTruthy();
+  it('després del tic de minut continua igual que el modal (abans marcava un minut de més)', () => {
+    vi.setSystemTime(new Date('2026-10-07T14:07:30Z'));   // 16:07:30 → posta 19:20:00: 3h 12m 30s
+    renderCard('ca');
+    expect(screen.getByText('3h 12m')).toBeTruthy();
+    // Tic a les 16:08:00.050 → queden 3h 11m 59.95s: el modal, obert en aquest minut, diu "3h 11m".
+    act(() => { vi.advanceTimersByTime(30_050); });
+    expect(screen.getByText('3h 11m')).toBeTruthy();
+    expect(screen.queryByText('3h 12m')).toBeNull();
   });
 });
 
-describe('SunArcWidget — tram il·luminat de l\'arc', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
-
-  const litPath = (c: HTMLElement) => c.querySelector('[data-testid="sun-arc-lit"]');
-  const sunXY = (c: HTMLElement) => (c.querySelector('g[style]') as SVGGElement).style.transform.match(/-?[\d.]+/g)!.map(Number);
-  const pathEnd = (d: string) => d.trim().split(/[\s,]+/).slice(-2).map(Number);
-
-  it.each([
-    ['matí', '2026-10-07T07:30:00Z'],   // 09:30 local
-    ['tarda', '2026-10-07T15:30:00Z'],  // 17:30 local: abans la línia anava 20 unitats per davant del sol
-    ['just abans de la posta', '2026-10-07T17:10:00Z'], // 19:10 local: abans l'arc es veia sencer
-  ])('%s: acaba exactament on és el sol', (_label, iso) => {
-    vi.setSystemTime(new Date(iso));
-    const { container } = renderCard('ca', { nextSunrise: NEXT_RISE });
-    const lit = litPath(container);
-    expect(lit).not.toBeNull();
-    const [ex, ey] = pathEnd(lit!.getAttribute('d')!);
-    const [sx, sy] = sunXY(container);
-    expect(ex).toBeCloseTo(sx, 6);
-    expect(ey).toBeCloseTo(sy, 6);
-    expect(ex).toBeLessThan(90); // no arriba a l'horitzó de ponent
+describe('SunArcWidget — dades del dia', () => {
+  it('sortida, posta i durada són les d\'Open-Meteo; Δ respecte d\'ahir i azimuts astronòmics', () => {
+    vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));
+    const { container } = renderCard('ca');
+    expect(screen.getByText('07:51')).toBeTruthy();
+    expect(screen.getByText('19:20')).toBeTruthy();
+    expect(screen.getByText('11h 29m')).toBeTruthy();
+    // A l'octubre els dies s'escurcen: "−2 min … s" (i, per al lector de pantalla, "menys que ahir").
+    expect(container.textContent).toMatch(/−2 min \d+ s menys que ahir/);
+    expect(screen.getAllByText(/^\d+° [A-Z]+$/)).toHaveLength(3);   // azimuts de sortida, posta i del sol ara
   });
 
-  it('de nit (abans de la sortida i després de la posta) no hi ha tram il·luminat', () => {
-    vi.setSystemTime(new Date('2026-10-07T03:00:00Z'));
-    const before = renderCard('ca', { nextSunrise: NEXT_RISE });
-    expect(litPath(before.container)).toBeNull();
-    before.unmount();
-    vi.setSystemTime(new Date('2026-10-07T19:30:00Z'));
-    const after = renderCard('ca', { nextSunrise: NEXT_RISE });
-    expect(litPath(after.container)).toBeNull();
+  it('sense les hores d\'Open-Meteo fa servir les astronòmiques (mai "sense dades" si hi ha coordenades)', () => {
+    vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));
+    renderCard('ca', { daily: undefined });
+    expect(screen.queryByText('SENSE DADES')).toBeNull();
+    expect(screen.getByText('07:52')).toBeTruthy();   // suncalc: 07:52:03
+    expect(screen.getByText('19:20')).toBeTruthy();   // suncalc: 19:20:23
+  });
+
+  it('el sol és a la seva hora sobre la corba i el tram recorregut acaba allà', () => {
+    vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));   // minut 967 del dia local
+    const { container } = renderCard('ca');
+    const marker = screen.getByTestId('sun-card-marker');
+    expect(Number(marker.dataset.x)).toBeCloseTo((967 / 1440) * 400, 0);
+    const pastClip = container.querySelector('clipPath[id$="p"] rect');
+    expect(Number(pastClip?.getAttribute('width'))).toBeCloseTo((967 / 1440) * 400, 0);
+    expect(screen.getByText(/^\+\d+°$/)).toBeTruthy();   // "Ara +NN° · azimut"
+  });
+
+  it('estrelles només quan és fosc', () => {
+    vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));
+    const day = renderCard('ca');
+    expect(day.container.querySelector('path[fill="#e2e8f0"]')).toBeNull();
+    day.unmount();
+    vi.setSystemTime(new Date('2026-10-07T21:00:00Z'));   // 23:00 local
+    const night = renderCard('ca');
+    expect(night.container.querySelector('path[fill="#e2e8f0"]')).not.toBeNull();
+    expect(screen.getByText(/sota l'horitzó/)).toBeTruthy();
+  });
+});
+
+describe('SunArcWidget — dies polars (Longyearbyen)', () => {
+  const svalbard = { lat: 78.22, lon: 15.65, timezone: 'Europe/Oslo', daily: undefined };
+  it('nit polar: cap compte enrere, sense hores i "Nit polar"', () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00Z'));
+    renderCard('ca', { ...svalbard, utcOffset: 3600 });
+    expect(screen.getByText('Nit polar')).toBeTruthy();
+    expect(screen.getByText('0h 00m')).toBeTruthy();
+    expect(screen.queryByText('Sortida en')).toBeNull();
+    expect(screen.queryByText('Posta de sol en')).toBeNull();
+  });
+
+  it('sol de mitjanit: 24 h de llum', () => {
+    vi.setSystemTime(new Date('2026-06-21T12:00:00Z'));
+    renderCard('ca', { ...svalbard, utcOffset: 7200 });
+    expect(screen.getByText('Sol de mitjanit')).toBeTruthy();
+    expect(screen.getByText('24h 00m')).toBeTruthy();
   });
 });
 
 describe('SunArcWidget — idioma', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
-
-  const CASES: Array<[Language, string, string, string, string]> = [
-    ['ca', 'CICLE SOLAR', 'Posta de sol en', 'Sortida en', 'SENSE DADES'],
-    ['es', 'CICLO SOLAR', 'Puesta de sol en', 'Salida del sol en', 'SIN DATOS'],
-    ['en', 'SUN CYCLE', 'Sunset in', 'Sunrise in', 'NO DATA'],
-    ['fr', 'CYCLE SOLAIRE', 'Coucher du soleil dans', 'Lever du soleil dans', 'PAS DE DONNÉES'],
+  const CASES: Array<[Language, string, string, string, string, string]> = [
+    ['ca', 'CICLE SOLAR', 'Posta de sol en', 'Sortida en', 'SENSE DADES', 'Llum'],
+    ['es', 'CICLO SOLAR', 'Puesta de sol en', 'Salida del sol en', 'SIN DATOS', 'Luz'],
+    ['en', 'SUN CYCLE', 'Sunset in', 'Sunrise in', 'NO DATA', 'Daylight'],
+    ['fr', 'CYCLE SOLAIRE', 'Coucher du soleil dans', 'Lever du soleil dans', 'PAS DE DONNÉES', 'Jour'],
   ];
 
-  it.each(CASES)('%s: títol del modal i etiquetes del compte enrere', (lang, title, sunsetIn, sunriseIn) => {
+  it.each(CASES)('%s: títol, etiquetes del compte enrere i del peu', (lang, title, sunsetIn, sunriseIn, _noData, daylight) => {
     vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));   // de dia
-    const day = renderCard(lang, { nextSunrise: NEXT_RISE });
+    const day = renderCard(lang);
     expect(screen.getByText(title)).toBeTruthy();
     expect(screen.getByText(sunsetIn)).toBeTruthy();
+    expect(screen.getByText(daylight)).toBeTruthy();
     day.unmount();
 
     vi.setSystemTime(new Date('2026-10-07T19:30:00Z'));   // de nit
-    renderCard(lang, { nextSunrise: NEXT_RISE });
+    renderCard(lang);
     expect(screen.getByText(sunriseIn)).toBeTruthy();
     expect(screen.getByText('10h 22m')).toBeTruthy();
   });
 
-  it.each(CASES)('%s: text sense dades', (lang, title, _sunsetIn, _sunriseIn, noData) => {
+  it.each(CASES)('%s: sense coordenades, "sense dades" i cap hora inventada', (lang, title, _sunsetIn, _sunriseIn, noData) => {
     vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));
-    renderCard(lang, { sunrise: '', sunset: '' });
+    renderCard(lang, { lat: undefined, lon: undefined });
     expect(screen.getByText(noData)).toBeTruthy();
     expect(screen.getByText(title)).toBeTruthy();
-    expect(screen.getByText('--h --m')).toBeTruthy();
-  });
-
-  it('un idioma desconegut cau al català', () => {
-    vi.setSystemTime(new Date('2026-10-07T14:07:00Z'));
-    renderCard('xx' as Language);
-    expect(screen.getByText('CICLE SOLAR')).toBeTruthy();
-    expect(screen.getByText('Posta de sol en')).toBeTruthy();
+    expect(screen.getAllByText('--:--')).toHaveLength(2);
+    expect(screen.queryByTestId('sun-card-marker')).toBeNull();
   });
 });

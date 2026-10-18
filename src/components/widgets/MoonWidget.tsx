@@ -1,34 +1,48 @@
+// src/components/widgets/MoonWidget.tsx
+// Targeta Fase lunar del tauler, direcció "Cel viu": la Lluna com és (mars, terminador i llum cendrosa) dins
+// d'un anell que marca el punt del cicle (nova a dalt, quart creixent a la dreta, plena a baix, quart minvant a
+// l'esquerra), on és ara al cel, les hores de sortida i posta i la pròxima lluna plena.
+// Pensada per a mòbils de gama baixa: cap blur, filtre ni animació; un SVG estàtic.
+import { useId, useMemo } from 'react';
 import { Moon, CloudOff } from 'lucide-react';
-// DOCTRINA RISC ZERO: Importació mitjançant Namespace (* as) 
-import * as SunCalc from 'suncalc'; 
-import { WidgetProps } from './widgetTypes';
-import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
-import { getTrans } from './widgetHelpers';
-import { MoonPhaseIcon } from '../MoonPhaseIcon';
+// DOCTRINA RISC ZERO: Importació mitjançant Namespace (* as)
+import * as SunCalc from 'suncalc';
 import type { Language } from '../../translations';
+import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
+import { getTrans } from './widgetHelpers';
+import { getCardinalLabel, getMoonCompassPosition, getNextMoonEvent } from '../../utils/astronomyMath';
+import { MOON_MARIA, MOON_TYCHO, lunationArc, moonLitPath, ringPoint } from '../../utils/moonDisc';
 
-// Ampliem la interfície localment. Afegim el timezone per a la telemetria global.
-type TacticalMoonWidgetProps = WidgetProps & {
+interface MoonWidgetProps {
+    lang: Language;
+    /** Fase 0..1 (lunarPhases.getMoonPhase) a l'instant `date`. */
+    phase: number;
+    /** Edat en dies des de la lluna nova real (lunarPhases.getMoonAgeDays), calculada al mateix instant que `phase`. */
+    ageDays?: number;
+    lat?: number;
     lon?: number;
+    /** Instant de referència (el rellotge de l'app); sense, ara. */
     date?: Date | string | number;
     timezone?: string;
-    // Edat en dies des de la lluna nova real (lunarPhases.getMoonAgeDays), calculada al mateix instant que `phase`.
-    ageDays?: number;
-};
+}
 
-// Textos propis de la targeta en els 4 idiomes (abans, ternaris ca/en/es: en francès sortia castellà).
-// Els de fr coincideixen amb els del modal Lunar.
-const MOON_TEXT: Readonly<Record<Language, { illumination: string; rise: string; set: string; day: string }>> = {
-    ca: { illumination: 'Il·luminació', rise: 'Sortida', set: 'Posta', day: 'Dia' },
-    es: { illumination: 'Iluminación', rise: 'Salida', set: 'Puesta', day: 'Día' },
-    en: { illumination: 'Illumination', rise: 'Rise', set: 'Set', day: 'Day' },
-    fr: { illumination: 'Illumination', rise: 'Lever', set: 'Coucher', day: 'Jour' },
+// Textos propis de la targeta en els 4 idiomes (els de fr i es, com els del modal Lunar).
+interface MoonStrings {
+    illuminated: string; below: string; rise: string; set: string; day: string;
+    full: string; today: string; tomorrow: string; days: string;
+}
+const MOON_TEXT: Readonly<Record<Language, MoonStrings>> = {
+    ca: { illuminated: 'il·luminada', below: "sota l'horitzó", rise: 'Sortida', set: 'Posta', day: 'Dia', full: 'Plena', today: 'avui', tomorrow: 'demà', days: 'dies' },
+    es: { illuminated: 'iluminada', below: 'bajo el horizonte', rise: 'Salida', set: 'Puesta', day: 'Día', full: 'Llena', today: 'hoy', tomorrow: 'mañana', days: 'días' },
+    en: { illuminated: 'illuminated', below: 'below the horizon', rise: 'Rise', set: 'Set', day: 'Day', full: 'Full', today: 'today', tomorrow: 'tomorrow', days: 'days' },
+    fr: { illuminated: 'éclairée', below: "sous l'horizon", rise: 'Lever', set: 'Coucher', day: 'Jour', full: 'Pleine', today: "aujourd'hui", tomorrow: 'demain', days: 'jours' },
 };
+const LOCALE: Readonly<Record<Language, string>> = { ca: 'ca-ES', es: 'es-ES', en: 'en-GB', fr: 'fr-FR' };
 
-// DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte
+// DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte (mateixos llindars que el modal)
 const getTranslatedMoonPhase = (phase: number, lang: string): string => {
     const safePhase = typeof phase === 'number' && !isNaN(phase) ? Math.max(0, Math.min(1, phase)) : 0;
-    
+
     // Mapatge astronòmic rigorós (8 fases)
     let phaseIndex = 0;
     if (safePhase < 0.02 || safePhase > 0.98) phaseIndex = 0; // Nova
@@ -49,181 +63,192 @@ const getTranslatedMoonPhase = (phase: number, lang: string): string => {
 
     const safeLang = typeof lang === 'string' ? lang.toLowerCase() : 'ca';
     const activeLang = dict[safeLang] ? safeLang : 'ca';
-    
+
     return dict[activeLang][phaseIndex] || '--';
 };
 
-export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: TacticalMoonWidgetProps) => {
+interface RiseSet { rise: string | null; set: string | null; riseNextDay: boolean; setNextDay: boolean }
+
+/**
+ * Sortida i posta del dia LOCAL de la ubicació: SunCalc.getMoonTimes treballa per dies UTC, així que es
+ * recullen els esdeveniments d'ahir, avui i demà i es tria el que cau a la data local (o el següent: "+1d").
+ */
+function moonRiseSet(target: Date, lat: number, lon: number, timezone?: string): RiseSet {
+    const empty: RiseSet = { rise: null, set: null, riseNextDay: false, setNextDay: false };
+    try {
+        // Definim el fus horari. Si no en rebem, utilitzem el del dispositiu com a xarxa de seguretat.
+        const tz = typeof timezone === 'string' && timezone.trim() !== ''
+            ? timezone
+            : Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+        const timeFormatter = new Intl.DateTimeFormat('ca-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+        const targetDateStr = dateFormatter.format(target);
+        const days = [-1, 0, 1].map(k => SunCalc.getMoonTimes(new Date(target.getTime() + k * 86400000), lat, lon));
+        const allRises = days.map(d => d.rise).filter(Boolean) as Date[];
+        const allSets = days.map(d => d.set).filter(Boolean) as Date[];
+
+        const pick = (list: Date[]) => {
+            const same = list.find(d => dateFormatter.format(d) === targetDateStr);
+            if (same) return { d: same, next: false };
+            const later = list.find(d => dateFormatter.format(d) > targetDateStr);
+            return later ? { d: later, next: true } : null;
+        };
+        const r = pick(allRises), s = pick(allSets);
+        const fmt = (d?: Date) => (d && !isNaN(d.getTime()) ? timeFormatter.format(d) : null);
+        return { rise: fmt(r?.d), set: fmt(s?.d), riseNextDay: !!r?.next, setNextDay: !!s?.next };
+    } catch (error) {
+        console.error("Error al calcular el cicle lunar global:", error);
+        return empty;
+    }
+}
+
+const LAB = 'text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500';
+
+/** La Lluna amb l'anell del cicle (viewBox 120×120). */
+const MoonWithRing = ({ phase, south, dim }: { phase: number; south: boolean; dim: boolean }) => {
+    const uid = `mw${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+    const C = 60, RING = 55, R = 41;
+    const lit = moonLitPath(phase, R);
+    const ang = Math.max(0, Math.min(1, phase)) * 360;
+    const [px, py] = ringPoint(C, C, RING, ang);
+    return (
+        <svg viewBox="0 0 120 120" className="w-full h-full" aria-hidden="true" focusable="false">
+            <defs>
+                <clipPath id={`${uid}l`}><path d={lit} /></clipPath>
+                <radialGradient id={`${uid}r`} cx="50%" cy="50%" r="50%">
+                    <stop offset="55%" stopColor="#000" stopOpacity="0" />
+                    <stop offset="100%" stopColor="#000" stopOpacity=".42" />
+                </radialGradient>
+            </defs>
+            <circle cx={C} cy={C} r={RING} fill="none" stroke="#fff" strokeOpacity=".08" strokeWidth="3" />
+            {!dim && <path d={lunationArc(C, C, RING, phase)} fill="none" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round" />}
+            {[0, 90, 180, 270].map(a => {
+                const [x, y] = ringPoint(C, C, RING, a);
+                return <circle key={a} cx={x} cy={y} r="2.6" fill={!dim && a <= ang ? '#a5b4fc' : '#3b4260'} />;
+            })}
+            {/* A l'hemisferi sud la Lluna es veu girada mig volt: el costat il·luminat i els mars canvien de lloc. */}
+            <g transform={`translate(${C},${C})${south ? ' rotate(180)' : ''}`} opacity={dim ? 0.4 : 1}>
+                <circle r={R} fill="#151a2a" />
+                {lit && (
+                    <g clipPath={`url(#${uid}l)`}>
+                        <circle r={R} fill="#e6e3da" />
+                        {MOON_MARIA.map(([x, y, rx, ry], i) => (
+                            <ellipse key={i} cx={x * R} cy={y * R} rx={rx * R} ry={ry * R} fill="#8f96a3" fillOpacity=".55" />
+                        ))}
+                        <circle cx={MOON_TYCHO[0] * R} cy={MOON_TYCHO[1] * R} r={Math.max(1, MOON_TYCHO[2] * R)} fill="#fbfaf6" />
+                        <circle r={R} fill={`url(#${uid}r)`} />
+                    </g>
+                )}
+                <circle r={R} fill="none" stroke="#fff" strokeOpacity=".08" />
+            </g>
+            {!dim && <circle cx={px} cy={py} r="4.6" fill="#eef2ff" stroke="#11131f" strokeWidth="2" />}
+        </svg>
+    );
+};
+
+export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: MoonWidgetProps) => {
     // DOCTRINA RISC ZERO: Validació estricta d'objecte i extracció tipada
     const t = getTrans(lang) as Record<string, unknown>;
     const titleMoon = typeof t.moonPhase === 'string' ? t.moonPhase : "LLUNA";
-    const text = MOON_TEXT[lang as Language] ?? MOON_TEXT.ca;
-    const tIllumination = text.illumination;
-    const tRise = text.rise;
-    const tSet = text.set;
-    const tDay = text.day;
-    
+    const text = MOON_TEXT[lang] ?? MOON_TEXT.ca;
+
     // Separació estricta de disponibilitat de dades
     const hasData = typeof phase === 'number' && !isNaN(phase);
     const hasValidCoords = typeof lat === 'number' && !isNaN(lat) && typeof lon === 'number' && !isNaN(lon);
-    
+    const isSouth = hasValidCoords && (lat as number) < 0;
+
     // Càlcul de la il·luminació real (0-100%) protegit contra divisions o nuls
     const illumination = hasData ? Math.round(((1 - Math.cos(phase * 2 * Math.PI)) / 2) * 100) : 0;
-    
-    // Usem el nou motor intern per la traducció i evitem dependre de getMoonPhaseText extern
     const moonText = hasData ? getTranslatedMoonPhase(phase, lang) : '--';
-    // Edat real (dies des de la lluna nova), no fase × 29,53: les lunacions no duren igual i el
-    // 18-10-2026, per exemple, això deia "Dia 7" amb una Lluna de gairebé 8 dies.
+    // Edat real (dies des de la lluna nova), no fase × 29,53: les lunacions no duren igual.
     const moonAge = hasData && typeof ageDays === 'number' && !isNaN(ageDays) ? ageDays : '--';
-    
-    // Utilitzem 'lat' per detectar l'hemisferi de manera segura
-    const isSouth = hasValidCoords && lat < 0;
 
-    // --- MOTOR MATEMÀTIC TÀCTIC (Risc Zero Global + Escombratge de 3 Dies) ---
-    let safeMoonrise: string | null = null;
-    let safeMoonset: string | null = null;
-    let isNextDayRise = false;
-    let isNextDaySet = false;
+    const instant = useMemo(() => {
+        const d = date !== undefined ? new Date(date) : new Date();
+        return isNaN(d.getTime()) ? new Date() : d;
+    }, [date]);
+    const instantMs = instant.getTime();
 
-    if (hasValidCoords) {
+    // Sortida i posta: depenen només del dia local (es recalculen quan canvia la data, no cada minut).
+    const localDay = useMemo(() => {
         try {
-            // Definim el fus horari. Si no en rebem, utilitzem el del dispositiu com a xarxa de seguretat.
-            const tz = typeof timezone === 'string' && timezone.trim() !== '' 
-                ? timezone 
-                : Intl.DateTimeFormat().resolvedOptions().timeZone;
-                
-            const targetDate = date ? new Date(date) : new Date();
-            
-            // Formatadors estrictes acoblats al fus horari destí per evitar desajustos celestes
-            const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
-            const timeFormatter = new Intl.DateTimeFormat('ca-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
-            
-            // L'"avui" absolut de la localitat consultada
-            const targetDateStr = dateFormatter.format(targetDate);
-
-            // Preparem els dies adjacents
-            const yesterday = new Date(targetDate.getTime() - 86400000);
-            const tomorrow = new Date(targetDate.getTime() + 86400000);
-
-            const getTimes = (d: Date) => SunCalc.getMoonTimes(d, lat, lon);
-            
-            // Recopilem tots els esdeveniments de la finestra
-            const allRises = [getTimes(yesterday).rise, getTimes(targetDate).rise, getTimes(tomorrow).rise].filter(Boolean) as Date[];
-            const allSets = [getTimes(yesterday).set, getTimes(targetDate).set, getTimes(tomorrow).set].filter(Boolean) as Date[];
-
-            // TÀCTICA DE FUS HORARI: Seleccionem l'esdeveniment que, a l'avaluar-se sota el fus horari destí, coincideix
-            let localRise = allRises.find(d => dateFormatter.format(d) === targetDateStr);
-            let localSet = allSets.find(d => dateFormatter.format(d) === targetDateStr);
-
-            // TÀCTICA DE PREVISIÓ (+1d)
-            if (!localRise) {
-                localRise = allRises.find(d => dateFormatter.format(d) > targetDateStr);
-                if (localRise) isNextDayRise = true;
-            }
-            if (!localSet) {
-                localSet = allSets.find(d => dateFormatter.format(d) > targetDateStr);
-                if (localSet) isNextDaySet = true;
-            }
-
-            const formatTime = (timeData?: Date): string | null => {
-                if (!timeData || isNaN(timeData.getTime())) return null;
-                return timeFormatter.format(timeData); // Hora blindada al país destí
-            };
-
-            safeMoonrise = formatTime(localRise);
-            safeMoonset = formatTime(localSet);
-
-        } catch (error) {
-            console.error("Error al calcular el cicle lunar global:", error);
-            // safeMoonrise i safeMoonset romanen null per defecte, activant els fallbacks visuals
+            const tz = typeof timezone === 'string' && timezone.trim() !== '' ? timezone : undefined;
+            return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(instantMs));
+        } catch {
+            return new Date(instantMs).toDateString();
         }
-    }
+    }, [instantMs, timezone]);
+    const riseSet = useMemo(
+        () => (hasValidCoords ? moonRiseSet(new Date(instantMs), lat as number, lon as number, timezone) : null),
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- es recalcula per dia local, no per minut
+        [hasValidCoords, lat, lon, timezone, localDay],
+    );
 
-    // SPATIAL UI: Seamless Loop Cinemàtic (Només s'activa si hi ha dades per protegir la lògica de pèrdua de senyal)
-    const cinematicAnimations = `
-        @keyframes lunar-levitation {
-            0%, 100% { transform: ${isSouth ? 'scaleX(-1)' : ''} translateY(0px) translateZ(10px); }
-            50% { transform: ${isSouth ? 'scaleX(-1)' : ''} translateY(-6px) translateZ(10px); }
-        }
-        @keyframes lunar-glow {
-            0%, 100% { filter: drop-shadow(0 0 10px rgba(255,255,255,0.15)); }
-            50% { filter: drop-shadow(0 0 25px rgba(255,255,255,0.4)); }
-        }
-        .animate-lunar-loop {
-            animation: lunar-levitation 8s ease-in-out infinite, lunar-glow 5s ease-in-out infinite;
-            will-change: transform, filter;
-        }
-    `;
-
-    // Estats visuals
-    const bgGlow = hasData ? "from-indigo-950/30 to-black/80" : "from-slate-900/50 to-black/80";
-    const borderColor = hasData ? "border-white/5" : "border-slate-700/50";
-    
-    const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} relative overflow-hidden backdrop-blur-md bg-gradient-to-br transition-colors duration-700 ${bgGlow} border ${borderColor} shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu p-3 sm:p-4 flex flex-col justify-between h-full select-none`;
+    // On és ara (la mateixa funció que la "Posició actual" del modal) i la pròxima plena (també la del modal).
+    const pos = hasValidCoords ? getMoonCompassPosition(instant, lat as number, lon as number) : null;
+    const nextFull = useMemo(() => (hasData ? getNextMoonEvent('full', new Date(instantMs), 45) : null), [hasData, instantMs]);
+    const nextFullText = useMemo(() => {
+        if (!nextFull) return '--';
+        if (nextFull.daysAhead === 0) return text.today;
+        if (nextFull.daysAhead === 1) return text.tomorrow;
+        // La data de getNextMoonEvent és el migdia UTC del dia de l'esdeveniment (el mateix dia que compta el modal).
+        const day = new Intl.DateTimeFormat(LOCALE[lang] ?? 'ca-ES', { weekday: 'short', day: 'numeric', timeZone: 'UTC' }).format(nextFull.date);
+        return `${day} · ${nextFull.daysAhead} ${text.days}`;
+    }, [nextFull, lang, text]);
 
     return (
-        <div className={SPATIAL_WIDGET_STYLE}>
-             {/* Només injectem els estils del bucle si hi ha telemetria */}
-             {hasData && <style>{cinematicAnimations}</style>}
-             
-             <div className={MATRIX_BG}></div>
-             
-             {/* Llum atmosfèrica de fons */}
-             <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-[50px] transition-colors duration-1000 pointer-events-none z-0 ${hasData ? 'bg-indigo-500/10' : 'bg-slate-700/10'}`}></div>
+        <div className={`${WIDGET_BASE_STYLE} select-none`}>
+            <div className="flex items-center justify-between gap-2 min-h-[28px] relative z-10">
+                <span className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} min-w-0`}>
+                    {hasData ? <Moon className="w-4 h-4 text-indigo-300 shrink-0" aria-hidden="true" /> : <CloudOff className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />}
+                    <span className="tracking-wider text-slate-200 truncate">{titleMoon}</span>
+                </span>
+                <span className="shrink-0 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-300">
+                    {text.day} {moonAge}
+                </span>
+            </div>
 
-             <div className="flex items-center justify-between w-full mb-3 z-10 relative">
-                 <span className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-1.5`}>
-                     {hasData ? (
-                         <Moon className="w-4 h-4 text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] transition-colors duration-500" /> 
-                     ) : (
-                         <CloudOff className="w-4 h-4 text-slate-500" />
-                     )}
-                     <span className="tracking-wider text-slate-200">{titleMoon}</span>
-                 </span>
-                 <div className={`flex flex-col items-end px-2 py-0.5 rounded border backdrop-blur-sm transition-colors duration-500 ${hasData ? 'bg-black/30 border-white/5' : 'bg-slate-800/40 border-slate-700/50'}`}>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${hasData ? 'text-slate-300' : 'text-slate-500'}`}>
-                        {tDay} {moonAge}
-                    </span>
-                 </div>
-             </div>
-             
-             <div className="flex items-center justify-center flex-1 gap-6 sm:gap-8 mb-4 mt-2 z-10 relative">
-                 <div className={`w-20 h-20 sm:w-24 sm:h-24 transition-all duration-1000 ${hasData ? 'animate-lunar-loop' : 'opacity-40 grayscale filter blur-[1px]'}`}>
-                    <MoonPhaseIcon phase={hasData ? phase : 0} title={hasData ? `${tIllumination}: ${illumination}%` : undefined} className={`w-full h-full ${hasData ? 'text-slate-200' : 'text-slate-500'}`} />
-                 </div>
-                 
-                 <div className="flex flex-col justify-center">
-                    <span className={`text-3xl sm:text-4xl font-black tabular-nums tracking-tighter leading-none mb-1 transition-colors duration-500 ${hasData ? 'text-white drop-shadow-md' : 'text-slate-600'}`}>
-                        {hasData ? illumination : '--'}%
-                    </span>
-                    <span className={`text-sm sm:text-base font-bold mb-1 tracking-wide leading-none transition-colors duration-500 ${hasData ? 'text-indigo-200' : 'text-slate-500'}`}>
-                        {moonText}
-                    </span>
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest border-t border-white/10 pt-1.5 mt-1">
-                        {tIllumination}
-                    </span>
-                 </div>
-             </div>
+            <div className="flex justify-center mt-2">
+                <div className="w-[120px] h-[120px] lg:w-[92px] lg:h-[92px]">
+                    <MoonWithRing phase={hasData ? phase : 0} south={isSouth} dim={!hasData} />
+                </div>
+            </div>
 
-             <div className={`flex items-center justify-between w-full pt-3 border-t mt-auto rounded-b px-2 pb-1 z-10 relative transition-colors duration-500 ${hasValidCoords ? 'border-indigo-500/20 bg-black/20' : 'border-slate-700/50 bg-slate-900/40'}`}>
-                <div className="flex flex-col items-start">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">{tRise}</span>
-                    <span className={`flex items-baseline gap-1 text-xs sm:text-sm font-mono font-bold tracking-tight transition-colors duration-500 ${safeMoonrise ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.4)]' : 'text-slate-600'}`}>
-                        {safeMoonrise || '--:--'}
-                        {isNextDayRise && <span className="text-[8px] font-sans text-cyan-200/60 tracking-normal drop-shadow-none">+1d</span>}
-                    </span>
+            <div className="text-center mt-0.5">
+                <div className={`text-[17px] font-bold leading-tight ${hasData ? 'text-slate-100' : 'text-slate-500'}`}>{moonText}</div>
+                <div className="text-[12px] text-slate-400 mt-0.5">
+                    <span className="font-mono text-indigo-100">{hasData ? illumination : '--'}%</span> {text.illuminated}
+                    {pos && (
+                        <>
+                            {' · '}
+                            {pos.altitudeDeg > 0
+                                ? <><span className="font-mono">{Math.round(pos.altitudeDeg)}°</span> {getCardinalLabel(pos.azimuthDeg, lang)}</>
+                                : text.below}
+                        </>
+                    )}
                 </div>
-                
-                <div className={`w-[1px] h-6 bg-gradient-to-b from-transparent transition-colors duration-500 to-transparent ${hasValidCoords ? 'via-indigo-500/30' : 'via-slate-700/50'}`}></div>
-                
-                <div className="flex flex-col items-end">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">{tSet}</span>
-                    <span className={`flex items-baseline gap-1 text-xs sm:text-sm font-mono font-bold tracking-tight transition-colors duration-500 ${safeMoonset ? 'text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.4)]' : 'text-slate-600'}`}>
-                        {isNextDaySet && <span className="text-[8px] font-sans text-amber-200/60 tracking-normal drop-shadow-none">+1d</span>}
-                        {safeMoonset || '--:--'}
-                    </span>
+            </div>
+
+            <div className="flex items-end justify-between gap-2 border-t border-white/[0.07] pt-2.5 mt-2.5 relative z-10">
+                <div className="font-mono text-[12.5px] leading-[1.45]">
+                    <div className="flex items-baseline gap-1">
+                        <span className="sr-only">{text.rise}</span>
+                        <span className="text-slate-500" aria-hidden="true">↑</span>
+                        <span className={riseSet?.rise ? 'text-cyan-300' : 'text-slate-600'}>{riseSet?.rise || '--:--'}</span>
+                        {riseSet?.riseNextDay && <span className="font-sans text-[9px] text-cyan-200/60">+1d</span>}
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                        <span className="sr-only">{text.set}</span>
+                        <span className="text-slate-500" aria-hidden="true">↓</span>
+                        <span className={riseSet?.set ? 'text-amber-300' : 'text-slate-600'}>{riseSet?.set || '--:--'}</span>
+                        {riseSet?.setNextDay && <span className="font-sans text-[9px] text-amber-200/60">+1d</span>}
+                    </div>
                 </div>
-             </div>
+                <div className="text-right min-w-0">
+                    <div className={LAB}>{text.full}</div>
+                    <div className="text-[13px] text-slate-200 whitespace-nowrap">{nextFullText}</div>
+                </div>
+            </div>
         </div>
     );
 };
