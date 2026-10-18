@@ -3,7 +3,7 @@
 // d'un anell que marca el punt del cicle (nova a dalt, quart creixent a la dreta, plena a baix, quart minvant a
 // l'esquerra), on és ara al cel, les hores de sortida i posta i la pròxima lluna plena.
 // Pensada per a mòbils de gama baixa: cap blur, filtre ni animació; un SVG estàtic.
-import { useId, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Moon, CloudOff } from 'lucide-react';
 // DOCTRINA RISC ZERO: Importació mitjançant Namespace (* as)
 import * as SunCalc from 'suncalc';
@@ -11,7 +11,7 @@ import type { Language } from '../../translations';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { getCardinalLabel, getMoonCompassPosition, getNextMoonEvent } from '../../utils/astronomyMath';
-import { MOON_MARIA, MOON_TYCHO, lunationArc, moonLitPath, ringPoint } from '../../utils/moonDisc';
+import { MoonWithRing } from '../MoonDisc';
 
 interface MoonWidgetProps {
     lang: Language;
@@ -103,48 +103,6 @@ function moonRiseSet(target: Date, lat: number, lon: number, timezone?: string):
 }
 
 const LAB = 'text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500';
-
-/** La Lluna amb l'anell del cicle (viewBox 120×120). */
-const MoonWithRing = ({ phase, south, dim }: { phase: number; south: boolean; dim: boolean }) => {
-    const uid = `mw${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
-    const C = 60, RING = 55, R = 41;
-    const lit = moonLitPath(phase, R);
-    const ang = Math.max(0, Math.min(1, phase)) * 360;
-    const [px, py] = ringPoint(C, C, RING, ang);
-    return (
-        <svg viewBox="0 0 120 120" className="w-full h-full" aria-hidden="true" focusable="false">
-            <defs>
-                <clipPath id={`${uid}l`}><path d={lit} /></clipPath>
-                <radialGradient id={`${uid}r`} cx="50%" cy="50%" r="50%">
-                    <stop offset="55%" stopColor="#000" stopOpacity="0" />
-                    <stop offset="100%" stopColor="#000" stopOpacity=".42" />
-                </radialGradient>
-            </defs>
-            <circle cx={C} cy={C} r={RING} fill="none" stroke="#fff" strokeOpacity=".08" strokeWidth="3" />
-            {!dim && <path d={lunationArc(C, C, RING, phase)} fill="none" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round" />}
-            {[0, 90, 180, 270].map(a => {
-                const [x, y] = ringPoint(C, C, RING, a);
-                return <circle key={a} cx={x} cy={y} r="2.6" fill={!dim && a <= ang ? '#a5b4fc' : '#3b4260'} />;
-            })}
-            {/* A l'hemisferi sud la Lluna es veu girada mig volt: el costat il·luminat i els mars canvien de lloc. */}
-            <g transform={`translate(${C},${C})${south ? ' rotate(180)' : ''}`} opacity={dim ? 0.4 : 1}>
-                <circle r={R} fill="#151a2a" />
-                {lit && (
-                    <g clipPath={`url(#${uid}l)`}>
-                        <circle r={R} fill="#e6e3da" />
-                        {MOON_MARIA.map(([x, y, rx, ry], i) => (
-                            <ellipse key={i} cx={x * R} cy={y * R} rx={rx * R} ry={ry * R} fill="#8f96a3" fillOpacity=".55" />
-                        ))}
-                        <circle cx={MOON_TYCHO[0] * R} cy={MOON_TYCHO[1] * R} r={Math.max(1, MOON_TYCHO[2] * R)} fill="#fbfaf6" />
-                        <circle r={R} fill={`url(#${uid}r)`} />
-                    </g>
-                )}
-                <circle r={R} fill="none" stroke="#fff" strokeOpacity=".08" />
-            </g>
-            {!dim && <circle cx={px} cy={py} r="4.6" fill="#eef2ff" stroke="#11131f" strokeWidth="2" />}
-        </svg>
-    );
-};
 
 export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: MoonWidgetProps) => {
     // DOCTRINA RISC ZERO: Validació estricta d'objecte i extracció tipada

@@ -15,7 +15,8 @@ interface SolarDayNavProps {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
-  t: SolarStrings;
+  /** Només els textos del navegador: el modal Fase lunar hi passa els seus. */
+  t: Pick<SolarStrings, 'dayNav' | 'prevDay' | 'nextDay' | 'backToToday' | 'today'>;
 }
 
 export const SolarDayNav = memo(function SolarDayNav({
