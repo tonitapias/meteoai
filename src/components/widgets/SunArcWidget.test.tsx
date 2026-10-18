@@ -67,6 +67,41 @@ describe('SunArcWidget — compte enrere', () => {
   });
 });
 
+describe('SunArcWidget — tram il·luminat de l\'arc', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const litPath = (c: HTMLElement) => c.querySelector('[data-testid="sun-arc-lit"]');
+  const sunXY = (c: HTMLElement) => (c.querySelector('g[style]') as SVGGElement).style.transform.match(/-?[\d.]+/g)!.map(Number);
+  const pathEnd = (d: string) => d.trim().split(/[\s,]+/).slice(-2).map(Number);
+
+  it.each([
+    ['matí', '2026-10-07T07:30:00Z'],   // 09:30 local
+    ['tarda', '2026-10-07T15:30:00Z'],  // 17:30 local: abans la línia anava 20 unitats per davant del sol
+    ['just abans de la posta', '2026-10-07T17:10:00Z'], // 19:10 local: abans l'arc es veia sencer
+  ])('%s: acaba exactament on és el sol', (_label, iso) => {
+    vi.setSystemTime(new Date(iso));
+    const { container } = renderCard('ca', { nextSunrise: NEXT_RISE });
+    const lit = litPath(container);
+    expect(lit).not.toBeNull();
+    const [ex, ey] = pathEnd(lit!.getAttribute('d')!);
+    const [sx, sy] = sunXY(container);
+    expect(ex).toBeCloseTo(sx, 6);
+    expect(ey).toBeCloseTo(sy, 6);
+    expect(ex).toBeLessThan(90); // no arriba a l'horitzó de ponent
+  });
+
+  it('de nit (abans de la sortida i després de la posta) no hi ha tram il·luminat', () => {
+    vi.setSystemTime(new Date('2026-10-07T03:00:00Z'));
+    const before = renderCard('ca', { nextSunrise: NEXT_RISE });
+    expect(litPath(before.container)).toBeNull();
+    before.unmount();
+    vi.setSystemTime(new Date('2026-10-07T19:30:00Z'));
+    const after = renderCard('ca', { nextSunrise: NEXT_RISE });
+    expect(litPath(after.container)).toBeNull();
+  });
+});
+
 describe('SunArcWidget — idioma', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });

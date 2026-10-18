@@ -48,13 +48,13 @@ export const SunArcWidget = ({ sunrise, sunset, nextSunrise, lang, utcOffset }: 
     const hasValidData = isValidTime(sunrise) && isValidTime(sunset);
     const tomorrowSunrise: string | undefined = isValidTime(nextSunrise) ? nextSunrise : undefined;
 
-    const { sunPosition, progressPercent, statusText, countdown, isDaytime, displaySunrise, displaySunset } = useMemo(() => {
+    const { sunPosition, litPath, statusText, countdown, isDaytime, displaySunrise, displaySunset } = useMemo(() => {
         // Fallback robust d'interfície si falla l'API
         if (!hasValidData || !sunrise || !sunset) {
-            return { 
-                sunPosition: { x: 50, y: 90 }, 
-                progressPercent: 0, 
-                statusText: tNoData, 
+            return {
+                sunPosition: { x: 50, y: 90 },
+                litPath: null,
+                statusText: tNoData,
                 countdown: '--h --m', 
                 isDaytime: false, 
                 displaySunrise: '--:--', 
@@ -70,7 +70,7 @@ export const SunArcWidget = ({ sunrise, sunset, nextSunrise, lang, utcOffset }: 
 
         // Si l'extracció de segons ha retornat NaN, abortem i fallback
         if (isNaN(sunriseSeconds) || isNaN(sunsetSeconds)) {
-             return { sunPosition: { x: 50, y: 90 }, progressPercent: 0, statusText: tNoData, countdown: '--h --m', isDaytime: false, displaySunrise: '--:--', displaySunset: '--:--' };
+             return { sunPosition: { x: 50, y: 90 }, litPath: null, statusText: tNoData, countdown: '--h --m', isDaytime: false, displaySunrise: '--:--', displaySunset: '--:--' };
         }
 
         let diffSeconds = 0;
@@ -114,9 +114,17 @@ export const SunArcWidget = ({ sunrise, sunset, nextSunrise, lang, utcOffset }: 
         const x = Math.pow(1-tVal, 2) * p0.x + 2 * (1-tVal) * tVal * p1.x + Math.pow(tVal, 2) * p2.x;
         const y = Math.pow(1-tVal, 2) * p0.y + 2 * (1-tVal) * tVal * p1.y + Math.pow(tVal, 2) * p2.y;
 
+        // Tram il·luminat = la mateixa corba retallada exactament al sol (de Casteljau: la subcorba [0, t]
+        // d'una quadràtica té per control el punt a t del segment p0→p1). Abans era un traç discontinu de
+        // 135 unitats sobre una corba de 118,3 (i t no és proporcional a la longitud): a la tarda la línia
+        // anava fins a un 17 % de l'arc per davant del sol i, cap al final del dia, el cobria sencer.
+        const litPath = isDay && tVal > 0
+            ? `M ${p0.x},${p0.y} Q ${p0.x + (p1.x - p0.x) * tVal},${p0.y + (p1.y - p0.y) * tVal} ${x},${y}`
+            : null;
+
         return {
             sunPosition: { x, y },
-            progressPercent: tVal * 100,
+            litPath,
             statusText: nextEventLabel,
             countdown: countdownStr,
             isDaytime: isDay,
@@ -172,7 +180,9 @@ export const SunArcWidget = ({ sunrise, sunset, nextSunrise, lang, utcOffset }: 
              <div className="relative flex-1 w-full flex items-center justify-center mt-3 z-10 [transform:rotateX(40deg)_translateZ(10px)] [transform-style:preserve-3d]">
                  <svg className="w-full h-36 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                      <defs>
-                        <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        {/* En coordenades de l'arc sencer (10→90): el tram il·luminat és més curt que l'arc i,
+                            amb objectBoundingBox, el degradat s'hauria comprimit dins del tram. */}
+                        <linearGradient id="arcGradient" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="90" y2="0">
                             <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.3" />
                             <stop offset="50%" stopColor="#fbbf24" stopOpacity="1" />
                             <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.3" />
@@ -205,16 +215,15 @@ export const SunArcWidget = ({ sunrise, sunset, nextSunrise, lang, utcOffset }: 
                      )}
 
                      {/* Ruta de progrés il·luminada */}
-                     {hasValidData && (
-                         <path 
-                            d="M 10,90 Q 50,10 90,90" 
-                            fill="none" 
-                            stroke="url(#arcGradient)" 
-                            strokeWidth="3.5" 
+                     {litPath && (
+                         <path
+                            d={litPath}
+                            fill="none"
+                            stroke="url(#arcGradient)"
+                            strokeWidth="3.5"
                             strokeLinecap="round"
-                            strokeDasharray="135" 
-                            strokeDashoffset={135 - (135 * (isDaytime ? progressPercent / 100 : 0))} 
-                            className="transition-all duration-1000 ease-out opacity-95 drop-shadow-[0_0_10px_rgba(251,191,36,0.2)]"
+                            className="opacity-95 drop-shadow-[0_0_10px_rgba(251,191,36,0.2)]"
+                            data-testid="sun-arc-lit"
                          />
                      )}
 
