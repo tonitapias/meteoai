@@ -519,14 +519,15 @@ describe('SolarModal — brúixola (només pantalla gran, matchMedia simulat)', 
 });
 
 describe('SolarModal — pressupost de DOM i guardes', () => {
-  it('≤ 230 elements abans del calendari i ≤ 350 després; cap desenfocament, animació en bucle ni filtre', () => {
+  // 380 i no 350 des que la brúixola "Direcció del sol" també surt a mòbil (~16 elements, muntada amb retard).
+  it('≤ 230 elements abans del calendari i ≤ 380 després; cap desenfocament, animació en bucle ni filtre', () => {
     renderModal();
     const dialog = screen.getByRole('dialog');
     const before = dialog.querySelectorAll('*').length;
     expect(before).toBeLessThanOrEqual(230);
     advance(300);
     const after = dialog.querySelectorAll('*').length;
-    expect(after).toBeLessThanOrEqual(350);
+    expect(after).toBeLessThanOrEqual(380);
     expect(after).toBeGreaterThan(before);
     for (const el of dialog.querySelectorAll('*')) {
       expect(el.getAttribute('class') ?? '').not.toMatch(/backdrop-blur|animate-|blur-\[|drop-shadow/);

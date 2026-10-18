@@ -325,9 +325,10 @@ export default function SolarModal({ weatherData, onClose, lang = 'ca' }: SolarM
                 dbarFrac={dbarFrac} deltaText={deltaText} dateId={dateId} t={t} lang={language} />
               <SolarTrajectoryCard model={viewModel} altMax={altMax} isLive={isLive} nowMinute={isLive ? nowMinute : null}
                 pinMinute={pinMinute} onCommit={commitPin} channel={channel} lang={language} t={t} ids={trajIds} />
+              {/* A totes les mides (abans només a PC): a mòbil, just sota el gràfic que la mou. */}
+              <SolarCompass model={viewModel} channel={channel} t={t} lang={language} />
               <SolarForecastCard forecast={forecast} lastDateLabel={lastFcLabel} hasDaily={hasDaily}
                 dayLengthSec={viewModel.dayLengthSec} t={t} lang={language} />
-              {isLg && <SolarCompass model={viewModel} channel={channel} t={t} lang={language} />}
               <SolarEphemeris model={viewModel} cellStates={isLive ? cellStates : null} t={t} lang={language} />
               <SolarAlmanac liveDate={liveDate} zone={zone} lat={lat} lon={lon} daily={daily} viewDate={viewDate}
                 isLg={isLg} onSelect={selectDate} t={t} lang={language} />

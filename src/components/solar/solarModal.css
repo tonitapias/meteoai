@@ -41,9 +41,9 @@
 @media (min-width:360px){.sm-grid{gap:16px}}
 .sm-a-nav{grid-area:nav}.sm-a-hero{grid-area:hero}.sm-a-traj{grid-area:traj}.sm-a-fc{grid-area:fc}
 .sm-a-cmp{grid-area:cmp}.sm-a-eph{grid-area:eph}.sm-a-alm{grid-area:alm}.sm-a-foot{grid-area:foot}
-@media (min-width:768px) and (min-height:481px){.sm-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;grid-template-areas:"nav nav" "hero hero" "traj traj" "fc eph" "alm alm" "foot foot"}}
+@media (min-width:768px) and (min-height:481px){.sm-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;grid-template-areas:"nav nav" "hero hero" "traj traj" "cmp eph" "fc eph" "alm alm" "foot foot"}}
 @media (min-width:1024px) and (min-height:481px){.sm-grid{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:24px;grid-template-areas:"nav cmp" "hero cmp" "traj eph" "fc eph" "alm alm" "foot foot"}}
-@media (max-height:480px) and (min-width:480px){.sm-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;grid-template-areas:"nav traj" "hero traj" "fc eph" "alm alm" "foot foot"}}
+@media (max-height:480px) and (min-width:480px){.sm-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;grid-template-areas:"nav traj" "hero traj" "cmp eph" "fc eph" "alm alm" "foot foot"}}
 
 /* --- Superfícies, tipografia i controls --- */
 .sm-card{position:relative;border-radius:16px;border:1px solid rgba(255,255,255,.07);background-color:#0c0f17;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);padding:12px;contain:layout paint}

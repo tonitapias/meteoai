@@ -1,5 +1,5 @@
 // src/components/solar/SolarCompass.tsx
-// "Direcció del sol" (només pantalla gran): el recorregut del sol vist des de dalt amb el nord a dalt
+// "Direcció del sol" (totes les mides; a pantalles estretes la figura i la llegenda s'apilen): el recorregut del sol vist des de dalt amb el nord a dalt
 // (projecció azimutal equidistant: l'horitzó és el cercle, el zenit el centre). SVG estàtic per dia; el punt
 // del sol el mou el canal del gràfic (una transformació per fotograma, sense render de React).
 import { memo, useId, useLayoutEffect, useMemo, useRef } from 'react';
@@ -84,7 +84,8 @@ function CompassBody({ model, channel, t, lang }: SolarCompassProps) {
   return (
     <section className="sm-card sm-a-cmp" aria-labelledby={id}>
       <h3 id={id} className="sm-eyebrow">{t.compassTitle}</h3>
-      <div className="mt-2 flex items-center gap-5">
+      {/* 168 px de figura + la llegenda al costat no caben per sota de ~380 px d'amplada: s'apilen. */}
+      <div className="mt-2 flex flex-col items-center gap-3 min-[380px]:flex-row min-[380px]:gap-5">
         <div className="sm-cmp-fig" role="img" aria-label={t.compassAria}>
           <svg width={FIG_PX} height={FIG_PX} viewBox="0 0 120 120" aria-hidden="true" focusable="false">
             <defs>
@@ -112,12 +113,12 @@ function CompassBody({ model, channel, t, lang }: SolarCompassProps) {
           </svg>
           <div ref={dotRef} className="sm-cmp-dot" aria-hidden="true" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex flex-wrap justify-center gap-x-4 gap-y-1 min-[380px]:block">
           <p className="flex items-center gap-2 text-[13px] leading-5 text-slate-200">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-400" aria-hidden="true" />
             {t.sunrise} <span className="tabular-nums text-slate-300">{azText(model.polar === 'none' ? model.riseAz : null, lang)}</span>
           </p>
-          <p className="mt-1 flex items-center gap-2 text-[13px] leading-5 text-slate-200">
+          <p className="min-[380px]:mt-1 flex items-center gap-2 text-[13px] leading-5 text-slate-200">
             <span className="inline-block w-2 h-2 rounded-full bg-indigo-400" aria-hidden="true" />
             {t.sunset} <span className="tabular-nums text-slate-300">{azText(model.polar === 'none' ? model.setAz : null, lang)}</span>
           </p>
