@@ -56,6 +56,8 @@ const T: Record<Language, Record<string, string>> = {
   },
 };
 
+const pctText = (v: number | null) => (v !== null ? `${Math.round(v)}%` : '--');
+
 const getSafe = (arr: (number | null)[] | undefined, idx: number): number | null => {
   const v = Array.isArray(arr) ? arr[idx] : undefined;
   return typeof v === 'number' && !isNaN(v) ? v : null;
@@ -185,6 +187,12 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
   const displayLow = isScrubbing ? activeEntry?.low ?? null : currentLow;
   const displayMid = isScrubbing ? activeEntry?.mid ?? null : currentMid;
   const displayHigh = isScrubbing ? activeEntry?.high ?? null : currentHigh;
+  // La cobertura efectiva i el seu nivell també segueixen el cursor: abans l'heroi es quedava en el valor d'ara
+  // mentre les tres capes de sota ja mostraven l'hora triada (p. ex. "93 % Cobert" amb 100 / 0 / 0 %).
+  // El fons i la vora del full es queden amb el nivell d'ara: no es repinten mentre s'arrossega.
+  const displayEffective = isScrubbing ? effectiveCloudCoverNow(displayLow, displayMid, displayHigh) : effectiveNow;
+  const displaySeverity = isScrubbing ? getCloudSeverity(displayEffective, t) : severity;
+  const activeTimeLabel = isScrubbing && activeEntry ? activeEntry.timeStr.slice(11, 16) : t.now;
 
   // --- Geometria del gràfic: percentatge 0-100 directe ---
   const valToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(100, v)) / 100) * (BOTTOM_Y - TOP_Y);
@@ -262,19 +270,21 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain cloudlayers-scrollbar relative z-10 p-4 md:p-6 space-y-6">
 
-            {/* HEROI: cobertura efectiva actual */}
+            {/* HEROI: cobertura efectiva ara, o a l'hora del cursor quan s'explora el gràfic */}
             <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="flex flex-col items-center sm:items-start gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.coverNow}</span>
-                <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${severity.color}`}>
-                  {effectiveNow !== null ? Math.round(effectiveNow) : '--'}
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  {t.coverNow} · <span className={isScrubbing ? 'text-slate-200' : ''}>{activeTimeLabel}</span>
+                </span>
+                <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${displaySeverity.color}`}>
+                  {displayEffective !== null ? Math.round(displayEffective) : '--'}
                 </span>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">%</span>
               </div>
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${severity.borderColor}`}>
-                  <Cloud className={`w-3.5 h-3.5 ${severity.color}`} />
-                  <span className={`text-xs font-black uppercase tracking-wider ${severity.color}`}>{severity.label}</span>
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${displaySeverity.borderColor}`}>
+                  <Cloud className={`w-3.5 h-3.5 ${displaySeverity.color}`} />
+                  <span className={`text-xs font-black uppercase tracking-wider ${displaySeverity.color}`}>{displaySeverity.label}</span>
                 </div>
               </div>
             </div>
@@ -294,7 +304,8 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                 </span>
                 {activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
-                    {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
+                    {activeTimeLabel}
+                    {' · '}<span className={displaySeverity.color}>{displayEffective !== null ? `${Math.round(displayEffective)}%` : '--'}</span>
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
@@ -320,7 +331,7 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                   aria-valuemin={0}
                   aria-valuemax={N - 1}
                   aria-valuenow={activeIndex}
-                  aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${t.high} ${activeEntry.high ?? '--'}% · ${t.mid} ${activeEntry.mid ?? '--'}% · ${t.low} ${activeEntry.low ?? '--'}%` : undefined}
+                  aria-valuetext={activeEntry ? `${activeTimeLabel} · ${t.coverNow} ${pctText(displayEffective)} · ${t.high} ${pctText(displayHigh)} · ${t.mid} ${pctText(displayMid)} · ${t.low} ${pctText(displayLow)}` : undefined}
                   onKeyDown={handleKeyDown}
                 >
                   <line x1="0" y1={valToY(CLOUDS.FEW)} x2={CHART_W} y2={valToY(CLOUDS.FEW)} stroke="#34d399" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
