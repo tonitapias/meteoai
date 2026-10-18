@@ -13,11 +13,11 @@ import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { getMoonPhase } from '../utils/weatherMath';
+import { getMoonAgeDays } from '../utils/lunarPhases';
 import {
   getMoonCompassPosition,
   getMoonRiseSetForDate,
   getMoonIlluminationPercent,
-  getMoonAgeDays,
   getNextMoonEvent,
   getMoonDistanceCategory,
   getMoonDistanceGaugePercent,
@@ -156,7 +156,12 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
     [isToday, now, viewAnchor]
   );
   const illumination = getMoonIlluminationPercent(phase);
-  const ageDays = getMoonAgeDays(phase);
+  // Edat = temps des de la lluna nova real (no fase × 29,53: les lunacions no duren igual).
+  const ageDays = useMemo(() => {
+    const at = isToday ? now : viewAnchor;
+    const age = at ? getMoonAgeDays(at) : NaN;
+    return isNaN(age) ? 0 : age;
+  }, [isToday, now, viewAnchor]);
   const phaseName = getPhaseName(phase, safeLang);
 
   // Posició real "ara mateix" — només es mostra a l'heroi quan es consulta avui.
@@ -274,7 +279,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                 {/* Caixa 3× la lluna: a diferència de l'antic blur, sí que desborda el layout, per
                     això el contenidor de scroll porta overflow-x-hidden (sense scroll horitzontal). */}
                 <div className="absolute -inset-full pointer-events-none" style={HERO_GLOW}></div>
-                <MoonPhaseIcon phase={phase} className="w-full h-full relative z-10" />
+                <MoonPhaseIcon phase={phase} title={`${t.illumination}: ${illumination}%`} className="w-full h-full relative z-10" />
               </div>
             </div>
             <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
@@ -361,7 +366,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                   className={`flex-shrink-0 w-28 rounded-xl border p-3 flex flex-col items-center gap-1.5 text-left transition-colors ${selectedDayOffset === d.offset ? 'border-indigo-400/60 bg-indigo-950/40 ring-1 ring-indigo-400/40' : 'border-white/5 bg-[#0a0a14] hover:border-white/20'}`}
                 >
                   <span className={`text-[10px] font-black uppercase ${selectedDayOffset === d.offset ? 'text-indigo-300' : 'text-slate-400'}`}>{d.weekdayLabel} {d.dayNum}</span>
-                  <div className={`w-10 h-10 ${isSouth ? 'scale-x-[-1]' : ''}`}><MoonPhaseIcon phase={d.phase} className="w-full h-full" /></div>
+                  <div className={`w-10 h-10 ${isSouth ? 'scale-x-[-1]' : ''}`}><MoonPhaseIcon phase={d.phase} title={`${t.illumination}: ${d.illumination}%`} className="w-full h-full" /></div>
                   <span className="text-[10px] font-bold text-indigo-200">{d.illumination}%</span>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-cyan-300"><ArrowUpCircle className="w-3 h-3" />{d.rise}</div>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-amber-300"><ArrowDownCircle className="w-3 h-3" />{d.set}</div>

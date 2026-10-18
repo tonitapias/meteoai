@@ -2,6 +2,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { AlertOctagon } from 'lucide-react';
 import { getMoonPhase, getCurrentDewPoint } from '../utils/weatherMath';
+import { getMoonAgeDays } from '../utils/lunarPhases';
 import { selectRegionalModel } from '../constants/regionalModels';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
@@ -74,23 +75,21 @@ interface ExpertWidgetsProps {
   // Codi de temps de la capçalera (ja passat per la política de boira): decideix si el giny de
   // Visibilitat pot dir "boira" (vegeu utils/visibilityDisplay.ts).
   effectiveCode?: number | null;
+  // Rellotge de l'app (ms, useViewState, cada minut): instant real per a la fase i l'edat lunars.
+  now?: number;
 }
 
-export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, effectiveCode = null }: ExpertWidgetsProps) {
+export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, effectiveCode = null, now }: ExpertWidgetsProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
-  const currentTimeStr = typeof current?.time === 'string' ? current.time : undefined;
 
-  const moonPhaseVal = useMemo(() => {
-    if (typeof currentTimeStr === 'string') {
-      const year = Number(currentTimeStr.substring(0, 4));
-      const month = Number(currentTimeStr.substring(5, 7));
-      const day = Number(currentTimeStr.substring(8, 10));
-      const hour = Number(currentTimeStr.substring(11, 13));
-      const minute = Number(currentTimeStr.substring(14, 16));
-      return getMoonPhase(new Date(Date.UTC(year, month - 1, day, hour, minute)));
-    }
-    return getMoonPhase(new Date());
-  }, [currentTimeStr]);
+  // La fase és d'un instant, no d'una hora local: abans es llegia current.time (hora LOCAL) com si fos
+  // UTC i el giny anava desfasat tantes hores com el fus (2 h a Barcelona, 11 h a Sydney) respecte al
+  // modal, que fa servir l'hora real. Sense rellotge de l'app (tests), l'hora del sistema.
+  const moonNowMs = typeof now === 'number' && Number.isFinite(now) ? now : undefined;
+  const { moonPhaseVal, moonAgeDays } = useMemo(() => {
+    const at = moonNowMs !== undefined ? new Date(moonNowMs) : new Date();
+    return { moonPhaseVal: getMoonPhase(at), moonAgeDays: getMoonAgeDays(at) };
+  }, [moonNowMs]);
   
   const showSnowWidget = typeof freezingLevel === 'number' && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
@@ -329,6 +328,8 @@ export default function ExpertWidgets({ weatherData, aqiData, lang, unit, freezi
           <WidgetCard onClick={onShowMoonModal}>
               <MoonWidget
                   phase={moonPhaseVal}
+                  ageDays={moonAgeDays}
+                  date={moonNowMs}
                   lat={safeLat ?? 41.728}
                   lon={safeLon ?? 1.824}
                   timezone={typeof timezone === 'string' ? timezone : undefined}

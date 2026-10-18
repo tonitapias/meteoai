@@ -103,6 +103,18 @@ describe('getNextMoonEvent', () => {
     expect(result!.daysAhead).toBeLessThanOrEqual(1);
   });
 
+  it('el dia d\'una plena de matinada (26-10-2026 04:12 UTC, USNO) diu "avui", no la de la lunació següent', () => {
+    const result = getNextMoonEvent('full', new Date(Date.UTC(2026, 9, 26, 10, 0, 0)), 45);
+    expect(result!.daysAhead).toBe(0);
+    expect(result!.date.toISOString().slice(0, 10)).toBe('2026-10-26');
+  });
+
+  it('una plena d\'ahir ja no compta: la pròxima és la de la lunació següent', () => {
+    // Plena real: 24-11-2026 14:53 UTC → el 25-11 la pròxima és la del 24-12 (01:28 UTC).
+    const result = getNextMoonEvent('full', new Date(Date.UTC(2026, 10, 25, 18, 0, 0)), 45);
+    expect(result!.date.toISOString().slice(0, 10)).toBe('2026-12-24');
+  });
+
   it('detects a new moon across the phase wraparound (0.97 -> 0.02)', () => {
     const fromDate = new Date(Date.UTC(2025, 11, 16, 0, 0, 0));
     const result = getNextMoonEvent('new', fromDate, 30);

@@ -1,7 +1,7 @@
 // src/hooks/useCurrentConditions.ts
 import { useMemo } from 'react';
 import { getRealTimeWeatherCode } from '../utils/weatherLogic';
-import { calculateDewPoint, getMoonPhase, extractValidArrayNum, extractValidNum } from '../utils/weatherMath';
+import { calculateDewPoint, extractValidArrayNum, extractValidNum } from '../utils/weatherMath';
 import { calculateShortRangeAgreement } from '../utils/rules/shortRangeAgreementRules';
 import { calculateEffectiveCloudCover } from '../utils/rules/cloudRules';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
@@ -130,17 +130,13 @@ export function useCurrentConditions(
       [weatherData, currentHourlyIndex]
   );
   
-  // [FIX] Amb `[]` com a dependències, la fase lunar es calculava un cop a
-  // l'arrencada i mai més: si la PWA queda oberta passat el pas de mitjanit,
-  // es quedava congelada. `shiftedNow` ja és el "now" que la resta del hook
-  // fa servir i que es refresca periòdicament (useViewState), així que
-  // reutilitzar-lo aquí la manté al dia sense un rellotge nou.
-  const moonPhaseVal = useMemo(() => getMoonPhase(shiftedNow), [shiftedNow]);
+  // La fase lunar ja no es calcula aquí: amb `shiftedNow` (hora local desplaçada) anava desfasada
+  // tantes hores com el fus horari, i ningú no la llegia. La del giny surt d'ExpertWidgets (hora real).
   const barometricTrend = useMemo(() => ({ trend: 'steady', val: 0 }), []); 
 
   return {
       minutelyPreciseData, currentRainProbability, currentFreezingLevel, 
       effectiveWeatherCode, effectiveCloudCover, currentCape, weeklyExtremes, 
-      currentDewPoint, reliability, moonPhaseVal, barometricTrend
+      currentDewPoint, reliability, barometricTrend
   };
 }

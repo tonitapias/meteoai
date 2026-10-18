@@ -55,7 +55,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
 
   const {
     minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode, effectiveCloudCover,
-    currentCape, weeklyExtremes, currentDewPoint, reliability, moonPhaseVal, barometricTrend
+    currentCape, weeklyExtremes, currentDewPoint, reliability, barometricTrend
   } = useCurrentConditions(weatherData, shiftedNow, currentHourlyIndex, chartData24h);
 
   // Codis del motor de totes les hores, per dia: la previsió setmanal en tria la icona amb els mateixos
@@ -77,9 +77,8 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     barometricTrend, 
     currentCape, 
     currentDewPoint, 
-    reliability, 
-    moonPhaseVal, 
-    chartData24h, 
+    reliability,
+    chartData24h,
     chartDataFull,
     chartSeries,
     dayHourCodes,

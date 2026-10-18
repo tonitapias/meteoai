@@ -4,13 +4,25 @@ import * as SunCalc from 'suncalc';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
-import { MoonPhaseIcon } from '../MoonPhaseIcon'; 
+import { MoonPhaseIcon } from '../MoonPhaseIcon';
+import type { Language } from '../../translations';
 
 // Ampliem la interfície localment. Afegim el timezone per a la telemetria global.
 type TacticalMoonWidgetProps = WidgetProps & {
-    lon?: number; 
-    date?: Date | string | number; 
+    lon?: number;
+    date?: Date | string | number;
     timezone?: string;
+    // Edat en dies des de la lluna nova real (lunarPhases.getMoonAgeDays), calculada al mateix instant que `phase`.
+    ageDays?: number;
+};
+
+// Textos propis de la targeta en els 4 idiomes (abans, ternaris ca/en/es: en francès sortia castellà).
+// Els de fr coincideixen amb els del modal Lunar.
+const MOON_TEXT: Readonly<Record<Language, { illumination: string; rise: string; set: string; day: string }>> = {
+    ca: { illumination: 'Il·luminació', rise: 'Sortida', set: 'Posta', day: 'Dia' },
+    es: { illumination: 'Iluminación', rise: 'Salida', set: 'Puesta', day: 'Día' },
+    en: { illumination: 'Illumination', rise: 'Rise', set: 'Set', day: 'Day' },
+    fr: { illumination: 'Illumination', rise: 'Lever', set: 'Coucher', day: 'Jour' },
 };
 
 // DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte
@@ -41,14 +53,15 @@ const getTranslatedMoonPhase = (phase: number, lang: string): string => {
     return dict[activeLang][phaseIndex] || '--';
 };
 
-export const MoonWidget = ({ phase, lat, lon, lang, date, timezone }: TacticalMoonWidgetProps) => {
+export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: TacticalMoonWidgetProps) => {
     // DOCTRINA RISC ZERO: Validació estricta d'objecte i extracció tipada
     const t = getTrans(lang) as Record<string, unknown>;
     const titleMoon = typeof t.moonPhase === 'string' ? t.moonPhase : "LLUNA";
-    const tIllumination = lang === 'ca' ? "Il·luminació" : (lang === 'en' ? "Illumination" : "Iluminación");
-    const tRise = lang === 'ca' ? "Sortida" : (lang === 'en' ? "Rise" : "Salida");
-    const tSet = lang === 'ca' ? "Posta" : (lang === 'en' ? "Set" : "Puesta");
-    const tDay = lang === 'ca' ? "Dia" : (lang === 'en' ? "Day" : "Día");
+    const text = MOON_TEXT[lang as Language] ?? MOON_TEXT.ca;
+    const tIllumination = text.illumination;
+    const tRise = text.rise;
+    const tSet = text.set;
+    const tDay = text.day;
     
     // Separació estricta de disponibilitat de dades
     const hasData = typeof phase === 'number' && !isNaN(phase);
@@ -59,7 +72,9 @@ export const MoonWidget = ({ phase, lat, lon, lang, date, timezone }: TacticalMo
     
     // Usem el nou motor intern per la traducció i evitem dependre de getMoonPhaseText extern
     const moonText = hasData ? getTranslatedMoonPhase(phase, lang) : '--';
-    const moonAge = hasData ? Math.round(phase * 29.53) : '--';
+    // Edat real (dies des de la lluna nova), no fase × 29,53: les lunacions no duren igual i el
+    // 18-10-2026, per exemple, això deia "Dia 7" amb una Lluna de gairebé 8 dies.
+    const moonAge = hasData && typeof ageDays === 'number' && !isNaN(ageDays) ? ageDays : '--';
     
     // Utilitzem 'lat' per detectar l'hemisferi de manera segura
     const isSouth = hasValidCoords && lat < 0;
@@ -174,7 +189,7 @@ export const MoonWidget = ({ phase, lat, lon, lang, date, timezone }: TacticalMo
              
              <div className="flex items-center justify-center flex-1 gap-6 sm:gap-8 mb-4 mt-2 z-10 relative">
                  <div className={`w-20 h-20 sm:w-24 sm:h-24 transition-all duration-1000 ${hasData ? 'animate-lunar-loop' : 'opacity-40 grayscale filter blur-[1px]'}`}>
-                    <MoonPhaseIcon phase={hasData ? phase : 0} className={`w-full h-full ${hasData ? 'text-slate-200' : 'text-slate-500'}`} />
+                    <MoonPhaseIcon phase={hasData ? phase : 0} title={hasData ? `${tIllumination}: ${illumination}%` : undefined} className={`w-full h-full ${hasData ? 'text-slate-200' : 'text-slate-500'}`} />
                  </div>
                  
                  <div className="flex flex-col justify-center">

@@ -140,18 +140,13 @@ export function getMoonRiseSetForDate(
   return result;
 }
 
-// --- Fase / il·luminació / edat lunar (font única: getMoonPhase, no SunCalc.getMoonIllumination) ---
-// L'app ja calcula la fase d'avui amb aquesta fórmula (ExpertWidgets.tsx). Reutilitzar-la aquí
-// evita que el modal nou mostri una fase/edat lleugerament diferent de la del giny compacte.
+// --- Fase / il·luminació lunar (font única: getMoonPhase, no SunCalc.getMoonIllumination) ---
+// El giny compacte (ExpertWidgets.tsx) fa servir la mateixa funció i la mateixa edat
+// (getMoonAgeDays de lunarPhases.ts): giny i modal no poden mostrar dues fases diferents.
 
 export function getMoonIlluminationPercent(phase: number): number {
   if (typeof phase !== 'number' || isNaN(phase)) return 0;
   return Math.round(((1 - Math.cos(phase * 2 * Math.PI)) / 2) * 100);
-}
-
-export function getMoonAgeDays(phase: number): number {
-  if (typeof phase !== 'number' || isNaN(phase)) return 0;
-  return Math.round(phase * 29.53);
 }
 
 // --- Pròxima lluna plena / nova (escaneig dia a dia, granularitat diària només) ---
@@ -163,8 +158,11 @@ export function getNextMoonEvent(type: 'full' | 'new', fromDate: Date = new Date
   const dayMs = 86400000;
   const day0 = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate(), 12, 0, 0));
 
-  let prevPhase = getMoonPhase(day0);
-  for (let i = 1; i <= maxDays; i++) {
+  // Es comença comparant amb el migdia d'AHIR: un esdeveniment d'avui abans de les 12 UTC (més a prop del
+  // migdia d'avui que del d'ahir) és "avui". Abans el primer tram era avui→demà i aquell cas saltava a la
+  // lunació següent (p. ex. el 26-10-2026, plena a les 04:12 UTC, deia "en 29 dies").
+  let prevPhase = getMoonPhase(new Date(day0.getTime() - dayMs));
+  for (let i = 0; i <= maxDays; i++) {
     const d = new Date(day0.getTime() + i * dayMs);
     const phase = getMoonPhase(d);
 
@@ -175,7 +173,8 @@ export function getNextMoonEvent(type: 'full' | 'new', fromDate: Date = new Date
     if (crossed) {
       const distTo = (p: number) => type === 'full' ? Math.abs(p - 0.5) : Math.min(p, 1 - p);
       const chosenDay = distTo(phase) <= distTo(prevPhase) ? i : i - 1;
-      return { type, date: new Date(day0.getTime() + chosenDay * dayMs), daysAhead: chosenDay };
+      // chosenDay = -1: l'esdeveniment va ser ahir, ja ha passat; es continua cap al següent.
+      if (chosenDay >= 0) return { type, date: new Date(day0.getTime() + chosenDay * dayMs), daysAhead: chosenDay };
     }
     prevPhase = phase;
   }

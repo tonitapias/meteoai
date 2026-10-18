@@ -116,17 +116,9 @@ export const getCurrentDewPoint = (temperature: number | undefined, humidity: nu
     : undefined;
 };
 
-/**
- * Calcula la fase lunar (0.0 a 1.0) amb precisió astronòmica.
- * Algoritme basat en Julian Date (JD) i cicle sinòdic mitjà.
- */
-export const getMoonPhase = (date: Date): number => {
-  const jd = (date.getTime() / 86400000) + 2440587.5;
-  const cycles = (jd - 2451550.1) / 29.530588853;
-  let phase = cycles - Math.floor(cycles);
-  if (phase < 0) phase += 1;
-  return phase; 
-};
+// Fase lunar (0.0 a 1.0): ara surt de les fases principals reals (lunarPhases.ts). La fórmula
+// d'aquí suposava una lunació de durada fixa i anava fins a 14-17 h desfasada.
+export { getMoonPhase } from './lunarPhases';
 
 /**
  * Extreu la latitud d'un objecte 'location' de tipatge feble. Necessari perquè

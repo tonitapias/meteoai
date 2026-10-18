@@ -3,13 +3,14 @@
 interface MoonPhaseIconProps {
   phase: number; // 0..1
   className?: string;
+  // Text emergent ja traduït (p. ex. "Illumination: 50%"); abans era sempre "Il·luminació" en català.
+  title?: string;
 }
 
-export const MoonPhaseIcon = ({ phase, className = "w-16 h-16" }: MoonPhaseIconProps) => {
+export const MoonPhaseIcon = ({ phase, className = "w-16 h-16", title }: MoonPhaseIconProps) => {
   // Risc Zero: Protegim contra valors nuls, indefinits o fora de rang
   const safePhase = typeof phase === 'number' && !isNaN(phase) ? Math.max(0, Math.min(1, phase)) : 0;
-  const illumination = (1 - Math.cos(safePhase * 2 * Math.PI)) / 2;
-  
+
   // Lògica de visualització SVG (Hemisferi Nord)
   const r = 45;
   const cx = 50;
@@ -40,7 +41,7 @@ export const MoonPhaseIcon = ({ phase, className = "w-16 h-16" }: MoonPhaseIconP
   return (
     <div 
       className={`relative ${className} flex items-center justify-center transition-transform duration-700 ease-out hover:scale-105`} 
-      title={`Il·luminació: ${(illumination * 100).toFixed(0)}%`}
+      title={title}
     >
        <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">
           <defs>
