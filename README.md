@@ -10,7 +10,7 @@
 
 ### 🇬🇧 In English
 
-> MeteoToni AI is a high-precision weather forecast PWA (React 19 + TypeScript) for any location in the world. It blends global models (ECMWF, AIFS, GFS, ICON) with 14 auto-selected national high-resolution models (AROME, ICON-D2, HRRR, JMA and more, down to 1 km), cross-checks them against real-time radar and official alerts from 7 national weather services, and adds an AI layer (Google Gemini, with a deterministic risk fallback) for a plain-language summary. The app itself is available in Catalan, Spanish, English and French — this README is written in Catalan, the author's own language.
+> MeteoToni AI is a high-precision weather forecast PWA (React 19 + TypeScript) for any location in the world. It blends global models (ECMWF, AIFS, GFS, ICON) with 14 auto-selected national high-resolution models (AROME, ICON-D2, HRRR, JMA and more, down to 1 km), cross-checks them against real-time radar, satellite lightning detection (Meteosat-12) and official alerts from 7 national weather services, and adds an AI layer (Google Gemini, with a deterministic risk fallback) for a plain-language summary. The app itself is available in Catalan, Spanish, English and French — this README is written in Catalan, the author's own language.
 
 ---
 
@@ -59,9 +59,7 @@ Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. 
 * **Consensus Widget:** Compara el model regional actiu amb el consens dels models globals i indica el nivell de fiabilitat de la previsió —consens, divergència, incertesa o redundància (quan el "best match" global ja coincideix amb el model regional)— per a temperatura, vent i pluja.
 * **Meteograma Multimodel:** La "Telemetria Gràfica Completa" del Consensus Widget mostra 6 sèries alhora (el model regional actiu, ECMWF, AIFS, GFS, ICON i el blend global) per visualitzar la incertesa real entre models en un sol gràfic.
 * **Avís de Canvi Sobtat (3h):** Si el model global o el model regional actiu preveu pluja forta o vent fort en les properes tres hores, el Consensus Widget ho marca amb un avís visual explícit, encara que la situació actual sigui tranquil·la — el model regional hi aporta la sensibilitat necessària per detectar convecció local que el model global sol allisar.
-* **Verificació amb Radar en Temps Real:** Els models poden no veure un xàfec molt localitzat que sí és real. L'app mostreja el píxel exacte del radar Doppler a la teva ubicació i el compara amb la previsió del model per a aquest mateix moment; si el radar detecta precipitació que el model no preveu, t'ho notifica a la pantalla principal.
-* **Quan començarà o acabarà la pluja:** a partir de la projecció a curt termini del radar (nowcast, ~55 minuts), l'app estima si la precipitació a la teva ubicació exacta està a punt de començar o d'acabar, independentment del que digui el model per a aquesta hora.
-* **Satèl·lit Meteosat HD amb una imatge cada 10 minuts:** la capa «Meteosat HD (Europa)» del radar fa servir el Meteosat de tercera generació (MTG, Meteosat-12), amb el doble de nitidesa (píxels d'uns 2 km sobre Catalunya, abans uns 4,6 × 3,4 km) i fins al Cap Nord (72°N). Cada fotograma de radar porta la imatge de satèl·lit de la mateixa desena de minuts: en un bucle de 2 hores hi ha unes 10 imatges diferents en lloc de 2, i la més nova té una mediana de 27 minuts en lloc de 72. La capa ja no depèn de LibreWXR: les hores les dona el proxy propi a partir d'EUMETSAT. Si MTG s'endarrereix més d'una hora, la sessió passa sencera al Meteosat anterior (MSG) mentre aquest funcioni, sense barrejar tessel·les dels dos.
+* **Contrast amb l'observació real:** el radar, el satèl·lit i els llamps també contrasten la previsió en temps real (pluja que el model no veu, quan començarà o acabarà de ploure, llamps a prop): vegeu la secció 3.
 * **Gràfic de tendència de 7 dies amb la incertesa a la vista:** cada dia mostra la màxima i la mínima amb el seu rang probable (bigotis, vegeu més avall) i tres punts de fiabilitat segons l'acord entre models (sobre la màxima i la mínima), perquè un canvi d'1-2° entre dos dies no es llegeixi com una tendència quan la incertesa és més gran que això. Una tira indica de quin model surt cada dia (el regional als primers dies, el global després: un salt entre tots dos no és un canvi de temps), una frase resum diu si s'escalfa, es refreda o és variable —i avisa quan el canvi és menor que el desacord entre models— i cada dia obre el seu detall.
 * **Gràfics horaris d'Expert amb la incertesa a la vista:** la temperatura, la pluja, el vent i la cota de neu de les properes 24 hores comparen la línia principal (el model regional actiu o el global) amb ECMWF, GFS, ICON i AIFS. Una banda mostra on discrepen els models i un xip diu si l'acord és alt, mitjà o baix (llindars calibrats amb finestres reals de 24 h, i sense inventar-se un acord quan només hi ha un model per comparar); una llegenda deixa amagar-ne qualsevol. Cada gràfic porta les xifres clau (extrems amb l'hora, total i inici de pluja, ràfega màxima), la pluja en barres amb el volum de cada model, eix, nit ombrejada, marca d'"ara" i canvi de dia. La temperatura és la mateixa que veus a la capçalera i a les 24 h (amb la correcció d'inversió tèrmica), un model idèntic a la línia principal no es dibuixa dues vegades i, a l'estiu, la cota de neu es resumeix en una frase en lloc d'una línia plana. A mòbil s'ajusta a l'amplada i es pot recórrer arrossegant el dit.
 * **Detall del dia coherent amb la llista i amb la fiabilitat a la vista:** la màxima i la mínima del detall d'un dia surten de les mateixes hores que la llista de 7 dies (model regional i correcció d'inversió tèrmica inclosos) i no del valor diari del model global, que en un cas mesurat arribava a gairebé 4° de diferència a la mínima. Sota la temperatura hi ha l'estat del cel, el nivell d'acord entre models, el rang probable de la màxima i la mínima i quin model és el dia. Les targetes afegeixen la probabilitat màxima de pluja, la ràfega màxima i la categoria de l'índex UV, i la cota de neu només hi surt quan pot nevar: la resta de dies la substitueixen les hores de sol. Una tira resumeix el dia en matinada, matí, tarda i nit abans de les 24 hores, i es pot passar al dia anterior o al següent amb les fletxes, el teclat o lliscant el dit. El detall d'avui s'obre amb el botó «Avui» de la capçalera de la llista i hi marca l'hora en curs i atenua les hores que ja han passat.
@@ -80,7 +78,46 @@ Per reduir l'impacte dels microclimes, l'aplicació no confia en una sola font. 
   <p><em>L'anàlisi de la IA per a les pròximes 6 hores (Kirkwall, Escòcia): sota el «Motiu», la ràfega màxima, l'hora i el llindar, calculats de les dades i no per la IA.</em></p>
 </div>
 
-### 3. Observatoris Solar i Lunar
+### 3. Radar, Satèl·lit i Llamps
+El botó **Radar** de la capçalera obre un mapa a pantalla completa —un globus en 3D amb atmosfera— amb dues pestanyes, **Radar** i **Vent**. Tot el que es veu en un fotograma és del mateix moment: la pluja del radar, els núvols del satèl·lit i els llamps.
+
+* **Animació de les últimes ~2 hores:** el radar porta un fotograma cada 10 minuts. El botó de reproducció els passa a 0,6 s per fotograma, amb l'hora local de cada un a sota, i el de refresc torna a demanar les dades. Mentre es reprodueix, els fotogrames següents es precarreguen perquè no parpellegi, i en passar a la pestanya de vent l'animació es posa en pausa. La llum del sol sobre el globus i l'ombra de la nit segueixen l'hora del fotograma.
+* **Mapes base:** Fosc, Clar, Relleu i Satèl·lit (òptic, el de per defecte).
+
+**Capes** (botó de capes, a dalt a la dreta). Només es baixen les que estan actives:
+
+| Capa | Què mostra | Font i freqüència | Per defecte |
+|---|---|---|---|
+| **Precipitació (Radar)** | Pluja i neu que detecta el radar | RainViewer (xarxes de radar nacionals) per sobre de LibreWXR (compost global), cada 10 min | Activa |
+| **Llamps (satèl·lit MTG)** | Àrea de llamps de cada 5 min: groc translúcid on n'hi ha pocs, granat on n'hi ha 20 o més | Lightning Imager de Meteosat-12 (EUMETSAT), cada 5 min, uns 12 min de retard | Activa |
+| **Núvols (Satèl·lit IR)** | Núvols de tot el món en infraroig | LibreWXR (satèl·lits geostacionaris, compost de NOAA), cada hora | Activa |
+| **Imatge Satèl·lit (NASA)** | Fotografia en color real del dia | VIIRS (NOAA-20): la data completa més recent dels últims 6 dies | — |
+| **Incendis Actius (NASA)** | Focs detectats el dia anterior | VIIRS (Suomi NPP), anomalies tèrmiques a 375 m | — |
+| **Relleu 3D i Muntanyes** | El terreny en 3D (exagerat 1,5 vegades); la càmera s'inclina | Mapbox | — |
+| **Nit** | L'ombra de la nit, amb la línia real entre el dia i la nit | Calculada a l'app | Activa |
+| **Etiquetes** | Noms de països, regions i poblacions en l'idioma de l'app | Mapbox Streets | — |
+
+**Satèl·lits d'alta resolució:** se'n pot activar un de cada cop; a la seva zona substitueix els núvols IR globals i, si cal, la càmera hi va.
+* **Meteosat HD (Europa i Àfrica), una imatge cada 10 minuts:** fa servir el Meteosat de tercera generació (MTG, Meteosat-12), amb el doble de nitidesa (píxels d'uns 2 km sobre Catalunya, abans uns 4,6 × 3,4 km) i fins al Cap Nord (72°N). Cada fotograma de radar porta la imatge de satèl·lit de la mateixa desena de minuts: en un bucle de 2 hores hi ha unes 10 imatges diferents en lloc de 2, i la més nova té una mediana de 27 minuts en lloc de 72. Les hores les dona el proxy propi a partir d'EUMETSAT. Si MTG s'endarrereix més d'una hora, la sessió passa sencera al Meteosat anterior (MSG) mentre aquest funcioni, sense barrejar tessel·les dels dos.
+* **Meteosat HD en infraroig o en color:** un selector IR | Color sota el botó de la capa. En color fa servir el producte GeoColour de Meteosat-12: color real de dia i, de nit, els núvols de l'infraroig sobre les llums de les ciutats, una imatge cada 10 minuts que s'anima amb el radar. Si GeoColour s'endarrereix més d'una hora, el mode color mostra l'infraroig.
+* **GOES HD (Amèrica) i Himawari HD (Àsia i Pacífic):** l'infraroig d'alta resolució (banda 13) de GOES-East/West i de Himawari, via NASA GIBS, una imatge per hora. Si el servei de la NASA s'encalla, el proxy serveix l'última imatge que té en lloc d'una tessel·la buida.
+
+**Llamps en temps real:** la capa de llamps ve del Lightning Imager de Meteosat-12, que detecta llamps de núvol a terra i dins del núvol sobre Europa, l'Àfrica i l'Atlàntic: l'àrea de llamps de cada 5 minuts, publicada uns 12 minuts després, per sobre del radar i amb l'escala d'EUMETSAT (d'1 a 20 o més llamps en 5 minuts). Cada fotograma de radar mostra els 10 minuts que l'envolten, de manera que cada llamp surt una sola vegada al bucle; una tessel·la sense llamps pesa 369 bytes. Les zones amb pocs llamps són translúcides perquè no tapin el radar (amb la paleta opaca d'EUMETSAT, una tempesta gran l'amagava). Límits: la posició té una resolució de pocs quilòmetres i de dia el satèl·lit en detecta menys; no substitueix una xarxa de detecció a terra.
+
+**Avisos a la pantalla principal:** el radar i el satèl·lit també contrasten la previsió, sense obrir el mapa.
+* **Llamps a prop:** l'app mira els últims 30 minuts en 50 km al voltant de la ubicació. Amb llamps a 30 km o menys avisa amb la distància, la direcció i quant fa («Llamps a prop»; a 10 km o menys, en vermell i amb el consell de refugiar-se), i un botó obre el radar. La IA rep els llamps com una observació real i no com una previsió, i el tallafocs posa l'avís de tempesta (ambre) amb el motiu «Llamps detectats per satèl·lit a uns 23 km». Una consulta que falla (xarxa lenta) no esborra un avís vigent: es manté fins a 10 minuts.
+* **Pluja que el model no veu:** els models poden no veure un xàfec molt localitzat que sí és real. L'app mostreja el píxel exacte del radar Doppler a la teva ubicació i el compara amb la previsió del model per a aquest mateix moment; si el radar detecta precipitació que el model no preveu, t'ho notifica.
+* **Quan començarà o acabarà la pluja:** a partir de la projecció a curt termini del radar (nowcast, ~55 minuts), l'app estima si la precipitació a la teva ubicació exacta està a punt de començar o d'acabar, independentment del que digui el model per a aquesta hora.
+
+**Vent:** la pestanya Vent mostra el vent de l'ECMWF animat (Windy). Només es carrega mentre és oberta, perquè el mapa del radar i el del vent no animin alhora a la targeta gràfica.
+
+**Robustesa:**
+* El satèl·lit i els llamps passen per un proxy propi (Cloudflare Workers) amb memòria cau, que també diu quina és l'última imatge publicada de cada producte.
+* Una tessel·la que falla surt transparent en lloc d'un error, i el radar no queda mai en blanc: si un instant només té fotograma de RainViewer, a sota hi va el de LibreWXR més proper.
+* Si el mòbil es queda sense memòria gràfica (pèrdua del context WebGL), el mapa es reconstrueix amb les mateixes capes.
+* Les atribucions obligatòries (LibreWXR, RainViewer, Mapbox, OpenStreetMap i EUMETSAT) són al botó «i» de baix a l'esquerra.
+
+### 4. Observatoris Solar i Lunar
 Dos modals de detall interactius, accessibles tocant els ginys compactes de Cicle Solar i Fase Lunar, amb una direcció visual pròpia d'observatori (cel nocturn, sol i lluna com a protagonistes) i selecció real d'avui i dels 14 dies següents: tot el modal es recalcula per al dia triat.
 * **Els ginys del tauler, amb el cel real:**
   * **Cicle Solar:** sobre el color que té el cel en aquell moment (blau de dia, càlid a la posta, negre amb estrelles de nit), la corba d'alçada real del sol al llarg del dia, pintada per franges de llum (nit, hora blava, hora daurada i dia), amb el tram ja recorregut a tot color. El sol és a la seva posició, amb l'alçada i l'azimut d'ara; el migdia porta l'alçada i l'hora, i a sota hi ha la sortida i la posta amb l'azimut i la durada del dia amb quant ha canviat respecte d'ahir. També el sol de mitjanit i la nit polar.
@@ -106,7 +143,7 @@ Dos modals de detall interactius, accessibles tocant els ginys compactes de Cicl
   <p><em>Esquerra: els ginys de Fase lunar i Cicle solar del tauler (Barcelona, a mitja tarda). Dreta: el modal del Cicle solar (Honolulu): sortida i posta, durada del dia, alçada del sol amb el color real del cel i previsió de sol.</em></p>
 </div>
 
-### 4. Observatori de Risc de Tempesta (CAPE)
+### 5. Observatori de Risc de Tempesta (CAPE)
 Un tercer modal de detall, accessible tocant el giny de CAPE en Mode Expert, per seguir l'evolució del risc de convecció sense sortir de l'app:
 * **Evolució horària (48h):** gràfic *scrubbable* de l'energia convectiva disponible (CAPE), amb les bandes dels llindars de risc (moderat, alt, sever) i la probabilitat de pluja superposada, per distingir quan el risc pot arribar a materialitzar-se de veritat.
 * **Escala d'inestabilitat completa:** entre 100 i 1.200 J/kg l'aire ja no surt com a «Estable» sinó com a inestabilitat «Feble» —la mateixa verificació de la regla de tempesta troba trons observats amb 800 J/kg—; per sota de 100 J/kg sí que és estable. Les etiquetes del giny surten en l'idioma de l'usuari (abans sempre en català).
@@ -116,7 +153,7 @@ Un tercer modal de detall, accessible tocant el giny de CAPE en Mode Expert, per
 * **Estadístiques ràpides:** CAPE màxim a 24h i 48h, total d'hores en risc i cisallament actual (el nivell de congelació ja surt a la capçalera del modal).
 * Reutilitza dades horàries que l'app ja demanava a Open-Meteo, més el vent a 500 hPa dins de la mateixa petició — cap crida de xarxa nova ni dependència externa.
 
-### 5. Observatori de Qualitat de l'Aire
+### 6. Observatori de Qualitat de l'Aire
 Un quart modal de detall, accessible tocant el giny de Qualitat de l'Aire en Mode Expert, amb tot el desglossament que Open-Meteo ja proporcionava però que no es mostrava enlloc:
 * **Evolució horària (48h)** de l'Índex Europeu de Qualitat de l'Aire (EAQI), *scrubbable*, amb les bandes oficials de les 6 categories (Bona, Raonable, Moderada, Dolenta, Molt Dolenta, Extrema).
 * **Desglossament complet de contaminants:** PM2.5, PM10, NO2, O3 i SO2 amb el seu valor real en µg/m³ — sense inventar-hi cap codi de color per contaminant, ja que no hi ha una taula oficial de llindars prou fiable per a cadascun per separat; el color de severitat només s'aplica a l'índex global, que sí té bandes oficials verificades.
@@ -124,7 +161,7 @@ Un quart modal de detall, accessible tocant el giny de Qualitat de l'Aire en Mod
 * **Avís de calima a la pantalla principal:** quan la pols (CAMS) supera els 100 µg/m³ —o el PM10 els 150 µg/m³ sense pols identificada, que s'etiqueta com a "partícules" i no com a calima— amb aire sec (HR < 75 %) i sense pluja, apareix una càpsula ambre amb la xifra i una insígnia sobre la icona del temps, i la IA local en avisa. És un **avís d'aerosols, no de visibilitat**: la visibilitat del model meteorològic no veu la calitja d'aerosols (verificat contra 24 mesos de METAR de 20 aeroports: el 95 % de les hores amb calitja observada tenien ≥ 10 km al model) i la pols del CAMS només prediu fluixament la visibilitat observada (a les hores en què salta l'avís, només el 13 % té < 10 km). Per això el text diu que el cel es pot veure enterbolit però que la visibilitat no sempre baixa. Amb aquests llindars salta el ~5 % de les hores a Canàries i gairebé mai a la resta d'Europa.
 * Reutilitza dades que l'app ja demanava a l'API de Qualitat de l'Aire d'Open-Meteo — cap crida de xarxa nova.
 
-### 6. Observatori d'Exposició Solar (Índex UV)
+### 7. Observatori d'Exposició Solar (Índex UV)
 Un cinquè modal de detall, accessible tocant el giny d'Índex UV en Mode Expert, centrat en quan cal protegir-se avui, no només en el valor puntual d'ara:
 * **Corba horària d'avui:** a diferència del CAPE i l'AQI (finestra contínua de 48h), l'UV segueix el cicle diari del sol, així que el modal mostra la corba completa d'avui (00:00–23:00) en lloc de barrejar dos dies amb hores de nit sense sentit.
 * **Real vs. cel clar:** la corba real de `uv_index` es compara amb `uv_index_clear_sky` (què faria el sol sense núvols), per veure quant protegeix la cobertura núvolosa del dia.
@@ -132,21 +169,21 @@ Un cinquè modal de detall, accessible tocant el giny d'Índex UV en Mode Expert
 * **Bandes oficials OMS:** reutilitza exactament el mateix sistema de 5 categories (Baix/Moderat/Alt/Molt Alt/Extrem) que ja fa servir el Cicle Solar per al UV màxim diari — cap llindar nou inventat. Com demana l'OMS, la categoria i la protecció es decideixen sobre l'índex arrodonit a enter (el número tal com es mostra, amb un decimal): abans un 5,8 sortia «Moderat» en lloc d'«Alt».
 * Reutilitza `hourly.uv_index`/`uv_index_clear_sky`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
-### 7. Observatori Baromètric (Pressió)
+### 8. Observatori Baromètric (Pressió)
 Un sisè modal de detall, accessible tocant el giny de Pressió en Mode Expert:
 * **Evolució de 48h** de la pressió atmosfèrica (`pressure_msl`), *scrubbable*, sense un "zero" absolut artificial — l'eix s'escala al rang real de la finestra.
 * **Classificació real de la tendència:** reutilitza la terminologia dels butlletins marítims (estable / pujant-baixant lentament / pujant-baixant / ràpidament / molt ràpidament, llindars 1.5/3.5/6.0 hPa en 3h) — el mateix criteri que fan servir els avisos per a petites embarcacions, no un color inventat.
 * **Canvi més sobtat de la finestra:** escaneja les 48h amb una tendència mòbil de 3h i assenyala el moment en què la pressió puja o baixa més ràpid, amb la seva hora — una caiguda de més de 3 hPa en 3h és el senyal operatiu clàssic d'un front pertorbat en 6-12h.
 * Reutilitza `hourly.pressure_msl`, ja demanat a Open-Meteo — cap crida de xarxa nova.
 
-### 8. Índex de Confort (Punt de Rosada)
+### 9. Índex de Confort (Punt de Rosada)
 Un setè modal de detall, accessible tocant el giny de Punt de Rosada en Mode Expert — construït al voltant del punt de rosada, no de la humitat relativa sola, perquè aquesta última és enganyosa fora de context (90% d'humitat a 5°C no té res a veure amb 90% a 30°C):
 * **Evolució de 48h** del punt de rosada (`dew_point_2m`), *scrubbable*, amb la humitat relativa de cada hora com a dada secundària — totes dues del mateix model que la temperatura (el regional on n'hi ha; abans el punt de rosada era sempre del global i a Barcelona podia diferir fins a 9,8 °C).
 * **Escala de confort real (NWS):** Sec / Còmode / Humit / Opressiu / Molt Opressiu, basada en els llindars del National Weather Service dels EUA (≈12.8°C i ≈18.3°C) — la banda superior es documenta com a àmpliament citada, no com a llindar oficial únic, per no sobrevendre'n la precisió.
 * **Finestra de xafogor:** primer tram de la finestra amb condicions humides i el seu pic previst, o confirma que no n'hi ha cap en les properes 48 hores.
 * Reutilitza `hourly.dew_point_2m`/`relative_humidity_2m`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
-### 9. Visibilitat i Boira
+### 10. Visibilitat i Boira
 Un vuitè modal de detall, accessible tocant el giny de Visibilitat en Mode Expert:
 * **Evolució de 48h** de la visibilitat (`visibility`), *scrubbable*, amb les mateixes 4 bandes que ja pintava el giny (Excel·lent/Bona/Calitja/Boira) — ara centralitzades a `WEATHER_THRESHOLDS` perquè giny i modal no puguin desincronitzar-se mai.
 * **Avís de boira:** primer tram de la finestra amb visibilitat per sota del llindar de boira i el mínim previst, o confirma que no n'hi ha cap en les properes 48 hores.
@@ -155,7 +192,7 @@ Un vuitè modal de detall, accessible tocant el giny de Visibilitat en Mode Expe
 * **Porta de núvols baixos:** la boira és un núvol a nivell de terra, així que només es confirma si el model porta almenys un 50 % de núvols baixos (a més del senyal del model, la saturació i l'absència de pluja). Contra 24 mesos de METAR de 20 aeroports, la porta puja l'índex d'encert (CSI) de 0,25 a 0,30 i baixa les falses alarmes de 0,73 a 0,65. El llindar és del 50 % i no més alt perquè a Girona i Sabadell més de la meitat de la boira real té poca capa baixa al model (boira de radiació poc gruixuda) i una porta més alta la descartava. Si la dada de núvols baixos falta, no s'aplica —mai es converteix una dada absent en un 0 %.
 * Reutilitza `hourly.visibility`, ja demanat a Open-Meteo — cap crida de xarxa nova.
 
-### 10. Núvols: Perfil de Capes
+### 11. Núvols: Perfil de Capes
 * **Giny Capes de núvols** (abans «Profunditat de núvols»): un perfil vertical del cel amb les tres capes apilades com al cel —alts a dalt, baixos a baix—, cadascuna amb una barra horitzontal i el seu percentatge, i les fronteres d'Open-Meteo (3 i 8 km) marcades a les línies que les separen. Al costat, la cobertura efectiva i el seu estat, els mateixos números i paraules que el modal. Es llegeix bé a totes les mides: a PC (targeta estreta) la xifra i el perfil van apilats; a mòbil i tauleta, l'un al costat de l'altre. Abans eren tres barres verticals que a PC no hi cabien (les xifres es tocaven i el títol es tallava). Una capa sense dada surt com a «--», mai com a 0 %.
 
 Un novè modal de detall, accessible tocant el giny Capes de núvols en Mode Expert:
@@ -165,7 +202,7 @@ Un novè modal de detall, accessible tocant el giny Capes de núvols en Mode Exp
 * **Icona i etiqueta "Molt ennuvolat":** a partir del 70 % de cobertura efectiva, el cel deixa de pintar-se com el sol entre núvols i passa a la icona de dos núvols, amb l'etiqueta corresponent a la capçalera. Es decideix amb el mateix percentatge que va decidir el codi de cel, a "ara", a cada hora i al diari (mitjana diürna).
 * Reutilitza `hourly.cloud_cover_low/mid/high`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
-### 11. Cota de Neu
+### 12. Cota de Neu
 Un desè modal de detall, accessible tocant el giny de Cota de Neu en Mode Expert (només visible quan el nivell de congelació és prou baix perquè la neu sigui rellevant):
 * **Giny panoràmic a tota la fila:** com que només surt de vegades, a PC es quedava sol a l'última fila del tauler, en una de quatre columnes i més baix que la resta. Ara ocupa tota la fila a qualsevol amplada, amb la cota d'ara i la mínima de les pròximes 48 hores (i d'aquí a quantes hores arriba) a l'esquerra, i a la dreta un perfil d'altitud al llarg del temps: la muntanya queda nevada per sobre de la cota, una línia marca l'altitud del lloc i la isoterma 0 °C hi surt al costat. La mínima es calcula amb la mateixa finestra que el modal, així que tots dos diuen el mateix.
 * **Cota actual i nivell de congelació:** la cota de neu (altitud on la pluja passa a neu, ≈300m per sota de la isoterma 0°C) com a valor principal, amb el nivell de congelació mostrat a part com a dada de context. El marge de 300 m està verificat contra 13.438 hores de precipitació observada a 30 aeroports: és el millor marge fix (200 o 400 m encerten menys) i fer-lo dependre de la humitat de superfície ho empitjora, perquè prop de la cota la humitat de terra gairebé no separa la neu de la pluja.
@@ -174,7 +211,7 @@ Un desè modal de detall, accessible tocant el giny de Cota de Neu en Mode Exper
 * **Avís de cota mínima:** quantes hores falten fins al moment en què la neu arribarà més avall, i a quina altitud.
 * A diferència de la resta de modals, no llegeix les dades horàries en cru: la cota de neu és un càlcul derivat amb una cadena de reserva entre models (ECMWF/GFS/ICON) quan AROME-HD no cobreix una hora concreta — reutilitza el mateix càlcul centralitzat que ja alimenta el giny, per no poder-se'n desincronitzar mai.
 
-### 12. Vent: Velocitat, Direcció i Ratxes
+### 13. Vent: Velocitat, Direcció i Ratxes
 L'últim modal de detall dels ginys experts, accessible tocant el giny de Vent en Mode Expert — pensat com a complement de dades pures al mapa de vent (Windy), que ja és molt visual:
 * **Brúixola gran** amb la direcció exacta en graus i velocitat i ratxes actuals ben grans.
 * **Escala Beaufort oficial** (13 graus, 0-12), amb els llindars en km/h verificats contra el Servei Meteorològic de Catalunya i els noms en cada idioma verificats contra fonts de referència — no una escala inventada.
@@ -182,7 +219,7 @@ L'últim modal de detall dels ginys experts, accessible tocant el giny de Vent e
 * **Avís de pròxima ratxa forta** i tres estadístiques: ratxa màxima, velocitat mitjana i direcció dominant de la finestra.
 * Reutilitza `hourly.wind_speed_10m/wind_direction_10m/wind_gusts_10m`, ja demanats a Open-Meteo — cap crida de xarxa nova.
 
-### 13. Alertes Meteorològiques Oficials
+### 14. Alertes Meteorològiques Oficials
 Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d'organismes oficials i horitzons més llargs (24-48h):
 * **Set fonts oficials, seleccionades automàticament per ubicació:** NWS (EUA), AEMET (Espanya), Meteocat (Catalunya), Météo-França (Vigilància), IPMA (Portugal), DWD (Alemanya) i Protezione Civile (Itàlia).
 * **Sense duplicats:** dins de Catalunya, Meteocat substitueix AEMET —mai es mostren els dos alhora— perquè és la font més precisa (a nivell de comarca) i evita que el mateix avís aparegui dues vegades amb redaccions diferents.
@@ -191,7 +228,7 @@ Per complementar l'anàlisi tàctica de la IA (horitzó de 6 hores) amb avisos d
 * **Font sempre citada:** cada avís mostra l'organisme oficial d'origen i un enllaç directe — mai només un resum generat per IA sense atribució.
 * **Salut monitoritzada:** un test diari comprova les 7 fonts oficials directament (no només el proxy) i avisa per correu si alguna es trenca.
 
-### 14. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
+### 15. Disseny Visual: Spatial UI & Neo-Skeuomorfisme
 Dissenyada sota el concepte de *Dark Dashboard* per facilitar la lectura ràpida sota qualsevol llum:
 * **GPU Acceleration:** Ús intel·ligent de capes per crear hologrames 3D i separar visualment els nivells de profunditat.
 * **Modals lleugers per a mòbils modestos:** els modals del Sol, la Lluna i els dels ginys del Mode Expert ja no fan servir desenfocaments de fons (`backdrop-filter`) ni filtres de desenfocament, ni animacions en bucle: les superfícies són opaques i les lluïssors i els cels són degradats estàtics que el navegador pinta una sola vegada, i amb el modal obert les animacions del tauler que queda tapat es posen en pausa. Les alçades dels seus fulls —i les del model regional i del radar— són un percentatge de la pantalla i no unitats `dvh`, així que també funcionen en navegadors i WebViews d'Android antics, on abans el botó de tancar podia quedar fora de la pantalla (i el mapa del radar, sense alçada).
@@ -216,7 +253,7 @@ Una mirada ràpida a l'auditoria de producció:
 | **Protecció API** | Zod + Sentry | Interceptors tipats (Mur de Contenció) per evitar caigudes de UI per dades corruptes. |
 | **Gestió d'Estat** | Context API + IDB | Memòria cau persistent (`idb-keyval`): sense connexió o amb l'API caiguda es mostra l'última previsió desada (fins a 24 h), avançada fins a l'hora actual. |
 | **Dades Meteorològiques** | Open-Meteo API | Orquestració dels models globals (ECMWF, AIFS, GFS, ICON, Best Match) i de 14 models regionals d'alta resolució, seleccionats automàticament per ubicació. |
-| **Radar i Satèl·lit** | LibreWXR + RainViewer (capa híbrida) + EUMETSAT | Radar Doppler: RainViewer (cobertura terrestre real) es renderitza per sobre de LibreWXR (cobertura global), que es veu per sota allà on RainViewer no arriba. Imatge satèl·lit (Meteosat MTG cada 10 min amb MSG de reserva, GOES, Himawari) servida per un proxy propi en Cloudflare Workers amb caché, que també diu quina és l'última imatge publicada. |
+| **Radar i Satèl·lit** | LibreWXR + RainViewer (capa híbrida) + EUMETSAT | Radar Doppler: RainViewer (cobertura terrestre real) es renderitza per sobre de LibreWXR (cobertura global), que es veu per sota allà on RainViewer no arriba. Imatge satèl·lit (Meteosat MTG cada 10 min, en infraroig o GeoColour, amb MSG de reserva, GOES, Himawari) i llamps del Lightning Imager de MTG cada 5 min, servits per un proxy propi en Cloudflare Workers amb caché, que també diu quina és l'última imatge publicada. |
 | **Alertes Oficials** | NWS + AEMET + Meteocat + Météo-França + IPMA + DWD + Protezione Civile | Consulta automàtica per ubicació via el mateix Worker de Cloudflare (Meteocat substitueix AEMET dins de Catalunya, mai els dos alhora), amb traducció IA i memòria cau quan la font no cobreix l'idioma de l'app. Salut comprovada diàriament contra les 7 fonts oficials. |
 | **Intel·ligència** | Gemini AI (amb Groq de reserva) | Anàlisi de risc meteorològic via un Worker propi a Cloudflare; un tallafocs determinista sobreescriu la IA si les dades brutes indiquen més risc del que reporta. |
 
@@ -265,7 +302,7 @@ Una mirada ràpida a l'auditoria de producció:
 * Desenvolupat per **Toni Tapias**, amb col·laboració d'intel·ligència artificial — vegeu [CONTRIBUTORS.md](./CONTRIBUTORS.md) per als detalls. © 2026.
 * Llicència MIT.
 * Dades meteorològiques proporcionades per [Open-Meteo](https://open-meteo.com/) sota llicència Creative Commons.
-* Dades de radar via [LibreWXR](https://librewxr.net/) i [RainViewer](https://www.rainviewer.com/) (capa híbrida) i imatge satèl·lit d'[EUMETSAT](https://www.eumetsat.int/) (Meteosat-12 i Meteosat de segona generació, CC BY 4.0: «Contains modified EUMETSAT Meteosat data»).
+* Dades de radar via [LibreWXR](https://librewxr.net/) i [RainViewer](https://www.rainviewer.com/) (capa híbrida) i imatge satèl·lit i llamps d'[EUMETSAT](https://www.eumetsat.int/) (Meteosat-12, amb el Lightning Imager i el producte GeoColour, i Meteosat de segona generació, CC BY 4.0: «Contains modified EUMETSAT Meteosat data»).
 * IA impulsada per Google Gemini, amb Groq com a sistema de reserva.
 
 ---
