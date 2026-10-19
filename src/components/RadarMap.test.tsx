@@ -15,6 +15,8 @@ interface FakeMapInstance {
   flights: Record<string, unknown>[];
   zoom: number;
   errors: string[];
+  // Sufixos d'id de font (p. ex. una franja HD) que encara no han carregat.
+  loading: Set<string>;
   emit: (ev: string, e?: unknown) => void;
 }
 
@@ -30,6 +32,7 @@ vi.mock('mapbox-gl', () => {
     flights: Record<string, unknown>[] = [];
     zoom = 7;
     errors: string[] = [];
+    loading = new Set<string>();
     constructor() {
       const g = globalThis as unknown as { __radarTestMaps: FakeMap[] };
       (g.__radarTestMaps ||= []).push(this);
@@ -50,6 +53,7 @@ vi.mock('mapbox-gl', () => {
       this.sources.set(id, spec);
     }
     getSource(id: string) { return this.sources.get(id); }
+    isSourceLoaded(id: string) { return this.sources.has(id) && ![...this.loading].some((s) => id.endsWith(s)); }
     removeSource(id: string) { this.sources.delete(id); }
     addLayer(layer: { id: string; paint?: Record<string, unknown>; layout?: Record<string, unknown> }, beforeId?: string) {
       if (this.getLayer(layer.id)) throw new Error(`Layer "${layer.id}" already exists`);
@@ -143,6 +147,22 @@ beforeEach(() => {
 const hdSource = (m: FakeMapInstance, key: string) =>
   m.sources.get(`hd-meteosat-src-${key}`) as { tiles: string[]; bounds: number[] } | undefined;
 const hdTargets = (m: FakeMapInstance) => visibleTargets(m, 'hd-meteosat-layer-', 0.3);
+// Fotograma de radar que es veu (capa LibreWXR objectiu) → imatge HD que
+// l'acompanya, la primera vegada que es veu cada fotograma.
+const radarFrame = (m: FakeMapInstance) => {
+  const id = visibleTargets(m, 'rad-layer-', 0.5)[0];
+  return id ? Number(id.replace('rad-layer-', '')) : null;
+};
+async function observeFrames(m: FakeMapInstance, done: (seen: Map<number, string>) => boolean, timeoutMs = 20000) {
+  const seen = new Map<number, string>();
+  const start = Date.now();
+  while (!done(seen) && Date.now() - start < timeoutMs) {
+    await act(async () => { await sleep(20); });
+    const frame = radarFrame(m);
+    if (frame !== null && !seen.has(frame)) seen.set(frame, hdTargets(m).join('+'));
+  }
+  return seen;
+}
 
 describe('RadarMap', () => {
   it('l\'animació no fa una sincronització completa del mapa a cada tick', async () => {
@@ -292,6 +312,59 @@ describe('RadarMap', () => {
     seen.forEach((id) => expect(id).toMatch(/^hd-meteosat-layer-mtg-\d+$/));
     expect(map.errors).toEqual([]);
   }, 20000);
+
+  // Els tres tests següents no compten el temps: a cada mostra llegeixen
+  // quin fotograma de radar es veu i quina imatge HD l'acompanya (totes dues
+  // es fixen a la mateixa crida), així que no fallen amb la màquina carregada.
+  it("reproduint, si la imatge HD nova encara no ha arribat es manté l'anterior (mai buida)", async () => {
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    // La franja del fotograma 1 triga a arribar (tessel·la freda d'EUMETSAT).
+    map.loading.add(`mtg-${T0 + 600}`);
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+
+    let seen = await observeFrames(map, (f) => f.has(T0 + 600));
+    // Fotograma 1: es continua veient la del fotograma 0, i la que espera no s'ha expulsat.
+    expect(seen.get(T0 + 600)).toBe(`hd-meteosat-layer-mtg-${T0}`);
+    expect(layer(map, `hd-meteosat-layer-mtg-${T0 + 600}`)).toBeTruthy();
+
+    map.loading.clear();
+    seen = await observeFrames(map, (f) => f.has(T0 + 1200));
+    // Ja ha arribat: el fotograma 2 porta la seva.
+    expect(seen.get(T0 + 1200)).toBe(`hd-meteosat-layer-mtg-${T0 + 1200}`);
+    expect(map.errors).toEqual([]);
+  }, 30000);
+
+  it('si la imatge que es veia tampoc no és a punt (mapa mogut), es mostra la carregada més propera', async () => {
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${T0}`]);
+    // Com després de moure el mapa: la que es veu i la del fotograma 1 encara
+    // carreguen; la precarregada del fotograma 2 ja és a punt.
+    map.loading.add(`mtg-${T0}`);
+    map.loading.add(`mtg-${T0 + 600}`);
+    const seen = await observeFrames(map, (f) => f.has(T0 + 600));
+    expect(seen.get(T0 + 600)).toBe(`hd-meteosat-layer-mtg-${T0 + 1200}`);
+  }, 30000);
+
+  it("si la imatge nova no arriba, la substituta no és mai a més d'1 h del fotograma", async () => {
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    for (let i = 1; i <= 11; i++) map.loading.add(`mtg-${T0 + i * 600}`);
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+
+    const seen = await observeFrames(map, (f) => f.has(T0 + 9 * 600));
+    // Fotogrames 1-6 (fins a 60 min): la del fotograma 0. Del 7 (70 min) en
+    // endavant: la del fotograma, encara que no hagi arribat, i no hi torna
+    // (del 8 en endavant és l'última publicada, MTG_LATEST).
+    for (let i = 1; i <= 9; i++) {
+      const shown = seen.get(T0 + i * 600);
+      if (shown === undefined) continue; // fotograma saltat per la càrrega de la màquina
+      expect(shown).toBe(`hd-meteosat-layer-mtg-${i <= 6 ? T0 : Math.min(T0 + i * 600, MTG_LATEST)}`);
+    }
+    expect([...seen.keys()].filter((t) => t > T0 && t <= T0 + 9 * 600).length).toBeGreaterThanOrEqual(6);
+  }, 30000);
 
   it('sense /hd/meteosat/latest, Meteosat HD fa servir MTG amb una hora calculada', async () => {
     hdLatest = 'fail';

@@ -54,6 +54,17 @@ const hdSourceId = (agency: HdAgency, key: string) => `hd-${agency}-src-${key}`;
 // expulsem la més antiga (mai la que és l'objectiu actual).
 const MAX_LIVE_HD_FRAMES_PER_AGENCY = 4;
 
+// CORRECCIÓ (diagnòstic en viu, 2026-10-19): amb Meteosat cada 10 min, cada
+// tick de l'animació mostra una capa HD diferent, i una tessel·la freda
+// d'EUMETSAT tarda sovint més que els 1,8 s de precàrrega (p50 0,7 s, p95
+// 6 s): la capa sortia buida i el satèl·lit parpellejava i desapareixia.
+// Ara, mentre la imatge del fotograma no ha arribat (map.isSourceLoaded,
+// contrastat amb la xarxa en 15 de 15 casos), es mostra la ja carregada més
+// propera en el temps si no és a més d'aquesta distància (el desfasament
+// que tenia la capa MSG amb les hores de LibreWXR); si no n'hi ha cap, la
+// del fotograma.
+const MAX_HD_FALLBACK_SEC = 3600;
+
 // PERF/VRAM: el radar abans només tenia LibreWXR (~12-13 frames com a màxim,
 // mida fixa de l'API). Ara cada frame pot tenir DUES fonts vives (LibreWXR +
 // RainViewer com a capa prioritària), i la unió de línies temporals dels dos
@@ -186,6 +197,29 @@ export function useRadarAnimation({
     sat: null,
     hd: { goes: null, meteosat: null, himawari: null }
   });
+
+  const isHdReady = useCallback((map: Map, agency: HdAgency, key: string): boolean => {
+    const sourceId = hdSourceId(agency, key);
+    return !!map.getSource(sourceId) && map.isSourceLoaded(sourceId);
+  }, []);
+
+  // Imatge HD ja carregada més propera en el temps a la del fotograma (a
+  // igualtat, l'anterior), de la mateixa variant i a MAX_HD_FALLBACK_SEC com
+  // a molt; null si no n'hi ha cap.
+  const pickReadyHdKey = useCallback((map: Map, agency: HdAgency, target: HdTarget): string | null => {
+    let bestKey: string | null = null;
+    let bestDistance = Infinity;
+    for (const key of hdLoadOrderRef.current[agency]) {
+      const [variant, slotStr] = key.split('-');
+      if (key === target.key || variant !== target.variant) continue;
+      const slot = Number(slotStr);
+      if (Math.abs(target.slot - slot) > MAX_HD_FALLBACK_SEC) continue;
+      if (!map.getLayer(hdLayerId(agency, key)) || !isHdReady(map, agency, key)) continue;
+      const distance = Math.abs(target.slot - slot) + (slot > target.slot ? 1 : 0);
+      if (distance < bestDistance) { bestKey = key; bestDistance = distance; }
+    }
+    return bestKey;
+  }, [isHdReady]);
 
   // Allibera totes les capes/fonts HD d'una agència. Es crida quan l'usuari
   // desactiva l'overlay HD corresponent.
@@ -495,11 +529,16 @@ export function useRadarAnimation({
 
         // PERF: finestra FIFO — expulsa la capa HD més antiga d'aquesta
         // agència si ja n'hi ha MAX_LIVE_HD_FRAMES_PER_AGENCY vives, mai la
-        // que s'acaba d'afegir ni la del fotograma actual.
+        // que s'acaba d'afegir ni la del fotograma actual. Si la del
+        // fotograma actual encara no ha arribat, la que es veu ara tampoc
+        // (l'animació la manté mentrestant) i el límit en compta una més.
+        const shownId = lastTargetIdsRef.current.hd[agency];
+        const keepShown = !!shownId && !!currentKey && shownId !== hdLayerId(agency, currentKey) && !isHdReady(map, agency, currentKey);
+        const isProtected = (k: string) => k === target.key || k === currentKey || (keepShown && hdLayerId(agency, k) === shownId);
         const order = hdLoadOrderRef.current[agency];
         order.push(target.key);
-        while (order.length > MAX_LIVE_HD_FRAMES_PER_AGENCY) {
-          const victimIdx = order.findIndex((k) => k !== target.key && k !== currentKey);
+        while (order.length > MAX_LIVE_HD_FRAMES_PER_AGENCY + (keepShown ? 1 : 0)) {
+          const victimIdx = order.findIndex((k) => !isProtected(k));
           if (victimIdx < 0) break;
           const [victim] = order.splice(victimIdx, 1);
           safeRemoveLayerAndSource(map, hdLayerId(agency, victim), hdSourceId(agency, victim));
@@ -508,7 +547,7 @@ export function useRadarAnimation({
         console.warn(`[Zero Risk] Error afegint HD satèl·lit ${layerId}:`, e);
       }
     });
-  }, [mapRef, overlaysRef, safeRemoveLayerAndSource, styleReadyRef, hdTargetFor]);
+  }, [mapRef, overlaysRef, safeRemoveLayerAndSource, styleReadyRef, hdTargetFor, isHdReady]);
 
   // CORRECCIÓ: quan el dispositiu perd el context WebGL, useMapLifecycle
   // destrueix el mapa i en crea un de nou, però aquest hook no es remunta:
@@ -660,32 +699,39 @@ export function useRadarAnimation({
     }
 
     // HD: la capa de la franja del fotograma actual a opacitat plena, les
-    // altres precarregades (0.000001).
+    // altres precarregades (0.000001). Reproduint, si la del fotograma actual
+    // encara no ha arribat, es mostra la imatge ja carregada més propera en
+    // el temps (vegeu MAX_HD_FALLBACK_SEC); si no n'hi ha cap, la del
+    // fotograma. En pausa, sempre la del fotograma exacte.
     HD_AGENCIES.forEach((agency) => {
       const enabled = isHdEnabled(overlaysRef.current, agency);
       const target = enabled ? hdTargetFor(agency, currentFrameTime) : null;
       const newHdId = target ? hdLayerId(agency, target.key) : null;
+      const shownId = lastTargetIdsRef.current.hd[agency];
+      const heldKey = (animationTick || isPlayingRef.current) && target && !isHdReady(map, agency, target.key)
+        ? pickReadyHdKey(map, agency, target)
+        : null;
+      const displayId = heldKey ? hdLayerId(agency, heldKey) : newHdId;
 
       if (animationTick) {
-        const prevHdId = lastTargetIdsRef.current.hd[agency];
-        if (prevHdId && prevHdId !== newHdId && map.getLayer(prevHdId)) {
-          map.setPaintProperty(prevHdId, 'raster-opacity', getSatOpacityExp(0.000001));
+        if (shownId && shownId !== displayId && map.getLayer(shownId)) {
+          map.setPaintProperty(shownId, 'raster-opacity', getSatOpacityExp(0.000001));
         }
-        if (newHdId && map.getLayer(newHdId)) {
-          map.setLayoutProperty(newHdId, 'visibility', 'visible');
-          map.setPaintProperty(newHdId, 'raster-opacity', getSatOpacityExp(1.0));
+        if (displayId && map.getLayer(displayId)) {
+          map.setLayoutProperty(displayId, 'visibility', 'visible');
+          map.setPaintProperty(displayId, 'raster-opacity', getSatOpacityExp(1.0));
         }
       } else {
         hdLoadOrderRef.current[agency].forEach((key) => {
           const id = hdLayerId(agency, key);
           if (!map.getLayer(id)) return;
           map.setLayoutProperty(id, 'visibility', enabled ? 'visible' : 'none');
-          map.setPaintProperty(id, 'raster-opacity', enabled ? getSatOpacityExp(id === newHdId ? 1.0 : 0.000001) : 0);
+          map.setPaintProperty(id, 'raster-opacity', enabled ? getSatOpacityExp(id === displayId ? 1.0 : 0.000001) : 0);
         });
       }
-      lastTargetIdsRef.current.hd[agency] = newHdId;
+      lastTargetIdsRef.current.hd[agency] = displayId;
     });
-  }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, styleReadyRef, hdTargetFor]);
+  }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, styleReadyRef, hdTargetFor, isHdReady, pickReadyHdKey]);
 
   // /hd/meteosat/latest ha canviat (primera resposta, franja nova o una altra
   // capa): fora les capes que ja no toquen i es creen les que falten.
