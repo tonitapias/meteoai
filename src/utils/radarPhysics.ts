@@ -80,20 +80,94 @@ export const Z_LAYERS = {
 // --- SATÈL·LITS HD ---
 export type HdAgency = 'goes' | 'meteosat' | 'himawari';
 
-// [oest, sud, est, nord] de cada font HD (useRadarAnimation) i zona on la
-// càmera considera que l'usuari ja hi és (useCameraFlight). Mapbox demana
-// tessel·les SENCERES que toquin els límits, així que la vora real depèn del
-// zoom. Meteosat (disc centrat a 0°): 66.4°N queda just per sota del
-// 66.51°N, que és frontera de tessel·la a tots els zooms, així que la vora
-// nord és 66.51°N a z2–z8 (abans 61.6°N a z5–z6 i 60.2°N a z7–z8: sense
-// Trondheim, Reykjavík ni Oulu, i sense Bergen a z7–z8). Més amunt no: de nit
-// EUMETSAT pinta una franja blanca saturada a prop del limbe (no són núvols).
-// Oest -40 (Açores senceres); est 60 per la mateixa franja del limbe a l'est.
+export const SAT_PROXY_HOST = 'https://meteo-sat-proxy.tonitapias.workers.dev';
+
+// Límits MSG [oest, sud, est, nord]. Mapbox demana tessel·les SENCERES que
+// toquin els límits, així que la vora real depèn del zoom: 66.4°N queda just
+// per sota del 66.51°N, que és frontera de tessel·la a tots els zooms, així
+// que la vora nord és 66.51°N a z2–z8. Més amunt MSG es converteix en franges
+// de 14–19 km i de nit EUMETSAT pinta una franja blanca saturada a prop del
+// limbe. Oest -40 (Açores senceres); est 60 per la mateixa franja a l'est.
+const MSG_BOUNDS: [number, number, number, number] = [-40, -60, 60, 66.4];
+// MTG té dades llegibles fins a 77°N entre 40°O i 40°E (71,4°N a 60°E): 72°N
+// cobreix el Cap Nord (71,2°N) sense la franja del limbe.
+const MTG_BOUNDS: [number, number, number, number] = [-40, -60, 60, 72];
+
+// [oest, sud, est, nord] de cada font HD i zona on la càmera considera que
+// l'usuari ja hi és (useCameraFlight). Meteosat = MTG (el més ampli); amb la
+// reserva MSG la font fa servir MSG_BOUNDS (HD_VARIANTS).
 export const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
   goes: [-160, -60, -20, 60],
-  meteosat: [-40, -60, 60, 66.4],
+  meteosat: MTG_BOUNDS,
   himawari: [80, -60, 180, 60]
 };
+
+// Variant de la font HD: MTG (Meteosat-12, imatge cada 10 min), MSG (el
+// Meteosat actual, reserva fins al 2027) o GIBS (GOES/Himawari via NASA).
+export type HdVariant = 'mtg' | 'msg' | 'gibs';
+
+interface HdVariantConfig {
+  cadenceSec: number;
+  // Ruta del worker; GIBS hi afegeix l'agència (hd/goes, hd/himawari).
+  route: string;
+  bounds?: [number, number, number, number];
+  saturation: number;
+  contrast: number;
+  brightnessMin: number;
+}
+
+// Pintura: MSG i MTG són IR en blanc i negre; MTG té ~20 % menys contrast a la
+// part brillant i només apujar el contrast enfosqueix la meitat de la imatge,
+// per això va amb una lluminositat mínima (simulat sobre tessel·les reals:
+// talla menys núvols que MSG avui amb un 89–96 % del contrast percebut).
+// GIBS ve amb una paleta realçada (verd/blau/vermell per a tempestes fortes)
+// que la saturació -1 esborraria.
+export const HD_VARIANTS: Record<HdVariant, HdVariantConfig> = {
+  mtg: { cadenceSec: 600, route: 'hd/mtg/v1', bounds: MTG_BOUNDS, saturation: -1, contrast: 0.47, brightnessMin: 0.16 },
+  msg: { cadenceSec: 900, route: 'hd/meteosat', bounds: MSG_BOUNDS, saturation: -1, contrast: 0.3, brightnessMin: 0 },
+  gibs: { cadenceSec: 3600, route: 'hd', saturation: 0, contrast: 0.3, brightnessMin: 0 }
+};
+
+// Resposta de /hd/meteosat/latest (worker meteo-sat-proxy): quina capa fa
+// servir el worker (MTG, o MSG si MTG va endarrerit o l'interruptor ho
+// força) i la franja més nova que es pot demanar.
+export const HdTimelineSchema = z.object({
+  layer: z.enum(['mtg', 'msg']),
+  latest: z.number().int().positive(),
+  cadence: z.number().int().positive(),
+  source: z.enum(['caps', 'computed']),
+});
+export type HdTimeline = z.infer<typeof HdTimelineSchema>;
+
+// Sense /latest: una hora segura (ara − 30 min), com fa el mateix worker.
+export const HD_COMPUTED_LAG_SEC = 1800;
+
+const floorTo = (t: number, step: number) => Math.floor(t / step) * step;
+
+// Franja Meteosat d'un fotograma de radar: la de la mateixa desena de minuts
+// (quinzena amb MSG), o la més nova publicada si encara no hi és. Totes les
+// franges són exactes al worker (memòria cau d'un any) i els fotogrames més
+// nous que `latest` comparteixen una sola font.
+export function computeMeteosatSlot(frameTime: number, timeline: HdTimeline | null, nowSec: number): { variant: 'mtg' | 'msg'; slot: number } {
+  const variant = timeline?.layer ?? 'mtg';
+  const cadence = timeline?.cadence ?? HD_VARIANTS[variant].cadenceSec;
+  const latest = timeline ? floorTo(timeline.latest, cadence) : floorTo(nowSec - HD_COMPUTED_LAG_SEC, cadence);
+  return { variant, slot: Math.min(floorTo(frameTime, cadence), latest) };
+}
+
+// Franja GIBS (GOES/Himawari): el frame de satèl·lit de LibreWXR més proper,
+// com sempre. Si LibreWXR no en dona (p. ex. només hi ha RainViewer), l'hora
+// anterior: el worker hi aplica el seu propi recul.
+export function computeGibsSlot(frameTime: number, satFrames: RadarFrame[]): number {
+  let closest: number | null = null;
+  let minDiff = Infinity;
+  satFrames.forEach((f) => {
+    if (!f || f.time === null) return;
+    const diff = Math.abs(f.time - frameTime);
+    if (diff < minDiff) { minDiff = diff; closest = f.time; }
+  });
+  return closest ?? floorTo(frameTime, 3600) - 3600;
+}
 
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---
 

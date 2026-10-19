@@ -27,6 +27,7 @@ import { useAstroEngine } from '../hooks/radar/useAstroEngine';
 import { useCameraFlight } from '../hooks/radar/useCameraFlight';
 import { useRadarAnimation } from '../hooks/radar/useRadarAnimation';
 import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
+import { useHdTimeline } from '../hooks/radar/useHdTimeline';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -141,10 +142,13 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     styleReadyRef
   });
 
+  // Hores pròpies de "Meteosat HD (Europa)": només es demanen amb la capa activa.
+  const { timelineRef: hdTimelineRef, version: hdTimelineVersion } = useHdTimeline(overlays.hdMeteosat);
+
   const {
     isPlaying, pausePlayback, framesCount, currentFrameTimestamp,
     injectLayersIntoMap, togglePlay, setAnimationActive, applyFrameVisibility,
-    resetLayerBookkeeping, radarFramesRef, currentFrameIndexRef
+    refreshHdTimeline, resetLayerBookkeeping, radarFramesRef, currentFrameIndexRef
   } = useRadarAnimation({
     mapRef,
     overlaysRef,
@@ -153,7 +157,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     formatTime,
     syncLighting,
     syncAtmosphere,
-    styleReadyRef
+    styleReadyRef,
+    hdTimelineRef
   });
 
   useCameraFlight({
@@ -192,6 +197,11 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
       radarFramesRef.current.length
     );
   }, [activeBaseLayer, overlays, webglKey, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
+
+  // 2b. Franges Meteosat HD noves (/hd/meteosat/latest).
+  useEffect(() => {
+    if (hdTimelineVersion > 0) refreshHdTimeline();
+  }, [hdTimelineVersion, refreshHdTimeline]);
 
   // 3. Gestió del Cicle de Vida Play/Pause vinculat a `isActive`
   useEffect(() => {

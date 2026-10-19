@@ -94,6 +94,12 @@ const LIBREWXR = {
   satellite: { infrared: Array.from({ length: 6 }, (_, i) => T0 + i * 1200).map((t) => ({ time: t, path: `/v2/satellite/${t}` })) },
 };
 const RAINVIEWER = { host: 'https://tilecache.rainviewer.com', radar: { past: radarFrames(12, 'rv'), nowcast: [] }, satellite: { infrared: [] } };
+// /hd/meteosat/latest del worker: per defecte MTG amb l'última imatge 3
+// fotogrames abans del més nou. 'fail' = error de xarxa; una promesa = resposta
+// que encara no ha arribat.
+const MTG_LATEST = T0 + 8 * 600;
+let hdLatest: unknown;
+let libreWxr: typeof LIBREWXR;
 
 const maps = () => (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -121,9 +127,22 @@ const layer = (m: FakeMapInstance, id: string) => m.layers.find((l) => l.id === 
 
 beforeEach(() => {
   (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps = [];
-  vi.stubGlobal('fetch', vi.fn(async (url: string) =>
-    new Response(JSON.stringify(String(url).includes('librewxr') ? LIBREWXR : RAINVIEWER), { status: 200 })));
+  hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' };
+  libreWxr = LIBREWXR;
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const u = String(url);
+    if (u.includes('/hd/meteosat/latest')) {
+      const body = await hdLatest;
+      if (body === 'fail') throw new TypeError('Failed to fetch');
+      return new Response(JSON.stringify(body), { status: 200 });
+    }
+    return new Response(JSON.stringify(u.includes('librewxr') ? libreWxr : RAINVIEWER), { status: 200 });
+  }));
 });
+
+const hdSource = (m: FakeMapInstance, key: string) =>
+  m.sources.get(`hd-meteosat-src-${key}`) as { tiles: string[]; bounds: number[] } | undefined;
+const hdTargets = (m: FakeMapInstance) => visibleTargets(m, 'hd-meteosat-layer-', 0.3);
 
 describe('RadarMap', () => {
   it('l\'animació no fa una sincronització completa del mapa a cada tick', async () => {
@@ -249,6 +268,74 @@ describe('RadarMap', () => {
     expect(targets.size).toBeGreaterThan(1);
     expect(map.errors).toEqual([]);
   }, 20000);
+
+  it('Meteosat HD és MTG amb una franja de 10 min per fotograma, alineada amb /hd/meteosat/latest', async () => {
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+
+    // El fotograma actual (el més nou) és posterior a l'última imatge: la fa servir.
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
+    expect(hdSource(map, `mtg-${MTG_LATEST}`)?.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/mtg/v1/${MTG_LATEST}/{z}/{x}/{y}.png`]);
+    expect(hdSource(map, `mtg-${MTG_LATEST}`)?.bounds).toEqual([-40, -60, 60, 72]);
+    const paint = layer(map, `hd-meteosat-layer-mtg-${MTG_LATEST}`)!.paint;
+    expect([paint['raster-saturation'], paint['raster-contrast'], paint['raster-brightness-min']]).toEqual([-1, 0.47, 0.16]);
+
+    // Reproducció: cada fotograma de radar té la seva imatge (LibreWXR en té una cada 20 min).
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    const seen = [hdTargets(map).join('+')];
+    for (let i = 0; i < 3; i++) {
+      await act(async () => { await sleep(650); });
+      seen.push(hdTargets(map).join('+'));
+    }
+    expect(seen[0]).toBe(`hd-meteosat-layer-mtg-${T0}`);
+    expect(new Set(seen).size).toBe(4);
+    seen.forEach((id) => expect(id).toMatch(/^hd-meteosat-layer-mtg-\d+$/));
+    expect(map.errors).toEqual([]);
+  }, 20000);
+
+  it('sense /hd/meteosat/latest, Meteosat HD fa servir MTG amb una hora calculada', async () => {
+    hdLatest = 'fail';
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    // Fotogrames de fa més de 30 min: la seva pròpia franja.
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${T0 + 11 * 600}`]);
+    expect(hdSource(map, `mtg-${T0 + 11 * 600}`)?.tiles[0]).toContain('/hd/mtg/v1/');
+  });
+
+  it('si el worker passa a MSG, la capa fa servir la ruta, els límits i la pintura de MSG', async () => {
+    const msgLatest = T0 + 4800; // múltiple de 15 min
+    hdLatest = { layer: 'msg', latest: msgLatest, cadence: 900, source: 'caps' };
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-msg-${msgLatest}`]);
+    expect(hdSource(map, `msg-${msgLatest}`)?.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/meteosat/${msgLatest}/{z}/{x}/{y}.png`]);
+    expect(hdSource(map, `msg-${msgLatest}`)?.bounds).toEqual([-40, -60, 60, 66.4]);
+    const paint = layer(map, `hd-meteosat-layer-msg-${msgLatest}`)!.paint;
+    expect([paint['raster-contrast'], paint['raster-brightness-min']]).toEqual([0.3, 0]);
+  });
+
+  it('Meteosat HD funciona encara que LibreWXR no doni frames de satèl·lit', async () => {
+    libreWxr = { ...LIBREWXR, satellite: { infrared: [] } };
+    const map = await mountRadar();
+    // useRadarData desa les dades 5 min a nivell de mòdul: refresc forçat.
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnRefresh')); await sleep(30); });
+    await click('Meteosat HD (Europa)');
+    expect(ids(map, 'sat-layer-')).toEqual([]);
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
+  });
+
+  it('mentre /hd/meteosat/latest no respon no es baixa cap tessel·la Meteosat HD', async () => {
+    let respond: (v: unknown) => void = () => {};
+    hdLatest = new Promise((r) => { respond = r; });
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    expect(ids(map, 'hd-meteosat-layer-')).toEqual([]);
+
+    await act(async () => { respond({ layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' }); await sleep(30); });
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
+    expect(map.errors).toEqual([]);
+  });
 
   it("el panell d'informació mostra l'atribució obligatòria d'EUMETSAT", async () => {
     await mountRadar();
