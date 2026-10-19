@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, RefObject, MutableRefObject } from 'react';
-import type { Map } from 'mapbox-gl';
+import type { Map, RasterPaint } from 'mapbox-gl';
 import { z } from 'zod';
 import {
   RainViewerResponseSchema,
@@ -11,12 +11,16 @@ import {
   HD_BOUNDS,
   HD_VARIANTS,
   SAT_PROXY_HOST,
+  LIGHTNING_BOUNDS,
+  LIGHTNING_ROUTE,
   computeMeteosatSlot,
   computeGibsSlot,
+  computeLightningSlots,
+  getHdColourOpacityExp,
   type HdAgency,
   type HdVariant
 } from '../../utils/radarPhysics';
-import type { HdTimelineState } from './useHdTimeline';
+import type { HdTimelineState, LightningTimelineState } from './useHdTimeline';
 
 interface UseRadarAnimationProps {
   mapRef: MutableRefObject<Map | null>;
@@ -28,6 +32,7 @@ interface UseRadarAnimationProps {
   syncAtmosphere: () => void;
   styleReadyRef: MutableRefObject<boolean>;
   hdTimelineRef: MutableRefObject<HdTimelineState>;
+  lightningTimelineRef: MutableRefObject<LightningTimelineState>;
 }
 
 const HD_AGENCIES: HdAgency[] = ['goes', 'meteosat', 'himawari'];
@@ -36,10 +41,44 @@ const isHdEnabled = (o: Overlays, agency: HdAgency): boolean =>
   agency === 'goes' ? o.hdGoes : agency === 'meteosat' ? o.hdMeteosat : o.hdHimawari;
 
 // Capa HD d'un fotograma: la clau porta la variant perquè una franja MSG de
-// :00/:30 no xoqui amb la mateixa hora de MTG.
+// :00/:30 no xoqui amb la mateixa hora de MTG (ni l'IR amb el color).
 interface HdTarget { key: string; variant: HdVariant; slot: number }
 const hdLayerId = (agency: HdAgency, key: string) => `hd-${agency}-layer-${key}`;
 const hdSourceId = (agency: HdAgency, key: string) => `hd-${agency}-src-${key}`;
+const hdVariantOfKey = (key: string) => key.split('-')[0] as HdVariant;
+// GeoColour és una fotografia opaca: opacitat pròpia (vegeu radarPhysics).
+const hdOpacityExp = (key: string, baseOp: number) =>
+  HD_VARIANTS[hdVariantOfKey(key)].colour ? getHdColourOpacityExp(baseOp) : getSatOpacityExp(baseOp);
+
+// Llamps: una capa per franja de 5 min; cada fotograma en mostra dues.
+const lightningLayerId = (slot: number) => `ltg-layer-${slot}`;
+const lightningSourceId = (slot: number) => `ltg-src-${slot}`;
+const LIGHTNING_OPACITY = 0.95;
+// La paleta d'EUMETSAT és opaca: en una tempesta gran l'àrea de llamps (cada
+// llamp pinta tota la superfície que il·lumina) tapava el radar de sota a
+// zoom 7. Es recolora per lluminositat: on hi ha pocs llamps (groc pàl·lid,
+// lluminós) queda translúcid i deixa veure el radar, i els nuclis intensos
+// (granat, fosc) continuen opacs. Els píxels sense llamps (0,0,0,0) donen 0
+// i queden transparents; 'nearest' evita que la interpolació amb aquests
+// píxels a les vores doni valors foscos (granat) que no hi són.
+const LIGHTNING_PAINT: RasterPaint = {
+  'raster-resampling': 'nearest',
+  'raster-color-mix': [0.2126, 0.7152, 0.0722, 0],
+  'raster-color-range': [0, 1],
+  'raster-color': [
+    'interpolate', ['linear'], ['raster-value'],
+    0, 'rgba(0,0,0,0)',
+    0.06, 'rgba(0,0,0,0)',
+    0.1, 'rgba(140,0,38,1)',
+    0.6, 'rgba(253,120,40,0.95)',
+    0.86, 'rgba(255,200,60,0.7)',
+    1, 'rgba(255,235,90,0.45)'
+  ]
+};
+// Precàrrega més curta que la del radar (el fotograma actual i els 2 següents, × 2 franges): són tessel·les petites
+// i ràpides, i així són 6 capes vives en lloc de 8 per als mòbils més modestos.
+const LIGHTNING_PREFETCH_FRAMES = 2;
+const MAX_LIVE_LIGHTNING_LAYERS = (LIGHTNING_PREFETCH_FRAMES + 1) * 2;
 
 // PERF (fluïdesa): les capes HD ("Alta Resolució") no caduquen fins que
 // l'API de RainViewer rota el frame de satèl·lit sencer (minuts). Com que
@@ -99,7 +138,8 @@ export function useRadarAnimation({
   syncLighting,
   syncAtmosphere,
   styleReadyRef,
-  hdTimelineRef
+  hdTimelineRef,
+  lightningTimelineRef
 }: UseRadarAnimationProps) {
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -157,6 +197,14 @@ export function useRadarAnimation({
     meteosat: false,
     himawari: false
   });
+  // Canvi IR ⇄ color de Meteosat HD: fora les capes de l'altra variant.
+  const prevMeteosatColourRef = useRef<boolean>(false);
+
+  // Franges de llamps vives, en ordre d'inserció (FIFO de
+  // MAX_LIVE_LIGHTNING_LAYERS), i si la capa estava activa (alliberament en
+  // desactivar-la, com les HD).
+  const lightningLoadOrderRef = useRef<number[]>([]);
+  const prevLightningEnabledRef = useRef<boolean>(false);
 
   const isMountedRef = useRef<boolean>(true);
 
@@ -191,11 +239,12 @@ export function useRadarAnimation({
   // que realment canvien. Els canvis provocats per un toggle d'overlay (que
   // sí afecten TOTES les capes d'un tipus, p.ex. mostrar/amagar precip)
   // continuen fent el recorregut complet — vegeu el paràmetre `animationTick`.
-  const lastTargetIdsRef = useRef<{ radar: string | null; rvRadar: string | null; sat: string | null; hd: Record<HdAgency, string | null> }>({
+  const lastTargetIdsRef = useRef<{ radar: string | null; rvRadar: string | null; sat: string | null; hd: Record<HdAgency, string | null>; lightning: string[] }>({
     radar: null,
     rvRadar: null,
     sat: null,
-    hd: { goes: null, meteosat: null, himawari: null }
+    hd: { goes: null, meteosat: null, himawari: null },
+    lightning: []
   });
 
   const isHdReady = useCallback((map: Map, agency: HdAgency, key: string): boolean => {
@@ -242,12 +291,12 @@ export function useRadarAnimation({
     if (agency === 'meteosat') {
       const state = hdTimelineRef.current;
       if (state.status === 'idle' || state.status === 'pending') return null;
-      const { variant, slot } = computeMeteosatSlot(frameTime, state.timeline, state.nowSec);
+      const { variant, slot } = computeMeteosatSlot(frameTime, state.timeline, state.nowSec, overlaysRef.current.meteosatColour);
       return { key: `${variant}-${slot}`, variant, slot };
     }
     const slot = computeGibsSlot(frameTime, satFramesRef.current);
     return { key: `gibs-${slot}`, variant: 'gibs', slot };
-  }, [hdTimelineRef]);
+  }, [hdTimelineRef, overlaysRef]);
 
   // Treu les capes HD que ja no necessita cap fotograma de la línia temporal
   // actual (dades de radar noves, o una altra franja/variant de Meteosat).
@@ -264,6 +313,30 @@ export function useRadarAnimation({
       });
     });
   }, [mapRef, hdTargetFor, safeRemoveLayerAndSource]);
+
+  // Franges de llamps d'un fotograma (buit mentre no se sap la franja més
+  // nova o si el Lightning Imager no està disponible).
+  const lightningSlotsFor = useCallback((frameTime: number | null | undefined): number[] => {
+    if (frameTime === null || frameTime === undefined) return [];
+    const state = lightningTimelineRef.current;
+    if (state.status === 'idle' || state.status === 'pending') return [];
+    return computeLightningSlots(frameTime, state.status === 'ready' ? state.timeline : undefined, state.nowSec);
+  }, [lightningTimelineRef]);
+
+  // Treu les capes de llamps que no necessita cap fotograma (o totes, en
+  // desactivar la capa).
+  const pruneLightning = useCallback((all: boolean) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const needed = all ? new Set<number>() : new Set(radarFramesRef.current.flatMap((t) => lightningSlotsFor(t)));
+    lightningLoadOrderRef.current = lightningLoadOrderRef.current.filter((slot) => {
+      if (needed.has(slot)) return true;
+      safeRemoveLayerAndSource(map, lightningLayerId(slot), lightningSourceId(slot));
+      return false;
+    });
+    const live = new Set(lightningLoadOrderRef.current.map(lightningLayerId));
+    lastTargetIdsRef.current.lightning = lastTargetIdsRef.current.lightning.filter((id) => live.has(id));
+  }, [mapRef, lightningSlotsFor, safeRemoveLayerAndSource]);
 
   // Només destrueix frames quan la pròpia API ens diu que ja han caducat en el temps
   const cleanupExpiredLayers = useCallback((validLwFrames: RadarFrame[], validRvFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
@@ -355,7 +428,7 @@ export function useRadarAnimation({
               'raster-fade-duration': 0,
               'raster-resampling': 'linear'
             },
-          }, Z_LAYERS.PIS_6_UI);
+          }, Z_LAYERS.PIS_5B_LIGHTNING);
           loadedRadarIdsRef.current[lwFrame.time] = radLayerId;
 
           // PERF/VRAM: mateix FIFO que a les agències HD — expulsa el frame
@@ -409,7 +482,7 @@ export function useRadarAnimation({
               'raster-fade-duration': 0,
               'raster-resampling': 'linear'
             },
-          }, Z_LAYERS.PIS_6_UI);
+          }, Z_LAYERS.PIS_5B_LIGHTNING);
           loadedRvRadarIdsRef.current[frameTime] = radRvLayerId;
 
           const rvOrder = rvRadarLoadOrderRef.current;
@@ -518,14 +591,14 @@ export function useRadarAnimation({
           source: sourceId,
           layout: { visibility: 'visible' },
           paint: {
-            'raster-opacity': getSatOpacityExp(target.key === currentKey ? 1.0 : 0.000001),
+            'raster-opacity': hdOpacityExp(target.key, target.key === currentKey ? 1.0 : 0.000001),
             'raster-opacity-transition': { duration: 0, delay: 0 },
             'raster-saturation': cfg.saturation,
             'raster-contrast': cfg.contrast,
             'raster-brightness-min': cfg.brightnessMin,
             'raster-fade-duration': 0
           },
-        }, Z_LAYERS.PIS_4_FILTER);
+        }, cfg.colour ? Z_LAYERS.PIS_5_HIGH_ATMOS : Z_LAYERS.PIS_4_FILTER);
 
         // PERF: finestra FIFO — expulsa la capa HD més antiga d'aquesta
         // agència si ja n'hi ha MAX_LIVE_HD_FRAMES_PER_AGENCY vives, mai la
@@ -547,7 +620,53 @@ export function useRadarAnimation({
         console.warn(`[Zero Risk] Error afegint HD satèl·lit ${layerId}:`, e);
       }
     });
-  }, [mapRef, overlaysRef, safeRemoveLayerAndSource, styleReadyRef, hdTargetFor, isHdReady]);
+
+    // Llamps: les dues franges de 5 min del fotograma, per sobre del radar
+    // (just sota les etiquetes; el radar va sota PIS_5B_LIGHTNING).
+    const framesAhead = (index - currentFrameIndexRef.current + rFrames.length) % rFrames.length;
+    if (overlaysRef.current.lightning && framesAhead <= LIGHTNING_PREFETCH_FRAMES) {
+      const slots = lightningSlotsFor(frameTime);
+      const currentSlots = lightningSlotsFor(rFrames[currentFrameIndexRef.current]);
+      slots.forEach((slot) => {
+        const sourceId = lightningSourceId(slot);
+        if (map.getSource(sourceId)) return;
+        try {
+          map.addSource(sourceId, {
+            type: 'raster',
+            tiles: [`${SAT_PROXY_HOST}/${LIGHTNING_ROUTE}/${slot}/{z}/{x}/{y}.png`],
+            tileSize: 512,
+            bounds: LIGHTNING_BOUNDS,
+            minzoom: 2,
+            maxzoom: 8
+          });
+          map.addLayer({
+            id: lightningLayerId(slot),
+            type: 'raster',
+            source: sourceId,
+            layout: { visibility: 'visible' },
+            paint: {
+              ...LIGHTNING_PAINT,
+              'raster-opacity': currentSlots.includes(slot) ? LIGHTNING_OPACITY : 0.000001,
+              'raster-opacity-transition': { duration: 0, delay: 0 },
+              'raster-fade-duration': 0
+            },
+          }, Z_LAYERS.PIS_6_UI);
+
+          // FIFO: mai la franja que s'acaba d'afegir ni les del fotograma actual.
+          const order = lightningLoadOrderRef.current;
+          order.push(slot);
+          while (order.length > MAX_LIVE_LIGHTNING_LAYERS) {
+            const victimIdx = order.findIndex((s) => s !== slot && !currentSlots.includes(s));
+            if (victimIdx < 0) break;
+            const [victim] = order.splice(victimIdx, 1);
+            safeRemoveLayerAndSource(map, lightningLayerId(victim), lightningSourceId(victim));
+          }
+        } catch (e) {
+          console.warn(`[Zero Risk] Error afegint llamps ${slot}:`, e);
+        }
+      });
+    }
+  }, [mapRef, overlaysRef, safeRemoveLayerAndSource, styleReadyRef, hdTargetFor, isHdReady, lightningSlotsFor]);
 
   // CORRECCIÓ: quan el dispositiu perd el context WebGL, useMapLifecycle
   // destrueix el mapa i en crea un de nou, però aquest hook no es remunta:
@@ -563,7 +682,9 @@ export function useRadarAnimation({
     rvRadarLoadOrderRef.current = [];
     hdLoadOrderRef.current = { goes: [], meteosat: [], himawari: [] };
     prevHdEnabledRef.current = { goes: false, meteosat: false, himawari: false };
-    lastTargetIdsRef.current = { radar: null, rvRadar: null, sat: null, hd: { goes: null, meteosat: null, himawari: null } };
+    lightningLoadOrderRef.current = [];
+    prevLightningEnabledRef.current = false;
+    lastTargetIdsRef.current = { radar: null, rvRadar: null, sat: null, hd: { goes: null, meteosat: null, himawari: null }, lightning: [] };
   }, []);
 
   const applyFrameVisibility = useCallback((index: number, animationTick: boolean = false) => {
@@ -596,6 +717,17 @@ export function useRadarAnimation({
       }
       prevHdEnabledRef.current[agency] = isEnabledNow;
     });
+
+    // IR ⇄ color: les capes de l'altra variant ja no les necessita cap
+    // fotograma (les del mode nou s'acaben de crear a ensureFrameLoaded).
+    if (overlaysRef.current.meteosatColour !== prevMeteosatColourRef.current) {
+      prevMeteosatColourRef.current = overlaysRef.current.meteosatColour;
+      pruneUnneededHd();
+    }
+
+    const lightningEnabled = overlaysRef.current.lightning;
+    if (prevLightningEnabledRef.current && !lightningEnabled) pruneLightning(true);
+    prevLightningEnabledRef.current = lightningEnabled;
 
     const currentFrameTime = radarFramesRef.current[safeIndex];
     const lwTargetFrame = currentFrameTime !== null && currentFrameTime !== undefined
@@ -711,27 +843,53 @@ export function useRadarAnimation({
       const heldKey = (animationTick || isPlayingRef.current) && target && !isHdReady(map, agency, target.key)
         ? pickReadyHdKey(map, agency, target)
         : null;
+      const displayKey = heldKey ?? target?.key ?? null;
       const displayId = heldKey ? hdLayerId(agency, heldKey) : newHdId;
 
       if (animationTick) {
-        if (shownId && shownId !== displayId && map.getLayer(shownId)) {
-          map.setPaintProperty(shownId, 'raster-opacity', getSatOpacityExp(0.000001));
+        const shownKey = shownId ? shownId.slice(`hd-${agency}-layer-`.length) : null;
+        if (shownId && shownKey && shownId !== displayId && map.getLayer(shownId)) {
+          map.setPaintProperty(shownId, 'raster-opacity', hdOpacityExp(shownKey, 0.000001));
         }
-        if (displayId && map.getLayer(displayId)) {
+        if (displayId && displayKey && map.getLayer(displayId)) {
           map.setLayoutProperty(displayId, 'visibility', 'visible');
-          map.setPaintProperty(displayId, 'raster-opacity', getSatOpacityExp(1.0));
+          map.setPaintProperty(displayId, 'raster-opacity', hdOpacityExp(displayKey, 1.0));
         }
       } else {
         hdLoadOrderRef.current[agency].forEach((key) => {
           const id = hdLayerId(agency, key);
           if (!map.getLayer(id)) return;
           map.setLayoutProperty(id, 'visibility', enabled ? 'visible' : 'none');
-          map.setPaintProperty(id, 'raster-opacity', enabled ? getSatOpacityExp(id === displayId ? 1.0 : 0.000001) : 0);
+          map.setPaintProperty(id, 'raster-opacity', enabled ? hdOpacityExp(key, id === displayId ? 1.0 : 0.000001) : 0);
         });
       }
       lastTargetIdsRef.current.hd[agency] = displayId;
     });
-  }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, styleReadyRef, hdTargetFor, isHdReady, pickReadyHdKey]);
+
+    // Llamps: les dues franges del fotograma a opacitat plena, la resta
+    // precarregades. Sense "reserva" com l'HD: si una franja encara no ha
+    // arribat, millor cap llamp que llamps d'una altra hora.
+    const lightningIds = lightningEnabled
+      ? lightningSlotsFor(currentFrameTime).map(lightningLayerId).filter((id) => !!map.getLayer(id))
+      : [];
+    if (animationTick) {
+      lastTargetIdsRef.current.lightning.forEach((id) => {
+        if (!lightningIds.includes(id) && map.getLayer(id)) map.setPaintProperty(id, 'raster-opacity', 0.000001);
+      });
+      lightningIds.forEach((id) => {
+        map.setLayoutProperty(id, 'visibility', 'visible');
+        map.setPaintProperty(id, 'raster-opacity', LIGHTNING_OPACITY);
+      });
+    } else {
+      lightningLoadOrderRef.current.forEach((slot) => {
+        const id = lightningLayerId(slot);
+        if (!map.getLayer(id)) return;
+        map.setLayoutProperty(id, 'visibility', lightningEnabled ? 'visible' : 'none');
+        map.setPaintProperty(id, 'raster-opacity', lightningIds.includes(id) ? LIGHTNING_OPACITY : lightningEnabled ? 0.000001 : 0);
+      });
+    }
+    lastTargetIdsRef.current.lightning = lightningIds;
+  }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, pruneUnneededHd, pruneLightning, styleReadyRef, hdTargetFor, isHdReady, pickReadyHdKey, lightningSlotsFor]);
 
   // /hd/meteosat/latest ha canviat (primera resposta, franja nova o una altra
   // capa): fora les capes que ja no toquen i es creen les que falten.
@@ -739,6 +897,12 @@ export function useRadarAnimation({
     pruneUnneededHd();
     applyFrameVisibility(currentFrameIndexRef.current);
   }, [pruneUnneededHd, applyFrameVisibility]);
+
+  // El mateix per a /lightning/latest.
+  const refreshLightningTimeline = useCallback(() => {
+    pruneLightning(false);
+    applyFrameVisibility(currentFrameIndexRef.current);
+  }, [pruneLightning, applyFrameVisibility]);
 
   const injectLayersIntoMap = useCallback((
     parsedData: z.infer<typeof RainViewerResponseSchema>,
@@ -776,6 +940,7 @@ export function useRadarAnimation({
 
     cleanupExpiredLayers(lwFrames, rvFrames, sFrames);
     pruneUnneededHd();
+    pruneLightning(false);
 
     if (unionTimes.length === 0) return;
 
@@ -798,7 +963,7 @@ export function useRadarAnimation({
         if (isMountedRef.current) applyFrameVisibility(currentFrameIndexRef.current);
       });
     }
-  }, [ensureFrameLoaded, applyFrameVisibility, cleanupExpiredLayers, pruneUnneededHd, mapRef, styleReadyRef]);
+  }, [ensureFrameLoaded, applyFrameVisibility, cleanupExpiredLayers, pruneUnneededHd, pruneLightning, mapRef, styleReadyRef]);
 
   const togglePlay = useCallback(() => {
     if (radarFramesRef.current.length === 0) return;
@@ -851,6 +1016,7 @@ export function useRadarAnimation({
     setAnimationActive,
     applyFrameVisibility,
     refreshHdTimeline,
+    refreshLightningTimeline,
     resetLayerBookkeeping,
     radarFramesRef,
     currentFrameIndexRef

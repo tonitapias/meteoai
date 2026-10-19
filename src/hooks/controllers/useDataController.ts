@@ -4,6 +4,7 @@ import { useWeatherCalculations } from '../useWeatherCalculations';
 import { useWeatherTheme } from '../useWeatherTheme';
 import { useWeatherAI } from '../useWeatherAI';
 import { useRefreshOnResume } from '../useRefreshOnResume';
+import { useLightningNearby } from '../useLightningNearby';
 import { useGeoLocation } from '../../context/GeoLocationContext';
 import { selectRegionalModel } from '../../constants/regionalModels';
 import type { Language } from '../../translations';
@@ -32,17 +33,20 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
   // 3. Estètica basada en Dades (Theme)
   const theme = useWeatherTheme(weatherData, calculations.effectiveWeatherCode);
 
-  // 4. Intel·ligència (AI)
-  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability, calculations.effectiveWeatherCode, calculations.effectiveCloudCover);
+  // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
+  const loc = weatherData?.location as LocationMeta | undefined;
+
+  // 4. Llamps observats a prop (Meteosat-12): avís del tauler i telemetria de la IA.
+  const { lightning, settled: lightningSettled } = useLightningNearby(loc?.latitude, loc?.longitude);
+
+  // 5. Intel·ligència (AI)
+  const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability, calculations.effectiveWeatherCode, calculations.effectiveCloudCover, lightning, lightningSettled);
 
   // Fusionem Theme dins de Calculations (com es feia abans) per consistència
   const calculationsWithTheme = {
     ...calculations,
     currentBg: theme.currentBg
   };
-
-  // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
-  const loc = weatherData?.location as LocationMeta | undefined;
 
   const activeRegionalModel = loc
     ? selectRegionalModel(loc.latitude, loc.longitude)
@@ -55,7 +59,8 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
       loading,
       error,
       calculations: calculationsWithTheme,
-      aiAnalysis
+      aiAnalysis,
+      lightning
     },
     actions: {
       fetchWeatherByCoords,

@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback, useMemo, Dispatch, SetStateAc
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTranslation } from 'react-i18next';
-import { Info } from 'lucide-react';
+import { Info, Zap } from 'lucide-react';
 
 // 1. DOMINI FÍSIC EXTRET
 import {
@@ -27,13 +27,13 @@ import { useAstroEngine } from '../hooks/radar/useAstroEngine';
 import { useCameraFlight } from '../hooks/radar/useCameraFlight';
 import { useRadarAnimation } from '../hooks/radar/useRadarAnimation';
 import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
-import { useHdTimeline } from '../hooks/radar/useHdTimeline';
+import { useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
-// La imatge Meteosat de la capa HD és CC BY 4.0 (EUMETSAT Data Policy, art.
-// 6.3), que exigeix aquesta fórmula. "modified": l'app hi aplica saturació i
-// contrast.
+// La imatge Meteosat de la capa HD i els llamps del Lightning Imager (també a
+// bord de Meteosat-12) són CC BY 4.0 (EUMETSAT Data Policy, art. 6.3), que
+// exigeix aquesta fórmula. "modified": l'app hi aplica saturació i contrast.
 const EUMETSAT_ATTRIBUTION = `Contains modified EUMETSAT Meteosat data ${new Date().getFullYear()}`;
 
 if (MAPBOX_TOKEN) {
@@ -86,7 +86,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     labels: false,
     nasaReal: false,
     nasaFires: false,
-    terrain3D: false
+    terrain3D: false,
+    lightning: true,
+    meteosatColour: false
   });
 
   // Referències essencials per als Hooks
@@ -142,13 +144,15 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     styleReadyRef
   });
 
-  // Hores pròpies de "Meteosat HD (Europa)": només es demanen amb la capa activa.
+  // Hores pròpies de "Meteosat HD (Europa)" i dels llamps: només es demanen
+  // amb la capa activa.
   const { timelineRef: hdTimelineRef, version: hdTimelineVersion } = useHdTimeline(overlays.hdMeteosat);
+  const { timelineRef: lightningTimelineRef, version: lightningTimelineVersion } = useLightningTimeline(overlays.lightning);
 
   const {
     isPlaying, pausePlayback, framesCount, currentFrameTimestamp,
     injectLayersIntoMap, togglePlay, setAnimationActive, applyFrameVisibility,
-    refreshHdTimeline, resetLayerBookkeeping, radarFramesRef, currentFrameIndexRef
+    refreshHdTimeline, refreshLightningTimeline, resetLayerBookkeeping, radarFramesRef, currentFrameIndexRef
   } = useRadarAnimation({
     mapRef,
     overlaysRef,
@@ -158,7 +162,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     syncLighting,
     syncAtmosphere,
     styleReadyRef,
-    hdTimelineRef
+    hdTimelineRef,
+    lightningTimelineRef
   });
 
   useCameraFlight({
@@ -202,6 +207,11 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   useEffect(() => {
     if (hdTimelineVersion > 0) refreshHdTimeline();
   }, [hdTimelineVersion, refreshHdTimeline]);
+
+  // 2c. Franges de llamps noves (/lightning/latest).
+  useEffect(() => {
+    if (lightningTimelineVersion > 0) refreshLightningTimeline();
+  }, [lightningTimelineVersion, refreshLightningTimeline]);
 
   // 3. Gestió del Cicle de Vida Play/Pause vinculat a `isActive`
   useEffect(() => {
@@ -255,6 +265,22 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               {EUMETSAT_ATTRIBUTION}
             </a>
           </>
+        )}
+        {/* Llegenda dels llamps: l'escala d'EUMETSAT (llamps per píxel en 5
+            min, logarítmica d'1 a 20 o més) amb els colors recolorats de la
+            capa (LIGHTNING_PAINT a useRadarAnimation). */}
+        {overlays.lightning && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-300">
+            <Zap className="w-2.5 h-2.5 text-amber-300 shrink-0" aria-hidden="true" />
+            <span>{t('lightningLegend', 'Llamps / 5 min')}</span>
+            <span>1</span>
+            <span
+              className="w-14 h-1.5 rounded-full"
+              style={{ background: 'linear-gradient(90deg, rgba(255,235,90,0.45), rgba(255,200,60,0.7), rgba(253,120,40,0.95) 53%, rgb(140,0,38))' }}
+              aria-hidden="true"
+            />
+            <span>20+</span>
+          </div>
         )}
         <button
           onClick={() => setShowAttribution(v => !v)}

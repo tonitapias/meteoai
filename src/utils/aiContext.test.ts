@@ -161,3 +161,12 @@ describe('generateAIPrediction — frases de reserva traduïdes (no català fix)
         expect(text.split(sentence).length - 1).toBe(1);
     });
 });
+
+describe('generateAIPrediction — llamps observats a prop', () => {
+    it('amb llamps a 30 km o menys avisa de tempesta encara que el model no en prevegi (IA caiguda)', () => {
+        const calm = generateAIPrediction(current, daily, hourly, 0, 'ca', 3, null, 'C', null, false);
+        expect(calm.alerts.some(a => a.msg === tr.alertStorm)).toBe(false);
+        const near = generateAIPrediction(current, daily, hourly, 0, 'ca', 3, null, 'C', null, true);
+        expect(near.alerts.some(a => a.msg === tr.alertStorm && a.level === 'high')).toBe(true);
+    });
+});

@@ -20,6 +20,7 @@ const AIInsights = lazy(() => import('../AIInsights'));
 const OfficialAlertBanner = lazy(() => import('../OfficialAlertBanner'));
 const RadarRealityBanner = lazy(() => import('../RadarRealityBanner'));
 const RadarNowcastBanner = lazy(() => import('../RadarNowcastBanner'));
+const LightningBanner = lazy(() => import('../LightningBanner'));
 const ForecastSection = lazy(() => import('../ForecastSection'));
 const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 // Només es mostra en Mode Expert — mateix cas que ExpertWidgets de dalt. Viu en un
@@ -90,6 +91,11 @@ export const DashboardContent = () => {
                     </div>
                 </div>
             )}
+
+            {/* 2a-0. LLAMPS OBSERVATS A PROP (Meteosat-12): el senyal més urgent, abans que la pluja */}
+            <Suspense fallback={null}>
+                <LightningBanner lightning={state.lightning} lang={flags.lang} now={state.now.getTime()} onShowRadar={() => actions.setShowRadar(true)} />
+            </Suspense>
 
             {/* 2a-i. TEMPORITZACIÓ NOWCAST (quan començarà/acabarà la pluja segons el radar) */}
             <Suspense fallback={null}>

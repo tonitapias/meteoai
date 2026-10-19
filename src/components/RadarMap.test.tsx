@@ -104,6 +104,10 @@ const RAINVIEWER = { host: 'https://tilecache.rainviewer.com', radar: { past: ra
 const MTG_LATEST = T0 + 8 * 600;
 let hdLatest: unknown;
 let libreWxr: typeof LIBREWXR;
+// /lightning/latest: per defecte, l'última franja de llamps 5 min després del
+// fotograma 9 (els dos més nous comparteixen aquesta).
+const LIGHTNING_LATEST = T0 + 9 * 600 + 300;
+let lightningLatest: unknown;
 
 const maps = () => (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -132,6 +136,7 @@ const layer = (m: FakeMapInstance, id: string) => m.layers.find((l) => l.id === 
 beforeEach(() => {
   (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps = [];
   hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' };
+  lightningLatest = { latest: LIGHTNING_LATEST, cadence: 300, source: 'caps' };
   libreWxr = LIBREWXR;
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const u = String(url);
@@ -139,6 +144,9 @@ beforeEach(() => {
       const body = await hdLatest;
       if (body === 'fail') throw new TypeError('Failed to fetch');
       return new Response(JSON.stringify(body), { status: 200 });
+    }
+    if (u.includes('/lightning/latest')) {
+      return new Response(JSON.stringify(await lightningLatest), { status: 200 });
     }
     return new Response(JSON.stringify(u.includes('librewxr') ? libreWxr : RAINVIEWER), { status: 200 });
   }));
@@ -408,6 +416,96 @@ describe('RadarMap', () => {
     await act(async () => { respond({ layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' }); await sleep(30); });
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
     expect(map.errors).toEqual([]);
+  });
+
+  it('llamps: les dues franges de 5 min de cada fotograma, entre el radar i les etiquetes', async () => {
+    const map = await mountRadar();
+    const ltg = () => visibleTargets(map, 'ltg-layer-', 0.5);
+
+    // Fotograma actual (el més nou): les seves dues franges passen de l'última
+    // publicada, així que en queda una sola.
+    expect(ltg()).toEqual([`ltg-layer-${LIGHTNING_LATEST}`]);
+    expect(map.sources.get(`ltg-src-${LIGHTNING_LATEST}`)).toMatchObject({
+      tiles: [`https://meteo-sat-proxy.tonitapias.workers.dev/lightning/v1/${LIGHTNING_LATEST}/{z}/{x}/{y}.png`],
+      bounds: [-60, -60, 60, 72]
+    });
+    const order = map.layers.map((l) => l.id);
+    const at = (id: string) => order.indexOf(id);
+    const lastRadar = Math.max(...order.filter((id) => id.startsWith('rad-')).map(at));
+    expect(at('z-index-lightning')).toBeGreaterThan(lastRadar);
+    expect(at(`ltg-layer-${LIGHTNING_LATEST}`)).toBeGreaterThan(at('z-index-lightning'));
+    expect(at(`ltg-layer-${LIGHTNING_LATEST}`)).toBeLessThan(at('layer-labels'));
+
+    // Reproduint: el fotograma T es veu amb les franges T − 5 i T, i cada franja surt en un sol fotograma.
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    const seen = new Map<number, string>();
+    const start = Date.now();
+    while (seen.size < 4 && Date.now() - start < 20000) {
+      await act(async () => { await sleep(20); });
+      const frame = radarFrame(map);
+      if (frame !== null && !seen.has(frame)) seen.set(frame, ltg().sort().join('+'));
+    }
+    for (const [frame, shown] of seen) {
+      if (frame > LIGHTNING_LATEST) continue;
+      expect(shown).toBe(`ltg-layer-${frame - 300}+ltg-layer-${frame}`);
+    }
+    // Precàrrega acotada: el fotograma actual i els 2 següents × 2 franges.
+    expect(ids(map, 'ltg-layer-').length).toBeLessThanOrEqual(6);
+    expect(map.errors).toEqual([]);
+  }, 30000);
+
+  it('desactivar els llamps treu les capes i la llegenda; tornar-los a activar les recrea', async () => {
+    const map = await mountRadar();
+    expect(ids(map, 'ltg-layer-').length).toBeGreaterThan(0);
+    expect(screen.getByText('Llamps / 5 min')).toBeTruthy();
+
+    await click('Llamps (satèl·lit MTG)');
+    expect(ids(map, 'ltg-layer-')).toEqual([]);
+    expect(screen.queryByText('Llamps / 5 min')).toBeNull();
+
+    await click('Llamps (satèl·lit MTG)');
+    await act(async () => { await sleep(30); });
+    expect(visibleTargets(map, 'ltg-layer-', 0.5)).toEqual([`ltg-layer-${LIGHTNING_LATEST}`]);
+    expect(map.errors).toEqual([]);
+  });
+
+  it('si el Lightning Imager va endarrerit (/lightning/latest null), no es crea cap capa de llamps', async () => {
+    lightningLatest = null;
+    const map = await mountRadar();
+    await act(async () => { await sleep(30); });
+    expect(ids(map, 'ltg-layer-')).toEqual([]);
+  });
+
+  it('Meteosat HD en color: GeoColour per sobre del filtre de nit, i en tornar a IR es treu', async () => {
+    const colourLatest = T0 + 7 * 600;
+    hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps', colour: { latest: colourLatest, cadence: 600, source: 'caps' } };
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
+
+    await click('Color');
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtgColour-${colourLatest}`]);
+    expect(ids(map, 'hd-meteosat-layer-mtg-')).toEqual([]);
+    expect(hdSource(map, `mtgColour-${colourLatest}`)?.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/mtg/geocolour/v1/${colourLatest}/{z}/{x}/{y}.png`]);
+    const order = map.layers.map((l) => l.id);
+    expect(order.indexOf(`hd-meteosat-layer-mtgColour-${colourLatest}`)).toBeGreaterThan(order.indexOf('layer-night'));
+    const paint = layer(map, `hd-meteosat-layer-mtgColour-${colourLatest}`)!.paint;
+    expect([paint['raster-saturation'], paint['raster-contrast'], paint['raster-brightness-min']]).toEqual([0, 0, 0]);
+    // Fotografia: opacitat plena a zoom baix (l'IR hi deixa veure el mapa base).
+    expect(opacityAtZoom3(layer(map, `hd-meteosat-layer-mtgColour-${colourLatest}`)!)).toBe(1);
+
+    await click('IR');
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
+    expect(ids(map, 'hd-meteosat-layer-mtgColour-')).toEqual([]);
+    expect(map.errors).toEqual([]);
+  });
+
+  it('si GeoColour no està disponible (colour null), el mode color mostra l\'IR', async () => {
+    hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps', colour: null };
+    const map = await mountRadar();
+    await click('Meteosat HD (Europa)');
+    await click('Color');
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
   });
 
   it("el panell d'informació mostra l'atribució obligatòria d'EUMETSAT", async () => {

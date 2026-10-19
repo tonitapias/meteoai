@@ -15,7 +15,7 @@ interface RiskDetailTexts {
     measured: Record<MeasuredHazard, string>;
     /** {t} = el llindar del tallafocs per a aquest nivell. */
     limits: Record<MeasuredHazard, { AMBER: string; RED: string }>;
-    /** {at} o {from}; els aerosols són d'ara mateix i no porten hora. */
+    /** {at} o {from}; els aerosols són d'ara mateix i no porten hora; els llamps porten {value} (km). */
     events: Record<RiskDetailEvent, string>;
 }
 
@@ -45,7 +45,8 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             rime: 'Boira gebradora prevista {from}',
             fog: 'Boira prevista {from}',
             dust: 'Pols en suspensió (calima) ara mateix',
-            particles: 'Partícules en suspensió ara mateix'
+            particles: 'Partícules en suspensió ara mateix',
+            lightning: 'Llamps detectats per satèl·lit a uns {value} km (últims 30 min)'
         }
     },
     es: {
@@ -72,7 +73,8 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             rime: 'Niebla engelante prevista {from}',
             fog: 'Niebla prevista {from}',
             dust: 'Polvo en suspensión (calima) ahora mismo',
-            particles: 'Partículas en suspensión ahora mismo'
+            particles: 'Partículas en suspensión ahora mismo',
+            lightning: 'Rayos detectados por satélite a unos {value} km (últimos 30 min)'
         }
     },
     fr: {
@@ -99,7 +101,8 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             rime: 'Brouillard givrant prévu {from}',
             fog: 'Brouillard prévu {from}',
             dust: 'Poussière en suspension en ce moment',
-            particles: 'Particules en suspension en ce moment'
+            particles: 'Particules en suspension en ce moment',
+            lightning: 'Éclairs détectés par satellite à environ {value} km (30 dernières min)'
         }
     },
     en: {
@@ -126,7 +129,8 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             rime: 'Freezing fog expected {from}',
             fog: 'Fog expected {from}',
             dust: 'Airborne dust right now',
-            particles: 'Airborne particles right now'
+            particles: 'Airborne particles right now',
+            lightning: 'Lightning detected by satellite about {value} km away (last 30 min)'
         }
     }
 };
@@ -155,7 +159,12 @@ export const formatRiskDetail = (detail: RiskDetail, lang: Language): string | n
         if (!template) return null;
         const needsHour = template.includes('{at}') || template.includes('{from}');
         if (needsHour && !detail.hour) return null;
-        return fill(template, detail.hour ? { at: texts.at(detail.hour), from: texts.from(detail.hour) } : {});
+        // Els llamps observats porten la distància (km enters) en lloc de l'hora.
+        if (template.includes('{value}') && detail.value === null) return null;
+        return fill(template, {
+            ...(detail.hour ? { at: texts.at(detail.hour), from: texts.from(detail.hour) } : {}),
+            ...(detail.value !== null ? { value: fmt(detail.value, 0) } : {})
+        });
     }
 
     if (!MEASURED.includes(detail.hazard) || detail.level === 'GREEN') return null;

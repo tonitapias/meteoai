@@ -44,6 +44,10 @@ export interface Overlays {
   nasaReal: boolean;
   nasaFires: boolean;
   terrain3D: boolean;
+  // Llamps del Lightning Imager de MTG (Europa, Àfrica i Atlàntic).
+  lightning: boolean;
+  // Meteosat HD en color (GeoColour) en lloc d'infraroig.
+  meteosatColour: boolean;
 }
 
 // CORRECCIÓ (revisió Fase 3): es va intentar definir GeoFeatureCollection
@@ -74,13 +78,20 @@ export const Z_LAYERS = {
   PIS_3_LOW_ATMOS: 'z-index-clouds',
   PIS_4_FILTER: 'layer-night',
   PIS_5_HIGH_ATMOS: 'z-index-radar',
+  // Àncora entre el radar (per sota) i els llamps (per sobre): cada capa de
+  // radar nova s'insereix just sota aquesta, i les de llamps just sota les
+  // etiquetes, de manera que un fotograma de radar afegit més tard mai tapa
+  // els llamps.
+  PIS_5B_LIGHTNING: 'z-index-lightning',
   PIS_6_UI: 'layer-labels'
 } as const;
 
 // --- SATÈL·LITS HD ---
 export type HdAgency = 'goes' | 'meteosat' | 'himawari';
 
-export const SAT_PROXY_HOST = 'https://meteo-sat-proxy.tonitapias.workers.dev';
+// VITE_SAT_PROXY_HOST: només per provar en local un worker de `wrangler dev`
+// (p. ex. a .env.development.local, que no es puja).
+export const SAT_PROXY_HOST: string = import.meta.env.VITE_SAT_PROXY_HOST || 'https://meteo-sat-proxy.tonitapias.workers.dev';
 
 // Límits MSG [oest, sud, est, nord]. Mapbox demana tessel·les SENCERES que
 // toquin els límits, així que la vora real depèn del zoom: 66.4°N queda just
@@ -102,9 +113,10 @@ export const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
   himawari: [80, -60, 180, 60]
 };
 
-// Variant de la font HD: MTG (Meteosat-12, imatge cada 10 min), MSG (el
-// Meteosat actual, reserva fins al 2027) o GIBS (GOES/Himawari via NASA).
-export type HdVariant = 'mtg' | 'msg' | 'gibs';
+// Variant de la font HD: MTG (Meteosat-12, imatge cada 10 min), MTG en color
+// (GeoColour), MSG (el Meteosat actual, reserva fins al 2027) o GIBS
+// (GOES/Himawari via NASA).
+export type HdVariant = 'mtg' | 'mtgColour' | 'msg' | 'gibs';
 
 interface HdVariantConfig {
   cadenceSec: number;
@@ -114,6 +126,10 @@ interface HdVariantConfig {
   saturation: number;
   contrast: number;
   brightnessMin: number;
+  // Fotografia opaca (GeoColour) en lloc d'IR: opacitat pròpia i per sobre
+  // del filtre de nit, perquè la imatge ja porta la nit (núvols IR sobre
+  // llums de ciutat) i el filtre l'enfosquiria dues vegades.
+  colour?: boolean;
 }
 
 // Pintura: MSG i MTG són IR en blanc i negre; MTG té ~20 % menys contrast a la
@@ -121,23 +137,35 @@ interface HdVariantConfig {
 // per això va amb una lluminositat mínima (simulat sobre tessel·les reals:
 // talla menys núvols que MSG avui amb un 89–96 % del contrast percebut).
 // GIBS ve amb una paleta realçada (verd/blau/vermell per a tempestes fortes)
-// que la saturació -1 esborraria.
+// que la saturació -1 esborraria. GeoColour es mostra tal com ve.
 export const HD_VARIANTS: Record<HdVariant, HdVariantConfig> = {
   mtg: { cadenceSec: 600, route: 'hd/mtg/v1', bounds: MTG_BOUNDS, saturation: -1, contrast: 0.47, brightnessMin: 0.16 },
+  mtgColour: { cadenceSec: 600, route: 'hd/mtg/geocolour/v1', bounds: MTG_BOUNDS, saturation: 0, contrast: 0, brightnessMin: 0, colour: true },
   msg: { cadenceSec: 900, route: 'hd/meteosat', bounds: MSG_BOUNDS, saturation: -1, contrast: 0.3, brightnessMin: 0 },
   gibs: { cadenceSec: 3600, route: 'hd', saturation: 0, contrast: 0.3, brightnessMin: 0 }
 };
 
-// Resposta de /hd/meteosat/latest (worker meteo-sat-proxy): quina capa fa
-// servir el worker (MTG, o MSG si MTG va endarrerit o l'interruptor ho
-// força) i la franja més nova que es pot demanar.
-export const HdTimelineSchema = z.object({
-  layer: z.enum(['mtg', 'msg']),
+const SlotLatestSchema = z.object({
   latest: z.number().int().positive(),
   cadence: z.number().int().positive(),
   source: z.enum(['caps', 'computed']),
 });
+
+// Resposta de /hd/meteosat/latest (worker meteo-sat-proxy): quina capa fa
+// servir el worker (MTG, o MSG si MTG va endarrerit o l'interruptor ho
+// força) i la franja més nova que es pot demanar. `colour`: la de GeoColour,
+// null si no està disponible (llavors el mode color mostra l'IR); absent en
+// un worker anterior.
+export const HdTimelineSchema = SlotLatestSchema.extend({
+  layer: z.enum(['mtg', 'msg']),
+  colour: SlotLatestSchema.nullable().optional(),
+});
 export type HdTimeline = z.infer<typeof HdTimelineSchema>;
+
+// Resposta de /lightning/latest: null si el Lightning Imager va endarrerit
+// més d'1 h (la capa i l'avís de llamps no es mostren).
+export const LightningLatestSchema = SlotLatestSchema.nullable();
+export type LightningLatest = z.infer<typeof LightningLatestSchema>;
 
 // Sense /latest: una hora segura (ara − 30 min), com fa el mateix worker.
 export const HD_COMPUTED_LAG_SEC = 1800;
@@ -147,12 +175,40 @@ const floorTo = (t: number, step: number) => Math.floor(t / step) * step;
 // Franja Meteosat d'un fotograma de radar: la de la mateixa desena de minuts
 // (quinzena amb MSG), o la més nova publicada si encara no hi és. Totes les
 // franges són exactes al worker (memòria cau d'un any) i els fotogrames més
-// nous que `latest` comparteixen una sola font.
-export function computeMeteosatSlot(frameTime: number, timeline: HdTimeline | null, nowSec: number): { variant: 'mtg' | 'msg'; slot: number } {
-  const variant = timeline?.layer ?? 'mtg';
-  const cadence = timeline?.cadence ?? HD_VARIANTS[variant].cadenceSec;
-  const latest = timeline ? floorTo(timeline.latest, cadence) : floorTo(nowSec - HD_COMPUTED_LAG_SEC, cadence);
+// nous que `latest` comparteixen una sola font. En color, GeoColour si el
+// worker en dona franja (o si no s'ha pogut consultar: hora calculada); si la
+// marca com a no disponible o fa servir MSG, l'IR.
+export function computeMeteosatSlot(
+  frameTime: number,
+  timeline: HdTimeline | null,
+  nowSec: number,
+  colour: boolean = false
+): { variant: 'mtg' | 'mtgColour' | 'msg'; slot: number } {
+  const colourLatest = timeline?.colour;
+  const useColour = colour && (timeline === null || (timeline.layer === 'mtg' && !!colourLatest));
+  const variant = useColour ? 'mtgColour' : timeline?.layer ?? 'mtg';
+  const source = useColour ? colourLatest : timeline;
+  const cadence = source?.cadence ?? HD_VARIANTS[variant].cadenceSec;
+  const latest = source ? floorTo(source.latest, cadence) : floorTo(nowSec - HD_COMPUTED_LAG_SEC, cadence);
   return { variant, slot: Math.min(floorTo(frameTime, cadence), latest) };
+}
+
+// --- LLAMPS (MTG Lightning Imager, àrea de llamps acumulada en 5 min) ---
+export const LIGHTNING_STEP_SEC = 300;
+export const LIGHTNING_ROUTE = 'lightning/v1';
+// Camp de visió del Lightning Imager: Europa, Àfrica, l'Atlàntic i l'est de
+// Sud-amèrica, amb el mateix nord que la capa HD.
+export const LIGHTNING_BOUNDS: [number, number, number, number] = [-60, -60, 60, 72];
+
+// Franges de llamps d'un fotograma de radar (cada 10 min): les dues de 5 min
+// que l'envolten, [T − 5, T + 5), de manera que cada llamp surt en un sol
+// fotograma del bucle. Sense passar de la més nova publicada; buit si el
+// Lightning Imager no està disponible (`latest` null).
+export function computeLightningSlots(frameTime: number, latest: LightningLatest | undefined, nowSec: number): number[] {
+  if (latest === null) return [];
+  const newest = latest ? floorTo(latest.latest, LIGHTNING_STEP_SEC) : floorTo(nowSec - HD_COMPUTED_LAG_SEC, LIGHTNING_STEP_SEC);
+  const base = floorTo(frameTime, LIGHTNING_STEP_SEC);
+  return [...new Set([base - LIGHTNING_STEP_SEC, base].map((s) => Math.min(s, newest)))];
 }
 
 // Franja GIBS (GOES/Himawari): el frame de satèl·lit de LibreWXR més proper,
@@ -206,6 +262,21 @@ export const getSatOpacityExp = (baseOp: number): Expression => {
     8, baseOp * 0.25,
     11, baseOp * 0.05,
     13, 0
+  ];
+};
+
+// GeoColour (Meteosat HD en color) és una fotografia opaca: plena fins a z6,
+// perquè l'IR (getSatOpacityExp) deixa veure el mapa base a través i, en una
+// foto, això la rentaria; a partir d'aquí s'esvaeix cap al mapa base, que té
+// més detall que la imatge de 0,5–1 km.
+export const getHdColourOpacityExp = (baseOp: number): Expression => {
+  return [
+    'interpolate', ['linear'], ['zoom'],
+    2, baseOp,
+    6, baseOp * 0.95,
+    8, baseOp * 0.6,
+    10, baseOp * 0.2,
+    12, 0
   ];
 };
 

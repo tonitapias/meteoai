@@ -55,6 +55,16 @@ describe('formatRiskDetail', () => {
         expect(formatRiskDetail(measured('WIND', 'GREEN', 30, 50), 'ca')).toBeNull();
     });
 
+    it('llamps observats: la distància (km enters), sense hora, als 4 idiomes', () => {
+        const lightning: RiskDetail = { level: 'AMBER', hazard: 'CONVECTIVE', hour: null, value: 23, threshold: 30, event: 'lightning' };
+        expect(formatRiskDetail(lightning, 'ca')).toBe('Llamps detectats per satèl·lit a uns 23 km (últims 30 min)');
+        expect(formatRiskDetail(lightning, 'es')).toBe('Rayos detectados por satélite a unos 23 km (últimos 30 min)');
+        expect(formatRiskDetail(lightning, 'en')).toBe('Lightning detected by satellite about 23 km away (last 30 min)');
+        expect(formatRiskDetail(lightning, 'fr')).toBe('Éclairs détectés par satellite à environ 23 km (30 dernières min)');
+        // Sense distància no es diu a mitges.
+        expect(formatRiskDetail({ ...lightning, value: null }, 'ca')).toBeNull();
+    });
+
     it('els 4 idiomes tenen tots els textos (cap plantilla per omplir)', () => {
         const langs: Language[] = ['ca', 'es', 'en', 'fr'];
         const events: RiskDetailEvent[] = ['storm', 'storm_hail', 'snow', 'sleet', 'freezing', 'rime', 'fog', 'dust', 'particles'];

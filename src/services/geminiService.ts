@@ -8,7 +8,8 @@ import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules'
 import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeMonthFromIso } from '../utils/weatherMath';
 import * as Sentry from "@sentry/react";
-import { cacheService } from './cacheService'; 
+import { cacheService } from './cacheService';
+import { compassPhraseCa, lightningBand, lightningMinutesAgo, LIGHTNING_NEAR_KM, type LightningNearby } from './lightningService';
 import { 
     GEMINI_PROXY_URL, 
     AI_CACHE_TTL 
@@ -25,8 +26,11 @@ export interface TacticalTip {
     text: string;
 }
 
-/** Fenomen concret darrere d'un perill de codi (tempesta, neu, boira...) o de l'avís d'aerosols. */
-export type RiskDetailEvent = 'storm' | 'storm_hail' | 'snow' | 'sleet' | 'freezing' | 'rime' | 'fog' | 'dust' | 'particles';
+/**
+ * Fenomen concret darrere d'un perill de codi (tempesta, neu, boira...), de l'avís d'aerosols o dels llamps observats
+ * a prop (`lightning`: `value` = km al llamp més proper).
+ */
+export type RiskDetailEvent = 'storm' | 'storm_hail' | 'snow' | 'sleet' | 'freezing' | 'rime' | 'fog' | 'dust' | 'particles' | 'lightning';
 
 /**
  * Per què el tallafocs veu aquest nivell: el valor pic de la finestra (ràfega, mm/h, temperatura) i la seva hora, o la
@@ -352,7 +356,8 @@ const evaluateDeterministicRisk = (
     weatherData: ExtendedWeatherData,
     startIndex: number,
     endIndex: number,
-    dustKind: DustKind = null
+    dustKind: DustKind = null,
+    lightning: LightningNearby | null = null
 ): DeterministicRisk => {
     let maxRisk: TacticalRiskLevel = 'GREEN';
     let detectedHazard: TacticalHazardType | null = null;
@@ -388,6 +393,10 @@ const evaluateDeterministicRisk = (
                 seen[newHazard] = { level: newRisk, index, event };
             }
         };
+
+        // Llamps observats a prop ara mateix (Meteosat-12): abans del bucle perquè, en un empat d'AMBER, una tempesta
+        // que ja hi és tingui preferència sobre la que el model preveu més tard (i sobre un vent o una pluja genèrics).
+        if (lightning && lightning.nearestKm <= LIGHTNING_NEAR_KM) upgradeRisk('AMBER', 'CONVECTIVE', null, 'lightning');
 
         for (let i = startIndex; i < endIndex; i++) {
             const wmo = wmoArr?.[i];
@@ -448,7 +457,9 @@ const evaluateDeterministicRisk = (
         if (dustKind !== null) upgradeRisk('AMBER', 'AIR_QUALITY', null, dustKind);
 
         for (const [hazard, s] of Object.entries(seen) as [TacticalHazardType, NonNullable<typeof seen[TacticalHazardType]>][]) {
-            details[hazard] = buildRiskDetail(weatherData, hourly, startIndex, endIndex, s.level, hazard, s.index, s.event);
+            details[hazard] = s.event === 'lightning' && lightning
+                ? { level: s.level, hazard, event: 'lightning', hour: null, value: lightning.nearestKm, threshold: LIGHTNING_NEAR_KM }
+                : buildRiskDetail(weatherData, hourly, startIndex, endIndex, s.level, hazard, s.index, s.event);
         }
     } catch (e) {
         console.warn("⚠️ Error en l'avaluació matemàtica del tallafocs", e);
@@ -589,7 +600,8 @@ export const getGeminiAnalysis = async (
     language: string,
     effectiveCode: number | null = null,
     aqiData: AiAirQualityInput | null = null,
-    effectiveCloudCover: number | null = null
+    effectiveCloudCover: number | null = null,
+    lightning: LightningNearby | null = null
 ): Promise<AICacheData | null> => {
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
@@ -651,6 +663,17 @@ export const getGeminiAnalysis = async (
           Aerosols: PARTÍCULES EN SUSPENSIÓ — PM10 ${Math.round(dustAdvisory.pm10 ?? 0)} µg/m³. Mesura de qualitat de l'aire (salut), NO de visibilitat ni de boira: no en derivis boira ni visibilitat reduïda.`
                 : '';
 
+        // Llamps observats (Meteosat-12, lightningService): l'únic senyal de la telemetria que no és previsió. Es
+        // diu explícitament perquè la IA no el confongui amb el codi de tempesta del model ni el posi en futur. Sense
+        // l'última frase, Gemini (2 de 2 crides, 2026-10-20) només parlava de la tempesta que el model preveia a les
+        // 04:00 i ignorava la que ja hi havia a 23 km; amb ella, la primera frase la cita (4 de 4, en ca/es/en/fr).
+        const lightningLine = lightning
+            ? `
+          Llamps observats ARA (satèl·lit Meteosat-12, darrers 30 min): el més proper a uns ${lightning.nearestKm} km ${compassPhraseCa(lightning.bearingDeg)}, fa ${lightningMinutesAgo(lightning, Date.now())} min${lightning.intense ? ', amb activitat elèctrica intensa' : ''}. És una observació real d'ara mateix, no una previsió: ${lightning.nearestKm <= LIGHTNING_NEAR_KM
+                ? 'hi ha una tempesta activa a prop. Digues-ho a la primera frase del text, en present, amb la distància i la direcció.'
+                : 'hi ha una tempesta activa a la zona, encara no a sobre. Esmenta-ho al text, en present, amb la distància i la direcció.'}`
+            : '';
+
         const currentTimeRaw = currentObj?.time;
         const currentHourStr = (typeof currentTimeRaw === 'string' || typeof currentTimeRaw === 'number')
             ? getTacticalHourStr(currentTimeRaw, tz, utcOffset)
@@ -677,7 +700,8 @@ export const getGeminiAnalysis = async (
             effectiveCode ?? currentWmoCode ?? 'x',
             isMostlyCloudy(effectiveCode ?? currentWmoCode, effectiveCloudCover) ? 'mc' : 'c',
             dustAdvisory.kind ?? 'n',
-            getAqiBandIndex(currentAqi, aqiScale)
+            getAqiBandIndex(currentAqi, aqiScale),
+            lightningBand(lightning)
         ].join('-');
         const elevationKey = context.location.elevation.toString();
         const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}_${situationKey}`, lat, lon, language);
@@ -740,7 +764,7 @@ export const getGeminiAnalysis = async (
                 // que "les dades crues sempre guanyen" també dins la finestra
                 // de cache, no només en una crida fresca a la IA.
                 try {
-                    const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex, dustAdvisory.kind);
+                    const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex, dustAdvisory.kind, lightning);
                     if (RISK_HIERARCHY[deterministicEval.risk] > RISK_HIERARCHY[cachedData.risk_level]) {
                         console.warn(`🛡️ TALLAFOCS (revalidat sobre cache): les dades actuals forcen '${deterministicEval.risk}' per '${deterministicEval.hazard}' — la cache encara deia '${cachedData.risk_level}'.`);
                         return {
@@ -753,6 +777,11 @@ export const getGeminiAnalysis = async (
                     }
                 } catch (evalError) {
                     console.warn("⚠️ Error revalidant el tallafocs sobre la resposta en cache:", evalError);
+                }
+                // El motiu dels llamps porta la distància d'ara, no la de quan es va desar (la clau només separa trams
+                // de 10 km).
+                if (cachedData.risk_detail?.event === 'lightning' && lightning) {
+                    return { ...cachedData, risk_detail: { ...cachedData.risk_detail, value: lightning.nearestKm } };
                 }
                 return cachedData;
             }
@@ -856,7 +885,7 @@ export const getGeminiAnalysis = async (
           Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
           Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentDisplayTemp, currentDisplayApparent, currentHumidity)}
-          Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}
+          Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}${lightningLine}
           MODEL EN ÚS: ${modelInfo.name}
 ${windowSummary ? `
           RESUM CALCULAT DE LA FINESTRA (xifres exactes: usa-les tal qual, no sumis ni recalculis):
@@ -911,7 +940,7 @@ ${windowSummary ? `
                 }
 
                 // Execució del tallafocs matemàtic fora del bucle IA
-                const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex, dustAdvisory.kind);
+                const deterministicEval = evaluateDeterministicRisk(weatherData, evalStartIndex, evalEndIndex, dustAdvisory.kind, lightning);
 
                 if (typeof parsed.text === 'string' && parsed.text.trim().length > 0) {
                     

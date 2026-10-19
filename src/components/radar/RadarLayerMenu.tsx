@@ -12,7 +12,8 @@ import {
   Map as MapIcon,
   Type as TypeIcon,
   Flame,
-  Mountain
+  Mountain,
+  Zap
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BaseLayerType, BaseLayerConfig, Overlays } from '../../utils/radarPhysics';
@@ -216,6 +217,27 @@ export function RadarLayerMenu({
                     {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
 
+                  {/* Overlay: Llamps (MTG Lightning Imager) */}
+                  <button
+                    onClick={() => toggleOverlay('lightning')}
+                    className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
+                      overlays.lightning
+                        ? 'bg-amber-950/60 border-amber-400/50 shadow-[inset_0_0_20px_rgba(245,158,11,0.15)]'
+                        : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 active:scale-[0.98]'
+                    }`}
+                  >
+                    {overlays.lightning && <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent"></div>}
+                    <div className="relative flex items-center gap-3 truncate pr-2">
+                      <div className={`p-1.5 rounded-lg transition-colors ${overlays.lightning ? 'bg-amber-500/20 text-amber-300' : 'bg-white/5 text-slate-400 group-hover:text-slate-300 group-hover:bg-white/10'}`}>
+                        <Zap className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-bold truncate transition-colors ${overlays.lightning ? 'text-amber-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        {t('layerLightning', 'Llamps (satèl·lit MTG)')}
+                      </span>
+                    </div>
+                    {overlays.lightning ? <Eye className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
+                  </button>
+
                   {/* Overlay: Satèl·lit IR (GLOBAL) */}
                   <button
                     onClick={() => toggleOverlay('satIR')}
@@ -380,6 +402,31 @@ export function RadarLayerMenu({
                     </div>
                     {overlays.hdMeteosat ? <Eye className="w-5 h-5 text-fuchsia-400 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
+
+                  {/* Meteosat HD: infraroig o color (GeoColour: color real de
+                      dia, núvols sobre llums de ciutat de nit). */}
+                  {overlays.hdMeteosat && (
+                    <div role="radiogroup" aria-label={t('hdModeLabel', 'Mode de Meteosat HD')} className="grid grid-cols-2 gap-1 p-1 -mt-1 rounded-xl bg-white/[0.03] border border-fuchsia-500/20">
+                      {([false, true] as const).map((colour) => {
+                        const selected = overlays.meteosatColour === colour;
+                        return (
+                          <button
+                            key={colour ? 'colour' : 'ir'}
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => { if (!selected) toggleOverlay('meteosatColour'); }}
+                            className={`min-h-[36px] rounded-lg text-[11px] font-bold transition-colors ${
+                              selected
+                                ? 'bg-fuchsia-500/25 text-fuchsia-100 border border-fuchsia-400/40'
+                                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                            }`}
+                          >
+                            {colour ? t('hdModeColour', 'Color') : t('hdModeIr', 'IR')}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Botó GOES (Amèrica) */}
                   <button

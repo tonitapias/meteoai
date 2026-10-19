@@ -17,6 +17,7 @@ import {
     type AiAirQualityInput,
     type RiskDetail
 } from '../services/geminiService';
+import { lightningBand, LIGHTNING_NEAR_KM, type LightningNearby } from '../services/lightningService';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
@@ -54,7 +55,13 @@ export function useWeatherAI(
     // (p.ex. el 45 d'ICON) i se saltaria la política de boira (visibilityRules.resolveFog).
     effectiveCode: number | null = null,
     // % efectiu de núvols d'"ara" (useCurrentConditions): la IA descriu el cel igual que la capçalera.
-    effectiveCloudCover: number | null = null
+    effectiveCloudCover: number | null = null,
+    // Llamps observats a prop ara mateix (Meteosat-12, useLightningNearby): telemetria i tallafocs de la IA.
+    lightning: LightningNearby | null = null,
+    // La primera consulta de llamps d'aquesta ubicació ja ha acabat. Mentre no, l'anàlisi espera uns segons: si no,
+    // en obrir l'app al costat d'una tempesta es feien dues crides a la IA (la primera sense llamps, que a més es
+    // quedava a la cache com si no n'hi hagués).
+    lightningSettled: boolean = true
 ) {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisState | null>(null);
   // startedKey: l'última anàlisi que ha arrencat de debò (és la que hi ha a la pantalla i no cal repetir-la).
@@ -91,7 +98,8 @@ export function useWeatherAI(
     // les mateixes dades de la pantalla. No es demana cap anàlisi nova sobre dades velles, i la clau diferent fa que,
     // quan torni la previsió nova, l'anàlisi remota s'hi faci encara que la resta de la clau coincideixi.
     const isOfflineSnapshot = !!weatherData.offlineSnapshot;
-    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}-${isOfflineSnapshot ? 'desada' : 'nova'}`;
+    // Llamps: només la banda de distància (cap, o trams de 10 km fins a 50), no els km exactes de cada refresc.
+    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}-${lightningBand(lightning)}-${isOfflineSnapshot ? 'desada' : 'nova'}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
     wantedKey.current = currentKey;
@@ -101,14 +109,15 @@ export function useWeatherAI(
       try {
         // Càlcul de previsió local determinística d'emergència (Fallback immediat)
         const local = generateAIPrediction(
-          current, weatherData.daily, weatherData.hourly, 
-          aqiVal, lang, effectiveCode, reliability, unit, dustKind
+          current, weatherData.daily, weatherData.hourly,
+          aqiVal, lang, effectiveCode, reliability, unit, dustKind,
+          !!lightning && lightning.nearestKm <= LIGHTNING_NEAR_KM
         );
         setAiAnalysis(local);
         if (isOfflineSnapshot) return;
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
-        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover);
+        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover, lightning);
         
         // Només si aquesta consulta encara és la vigent i la que hi ha a la pantalla: la resposta d'una consulta
         // anterior no s'enganxa al text local d'una altra.
@@ -140,13 +149,15 @@ export function useWeatherAI(
     // els 500 ms arribaven dades noves amb la mateixa clau (un refresc), la neteja cancel·lava l'espera i el nou efecte
     // veia la clau com a feta i no en programava cap altra. L'anàlisi no es feia mai i la pantalla es quedava amb
     // l'anterior, d'una altra consulta (text i insígnia inclosos).
+    // Mentre no se sap si hi ha llamps, s'espera fins a 2,5 s (la consulta sol trigar ~1–1,5 s); quan arriba, l'efecte
+    // es torna a executar i l'espera passa a 500 ms. Si tarda més, l'anàlisi surt igualment i es refà si hi ha llamps.
     const timer = setTimeout(() => {
       startedKey.current = currentKey;
       fetchAI();
-    }, 500);
+    }, lightningSettled ? 500 : 2500);
     return () => clearTimeout(timer);
 
-  }, [weatherData, aqiData, lang, unit, reliability, effectiveCode, effectiveCloudCover]);
+  }, [weatherData, aqiData, lang, unit, reliability, effectiveCode, effectiveCloudCover, lightning, lightningSettled]);
 
   return { aiAnalysis };
 }

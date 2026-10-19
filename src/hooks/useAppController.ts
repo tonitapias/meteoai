@@ -61,6 +61,7 @@ export function useAppController() {
           loading: data.state.loading,
           error: data.state.error,
           aiAnalysis: data.state.aiAnalysis,
+          lightning: data.state.lightning,
           calculations: data.state.calculations,
           favorites,
           notification: ui.state.notification,
@@ -108,7 +109,7 @@ export function useAppController() {
       t
   }), [
       data.state.weatherData, data.state.aqiData, data.state.loading, data.state.error,
-      data.state.aiAnalysis, data.state.calculations, favorites, ui.state.notification, ui.state.now,
+      data.state.aiAnalysis, data.state.lightning, data.state.calculations, favorites, ui.state.notification, ui.state.now,
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite,
       setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,

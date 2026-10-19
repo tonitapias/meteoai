@@ -11,6 +11,8 @@ import { describe, it, expect } from 'vitest';
 //   el worker (caps d'una sola capa, JPEG/PNG segons la geometria, recul
 //   davant InvalidDimensionValue) i les seves rutes /hd/meteosat/latest i
 //   /hd/mtg/v1.
+// - Llamps (mtg_fd:li_afa) i GeoColour (mtg_fd:rgb_geocolour): les capes i
+//   les rutes /lightning/* i /hd/mtg/geocolour/v1 (al final del fitxer).
 
 const CAPABILITIES_URL = 'https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetCapabilities';
 const MSG_LAYER = 'msg_fes:ir108';
@@ -221,5 +223,85 @@ describe('EUMETSAT MTG (mtg_fd:ir105_hrfi) Contract Check', () => {
         expect(isImage(bytes)).toBe(true);
         expect(bytes.byteLength, 'El worker ha servit el fallback transparent: mira `wrangler tail` (línies "[Zero Risk] MTG ...")').toBeGreaterThan(MIN_TILE_BYTES);
         expect(response.headers.get('cache-control')).toBe('no-store');
+    }, TIMEOUT_MS);
+});
+
+// Llamps (mtg_fd:li_afa: capa del radar i avís "llamps a prop" del tauler) i
+// GeoColour (mtg_fd:rgb_geocolour: Meteosat HD en color). Si fallen, la capa
+// de llamps queda buida i l'avís i la IA deixen de veure tempestes, sense cap
+// error visible; o el mode color mostra l'IR.
+const LIGHTNING_LAYER = 'mtg_fd:li_afa';
+const GEOCOLOUR_LAYER = 'mtg_fd:rgb_geocolour';
+const capsOf = (layer: string) => `https://view.eumetsat.int/geoserver/${layer.replace(':', '/')}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
+const getMapOf = (layer: string, time: string, tile: typeof TILE, format: string) =>
+    `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${layer}&styles=&crs=EPSG:3857&bbox=${tileBbox(tile)}&width=512&height=512&format=${format}&transparent=true&time=${time}`;
+// El fallback del worker (PNG transparent d'1x1).
+const FALLBACK_BYTES = 68;
+
+async function layerLatest(layer: string, period: string): Promise<string> {
+    const res = await fetch(capsOf(layer));
+    expect(res.ok, `GetCapabilities de ${layer} ha fallat amb status: ${res.status}`).toBe(true);
+    const xml = await res.text();
+    const { attrs, extentEnd } = timeDimension(xml);
+    expect(extentEnd, `Les caps de ${layer} no tenen dimensió temps`).not.toBeNull();
+    expect(attrs).toContain('nearestValue="1"');
+    expect(xml, `${layer} ha canviat de període (el worker i l'app treballen amb ${period})`).toContain(`/${period}<`);
+    const ageMs = Date.now() - Date.parse(extentEnd!);
+    expect(ageMs, `L'última imatge de ${layer} és de fa ${(ageMs / 3600000).toFixed(1)} h (${extentEnd})`).toBeLessThan(MAX_AGE_MS);
+    return extentEnd!;
+}
+
+describe('EUMETSAT MTG llamps (li_afa) i GeoColour Contract Check', () => {
+    it('llamps: caps cada 5 min al dia i GetMap png8 anònim amb transparència', async () => {
+        const time = await layerLatest(LIGHTNING_LAYER, 'PT5M');
+        const response = await fetch(getMapOf(LIGHTNING_LAYER, time, TILE, 'image/png8'));
+        expect(response.ok, `GetMap de ${LIGHTNING_LAYER} ha fallat amb status: ${response.status}`).toBe(true);
+        const png = new Uint8Array(await response.arrayBuffer());
+        expect([png[0], png[1], png[2], png[3]], `image/png8 no ha tornat PNG (Content-Type: ${response.headers.get('content-type')})`).toEqual([0x89, 0x50, 0x4e, 0x47]);
+        // On no hi ha llamps ha de ser transparent: si no, la capa taparia el radar.
+        expect(hasTransparentPaletteEntry(png), 'El PNG dels llamps ja no té cap color transparent').toBe(true);
+    }, TIMEOUT_MS);
+
+    it('GeoColour: caps cada 10 min al dia i GetMap JPEG anònim dins el disc', async () => {
+        const time = await layerLatest(GEOCOLOUR_LAYER, 'PT10M');
+        const response = await fetch(getMapOf(GEOCOLOUR_LAYER, time, TILE, 'image/jpeg'));
+        expect(response.ok, `GetMap de ${GEOCOLOUR_LAYER} ha fallat amb status: ${response.status}`).toBe(true);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        expect(isImage(bytes)).toBe(true);
+        expect(bytes.byteLength).toBeGreaterThan(MIN_TILE_BYTES);
+    }, TIMEOUT_MS);
+
+    it('el worker de producció dona la franja de llamps (caps, cada 5 min, al dia)', async () => {
+        const response = await fetch(`${WORKER_URL}/lightning/latest`, { headers: WORKER_HEADERS });
+        expect(response.ok, `/lightning/latest ha respost amb status: ${response.status}`).toBe(true);
+        const latest = await response.json() as { latest: number; cadence: number; source: string } | null;
+        expect(latest, 'El worker diu que el Lightning Imager va endarrerit més d\'1 h: capa i avís de llamps desactivats').not.toBeNull();
+        expect(latest!.source, 'El worker no ha pogut llegir les caps dels llamps i fa servir una hora calculada').toBe('caps');
+        expect(latest!.cadence).toBe(300);
+        expect(Date.now() / 1000 - latest!.latest).toBeLessThan(MAX_LATEST_AGE_S);
+    }, TIMEOUT_MS);
+
+    it('el worker de producció dona la franja de GeoColour dins /hd/meteosat/latest', async () => {
+        const response = await fetch(`${WORKER_URL}/hd/meteosat/latest`, { headers: WORKER_HEADERS });
+        const latest = await response.json() as { colour?: { latest: number; cadence: number; source: string } | null };
+        expect(latest.colour, 'Sense franja de GeoColour: el mode color de Meteosat HD mostra l\'IR').toBeTruthy();
+        expect(latest.colour!.source).toBe('caps');
+        expect(latest.colour!.cadence).toBe(600);
+    }, TIMEOUT_MS);
+
+    it('el worker de producció resol tessel·les reals de llamps i de GeoColour (no el fallback)', async () => {
+        const lightning = Math.floor(Date.parse(await layerLatest(LIGHTNING_LAYER, 'PT5M')) / 1000);
+        // Desalineades: no-store i sense desar, el camí sencer fins a EUMETSAT.
+        const ltg = await fetch(`${WORKER_URL}/lightning/v1/${lightning - 3600 + 7}/${TILE.z}/${TILE.x}/${TILE.y}.png`, { headers: WORKER_HEADERS });
+        const ltgBytes = new Uint8Array(await ltg.arrayBuffer());
+        // Una tessel·la buida de llamps (369 B) és petita però real: el que la distingeix del fallback és X-Hd-Slot.
+        expect(ltg.headers.get('x-hd-slot'), 'El worker ha servit el fallback dels llamps: mira `wrangler tail` ("[Zero Risk] MTG llamps ...")').toBeTruthy();
+        expect(ltgBytes.byteLength).toBeGreaterThan(FALLBACK_BYTES);
+
+        const colour = Math.floor(Date.parse(await layerLatest(GEOCOLOUR_LAYER, 'PT10M')) / 1000);
+        const geo = await fetch(`${WORKER_URL}/hd/mtg/geocolour/v1/${colour - 3600 + 7}/${TILE.z}/${TILE.x}/${TILE.y}.png`, { headers: WORKER_HEADERS });
+        const geoBytes = new Uint8Array(await geo.arrayBuffer());
+        expect(isImage(geoBytes)).toBe(true);
+        expect(geoBytes.byteLength, 'El worker ha servit el fallback de GeoColour: mira `wrangler tail` ("[Zero Risk] MTG GeoColour ...")').toBeGreaterThan(MIN_TILE_BYTES);
     }, TIMEOUT_MS);
 });

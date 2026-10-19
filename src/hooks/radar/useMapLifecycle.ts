@@ -135,6 +135,9 @@ export function useMapLifecycle({
       antialias: false,
 
       transformRequest: (url, resourceType) => {
+        if (resourceType === 'Tile' && url.includes('/lightning/') && !overlaysRef.current.lightning) {
+          return { url: TRANSPARENT_PIXEL };
+        }
         if (resourceType === 'Tile' && url.includes('/hd/')) {
           const currentOverlays = overlaysRef.current;
           const isGoes = url.includes('/hd/goes/');
@@ -179,7 +182,7 @@ export function useMapLifecycle({
 
       const is404 = status === 404 || message.includes('404') || message.includes('not found');
       const sourceId = errorEvent.sourceId;
-      const isVolatileSource = !!sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-') || sourceId.includes('hd-'));
+      const isVolatileSource = !!sourceId && (sourceId.includes('nasa') || sourceId.includes('sat-') || sourceId.includes('rad-') || sourceId.includes('hd-') || sourceId.includes('ltg-'));
 
       if (is404 || isVolatileSource) return; // Esperat: tessel·la fora de rang o font volàtil sense dades actuals
 
@@ -293,6 +296,7 @@ export function useMapLifecycle({
         });
 
         map.addLayer({ id: Z_LAYERS.PIS_5_HIGH_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
+        map.addLayer({ id: Z_LAYERS.PIS_5B_LIGHTNING, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
         // Etiquetes vectorials de Mapbox (abans raster de CARTO, que ara
         // exigeix API key: veure utils/mapLabels.ts). Manté l'id

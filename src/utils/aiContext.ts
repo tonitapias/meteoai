@@ -109,17 +109,18 @@ interface AlertParams {
     currentCape: number;
     precipSum: number;
     dustKind: DustKind;
+    lightningNear: boolean;
 }
 
 const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
-    const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum, dustKind } = params;
+    const { code, windSpeed, windGusts, temp, rainProb, isRaining, uvMax, isDay, aqiValue, currentCape, precipSum, dustKind, lightningNear } = params;
     const alerts: Alert[] = []; 
     const tips: string[] = [];   
     const isSnow = (code >= 71 && code <= 77) || code === 85 || code === 86;
     const isFreezingPrecip = isFreezingPrecipCode(code);
     const isSleet = isSleetCode(code);
 
-    if (code >= 95 || currentCape > ALERTS.CAPE_STORM) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
+    if (code >= 95 || currentCape > ALERTS.CAPE_STORM || lightningNear) alerts.push({ type: tr.storm, msg: tr.alertStorm, level: 'high' });
     else if (isSnow) alerts.push({ type: tr.snow, msg: tr.alertSnow, level: 'warning' });
     else if (isFreezingPrecip) alerts.push({ type: tr.rain, msg: tr.alertFreezingRain, level: 'high' });
     else if (isSleet) alerts.push({ type: tr.snow, msg: tr.alertSleet, level: 'warning' });
@@ -220,7 +221,10 @@ export const generateAIPrediction = (
     agreement: ShortRangeAgreement | null = null,
     unit: string = 'C',
     // Avís de pols/partícules de "ara" (resolveDustAdvisory); null si no n'hi ha.
-    dustKind: DustKind = null
+    dustKind: DustKind = null,
+    // Llamps observats a prop ara mateix (lightningService, a LIGHTNING_NEAR_KM o menys): avís de tempesta encara
+    // que el model no en prevegi. Sense això, amb la IA caiguda, l'anàlisi local no deia res d'una tempesta a 5 km.
+    lightningNear: boolean = false
 ): AIPredictionResult => {
     const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
     // Sense dades no hi ha acord entre models que valgui: sense insígnia, mai una "Incertesa alta" que, en arribar
@@ -309,7 +313,7 @@ export const generateAIPrediction = (
             code, windSpeed, windGusts, temp: validTemp,
             rainProb: futureRainProb, isRaining, uvMax,
             isDay, aqiValue: safeNum(aqiValue), dustKind,
-            currentCape, precipSum
+            currentCape, precipSum, lightningNear
         }, tr);
 
         // Sense comparació entre models (agreement null) no hi ha insígnia: abans sortia "Consens Models" per defecte.
