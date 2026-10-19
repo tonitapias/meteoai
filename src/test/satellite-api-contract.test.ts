@@ -1,12 +1,16 @@
 import { describe, it, expect } from 'vitest';
 
-// Test de contracte de la capa "Meteosat HD (Europa)" del radar. Avisa amb
-// temps si EUMETSAT deixa d'actualitzar la capa msg_fes:ir108: el servei
-// MSG 0° funciona en paral·lel amb Meteosat-12 (MTG) només fins a finals del
-// primer trimestre de 2027 (pendent de confirmar), i quan s'aturi el worker
-// meteo-sat-proxy servirà tessel·les transparents sense cap error visible
-// ("fail-open"): la capa quedaria en blanc en silenci. El substitut previst
-// és mtg_fd:ir105_hrfi (també en comprovem l'existència).
+// Test de contracte de la capa "Meteosat HD (Europa)" del radar. El worker
+// meteo-sat-proxy serveix tessel·les transparents sense cap error visible
+// ("fail-open") quan EUMETSAT falla: sense aquest avís, la capa quedaria en
+// blanc en silenci.
+// - MSG (msg_fes:ir108): servei 0° en paral·lel amb Meteosat-12 (MTG) fins
+//   cap al 2027 (data no confirmada). Quan s'aturi, aquests tests fallaran:
+//   és el senyal per a la Fase 3 (la ruta antiga passa a servir MTG).
+// - MTG (mtg_fd:ir105_hrfi): la capa nova, amb les mateixes peticions que fa
+//   el worker (caps d'una sola capa, JPEG/PNG segons la geometria, recul
+//   davant InvalidDimensionValue) i les seves rutes /hd/meteosat/latest i
+//   /hd/mtg/v1.
 
 const CAPABILITIES_URL = 'https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetCapabilities';
 const MSG_LAYER = 'msg_fes:ir108';
@@ -20,6 +24,16 @@ const MIN_TILE_BYTES = 4096;
 // igual que xyzToBbox al worker.
 const TILE = { z: 4, x: 8, y: 5 };
 const TIMEOUT_MS = 30000;
+const WORKER_URL = 'https://meteo-sat-proxy.tonitapias.workers.dev';
+const WORKER_HEADERS = { Origin: 'https://tonitapias.github.io' };
+// Caps d'una sola capa: la mateixa URL que llegeix el worker (MTG_CAPS_URL).
+const MTG_CAPS_URL = 'https://view.eumetsat.int/geoserver/mtg_fd/ir105_hrfi/ows?service=WMS&version=1.3.0&request=GetCapabilities';
+// Tessel·la de vora del disc (Àsia, en part fora de la Terra): el worker hi
+// demana vnd.jpeg-png, que ha de donar PNG amb transparència.
+const LIMB_TILE = { z: 3, x: 5, y: 2 };
+// /hd/meteosat/latest: amb el marge de publicació de 23 min, una franja de
+// més d'1 h vol dir que MTG s'ha aturat o va molt endarrerit.
+const MAX_LATEST_AGE_S = 3600;
 
 let capabilitiesPromise: Promise<string> | null = null;
 function getCapabilities(): Promise<string> {
@@ -111,12 +125,101 @@ describe('EUMETSAT Meteosat (msg_fes:ir108) Contract Check', () => {
         expect(bytes.byteLength, 'El worker ha servit el fallback transparent: mira `wrangler tail` (línies "[Zero Risk] Meteosat ...")').toBeGreaterThan(MIN_TILE_BYTES);
     }, TIMEOUT_MS);
 
-    it(`la capa de substitució ${MTG_LAYER} (Meteosat-12) existeix i s'actualitza`, async () => {
-        const block = layerBlock(await getCapabilities(), MTG_LAYER);
-        expect(block, `La capa ${MTG_LAYER} no és al GetCapabilities: revisa el pla de migració`).not.toBeNull();
+});
 
-        const { extentEnd } = timeDimension(block!);
-        expect(extentEnd).not.toBeNull();
-        expect(Date.now() - Date.parse(extentEnd!)).toBeLessThan(MAX_AGE_MS);
+let mtgCapsPromise: Promise<string> | null = null;
+function getMtgCapabilities(): Promise<string> {
+    mtgCapsPromise ??= fetch(MTG_CAPS_URL).then((res) => {
+        if (!res.ok) throw new Error(`GetCapabilities de ${MTG_LAYER} ha fallat amb status: ${res.status}`);
+        return res.text();
+    });
+    return mtgCapsPromise;
+}
+
+const mtgGetMap = (time: string, tile: typeof TILE, format: string) =>
+    `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${MTG_LAYER}&styles=&crs=EPSG:3857&bbox=${tileBbox(tile)}&width=512&height=512&format=${format}&transparent=true&time=${time}`;
+
+// Bloc tRNS d'un PNG (alfa de cada entrada de la paleta) amb algun 0.
+function hasTransparentPaletteEntry(png: Uint8Array): boolean {
+    const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    for (let i = 8; i + 8 <= png.byteLength;) {
+        const length = view.getUint32(i);
+        const type = String.fromCharCode(png[i + 4], png[i + 5], png[i + 6], png[i + 7]);
+        if (type === 'tRNS') return png.subarray(i + 8, i + 8 + length).includes(0);
+        if (type === 'IDAT') return false; // tRNS sempre va abans de les dades
+        i += 12 + length;
+    }
+    return false;
+}
+
+async function mtgLatestTime(): Promise<string> {
+    const { extentEnd } = timeDimension(await getMtgCapabilities());
+    expect(extentEnd, `No s'ha pogut llegir la dimensió temps de ${MTG_LAYER}`).not.toBeNull();
+    return extentEnd!;
+}
+
+describe('EUMETSAT MTG (mtg_fd:ir105_hrfi) Contract Check', () => {
+    it("les caps de la capa tenen nearestValue, període de 10 min i s'han actualitzat fa menys de 2 h", async () => {
+        const { attrs, extentEnd } = timeDimension(await getMtgCapabilities());
+        expect(extentEnd, `Les caps de ${MTG_LAYER} no tenen dimensió temps: el worker passarà a MSG o a una hora calculada`).not.toBeNull();
+        expect(attrs).toContain('nearestValue="1"');
+        // El worker i l'app treballen amb franges de 10 min.
+        expect(await getMtgCapabilities()).toMatch(/\/PT10M</);
+
+        const ageMs = Date.now() - Date.parse(extentEnd!);
+        expect(ageMs, `L'última imatge de ${MTG_LAYER} és de fa ${(ageMs / 3600000).toFixed(1)} h (${extentEnd})`).toBeLessThan(MAX_AGE_MS);
+    }, TIMEOUT_MS);
+
+    it('GetMap anònim: JPEG dins el disc i PNG a la vora', async () => {
+        const time = await mtgLatestTime();
+
+        const inside = await fetch(mtgGetMap(time, TILE, 'image/jpeg'));
+        expect(inside.ok, `GetMap JPEG de ${MTG_LAYER} ha fallat amb status: ${inside.status} (si és 401/403, EUMETSAT exigeix el token)`).toBe(true);
+        const jpeg = new Uint8Array(await inside.arrayBuffer());
+        expect([jpeg[0], jpeg[1], jpeg[2]], `Dins el disc no ha tornat JPEG (Content-Type: ${inside.headers.get('content-type')})`).toEqual([0xff, 0xd8, 0xff]);
+        expect(jpeg.byteLength).toBeGreaterThan(MIN_TILE_BYTES);
+
+        const limb = await fetch(mtgGetMap(time, LIMB_TILE, 'image/vnd.jpeg-png'));
+        const png = new Uint8Array(await limb.arrayBuffer());
+        expect([png[0], png[1], png[2], png[3]], `A la vora vnd.jpeg-png no ha tornat PNG (Content-Type: ${limb.headers.get('content-type')}): fora del disc sortiria negre`).toEqual([0x89, 0x50, 0x4e, 0x47]);
+        // MTG torna sempre PNG de paleta: la transparència de fora del disc és
+        // una entrada amb alfa 0 al bloc tRNS.
+        expect(hasTransparentPaletteEntry(png), 'El PNG de la vora ja no té cap color transparent: fora del disc sortiria opac').toBe(true);
+    }, TIMEOUT_MS);
+
+    it('una franja no publicada torna InvalidDimensionValue (el recul del worker en depèn)', async () => {
+        const future = new Date(Date.parse(await mtgLatestTime()) + 30 * 60000).toISOString().replace('.000Z', 'Z');
+        const response = await fetch(mtgGetMap(future, TILE, 'image/jpeg'));
+        const contentType = response.headers.get('content-type') ?? '';
+        const body = await response.text();
+        expect(contentType, `Una franja futura ja no torna XML (status ${response.status}): revisa resolveMtgTile al worker`).toContain('xml');
+        expect(body, "EUMETSAT ha canviat el codi d'error de franja no publicada: el worker no recularà").toContain('InvalidDimensionValue');
+    }, TIMEOUT_MS);
+
+    it('el worker de producció diu que la capa és MTG, llegida de les caps i al dia', async () => {
+        const response = await fetch(`${WORKER_URL}/hd/meteosat/latest`, { headers: WORKER_HEADERS });
+        expect(response.ok, `/hd/meteosat/latest ha respost amb status: ${response.status}`).toBe(true);
+        const latest = await response.json() as { layer: string; latest: number; cadence: number; source: string };
+
+        expect(latest.layer, `El worker ha passat a MSG: MTG va endarrerit més d'1 h o l'interruptor HD_METEOSAT_LAYER no és "auto"`).toBe('mtg');
+        expect(latest.source, 'El worker no ha pogut llegir les caps de MTG i fa servir una hora calculada').toBe('caps');
+        expect(latest.cadence).toBe(600);
+        const ageS = Date.now() / 1000 - latest.latest;
+        expect(ageS, `La franja que ofereix el worker és de fa ${Math.round(ageS / 60)} min`).toBeLessThan(MAX_LATEST_AGE_S);
+    }, TIMEOUT_MS);
+
+    it('el worker de producció serveix una tessel·la MTG real (no el fallback transparent)', async () => {
+        const latest = Math.floor(Date.parse(await mtgLatestTime()) / 1000);
+        // Una hora abans i uns segons desalineada: el worker l'arrodoneix a la
+        // franja de 10 min, respon no-store i no la desa, així que cada dia es
+        // prova el camí sencer fins a EUMETSAT.
+        const timestamp = latest - 3600 + 7;
+        const response = await fetch(`${WORKER_URL}/hd/mtg/v1/${timestamp}/${TILE.z}/${TILE.x}/${TILE.y}.png`, { headers: WORKER_HEADERS });
+        expect(response.ok, `El worker ha respost amb status: ${response.status}`).toBe(true);
+
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        expect(isImage(bytes)).toBe(true);
+        expect(bytes.byteLength, 'El worker ha servit el fallback transparent: mira `wrangler tail` (línies "[Zero Risk] MTG ...")').toBeGreaterThan(MIN_TILE_BYTES);
+        expect(response.headers.get('cache-control')).toBe('no-store');
     }, TIMEOUT_MS);
 });
