@@ -2,17 +2,22 @@ import { useEffect, useRef, useState } from 'react';
 import type { z } from 'zod';
 import { fetchWithTimeout } from '../../utils/networkUtils';
 import {
+  GibsTimelineSchema,
   HdTimelineSchema,
   LightningLatestSchema,
   SAT_PROXY_HOST,
+  type GibsAgency,
+  type GibsTimeline,
   type HdTimeline,
   type LightningLatest
 } from '../../utils/radarPhysics';
 
 // Franges pròpies d'una capa del worker: el worker diu quina és l'última
 // imatge publicada (/hd/meteosat/latest per a "Meteosat HD (Europa)",
+// /hd/goes/latest i /hd/himawari/latest per a GOES i Himawari,
 // /lightning/latest per als llamps; desat 60 s a l'edge). useRadarAnimation
-// hi alinea cada fotograma de radar (computeMeteosatSlot, computeLightningSlots).
+// hi alinea cada fotograma de radar (computeMeteosatSlot, computeGibsSlot,
+// computeLightningSlots).
 export interface SlotTimelineState<T> {
   // 'pending': encara no se sap la franja; les capes s'esperen (uns
   // 0,1–0,3 s) en lloc de baixar tessel·les que s'haurien de llençar.
@@ -25,6 +30,7 @@ export interface SlotTimelineState<T> {
 }
 export type HdTimelineState = SlotTimelineState<HdTimeline>;
 export type LightningTimelineState = SlotTimelineState<LightningLatest>;
+export type GibsTimelineState = SlotTimelineState<GibsTimeline>;
 
 // La resposta porta `Cache-Control: max-age=60`: obrir i tancar el radar en
 // menys d'un minut surt de la memòria cau HTTP del navegador.
@@ -85,6 +91,10 @@ function useSlotTimeline<T>(enabled: boolean, url: string, schema: z.ZodType<T>)
 
 export function useHdTimeline(enabled: boolean) {
   return useSlotTimeline<HdTimeline>(enabled, HD_LATEST_URL, HdTimelineSchema);
+}
+
+export function useGibsTimeline(agency: GibsAgency, enabled: boolean) {
+  return useSlotTimeline<GibsTimeline>(enabled, `${SAT_PROXY_HOST}/hd/${agency}/latest`, GibsTimelineSchema);
 }
 
 export function useLightningTimeline(enabled: boolean) {

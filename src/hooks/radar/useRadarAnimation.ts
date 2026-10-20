@@ -17,10 +17,12 @@ import {
   computeGibsSlot,
   computeLightningSlots,
   getHdColourOpacityExp,
+  hdRoute,
+  type GibsAgency,
   type HdAgency,
   type HdVariant
 } from '../../utils/radarPhysics';
-import type { HdTimelineState, LightningTimelineState } from './useHdTimeline';
+import type { GibsTimelineState, HdTimelineState, LightningTimelineState } from './useHdTimeline';
 
 interface UseRadarAnimationProps {
   mapRef: MutableRefObject<Map | null>;
@@ -32,6 +34,7 @@ interface UseRadarAnimationProps {
   syncAtmosphere: () => void;
   styleReadyRef: MutableRefObject<boolean>;
   hdTimelineRef: MutableRefObject<HdTimelineState>;
+  gibsTimelineRefs: Record<GibsAgency, MutableRefObject<GibsTimelineState>>;
   lightningTimelineRef: MutableRefObject<LightningTimelineState>;
 }
 
@@ -139,6 +142,7 @@ export function useRadarAnimation({
   syncAtmosphere,
   styleReadyRef,
   hdTimelineRef,
+  gibsTimelineRefs,
   lightningTimelineRef
 }: UseRadarAnimationProps) {
 
@@ -197,8 +201,8 @@ export function useRadarAnimation({
     meteosat: false,
     himawari: false
   });
-  // Canvi IR ⇄ color de Meteosat HD: fora les capes de l'altra variant.
-  const prevMeteosatColourRef = useRef<boolean>(false);
+  // Canvi IR ⇄ color del satèl·lit HD: fora les capes de l'altra variant.
+  const prevHdColourRef = useRef<boolean>(false);
 
   // Franges de llamps vives, en ordre d'inserció (FIFO de
   // MAX_LIVE_LIGHTNING_LAYERS), i si la capa estava activa (alliberament en
@@ -282,24 +286,27 @@ export function useRadarAnimation({
     lastTargetIdsRef.current.hd[agency] = null;
   }, [mapRef, safeRemoveLayerAndSource]);
 
-  // Capa HD que correspon a un fotograma de radar. Meteosat té hores pròpies
-  // (cada 10 min amb MTG) alineades amb /hd/meteosat/latest; mentre no se sap
-  // la capa (MTG o MSG) no se'n crea cap. GOES/Himawari segueixen el frame de
-  // satèl·lit de LibreWXR més proper.
+  // Capa HD que correspon a un fotograma de radar. Cada satèl·lit té hores
+  // pròpies cada 10 min: Meteosat alineades amb /hd/meteosat/latest (MTG o
+  // MSG), GOES i Himawari amb les franges de GIBS de /hd/{agència}/latest.
+  // Mentre no se saben, no se'n crea cap capa.
   const hdTargetFor = useCallback((agency: HdAgency, frameTime: number | null | undefined): HdTarget | null => {
     if (frameTime === null || frameTime === undefined) return null;
+    const colour = overlaysRef.current.hdColour;
     if (agency === 'meteosat') {
       const state = hdTimelineRef.current;
       if (state.status === 'idle' || state.status === 'pending') return null;
-      const { variant, slot } = computeMeteosatSlot(frameTime, state.timeline, state.nowSec, overlaysRef.current.meteosatColour);
+      const { variant, slot } = computeMeteosatSlot(frameTime, state.timeline, state.nowSec, colour);
       return { key: `${variant}-${slot}`, variant, slot };
     }
-    const slot = computeGibsSlot(frameTime, satFramesRef.current);
-    return { key: `gibs-${slot}`, variant: 'gibs', slot };
-  }, [hdTimelineRef, overlaysRef]);
+    const state = gibsTimelineRefs[agency].current;
+    if (state.status === 'idle' || state.status === 'pending') return null;
+    const { variant, slot } = computeGibsSlot(frameTime, state.timeline, state.nowSec, colour);
+    return { key: `${variant}-${slot}`, variant, slot };
+  }, [hdTimelineRef, gibsTimelineRefs, overlaysRef]);
 
   // Treu les capes HD que ja no necessita cap fotograma de la línia temporal
-  // actual (dades de radar noves, o una altra franja/variant de Meteosat).
+  // actual (dades de radar noves, o una altra franja/variant).
   const pruneUnneededHd = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -559,8 +566,8 @@ export function useRadarAnimation({
       }
     }
 
-    // Capes HD: independents de la llista de satèl·lit de LibreWXR (Meteosat
-    // té hores pròpies; si LibreWXR cau, la capa HD continua).
+    // Capes HD: independents de la llista de satèl·lit de LibreWXR (cada
+    // satèl·lit té hores pròpies; si LibreWXR cau, la capa HD continua).
     HD_AGENCIES.forEach((agency) => {
       if (!isHdEnabled(overlaysRef.current, agency)) return;
       const target = hdTargetFor(agency, frameTime);
@@ -573,16 +580,15 @@ export function useRadarAnimation({
       // fotograma actual, encara que s'estigui precarregant per a un altre.
       const currentKey = hdTargetFor(agency, rFrames[currentFrameIndexRef.current])?.key;
       const cfg = HD_VARIANTS[target.variant];
-      const route = target.variant === 'gibs' ? `${cfg.route}/${agency}` : cfg.route;
 
       try {
         map.addSource(sourceId, {
           type: 'raster',
-          tiles: [`${SAT_PROXY_HOST}/${route}/${target.slot}/{z}/{x}/{y}.png`],
-          tileSize: 512,
+          tiles: [`${SAT_PROXY_HOST}/${hdRoute(target.variant, agency)}/${target.slot}/{z}/{x}/{y}.png`],
+          tileSize: cfg.tileSize ?? 512,
           bounds: cfg.bounds ?? HD_BOUNDS[agency],
-          minzoom: 2,
-          maxzoom: 8
+          minzoom: cfg.minzoom ?? 2,
+          maxzoom: cfg.maxzoom ?? 8
         });
 
         map.addLayer({
@@ -720,8 +726,8 @@ export function useRadarAnimation({
 
     // IR ⇄ color: les capes de l'altra variant ja no les necessita cap
     // fotograma (les del mode nou s'acaben de crear a ensureFrameLoaded).
-    if (overlaysRef.current.meteosatColour !== prevMeteosatColourRef.current) {
-      prevMeteosatColourRef.current = overlaysRef.current.meteosatColour;
+    if (overlaysRef.current.hdColour !== prevHdColourRef.current) {
+      prevHdColourRef.current = overlaysRef.current.hdColour;
       pruneUnneededHd();
     }
 
@@ -891,8 +897,9 @@ export function useRadarAnimation({
     lastTargetIdsRef.current.lightning = lightningIds;
   }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, pruneUnneededHd, pruneLightning, styleReadyRef, hdTargetFor, isHdReady, pickReadyHdKey, lightningSlotsFor]);
 
-  // /hd/meteosat/latest ha canviat (primera resposta, franja nova o una altra
-  // capa): fora les capes que ja no toquen i es creen les que falten.
+  // /hd/meteosat/latest o /hd/{goes|himawari}/latest han canviat (primera
+  // resposta, franja nova o una altra capa): fora les capes que ja no toquen i
+  // es creen les que falten.
   const refreshHdTimeline = useCallback(() => {
     pruneUnneededHd();
     applyFrameVisibility(currentFrameIndexRef.current);

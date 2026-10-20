@@ -46,8 +46,9 @@ export interface Overlays {
   terrain3D: boolean;
   // Llamps del Lightning Imager de MTG (Europa, Àfrica i Atlàntic).
   lightning: boolean;
-  // Meteosat HD en color (GeoColour) en lloc d'infraroig.
-  meteosatColour: boolean;
+  // Satèl·lit HD en color (GeoColour de Meteosat, GeoColor de GOES) en lloc
+  // d'infraroig. Himawari no en té i continua en IR.
+  hdColour: boolean;
 }
 
 // CORRECCIÓ (revisió Fase 3): es va intentar definir GeoFeatureCollection
@@ -88,6 +89,8 @@ export const Z_LAYERS = {
 
 // --- SATÈL·LITS HD ---
 export type HdAgency = 'goes' | 'meteosat' | 'himawari';
+// Les que arriben via NASA GIBS.
+export type GibsAgency = Exclude<HdAgency, 'meteosat'>;
 
 // VITE_SAT_PROXY_HOST: només per provar en local un worker de `wrangler dev`
 // (p. ex. a .env.development.local, que no es puja).
@@ -104,25 +107,41 @@ const MSG_BOUNDS: [number, number, number, number] = [-40, -60, 60, 66.4];
 // cobreix el Cap Nord (71,2°N) sense la franja del limbe.
 const MTG_BOUNDS: [number, number, number, number] = [-40, -60, 60, 72];
 
+// GOES i Himawari fins a 66,4°N, que queda just per sota del 66,51°N, frontera
+// de tessel·la a tots els zooms (com MSG): més amunt el píxel s'estira
+// (10–15 km) i la paleta de l'IR pinta de colors el terra glaçat de l'Àrtic.
+// GOES arriba a -180° (GOES-West hi veu bé: Pacífic central fins a la línia de
+// canvi de data, com Himawari per l'altre costat).
+const GIBS_NORTH = 66.4;
+
 // [oest, sud, est, nord] de cada font HD i zona on la càmera considera que
 // l'usuari ja hi és (useCameraFlight). Meteosat = MTG (el més ampli); amb la
 // reserva MSG la font fa servir MSG_BOUNDS (HD_VARIANTS).
 export const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
-  goes: [-160, -60, -20, 60],
+  goes: [-180, -60, -20, GIBS_NORTH],
   meteosat: MTG_BOUNDS,
-  himawari: [80, -60, 180, 60]
+  himawari: [80, -60, 180, GIBS_NORTH]
 };
 
 // Variant de la font HD: MTG (Meteosat-12, imatge cada 10 min), MTG en color
 // (GeoColour), MSG (el Meteosat actual, reserva fins al 2027) o GIBS
-// (GOES/Himawari via NASA).
-export type HdVariant = 'mtg' | 'mtgColour' | 'msg' | 'gibs';
+// (GOES/Himawari via NASA, cada 10 min), en IR o en color (GeoColor, només
+// GOES).
+export type HdVariant = 'mtg' | 'mtgColour' | 'msg' | 'gibs' | 'gibsColour';
 
 interface HdVariantConfig {
   cadenceSec: number;
-  // Ruta del worker; GIBS hi afegeix l'agència (hd/goes, hd/himawari).
+  // Ruta del worker; GIBS hi afegeix l'agència i el producte
+  // (hd/gibs/v1/goes/ir).
   route: string;
+  gibsProduct?: 'ir' | 'colour';
   bounds?: [number, number, number, number];
+  // Tessel·les de 256 px (GIBS) en lloc de 512: nivells de tessel·la un per
+  // sobre del zoom del mapa. maxzoom: el nivell més alt que es demana (per
+  // sobre, Mapbox amplia la tessel·la).
+  tileSize?: 256 | 512;
+  minzoom?: number;
+  maxzoom?: number;
   saturation: number;
   contrast: number;
   brightnessMin: number;
@@ -137,13 +156,23 @@ interface HdVariantConfig {
 // per això va amb una lluminositat mínima (simulat sobre tessel·les reals:
 // talla menys núvols que MSG avui amb un 89–96 % del contrast percebut).
 // GIBS ve amb una paleta realçada (verd/blau/vermell per a tempestes fortes)
-// que la saturació -1 esborraria. GeoColour es mostra tal com ve.
+// que la saturació -1 esborraria. GeoColour i GeoColor es mostren tal com
+// vénen. GIBS va en tessel·les de 256 px (les del seu WMTS, vegeu el worker) i
+// fins a la resolució real: el nivell 6 a l'IR (2 km) i el 7 a GeoColor
+// (~1 km); més amunt Mapbox amplia sense demanar més tessel·les.
 export const HD_VARIANTS: Record<HdVariant, HdVariantConfig> = {
   mtg: { cadenceSec: 600, route: 'hd/mtg/v1', bounds: MTG_BOUNDS, saturation: -1, contrast: 0.47, brightnessMin: 0.16 },
   mtgColour: { cadenceSec: 600, route: 'hd/mtg/geocolour/v1', bounds: MTG_BOUNDS, saturation: 0, contrast: 0, brightnessMin: 0, colour: true },
   msg: { cadenceSec: 900, route: 'hd/meteosat', bounds: MSG_BOUNDS, saturation: -1, contrast: 0.3, brightnessMin: 0 },
-  gibs: { cadenceSec: 3600, route: 'hd', saturation: 0, contrast: 0.3, brightnessMin: 0 }
+  gibs: { cadenceSec: 600, route: 'hd/gibs/v1', gibsProduct: 'ir', tileSize: 256, minzoom: 3, maxzoom: 6, saturation: 0, contrast: 0.3, brightnessMin: 0 },
+  gibsColour: { cadenceSec: 600, route: 'hd/gibs/v1', gibsProduct: 'colour', tileSize: 256, minzoom: 3, maxzoom: 7, saturation: 0, contrast: 0, brightnessMin: 0, colour: true }
 };
+
+// Ruta de les tessel·les d'una variant HD per a una agència.
+export function hdRoute(variant: HdVariant, agency: HdAgency): string {
+  const cfg = HD_VARIANTS[variant];
+  return cfg.gibsProduct ? `${cfg.route}/${agency}/${cfg.gibsProduct}` : cfg.route;
+}
 
 const SlotLatestSchema = z.object({
   latest: z.number().int().positive(),
@@ -166,6 +195,19 @@ export type HdTimeline = z.infer<typeof HdTimelineSchema>;
 // més d'1 h (la capa i l'avís de llamps no es mostren).
 export const LightningLatestSchema = SlotLatestSchema.nullable();
 export type LightningLatest = z.infer<typeof LightningLatestSchema>;
+
+// Resposta de /hd/goes/latest i /hd/himawari/latest: per a l'IR i el color
+// (GeoColor; null a Himawari o si va endarrerit), les franges que GIBS té de
+// les últimes 4 h (GIBS en salta alguna) fins a la més nova que es pot
+// demanar.
+const GibsProductTimelineSchema = SlotLatestSchema.extend({
+  slots: z.array(z.number().int().positive()),
+});
+export const GibsTimelineSchema = z.object({
+  ir: GibsProductTimelineSchema,
+  colour: GibsProductTimelineSchema.nullable(),
+});
+export type GibsTimeline = z.infer<typeof GibsTimelineSchema>;
 
 // Sense /latest: una hora segura (ara − 30 min), com fa el mateix worker.
 export const HD_COMPUTED_LAG_SEC = 1800;
@@ -211,18 +253,31 @@ export function computeLightningSlots(frameTime: number, latest: LightningLatest
   return [...new Set([base - LIGHTNING_STEP_SEC, base].map((s) => Math.min(s, newest)))];
 }
 
-// Franja GIBS (GOES/Himawari): el frame de satèl·lit de LibreWXR més proper,
-// com sempre. Si LibreWXR no en dona (p. ex. només hi ha RainViewer), l'hora
-// anterior: el worker hi aplica el seu propi recul.
-export function computeGibsSlot(frameTime: number, satFrames: RadarFrame[]): number {
-  let closest: number | null = null;
-  let minDiff = Infinity;
-  satFrames.forEach((f) => {
-    if (!f || f.time === null) return;
-    const diff = Math.abs(f.time - frameTime);
-    if (diff < minDiff) { minDiff = diff; closest = f.time; }
-  });
-  return closest ?? floorTo(frameTime, 3600) - 3600;
+// Sense /hd/{agència}/latest: una hora segura (ara − 40 min), com el worker.
+export const GIBS_COMPUTED_LAG_SEC = 2400;
+
+// Franja GOES/Himawari d'un fotograma de radar: la més nova que GIBS té fins a
+// l'hora del fotograma (si n'hi falta una, l'anterior); un fotograma més antic
+// que totes, la primera. En color, GeoColor si el worker en dona franges; si
+// no (Himawari, GeoColor endarrerit o sense /latest), l'IR.
+export function computeGibsSlot(
+  frameTime: number,
+  timeline: GibsTimeline | null,
+  nowSec: number,
+  colour: boolean = false
+): { variant: 'gibs' | 'gibsColour'; slot: number } {
+  const useColour = colour && !!timeline?.colour;
+  const variant = useColour ? 'gibsColour' : 'gibs';
+  const product = useColour ? timeline!.colour! : timeline?.ir;
+  if (!product) {
+    const cadence = HD_VARIANTS.gibs.cadenceSec;
+    return { variant, slot: Math.min(floorTo(frameTime, cadence), floorTo(nowSec - GIBS_COMPUTED_LAG_SEC, cadence)) };
+  }
+  let slot: number | null = null;
+  for (const s of product.slots) {
+    if (s <= frameTime && s <= product.latest) slot = s;
+  }
+  return { variant, slot: slot ?? product.slots[0] ?? product.latest };
 }
 
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---

@@ -12,7 +12,9 @@ import { describe, it, expect } from 'vitest';
 //   davant InvalidDimensionValue) i les seves rutes /hd/meteosat/latest i
 //   /hd/mtg/v1.
 // - Llamps (mtg_fd:li_afa) i GeoColour (mtg_fd:rgb_geocolour): les capes i
-//   les rutes /lightning/* i /hd/mtg/geocolour/v1 (al final del fitxer).
+//   les rutes /lightning/* i /hd/mtg/geocolour/v1.
+// - GOES i Himawari HD (NASA GIBS): DescribeDomains, WMS/WMTS i les rutes
+//   /hd/{goes|himawari}/latest i /hd/gibs/v1 (al final del fitxer).
 
 const CAPABILITIES_URL = 'https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetCapabilities';
 const MSG_LAYER = 'msg_fes:ir108';
@@ -303,5 +305,84 @@ describe('EUMETSAT MTG llamps (li_afa) i GeoColour Contract Check', () => {
         const geoBytes = new Uint8Array(await geo.arrayBuffer());
         expect(isImage(geoBytes)).toBe(true);
         expect(geoBytes.byteLength, 'El worker ha servit el fallback de GeoColour: mira `wrangler tail` ("[Zero Risk] MTG GeoColour ...")').toBeGreaterThan(MIN_TILE_BYTES);
+    }, TIMEOUT_MS);
+});
+
+// GOES i Himawari HD (NASA GIBS): el worker treu les franges de DescribeDomains
+// del WMTS i dona cada tessel·la de 256 px del WMS en JPEG o, mentre el WMS
+// encara no la té, en PNG del WMTS (rutes /hd/{goes|himawari}/latest i
+// /hd/gibs/v1). Si GIBS canvia res d'això, la capa queda buida o vella sense
+// cap error visible.
+const GIBS_LAYERS = [
+    ['GOES-East_ABI_Band13_Clean_Infrared', 'GoogleMapsCompatible_Level6'],
+    ['GOES-West_ABI_Band13_Clean_Infrared', 'GoogleMapsCompatible_Level6'],
+    ['Himawari_AHI_Band13_Clean_Infrared', 'GoogleMapsCompatible_Level6'],
+    ['GOES-East_ABI_GeoColor', 'GoogleMapsCompatible_Level7'],
+    ['GOES-West_ABI_GeoColor', 'GoogleMapsCompatible_Level7'],
+] as const;
+// Florida (GOES-East, dins el disc), tessel·la de 256 px.
+const GOES_TILE = { z: 5, x: 8, y: 13 };
+const isoSeconds = (s: number) => new Date(s * 1000).toISOString().slice(0, 19) + 'Z';
+// Una tessel·la de 256 px real fa 4 KB o més; la buida del WMS, 668 B (JPEG).
+const MIN_GIBS_TILE_BYTES = 1024;
+
+async function gibsNewestSlot(layer: string, tileMatrixSet: string): Promise<number> {
+    const now = Date.now() / 1000;
+    const res = await fetch(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=DescribeDomains&VERSION=1.0.0&LAYER=${layer}&TILEMATRIXSET=${tileMatrixSet}&TIME=${isoSeconds(now - 86400)}/${isoSeconds(now + 3600)}`);
+    expect(res.ok, `DescribeDomains de ${layer} ha fallat amb status: ${res.status}`).toBe(true);
+    const domain = (await res.text()).match(/<Domain>([^<]*)<\/Domain>/)?.[1];
+    expect(domain, `DescribeDomains de ${layer} ja no porta <Domain>: el worker farà servir hores calculades`).toBeTruthy();
+    expect(domain, `${layer} ha canviat de període (el worker treballa amb PT10M)`).toContain('/PT10M');
+    const last = domain!.split(',').pop()!.split('/');
+    return Date.parse(last[1] ?? last[0]) / 1000;
+}
+
+describe('NASA GIBS GOES i Himawari Contract Check', () => {
+    it('DescribeDomains: les 5 capes cada 10 min, amb la imatge més nova de fa menys de 2 h', async () => {
+        for (const [layer, tileMatrixSet] of GIBS_LAYERS) {
+            const ageMs = Date.now() - (await gibsNewestSlot(layer, tileMatrixSet)) * 1000;
+            expect(ageMs, `L'última imatge de ${layer} és de fa ${(ageMs / 3600000).toFixed(1)} h`).toBeLessThan(MAX_AGE_MS);
+        }
+    }, TIMEOUT_MS * 2);
+
+    it('WMS: JPEG de 256 px real una hora enrere; WMTS: PNG de la franja més nova i 404 per a una de futura', async () => {
+        const newest = await gibsNewestSlot('GOES-East_ABI_Band13_Clean_Infrared', 'GoogleMapsCompatible_Level6');
+        const wms = await fetch(`https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GOES-East_ABI_Band13_Clean_Infrared&STYLES=&FORMAT=image/jpeg&TRANSPARENT=true&HEIGHT=256&WIDTH=256&TIME=${isoSeconds(newest - 3600)}&CRS=EPSG:3857&BBOX=${tileBbox(GOES_TILE)}`);
+        const jpeg = new Uint8Array(await wms.arrayBuffer());
+        expect([jpeg[0], jpeg[1], jpeg[2]], `El WMS ja no dona JPEG (Content-Type: ${wms.headers.get('content-type')})`).toEqual([0xff, 0xd8, 0xff]);
+        expect(jpeg.byteLength, 'El WMS no té la imatge d\'una hora enrere: el worker hauria de servir-ho tot en PNG').toBeGreaterThan(MIN_GIBS_TILE_BYTES);
+
+        const wmts = (time: number) => fetch(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${isoSeconds(time)}/GoogleMapsCompatible_Level6/${GOES_TILE.z}/${GOES_TILE.y}/${GOES_TILE.x}.png`);
+        // La més nova pot no ser encara a tots els servidors: la d'abans.
+        const current = await wmts(newest - 600);
+        expect(current.status, 'El WMTS no té la penúltima imatge anunciada').toBe(200);
+        expect(isImage(new Uint8Array(await current.arrayBuffer()))).toBe(true);
+        const future = await wmts(newest + 7200);
+        await future.arrayBuffer();
+        expect(future.status, 'El WMTS ja no respon 404 a una franja sense dades: el worker no sabrà que ha de recular').toBe(404);
+    }, TIMEOUT_MS);
+
+    it('el worker de producció dona les franges de GOES (IR i GeoColor) i de Himawari, llegides de GIBS i al dia', async () => {
+        for (const agency of ['goes', 'himawari']) {
+            const response = await fetch(`${WORKER_URL}/hd/${agency}/latest`, { headers: WORKER_HEADERS });
+            expect(response.ok, `/hd/${agency}/latest ha respost amb status: ${response.status}`).toBe(true);
+            const latest = await response.json() as { ir: { latest: number; source: string; slots: number[] }; colour: { source: string } | null };
+            expect(latest.ir.source, `El worker no ha pogut llegir DescribeDomains de ${agency} i fa servir hores calculades`).toBe('caps');
+            expect(latest.ir.slots.length).toBeGreaterThan(6);
+            expect(Date.now() / 1000 - latest.ir.latest).toBeLessThan(MAX_LATEST_AGE_S);
+            if (agency === 'goes') expect(latest.colour?.source, 'Sense franges de GeoColor: el mode color de GOES mostra l\'IR').toBe('caps');
+            else expect(latest.colour).toBeNull();
+        }
+    }, TIMEOUT_MS);
+
+    it('el worker de producció resol una tessel·la GOES real (no el fallback transparent)', async () => {
+        const newest = await gibsNewestSlot('GOES-East_ABI_Band13_Clean_Infrared', 'GoogleMapsCompatible_Level6');
+        // Una hora abans i desalineada: no-store i sense desar, el camí sencer fins a GIBS.
+        const response = await fetch(`${WORKER_URL}/hd/gibs/v1/goes/ir/${newest - 3600 + 7}/${GOES_TILE.z}/${GOES_TILE.x}/${GOES_TILE.y}.png`, { headers: WORKER_HEADERS });
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        expect(response.headers.get('x-hd-slot'), 'El worker ha servit el fallback: mira `wrangler tail` ("[Zero Risk] GIBS ...")').toBeTruthy();
+        expect(isImage(bytes)).toBe(true);
+        expect(bytes.byteLength).toBeGreaterThan(MIN_GIBS_TILE_BYTES);
+        expect(response.headers.get('cache-control')).toBe('no-store');
     }, TIMEOUT_MS);
 });

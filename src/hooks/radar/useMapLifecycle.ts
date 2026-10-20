@@ -140,9 +140,9 @@ export function useMapLifecycle({
         }
         if (resourceType === 'Tile' && url.includes('/hd/')) {
           const currentOverlays = overlaysRef.current;
-          const isGoes = url.includes('/hd/goes/');
+          const isGoes = url.includes('/hd/goes/') || url.includes('/hd/gibs/v1/goes/');
           const isMeteosat = url.includes('/hd/meteosat/') || url.includes('/hd/mtg/');
-          const isHimawari = url.includes('/hd/himawari/');
+          const isHimawari = url.includes('/hd/himawari/') || url.includes('/hd/gibs/v1/himawari/');
 
           if (
             (isGoes && !currentOverlays.hdGoes) ||

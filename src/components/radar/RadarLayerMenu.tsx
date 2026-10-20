@@ -39,6 +39,32 @@ export function RadarLayerMenu({
 }: RadarLayerMenuProps) {
   const { t } = useTranslation();
 
+  // Satèl·lit HD en infraroig o en color (GeoColour/GeoColor: color real de
+  // dia, núvols sobre llums de ciutat de nit). Surt sota Meteosat i GOES;
+  // Himawari no té color.
+  const hdModeSelector = (
+    <div role="radiogroup" aria-label={t('hdModeLabel', 'Mode del satèl·lit HD')} className="grid grid-cols-2 gap-1 p-1 -mt-1 rounded-xl bg-white/[0.03] border border-fuchsia-500/20">
+      {([false, true] as const).map((colour) => {
+        const selected = overlays.hdColour === colour;
+        return (
+          <button
+            key={colour ? 'colour' : 'ir'}
+            role="radio"
+            aria-checked={selected}
+            onClick={() => { if (!selected) toggleOverlay('hdColour'); }}
+            className={`min-h-[36px] rounded-lg text-[11px] font-bold transition-colors ${
+              selected
+                ? 'bg-fuchsia-500/25 text-fuchsia-100 border border-fuchsia-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+            }`}
+          >
+            {colour ? t('hdModeColour', 'Color') : t('hdModeIr', 'IR')}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -403,30 +429,7 @@ export function RadarLayerMenu({
                     {overlays.hdMeteosat ? <Eye className="w-5 h-5 text-fuchsia-400 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
 
-                  {/* Meteosat HD: infraroig o color (GeoColour: color real de
-                      dia, núvols sobre llums de ciutat de nit). */}
-                  {overlays.hdMeteosat && (
-                    <div role="radiogroup" aria-label={t('hdModeLabel', 'Mode de Meteosat HD')} className="grid grid-cols-2 gap-1 p-1 -mt-1 rounded-xl bg-white/[0.03] border border-fuchsia-500/20">
-                      {([false, true] as const).map((colour) => {
-                        const selected = overlays.meteosatColour === colour;
-                        return (
-                          <button
-                            key={colour ? 'colour' : 'ir'}
-                            role="radio"
-                            aria-checked={selected}
-                            onClick={() => { if (!selected) toggleOverlay('meteosatColour'); }}
-                            className={`min-h-[36px] rounded-lg text-[11px] font-bold transition-colors ${
-                              selected
-                                ? 'bg-fuchsia-500/25 text-fuchsia-100 border border-fuchsia-400/40'
-                                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-                            }`}
-                          >
-                            {colour ? t('hdModeColour', 'Color') : t('hdModeIr', 'IR')}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {overlays.hdMeteosat && hdModeSelector}
 
                   {/* Botó GOES (Amèrica) */}
                   <button
@@ -448,6 +451,8 @@ export function RadarLayerMenu({
                     </div>
                     {overlays.hdGoes ? <Eye className="w-5 h-5 text-fuchsia-400 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
+
+                  {overlays.hdGoes && hdModeSelector}
 
                   {/* Botó Himawari (Àsia/Pacífic) */}
                   <button

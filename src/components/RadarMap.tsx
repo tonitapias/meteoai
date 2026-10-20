@@ -27,7 +27,7 @@ import { useAstroEngine } from '../hooks/radar/useAstroEngine';
 import { useCameraFlight } from '../hooks/radar/useCameraFlight';
 import { useRadarAnimation } from '../hooks/radar/useRadarAnimation';
 import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
-import { useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
+import { useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -88,7 +88,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     nasaFires: false,
     terrain3D: false,
     lightning: true,
-    meteosatColour: false
+    hdColour: false
   });
 
   // Referències essencials per als Hooks
@@ -144,9 +144,12 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     styleReadyRef
   });
 
-  // Hores pròpies de "Meteosat HD (Europa)" i dels llamps: només es demanen
-  // amb la capa activa.
+  // Hores pròpies de cada satèl·lit HD i dels llamps: només es demanen amb la
+  // capa activa.
   const { timelineRef: hdTimelineRef, version: hdTimelineVersion } = useHdTimeline(overlays.hdMeteosat);
+  const { timelineRef: goesTimelineRef, version: goesTimelineVersion } = useGibsTimeline('goes', overlays.hdGoes);
+  const { timelineRef: himawariTimelineRef, version: himawariTimelineVersion } = useGibsTimeline('himawari', overlays.hdHimawari);
+  const gibsTimelineRefs = useMemo(() => ({ goes: goesTimelineRef, himawari: himawariTimelineRef }), [goesTimelineRef, himawariTimelineRef]);
   const { timelineRef: lightningTimelineRef, version: lightningTimelineVersion } = useLightningTimeline(overlays.lightning);
 
   const {
@@ -163,6 +166,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     syncAtmosphere,
     styleReadyRef,
     hdTimelineRef,
+    gibsTimelineRefs,
     lightningTimelineRef
   });
 
@@ -203,10 +207,10 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     );
   }, [activeBaseLayer, overlays, webglKey, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
 
-  // 2b. Franges Meteosat HD noves (/hd/meteosat/latest).
+  // 2b. Franges HD noves (/hd/meteosat/latest, /hd/goes/latest, /hd/himawari/latest).
   useEffect(() => {
-    if (hdTimelineVersion > 0) refreshHdTimeline();
-  }, [hdTimelineVersion, refreshHdTimeline]);
+    if (hdTimelineVersion + goesTimelineVersion + himawariTimelineVersion > 0) refreshHdTimeline();
+  }, [hdTimelineVersion, goesTimelineVersion, himawariTimelineVersion, refreshHdTimeline]);
 
   // 2c. Franges de llamps noves (/lightning/latest).
   useEffect(() => {
@@ -263,6 +267,16 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
               {EUMETSAT_ATTRIBUTION}
+            </a>
+            {/* GOES i Himawari HD: imatges de NASA GIBS a partir de dades de
+                NOAA (GOES, amb el GeoColor de CIRA) i de JMA (Himawari). */}
+            <a
+              href="https://nasa-gibs.github.io/gibs-api-docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+            >
+              NASA GIBS · GOES (NOAA/CIRA) · Himawari (JMA)
             </a>
           </>
         )}

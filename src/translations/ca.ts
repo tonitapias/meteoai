@@ -26,7 +26,7 @@ export const ca = {
   layerhdMeteosat: "Meteosat HD (Europa)",
   layerhdHimawari: "Himawari HD (Àsia)",
   layerLightning: "Llamps (satèl·lit MTG)",
-  hdModeLabel: "Mode de Meteosat HD",
+  hdModeLabel: "Mode del satèl·lit HD",
   hdModeIr: "IR",
   hdModeColour: "Color",
   lightningLegend: "Llamps / 5 min",

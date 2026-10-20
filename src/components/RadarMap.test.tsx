@@ -108,6 +108,16 @@ let libreWxr: typeof LIBREWXR;
 // fotograma 9 (els dos més nous comparteixen aquesta).
 const LIGHTNING_LATEST = T0 + 9 * 600 + 300;
 let lightningLatest: unknown;
+// /hd/goes/latest i /hd/himawari/latest: franges de GIBS cada 10 min amb un
+// forat (com els que té GIBS), l'IR fins 2 fotogrames abans del més nou i
+// GeoColor fins a 4 (Himawari, sense color). 'fail' = error de xarxa.
+const GIBS_IR_LATEST = T0 + 9 * 600;
+const GIBS_COLOUR_LATEST = T0 + 7 * 600;
+const GIBS_GAP = T0 + 4 * 600;
+const gibsSlots = (latest: number) =>
+  Array.from({ length: 14 }, (_, i) => T0 - 1200 + i * 600).filter((s) => s <= latest && s !== GIBS_GAP);
+let gibsLatest: unknown;
+let gibsCalls: string[];
 
 const maps = () => (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -137,6 +147,11 @@ beforeEach(() => {
   (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps = [];
   hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' };
   lightningLatest = { latest: LIGHTNING_LATEST, cadence: 300, source: 'caps' };
+  gibsLatest = {
+    ir: { latest: GIBS_IR_LATEST, cadence: 600, source: 'caps', slots: gibsSlots(GIBS_IR_LATEST) },
+    colour: { latest: GIBS_COLOUR_LATEST, cadence: 600, source: 'caps', slots: gibsSlots(GIBS_COLOUR_LATEST) },
+  };
+  gibsCalls = [];
   libreWxr = LIBREWXR;
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const u = String(url);
@@ -144,6 +159,12 @@ beforeEach(() => {
       const body = await hdLatest;
       if (body === 'fail') throw new TypeError('Failed to fetch');
       return new Response(JSON.stringify(body), { status: 200 });
+    }
+    if (u.includes('/hd/goes/latest') || u.includes('/hd/himawari/latest')) {
+      gibsCalls.push(u);
+      const body = await gibsLatest;
+      if (body === 'fail') throw new TypeError('Failed to fetch');
+      return new Response(JSON.stringify(u.includes('himawari') ? { ...(body as object), colour: null } : body), { status: 200 });
     }
     if (u.includes('/lightning/latest')) {
       return new Response(JSON.stringify(await lightningLatest), { status: 200 });
@@ -514,5 +535,73 @@ describe('RadarMap', () => {
     await act(async () => { fireEvent.click(screen.getByLabelText('radarData')); await sleep(20); });
     const link = screen.getByText(/^Contains modified EUMETSAT Meteosat data \d{4}$/);
     expect(link.closest('a')?.getAttribute('href')).toBe('https://www.eumetsat.int/');
+    expect(screen.getByText('NASA GIBS · GOES (NOAA/CIRA) · Himawari (JMA)').closest('a')?.getAttribute('href')).toBe('https://nasa-gibs.github.io/gibs-api-docs/');
+  });
+
+  const gibsTargets = (m: FakeMapInstance, agency: string) => visibleTargets(m, `hd-${agency}-layer-`, 0.3);
+  const gibsSource = (m: FakeMapInstance, agency: string, key: string) =>
+    m.sources.get(`hd-${agency}-src-${key}`) as { tiles: string[]; bounds: number[]; tileSize: number; minzoom: number; maxzoom: number } | undefined;
+
+  it('GOES HD: una franja de GIBS per fotograma (cada 10 min) segons /hd/goes/latest, en tessel·les de 256 px', async () => {
+    const map = await mountRadar();
+    expect(gibsCalls).toEqual([]);
+    await click('GOES HD (Amèrica)');
+    expect(gibsCalls).toEqual(['https://meteo-sat-proxy.tonitapias.workers.dev/hd/goes/latest']);
+
+    // El fotograma actual (el més nou) és posterior a l'última franja: la fa servir.
+    expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-gibs-${GIBS_IR_LATEST}`]);
+    const src = gibsSource(map, 'goes', `gibs-${GIBS_IR_LATEST}`)!;
+    expect(src.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/gibs/v1/goes/ir/${GIBS_IR_LATEST}/{z}/{x}/{y}.png`]);
+    expect([src.tileSize, src.minzoom, src.maxzoom]).toEqual([256, 3, 6]);
+    expect(src.bounds).toEqual([-180, -60, -20, 66.4]);
+    // La paleta realçada de GIBS es manté (saturació 0).
+    expect(layer(map, `hd-goes-layer-gibs-${GIBS_IR_LATEST}`)!.paint['raster-saturation']).toBe(0);
+
+    // Reproduint: la imatge de cada fotograma; on GIBS té un forat, la de 10 min abans.
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    const seen = new Map<number, string>();
+    const start = Date.now();
+    while (seen.size < 6 && Date.now() - start < 15000) {
+      await act(async () => { await sleep(20); });
+      const frame = radarFrame(map);
+      if (frame !== null && !seen.has(frame)) seen.set(frame, gibsTargets(map, 'goes').join('+'));
+    }
+    expect(seen.get(T0 + 600)).toBe(`hd-goes-layer-gibs-${T0 + 600}`);
+    expect(seen.get(T0 + 3 * 600)).toBe(`hd-goes-layer-gibs-${T0 + 3 * 600}`);
+    expect(seen.get(GIBS_GAP)).toBe(`hd-goes-layer-gibs-${T0 + 3 * 600}`);
+    expect(seen.get(T0 + 5 * 600)).toBe(`hd-goes-layer-gibs-${T0 + 5 * 600}`);
+    expect(map.errors).toEqual([]);
+  }, 20000);
+
+  it('GOES en color: GeoColor per sobre del filtre de nit fins al nivell 7; Himawari no té selector i va en IR', async () => {
+    const map = await mountRadar();
+    await click('GOES HD (Amèrica)');
+    await click('Color');
+    const key = `gibsColour-${GIBS_COLOUR_LATEST}`;
+    expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-${key}`]);
+    expect(ids(map, 'hd-goes-layer-gibs-')).toEqual([]);
+    const src = gibsSource(map, 'goes', key)!;
+    expect(src.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/gibs/v1/goes/colour/${GIBS_COLOUR_LATEST}/{z}/{x}/{y}.png`]);
+    expect(src.maxzoom).toBe(7);
+    const order = map.layers.map((l) => l.id);
+    expect(order.indexOf(`hd-goes-layer-${key}`)).toBeGreaterThan(order.indexOf('layer-night'));
+    expect(opacityAtZoom3(layer(map, `hd-goes-layer-${key}`)!)).toBe(1);
+
+    await click('Himawari HD (Àsia)');
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(ids(map, 'hd-goes-layer-')).toEqual([]);
+    expect(gibsTargets(map, 'himawari')).toEqual([`hd-himawari-layer-gibs-${GIBS_IR_LATEST}`]);
+    expect(gibsSource(map, 'himawari', `gibs-${GIBS_IR_LATEST}`)?.tiles[0]).toContain('/hd/gibs/v1/himawari/ir/');
+    expect(gibsSource(map, 'himawari', `gibs-${GIBS_IR_LATEST}`)?.bounds).toEqual([80, -60, 180, 66.4]);
+    expect(map.errors).toEqual([]);
+  });
+
+  it('sense /hd/goes/latest, GOES fa servir l\'IR a la desena del fotograma', async () => {
+    gibsLatest = 'fail';
+    const map = await mountRadar();
+    await click('GOES HD (Amèrica)');
+    await click('Color');
+    // Els fotogrames de la prova són de fa dies: "ara − 40 min" no hi limita.
+    expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-gibs-${T0 + 11 * 600}`]);
   });
 });
