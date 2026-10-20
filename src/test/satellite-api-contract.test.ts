@@ -35,8 +35,8 @@ const MTG_CAPS_URL = 'https://view.eumetsat.int/geoserver/mtg_fd/ir105_hrfi/ows?
 // Tessel·la de vora del disc (Àsia, en part fora de la Terra): el worker hi
 // demana vnd.jpeg-png, que ha de donar PNG amb transparència.
 const LIMB_TILE = { z: 3, x: 5, y: 2 };
-// /hd/meteosat/latest: amb el marge de publicació de 23 min, una franja de
-// més d'1 h vol dir que MTG s'ha aturat o va molt endarrerit.
+// /lightning/latest i /hd/{goes|himawari}/latest: una franja de més d'1 h vol
+// dir que la capa s'ha aturat o va molt endarrerida.
 const MAX_LATEST_AGE_S = 3600;
 
 let capabilitiesPromise: Promise<string> | null = null;
@@ -200,16 +200,23 @@ describe('EUMETSAT MTG (mtg_fd:ir105_hrfi) Contract Check', () => {
         expect(body, "EUMETSAT ha canviat el codi d'error de franja no publicada: el worker no recularà").toContain('InvalidDimensionValue');
     }, TIMEOUT_MS);
 
-    it('el worker de producció diu que la capa és MTG, llegida de les caps i al dia', async () => {
+    it('el worker de producció diu que la capa és MTG, llegida de les caps i amb la franja més nova', async () => {
         const response = await fetch(`${WORKER_URL}/hd/meteosat/latest`, { headers: WORKER_HEADERS });
         expect(response.ok, `/hd/meteosat/latest ha respost amb status: ${response.status}`).toBe(true);
         const latest = await response.json() as { layer: string; latest: number; cadence: number; source: string };
 
-        expect(latest.layer, `El worker ha passat a MSG: MTG va endarrerit més d'1 h o l'interruptor HD_METEOSAT_LAYER no és "auto"`).toBe('mtg');
-        expect(latest.source, 'El worker no ha pogut llegir les caps de MTG i fa servir una hora calculada').toBe('caps');
+        expect(latest.layer, `El worker ha passat a MSG: MTG va endarrerit més d'1 h i MSG és més nou, o l'interruptor HD_METEOSAT_LAYER no és "auto"`).toBe('mtg');
+        expect(latest.source, 'El worker no ha pogut llegir les caps de MTG (o són de fa més de 3 h) i fa servir una hora calculada').toBe('caps');
         expect(latest.cadence).toBe(600);
-        const ageS = Date.now() / 1000 - latest.latest;
-        expect(ageS, `La franja que ofereix el worker és de fa ${Math.round(ageS / 60)} min`).toBeLessThan(MAX_LATEST_AGE_S);
+        // Amb EUMETSAT endarrerit, el worker ofereix igualment la franja real
+        // més nova (l'antiguitat ja la vigila el primer test, < 2 h): ha de
+        // coincidir amb les caps, llegides després, o anar-hi com a molt 20 min
+        // per darrere (marge de publicació de 23 min + 60 s de memòria cau).
+        const { extentEnd } = timeDimension(await (await fetch(MTG_CAPS_URL)).text());
+        const behindMin = (Date.parse(extentEnd ?? '') / 1000 - latest.latest) / 60;
+        const offered = new Date(latest.latest * 1000).toISOString();
+        expect(behindMin, `La franja del worker (${offered}) és més nova que les caps de MTG (${extentEnd})`).toBeGreaterThanOrEqual(0);
+        expect(behindMin, `La franja del worker (${offered}) va ${behindMin} min per darrere de les caps de MTG (${extentEnd})`).toBeLessThanOrEqual(20);
     }, TIMEOUT_MS);
 
     it('el worker de producció serveix una tessel·la MTG real (no el fallback transparent)', async () => {
