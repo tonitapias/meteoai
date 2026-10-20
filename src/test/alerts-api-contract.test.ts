@@ -104,9 +104,18 @@ describe('DWD (Alemanya) Contract Check', () => {
 describe('Protezione Civile (Itàlia) Contract Check', () => {
     it('hauria de trobar el butlletí més recent i el seu TopoJSON', async () => {
         const repo = 'pcm-dpc/DPC-Bollettini-Criticita-Idrogeologica-Idraulica';
+        // Sense token, l'API de GitHub dona 60 peticions/h per IP, i les IP dels
+        // runners són compartides (403). api-health-check.yml passa el
+        // GITHUB_TOKEN del workflow; en local, sense la variable, va sense token.
+        const githubToken = process.env.GITHUB_TOKEN;
+        const githubHeaders: Record<string, string> = {
+            'User-Agent': 'meteoai-health-check',
+            Accept: 'application/vnd.github+json',
+            ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {})
+        };
 
         const listRes = await fetch(`https://api.github.com/repos/${repo}/commits?path=files&per_page=1`, {
-            headers: { 'User-Agent': 'meteoai-health-check', Accept: 'application/vnd.github+json' }
+            headers: githubHeaders
         });
         expect(listRes.ok, `GitHub (llista de commits) ha fallat amb status: ${listRes.status}`).toBe(true);
         const commits = await listRes.json();
@@ -114,7 +123,7 @@ describe('Protezione Civile (Itàlia) Contract Check', () => {
         expect(sha, 'No s\'ha trobat cap commit recent a files/').toBeTruthy();
 
         const detailRes = await fetch(`https://api.github.com/repos/${repo}/commits/${sha}`, {
-            headers: { 'User-Agent': 'meteoai-health-check', Accept: 'application/vnd.github+json' }
+            headers: githubHeaders
         });
         expect(detailRes.ok, `GitHub (detall del commit) ha fallat amb status: ${detailRes.status}`).toBe(true);
         const detail = await detailRes.json();

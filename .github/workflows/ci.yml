@@ -27,5 +27,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Sense els tests de contracte, com a deploy.yml: criden APIs externes
+      # reals (EUMETSAT, GitHub, Open-Meteo, el worker...) i un servei lent o
+      # un 403 des dels runners no diu res del commit. Ja es comproven cada dia
+      # a api-health-check.yml.
       - name: Test
-        run: npm test -- --run
+        run: npx vitest run --exclude "**/*api-contract.test.ts"

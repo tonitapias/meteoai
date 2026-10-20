@@ -40,10 +40,13 @@ jobs:
       # AEMET i Meteocat necessiten les claus com a secrets del repositori
       # (Settings → Secrets and variables → Actions); si no hi són, els seus
       # tests se salten automàticament en lloc de fallar.
+      # GITHUB_TOKEN (automàtic, no cal crear-lo) evita el 403 de l'API de
+      # GitHub sense token al test d'Itàlia: les IP dels runners són compartides.
       - name: Run Official Alerts API Contract Test
         env:
           AEMET_API_KEY: ${{ secrets.AEMET_API_KEY }}
           METEOCAT_API_KEY: ${{ secrets.METEOCAT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx vitest run src/test/alerts-api-contract.test.ts
 
       # 6. SATÈL·LIT METEOSAT HD (capa del radar)
