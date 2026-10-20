@@ -360,10 +360,19 @@ describe('NASA GIBS GOES i Himawari Contract Check', () => {
         expect(jpeg.byteLength, 'El WMS no té la imatge d\'una hora enrere: el worker hauria de servir-ho tot en PNG').toBeGreaterThan(MIN_GIBS_TILE_BYTES);
 
         const wmts = (time: number) => fetch(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${isoSeconds(time)}/GoogleMapsCompatible_Level6/${GOES_TILE.z}/${GOES_TILE.y}/${GOES_TILE.x}.png`);
-        // La més nova pot no ser encara a tots els servidors: la d'abans.
-        const current = await wmts(newest - 600);
-        expect(current.status, 'El WMTS no té la penúltima imatge anunciada').toBe(200);
-        expect(isImage(new Uint8Array(await current.arrayBuffer()))).toBe(true);
+        // GIBS anuncia les franges abans que les tessel·les arribin a tots els
+        // servidors: el 2026-10-20 la penúltima també donava 404 des dels
+        // runners. El worker recula com a molt 2 franges (GIBS_MAX_STEPBACK)
+        // abans del fallback transparent, així que n'hi ha prou amb una de les 3.
+        const tried: string[] = [];
+        let served = false;
+        for (let step = 0; step <= 2 && !served; step++) {
+            const res = await wmts(newest - step * 600);
+            const bytes = new Uint8Array(await res.arrayBuffer());
+            served = res.status === 200 && isImage(bytes);
+            tried.push(`${isoSeconds(newest - step * 600)} → ${res.status}`);
+        }
+        expect(served, `El WMTS no té cap de les 3 últimes imatges anunciades (el worker només recula 2): ${tried.join(', ')}`).toBe(true);
         const future = await wmts(newest + 7200);
         await future.arrayBuffer();
         expect(future.status, 'El WMTS ja no respon 404 a una franja sense dades: el worker no sabrà que ha de recular').toBe(404);
