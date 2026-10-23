@@ -27,7 +27,7 @@ MeteoToni AI és exclusivament una eina d'informació analítica. Proporciona da
 
 <div align="center">
   <img src="./public/screenshot-desktop.png" alt="Pantalla d'Inici Escriptori" width="800" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
-  <p><em>La pantalla d'inici amb disseny Spatial UI i Neo-Skeuomorfisme, punt de partida per cercar qualsevol ubicació del món.</em></p>
+  <p><em>La pantalla d'inici: la columna del cel, amb el cel del lloc on és el dispositiu (aquí, la posta de sol), i la ubicació, el cercador i els favorits per començar des de qualsevol lloc del món.</em></p>
 </div>
 
 <br/>

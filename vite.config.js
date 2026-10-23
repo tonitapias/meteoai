@@ -83,7 +83,7 @@ export default defineConfig({
             sizes: '1440x780', //[cite: 3]
             type: 'image/png', //[cite: 3]
             form_factor: 'wide', //[cite: 3]
-            label: 'Panell de control' //[cite: 3]
+            label: "Pantalla d'inici" //[cite: 3]
           }
         ]
       }
