@@ -16,10 +16,10 @@ import WelcomeSearch from './welcome/WelcomeSearch';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { useMinWidth } from './solar/useMinWidth';
 
-// Carregat de manera diferida: és un modal de diagnòstic tècnic que la immensa majoria
-// de visites mai obren, però abans s'important estàticament i inflava el bundle crític
-// que bloqueja el primer pintat (LCP) de la pantalla de benvinguda — confirmat per Lighthouse.
-const DiagnosticsModal = lazy(() => import('./DiagnosticsModal'));
+// Carregat de manera diferida: és un modal que la immensa majoria de visites mai obren, però
+// abans s'importava estàticament i inflava el bundle crític que bloqueja el primer pintat (LCP)
+// de la pantalla de benvinguda — confirmat per Lighthouse.
+const HowItWorksModal = lazy(() => import('./HowItWorksModal'));
 // El cel (suncalc, colors del modal Solar, fase lunar) i la columna, després del primer pintat: amb ells al
 // paquet inicial creixia ~25 KB comprimits, perquè fins ara només els carregaven els ginys diferits del tauler.
 const SkyScene = lazy(() => import('./welcome/SkyScene'));
@@ -92,30 +92,30 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
   }, [status, loading, onLocate]);
 
   // --- Modal "Com funciona" amb entrada d'historial (el botó enrere el tanca) ---
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   // Ref pròpia per saber si tenim una entrada d'historial pendent de consumir,
   // en comptes de llegir window.history.state (mutable i compartit amb la resta
   // de l'app: si alguna altra part fes push/replace mentre el modal està obert,
   // window.history.state?.modal podria deixar de coincidir i l'entrada nostra
-  // quedaria òrfena a la pila sense que closeDiagnosticsModal la consumís).
-  const diagnosticsHistoryPushedRef = useRef(false);
-  const closeDiagnosticsModal = useCallback(() => {
-    if (diagnosticsHistoryPushedRef.current) {
-      diagnosticsHistoryPushedRef.current = false;
+  // quedaria òrfena a la pila sense que closeHelpModal la consumís).
+  const helpHistoryPushedRef = useRef(false);
+  const closeHelpModal = useCallback(() => {
+    if (helpHistoryPushedRef.current) {
+      helpHistoryPushedRef.current = false;
       window.history.back();
     } else {
-      setShowDiagnostics(false);
+      setShowHelp(false);
     }
   }, []);
-  const openDiagnosticsModal = () => {
-    window.history.pushState({ modal: 'meteo_diagnostics' }, '');
-    diagnosticsHistoryPushedRef.current = true;
-    setShowDiagnostics(true);
+  const openHelpModal = () => {
+    window.history.pushState({ modal: 'meteo_how_it_works' }, '');
+    helpHistoryPushedRef.current = true;
+    setShowHelp(true);
   };
   useEffect(() => {
     const handlePopState = () => {
-      diagnosticsHistoryPushedRef.current = false;
-      setShowDiagnostics(false);
+      helpHistoryPushedRef.current = false;
+      setShowHelp(false);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -169,7 +169,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
   const wide = useMinWidth('(min-width: 1024px)');
 
   return (
-    <div className={`relative w-full min-h-screen overflow-x-hidden bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showDiagnostics ? 'overflow-hidden' : ''}`}>
+    <div className={`relative w-full min-h-screen overflow-x-hidden bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showHelp ? 'overflow-hidden' : ''}`}>
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none transition-opacity duration-700 motion-reduce:transition-none"
@@ -196,7 +196,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         <nav aria-label={w.language} className="flex items-center gap-1 sm:gap-3">
           <button
             type="button"
-            onClick={openDiagnosticsModal}
+            onClick={openHelpModal}
             aria-label={w.help}
             className="h-11 min-w-[44px] rounded-xl px-2.5 sm:px-3.5 flex items-center justify-center text-sm font-medium text-slate-200 hover:text-white hover:bg-white/5 transition-colors"
           >
@@ -296,10 +296,10 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         <span className="font-mono">v{APP_VERSION}</span>
       </footer>
 
-      {showDiagnostics && (
+      {showHelp && (
         <Suspense fallback={null}>
           <div className="absolute z-[99999]">
-            <DiagnosticsModal onClose={closeDiagnosticsModal} lang={lang} t={t} />
+            <HowItWorksModal onClose={closeHelpModal} t={t} />
           </div>
         </Suspense>
       )}
