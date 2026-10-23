@@ -1,460 +1,301 @@
 // src/components/WelcomeScreen.tsx
-import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
-import {
-  Loader2, CloudRain, Wind,
-  ShieldCheck, CloudLightning, ThermometerSun,
-  HelpCircle, Crosshair, Sun, Fingerprint, AlertTriangle
-} from 'lucide-react';
+// Benvinguda: igual per a tothom i sense cap consulta de dades. Només canvia amb l'hora i el lloc del
+// dispositiu (la columna del cel i el color del fons). "Utilitza la meva ubicació" amb un sol toc, el
+// cercador i els favorits a la mateixa zona, i errors d'ubicació explicats a sota del botó, que no es queda
+// mai bloquejat. Sense blur, filtres ni animacions contínues (mòbils modestos).
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import { ChevronDown, HelpCircle, Navigation } from 'lucide-react';
 import { Language, TranslationType } from '../translations';
 import { APP_VERSION } from '../utils/appVersion';
+import type { LocateResult } from '../hooks/useAppActions';
+import type { LocationData } from '../hooks/usePreferences';
+import { useGeoPermission } from '../hooks/welcome/useGeoPermission';
+import type { WelcomePhase, WelcomeSky } from '../utils/welcome/welcomeSky';
+import { moonPhaseKey } from '../utils/welcome/moonPhaseKey';
+import WelcomeSearch from './welcome/WelcomeSearch';
+import { StarfieldBackdrop } from './StarfieldBackdrop';
+import { useMinWidth } from './solar/useMinWidth';
 
 // Carregat de manera diferida: és un modal de diagnòstic tècnic que la immensa majoria
 // de visites mai obren, però abans s'important estàticament i inflava el bundle crític
 // que bloqueja el primer pintat (LCP) de la pantalla de benvinguda — confirmat per Lighthouse.
 const DiagnosticsModal = lazy(() => import('./DiagnosticsModal'));
-import { useHoldGesture } from '../hooks/welcome/useHoldGesture';
-import { useWeatherParticles } from '../hooks/welcome/useWeatherParticles';
+// El cel (suncalc, colors del modal Solar, fase lunar) i la columna, després del primer pintat: amb ells al
+// paquet inicial creixia ~25 KB comprimits, perquè fins ara només els carregaven els ginys diferits del tauler.
+const SkyScene = lazy(() => import('./welcome/SkyScene'));
 
 interface WelcomeScreenProps {
   lang: Language;
   setLang: (lang: Language) => void;
   t: TranslationType;
-  onLocate: () => void;
+  onLocate: () => Promise<LocateResult>;
+  onSelectLocation: (lat: number, lon: number, name: string, country?: string) => void;
+  favorites: LocationData[];
   loading: boolean;
+  /** 5 tocs seguits a la marca: panell de depuració (com el títol de la capçalera). */
+  onDebugToggle?: () => void;
 }
 
-// Claus tàctiques que aquest component pot rebre via t.welcome (mateix patró que
-// HeaderTranslations a Header.tsx). Totes opcionals: cap encara existeix a
-// ca/es/en/fr.ts, així que ara mateix sempre s'utilitza el fallback per idioma
-// de systemText; si algun dia s'afegeixen a les traduccions, un typo aquí sota
-// (a l'accés tWelcome.xxx) ja el detectaria el compilador.
-interface WelcomeTacticalTranslations {
-  loading?: string;
-  systemStatus?: string;
-  secure?: string;
-  tapWarning?: string;
-  deployed?: string;
-  ariaDescription?: string;
-  sysTagline?: string;
-  sysStart?: string;
-  sysManual?: string;
-}
+type LocateStatus = 'idle' | 'locating' | 'error';
+type FailReason = Extract<LocateResult, { ok: false }>['reason'];
 
-// Geometria de l'anell de progrés del botó (constants de mòdul, no depenen de cap prop/estat)
-const RING_RADIUS = 15.5;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS; // Longitud total del traç de l'anell de progrés
+const LANGS: readonly Language[] = ['ca', 'es', 'en', 'fr'];
+// Al selector del mòbil, cada idioma amb el seu nom (el selector nadiu mostra tancat el text de l'opció).
+const LANG_NAMES: Readonly<Record<Language, string>> = { ca: 'Català', es: 'Español', en: 'English', fr: 'Français' };
+const LOCALE: Readonly<Record<Language, string>> = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
+/** A partir d'aquí es diu a l'usuari que pot cercar el lloc mentre el GPS encara busca. */
+const SLOW_LOCATE_MS = 5000;
+/** Després d'això el botó torna a l'estat normal amb l'avís de "massa espera" (la petició pot acabar després). */
+const LOCATE_GIVE_UP_MS = 30000;
 
-/**
- * METEOTONI AI - TACTICAL ATMOSPHERIC OPERATING SYSTEM (v8.60 ZERO-RISK UPDATE)
- * Arquitectura: Spatial UI, Modal Desacoblat i18n, Puresa React garantida.
- * Holograma v8.2: Billboard Optics & GPU Acceleration.
- * UI v8.60 Update: GPU-accelerated Hold-to-Arm, onTouchCancel guard, Keyboard Parity, ARIA labels.
- */
-export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: WelcomeScreenProps) {
-  const year = new Date().getFullYear();
+const capitalize = (s: string) => (s ? s.charAt(0).toLocaleUpperCase() + s.slice(1) : s);
 
-  // DOCTRINA RISC ZERO: Tipatge estricte contra TranslationType (sense cast a Record<string, unknown>)
-  // Cast via `unknown` necessari només aquí: welcome.* real (tagline/desc/connecting/start/manual)
-  // i WelcomeTacticalTranslations no comparteixen cap clau (són tàctiques, encara no traduïdes),
-  // així que TypeScript el marca com "weak type" sense el pas intermedi. `t` en si es manté
-  // tipat com TranslationType a la resta del component.
-  const tWelcome: WelcomeTacticalTranslations =
-    ((t && typeof t === 'object' && t.welcome && typeof t.welcome === 'object') ? t.welcome : {}) as unknown as WelcomeTacticalTranslations;
+export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, loading, onDebugToggle }: WelcomeScreenProps) {
+  const w = t.welcome;
+  const permission = useGeoPermission();
+  // Arriba quan s'ha carregat SkyScene; fins llavors, fons fosc neutre i la línia de dalt sense el moment del dia.
+  const [skyState, setSkyState] = useState<{ sky: WelcomeSky; now: Date } | null>(null);
+  const handleSky = useCallback((sky: WelcomeSky, now: Date) => setSkyState({ sky, now }), []);
+  const [mountedAt] = useState(() => new Date());
+  const sky = skyState?.sky ?? null;
+  const now = skyState?.now ?? mountedAt;
 
-  // DICCIONARI MULTILINGÜE ESTRICTE
-  const systemText = {
-    loading: tWelcome.loading || (lang === 'es' ? "CARGANDO PREVISIÓN..." : lang === 'en' ? "LOADING FORECAST..." : lang === 'fr' ? "CHARGEMENT DES PRÉVISIONS..." : "CARREGANT PREVISIÓ..."),
-    // NOTA: es consulta sysTagline/sysStart/sysManual (no tagline/start/manual) perquè
-    // welcome.tagline/start/manual ja existeixen a ca/es/en/fr.ts amb un altre contingut
-    // (disseny anterior); si es consultés el nom real, sempre serien truthy i el text
-    // d'aquí sota no s'arribaria a mostrar mai.
-    tagline: tWelcome.sysTagline || (lang === 'es' ? "PREVISIÓN DE ALTA PRECISIÓN, IMPULSADA POR IA" : lang === 'en' ? "HIGH-PRECISION FORECASTS, POWERED BY AI" : lang === 'fr' ? "PRÉVISIONS DE HAUTE PRÉCISION, PAR IA" : "PREVISIÓ D'ALTA PRECISIÓ, IMPULSADA PER IA"),
-    start: tWelcome.sysStart || (lang === 'es' ? "VER EL TIEMPO" : lang === 'en' ? "VIEW WEATHER" : lang === 'fr' ? "VOIR LA MÉTÉO" : "VEURE EL TEMPS"),
-    manual: tWelcome.sysManual || (lang === 'es' ? "CÓMO FUNCIONA" : lang === 'en' ? "HOW IT WORKS" : lang === 'fr' ? "COMMENT ÇA MARCHE" : "COM FUNCIONA"),
-    systemStatus: tWelcome.systemStatus || (lang === 'es' ? "EN LÍNEA" : lang === 'en' ? "ONLINE" : lang === 'fr' ? "EN LIGNE" : "EN LÍNIA"),
-    secure: tWelcome.secure || (lang === 'es' ? "CONEXIÓN SEGURA" : lang === 'en' ? "SECURE CONNECTION" : lang === 'fr' ? "CONNEXION SÉCURISÉE" : "CONNEXIÓ SEGURA"),
-    
-    // Cadenes Hold-to-Arm (retextualitzades: to professional, sense vocabulari tàctic)
-    tapWarning: tWelcome.tapWarning || (lang === 'es' ? "MANTENLO PULSADO" : lang === 'en' ? "PRESS AND HOLD" : lang === 'fr' ? "MAINTIENS APPUYÉ" : "MANTÉN-LO PREMUT"),
-    deployed: tWelcome.deployed || (lang === 'es' ? "LISTO" : lang === 'en' ? "READY" : lang === 'fr' ? "PRÊT" : "LLEST"),
-    ariaDescription: tWelcome.ariaDescription || (lang === 'es' ? "Botón de inicio. Mantén pulsado 1,5 segundos para empezar." : lang === 'en' ? "Start button. Hold for 1.5 seconds to begin." : lang === 'fr' ? "Bouton de démarrage. Maintenez appuyé 1,5 seconde pour commencer." : "Botó d'inici. Mantén-lo premut 1,5 segons per començar."),
-  };
+  const [status, setStatus] = useState<LocateStatus>('idle');
+  const [failReason, setFailReason] = useState<FailReason | null>(null);
+  const [slow, setSlow] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
+  const handleLocate = useCallback(async () => {
+    if (status === 'locating' || loading) return;
+    setStatus('locating');
+    setFailReason(null);
+    setSlow(false);
+    const slowTimer = window.setTimeout(() => setSlow(true), SLOW_LOCATE_MS);
+    // El 'timeout' de la geolocalització no compta mentre el navegador espera que l'usuari respongui
+    // l'avís de permís: si el deixa sense respondre, el botó no es pot quedar buscant per sempre.
+    let giveUpTimer = 0;
+    const giveUp = new Promise<LocateResult>(resolve => {
+      giveUpTimer = window.setTimeout(() => resolve({ ok: false, reason: 'timeout' }), LOCATE_GIVE_UP_MS);
+    });
+    const result = await Promise.race([onLocate(), giveUp]);
+    window.clearTimeout(slowTimer);
+    window.clearTimeout(giveUpTimer);
+    // Si ha anat bé, l'app ja passa al tauler i aquest component es desmunta.
+    if (!mountedRef.current || result.ok) return;
+    setStatus('error');
+    setFailReason(result.reason);
+    setSlow(false);
+  }, [status, loading, onLocate]);
+
+  // --- Modal "Com funciona" amb entrada d'historial (el botó enrere el tanca) ---
   const [showDiagnostics, setShowDiagnostics] = useState(false);
-
   // Ref pròpia per saber si tenim una entrada d'historial pendent de consumir,
   // en comptes de llegir window.history.state (mutable i compartit amb la resta
   // de l'app: si alguna altra part fes push/replace mentre el modal està obert,
   // window.history.state?.modal podria deixar de coincidir i l'entrada nostra
   // quedaria òrfena a la pila sense que closeDiagnosticsModal la consumís).
   const diagnosticsHistoryPushedRef = useRef(false);
-
   const closeDiagnosticsModal = useCallback(() => {
-    if (typeof window !== 'undefined' && diagnosticsHistoryPushedRef.current) {
+    if (diagnosticsHistoryPushedRef.current) {
       diagnosticsHistoryPushedRef.current = false;
       window.history.back();
     } else {
       setShowDiagnostics(false);
     }
   }, []);
-
   const openDiagnosticsModal = () => {
-    if (typeof window !== 'undefined') {
-      window.history.pushState({ modal: 'meteo_diagnostics' }, '');
-      diagnosticsHistoryPushedRef.current = true;
-      setShowDiagnostics(true);
-    }
+    window.history.pushState({ modal: 'meteo_diagnostics' }, '');
+    diagnosticsHistoryPushedRef.current = true;
+    setShowDiagnostics(true);
   };
-
   useEffect(() => {
     const handlePopState = () => {
       diagnosticsHistoryPushedRef.current = false;
-      if (showDiagnostics) setShowDiagnostics(false);
+      setShowDiagnostics(false);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showDiagnostics]);
+  }, []);
 
-  // FONS ATMOSFÈRIC (partícules, pluja, núvols, cicle tempesta/sol)
-  const { particles, precipDrops, clouds, isMounted, isStorm } = useWeatherParticles();
+  // --- Mode depuració: 5 tocs seguits a la marca ---
+  const debugClicksRef = useRef({ count: 0, timer: 0 });
+  const handleBrandClick = () => {
+    if (!onDebugToggle) return;
+    const d = debugClicksRef.current;
+    window.clearTimeout(d.timer);
+    d.count += 1;
+    if (d.count >= 5) { d.count = 0; onDebugToggle(); return; }
+    d.timer = window.setTimeout(() => { d.count = 0; }, 2000);
+  };
 
-  // SISTEMA D'ENGEGADA TÀCTICA (GPU ACCELERATED HOLD-TO-BOOT)
-  const {
-    isHolding, tapWarning, isArmed,
-    progressRingRef, progressTextRef,
-    startHold, cancelHold, handleKeyDown, handleKeyUp
-  } = useHoldGesture({ loading, onLocate, ringCircumference: RING_CIRCUMFERENCE });
+  // Línia de dalt: només l'hora del dispositiu i el moment del dia (o la fase lunar, de nit).
+  const eyebrow = useMemo(() => {
+    const locale = LOCALE[lang] ?? 'ca-ES';
+    const day = capitalize(new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(now));
+    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(now);
+    if (!sky) return `${day}, ${time}`;
+    const PHASE: Record<WelcomePhase, string> = { alba: w.phaseDawn, dia: w.phaseDay, posta: w.phaseDusk, nit: w.phaseNight };
+    let moment = PHASE[sky.phase];
+    if (sky.phase === 'nit' && sky.moon.angle !== null) {
+      const pct = new Intl.NumberFormat(locale, { style: 'percent' }).format(sky.moon.illumination / 100);
+      moment = `${t.moonPhases[moonPhaseKey(sky.moon.phase)]}, ${pct}`;
+    }
+    return `${day}, ${time} · ${moment}`;
+  }, [lang, now, sky, w, t.moonPhases]);
 
-  const orbitingSensors = useMemo(() => [
-    { Icon: CloudRain, color: 'text-sky-300', angle: 0, label: 'PRECIP', width: '75%', val: '0.0 mm' },
-    { Icon: Wind, color: 'text-indigo-300', angle: 120, label: 'WIND', width: '65%', val: 'KNOTS' },
-    { Icon: ThermometerSun, color: 'text-amber-300', angle: 240, label: 'TEMP', width: '85%', val: 'SYNC' }
-  ], []);
+  const denied = permission === 'denied';
+  const supported = permission !== 'unsupported';
+  const locating = status === 'locating';
+  const searchFirst = denied || !supported || (status === 'error' && (failReason === 'denied' || failReason === 'unsupported'));
+
+  let statusText = '';
+  if (locating) statusText = slow ? w.locatingSlow : (permission === 'granted' ? '' : w.permissionHint);
+  else if (status === 'error') {
+    statusText = failReason === 'denied' || failReason === 'unsupported' ? w.errorDenied
+      : failReason === 'timeout' ? w.errorTimeout : w.errorUnavailable;
+  }
+
+  const columnLabels = {
+    high: w.cloudsHigh, mid: w.cloudsMid, low: w.cloudsLow,
+    east: w.cardinalEast, west: w.cardinalWest, north: w.cardinalNorth, south: w.cardinalSouth,
+    caption: w.columnCaption, alt: w.columnAlt,
+  };
+  const columnLabelsShort = { ...columnLabels, high: w.cloudsHighShort, mid: w.cloudsMidShort, low: w.cloudsLowShort };
+  // Una sola columna (no una per mida amagada amb CSS): és l'element més pesant de la pantalla.
+  const wide = useMinWidth('(min-width: 1024px)');
 
   return (
-    <div className={`relative w-full min-h-dvh overflow-x-hidden bg-[#020617] select-none font-sans text-slate-200 antialiased flex flex-col ${showDiagnostics ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-      
-      <style>{`
-        @keyframes aurora-shift {
-          0% { transform: translateX(-5%) translateY(-5%) scale(1); filter: hue-rotate(0deg); opacity: 0.2; }
-          50% { transform: translateX(5%) translateY(5%) scale(1.1); filter: hue-rotate(15deg); opacity: 0.4; }
-          100% { transform: translateX(-5%) translateY(-5%) scale(1); filter: hue-rotate(0deg); opacity: 0.2; }
-        }
-        @keyframes turntable-spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-        @keyframes ring-spin-x { from { transform: rotateX(60deg) rotateY(0deg) rotateZ(0deg); } to { transform: rotateX(60deg) rotateY(360deg) rotateZ(360deg); } }
-        @keyframes ring-spin-y { from { transform: rotateX(120deg) rotateY(0deg) rotateZ(0deg); } to { transform: rotateX(120deg) rotateY(-360deg) rotateZ(180deg); } }
-        @keyframes cube-spin { from { transform: rotateY(0deg); } to { transform: rotateY(-360deg); } }
-        @keyframes radar-sweep { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
-        @keyframes plasma-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-        @keyframes particle-rise {
-          0% { transform: translateY(20px) translateX(0px); opacity: 0; }
-          20% { opacity: 1; }
-          80% { opacity: 0.8; }
-          100% { transform: translateY(-100vh) translateX(var(--drift)); opacity: 0; }
-        }
-        @keyframes precip-drop {
-          0% { transform: translateY(0px) translateZ(var(--z)); opacity: 0; }
-          10%, 80% { opacity: 0.8; }
-          100% { transform: translateY(260px) translateZ(var(--z)); opacity: 0; }
-        }
-        @keyframes cloud-pan {
-          0% { transform: translateX(200px) translateY(var(--y)) translateZ(var(--z)); opacity: 0; }
-          15%, 85% { opacity: 0.5; }
-          100% { transform: translateX(-80px) translateY(var(--y)) translateZ(var(--z)); opacity: 0; }
-        }
-        @keyframes float-hologram { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
-        
-        /* NOVES ANIMACIONS BOTÓ V2 (Amber/Error/Flash) */
-        @keyframes scan-shimmer-amber {
-          0% { transform: translateX(-150%) skewX(-20deg); }
-          100% { transform: translateX(250%) skewX(-20deg); }
-        }
-        @keyframes button-error-shake {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-6px); }
-          80% { transform: translateX(6px); }
-        }
-        @keyframes ghost-tease-pulse {
-          0%, 80%, 100% { width: 0%; opacity: 0; }
-          85% { opacity: 0.3; }
-          90% { width: 15%; opacity: 0.1; }
-        }
-        @keyframes tactical-flashbang {
-          0% { opacity: 1; transform: scale(1); filter: brightness(3); }
-          100% { opacity: 0; transform: scale(1.05); filter: brightness(1); }
-        }
+    <div className={`relative w-full min-h-screen overflow-x-hidden bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showDiagnostics ? 'overflow-hidden' : ''}`}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none transition-opacity duration-700 motion-reduce:transition-none"
+        style={sky
+          ? { opacity: 1, background: `linear-gradient(180deg, ${sky.colors.top} 0%, ${sky.colors.mid} 46%, ${sky.colors.bottom} 100%)` }
+          : { opacity: 0 }}
+      />
+      {sky && (sky.phase === 'nit' || sky.phase === 'alba') && (
+        <StarfieldBackdrop density={sky.phase === 'nit' ? 70 : 22} tint="#dbe4ff" className="bottom-[40%] opacity-80" />
+      )}
 
-        .perspective-xl { perspective: 2000px; }
-        .preserve-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        
-        .glass-panel-tactical {
-          background: linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(2, 6, 23, 0.9) 100%);
-          backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.1);
-        }
-        .glass-panel-interactive {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          transition: all 0.2s ease-out;
-        }
-        .glass-panel-interactive:active { background: rgba(56, 189, 248, 0.1); }
-        
-        @media (min-width: 1024px) {
-          .glass-panel-interactive:hover {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
-            border-color: rgba(56, 189, 248, 0.5); transform: translateY(-1px);
-          }
-        }
-        .glitch-overlay::before {
-          content: ""; position: absolute; inset: 0; pointer-events: none;
-          background: repeating-linear-gradient(transparent 0, transparent 2px, rgba(56, 189, 248, 0.05) 2px, rgba(56, 189, 248, 0.05) 4px);
-          mix-blend-mode: overlay; z-index: 50; opacity: 0.3; border-radius: 1.5rem;
-        }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Zona interactiva tàctica: bloqueja absolutament seleccions, menús iOS/Android i crides touch predeterminades */
-        .tactical-btn-zone { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; outline: none; }
-      `}</style>
-
-      {/* FONS ATMOSFÈRIC */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-[#020617]">
-        <div className="absolute -top-[30%] -left-[20%] w-[120%] h-[120%] bg-sky-500/10 lg:bg-sky-500/5 rounded-full blur-[80px] lg:blur-[120px] mix-blend-screen animate-[aurora-shift_30s_ease-in-out_infinite]"></div>
-        <div className="absolute -bottom-[30%] -right-[20%] w-[120%] h-[120%] bg-indigo-600/10 lg:bg-indigo-600/5 rounded-full blur-[80px] lg:blur-[120px] mix-blend-screen animate-[aurora-shift_35s_ease-in-out_infinite_reverse]"></div>
-
-        <div className="absolute inset-0 z-10 preserve-3d">
-          {isMounted && particles.map((p) => (
-            <div key={p.id} className="absolute bg-sky-200 rounded-full"
-              style={{ left: p.left, top: p.top, width: p.size, height: p.size, opacity: 0,
-                filter: `blur(${parseFloat(p.size) / 2}px)`, animation: `particle-rise ${p.duration} linear infinite`, animationDelay: p.delay, '--drift': p.drift } as React.CSSProperties} />
-          ))}
+      <header className="relative z-10 mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-16 pt-4 sm:pt-7 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 select-none" onClick={handleBrandClick}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]">
+            <path d="M5.07 15A8 8 0 1 1 18.93 15" />
+            <path d="M2 15H22" />
+            <path d="M6.5 19H17.5" />
+          </svg>
+          <span className="flex items-center text-[19px] sm:text-[22px] font-bold tracking-[-0.01em] leading-none">
+            MeteoToni
+            <span className="ml-1.5 rounded-[4px] border-[1.5px] border-slate-100/80 px-[3px] pt-[2px] pb-px text-[9.5px] sm:text-[10.5px] tracking-[0.08em]">AI</span>
+          </span>
         </div>
-      </div>
+        <nav aria-label={w.language} className="flex items-center gap-1 sm:gap-3">
+          <button
+            type="button"
+            onClick={openDiagnosticsModal}
+            aria-label={w.help}
+            className="h-11 min-w-[44px] rounded-xl px-2.5 sm:px-3.5 flex items-center justify-center text-sm font-medium text-slate-200 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <HelpCircle className="w-[22px] h-[22px] sm:hidden" aria-hidden="true" />
+            <span className="hidden sm:inline">{w.help}</span>
+          </button>
+          {/* Mòbil: el selector nadiu del sistema (els quatre botons no hi caben al costat de la marca). */}
+          <label className="relative sm:hidden">
+            <span className="sr-only">{w.language}</span>
+            <select
+              value={lang}
+              disabled={loading}
+              onChange={(e) => setLang(e.target.value as Language)}
+              className="h-11 appearance-none rounded-xl border border-slate-200/25 bg-transparent pl-3.5 pr-8 text-[13px] font-semibold text-slate-100 outline-none focus:border-sky-300 disabled:opacity-50"
+            >
+              {LANGS.map(l => <option key={l} value={l} className="bg-[#0c0f17] text-slate-100">{LANG_NAMES[l]}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" aria-hidden="true" />
+          </label>
+          <div role="group" aria-label={w.language} className="hidden sm:flex rounded-xl border border-slate-200/25 overflow-hidden">
+            {LANGS.map(l => (
+              <button
+                key={l}
+                type="button"
+                aria-pressed={lang === l}
+                disabled={loading}
+                onClick={() => setLang(l)}
+                className={`w-10 sm:w-11 h-11 text-[13px] font-semibold uppercase transition-colors disabled:opacity-50 ${lang === l ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </nav>
+      </header>
 
-      <main className="relative z-30 flex-1 w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 xl:px-24 py-6 sm:py-12 flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-6 lg:gap-8 xl:gap-12 no-scrollbar">
-        
-        {/* =========================================================================
-            HOLOGRAMA V8.2 (BILLBOARD OPTICS)
-            ========================================================================= */}
-        <div className={`relative w-full max-w-[280px] sm:max-w-[420px] lg:max-w-[480px] xl:max-w-[540px] aspect-square shrink-0 items-center justify-center perspective-xl animate-[float-hologram_10s_ease-in-out_infinite] preserve-3d ${showDiagnostics ? 'hidden lg:flex' : 'flex'}`}>
-            <div className={`absolute inset-0 rounded-full blur-[80px] lg:blur-[120px] transition-colors duration-[3000ms] opacity-50 ${isStorm ? 'bg-sky-500/40' : 'bg-amber-600/40'}`}></div>
-            <div className="absolute w-[400px] h-[400px] preserve-3d transform scale-[0.65] sm:scale-100 lg:scale-[1.1] xl:scale-[1.2]">
-                <div className="absolute inset-0 preserve-3d" style={{ transform: 'rotateX(20deg) translateY(-30px)' }}>
-                    <div className="absolute inset-0 preserve-3d animate-[turntable-spin_60s_linear_infinite]">
-                        
-                        {/* TERRENY CARTOGRÀFIC */}
-                        <div className="absolute w-[360px] h-[360px] left-[20px] top-[180px] preserve-3d" style={{ transform: 'rotateX(90deg)' }}>
-                            <div className="absolute inset-[-20%] blur-[40px] rounded-full transition-colors duration-[3000ms] bg-sky-500/10"></div>
-                            <div className="absolute inset-0 rounded-full bg-slate-950/95 border border-sky-800/80 preserve-3d" style={{ transform: 'translateZ(-20px)' }}></div>
-                            {[...Array(6)].map((_, i) => (
-                                <div key={i} className="absolute inset-0 rounded-full border border-sky-400/15 preserve-3d" style={{ transform: `translateZ(${-20 + i*3}px)` }}></div>
-                            ))}
-                            <div className={`absolute inset-0 rounded-full border-[2px] lg:border-[3px] bg-gradient-to-br from-slate-900/90 via-sky-950/70 to-slate-900/90 preserve-3d overflow-hidden transition-all duration-[3000ms] ${isStorm ? 'border-sky-400/50 shadow-[inset_0_0_30px_rgba(56,189,248,0.4)]' : 'border-amber-400/50 shadow-[inset_0_0_30px_rgba(251,191,36,0.3)]'}`} style={{ transform: 'translateZ(0px)' }}>
-                                <svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 opacity-30">
-                                    <defs><pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M 8 0 L 0 0 0 8" fill="none" stroke="rgba(56,189,248,0.5)" strokeWidth="0.5"/></pattern></defs>
-                                    <rect width="100" height="100" fill="url(#grid)" />
-                                    <path d="M 50 10 L 50 45 M 50 55 L 50 90 M 10 50 L 45 50 M 55 50 L 90 50" stroke="rgba(56,189,248,0.8)" strokeWidth="0.5" strokeDasharray="2,2"/>
-                                    <circle cx="50" cy="50" r="15" fill="none" stroke="rgba(56,189,248,0.4)" strokeWidth="0.5"/>
-                                    <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(56,189,248,0.2)" strokeWidth="0.5"/>
-                                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(56,189,248,0.1)" strokeWidth="0.5"/>
-                                </svg>
-                                <div className={`absolute inset-0 animate-[radar-sweep_3s_linear_infinite] rounded-full origin-center opacity-80 transition-colors duration-[3000ms] ${isStorm ? 'bg-[conic-gradient(from_0deg,transparent_80%,rgba(56,189,248,0.6)_100%)]' : 'bg-[conic-gradient(from_0deg,transparent_80%,rgba(251,191,36,0.5)_100%)]'}`}></div>
-                                <div className={`absolute inset-[38%] bg-black rounded-full border-[2px] transition-all duration-[3000ms] ${isStorm ? 'border-sky-400/50 shadow-[0_0_20px_rgba(56,189,248,0.6)]' : 'border-amber-400/50 shadow-[0_0_20px_rgba(251,191,36,0.5)]'}`}></div>
-                            </div>
-                        </div>
-
-                        {/* CILINDRE DE CONTENCIÓ I ATMOSFERA */}
-                        <div className="absolute w-[180px] h-[280px] left-[110px] top-[10px] preserve-3d">
-                            <div className="absolute inset-0 preserve-3d transition-all duration-[3000ms]">
-                                {[0, 60, 120].map(deg => (
-                                    <div key={`plasma-${deg}`} className={`absolute inset-0 rounded-full border-x-[1px] transition-all duration-[3000ms] preserve-3d ${isStorm ? 'border-sky-300/20 bg-gradient-to-b from-transparent via-sky-400/5 to-transparent shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'border-amber-300/20 bg-gradient-to-b from-transparent via-amber-400/5 to-transparent shadow-[0_0_15px_rgba(251,191,36,0.1)]'}`} style={{ transform: `rotateY(${deg}deg)` }}></div>
-                                ))}
-                                <div className={`absolute inset-x-[40%] inset-y-0 blur-[10px] animate-[plasma-pulse_3s_ease-in-out_infinite] preserve-3d transition-colors duration-[3000ms] ${isStorm ? 'bg-gradient-to-t from-sky-400/0 via-sky-300/10 to-sky-400/0' : 'bg-gradient-to-t from-amber-400/0 via-amber-300/10 to-amber-400/0'}`} style={{ transform: 'translateZ(0px)' }}></div>
-                            </div>
-                            <div className={`absolute inset-0 preserve-3d transition-opacity duration-[2000ms] ${isStorm ? 'opacity-100' : 'opacity-0'}`}>
-                                {isMounted && precipDrops.map(drop => (
-                                    <div key={drop.id} className="absolute w-[1.5px] h-[15px] bg-gradient-to-b from-transparent via-sky-200 to-sky-400 rounded-full animate-[precip-drop_2.5s_linear_infinite] preserve-3d" style={{ left: drop.left, animationDelay: drop.delay, '--z': drop.z } as React.CSSProperties}></div>
-                                ))}
-                            </div>
-                            {isMounted && clouds.map((cloud) => (
-                                <div key={`cloud-${cloud.id}`} className="absolute w-32 h-16 preserve-3d animate-[cloud-pan_20s_linear_infinite]" style={{ animationDelay: cloud.delay, '--y': cloud.y, '--z': cloud.z } as React.CSSProperties}>
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_70%)] rounded-full"></div>
-                                    <div className="absolute inset-[25%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2)_0%,transparent_70%)] rounded-full"></div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* NUCLI GIROSCÒPIC I ICONES */}
-                        <div className="absolute w-[90px] h-[90px] left-[155px] top-[105px] preserve-3d">
-                            <div className={`absolute inset-[15%] rounded-full blur-[6px] animate-[plasma-pulse_2s_ease-in-out_infinite] transition-all duration-[3000ms] ${isStorm ? 'bg-gradient-to-tr from-white via-sky-100 to-transparent shadow-[0_0_20px_white]' : 'bg-gradient-to-tr from-white via-amber-200 to-transparent shadow-[0_0_25px_rgba(251,191,36,0.8)]'}`}></div>
-                            <div className="absolute inset-[-40%] preserve-3d animate-[ring-spin-x_8s_linear_infinite]"><svg className="absolute inset-0 w-full h-full transition-colors duration-[3000ms]" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="none" className={isStorm ? 'stroke-sky-400/50' : 'stroke-amber-400/50'} strokeWidth="1" strokeDasharray="20, 10, 5, 10" /></svg></div>
-                            <div className="absolute inset-[-30%] preserve-3d animate-[ring-spin-y_12s_linear_infinite]"><svg className="absolute inset-0 w-full h-full transition-colors duration-[3000ms]" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="none" className={isStorm ? 'stroke-white/60' : 'stroke-orange-200/60'} strokeWidth="1.5" strokeDasharray="30, 40" /></svg></div>
-                            <div className="absolute inset-[15%] preserve-3d animate-[cube-spin_60s_linear_infinite]">
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <CloudLightning className={`absolute w-full h-full transition-all duration-[2000ms] ease-in-out ${isStorm ? 'opacity-100 scale-100 text-white drop-shadow-[0_0_15px_rgba(255,255,255,1)]' : 'opacity-0 scale-50 text-sky-200'}`} strokeWidth={2} />
-                                    <Sun className={`absolute w-full h-full transition-all duration-[2000ms] ease-in-out ${!isStorm ? 'opacity-100 scale-100 text-amber-100 drop-shadow-[0_0_20px_rgba(251,191,36,0.9)]' : 'opacity-0 scale-150 text-orange-400'}`} strokeWidth={2.5} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* CUBS DE DADES */}
-                        {orbitingSensors.map((sensor, i) => (
-                            <div key={`sensor-orbit-${i}`} className="absolute left-[200px] top-[150px] preserve-3d" style={{ transform: `rotateY(${sensor.angle}deg)` }}>
-                                <div className="absolute top-1/2 left-1/2 h-[1px] bg-sky-400/40 preserve-3d shadow-[0_0_8px_rgba(56,189,248,0.6)]" style={{ width: '220px', transform: 'translateX(-110px) translateY(-50px) translateZ(110px) rotateY(-90deg)' }}></div>
-                                <div className="absolute preserve-3d" style={{ transform: 'translateX(-45px) translateY(-55px) translateZ(220px)' }}>
-                                    <div className="relative w-[90px] h-[110px] preserve-3d animate-[cube-spin_15s_linear_infinite]">
-                                        <div className="absolute inset-[25%] bg-sky-400/10 blur-[10px] rounded-full preserve-3d"></div>
-                                        {[0, 90, 180, 270].map(rot => (
-                                            <div key={`face-${rot}`} className="absolute inset-0 flex flex-col items-center justify-between py-2.5 px-2 rounded-xl bg-slate-900/95 border-[1px] border-sky-400/30 preserve-3d backface-hidden" style={{ transform: `rotateY(${rot}deg) translateZ(45px)` }}>
-                                                <div className="p-1.5 rounded-lg bg-black/90 border border-white/5 z-10"><sensor.Icon className={`w-4 h-4 ${sensor.color} animate-[plasma-pulse_2s_ease-in-out_infinite]`} strokeWidth={2.5} /></div>
-                                                <div className="flex flex-col items-center z-10"><span className="text-[10px] font-mono tracking-widest font-black text-white uppercase">{sensor.label}</span><span className="text-[8px] font-mono font-bold text-sky-300/70 mt-0.5">{sensor.val}</span></div>
-                                                <div className={`w-14 h-1.5 ${loading ? 'bg-amber-950/80' : 'bg-sky-950/80'} rounded-full overflow-hidden border border-white/10 z-10 shadow-inner`}><div className={`h-full rounded-full ${loading ? 'bg-gradient-to-r from-amber-600 to-amber-300' : 'bg-gradient-to-r from-sky-500 to-white'}`} style={{ width: sensor.width }}></div></div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+      <main className="relative z-10 mx-auto w-full max-w-[1440px] flex-1 px-5 sm:px-8 lg:px-16 pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-6 lg:gap-10">
+        <div className="order-1 lg:order-2 mx-auto lg:mx-0 w-full shrink-0 max-w-[min(340px,40vh)] sm:max-w-[min(440px,46vh)] lg:max-w-[min(600px,calc(100vh_-_230px),44vw)]">
+          <div className="relative w-full pt-[100%]">
+            <div className="absolute inset-0">
+              <Suspense fallback={null}>
+                <SkyScene permission={permission} labels={wide ? columnLabels : columnLabelsShort} compact={!wide} onSky={handleSky} />
+              </Suspense>
             </div>
+          </div>
         </div>
 
-        {/* =========================================================================
-            PANELL PRINCIPAL TÀCTIC
-            ========================================================================= */}
-        <div className="relative flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-[420px] lg:max-w-[420px] xl:max-w-[460px] shrink-0 z-30 gap-5 lg:gap-7">
-            
-            <div className="flex flex-col items-center lg:items-start w-full gap-2 lg:gap-3 relative z-10">
-              <h1 className="relative flex items-center text-[2.75rem] sm:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tighter">
-                <span className="text-white drop-shadow-[0_2px_10px_rgba(56,189,248,0.4)]">METEO<span className="text-sky-200">TONI</span></span>
-                <div className="relative ml-1.5 flex items-center justify-center">
-                   <span className="relative z-10 text-sky-400 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]">AI</span>
-                   <div className="absolute -right-3 -top-0.5 w-1.5 h-1.5 bg-sky-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.8)] hidden lg:block"></div>
-                </div>
-              </h1>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-sky-400/30 bg-sky-950/40 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-                  <Crosshair className="w-3.5 h-3.5 text-sky-400 animate-[plasma-pulse_2s_ease-in-out_infinite]" />
-                  <span className="text-[9px] sm:text-[10px] font-bold tracking-[0.25em] text-sky-100 uppercase">{systemText.tagline}</span>
-              </div>
-            </div>
+        <section className="order-2 lg:order-1 w-full lg:max-w-[540px] flex flex-col gap-3 sm:gap-4 lg:py-8">
+          <p className="text-[13px] sm:text-sm text-slate-300">{eyebrow}</p>
+          <h1 className="text-[30px] leading-[1.06] sm:text-5xl lg:text-[clamp(40px,4vw,58px)] lg:leading-[1.03] font-semibold tracking-[-0.025em] text-balance">
+            {w.headline}
+          </h1>
+          <p className="text-[15px] sm:text-lg leading-relaxed text-slate-200/90 text-pretty max-w-[34rem] max-lg:[@media(max-height:700px)]:hidden">
+            {w.subtitle}
+          </p>
 
-            <div className="w-full glass-panel-tactical rounded-[1.25rem] p-4 sm:p-5 lg:p-6 flex flex-col gap-4 lg:gap-5 relative z-10 glitch-overlay">
-              
-              {/* =========================================================================
-                  BOTÓ HOLD-TO-ARM (Trencament Cromàtic Ambre + GPU API + TouchCancel)
-                  ========================================================================= */}
-              <div className="relative w-full flex flex-col gap-1.5 perspective-xl">
-                
-                <button 
-                  type="button" 
-                  disabled={loading || isArmed}
-                  onMouseDown={startHold}
-                  onMouseUp={cancelHold}
-                  onMouseLeave={cancelHold}
-                  onTouchStart={startHold}
-                  onTouchEnd={cancelHold}
-                  onTouchCancel={cancelHold} // Nova guàrdia: salva de trucades imprevistes
-                  onKeyDown={handleKeyDown}  // Paritat de PC (Teclat)
-                  onKeyUp={handleKeyUp}      // Paritat de PC (Teclat)
-                  onContextMenu={(e) => e.preventDefault()} // Impedeix menús natius al mòbil
-                  aria-label={systemText.start}
-                  aria-description={systemText.ariaDescription}
-                  className={`group relative w-full h-[72px] lg:h-[80px] overflow-hidden flex items-center justify-center rounded-xl border preserve-3d tactical-btn-zone transition-all duration-[50ms] ease-out
-                    ${tapWarning ? 'bg-red-950/80 border-red-500 shadow-[inset_0_0_20px_rgba(239,68,68,0.4),0_0_20px_rgba(239,68,68,0.6)] animate-[button-error-shake_0.4s_ease-in-out]' : 
-                      loading ? 'cursor-wait border-amber-500/40 bg-amber-950/20 shadow-[inset_0_0_20px_rgba(245,158,11,0.1)]' : 
-                      isArmed ? 'bg-emerald-600 border-emerald-400 shadow-[0_0_40px_rgba(52,211,153,0.8)]' :
-                      isHolding ? 'cursor-pointer border-emerald-500/60 shadow-[inset_0_0_30px_rgba(52,211,153,0.2),0_10px_20px_-5px_rgba(0,0,0,0.9)] transform scale-[0.98]' : 
-                     'cursor-pointer bg-slate-950/90 border-amber-500/50 shadow-[inset_0_0_20px_rgba(245,158,11,0.2),0_15px_30px_-10px_rgba(0,0,0,0.8)] lg:hover:border-amber-400/80'}`} 
-                >
-                  
-                  {/* Flashbang Layer (S'activa a l'èxit) */}
-                  {isArmed && <div className="absolute inset-0 bg-white z-[60] animate-[tactical-flashbang_0.6s_ease-out_forwards]"></div>}
-
-                  {/* Micro-patró tàctic de fons (Black Glass base) */}
-                  <div className="absolute inset-0 opacity-[0.05] z-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '16px 16px' }}></div>
-                  
-                  {/* Animació Fantasma (Tease) quan està en repòs */}
-                  {!isHolding && !loading && !tapWarning && !isArmed && (
-                    <div className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-emerald-500/20 to-transparent animate-[ghost-tease-pulse_5s_ease-in-out_infinite] z-0"></div>
-                  )}
-
-                  {/* Línia d'Escaneig Ambre (Radar Sweep) */}
-                  {!isHolding && !loading && !tapWarning && !isArmed && (
-                    <div className="absolute inset-0 overflow-hidden rounded-xl opacity-[0.15] lg:opacity-30 z-0">
-                      <div className="w-[80%] h-full bg-gradient-to-r from-transparent via-amber-400 to-transparent -translate-x-[150%] animate-[scan-shimmer-amber_4s_ease-in-out_infinite]" />
-                    </div>
-                  )}
-                  
-                  {/* Méskia de contenció Cantonades HUD */}
-                  <div className={`absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 transition-colors duration-300 rounded-tr-xl z-20 ${tapWarning ? 'border-red-400' : isHolding ? 'border-emerald-400' : 'border-amber-500/80 group-hover:border-amber-400'}`}></div>
-                  <div className={`absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 transition-colors duration-300 rounded-bl-xl z-20 ${tapWarning ? 'border-red-400' : isHolding ? 'border-emerald-400' : 'border-amber-500/80 group-hover:border-amber-400'}`}></div>
-
-                  {/* Contingut Central (Símbol + Text) */}
-                  <div className="relative flex items-center gap-3 lg:gap-4 z-30 preserve-3d w-full justify-center" style={{ transform: 'translateZ(10px)' }}>
-                      {loading ? (
-                          <><Loader2 className="w-5 h-5 lg:w-6 lg:h-6 text-amber-200 animate-spin" /><span className="font-sans font-black tracking-widest text-sm sm:text-base lg:text-lg text-amber-100 uppercase">{systemText.loading}</span></>
-                      ) : tapWarning ? (
-                          <><AlertTriangle className="w-5 h-5 lg:w-6 lg:h-6 text-red-300 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-                          <span className="font-sans font-black tracking-[0.1em] text-base sm:text-xl lg:text-2xl text-red-100 uppercase drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
-                              {systemText.tapWarning}
-                          </span></>
-                      ) : isArmed ? (
-                          <><ShieldCheck className="w-6 h-6 text-white drop-shadow-[0_0_15px_white]" /><span className="font-sans font-black tracking-[0.25em] text-xl lg:text-2xl text-white uppercase drop-shadow-[0_0_15px_white]">{systemText.deployed}</span></>
-                      ) : (
-                          <>
-                          <div className="relative w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center shrink-0">
-                            {/* Anell SVG: traç de fons fix + traç de progrés mutat per ref (mateix patró GPU que la resta del component) */}
-                            <svg
-                              viewBox="0 0 36 36"
-                              className={`absolute inset-0 w-full h-full -rotate-90 ${!isHolding ? 'animate-[radar-sweep_6s_linear_infinite]' : ''}`}
-                            >
-                              <circle cx="18" cy="18" r={RING_RADIUS} fill="none" strokeWidth="2" className="stroke-amber-400/25" />
-                              <circle
-                                ref={progressRingRef}
-                                cx="18" cy="18" r={RING_RADIUS} fill="none" strokeWidth="2.5" strokeLinecap="round"
-                                className={`transition-colors duration-300 ${isHolding ? 'stroke-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : 'stroke-transparent'}`}
-                                style={{ strokeDasharray: RING_CIRCUMFERENCE, strokeDashoffset: RING_CIRCUMFERENCE }}
-                              />
-                            </svg>
-                            {isHolding ? (
-                              <span ref={progressTextRef} className="relative font-mono font-black text-white text-[11px] lg:text-xs drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">0</span>
-                            ) : (
-                              <Fingerprint className="relative w-4 h-4 lg:w-[18px] lg:h-[18px] text-amber-400 group-hover:text-amber-300 transition-colors duration-300" />
-                            )}
-                          </div>
-                          <span className={`font-sans font-black tracking-[0.2em] sm:tracking-[0.25em] text-lg sm:text-xl lg:text-2xl uppercase transition-colors duration-300 ${isHolding ? 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]' : 'text-amber-400 group-hover:text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]'}`}>
-                            {systemText.start}
-                          </span></>
-                      )}
-                  </div>
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between w-full pt-2 lg:pt-3">
-                  <button type="button" onClick={openDiagnosticsModal} className="flex items-center gap-1.5 group cursor-pointer px-3.5 py-2 rounded-lg glass-panel-interactive">
-                      <HelpCircle className="w-4 h-4 text-sky-400 lg:group-hover:scale-110 transition-all" />
-                      <span className="text-[10px] font-bold text-slate-300 group-hover:text-white uppercase tracking-widest transition-colors">{systemText.manual}</span>
-                  </button>
-                  <div className="flex gap-1 bg-black/60 p-1 rounded-lg border border-white/10 shadow-inner">
-                      {(['ca', 'es', 'en', 'fr'] as Language[]).map((l) => (
-                          <button key={l} type="button" disabled={loading} onClick={() => setLang(l)}
-                              className={`px-3 py-1.5 font-sans text-[10px] font-black uppercase transition-colors duration-200 rounded-md ${lang === l ? 'bg-sky-500 text-white shadow-[0_0_10px_rgba(56,189,248,0.5)]' : 'text-slate-400 hover:text-white hover:bg-white/10'} ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} >
-                              {l}
-                          </button>
-                      ))}
-                  </div>
-              </div>
-            </div>
-        </div>
+          <div className="mt-2 sm:mt-5 flex flex-col gap-3 sm:max-w-[30rem]">
+            {supported && (
+              <button
+                type="button"
+                onClick={handleLocate}
+                disabled={locating || loading}
+                aria-busy={locating}
+                className={`h-14 w-full rounded-2xl px-5 flex items-center justify-center gap-3 text-base font-semibold transition-colors disabled:cursor-wait ${searchFirst
+                  ? 'border border-[#566079] text-slate-200 hover:border-slate-300 hover:text-white'
+                  : 'bg-slate-100 text-slate-900 hover:bg-white shadow-[0_12px_32px_-14px_rgba(0,0,0,0.7)]'}`}
+              >
+                {locating ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="w-[22px] h-[22px] animate-spin motion-reduce:animate-none">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity={0.2} strokeWidth={2.5} />
+                    <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <Navigation className="w-5 h-5 fill-current" aria-hidden="true" />
+                )}
+                <span>{locating ? w.locating : denied ? w.locationOff : w.locate}</span>
+              </button>
+            )}
+            {statusText && (
+              <p role={status === 'error' ? 'alert' : 'status'} className={`text-sm leading-snug ${status === 'error' ? 'text-amber-200' : 'text-slate-300'}`}>
+                {statusText}
+              </p>
+            )}
+            <WelcomeSearch
+              labels={{ placeholder: w.searchPlaceholder, searching: w.searching, noResults: w.noResults, favorites: w.favorites }}
+              favorites={favorites}
+              disabled={loading}
+              emphasized={searchFirst}
+              onSelect={onSelectLocation}
+            />
+          </div>
+        </section>
       </main>
 
-      {/* MODAL I18N */}
+      <footer className="relative z-10 mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-16 py-4 flex flex-wrap justify-between gap-x-6 gap-y-1 text-xs text-slate-400">
+        <span>{w.dataSources}: Open-Meteo · ECMWF · MeteoSwiss · Météo-France · DWD · NOAA</span>
+        <span className="font-mono">v{APP_VERSION}</span>
+      </footer>
+
       {showDiagnostics && (
         <Suspense fallback={null}>
           <div className="absolute z-[99999]">
@@ -462,25 +303,6 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, loading }: W
           </div>
         </Suspense>
       )}
-
-      {/* FOOTER */}
-      <footer className="relative w-full border-t border-white/10 px-4 py-3 sm:py-4 flex items-center justify-between z-40 shrink-0 bg-black/30 mt-auto">
-          <div className="flex items-center gap-2.5">
-              <div className="relative flex items-center justify-center">
-                <div className="absolute w-3 h-3 rounded-full bg-emerald-400 animate-[plasma-pulse_1.5s_ease-in-out_infinite]"></div>
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-              </div>
-              <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 tracking-widest uppercase">{systemText.systemStatus}</span>
-          </div>
-          <div className="flex items-center gap-4 sm:gap-6">
-              <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {systemText.secure}
-              </div>
-              <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-mono font-black text-slate-500 tracking-widest uppercase">
-                  <span className="text-slate-400">© {year} MT-AI</span><span className="text-sky-500/90">v{APP_VERSION}</span>
-              </div>
-          </div>
-      </footer>
     </div>
   );
 }

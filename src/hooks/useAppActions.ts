@@ -12,6 +12,11 @@ import { LocationData } from './usePreferences';
 type NotificationLevel = 'error' | 'success' | 'info';
 type NotificationAction = (payload: { type: NotificationLevel; msg: string }) => void;
 
+/** Resultat de "Utilitza la meva ubicació": la benvinguda en mostra el motiu quan falla. */
+export type LocateResult =
+  | { ok: true }
+  | { ok: false; reason: 'denied' | 'unavailable' | 'timeout' | 'unsupported' | 'fetch' };
+
 interface UseAppActionsProps {
   t: TranslationType; 
   getCoordinates: () => Promise<{ lat: number; lon: number; name: string }>; // <-- Afegit el 'name: string'
@@ -34,30 +39,31 @@ export function useAppActions({
   removeFavorite
 }: UseAppActionsProps) {
 
-  const handleGetCurrentLocation = useCallback(async () => {
+  // Només la fa servir la benvinguda, que explica l'error a sota del botó (per això no hi ha avís flotant
+  // quan falla la ubicació): torna el motiu perquè el botó no es quedi mai bloquejat.
+  const handleGetCurrentLocation = useCallback(async (): Promise<LocateResult> => {
+    let coords: { lat: number; lon: number; name: string };
     try {
-      const { lat, lon, name } = await getCoordinates();
-      const result = await fetchWeatherByCoords(lat, lon, name);
-
-      if (result.success) {
-        setNotification({ 
-            type: NOTIFICATION_TYPES.SUCCESS as NotificationLevel, 
-            msg: t.notifLocationSuccess || "Ubicació actualitzada" 
-        });
-      }
+      coords = await getCoordinates();
     } catch (e: unknown) {
-      const err = e as Error;
-      let errorMsg = t.notifLocationError || "Error d'ubicació";
+      const message = e instanceof Error ? e.message : '';
+      if (message === GEO_ERRORS.NOT_SUPPORTED) return { ok: false, reason: 'unsupported' };
+      if (message === GEO_ERRORS.PERMISSION_DENIED) return { ok: false, reason: 'denied' };
+      if (message === GEO_ERRORS.TIMEOUT) return { ok: false, reason: 'timeout' };
+      return { ok: false, reason: 'unavailable' };
+    }
 
-      if (err.message === GEO_ERRORS.NOT_SUPPORTED) {
-        errorMsg = t.geoNotSupported || "Geolocalització no suportada";
-      } else if (err.message === GEO_ERRORS.PERMISSION_DENIED) {
-        errorMsg = t.notifLocationError || "Permís denegat";
-      } else if (err.message === GEO_ERRORS.TIMEOUT) {
-        errorMsg = t.notifLocationError || "Temps d'espera esgotat";
-      }
-
-      setNotification({ type: NOTIFICATION_TYPES.ERROR as NotificationLevel, msg: errorMsg });
+    try {
+      const result = await fetchWeatherByCoords(coords.lat, coords.lon, coords.name);
+      if (!result.success) return { ok: false, reason: 'fetch' };
+      setNotification({
+          type: NOTIFICATION_TYPES.SUCCESS as NotificationLevel,
+          msg: t.notifLocationSuccess || "Ubicació actualitzada"
+      });
+      return { ok: true };
+    } catch {
+      setNotification({ type: NOTIFICATION_TYPES.ERROR as NotificationLevel, msg: t.notifLocationError || "Error d'ubicació" });
+      return { ok: false, reason: 'fetch' };
     }
   }, [getCoordinates, fetchWeatherByCoords, t, setNotification]);
 

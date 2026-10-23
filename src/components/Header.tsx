@@ -2,13 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, Activity } from 'lucide-react';
 import { usePreferences, LocationData } from '../hooks/usePreferences';
-import { searchCity, reverseGeocode, GeoSearchResult } from '../services/geocodingService';
+import { reverseGeocode, GeoSearchResult } from '../services/geocodingService';
+import { useCitySearch } from '../hooks/useCitySearch';
 import { useAppContext } from '../context/AppContext';
 import { useGeoLocation } from '../context/GeoLocationContext';
 import { Language, TranslationType } from '../translations';
-
-// DOCTRINA RISC ZERO: Regex de llista negra per sanitejar inputs
-const DANGEROUS_CHARS = /[<>{}[\]\\/]/;
 
 // DOCTRINA RISC ZERO: Guàrdia de tipus per discriminar entre favorit i resultat de cerca
 function isLocationData(item: GeoSearchResult | LocationData): item is LocationData {
@@ -127,16 +125,11 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const { favorites: hookFavorites } = usePreferences();
   const favorites: LocationData[] = contextFavorites ?? hookFavorites ?? [];
 
-  const [query, setQuery] = useState('');
+  // Cerca compartida amb la benvinguda (espera, sanejament i "últim guanyador").
+  const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch();
   const [isFocused, setIsFocused] = useState(false);
-  const [suggestions, setSuggestions] = useState<GeoSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [isLocating, setIsLocating] = useState(false); 
+  const [isLocating, setIsLocating] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // [FIX PRECISIÓ] "Últim guanyador": evita que una cerca anterior i més lenta
-  // sobreescrigui els suggeriments d'una de posterior i més ràpida.
-  const searchRequestIdRef = useRef(0);
 
   // --- LÒGICA DEBUG MODE (5 CLICS) ---
   const [debugClicks, setDebugClicks] = useState(0);
@@ -189,41 +182,6 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      const cleanQuery = query.trim();
-
-      if (cleanQuery.length < 3) {
-        setSuggestions([]);
-        return;
-      }
-
-      if (DANGEROUS_CHARS.test(cleanQuery)) {
-        console.warn("Input sanitization blocked dangerous characters");
-        setSuggestions([]);
-        return;
-      }
-
-      const requestId = ++searchRequestIdRef.current;
-      setIsSearching(true);
-      try {
-        const results = await searchCity(cleanQuery);
-        // Una cerca més recent ja ha començat mentrestant: descartem aquest
-        // resultat obsolet en lloc de sobreescriure els suggeriments actuals.
-        if (searchRequestIdRef.current !== requestId) return;
-        setSuggestions(results || []);
-      } catch (err) {
-        console.error("Error en la cerca de ciutat:", err);
-        if (searchRequestIdRef.current === requestId) setSuggestions([]);
-      } finally {
-        if (searchRequestIdRef.current === requestId) {
-          setSelectedIndex(-1);
-          setIsSearching(false);
-        }
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
 
   // --- LÒGICA DE GEOLOCALITZACIÓ ---
   // Delega la localització GPS a GeoLocationContext (retries alta/baixa precisió +
@@ -392,7 +350,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
             {query && !loading && (
                 <button
                     type="button"
-                    onClick={() => { setQuery(''); setSuggestions([]); setSelectedIndex(-1); }}
+                    onClick={() => { setQuery(''); setSelectedIndex(-1); }}
                     className="p-2 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
                     aria-label={dict.clearSearch}
                 >
