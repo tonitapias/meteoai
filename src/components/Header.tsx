@@ -424,8 +424,9 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           </form>
 
           {/* DESPLEGABLE DE RESULTATS I FAVORITS */}
+          {/* Fons opac i sense header-glass: el seu `background` anul·lava el color i, sense blur, el tauler es llegia a través. */}
           {isFocused && (showFavorites || (showSuggestionsList && suggestions.length > 0)) && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-[#020617]/95 header-glass border border-sky-500/20 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 z-10">
+            <div className="absolute top-full left-0 w-full mt-2 bg-[#020617] border border-sky-500/20 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 z-10">
                 {showFavorites && (
                     <div className="py-2">
                         <div className="px-4 py-2 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
