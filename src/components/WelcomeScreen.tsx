@@ -168,8 +168,10 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
   // Una sola columna (no una per mida amagada amb CSS): és l'element més pesant de la pantalla.
   const wide = useMinWidth('(min-width: 1024px)');
 
+  // overflow-x: clip i no hidden: hidden converteix el contenidor en una capsa amb desplaçament propi i la
+  // llista del cercador, que en sobresurt, s'havia de desplaçar per dins (hidden queda per als navegadors antics).
   return (
-    <div className={`relative w-full min-h-screen overflow-x-hidden bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showHelp ? 'overflow-hidden' : ''}`}>
+    <div className={`relative w-full min-h-screen overflow-x-hidden supports-[overflow:clip]:overflow-x-clip bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showHelp ? 'overflow-hidden' : ''}`}>
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none transition-opacity duration-700 motion-reduce:transition-none"
@@ -233,7 +235,8 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         </nav>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-[1440px] flex-1 px-5 sm:px-8 lg:px-16 pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-6 lg:gap-10">
+      {/* z-20, per sobre del peu (z-10): la llista del cercador hi passa per damunt quan s'obre cap avall. */}
+      <main className="relative z-20 mx-auto w-full max-w-[1440px] flex-1 px-5 sm:px-8 lg:px-16 pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-6 lg:gap-10">
         <div className="order-1 lg:order-2 mx-auto lg:mx-0 w-full shrink-0 max-w-[min(340px,40vh)] sm:max-w-[min(440px,46vh)] lg:max-w-[min(600px,calc(100vh_-_230px),44vw)]">
           <div className="relative w-full pt-[100%]">
             <div className="absolute inset-0">
