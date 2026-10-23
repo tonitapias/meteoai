@@ -36,6 +36,8 @@ export interface WelcomeSky {
 // darrere de la columna, al sud), quedi per sobre del capdamunt i no amagat darrere.
 export const ORBIT = { cx: 320, cy: 550, rx: 232, ry: 480, horizonY: 500 } as const;
 const HORIZON_COS = (ORBIT.cy - ORBIT.horizonY) / ORBIT.ry;
+/** Graus per sota del sol on es mira la rampa del cel per al color de dalt de la pantalla. */
+const ZENITH_OFFSET = 12;
 
 // Latitud típica per continent quan la zona no és a la taula.
 const AREA_LAT: Readonly<Record<string, number>> = {
@@ -104,7 +106,10 @@ export function computeWelcomeSky(now: Date, place: SkyPlace): WelcomeSky {
     ? orbitAngle(moonPos.altitude, Math.max(20, 90 - Math.abs(place.lat)), moonPos.azimuth < 180)
     : null;
 
-  const sky = skyColorAt(sunAltitude);
+  // El fons fa servir el color del zenit (el de la rampa uns 12° més avall: a la posta, blau fosc i no
+  // taronja), i el de l'horitzó queda per a la lluïssor darrere la columna, com al cel de debò.
+  const horizon = skyColorAt(sunAltitude);
+  const zenith = skyColorAt(sunAltitude - ZENITH_OFFSET);
   return {
     phase,
     place,
@@ -113,10 +118,10 @@ export function computeWelcomeSky(now: Date, place: SkyPlace): WelcomeSky {
     sunAltitude,
     moon: { phase: Number.isFinite(moonPhase) ? moonPhase : 0, illumination, angle: moonAngle },
     colors: {
-      top: mixLinear(sky, '#03050b', 0.62),
-      mid: mixLinear(sky, SKY_BASE, 0.3),
+      top: mixLinear(zenith, '#03050b', 0.7),
+      mid: mixLinear(zenith, SKY_BASE, 0.35),
       bottom: SKY_BASE,
-      glow: sky,
+      glow: horizon,
     },
   };
 }

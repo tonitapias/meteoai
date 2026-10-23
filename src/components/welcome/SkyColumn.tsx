@@ -4,7 +4,7 @@
 // i l'òrbita diària del sol, que hi és a la posició de l'hora actual; de nit, la lluna amb la fase real.
 // Cap dada de xarxa: tot surt de useWelcomeSky. Un sol SVG sense filtres; l'única animació és l'entrada
 // (una vegada), que respecta "reduir el moviment".
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { MoonDisc } from '../MoonDisc';
 import { contourPaths, DISC } from '../../utils/welcome/contourTexture';
 import { ORBIT, orbitPoint, WelcomePhase, WelcomeSky } from '../../utils/welcome/welcomeSky';
@@ -93,6 +93,7 @@ const prefersReducedMotion = () =>
 export default function SkyColumn({ sky, labels, compact = false }: SkyColumnProps) {
   const theme = THEME[sky.phase];
   const contours = useMemo(() => contourPaths(), []);
+  const clipId = `orbit${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const [shown, setShown] = useState(prefersReducedMotion);
 
   useEffect(() => {
@@ -113,6 +114,9 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
   // L'astre que il·lumina és a l'esquerra si és a l'est (hemisferi nord) o a l'oest (hemisferi sud).
   const litLeft = lightAngle === null ? true : (lightAngle < 0) !== sky.south;
   const shadowX = DISC.cx + theme.shadow[0] * (litLeft ? 1 : -1);
+  // A l'alba i a la posta la lluïssor de l'horitzó és cap al costat del sol, com al cel de debò.
+  const twilight = sky.phase === 'alba' || sky.phase === 'posta';
+  const glowLeft = twilight ? (litLeft ? '28%' : '72%') : '50%';
   const shadowY = DISC.cy + theme.shadow[1];
 
   const fade = (delay: number) => ({
@@ -126,13 +130,17 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
     <div className="relative w-full h-full">
       <div
         aria-hidden="true"
-        className="absolute left-1/2 top-[78%] w-[150%] h-[80%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        style={{ background: `radial-gradient(closest-side, ${withAlpha(sky.colors.glow, 0.55)}, transparent)` }}
+        className="absolute top-[78%] w-[150%] h-[80%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+        style={{ left: glowLeft, background: `radial-gradient(closest-side, ${withAlpha(sky.colors.glow, twilight ? 0.7 : 0.55)}, transparent)` }}
       />
 
       <svg role="img" aria-label={labels.alt} viewBox="0 0 640 640" fill="none" className="absolute inset-0 w-full h-full overflow-visible">
+        <defs>
+          {/* La part de l'òrbita sota l'horitzó s'acaba poc després del disc: si no, baixava fins al text. */}
+          <clipPath id={clipId}><rect x="-200" y="-200" width="1040" height="800" /></clipPath>
+        </defs>
         <g style={fade(0)}>
-          <ellipse cx={ORBIT.cx} cy={ORBIT.cy} rx={ORBIT.rx} ry={ORBIT.ry} stroke="#e2e8f0" strokeOpacity={0.16} strokeDasharray="2 6" vectorEffect="non-scaling-stroke" />
+          <ellipse cx={ORBIT.cx} cy={ORBIT.cy} rx={ORBIT.rx} ry={ORBIT.ry} stroke="#e2e8f0" strokeOpacity={0.14} strokeDasharray="2 6" vectorEffect="non-scaling-stroke" clipPath={`url(#${clipId})`} />
           <path d={DAY_ARC} stroke={theme.orbit} strokeOpacity={0.55} strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
           {ORBIT_TICKS.map(([x, y], i) => <circle key={i} cx={mirror(x)} cy={y} r={2.4} fill={theme.orbit} opacity={0.7} />)}
           {sunPoint && (
@@ -218,7 +226,7 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
         ))}
         <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-sky-300 ${bandSize}`} style={{ left: '63%', top: '28.6%' }}>{labels.high}</span>
         <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-blue-300 ${bandSize}`} style={{ left: '63%', top: '50.9%' }}>{labels.mid}</span>
-        <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-indigo-200 ${bandSize}`} style={{ left: '63%', top: '70.6%' }}>{labels.low}</span>
+        <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-indigo-200 ${bandSize}`} style={{ left: '63%', top: '65%' }}>{labels.low}</span>
         <span className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left: '12.5%', top: '82%' }}>{sky.south ? labels.west : labels.east}</span>
         <span className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left: '87.5%', top: '82%' }}>{sky.south ? labels.east : labels.west}</span>
         <span className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left: '50%', top: '92.8%' }}>{sky.south ? labels.south : labels.north}</span>
