@@ -211,7 +211,7 @@ export const ca = {
   manualSearch: "Busca manualment",
   
   welcome: {
-    headline: "El temps del lloc exacte on ets.",
+    headline: "El temps on ets, vist de més a prop.",
     subtitle: "Comparem fins a cinc models, alguns amb una malla d'1 km, i una IA te'n resumeix el que importa.",
     locate: "Utilitza la meva ubicació",
     locating: "Buscant la teva ubicació…",

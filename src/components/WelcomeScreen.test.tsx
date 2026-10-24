@@ -41,7 +41,7 @@ describe('WelcomeScreen', () => {
 
   it('mostra el titular i la frase de cada idioma', () => {
     renderWelcome({ lang: 'en' });
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The weather for exactly where you are.');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The weather where you are, up close.');
     expect(screen.getByText(TRANSLATIONS.en.welcome.subtitle)).toBeInTheDocument();
   });
 

@@ -211,7 +211,7 @@ export const es = {
   manualSearch: "Búsqueda manual",
   
   welcome: {
-    headline: "El tiempo del lugar exacto donde estás.",
+    headline: "El tiempo donde estás, visto más de cerca.",
     subtitle: "Comparamos hasta cinco modelos, algunos con una malla de 1 km, y una IA te resume lo importante.",
     locate: "Usar mi ubicación",
     locating: "Buscando tu ubicación…",

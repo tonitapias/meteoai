@@ -212,7 +212,7 @@ export const en = {
   manualSearch: "Manual search",
   
   welcome: {
-    headline: "The weather for exactly where you are.",
+    headline: "The weather where you are, up close.",
     subtitle: "We compare up to five models, some on a 1 km grid, and an AI sums up what matters.",
     locate: "Use my location",
     locating: "Finding your location…",

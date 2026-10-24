@@ -212,7 +212,7 @@ export const fr = {
   manualSearch: "Recherche manuelle",
   
   welcome: {
-    headline: "La météo de l'endroit exact où vous êtes.",
+    headline: "La météo là où vous êtes, vue de plus près.",
     subtitle: "Nous comparons jusqu'à cinq modèles, certains à maille de 1 km, et une IA vous en résume l'essentiel.",
     locate: "Utiliser ma position",
     locating: "Recherche de votre position…",
