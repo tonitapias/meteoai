@@ -1,9 +1,10 @@
 // src/components/WelcomeScreen.tsx
 // Benvinguda: igual per a tothom i sense cap consulta de dades. Només canvia amb l'hora i el lloc del
-// dispositiu (la columna del cel i el color del fons). "Utilitza la meva ubicació" amb un sol toc, el
-// cercador i els favorits a la mateixa zona, i errors d'ubicació explicats a sota del botó, que no es queda
-// mai bloquejat. Sense blur, filtres ni animacions contínues (mòbils modestos).
-import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+// dispositiu (la columna del cel, el color del fons i un sol accent, el del moment del dia, a la segona línia del
+// titular). "Utilitza la meva ubicació" amb un sol toc, el cercador i els favorits a la mateixa zona, i errors
+// d'ubicació explicats a sota del botó, que no es queda mai bloquejat. Sense blur, filtres ni animacions
+// contínues (mòbils modestos).
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { ChevronDown, HelpCircle, Navigation } from 'lucide-react';
 import { Language, TranslationType } from '../translations';
 import { APP_VERSION } from '../utils/appVersion';
@@ -12,6 +13,7 @@ import type { LocationData } from '../hooks/usePreferences';
 import { useGeoPermission } from '../hooks/welcome/useGeoPermission';
 import type { WelcomeSky } from '../utils/welcome/welcomeSky';
 import { welcomeEyebrow } from '../utils/welcome/welcomeEyebrow';
+import { splitHeadline, WELCOME_ACCENT } from '../utils/welcome/welcomeAccent';
 import WelcomeSearch from './welcome/WelcomeSearch';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { useMinWidth } from './solar/useMinWidth';
@@ -25,6 +27,7 @@ const HowItWorksModal = lazy(() => import('./HowItWorksModal'));
 const SkyScene = lazy(() => import('./welcome/SkyScene'));
 // Del mateix tros: quan hi ha lluna a la línia de dalt, el cel (i doncs aquest codi) ja ha arribat.
 const EyebrowMoon = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowMoon })));
+const EyebrowSun = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowSun })));
 
 interface WelcomeScreenProps {
   lang: Language;
@@ -49,6 +52,27 @@ const LOCALE: Readonly<Record<Language, string>> = { ca: 'ca-ES', es: 'es-ES', e
 const SLOW_LOCATE_MS = 5000;
 /** Després d'això el botó torna a l'estat normal amb l'avís de "massa espera" (la petició pot acabar després). */
 const LOCATE_GIVE_UP_MS = 30000;
+
+/** Bloc de text respecte de la pantalla sencera, en px. */
+interface TextBox { left: number; top: number; right: number; bottom: number }
+/** Marge al voltant del text sense estrelles, i amplada de la vora on tornen a aparèixer a poc a poc. */
+const STAR_GAP = 28;
+const STAR_FADE = 56;
+
+/**
+ * Màscara de les estrelles: tot menys el bloc de text, com la unió de quatre franges (a dalt, a sota, a l'esquerra
+ * i a la dreta del text) amb vores suaus. La capa comença a dalt de tot de la pantalla, així que les mesures hi
+ * serveixen tal qual.
+ */
+function starMaskOutside({ left, top, right, bottom }: TextBox): string {
+  const near = STAR_GAP, far = STAR_GAP + STAR_FADE;
+  return [
+    `linear-gradient(to bottom, #000 ${top - far}px, transparent ${top - near}px)`,
+    `linear-gradient(to top, #000 calc(100% - ${bottom + far}px), transparent calc(100% - ${bottom + near}px))`,
+    `linear-gradient(to right, #000 ${left - far}px, transparent ${left - near}px)`,
+    `linear-gradient(to left, #000 calc(100% - ${right + far}px), transparent calc(100% - ${right + near}px))`,
+  ].join(', ');
+}
 
 export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, loading, onDebugToggle }: WelcomeScreenProps) {
   const w = t.welcome;
@@ -155,10 +179,38 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
   // Una sola columna (no una per mida amagada amb CSS): és l'element més pesant de la pantalla.
   const wide = useMinWidth('(min-width: 1024px)');
 
+  const [headlineFirst, headlineAccent] = splitHeadline(w.headline);
+  const accent = sky ? WELCOME_ACCENT[sky.phase] : undefined;
+
+  // De nit, les estrelles no passen per darrere del text (entre les lletres semblaven taques): es mesura on és el
+  // bloc de text, i torna a mesurar-se si canvia la mida de la pantalla o del text (idioma, avisos d'ubicació).
+  const night = sky?.phase === 'nit';
+  const rootRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLElement>(null);
+  const [textBox, setTextBox] = useState<TextBox | null>(null);
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const text = textRef.current;
+    if (!night || !root || !text) return;
+    const measure = () => {
+      const r = root.getBoundingClientRect();
+      const s = text.getBoundingClientRect();
+      const next = { left: Math.round(s.left - r.left), top: Math.round(s.top - r.top), right: Math.round(s.right - r.left), bottom: Math.round(s.bottom - r.top) };
+      setTextBox(prev => (prev && prev.left === next.left && prev.top === next.top && prev.right === next.right && prev.bottom === next.bottom ? prev : next));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    ro.observe(text);
+    return () => ro.disconnect();
+  }, [night]);
+  const starMask = textBox ? starMaskOutside(textBox) : null;
+
   // overflow-x: clip i no hidden: hidden converteix el contenidor en una capsa amb desplaçament propi i la
   // llista del cercador, que en sobresurt, s'havia de desplaçar per dins (hidden queda per als navegadors antics).
   return (
-    <div className={`relative w-full min-h-screen overflow-x-hidden supports-[overflow:clip]:overflow-x-clip bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showHelp ? 'overflow-hidden' : ''}`}>
+    <div ref={rootRef} className={`relative w-full min-h-screen overflow-x-hidden supports-[overflow:clip]:overflow-x-clip bg-[#0c0f17] text-slate-100 antialiased flex flex-col ${showHelp ? 'overflow-hidden' : ''}`}>
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none transition-opacity duration-700 motion-reduce:transition-none"
@@ -166,9 +218,16 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
           ? { opacity: 1, background: `linear-gradient(180deg, ${sky.colors.top} 0%, ${sky.colors.mid} 46%, ${sky.colors.bottom} 100%)` }
           : { opacity: 0 }}
       />
-      {/* Estrelles només de nit: a l'alba i a la posta (sol a menys de 6° sota l'horitzó) gairebé no se'n veuen. */}
-      {sky?.phase === 'nit' && (
-        <StarfieldBackdrop density={70} tint="#dbe4ff" className="bottom-[40%] opacity-80" />
+      {/* Estrelles només de nit: a l'alba i a la posta (sol a menys de 6° sota l'horitzó) gairebé no se'n veuen.
+          Unes quantes de brillants i la resta tènues; amagades fins que se sap on és el text. */}
+      {night && (
+        <StarfieldBackdrop
+          density={70}
+          bright={7}
+          tint="#dbe4ff"
+          className="bottom-[40%] opacity-80"
+          style={starMask ? { maskImage: starMask, WebkitMaskImage: starMask } : { opacity: 0 }}
+        />
       )}
 
       <header className="relative z-10 mx-auto w-full max-w-[1440px] px-4 min-[360px]:px-5 sm:px-8 lg:px-16 pt-4 sm:pt-7 flex items-center justify-between gap-3">
@@ -243,15 +302,22 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
           </div>
         </div>
 
-        <section className="order-2 lg:order-1 w-full lg:max-w-[540px] flex flex-col gap-3 sm:gap-4 lg:py-8">
+        <section ref={textRef} className="order-2 lg:order-1 w-full lg:max-w-[540px] flex flex-col gap-3 sm:gap-4 lg:py-8">
           <p className="text-[13px] sm:text-sm text-slate-300">
             {eyebrow.head}
             {eyebrow.moment && <> · {eyebrow.moon && sky && (
               <Suspense fallback={null}><EyebrowMoon phase={sky.moon.phase} south={sky.south} /></Suspense>
+            )}{!eyebrow.moon && sky && sky.phase !== 'nit' && (
+              <Suspense fallback={null}><EyebrowSun phase={sky.phase} color={WELCOME_ACCENT[sky.phase]} /></Suspense>
             )}{eyebrow.moment}</>}
           </p>
+          {/* Dues línies partides per la coma; la segona, amb l'accent del moment quan arriba el cel. */}
           <h1 className="text-[30px] leading-[1.06] sm:text-5xl lg:text-[clamp(40px,4vw,58px)] lg:leading-[1.03] font-semibold tracking-[-0.025em] text-balance">
-            {w.headline}
+            {headlineAccent ? (
+              <>
+                <span className="block">{headlineFirst}</span> <span className="block transition-colors duration-700 motion-reduce:transition-none" style={{ color: accent }}>{headlineAccent}</span>
+              </>
+            ) : headlineFirst}
           </h1>
           <p className="text-[15px] sm:text-lg leading-relaxed text-slate-200/90 text-pretty max-w-[34rem] max-lg:[@media(max-height:700px)]:hidden">
             {w.subtitle}

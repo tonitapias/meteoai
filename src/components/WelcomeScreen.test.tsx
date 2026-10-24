@@ -5,6 +5,7 @@ import WelcomeScreen from './WelcomeScreen';
 import { TRANSLATIONS, type Language } from '../translations';
 import type { LocateResult } from '../hooks/useAppActions';
 import type { LocationData } from '../hooks/usePreferences';
+import { WELCOME_ACCENT } from '../utils/welcome/welcomeAccent';
 
 const FAVORITES: LocationData[] = [
   { name: 'Girona', latitude: 41.98, longitude: 2.82, country: 'Espanya' },
@@ -43,6 +44,19 @@ describe('WelcomeScreen', () => {
     renderWelcome({ lang: 'en' });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The weather where you are, up close.');
     expect(screen.getByText(TRANSLATIONS.en.welcome.subtitle)).toBeInTheDocument();
+  });
+
+  it('la segona línia del titular agafa l\'accent del moment del dia quan arriba el cel', async () => {
+    renderWelcome();
+    const h1 = screen.getByRole('heading', { level: 1 });
+    // El text accessible és la frase sencera, amb l'espai entre les dues línies.
+    expect(h1.textContent).toBe(TRANSLATIONS.ca.welcome.headline);
+    const second = screen.getByText('vist de més a prop.');
+    const accents = Object.values(WELCOME_ACCENT).map(hex => {
+      const n = parseInt(hex.slice(1), 16);
+      return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+    });
+    await waitFor(() => expect(accents).toContain(second.style.color));
   });
 
   it('un sol toc demana la ubicació (no cal mantenir premut)', async () => {

@@ -3,6 +3,7 @@
 // accessible (combobox) i, a sota, els favorits com a botons per entrar-hi d'un toc.
 // El camp és a la part de baix de la pantalla: la llista s'obre cap amunt quan a sota no hi cap (al mòbil,
 // gairebé sempre, i encara més amb el teclat obert) i fa l'alçada de l'espai que queda visible.
+// El camp i els favorits són blancs translúcids (sense desenfocament): es veu el cel a través. La llista, opaca.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Loader2, Search, Star } from 'lucide-react';
 import { useCitySearch } from '../../hooks/useCitySearch';
@@ -133,7 +134,7 @@ export default function WelcomeSearch({ labels, favorites, disabled = false, emp
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(-1); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            className={`w-full h-14 rounded-2xl border bg-[#121722] pl-12 pr-4 text-base text-slate-100 placeholder:text-slate-400 outline-none transition-colors focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30 disabled:opacity-60 ${emphasized ? 'border-sky-300' : 'border-[#566079]'}`}
+            className={`w-full h-14 rounded-2xl border bg-white/[0.07] pl-12 pr-4 text-base text-slate-100 placeholder:text-slate-300/80 outline-none transition-colors hover:bg-white/[0.1] focus:bg-white/[0.1] focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30 disabled:opacity-60 ${emphasized ? 'border-sky-300' : 'border-white/25'}`}
           />
         </form>
 
@@ -182,7 +183,7 @@ export default function WelcomeSearch({ labels, favorites, disabled = false, emp
               type="button"
               disabled={disabled}
               onClick={() => onSelect(f.latitude, f.longitude, f.name, f.country)}
-              className="h-11 max-w-[11rem] truncate rounded-xl border border-[#566079] px-3.5 text-sm font-medium text-slate-200 transition-colors hover:border-slate-300 hover:text-white disabled:opacity-60"
+              className="h-11 max-w-[11rem] truncate rounded-xl border border-white/20 bg-white/[0.05] px-3.5 text-sm font-medium text-slate-100 transition-colors hover:border-white/40 hover:bg-white/[0.09] hover:text-white disabled:opacity-60"
             >
               {f.name}
             </button>
