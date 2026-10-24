@@ -16,3 +16,26 @@ export function moonPhaseKey(phase: number): MoonPhaseKey {
   if (p < 0.77) return 'lastQuarter';
   return 'waningCrescent';
 }
+
+export type WelcomeMoonKey = 'moonNew' | 'moonWaxing' | 'moonFirstQuarter' | 'moonAlmostFull' | 'moonFull' | 'moonLastQuarter' | 'moonWaning';
+
+/** A partir d'aquí la gibosa es diu "gairebé plena": per sota, només creixent o minvant (el dibuix ja en dona la forma). */
+const ALMOST_FULL_PCT = 85;
+
+/**
+ * La fase en paraules de cada dia per a la línia de dalt de la benvinguda (clau de t.welcome). Mateixos llindars
+ * que moonPhaseKey: mai no dirà "plena" quan la targeta Fase lunar diu gibosa, ni al revés.
+ */
+export function welcomeMoonKey(phase: number, illumination: number): WelcomeMoonKey {
+  const key = moonPhaseKey(phase);
+  switch (key) {
+    case 'new': return 'moonNew';
+    case 'waxingCrescent': return 'moonWaxing';
+    case 'firstQuarter': return 'moonFirstQuarter';
+    case 'waxingGibbous': return illumination >= ALMOST_FULL_PCT ? 'moonAlmostFull' : 'moonWaxing';
+    case 'full': return 'moonFull';
+    case 'waningGibbous': return illumination >= ALMOST_FULL_PCT ? 'moonAlmostFull' : 'moonWaning';
+    case 'lastQuarter': return 'moonLastQuarter';
+    case 'waningCrescent': return 'moonWaning';
+  }
+}

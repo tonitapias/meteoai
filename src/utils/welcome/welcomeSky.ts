@@ -4,7 +4,7 @@
 // i de quins colors és el fons. Pur, sense React ni xarxa: tot surt del rellotge del dispositiu i de taules fixes.
 // Els llocs consultats no hi intervenen mai: el cel és sempre el d'on és el dispositiu.
 import * as SunCalc from 'suncalc';
-import { geometricAltitude, lightPhase, RISE_SET_GEO } from '../solar/solarDay';
+import { geometricAltitude, lightPhase, RISE_SET_GEO, sunTimesForLocalDay } from '../solar/solarDay';
 import { SKY_BASE, mixLinear, skyColorAt } from '../solar/solarSky';
 import { getMoonPhase } from '../lunarPhases';
 import { getMoonIlluminationPercent } from '../astronomyMath';
@@ -27,6 +27,10 @@ export interface WelcomeSky {
   /** Angle a l'òrbita en graus (0 = dalt, negatiu = costat est); null si és sota l'horitzó. */
   sunAngle: number | null;
   sunAltitude: number;
+  /** El sol és a la meitat est del cel (abans del migdia solar). */
+  sunEast: boolean;
+  /** Sortida, posta i migdia solar del dia local del dispositiu (ms); null si no n'hi ha (dia o nit polar). */
+  sunTimes: { rise: number | null; set: number | null; noon: number | null };
   moon: { phase: number; illumination: number; angle: number | null };
   colors: { top: string; mid: string; bottom: string; glow: string };
 }
@@ -38,6 +42,36 @@ export const ORBIT = { cx: 320, cy: 550, rx: 232, ry: 480, horizonY: 500 } as co
 const HORIZON_COS = (ORBIT.cy - ORBIT.horizonY) / ORBIT.ry;
 /** Graus per sota del sol on es mira la rampa del cel per al color de dalt de la pantalla. */
 const ZENITH_OFFSET = 12;
+
+/**
+ * Altura on es mira la rampa per al color de dalt: 12° més avall amb el sol sobre l'horitzó (a la posta, blau
+ * fosc i no taronja); sota l'horitzó baixa a mitja velocitat fins a -18° quan el sol és a -12°, perquè a l'hora
+ * blava el cel encara sigui blau i no negre de nit. Contínua i sempre creixent amb l'altura del sol.
+ */
+export function zenithAltitude(sunAlt: number): number {
+  if (sunAlt >= 0) return sunAlt - ZENITH_OFFSET;
+  if (sunAlt >= -12) return -ZENITH_OFFSET + sunAlt / 2;
+  return sunAlt - 6;
+}
+
+// Altura del sol → altura on es mira la rampa per a la lluïssor de l'horitzó. A l'alba i a la posta amb el sol
+// amagat (fins a -6°), l'horitzó del costat del sol encara és rosat o taronja: la rampa hi va molt a poc a poc.
+const GLOW_ANCHORS: ReadonlyArray<readonly [number, number]> = [[-90, -90], [-12, -12], [-6, -1.5], [0, 0], [90, 90]];
+
+/** Altura per al color de la lluïssor de l'horitzó (contínua i sempre creixent amb l'altura del sol). */
+export function glowAltitude(sunAlt: number): number {
+  const a = Math.max(-90, Math.min(90, sunAlt));
+  for (let i = 1; i < GLOW_ANCHORS.length; i++) {
+    const [x1, y1] = GLOW_ANCHORS[i];
+    if (a <= x1) {
+      const [x0, y0] = GLOW_ANCHORS[i - 1];
+      return y0 + ((a - x0) / (x1 - x0)) * (y1 - y0);
+    }
+  }
+  return a;
+}
+
+const msOf = (d: unknown): number | null => (d instanceof Date && Number.isFinite(d.getTime()) ? d.getTime() : null);
 
 // Latitud típica per continent quan la zona no és a la taula.
 const AREA_LAT: Readonly<Record<string, number>> = {
@@ -106,16 +140,21 @@ export function computeWelcomeSky(now: Date, place: SkyPlace): WelcomeSky {
     ? orbitAngle(moonPos.altitude, Math.max(20, 90 - Math.abs(place.lat)), moonPos.azimuth < 180)
     : null;
 
-  // El fons fa servir el color del zenit (el de la rampa uns 12° més avall: a la posta, blau fosc i no
-  // taronja), i el de l'horitzó queda per a la lluïssor darrere la columna, com al cel de debò.
-  const horizon = skyColorAt(sunAltitude);
-  const zenith = skyColorAt(sunAltitude - ZENITH_OFFSET);
+  // El fons fa servir el color del zenit (zenithAltitude: a la posta, blau fosc i no taronja), i el de
+  // l'horitzó queda per a la lluïssor darrere la columna, com al cel de debò.
+  const horizon = skyColorAt(glowAltitude(sunAltitude));
+  const zenith = skyColorAt(zenithAltitude(sunAltitude));
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  const times = sunTimesForLocalDay(dayStart, dayEnd, place.lat, place.lon);
   return {
     phase,
     place,
     south: place.lat < 0,
     sunAngle: orbitAngle(sunAltitude, peak, sunEast),
     sunAltitude,
+    sunEast,
+    sunTimes: { rise: msOf(times?.sunrise), set: msOf(times?.sunset), noon: msOf(times?.solarNoon) },
     moon: { phase: Number.isFinite(moonPhase) ? moonPhase : 0, illumination, angle: moonAngle },
     colors: {
       top: mixLinear(zenith, '#03050b', 0.7),

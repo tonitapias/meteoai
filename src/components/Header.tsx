@@ -302,7 +302,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           </div>
           
           <div className="flex flex-col items-center md:items-start">
-             <span className="text-[10px] sm:text-xs font-black tracking-[0.3em] text-slate-300 group-hover:text-white transition-colors drop-shadow-md">METEOTONI.AI</span>
+             <span className="text-[10px] sm:text-xs font-black tracking-[0.3em] text-slate-300 group-hover:text-white transition-colors drop-shadow-md">METEOTONI AI</span>
              {debugClicks > 0 && debugClicks < 5 && (
                  <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono font-bold tracking-widest bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded animate-pulse mt-0.5 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
                      {dict.devMode}: {5 - debugClicks}

@@ -13,6 +13,8 @@ export interface WelcomeSearchLabels {
   searching: string;
   noResults: string;
   favorites: string;
+  /** Text accessible del botó "+N" ({n} = favorits amagats). */
+  moreFavorites: string;
 }
 
 interface WelcomeSearchProps {
@@ -24,6 +26,9 @@ interface WelcomeSearchProps {
   onSelect: (lat: number, lon: number, name: string, country?: string) => void;
 }
 
+/** Favorits que es veuen d'entrada; la resta, darrere del botó "+N". */
+const FAVORITES_SHOWN = 3;
+
 /** Alçada màxima de la llista (com max-h-72) i mínima quan no hi ha gaire espai. Si a sota no hi cap la
  *  llista sencera i a dalt hi ha més lloc, s'obre cap amunt. */
 const LIST_MAX = 288;
@@ -33,6 +38,7 @@ const GAP = 12;
 export default function WelcomeSearch({ labels, favorites, disabled = false, emphasized = false, onSelect }: WelcomeSearchProps) {
   const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch();
   const [open, setOpen] = useState(false);
+  const [allFavorites, setAllFavorites] = useState(false);
   const [placement, setPlacement] = useState<{ up: boolean; maxHeight: number }>({ up: false, maxHeight: LIST_MAX });
   const listId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -95,8 +101,9 @@ export default function WelcomeSearch({ labels, favorites, disabled = false, emp
   };
 
   const validFavorites = favorites
-    .filter(f => typeof f.latitude === 'number' && typeof f.longitude === 'number' && !isNaN(f.latitude) && !isNaN(f.longitude))
-    .slice(0, 3);
+    .filter(f => typeof f.latitude === 'number' && typeof f.longitude === 'number' && !isNaN(f.latitude) && !isNaN(f.longitude));
+  const hiddenFavorites = allFavorites ? 0 : Math.max(0, validFavorites.length - FAVORITES_SHOWN);
+  const shownFavorites = hiddenFavorites > 0 ? validFavorites.slice(0, FAVORITES_SHOWN) : validFavorites;
 
   return (
     <div className="flex flex-col gap-3">
@@ -169,7 +176,7 @@ export default function WelcomeSearch({ labels, favorites, disabled = false, emp
         <div className="flex flex-wrap items-center gap-2">
           <Star className="w-[18px] h-[18px] shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
           <span className="sr-only">{labels.favorites}:</span>
-          {validFavorites.map(f => (
+          {shownFavorites.map(f => (
             <button
               key={`${f.name}-${f.latitude}-${f.longitude}`}
               type="button"
@@ -180,6 +187,17 @@ export default function WelcomeSearch({ labels, favorites, disabled = false, emp
               {f.name}
             </button>
           ))}
+          {hiddenFavorites > 0 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => setAllFavorites(true)}
+              aria-label={labels.moreFavorites.replace('{n}', String(hiddenFavorites))}
+              className="h-11 min-w-[44px] rounded-xl px-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-60"
+            >
+              +{hiddenFavorites}
+            </button>
+          )}
         </div>
       )}
     </div>

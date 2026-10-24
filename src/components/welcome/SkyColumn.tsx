@@ -1,10 +1,11 @@
 // src/components/welcome/SkyColumn.tsx
 // "La columna del cel" de la benvinguda: un esquema de l'aire que tenim a sobre. Disc amb corbes de nivell,
 // columna de 0 a 12 km amb les tres capes de núvols (mateixes alçades i colors que el giny Capes de núvols),
-// i l'òrbita diària del sol, que hi és a la posició de l'hora actual; de nit, la lluna amb la fase real.
+// i l'òrbita diària del sol, que hi és a la posició de l'hora actual; de nit, la lluna amb la fase real. Si el sol o
+// la lluna passen per damunt d'una etiqueta, l'etiqueta s'amaga mentre hi són: l'astre no queda mai tapat.
 // Cap dada de xarxa: tot surt de useWelcomeSky. Un sol SVG sense filtres; l'única animació és l'entrada
 // (una vegada), que respecta "reduir el moviment".
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MoonDisc } from '../MoonDisc';
 import { contourPaths, DISC } from '../../utils/welcome/contourTexture';
 import { ORBIT, orbitPoint, WelcomePhase, WelcomeSky } from '../../utils/welcome/welcomeSky';
@@ -25,7 +26,7 @@ export interface SkyColumnLabels {
 interface SkyColumnProps {
   sky: WelcomeSky;
   labels: SkyColumnLabels;
-  /** Mòbil: etiquetes més petites i sense peu. */
+  /** Mòbil: etiquetes més petites, peu curt i lluna més grossa (proporcionalment). */
   compact?: boolean;
 }
 
@@ -82,6 +83,8 @@ const ALTOCUMULUS: ReadonlyArray<readonly [number, number, 'top' | 'mid' | 'shad
 ];
 
 const pct = (v: number) => `${(v / 640) * 100}%`;
+/** Diàmetre de la lluna, en unitats del viewBox: al mòbil la columna és petita i ha de fer uns 26 px, no 15. */
+const MOON_SIZE = { compact: 52, wide: 34 } as const;
 // rgba() i no #rrggbbaa: els WebView antics no entenen el color hexadecimal de 8 xifres.
 const withAlpha = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
@@ -95,6 +98,11 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
   const contours = useMemo(() => contourPaths(), []);
   const clipId = `orbit${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const [shown, setShown] = useState(prefersReducedMotion);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const astreRef = useRef<Element | null>(null);
+  const labelRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  // Bit i = l'etiqueta i queda sota el sol o la lluna i s'amaga.
+  const [covered, setCovered] = useState(0);
 
   useEffect(() => {
     if (shown) return;
@@ -119,6 +127,39 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
   const glowLeft = twilight ? (litLeft ? '28%' : '72%') : '50%';
   const shadowY = DISC.cy + theme.shadow[1];
 
+  // Posicions reals a la pantalla (les etiquetes tenen mida de lletra fixa i la columna s'escala): es mesura
+  // després de pintar i quan la columna canvia de mida.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const a = astreRef.current?.getBoundingClientRect();
+      let mask = 0;
+      if (a && a.width > 0) {
+        const pad = a.width * 0.12;
+        labelRefs.current.forEach((el, i) => {
+          const r = el?.getBoundingClientRect();
+          if (r && r.width > 0 && r.left < a.right + pad && r.right > a.left - pad && r.top < a.bottom + pad && r.bottom > a.top - pad) mask |= 1 << i;
+        });
+      }
+      setCovered(prev => (prev === mask ? prev : mask));
+    };
+    measure();
+    const root = rootRef.current;
+    if (!root || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, [sky, labels, compact]);
+
+  let labelIndex = 0;
+  const labelProps = () => {
+    const i = labelIndex++;
+    return {
+      ref: (el: HTMLSpanElement | null) => { labelRefs.current[i] = el; },
+      style: { opacity: covered & (1 << i) ? 0 : 1, transition: 'opacity 300ms ease-out' },
+    };
+  };
+  const moonSize = compact ? MOON_SIZE.compact : MOON_SIZE.wide;
+
   const fade = (delay: number) => ({
     opacity: shown ? 1 : 0,
     transition: `opacity 700ms ease-out ${delay}ms`,
@@ -127,7 +168,7 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
   const bandSize = compact ? 'text-[10px]' : 'text-[12px]';
 
   return (
-    <div className="relative w-full h-full">
+    <div ref={rootRef} className="relative w-full h-full">
       <div
         aria-hidden="true"
         className="absolute top-[78%] w-[150%] h-[80%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
@@ -147,14 +188,14 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
             <g>
               <circle cx={mirror(sunPoint[0])} cy={sunPoint[1]} r={76} fill={theme.sun.glow} opacity={0.07} />
               <circle cx={mirror(sunPoint[0])} cy={sunPoint[1]} r={48} fill={theme.sun.glow} opacity={0.13} />
-              <circle cx={mirror(sunPoint[0])} cy={sunPoint[1]} r={28} fill={theme.sun.mid} opacity={0.32} />
+              <circle ref={el => { astreRef.current = el; }} cx={mirror(sunPoint[0])} cy={sunPoint[1]} r={28} fill={theme.sun.mid} opacity={0.32} />
               <circle cx={mirror(sunPoint[0])} cy={sunPoint[1]} r={15} fill={theme.sun.core} />
             </g>
           )}
           {moonPoint && !sunPoint && (
             <g>
-              <circle cx={mirror(moonPoint[0])} cy={moonPoint[1]} r={34} fill="#c8d4ff" opacity={0.06} />
-              <circle cx={mirror(moonPoint[0])} cy={moonPoint[1]} r={22} fill="#c8d4ff" opacity={0.07} />
+              <circle cx={mirror(moonPoint[0])} cy={moonPoint[1]} r={moonSize * 1.15} fill="#c8d4ff" opacity={0.06} />
+              <circle cx={mirror(moonPoint[0])} cy={moonPoint[1]} r={moonSize * 0.75} fill="#c8d4ff" opacity={0.07} />
             </g>
           )}
         </g>
@@ -212,25 +253,29 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
 
       {moonPoint && !sunPoint && (
         <div
+          ref={el => { astreRef.current = el; }}
           aria-hidden="true"
-          className="absolute w-[4.7%] h-[4.7%] -translate-x-1/2 -translate-y-1/2"
-          style={{ left: pct(mirror(moonPoint[0])), top: pct(moonPoint[1]), ...fade(0) }}
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{ left: pct(mirror(moonPoint[0])), top: pct(moonPoint[1]), width: pct(moonSize), height: pct(moonSize), ...fade(0) }}
         >
-          <MoonDisc phase={sky.moon.phase} south={sky.south} detail={!compact} />
+          <MoonDisc phase={sky.moon.phase} south={sky.south} />
         </div>
       )}
 
       <div aria-hidden="true" className={`absolute inset-0 pointer-events-none text-slate-300 ${textSize}`} style={fade(300)}>
-        {(['12 km', '8 km', '3 km'] as const).map((label, i) => (
-          <span key={label} className="absolute -translate-x-full -translate-y-1/2 font-mono whitespace-nowrap" style={{ left: '37%', top: ['18.75%', '38.55%', '63.28%'][i] }}>{label}</span>
-        ))}
-        <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-sky-300 ${bandSize}`} style={{ left: '63%', top: '28.6%' }}>{labels.high}</span>
-        <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-blue-300 ${bandSize}`} style={{ left: '63%', top: '50.9%' }}>{labels.mid}</span>
-        <span className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap text-indigo-200 ${bandSize}`} style={{ left: '63%', top: '65%' }}>{labels.low}</span>
-        <span className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left: '12.5%', top: '82%' }}>{sky.south ? labels.west : labels.east}</span>
-        <span className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left: '87.5%', top: '82%' }}>{sky.south ? labels.east : labels.west}</span>
-        <span className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left: '50%', top: '92.8%' }}>{sky.south ? labels.south : labels.north}</span>
-        {!compact && labels.caption && (
+        {(['12 km', '8 km', '3 km'] as const).map((label, i) => {
+          const { ref, style } = labelProps();
+          return <span key={label} ref={ref} className="absolute -translate-x-full -translate-y-1/2 font-mono whitespace-nowrap" style={{ left: '37%', top: ['18.75%', '38.55%', '63.28%'][i], ...style }}>{label}</span>;
+        })}
+        {([[labels.high, 'text-sky-300', '28.6%'], [labels.mid, 'text-blue-300', '50.9%'], [labels.low, 'text-indigo-200', '65%']] as const).map(([text, color, top]) => {
+          const { ref, style } = labelProps();
+          return <span key={top} ref={ref} className={`absolute -translate-y-1/2 font-semibold whitespace-nowrap ${color} ${bandSize}`} style={{ left: '63%', top, ...style }}>{text}</span>;
+        })}
+        {([[sky.south ? labels.west : labels.east, '12.5%', '82%'], [sky.south ? labels.east : labels.west, '87.5%', '82%'], [sky.south ? labels.south : labels.north, '50%', '92.8%']] as const).map(([text, left, top]) => {
+          const { ref, style } = labelProps();
+          return <span key={left} ref={ref} className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-slate-400" style={{ left, top, ...style }}>{text}</span>;
+        })}
+        {labels.caption && (
           <span className="absolute left-1/2 top-[98%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-slate-400">{labels.caption}</span>
         )}
       </div>

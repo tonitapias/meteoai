@@ -14,7 +14,7 @@ const RESULTS: GeoSearchResult[] = [
 
 vi.mock('../../services/geocodingService', () => ({ searchCity: vi.fn(async () => RESULTS) }));
 
-const LABELS = { placeholder: 'Cerca una ciutat o un poble', searching: 'Cercant…', noResults: 'Cap resultat', favorites: 'Favorits' };
+const LABELS = { placeholder: 'Cerca una ciutat o un poble', searching: 'Cercant…', noResults: 'Cap resultat', favorites: 'Favorits', moreFavorites: 'Mostra {n} favorits més' };
 
 function renderSearch() {
   const onSelect = vi.fn();
@@ -71,5 +71,16 @@ describe('WelcomeSearch', () => {
     fireEvent.change(input, { target: { value: 'Valencia' } });
     await screen.findAllByRole('option');
     expect(screen.getByRole('listbox').dataset.placement).toBe('down');
+  });
+
+  it('ensenya tres favorits i la resta darrere del botó "+N"', () => {
+    const fav = (name: string, latitude: number) => ({ name, latitude, longitude: 2 });
+    const onSelect = vi.fn();
+    render(<WelcomeSearch labels={LABELS} favorites={[fav('A', 1), fav('B', 2), fav('C', 3), fav('D', 4), fav('E', 5)]} onSelect={onSelect} />);
+    expect(screen.queryByRole('button', { name: 'D' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostra 2 favorits més' }));
+    expect(screen.queryByRole('button', { name: /favorits més/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'E' }));
+    expect(onSelect).toHaveBeenCalledWith(5, 2, 'E', undefined);
   });
 });

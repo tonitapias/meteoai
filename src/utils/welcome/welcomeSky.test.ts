@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  computeWelcomeSky, orbitAngle, orbitPoint, placeFromTimeZone, welcomePhase, ORBIT,
+  computeWelcomeSky, glowAltitude, orbitAngle, orbitPoint, placeFromTimeZone, welcomePhase, zenithAltitude, ORBIT,
 } from './welcomeSky';
 import { moonPhaseKey } from './moonPhaseKey';
 import { contourPaths } from './contourTexture';
@@ -88,6 +88,36 @@ describe('computeWelcomeSky (Barcelona, 23-10-2026)', () => {
   it('a la nit polar el sol no surt a l\'òrbita', () => {
     const sky = computeWelcomeSky(new Date('2026-12-21T10:00:00Z'), { lat: 78.2, lon: 15.6, source: 'timezone' });
     expect(sky.sunAngle).toBeNull();
+  });
+});
+
+describe('hores del sol i cel del crepuscle', () => {
+  it('sortida, posta i migdia solar del dia local, com el modal Solar', () => {
+    const { sunTimes } = computeWelcomeSky(new Date('2026-10-23T10:00:00Z'), BARCELONA);
+    // Barcelona, 23-10-2026: surt a les 08:12 i es pon a les 18:59 (hora d'estiu, UTC+2).
+    expect(Math.abs(sunTimes.rise! - Date.UTC(2026, 9, 23, 6, 12))).toBeLessThan(3 * 60000);
+    expect(Math.abs(sunTimes.set! - Date.UTC(2026, 9, 23, 16, 59))).toBeLessThan(3 * 60000);
+    expect(sunTimes.noon!).toBeGreaterThan(sunTimes.rise!);
+    expect(sunTimes.noon!).toBeLessThan(sunTimes.set!);
+  });
+
+  it('a la nit polar no hi ha sortida ni posta', () => {
+    const { sunTimes } = computeWelcomeSky(new Date('2026-12-21T10:00:00Z'), { lat: 78.2, lon: 15.6, source: 'timezone' });
+    expect(sunTimes.rise).toBeNull();
+    expect(sunTimes.set).toBeNull();
+  });
+
+  it('el color de dalt no es fa negre de nit a l\'hora blava i sempre va a més amb el sol', () => {
+    expect(zenithAltitude(0)).toBe(-12);
+    expect(zenithAltitude(10)).toBe(-2);
+    expect(zenithAltitude(-4.5)).toBeGreaterThan(-15);
+    expect(zenithAltitude(-12)).toBe(-18);
+    for (let a = -30; a < 30; a += 0.5) {
+      expect(zenithAltitude(a + 0.5)).toBeGreaterThan(zenithAltitude(a));
+      expect(glowAltitude(a + 0.5)).toBeGreaterThan(glowAltitude(a));
+    }
+    expect(Math.abs(zenithAltitude(1e-9) - zenithAltitude(-1e-9))).toBeLessThan(1e-6);
+    expect(Math.abs(zenithAltitude(-12 + 1e-9) - zenithAltitude(-12 - 1e-9))).toBeLessThan(1e-6);
   });
 });
 

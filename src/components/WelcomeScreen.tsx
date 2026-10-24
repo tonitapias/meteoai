@@ -10,8 +10,8 @@ import { APP_VERSION } from '../utils/appVersion';
 import type { LocateResult } from '../hooks/useAppActions';
 import type { LocationData } from '../hooks/usePreferences';
 import { useGeoPermission } from '../hooks/welcome/useGeoPermission';
-import type { WelcomePhase, WelcomeSky } from '../utils/welcome/welcomeSky';
-import { moonPhaseKey } from '../utils/welcome/moonPhaseKey';
+import type { WelcomeSky } from '../utils/welcome/welcomeSky';
+import { welcomeEyebrow } from '../utils/welcome/welcomeEyebrow';
 import WelcomeSearch from './welcome/WelcomeSearch';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { useMinWidth } from './solar/useMinWidth';
@@ -23,6 +23,8 @@ const HowItWorksModal = lazy(() => import('./HowItWorksModal'));
 // El cel (suncalc, colors del modal Solar, fase lunar) i la columna, després del primer pintat: amb ells al
 // paquet inicial creixia ~25 KB comprimits, perquè fins ara només els carregaven els ginys diferits del tauler.
 const SkyScene = lazy(() => import('./welcome/SkyScene'));
+// Del mateix tros: quan hi ha lluna a la línia de dalt, el cel (i doncs aquest codi) ja ha arribat.
+const EyebrowMoon = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowMoon })));
 
 interface WelcomeScreenProps {
   lang: Language;
@@ -47,8 +49,6 @@ const LOCALE: Readonly<Record<Language, string>> = { ca: 'ca-ES', es: 'es-ES', e
 const SLOW_LOCATE_MS = 5000;
 /** Després d'això el botó torna a l'estat normal amb l'avís de "massa espera" (la petició pot acabar després). */
 const LOCATE_GIVE_UP_MS = 30000;
-
-const capitalize = (s: string) => (s ? s.charAt(0).toLocaleUpperCase() + s.slice(1) : s);
 
 export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, loading, onDebugToggle }: WelcomeScreenProps) {
   const w = t.welcome;
@@ -132,20 +132,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
     d.timer = window.setTimeout(() => { d.count = 0; }, 2000);
   };
 
-  // Línia de dalt: només l'hora del dispositiu i el moment del dia (o la fase lunar, de nit).
-  const eyebrow = useMemo(() => {
-    const locale = LOCALE[lang] ?? 'ca-ES';
-    const day = capitalize(new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(now));
-    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(now);
-    if (!sky) return `${day}, ${time}`;
-    const PHASE: Record<WelcomePhase, string> = { alba: w.phaseDawn, dia: w.phaseDay, posta: w.phaseDusk, nit: w.phaseNight };
-    let moment = PHASE[sky.phase];
-    if (sky.phase === 'nit' && sky.moon.angle !== null) {
-      const pct = new Intl.NumberFormat(locale, { style: 'percent' }).format(sky.moon.illumination / 100);
-      moment = `${t.moonPhases[moonPhaseKey(sky.moon.phase)]}, ${pct}`;
-    }
-    return `${day}, ${time} · ${moment}`;
-  }, [lang, now, sky, w, t.moonPhases]);
+  const eyebrow = useMemo(() => welcomeEyebrow(sky, now, LOCALE[lang] ?? 'ca-ES', w), [lang, now, sky, w]);
 
   const denied = permission === 'denied';
   const supported = permission !== 'unsupported';
@@ -164,7 +151,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
     east: w.cardinalEast, west: w.cardinalWest, north: w.cardinalNorth, south: w.cardinalSouth,
     caption: w.columnCaption, alt: w.columnAlt,
   };
-  const columnLabelsShort = { ...columnLabels, high: w.cloudsHighShort, mid: w.cloudsMidShort, low: w.cloudsLowShort };
+  const columnLabelsShort = { ...columnLabels, high: w.cloudsHighShort, mid: w.cloudsMidShort, low: w.cloudsLowShort, caption: w.columnCaptionShort };
   // Una sola columna (no una per mida amagada amb CSS): és l'element més pesant de la pantalla.
   const wide = useMinWidth('(min-width: 1024px)');
 
@@ -179,20 +166,26 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
           ? { opacity: 1, background: `linear-gradient(180deg, ${sky.colors.top} 0%, ${sky.colors.mid} 46%, ${sky.colors.bottom} 100%)` }
           : { opacity: 0 }}
       />
-      {sky && (sky.phase === 'nit' || sky.phase === 'alba') && (
-        <StarfieldBackdrop density={sky.phase === 'nit' ? 70 : 22} tint="#dbe4ff" className="bottom-[40%] opacity-80" />
+      {/* Estrelles només de nit: a l'alba i a la posta (sol a menys de 6° sota l'horitzó) gairebé no se'n veuen. */}
+      {sky?.phase === 'nit' && (
+        <StarfieldBackdrop density={70} tint="#dbe4ff" className="bottom-[40%] opacity-80" />
       )}
 
-      <header className="relative z-10 mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-16 pt-4 sm:pt-7 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 select-none" onClick={handleBrandClick}>
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]">
-            <path d="M5.07 15A8 8 0 1 1 18.93 15" />
-            <path d="M2 15H22" />
-            <path d="M6.5 19H17.5" />
-          </svg>
-          <span className="flex items-center text-[19px] sm:text-[22px] font-bold tracking-[-0.01em] leading-none">
+      <header className="relative z-10 mx-auto w-full max-w-[1440px] px-4 min-[360px]:px-5 sm:px-8 lg:px-16 pt-4 sm:pt-7 flex items-center justify-between gap-3">
+        {/* La marca, amb la mateixa icona que l'app instal·lada i la capçalera del tauler. Als mòbils de 320 px,
+            una mica més petita perquè no toqui el botó d'ajuda. */}
+        <div className="flex shrink-0 items-center gap-2 min-[360px]:gap-2.5 sm:gap-3 select-none" onClick={handleBrandClick}>
+          <img
+            src={`${import.meta.env.BASE_URL}android-chrome-192x192.png`}
+            alt=""
+            width={192}
+            height={192}
+            decoding="async"
+            className="w-8 h-8 min-[360px]:w-9 min-[360px]:h-9 sm:w-11 sm:h-11 lg:w-12 lg:h-12 shrink-0 rounded-[22%]"
+          />
+          <span className="flex items-center text-[20px] min-[360px]:text-[23px] sm:text-[28px] lg:text-[32px] font-bold tracking-[-0.015em] leading-none whitespace-nowrap">
             MeteoToni
-            <span className="ml-1.5 rounded-[4px] border-[1.5px] border-slate-100/80 px-[3px] pt-[2px] pb-px text-[9.5px] sm:text-[10.5px] tracking-[0.08em]">AI</span>
+            <span className="ml-1.5 sm:ml-2 rounded-[0.3em] border-[1.5px] sm:border-2 border-slate-100/80 px-[0.28em] pt-[0.16em] pb-[0.1em] text-[10px] min-[360px]:text-[11px] sm:text-[13px] lg:text-[14.5px] tracking-[0.08em]">AI</span>
           </span>
         </div>
         <nav aria-label={w.language} className="flex items-center gap-1 sm:gap-3">
@@ -205,18 +198,21 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
             <HelpCircle className="w-[22px] h-[22px] sm:hidden" aria-hidden="true" />
             <span className="hidden sm:inline">{w.help}</span>
           </button>
-          {/* Mòbil: el selector nadiu del sistema (els quatre botons no hi caben al costat de la marca). */}
-          <label className="relative sm:hidden">
+          {/* Mòbil: el selector nadiu del sistema (els quatre botons no hi caben al costat de la marca). Tancat
+              només ensenya el codi (CA, FR...): el nom sencer no hi cabia amb la marca gran; obert, la llista
+              del sistema amb els noms. El selector, transparent, és a sobre i rep els tocs i el teclat. */}
+          <label className={`relative sm:hidden flex h-11 items-center rounded-xl border border-slate-200/25 pl-3 pr-7 text-[13px] font-semibold uppercase text-slate-100 focus-within:border-sky-300 ${loading ? 'opacity-50' : ''}`}>
             <span className="sr-only">{w.language}</span>
+            <span aria-hidden="true">{lang}</span>
             <select
               value={lang}
               disabled={loading}
               onChange={(e) => setLang(e.target.value as Language)}
-              className="h-11 appearance-none rounded-xl border border-slate-200/25 bg-transparent pl-3.5 pr-8 text-[13px] font-semibold text-slate-100 outline-none focus:border-sky-300 disabled:opacity-50"
+              className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
             >
               {LANGS.map(l => <option key={l} value={l} className="bg-[#0c0f17] text-slate-100">{LANG_NAMES[l]}</option>)}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" aria-hidden="true" />
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" aria-hidden="true" />
           </label>
           <div role="group" aria-label={w.language} className="hidden sm:flex rounded-xl border border-slate-200/25 overflow-hidden">
             {LANGS.map(l => (
@@ -236,7 +232,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
       </header>
 
       {/* z-20, per sobre del peu (z-10): la llista del cercador hi passa per damunt quan s'obre cap avall. */}
-      <main className="relative z-20 mx-auto w-full max-w-[1440px] flex-1 px-5 sm:px-8 lg:px-16 pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-6 lg:gap-10">
+      <main className="relative z-20 mx-auto w-full max-w-[1440px] flex-1 px-4 min-[360px]:px-5 sm:px-8 lg:px-16 pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-6 lg:gap-10">
         <div className="order-1 lg:order-2 mx-auto lg:mx-0 w-full shrink-0 max-w-[min(340px,40vh)] sm:max-w-[min(440px,46vh)] lg:max-w-[min(600px,calc(100vh_-_230px),44vw)]">
           <div className="relative w-full pt-[100%]">
             <div className="absolute inset-0">
@@ -248,7 +244,12 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         </div>
 
         <section className="order-2 lg:order-1 w-full lg:max-w-[540px] flex flex-col gap-3 sm:gap-4 lg:py-8">
-          <p className="text-[13px] sm:text-sm text-slate-300">{eyebrow}</p>
+          <p className="text-[13px] sm:text-sm text-slate-300">
+            {eyebrow.head}
+            {eyebrow.moment && <> · {eyebrow.moon && sky && (
+              <Suspense fallback={null}><EyebrowMoon phase={sky.moon.phase} south={sky.south} /></Suspense>
+            )}{eyebrow.moment}</>}
+          </p>
           <h1 className="text-[30px] leading-[1.06] sm:text-5xl lg:text-[clamp(40px,4vw,58px)] lg:leading-[1.03] font-semibold tracking-[-0.025em] text-balance">
             {w.headline}
           </h1>
@@ -284,7 +285,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
               </p>
             )}
             <WelcomeSearch
-              labels={{ placeholder: w.searchPlaceholder, searching: w.searching, noResults: w.noResults, favorites: w.favorites }}
+              labels={{ placeholder: w.searchPlaceholder, searching: w.searching, noResults: w.noResults, favorites: w.favorites, moreFavorites: w.moreFavorites }}
               favorites={favorites}
               disabled={loading}
               emphasized={searchFirst}
@@ -294,8 +295,8 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         </section>
       </main>
 
-      <footer className="relative z-10 mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-16 py-4 flex flex-wrap justify-between gap-x-6 gap-y-1 text-xs text-slate-400">
-        <span>{w.dataSources}: Open-Meteo · ECMWF · MeteoSwiss · Météo-France · DWD · NOAA</span>
+      <footer className="relative z-10 mx-auto w-full max-w-[1440px] px-4 min-[360px]:px-5 sm:px-8 lg:px-16 py-4 flex flex-wrap justify-between gap-x-6 gap-y-1 text-xs text-slate-400">
+        <span>{w.dataCredit}</span>
         <span className="font-mono">v{APP_VERSION}</span>
       </footer>
 
