@@ -123,19 +123,12 @@ export const DashboardContent = () => {
                 activeRegionalModel={flags.activeRegionalModel}
             />
 
-            {/* 2. GRÀFIC PRECIPITACIÓ MINUTAL */}
-            {calculations.minutelyPreciseData && (
-                <div className="bento-card p-5 animate-in zoom-in-95 duration-500 border border-indigo-500/30 bg-[#060913]/90 shadow-[0_10px_30px_rgba(30,27,75,0.6)] relative overflow-hidden preserve-3d">
-                    <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none"></div>
-                    <div className="relative z-10 [transform:translateZ(10px)]">
-                        <MinutelyPreciseChart 
-                            data={calculations.minutelyPreciseData} 
-                            label={t.preciseRain || "SCAN PRECIPITACIÓ (1H)"} 
-                            currentPrecip={calculations.chartData24h?.[0]?.precip || 0} 
-                        />
-                    </div>
-                </div>
-            )}
+            {/* 2. GRÀFIC PRECIPITACIÓ MINUTAL (porta la seva targeta: sense pluja la pròxima hora no pinta res) */}
+            <MinutelyPreciseChart
+                data={calculations.minutelyPreciseData}
+                label={t.preciseRain || "SCAN PRECIPITACIÓ (1H)"}
+                currentPrecip={calculations.chartData24h?.[0]?.precip || 0}
+            />
 
             {/* 2a-0. LLAMPS OBSERVATS A PROP (Meteosat-12): el senyal més urgent, abans que la pluja */}
             <Suspense fallback={null}>
