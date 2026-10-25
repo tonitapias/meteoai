@@ -12,7 +12,23 @@ const renderChip = (viewMode: 'basic' | 'expert' = 'basic') => {
 };
 
 describe('ViewModeChip', () => {
-    afterEach(cleanup);
+    afterEach(() => {
+        cleanup();
+        localStorage.clear();
+    });
+
+    it('porta un punt de novetat fins que s\'obre el menú per primer cop, i ja no torna', () => {
+        const { chip } = renderChip();
+        expect(screen.getByTestId('view-menu-new-dot')).toBeTruthy();
+
+        fireEvent.click(chip);
+        expect(screen.queryByTestId('view-menu-new-dot')).toBeNull();
+        expect(localStorage.getItem('meteoai_view_menu_seen')).toBe('1');
+
+        cleanup();
+        renderChip();
+        expect(screen.queryByTestId('view-menu-new-dot')).toBeNull();
+    });
 
     it('diu en quina vista ets i obre un menú amb les dues vistes explicades', () => {
         const { chip } = renderChip();

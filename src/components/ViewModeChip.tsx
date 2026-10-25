@@ -2,10 +2,35 @@
 // Selector de vista de la capçalera: un xip petit ("Vista · Essencial") que obre un menú amb les dues
 // vistes i una frase que explica cada una. Patró de desplegable (botó + grup de botons), sense animacions
 // contínues ni blur, pensat per a mòbils modestos.
+// Perquè es distingeixi del cercador porta color d'accent i una icona que diu quanta informació es veu
+// (un quadre a Essencial, una graella a Completa), i un punt de novetat fins que s'obre el menú per primer cop.
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, LayoutGrid, Square } from 'lucide-react';
 import type { ViewMode } from '../hooks/usePreferences';
 import type { TranslationType } from '../translations';
+import { readStorage, writeStorage } from '../utils/safeStorage';
+
+const MENU_SEEN_KEY = 'meteoai_view_menu_seen';
+
+// Essencial en blau cel; Completa en indi, el color que tenia el botó "Expert".
+const MODE_STYLE: Record<ViewMode, { Icon: typeof Square; chip: string; chipOpen: string; soft: string; strong: string; dot: string }> = {
+  basic: {
+    Icon: Square,
+    chip: 'border-sky-400/45 bg-sky-500/10 hover:border-sky-300/60 hover:bg-sky-500/15',
+    chipOpen: 'border-sky-300/70 bg-sky-500/20',
+    soft: 'text-sky-300/80',
+    strong: 'text-sky-50',
+    dot: 'bg-sky-400',
+  },
+  expert: {
+    Icon: LayoutGrid,
+    chip: 'border-indigo-400/50 bg-indigo-500/[0.14] hover:border-indigo-300/60 hover:bg-indigo-500/20',
+    chipOpen: 'border-indigo-300/70 bg-indigo-500/25',
+    soft: 'text-indigo-300/80',
+    strong: 'text-indigo-50',
+    dot: 'bg-indigo-400',
+  },
+};
 
 interface ViewModeChipProps {
   viewMode: ViewMode;
@@ -16,6 +41,8 @@ interface ViewModeChipProps {
 
 export default function ViewModeChip({ viewMode, onSelect, strings, className = '' }: ViewModeChipProps) {
   const [open, setOpen] = useState(false);
+  // Es desa en obrir el menú (no amb un efecte en muntar), com l'"Ara no" de la targeta del tauler.
+  const [menuSeen, setMenuSeen] = useState(() => readStorage(MENU_SEEN_KEY) === '1');
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -45,6 +72,16 @@ export default function ViewModeChip({ viewMode, onSelect, strings, className = 
     { mode: 'expert', name: strings.complete, hint: strings.completeHint },
   ];
   const currentName = viewMode === 'expert' ? strings.complete : strings.essential;
+  const style = MODE_STYLE[viewMode];
+  const CurrentIcon = style.Icon;
+
+  const toggle = () => {
+    setOpen((o) => !o);
+    if (!menuSeen) {
+      setMenuSeen(true);
+      writeStorage(MENU_SEEN_KEY, '1');
+    }
+  };
 
   const choose = (mode: ViewMode) => {
     setOpen(false);
@@ -66,15 +103,26 @@ export default function ViewModeChip({ viewMode, onSelect, strings, className = 
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((o) => !o)}
-        className={`flex h-full min-h-[44px] items-center gap-1.5 rounded-xl border px-3 text-xs sm:text-sm transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 ${open ? 'border-sky-400/50 bg-black/60' : 'border-white/10 bg-black/40 hover:border-white/20 hover:bg-black/50'}`}
+        onClick={toggle}
+        className={`flex h-full min-h-[44px] items-center gap-1.5 rounded-xl border px-3 text-xs sm:text-sm transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 ${open ? style.chipOpen : style.chip}`}
       >
-        {/* Sota 360 px no hi cap al costat de la marca: només es deixa per als lectors de pantalla. */}
-        <span className="sr-only min-[360px]:not-sr-only text-slate-400">{strings.label}</span>
+        <CurrentIcon aria-hidden="true" className={`w-4 h-4 shrink-0 ${style.soft}`} />
+        {/* Al costat de la marca, mesurat en els 4 idiomes: "Vista" hi cap a partir de 375 px (abans, només per
+            als lectors de pantalla) i la fletxa a partir de 360 px; per sota, el xip baixava a una segona línia. */}
+        <span className={`sr-only min-[375px]:not-sr-only ${style.soft}`}>{strings.label}</span>
         <span className="sr-only">: </span>
-        <span className="font-semibold text-slate-100">{currentName}</span>
-        <ChevronDown aria-hidden="true" className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className={`font-semibold ${style.strong}`}>{currentName}</span>
+        <ChevronDown aria-hidden="true" className={`hidden min-[360px]:block w-4 h-4 shrink-0 transition-transform ${style.soft} ${open ? 'rotate-180' : ''}`} />
       </button>
+
+      {/* Punt de novetat: fix, sense animació, fins que s'obre el menú per primer cop. */}
+      {!menuSeen && (
+        <span
+          aria-hidden="true"
+          data-testid="view-menu-new-dot"
+          className={`pointer-events-none absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-[#0b0e17] ${style.dot}`}
+        />
+      )}
 
       {open && (
         <div
@@ -86,6 +134,7 @@ export default function ViewModeChip({ viewMode, onSelect, strings, className = 
           <p className="px-2 pt-1 pb-2 text-[11px] text-slate-400">{strings.menuTitle}</p>
           {options.map((option) => {
             const selected = option.mode === viewMode;
+            const { Icon: OptionIcon, soft } = MODE_STYLE[option.mode];
             return (
               <button
                 key={option.mode}
@@ -96,7 +145,10 @@ export default function ViewModeChip({ viewMode, onSelect, strings, className = 
               >
                 <Check aria-hidden="true" className={`mt-0.5 w-4 h-4 shrink-0 ${selected ? 'text-sky-400' : 'invisible'}`} />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-100">{option.name}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-100">
+                    <OptionIcon aria-hidden="true" className={`w-3.5 h-3.5 shrink-0 ${soft}`} />
+                    {option.name}
+                  </span>
                   <span className="mt-0.5 block text-xs leading-snug text-slate-400">{option.hint}</span>
                 </span>
               </button>

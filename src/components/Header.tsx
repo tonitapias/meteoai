@@ -260,7 +260,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
 
   return (
     // Mòbil: marca i xip de vista a la primera fila, cercador a la segona. PC: marca, cercador i xip en una fila.
-    <header className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-x-4 gap-y-3 z-50 relative py-2 sm:py-0">
+    <header className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-x-3 md:gap-x-4 gap-y-3 z-50 relative py-2 sm:py-0">
 
       {/* CSS INTERN PEL GLASSMORPHISM AVANÇAT */}
       <style>{`
