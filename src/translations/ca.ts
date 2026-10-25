@@ -183,6 +183,7 @@ export const ca = {
     cardDismiss: "Ara no",
     compactRow: "pressió, núvols, lluna…",
     sectionTitle: "Vista completa",
+    sectionHint: "Panells de detall i gràfics per models",
     backToEssential: "Torna a l'essencial",
     teaserPressure: "Pressió {v} hPa",
     teaserAir: "Qualitat de l'aire {v}",

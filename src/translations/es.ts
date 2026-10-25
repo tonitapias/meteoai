@@ -183,6 +183,7 @@ export const es = {
     cardDismiss: "Ahora no",
     compactRow: "presión, nubes, luna…",
     sectionTitle: "Vista completa",
+    sectionHint: "Paneles de detalle y gráficos por modelos",
     backToEssential: "Volver a la esencial",
     teaserPressure: "Presión {v} hPa",
     teaserAir: "Calidad del aire {v}",

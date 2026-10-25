@@ -184,6 +184,7 @@ export const en = {
     cardDismiss: "Not now",
     compactRow: "pressure, clouds, moon…",
     sectionTitle: "Full view",
+    sectionHint: "Detail panels and charts by model",
     backToEssential: "Back to essential",
     teaserPressure: "Pressure {v} hPa",
     teaserAir: "Air quality: {v}",

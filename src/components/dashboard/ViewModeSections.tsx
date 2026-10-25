@@ -3,12 +3,14 @@
 // (just després del resum de la IA):
 // - MoreDetailPrompt (vista essencial): "Vols més detall?" amb valors d'ara que la vista essencial no ensenya.
 //   Sencera només per a qui encara no coneix la vista completa; si no, una sola línia.
-// - CompleteViewHeading (vista completa): on comença el contingut nou i com tornar a l'essencial.
+// - CompleteViewHeading (vista completa): una franja amb els colors i la icona de la vista completa que marca
+//   on comença el contingut nou, amb el botó per tornar a l'essencial (colors i icona de l'essencial).
 // Sense blur, filtres ni animacions contínues (mòbils modestos).
 import { useEffect, useId, useRef } from 'react';
 import { ChevronRight, Eye, Gauge, Leaf, Moon, Plus } from 'lucide-react';
 import type { TranslationType } from '../../translations';
 import type { DetailTeaserItem, DetailTeaserKey } from '../../utils/detailTeaser';
+import { VIEW_MODE_STYLE } from '../viewModeStyle';
 import { COMPLETE_VIEW_ANCHOR_ID } from './completeViewAnchor';
 
 type ViewModeStrings = TranslationType['viewModes'];
@@ -121,15 +123,32 @@ export function CompleteViewHeading({ strings, onBack, takeFocus }: CompleteView
     if (takeFocus('heading')) titleRef.current?.focus();
   }, [takeFocus]);
 
+  const complete = VIEW_MODE_STYLE.expert;
+  const essential = VIEW_MODE_STYLE.basic;
+
   return (
-    <div id={COMPLETE_VIEW_ANCHOR_ID} className="flex scroll-mt-4 items-center justify-between gap-3 px-1">
-      <h2 ref={titleRef} tabIndex={-1} className="text-sm font-semibold text-indigo-200 focus:outline-none">{strings.sectionTitle}</h2>
+    <div
+      id={COMPLETE_VIEW_ANCHOR_ID}
+      // flex-wrap: en mòbils molt estrets (o en francès a 360 px) el botó baixa a una segona línia en lloc
+      // d'aprimar el títol i l'explicació fins a quatre línies.
+      className="flex flex-wrap scroll-mt-4 items-center gap-x-3 gap-y-2 rounded-2xl border border-indigo-400/50 bg-indigo-500/[0.14] px-3 py-2.5 sm:px-4"
+    >
+      <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-400/20">
+        <complete.Icon className={`h-[18px] w-[18px] ${complete.soft}`} />
+      </span>
+      <div className="min-w-[8rem] flex-1">
+        <h2 ref={titleRef} tabIndex={-1} className={`text-base font-semibold leading-tight focus:outline-none ${complete.strong}`}>{strings.sectionTitle}</h2>
+        <p className={`mt-0.5 text-xs leading-snug ${complete.soft}`}>{strings.sectionHint}</p>
+      </div>
+      {/* Al mòbil "Torna a l'essencial" no hi cap al costat del títol: es veu "Essencial" i es diu sencer. */}
       <button
         type="button"
         onClick={onBack}
-        className="min-h-[44px] rounded-xl px-3 text-sm text-slate-400 transition-colors cursor-pointer hover:bg-white/5 hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+        aria-label={strings.backToEssential}
+        className={`ml-auto inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 ${essential.chip} ${essential.strong}`}
       >
-        {strings.backToEssential}
+        <essential.Icon aria-hidden="true" className={`h-4 w-4 ${essential.soft}`} />
+        {strings.essential}
       </button>
     </div>
   );

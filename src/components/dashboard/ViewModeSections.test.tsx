@@ -69,7 +69,11 @@ describe('CompleteViewHeading', () => {
         const { container } = render(<CompleteViewHeading strings={ca.viewModes} onBack={onBack} takeFocus={() => true} />);
         expect(container.querySelector(`#${COMPLETE_VIEW_ANCHOR_ID}`)).toBeTruthy();
         expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Vista completa' }));
-        fireEvent.click(screen.getByRole('button', { name: "Torna a l'essencial" }));
+        expect(screen.getByText('Panells de detall i gràfics per models')).toBeTruthy();
+        // Es veu "Essencial" (no hi cap més al mòbil), però el lector de pantalla diu "Torna a l'essencial".
+        const back = screen.getByRole('button', { name: "Torna a l'essencial" });
+        expect(back.textContent).toBe('Essencial');
+        fireEvent.click(back);
         expect(onBack).toHaveBeenCalledTimes(1);
     });
 });

@@ -184,6 +184,7 @@ export const fr = {
     cardDismiss: "Pas maintenant",
     compactRow: "pression, nuages, lune…",
     sectionTitle: "Vue complète",
+    sectionHint: "Panneaux de détail et graphiques par modèle",
     backToEssential: "Revenir à l'essentielle",
     teaserPressure: "Pression {v} hPa",
     teaserAir: "Qualité de l'air : {v}",
