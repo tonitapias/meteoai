@@ -7,6 +7,11 @@ import type { LocateResult } from '../hooks/useAppActions';
 import type { LocationData } from '../hooks/usePreferences';
 import { WELCOME_ACCENT } from '../utils/welcome/welcomeAccent';
 
+// El cel (la columna, l'accent del titular i el moment del dia) es carrega amb un import dinàmic després del
+// primer pintat. L'espera per defecte d'1 s no n'hi ha prou quan la màquina va carregada (la prova de l'accent
+// fallava una de cada tres vegades fins i tot sola): el que es prova és que arriba, no quan.
+const SKY_WAIT = { timeout: 5000 };
+
 const FAVORITES: LocationData[] = [
   { name: 'Girona', latitude: 41.98, longitude: 2.82, country: 'Espanya' },
   { name: 'Val Thorens', latitude: 45.3, longitude: 6.58, country: 'França' },
@@ -56,7 +61,7 @@ describe('WelcomeScreen', () => {
       const n = parseInt(hex.slice(1), 16);
       return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
     });
-    await waitFor(() => expect(accents).toContain(second.style.color));
+    await waitFor(() => expect(accents).toContain(second.style.color), SKY_WAIT);
   });
 
   it('un sol toc demana la ubicació (no cal mantenir premut)', async () => {
@@ -106,9 +111,9 @@ describe('WelcomeScreen', () => {
 
   it('la columna del cel (carregada després del primer pintat) té una descripció i les capes de núvols', async () => {
     renderWelcome();
-    expect(await screen.findByRole('img', { name: TRANSLATIONS.ca.welcome.columnAlt })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: TRANSLATIONS.ca.welcome.columnAlt }, SKY_WAIT)).toBeInTheDocument();
     expect(screen.getByText(TRANSLATIONS.ca.welcome.cloudsLowShort)).toBeInTheDocument();
     // Quan arriba el cel, la línia de dalt hi afegeix el moment del dia (alba, dia, posta, nit o la lluna).
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).previousElementSibling?.textContent).toMatch(/·/));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).previousElementSibling?.textContent).toMatch(/·/), SKY_WAIT);
   });
 });
