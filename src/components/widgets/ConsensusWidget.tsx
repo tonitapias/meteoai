@@ -49,7 +49,7 @@ const translations = {
     title: 'Motor de Consens',
     affinity: 'Precisió',
     temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
-    chartsBtn: 'Telemetria Gràfica Completa',
+    chartsBtn: 'Compara els models',
     status: { sync: 'Alineat', discrepancy: 'Discrepància', alert: 'Divergència' },
     futureDivergence: 'Possible canvi brusc en 3h (pluja forta o vent fort)'
   },
@@ -57,7 +57,7 @@ const translations = {
     title: 'Motor de Consenso',
     affinity: 'Precisión',
     temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Δ', secondary: 'GLO',
-    chartsBtn: 'Telemetría Gráfica Completa',
+    chartsBtn: 'Compara los modelos',
     status: { sync: 'Alineado', discrepancy: 'Discrepancia', alert: 'Divergencia' },
     futureDivergence: 'Posible cambio brusco en 3h (lluvia o viento fuerte)'
   },
@@ -65,7 +65,7 @@ const translations = {
     title: 'Consensus Engine',
     affinity: 'Accuracy',
     temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Δ', secondary: 'GLO',
-    chartsBtn: 'Full Graphical Telemetry',
+    chartsBtn: 'Compare models',
     status: { sync: 'Aligned', discrepancy: 'Variance', alert: 'Divergence' },
     futureDivergence: 'Possible sudden shift in 3h (heavy rain or strong wind)'
   },
@@ -73,7 +73,7 @@ const translations = {
     title: 'Moteur de Consensus',
     affinity: 'Précision',
     temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
-    chartsBtn: 'Télémétrie Graphique Complète',
+    chartsBtn: 'Comparer les modèles',
     status: { sync: 'Aligné', discrepancy: 'Écart', alert: 'Divergence' },
     futureDivergence: 'Changement brusque possible en 3h (pluie ou vent fort)'
   }

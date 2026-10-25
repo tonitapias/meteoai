@@ -1,10 +1,13 @@
 // src/components/dashboard/DashboardContent.tsx
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { useDetailHint } from '../../hooks/useDetailHint';
 import { getSafeLatitude } from '../../utils/weatherMath';
 import { findNowIndex } from '../../utils/hourlyChartSeries';
+import { buildDetailTeaser } from '../../utils/detailTeaser';
 import { isRegionalModelActive } from '../../constants/regionalModels';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
+import { CompleteViewHeading, MoreDetailPrompt, type TakeFocusRequest } from './ViewModeSections';
 
 // Components estàtics
 import CurrentWeather from '../CurrentWeather';
@@ -38,6 +41,49 @@ export const DashboardContent = () => {
     // OBTENIM TOT DIRECTAMENT DEL CONTEXT
     const { state, actions, flags, t } = useAppContext();
     const { weatherData, calculations } = state;
+    // 'expert' = vista completa (vegeu ViewMode a usePreferences.ts)
+    const isExpert = flags.viewMode === 'expert';
+    const { setViewMode } = actions;
+
+    // Qui ha entrat a la vista completa ja la coneix: la targeta "Vols més detall?" passa a una línia.
+    // També val per a qui ja la tenia desada d'abans (en entrar, ja és 'expert').
+    const { compact: detailHintCompact, markCompact } = useDetailHint();
+    useEffect(() => {
+        if (isExpert && !detailHintCompact) markCompact();
+    }, [isExpert, detailHintCompact, markCompact]);
+
+    const focusRequestRef = useRef<'prompt' | 'heading' | null>(null);
+    const takeFocus = useCallback<TakeFocusRequest>((target) => {
+        if (focusRequestRef.current !== target) return false;
+        focusRequestRef.current = null;
+        return true;
+    }, []);
+    const showCompleteView = () => {
+        focusRequestRef.current = 'heading';
+        setViewMode('expert');
+    };
+    const backToEssential = () => {
+        focusRequestRef.current = 'prompt';
+        setViewMode('basic');
+    };
+    const dismissDetailPrompt = () => {
+        focusRequestRef.current = 'prompt';
+        markCompact();
+    };
+
+    const nowMs = state.now.getTime();
+    const currentConditions = weatherData?.current;
+    const detailTeaser = useMemo(() => {
+        if (isExpert || !currentConditions) return [];
+        return buildDetailTeaser({
+            current: currentConditions,
+            aqiCurrent: (state.aqiData as Record<string, unknown> | null)?.current,
+            effectiveCode: calculations.effectiveWeatherCode,
+            nowMs,
+            lang: flags.lang,
+            templates: t.viewModes,
+        });
+    }, [isExpert, currentConditions, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.viewModes]);
 
     // Gestió d'estats de càrrega i error
     if (state.error) return <ErrorBanner message={state.error} />;
@@ -46,7 +92,6 @@ export const DashboardContent = () => {
 
     // Forcem el tipatge de location per corregir la pèrdua d'inferència (Risc Zero)
     const loc = weatherData.location as LocationMeta | undefined;
-    const isExpert = flags.viewMode === 'expert';
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col gap-6 sm:gap-8 relative z-10 w-full max-w-7xl mx-auto">
@@ -124,31 +169,44 @@ export const DashboardContent = () => {
 
             <ErrorBoundary>
                 <div className="flex flex-col gap-6 sm:gap-8">
-                    {/* 4. GINYS EXPERTS */}
+                    {/* 4. VISTA COMPLETA (ginys de detall) o, a la vista essencial, la targeta que la dona a conèixer */}
+                    {!isExpert && (
+                        <MoreDetailPrompt
+                            compact={detailHintCompact}
+                            teaser={detailTeaser}
+                            strings={t.viewModes}
+                            onShow={showCompleteView}
+                            onDismiss={dismissDetailPrompt}
+                            takeFocus={takeFocus}
+                        />
+                    )}
                     {isExpert && (
-                        <Suspense fallback={<SectionSkeleton />}>
-                            <ExpertWidgets
-                                weatherData={weatherData}
-                                aqiData={state.aqiData}
-                                lang={flags.lang}
-                                unit={flags.unit}
-                                freezingLevel={calculations.currentFreezingLevel ?? null}
-                                chartDataFull={calculations.chartDataFull}
-                                effectiveCode={calculations.effectiveWeatherCode}
-                                now={state.now.getTime()}
-                                onShowSolarModal={() => actions.setShowSolarModal(true)}
-                                onShowMoonModal={() => actions.setShowMoonModal(true)}
-                                onShowStormModal={() => actions.setShowStormModal(true)}
-                                onShowAqiModal={() => actions.setShowAqiModal(true)}
-                                onShowUvModal={() => actions.setShowUvModal(true)}
-                                onShowPressureModal={() => actions.setShowPressureModal(true)}
-                                onShowComfortModal={() => actions.setShowComfortModal(true)}
-                                onShowVisibilityModal={() => actions.setShowVisibilityModal(true)}
-                                onShowCloudLayersModal={() => actions.setShowCloudLayersModal(true)}
-                                onShowSnowLevelModal={() => actions.setShowSnowLevelModal(true)}
-                                onShowWindModal={() => actions.setShowWindModal(true)}
-                            />
-                        </Suspense>
+                        <div className="flex flex-col gap-3">
+                            <CompleteViewHeading strings={t.viewModes} onBack={backToEssential} takeFocus={takeFocus} />
+                            <Suspense fallback={<SectionSkeleton />}>
+                                <ExpertWidgets
+                                    weatherData={weatherData}
+                                    aqiData={state.aqiData}
+                                    lang={flags.lang}
+                                    unit={flags.unit}
+                                    freezingLevel={calculations.currentFreezingLevel ?? null}
+                                    chartDataFull={calculations.chartDataFull}
+                                    effectiveCode={calculations.effectiveWeatherCode}
+                                    now={state.now.getTime()}
+                                    onShowSolarModal={() => actions.setShowSolarModal(true)}
+                                    onShowMoonModal={() => actions.setShowMoonModal(true)}
+                                    onShowStormModal={() => actions.setShowStormModal(true)}
+                                    onShowAqiModal={() => actions.setShowAqiModal(true)}
+                                    onShowUvModal={() => actions.setShowUvModal(true)}
+                                    onShowPressureModal={() => actions.setShowPressureModal(true)}
+                                    onShowComfortModal={() => actions.setShowComfortModal(true)}
+                                    onShowVisibilityModal={() => actions.setShowVisibilityModal(true)}
+                                    onShowCloudLayersModal={() => actions.setShowCloudLayersModal(true)}
+                                    onShowSnowLevelModal={() => actions.setShowSnowLevelModal(true)}
+                                    onShowWindModal={() => actions.setShowWindModal(true)}
+                                />
+                            </Suspense>
+                        </div>
                     )}
                     
                     {/* 5. PREVISIÓ 24H */}

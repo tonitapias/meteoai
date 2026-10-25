@@ -19,33 +19,33 @@ interface ConsensusModalProps {
 
 const translations = {
   ca: {
-    modalTitle: 'Telemetria Horària',
+    modalTitle: 'Hora a hora',
     local: 'LOC', global: 'GLO', now: 'ARA',
-    sync: 'Sincronitzant matrius horàries...',
+    sync: 'Carregant els models...',
     tempLabel: 'TEMPERATURA',
     rainLabel: 'PLUJA / NEU',
     windLabel: 'VENT (10M)'
   },
   es: {
-    modalTitle: 'Telemetría Horaria',
+    modalTitle: 'Hora a hora',
     local: 'LOC', global: 'GLO', now: 'AHORA',
-    sync: 'Sincronizando matrices horarias...',
+    sync: 'Cargando los modelos...',
     tempLabel: 'TEMPERATURA',
     rainLabel: 'LLUVIA / NIEVE',
     windLabel: 'VIENTO (10M)'
   },
   en: {
-    modalTitle: 'Hourly Telemetry',
+    modalTitle: 'Hour by hour',
     local: 'LOC', global: 'GLO', now: 'NOW',
-    sync: 'Synchronizing hourly matrices...',
+    sync: 'Loading models...',
     tempLabel: 'TEMPERATURE',
     rainLabel: 'RAIN / SNOW',
     windLabel: 'WIND (10M)'
   },
   fr: {
-    modalTitle: 'Télémétrie Horaire',
+    modalTitle: 'Heure par heure',
     local: 'LOC', global: 'GLO', now: 'ACTUEL',
-    sync: 'Synchronisation des matrices horaires...',
+    sync: 'Chargement des modèles...',
     tempLabel: 'TEMPÉRATURE',
     rainLabel: 'PLUIE / NEIGE',
     windLabel: 'VENT (10M)'

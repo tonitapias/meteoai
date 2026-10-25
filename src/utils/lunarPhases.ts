@@ -84,3 +84,32 @@ export const getMoonAgeDays = (date: Date): number => {
   if (!Number.isFinite(ms)) return NaN;
   return Math.round((ms - principalPhaseMs(lunationIndexAt(ms))) / DAY_MS);
 };
+
+// DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte (mateixos llindars que el modal).
+// El fan servir la targeta Fase lunar i la targeta "Vols més detall?", perquè totes dues diguin la mateixa fase.
+export const getMoonPhaseName = (phase: number, lang: string): string => {
+  const safePhase = typeof phase === 'number' && !isNaN(phase) ? Math.max(0, Math.min(1, phase)) : 0;
+
+  // Mapatge astronòmic rigorós (8 fases)
+  let phaseIndex = 0;
+  if (safePhase < 0.02 || safePhase > 0.98) phaseIndex = 0; // Nova
+  else if (safePhase < 0.23) phaseIndex = 1; // Creixent
+  else if (safePhase < 0.27) phaseIndex = 2; // Quart Creixent
+  else if (safePhase < 0.48) phaseIndex = 3; // Gibosa Creixent
+  else if (safePhase <= 0.52) phaseIndex = 4; // Plena
+  else if (safePhase < 0.73) phaseIndex = 5; // Gibosa Minvant
+  else if (safePhase < 0.77) phaseIndex = 6; // Quart Minvant
+  else phaseIndex = 7; // Minvant
+
+  const dict: Record<string, string[]> = {
+    ca: ['Lluna Nova', 'Creixent', 'Quart Creixent', 'Gibosa Creixent', 'Lluna Plena', 'Gibosa Minvant', 'Quart Minvant', 'Minvant'],
+    es: ['Luna Nueva', 'Creciente', 'Cuarto Creciente', 'Gibosa Creciente', 'Luna Llena', 'Gibosa Menguante', 'Cuarto Menguante', 'Menguante'],
+    en: ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'],
+    fr: ['Nouvelle Lune', 'Premier Croissant', 'Premier Quartier', 'Lune Gibbeuse Crois.', 'Pleine Lune', 'Lune Gibbeuse Décrois.', 'Dernier Quartier', 'Dernier Croissant']
+  };
+
+  const safeLang = typeof lang === 'string' ? lang.toLowerCase() : 'ca';
+  const activeLang = dict[safeLang] ? safeLang : 'ca';
+
+  return dict[activeLang][phaseIndex] || '--';
+};

@@ -2,123 +2,32 @@ import { Wind, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, CARD_VEIL, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
+import { AQI_TRANSLATIONS, AqiLevel, AqiResult, extractAqiData, getAqiLevel, getAqiSafeLang } from '../../utils/aqiLevel';
 
-type AqiResult = { 
-    value: number; 
-    type: 'EAQI' | 'USAQI';
-    pm25: number | null;
-    pm10: number | null;
+type AqiStyle = { color: string; bg: string; shadow: string };
+
+// Els llindars de cada nivell són a utils/aqiLevel.ts; aquí només el color de cada nivell i escala.
+const EAQI_STYLES: Partial<Record<AqiLevel, AqiStyle>> = {
+    extreme: { color: 'text-purple-500', bg: 'bg-purple-500', shadow: 'shadow-[0_0_12px_#a855f7]' },
+    very_poor: { color: 'text-fuchsia-500', bg: 'bg-fuchsia-500', shadow: 'shadow-[0_0_12px_#d946ef]' },
+    poor: { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]' },
+    moderate: { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]' },
+    fair: { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]' },
+    good: { color: 'text-cyan-400', bg: 'bg-cyan-500', shadow: 'shadow-[0_0_8px_#22d3ee]' }
 };
 
-// Diccionari Tàctic Local per a Risc Zero (Garanteix els 4 idiomes encara que falli l'i18n global)
-type SupportedLang = 'ca' | 'es' | 'en' | 'fr';
-
-const AQI_TRANSLATIONS: Record<SupportedLang, Record<string, string>> = {
-    ca: {
-        title: "QUALITAT AIRE",
-        nd: "N/D",
-        good: "BONA",
-        fair: "RAONABLE",
-        moderate: "MODERADA",
-        sensitive: "SENSIBLE",
-        poor: "DOLENTA",
-        very_poor: "MOLT DOLENTA",
-        extreme: "EXTREMA",
-        hazardous: "PERILLOSA"
-    },
-    es: {
-        title: "CALIDAD AIRE",
-        nd: "N/D",
-        good: "BUENA",
-        fair: "RAZONABLE",
-        moderate: "MODERADA",
-        sensitive: "SENSIBLE",
-        poor: "MALA",
-        very_poor: "MUY MALA",
-        extreme: "EXTREMA",
-        hazardous: "PELIGROSA"
-    },
-    en: {
-        title: "AIR QUALITY",
-        nd: "N/A",
-        good: "GOOD",
-        fair: "FAIR",
-        moderate: "MODERATE",
-        sensitive: "SENSITIVE",
-        poor: "POOR",
-        very_poor: "VERY POOR",
-        extreme: "EXTREME",
-        hazardous: "HAZARDOUS"
-    },
-    fr: {
-        title: "QUALITÉ AIR",
-        nd: "N/D",
-        good: "BONNE",
-        fair: "PASSABLE",
-        moderate: "MODÉRÉE",
-        sensitive: "SENSIBLE",
-        poor: "MAUVAISE",
-        very_poor: "TRÈS MAUVAISE",
-        extreme: "EXTRÊME",
-        hazardous: "DANGEREUSE"
-    }
-};
-
-// Resolució segura d'idioma (Fallback sempre a Català)
-const getSafeLang = (langParam?: string): SupportedLang => {
-    if (!langParam) return 'ca';
-    const l = langParam.toLowerCase().substring(0, 2);
-    if (l === 'es') return 'es';
-    if (l === 'en') return 'en';
-    if (l === 'fr') return 'fr';
-    return 'ca';
-};
-
-// DOCTRINA RISC ZERO: Extracció profunda blindada amb limitador de recursivitat (Stack Overflow Protection)
-const extractAqiData = (dataObj: unknown, depth = 0): AqiResult | null => {
-    // Tallem en sec si passem de 4 nivells de profunditat per evitar bucles infinits
-    if (!dataObj || typeof dataObj !== 'object' || depth > 4) return null;
-    const record = dataObj as Record<string, unknown>;
-
-    // Extracció segura de PM2.5 i PM10
-    const pm25 = typeof record.pm2_5 === 'number' && !isNaN(record.pm2_5) ? record.pm2_5 : null;
-    const pm10 = typeof record.pm10 === 'number' && !isNaN(record.pm10) ? record.pm10 : null;
-
-    // 1. PRIORITAT ABSOLUTA: Escala Europea Oficial (AEMA)
-    if (typeof record.european_aqi === 'number' && !isNaN(record.european_aqi)) {
-        return { value: record.european_aqi, type: 'EAQI', pm25, pm10 };
-    }
-    
-    // 2. FALLBACK: Escala Americana (EPA)
-    if (typeof record.us_aqi === 'number' && !isNaN(record.us_aqi)) {
-        return { value: record.us_aqi, type: 'USAQI', pm25, pm10 };
-    }
-    if (typeof record.aqi === 'number' && !isNaN(record.aqi)) {
-        return { value: record.aqi, type: 'USAQI', pm25, pm10 };
-    }
-
-    // 3. Cerca recursiva controlada
-    const wrapperKeys = ['current', 'current_weather', 'hourly', 'daily', 'air_quality'];
-    for (const wrapper of wrapperKeys) {
-        if (record[wrapper] && typeof record[wrapper] === 'object') {
-            const nestedAqi = extractAqiData(record[wrapper], depth + 1);
-            if (nestedAqi !== null) {
-                return {
-                    ...nestedAqi,
-                    // Prioritzem els PM niuats, però usem els globals si falten
-                    pm25: nestedAqi.pm25 ?? pm25,
-                    pm10: nestedAqi.pm10 ?? pm10
-                };
-            }
-        }
-    }
-
-    return null;
+const USAQI_STYLES: Partial<Record<AqiLevel, AqiStyle>> = {
+    hazardous: { color: 'text-red-800', bg: 'bg-red-800', shadow: 'shadow-[0_0_16px_#991b1b]' },
+    very_poor: { color: 'text-fuchsia-500', bg: 'bg-fuchsia-500', shadow: 'shadow-[0_0_12px_#d946ef]' },
+    poor: { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]' },
+    sensitive: { color: 'text-amber-400', bg: 'bg-amber-400', shadow: 'shadow-[0_0_12px_#fbbf24]' },
+    moderate: { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]' },
+    good: { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]' }
 };
 
 export const AqiWidget = ({ data, lang }: WidgetProps) => {
     const t = getTrans(lang);
-    const safeLang = getSafeLang(lang);
+    const safeLang = getAqiSafeLang(lang);
     const tLocal = AQI_TRANSLATIONS[safeLang];
     
     // Prioritzem el diccionari global pel títol si existeix, si no, usem el local
@@ -129,28 +38,10 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
 
     const getAqiState = (result: AqiResult | null) => {
         if (!result) return { color: 'text-slate-500', bg: 'bg-slate-500/20', shadow: 'shadow-none', label: tLocal.nd, barMax: 100 };
-        
-        const { value, type } = result;
 
-        // ESTÀNDARD EAQI (Agència Europea de Medi Ambient): 6 Nivells Oficials
-        if (type === 'EAQI') {
-            if (value > 150) return { color: 'text-purple-500', bg: 'bg-purple-500', shadow: 'shadow-[0_0_12px_#a855f7]', label: tLocal.extreme, barMax: 200 };
-            if (value > 100) return { color: 'text-fuchsia-500', bg: 'bg-fuchsia-500', shadow: 'shadow-[0_0_12px_#d946ef]', label: tLocal.very_poor, barMax: 200 };
-            if (value > 50)  return { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]', label: tLocal.poor, barMax: 200 };
-            if (value > 40)  return { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]', label: tLocal.moderate, barMax: 200 };
-            if (value > 20)  return { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]', label: tLocal.fair, barMax: 200 };
-            return { color: 'text-cyan-400', bg: 'bg-cyan-500', shadow: 'shadow-[0_0_8px_#22d3ee]', label: tLocal.good, barMax: 200 };
-        } 
-        
-        // ESTÀNDARD USAQI (EPA): 6 Nivells Oficials (Arriba fins a 500)
-        else {
-            if (value > 300) return { color: 'text-red-800', bg: 'bg-red-800', shadow: 'shadow-[0_0_16px_#991b1b]', label: tLocal.hazardous, barMax: 500 };
-            if (value > 200) return { color: 'text-fuchsia-500', bg: 'bg-fuchsia-500', shadow: 'shadow-[0_0_12px_#d946ef]', label: tLocal.very_poor, barMax: 500 };
-            if (value > 150) return { color: 'text-rose-500', bg: 'bg-rose-500', shadow: 'shadow-[0_0_12px_#f43f5e]', label: tLocal.poor, barMax: 500 };
-            if (value > 100) return { color: 'text-amber-400', bg: 'bg-amber-400', shadow: 'shadow-[0_0_12px_#fbbf24]', label: tLocal.sensitive, barMax: 500 };
-            if (value > 50)  return { color: 'text-yellow-300', bg: 'bg-yellow-300', shadow: 'shadow-[0_0_8px_#fde047]', label: tLocal.moderate, barMax: 500 };
-            return { color: 'text-emerald-400', bg: 'bg-emerald-500', shadow: 'shadow-[0_0_8px_#34d399]', label: tLocal.good, barMax: 500 };
-        }
+        const level = getAqiLevel(result);
+        const style = (result.type === 'EAQI' ? EAQI_STYLES : USAQI_STYLES)[level] ?? { color: 'text-slate-500', bg: 'bg-slate-500/20', shadow: 'shadow-none' };
+        return { ...style, label: tLocal[level], barMax: result.type === 'EAQI' ? 200 : 500 };
     };
 
     const { color, bg, shadow, label, barMax } = getAqiState(aqiData);

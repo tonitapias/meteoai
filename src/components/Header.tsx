@@ -1,7 +1,9 @@
 // src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, Layers, Activity } from 'lucide-react';
-import { usePreferences, LocationData } from '../hooks/usePreferences';
+import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft } from 'lucide-react';
+import { usePreferences, LocationData, ViewMode } from '../hooks/usePreferences';
+import ViewModeChip from './ViewModeChip';
+import { scrollToCompleteView } from './dashboard/completeViewAnchor';
 import { reverseGeocode, GeoSearchResult } from '../services/geocodingService';
 import { useCitySearch } from '../hooks/useCitySearch';
 import { useAppContext } from '../context/AppContext';
@@ -22,9 +24,6 @@ interface HeaderTranslations {
   geoError: string;
   favorites: string;
   results: string;
-  visualMode: string;
-  basic: string;
-  expert: string;
   devMode: string;
   locationTitle: string;
   useCurrentLocation: string;
@@ -41,9 +40,6 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoError: "No s'ha pogut obtenir la ubicació precisa. Comprova el GPS o la connexió.",
     favorites: "FAVORITS",
     results: "RESULTATS",
-    visualMode: "MODE VISUAL",
-    basic: "BÀSIC",
-    expert: "EXPERT",
     devMode: "MODE DEV",
     locationTitle: "Localització",
     useCurrentLocation: "Utilitzar la meva ubicació actual",
@@ -57,9 +53,6 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoError: "No se ha podido obtener la ubicación precisa. Comprueba el GPS o la conexión.",
     favorites: "FAVORITOS",
     results: "RESULTADOS",
-    visualMode: "MODO VISUAL",
-    basic: "BÁSICO",
-    expert: "EXPERTO",
     devMode: "MODO DEV",
     locationTitle: "Localización",
     useCurrentLocation: "Usar mi ubicación actual",
@@ -73,9 +66,6 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoError: "Impossible d'obtenir une position précise. Vérifiez le GPS ou la connexion.",
     favorites: "FAVORIS",
     results: "RÉSULTATS",
-    visualMode: "MODE VISUEL",
-    basic: "BASIQUE",
-    expert: "EXPERT",
     devMode: "MODE DÉV",
     locationTitle: "Localisation",
     useCurrentLocation: "Utiliser ma position actuelle",
@@ -89,9 +79,6 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoError: "Could not obtain precise location. Check GPS or connection.",
     favorites: "FAVORITES",
     results: "RESULTS",
-    visualMode: "VISUAL MODE",
-    basic: "BASIC",
-    expert: "EXPERT",
     devMode: "DEV MODE",
     locationTitle: "Location",
     useCurrentLocation: "Use my current location",
@@ -114,6 +101,12 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const viewMode = flags.viewMode;
   const setViewMode = actions.setViewMode;
   const onDebugToggle = actions.toggleDebug;
+
+  // Des del xip, el contingut nou de la vista completa queda unes pantalles més avall: s'hi baixa.
+  const handleViewModeSelect = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (mode === 'expert') scrollToCompleteView();
+  };
 
   // Risc Zero: Prioritzem l'idioma i traduccions del context. Ignorem props exteriors desactualitzades.
   const activeLang: Language = (flags.lang as Language) || propLang || 'ca';
@@ -266,27 +259,21 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   };
 
   return (
-    <header className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 z-50 relative py-2 sm:py-0">
-      
-      {/* CSS INTERN PEL GLASSMORPHISM AVANÇAT I SKEUOMORFISME */}
+    // Mòbil: marca i xip de vista a la primera fila, cercador a la segona. PC: marca, cercador i xip en una fila.
+    <header className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-x-4 gap-y-3 z-50 relative py-2 sm:py-0">
+
+      {/* CSS INTERN PEL GLASSMORPHISM AVANÇAT */}
       <style>{`
         /* Sense backdrop-filter: sobre el fons fosc no es veia i en mòbils modestos costava a cada fotograma. */
         .header-glass {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
         }
-        .physical-switch-track {
-          background-color: #020617;
-          box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
-        .physical-btn-active {
-          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 4px 15px rgba(0, 0, 0, 0.4);
-        }
       `}</style>
 
       {/* LOGO I TÍTOL (Efecte Insígnia 3D) */}
-      <div 
+      <div
         onClick={handleTitleClick}
-        className="flex items-center gap-3 opacity-90 hover:opacity-100 select-none cursor-pointer group transition-all w-full justify-center md:w-auto md:justify-start order-0 relative z-10"
+        className="flex items-center gap-3 opacity-90 hover:opacity-100 select-none cursor-pointer group transition-all shrink-0 order-0 relative z-10"
       >
           {/* Contenidor Insígnia Físic */}
           <div className="relative p-1.5 sm:p-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/10 to-transparent border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_4px_10px_rgba(0,0,0,0.5)] group-hover:border-sky-400/50 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.3)] transition-all duration-500">
@@ -301,7 +288,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
              />
           </div>
           
-          <div className="flex flex-col items-center md:items-start">
+          <div className="flex flex-col items-start">
              <span className="text-[10px] sm:text-xs font-black tracking-[0.3em] text-slate-300 group-hover:text-white transition-colors drop-shadow-md">METEOTONI AI</span>
              {debugClicks > 0 && debugClicks < 5 && (
                  <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono font-bold tracking-widest bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded animate-pulse mt-0.5 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
@@ -312,7 +299,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
       </div>
 
       {/* BARRA DE CERCA (Spatial UI) */}
-      <div ref={wrapperRef} className="flex-1 w-full max-w-2xl relative order-2 md:order-1">
+      <div ref={wrapperRef} className="basis-full md:basis-auto md:flex-1 w-full max-w-2xl relative order-2 md:order-1">
           <form 
             onSubmit={handleSubmit}
             className={`
@@ -438,50 +425,14 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           )}
       </div>
 
-      {/* SELECTOR DE MODE TÀCTIC (Efecte Carril Enfosquit i Botons Físics) */}
-      <div className="flex flex-col items-center md:items-end order-1 md:order-2 w-full md:w-auto mt-1 sm:mt-0 z-10 group">
-          <span className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1.5 hidden md:block drop-shadow-sm font-sans">
-              {dict.visualMode}
-          </span>
-          {/* El Carril Físic Enfonsat */}
-          <div className="flex items-center p-1 physical-switch-track rounded-[14px] w-full md:w-auto relative z-10">
-              
-              <button
-                type="button"
-                onClick={() => setViewMode && setViewMode('basic')}
-                className={`
-                    flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest cursor-pointer transition-all duration-300
-                    ${viewMode === 'basic'
-                        ? 'bg-gradient-to-b from-sky-600 to-sky-900 text-white border border-sky-400/50 physical-btn-active ring-1 ring-sky-500/30'
-                        : 'text-slate-400 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
-                `}
-                aria-pressed={viewMode === 'basic'}
-              >
-                  {/* Indicador LED actiu/inactiu */}
-                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${viewMode === 'basic' ? 'bg-sky-300 shadow-[0_0_8px_rgba(56,189,248,1)]' : 'bg-slate-700'}`}></div>
-                  <Layers className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${viewMode === 'basic' ? 'text-sky-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]' : ''}`} /> 
-                  <span className={viewMode === 'basic' ? 'drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]' : ''}>{dict.basic}</span>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setViewMode && setViewMode('expert')}
-                className={`
-                    flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest cursor-pointer transition-all duration-300
-                    ${viewMode === 'expert'
-                        ? 'bg-gradient-to-b from-indigo-600 to-indigo-900 text-white border border-indigo-400/50 physical-btn-active ring-1 ring-indigo-500/30'
-                        : 'text-slate-400 hover:text-slate-300 hover:bg-white/5 border border-transparent'}
-                `}
-                aria-pressed={viewMode === 'expert'}
-              >
-                  {/* Indicador LED actiu/inactiu */}
-                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${viewMode === 'expert' ? 'bg-indigo-300 shadow-[0_0_8px_rgba(129,140,248,1)] animate-pulse' : 'bg-slate-700'}`}></div>
-                  <Activity className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${viewMode === 'expert' ? 'text-indigo-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]' : ''}`} /> 
-                  <span className={viewMode === 'expert' ? 'drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]' : ''}>{dict.expert}</span>
-              </button>
-
-          </div>
-      </div>
+      {/* SELECTOR DE VISTA: al mòbil al costat de la marca; a PC a la dreta del cercador i amb la seva alçada.
+          z-30: amb `order` el cercador (z-20) es pinta després, i el menú obert quedava per sota seu al mòbil. */}
+      <ViewModeChip
+        viewMode={viewMode}
+        onSelect={handleViewModeSelect}
+        strings={contextT.viewModes}
+        className="order-1 md:order-2 md:self-stretch z-30"
+      />
     </header>
   );
 }

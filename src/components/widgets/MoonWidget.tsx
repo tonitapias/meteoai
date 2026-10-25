@@ -11,6 +11,7 @@ import type { Language } from '../../translations';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { getCardinalLabel, getMoonCompassPosition, getNextMoonEvent } from '../../utils/astronomyMath';
+import { getMoonPhaseName } from '../../utils/lunarPhases';
 import { MoonWithRing } from '../MoonDisc';
 
 interface MoonWidgetProps {
@@ -38,34 +39,6 @@ const MOON_TEXT: Readonly<Record<Language, MoonStrings>> = {
     fr: { illuminated: 'éclairée', below: "sous l'horizon", rise: 'Lever', set: 'Coucher', day: 'Jour', full: 'Pleine', today: "aujourd'hui", tomorrow: 'demain', days: 'jours' },
 };
 const LOCALE: Readonly<Record<Language, string>> = { ca: 'ca-ES', es: 'es-ES', en: 'en-GB', fr: 'fr-FR' };
-
-// DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte (mateixos llindars que el modal)
-const getTranslatedMoonPhase = (phase: number, lang: string): string => {
-    const safePhase = typeof phase === 'number' && !isNaN(phase) ? Math.max(0, Math.min(1, phase)) : 0;
-
-    // Mapatge astronòmic rigorós (8 fases)
-    let phaseIndex = 0;
-    if (safePhase < 0.02 || safePhase > 0.98) phaseIndex = 0; // Nova
-    else if (safePhase < 0.23) phaseIndex = 1; // Creixent
-    else if (safePhase < 0.27) phaseIndex = 2; // Quart Creixent
-    else if (safePhase < 0.48) phaseIndex = 3; // Gibosa Creixent
-    else if (safePhase <= 0.52) phaseIndex = 4; // Plena
-    else if (safePhase < 0.73) phaseIndex = 5; // Gibosa Minvant
-    else if (safePhase < 0.77) phaseIndex = 6; // Quart Minvant
-    else phaseIndex = 7; // Minvant
-
-    const dict: Record<string, string[]> = {
-        ca: ['Lluna Nova', 'Creixent', 'Quart Creixent', 'Gibosa Creixent', 'Lluna Plena', 'Gibosa Minvant', 'Quart Minvant', 'Minvant'],
-        es: ['Luna Nueva', 'Creciente', 'Cuarto Creciente', 'Gibosa Creciente', 'Luna Llena', 'Gibosa Menguante', 'Cuarto Menguante', 'Menguante'],
-        en: ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'],
-        fr: ['Nouvelle Lune', 'Premier Croissant', 'Premier Quartier', 'Lune Gibbeuse Crois.', 'Pleine Lune', 'Lune Gibbeuse Décrois.', 'Dernier Quartier', 'Dernier Croissant']
-    };
-
-    const safeLang = typeof lang === 'string' ? lang.toLowerCase() : 'ca';
-    const activeLang = dict[safeLang] ? safeLang : 'ca';
-
-    return dict[activeLang][phaseIndex] || '--';
-};
 
 interface RiseSet { rise: string | null; set: string | null; riseNextDay: boolean; setNextDay: boolean }
 
@@ -117,7 +90,7 @@ export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: M
 
     // Càlcul de la il·luminació real (0-100%) protegit contra divisions o nuls
     const illumination = hasData ? Math.round(((1 - Math.cos(phase * 2 * Math.PI)) / 2) * 100) : 0;
-    const moonText = hasData ? getTranslatedMoonPhase(phase, lang) : '--';
+    const moonText = hasData ? getMoonPhaseName(phase, lang) : '--';
     // Edat real (dies des de la lluna nova), no fase × 29,53: les lunacions no duren igual.
     const moonAge = hasData && typeof ageDays === 'number' && !isNaN(ageDays) ? ageDays : '--';
 

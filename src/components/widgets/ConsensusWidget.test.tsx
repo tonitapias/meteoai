@@ -13,7 +13,7 @@ const METRICS: ConsensusMetrics = {
 };
 
 // Dins del tauler, algun contenidor amb transform crea un context d'apilament propi: un modal fix que hi queda a dins no
-// pot pujar per sobre de la capçalera de la pàgina (z-50), que es pintava damunt de la Telemetria gràfica.
+// pot pujar per sobre de la capçalera de la pàgina (z-50), que es pintava damunt de la Comparació de models.
 const renderInTransformedDashboard = () => render(
     <div data-testid="tauler" style={{ transform: 'translateZ(0)' }}>
         <ConsensusWidget metrics={METRICS} localTemp={23} localPrecip={0} localWind={12} lang="ca" regionalModelLabel="AROME HD" />
@@ -23,11 +23,11 @@ const renderInTransformedDashboard = () => render(
 describe('ConsensusWidget — modals fora del tauler', () => {
     afterEach(() => { cleanup(); document.body.style.overflow = ''; });
 
-    it('la Telemetria gràfica es pinta a document.body (no dins del tauler) i bloqueja el scroll de la pàgina', () => {
+    it('la Comparació de models es pinta a document.body (no dins del tauler) i bloqueja el scroll de la pàgina', () => {
         renderInTransformedDashboard();
-        fireEvent.click(screen.getByText('Telemetria Gràfica Completa'));
+        fireEvent.click(screen.getByText('Compara els models'));
 
-        const title = screen.getByText('Telemetria Gràfica Avançada');
+        const title = screen.getByText('Comparació de models');
         expect(screen.getByTestId('tauler').contains(title)).toBe(false);
         expect(document.body.contains(title)).toBe(true);
         expect(document.body.style.overflow).toBe('hidden');
@@ -35,10 +35,10 @@ describe('ConsensusWidget — modals fora del tauler', () => {
 
     it('en tancar-la (Esc), el modal desapareix i el scroll de la pàgina torna', () => {
         renderInTransformedDashboard();
-        fireEvent.click(screen.getByText('Telemetria Gràfica Completa'));
+        fireEvent.click(screen.getByText('Compara els models'));
         fireEvent.keyDown(window, { key: 'Escape' });
 
-        expect(screen.queryByText('Telemetria Gràfica Avançada')).toBeNull();
+        expect(screen.queryByText('Comparació de models')).toBeNull();
         expect(document.body.style.overflow).toBe('');
     });
 
