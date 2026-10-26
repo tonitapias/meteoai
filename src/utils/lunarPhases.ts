@@ -85,6 +85,24 @@ export const getMoonAgeDays = (date: Date): number => {
   return Math.round((ms - principalPhaseMs(lunationIndexAt(ms))) / DAY_MS);
 };
 
+/**
+ * Fase per POSAR NOM al dia (no per dibuixar ni per a la il·luminació): el dia d'una fase principal es diu com ella tot el
+ * dia, com als calendaris i com el "PLENA avui" de la targeta (getNextMoonEvent compta el dia UTC de l'esdeveniment). Amb
+ * la finestra estricta de ±0,02 (unes 14 h), el vespre del 26-10-2026 (plena a les 04:12 UTC) la targeta deia
+ * "Gibosa Minvant · 100 % il·luminada · PLENA avui". Fora d'aquests dies, la fase real. NaN si la data no és vàlida.
+ */
+export const getNamedMoonPhase = (date: Date): number => {
+  const ms = date.getTime();
+  if (!Number.isFinite(ms)) return NaN;
+  const utcDay = Math.floor(ms / DAY_MS);
+  const k = lunationIndexAt(ms);
+  // q = 1: la lluna nova que tanca la lunació en curs pot caure més tard el mateix dia.
+  for (const q of [0, 0.25, 0.5, 0.75, 1]) {
+    if (Math.floor(principalPhaseMs(k + q) / DAY_MS) === utcDay) return q % 1;
+  }
+  return getMoonPhase(date);
+};
+
 // DOCTRINA RISC ZERO: Motor de traducció local aïllat i amb tipatge estricte (mateixos llindars que el modal).
 // El fan servir la targeta Fase lunar i la targeta "Vols més detall?", perquè totes dues diguin la mateixa fase.
 export const getMoonPhaseName = (phase: number, lang: string): string => {

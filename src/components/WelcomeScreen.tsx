@@ -353,6 +353,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
             <WelcomeSearch
               labels={{ placeholder: w.searchPlaceholder, searching: w.searching, noResults: w.noResults, favorites: w.favorites, moreFavorites: w.moreFavorites }}
               favorites={favorites}
+              lang={lang}
               disabled={loading}
               emphasized={searchFirst}
               onSelect={onSelectLocation}

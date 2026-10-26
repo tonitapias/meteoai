@@ -52,3 +52,29 @@ describe('ConsensusWidget — modals fora del tauler', () => {
         expect(document.body.style.overflow).toBe('hidden');
     });
 });
+
+describe('ConsensusWidget — targetes accessibles amb el teclat', () => {
+    afterEach(() => { cleanup(); document.body.style.overflow = ''; });
+
+    it('les tres targetes són botons enfocables i s\'obren amb Enter i amb Espai', () => {
+        renderInTransformedDashboard();
+        const cards = screen.getAllByRole('button').filter(b => /TEMP|PLUJA|VENT/.test(b.textContent ?? ''));
+        expect(cards).toHaveLength(3);
+        cards.forEach(card => expect(card).toHaveAttribute('tabindex', '0'));
+
+        fireEvent.keyDown(cards[0], { key: 'Enter' });
+        expect(document.body.style.overflow).toBe('hidden');
+        fireEvent.keyDown(window, { key: 'Escape' });
+        expect(document.body.style.overflow).toBe('');
+
+        fireEvent.keyDown(cards[2], { key: ' ' });
+        expect(document.body.style.overflow).toBe('hidden');
+    });
+
+    it('les xifres van amb coma decimal i el vent en km/h', () => {
+        renderInTransformedDashboard();
+        expect(screen.getByText('22,6°')).toBeInTheDocument();
+        expect(screen.getAllByText('km/h').length).toBeGreaterThanOrEqual(2);
+        expect(screen.queryByText('kmh')).not.toBeInTheDocument();
+    });
+});

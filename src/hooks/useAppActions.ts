@@ -7,6 +7,7 @@ import { WeatherFetchResult } from './useWeather';
 // SOLUCIÓ 1 i 3: Imports directes de l'arquitectura de tipus de l'App
 import { TranslationType } from '../translations';
 import { LocationData } from './usePreferences';
+import type { PlaceRef } from '../utils/geoDistance';
 
 // SOLUCIÓ 2: Alineem el tipatge estricte del sistema de notificacions de la UI
 type NotificationLevel = 'error' | 'success' | 'info';
@@ -23,9 +24,9 @@ interface UseAppActionsProps {
   fetchWeatherByCoords: (lat: number, lon: number, name: string) => Promise<WeatherFetchResult>;
   setNotification: NotificationAction; // <- Tipus estricte
   weatherData: ExtendedWeatherData | null;
-  isFavorite: (name: string) => boolean;
+  isFavorite: (place: PlaceRef) => boolean;
   addFavorite: (location: LocationData) => void; // <- Tipus exacte del Context
-  removeFavorite: (name: string) => void;
+  removeFavorite: (place: PlaceRef) => void;
 }
 
 export function useAppActions({
@@ -70,12 +71,11 @@ export function useAppActions({
   const handleToggleFavorite = useCallback(() => {
     if (!weatherData?.location) return;
     
-    // Tractem location com un Record per evitar el Type Collapsing a {}
-    const loc = weatherData.location as Record<string, unknown>;
-    const name = loc['name'] as string;
-    
-    if (isFavorite(name)) {
-      removeFavorite(name);
+    // El lloc a pantalla (nom i coordenades): un favorit s'identifica pel lloc, no pel nom (vegeu isSamePlace).
+    const place = weatherData.location as unknown as LocationData;
+
+    if (isFavorite(place)) {
+      removeFavorite(place);
       setNotification({ 
           type: NOTIFICATION_TYPES.INFO as NotificationLevel, 
           msg: t.favRemoved || "Favorit eliminat" 

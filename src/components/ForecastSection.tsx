@@ -269,7 +269,7 @@ const ForecastSection = memo(function ForecastSection({
                 <div className="flex items-center justify-end gap-2 md:gap-3 w-[80px] md:w-[130px]">
                   {day.precipSum !== null && day.precipSum > 0 ? (
                     <span className="text-[9px] md:text-[10px] text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-                      {formatPrecipitation(day.precipSum, day.snowSum)}
+                      {formatPrecipitation(day.precipSum, day.snowSum, lang)}
                     </span>
                   ) : (
                     <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">

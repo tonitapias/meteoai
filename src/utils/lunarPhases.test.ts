@@ -3,7 +3,7 @@
 // en UTC i arrodonides al minut. N = lluna nova, Q1 = quart creixent, F = plena, Q3 = quart minvant.
 import { describe, it, expect } from 'vitest';
 import * as SunCalc from 'suncalc';
-import { principalPhaseMs, getMoonPhase, getMoonAgeDays } from './lunarPhases';
+import { principalPhaseMs, getMoonPhase, getMoonAgeDays, getMoonPhaseName, getNamedMoonPhase } from './lunarPhases';
 
 const USNO_2026_2027 = [
   'F 2026-01-03T10:03', 'Q3 2026-01-10T15:48', 'N 2026-01-18T19:52', 'Q1 2026-01-26T04:47',
@@ -104,4 +104,33 @@ describe('getMoonAgeDays', () => {
   it('retorna NaN per a una data invàlida', () => {
     expect(getMoonAgeDays(new Date(NaN))).toBeNaN();
   });
+});
+
+describe('getNamedMoonPhase (nom del dia)', () => {
+    // Plena del 26-10-2026 a les 04:12 UTC (vegeu getNextMoonEvent): tot el dia es diu "Lluna Plena".
+    it('el vespre del dia de la plena es diu "Lluna Plena", tot i que la fase real ja passa de 0,52', () => {
+        const evening = new Date('2026-10-26T18:26:00Z');
+        expect(getMoonPhase(evening)).toBeGreaterThan(0.52);
+        expect(getNamedMoonPhase(evening)).toBe(0.5);
+        expect(getMoonPhaseName(getNamedMoonPhase(evening), 'ca')).toBe('Lluna Plena');
+        expect(getMoonPhaseName(getMoonPhase(evening), 'ca')).toBe('Gibosa Minvant');
+    });
+
+    it("l'endemà ja torna a ser la fase real (gibosa minvant)", () => {
+        const next = new Date('2026-10-27T18:00:00Z');
+        expect(getNamedMoonPhase(next)).toBe(getMoonPhase(next));
+        expect(getMoonPhaseName(getNamedMoonPhase(next), 'ca')).toBe('Gibosa Minvant');
+    });
+
+    it('també el dia de la lluna nova i dels quarts', () => {
+        const nk = principalPhaseMs(330);          // una lluna nova qualsevol
+        const sameDayLater = new Date(Math.floor(nk / 86400000) * 86400000 + 86399000);
+        expect(getNamedMoonPhase(sameDayLater)).toBe(0);
+        const fq = principalPhaseMs(330.25);
+        expect(getNamedMoonPhase(new Date(Math.floor(fq / 86400000) * 86400000))).toBe(0.25);
+    });
+
+    it('data no vàlida: NaN', () => {
+        expect(getNamedMoonPhase(new Date('x'))).toBeNaN();
+    });
 });

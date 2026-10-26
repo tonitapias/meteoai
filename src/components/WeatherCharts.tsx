@@ -4,14 +4,18 @@
 // vegeu el comentari a l'inici d'aquell fitxer per l'explicació.
 import { CloudRain } from 'lucide-react';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import { formatDecimal } from '../utils/formatters';
+import type { Language } from '../translations';
 
 interface MinutelyPreciseChartProps {
     data: (number | null)[];
     label: string;
+    /** Idioma dels decimals ("0,4 mm" / "0.4 mm"). */
+    lang?: Language;
     currentPrecip?: number;
 }
 
-export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPrecip = 0 }: MinutelyPreciseChartProps) => {
+export const MinutelyPreciseChart = ({ data, label, lang = 'ca', currentPrecip: _currentPrecip = 0 }: MinutelyPreciseChartProps) => {
     const chartData = Array.isArray(data) ? [...data] : [];
     let processedData = chartData.map(v => v !== null && v !== undefined && !isNaN(v) ? v : 0);
 
@@ -50,7 +54,7 @@ export const MinutelyPreciseChart = ({ data, label, currentPrecip: _currentPreci
                         {processedData.map((val, i) => (
                             <div key={`minutely-${i}`} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
                                 {val > 0 ? (
-                                    <span className="text-[9px] font-black mb-0.5 text-white drop-shadow-md">{val.toFixed(1)}<span className="opacity-50 text-[8px] ml-0.5">mm</span></span>
+                                    <span className="text-[9px] font-black mb-0.5 text-white drop-shadow-md">{formatDecimal(val, lang)}<span className="opacity-50 text-[8px] ml-0.5">mm</span></span>
                                 ) : (
                                     <span className="text-[9px] font-bold mb-0.5 text-slate-600 opacity-50">-</span>
                                 )}

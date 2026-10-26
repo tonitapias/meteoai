@@ -45,14 +45,14 @@ describe('buildAlmanacRows (Girona, avui 2026-10-07)', () => {
     expect([rows[8].rise, rows[8].set]).toEqual([m8.riseLabel!.text, m8.setLabel!.text]);
   });
 
-  it('UV "5.5" amb la classe d\'ALT, idèntic a la targeta de previsió; fora de daily => null', () => {
+  it('UV "5,5" amb la classe d\'ALT, idèntic a la targeta de previsió; fora de daily => null', () => {
     const rows = buildAlmanacRows(input());
-    const card = uvDisplay(forecastFor(GIRONA_DAILY, null, '2026-10-07', 41340)!.uvMax);
-    expect(rows[0].uv).toBe('5.5');
+    const card = uvDisplay(forecastFor(GIRONA_DAILY, null, '2026-10-07', 41340)!.uvMax, 'ca');
+    expect(rows[0].uv).toBe('5,5');
     expect(rows[0].uvClass).toBe('text-orange-500');
     expect({ text: rows[0].uv, cls: rows[0].uvClass }).toEqual(card);
-    expect(rows[1].uv).toBe('4.9');
-    expect(rows[7].uv).toBe('4.0');
+    expect(rows[1].uv).toBe('4,9');
+    expect(rows[7].uv).toBe('4,0');
     for (const r of rows.slice(8)) {
       expect(r.uv).toBeNull();
       expect(r.uvClass).toBe('');
@@ -92,7 +92,7 @@ describe('buildAlmanacRows (Girona, avui 2026-10-07)', () => {
     const rows = buildAlmanacRows(input());
     expect(rows[0].aria.startsWith('Avui, Dimecres 7 d’octubre: sortida 07:51')).toBe(true);
     expect(rows[0].aria).toContain('posta 19:20, 11h 29m de llum');
-    expect(rows[0].aria).toMatch(/\d+ min \d+ s menys que ahir, UV 5\.5 ALT$/);
+    expect(rows[0].aria).toMatch(/\d+ min \d+ s menys que ahir, UV 5,5 ALT$/);
     expect(rows[1].aria.startsWith('dj. 8, Dijous 8 d’octubre: sortida 07:52')).toBe(true);
     expect(rows[1].aria).toContain('menys que el dia anterior');
     expect(rows[10].aria).not.toContain('UV');

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { Loader2, Search, Star } from 'lucide-react';
 import { useCitySearch } from '../../hooks/useCitySearch';
 import type { LocationData } from '../../hooks/usePreferences';
+import type { Language } from '../../translations';
 
 export interface WelcomeSearchLabels {
   placeholder: string;
@@ -21,6 +22,8 @@ export interface WelcomeSearchLabels {
 interface WelcomeSearchProps {
   labels: WelcomeSearchLabels;
   favorites: LocationData[];
+  /** Idioma dels noms dels resultats (el de la interfície). */
+  lang?: Language;
   disabled?: boolean;
   /** Ressalta el camp quan la ubicació ha fallat i la cerca passa a ser el camí principal. */
   emphasized?: boolean;
@@ -36,8 +39,8 @@ const LIST_MAX = 288;
 const LIST_MIN = 120;
 const GAP = 12;
 
-export default function WelcomeSearch({ labels, favorites, disabled = false, emphasized = false, onSelect }: WelcomeSearchProps) {
-  const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch();
+export default function WelcomeSearch({ labels, favorites, lang = 'ca', disabled = false, emphasized = false, onSelect }: WelcomeSearchProps) {
+  const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch(lang);
   const [open, setOpen] = useState(false);
   const [allFavorites, setAllFavorites] = useState(false);
   const [placement, setPlacement] = useState<{ up: boolean; maxHeight: number }>({ up: false, maxHeight: LIST_MAX });

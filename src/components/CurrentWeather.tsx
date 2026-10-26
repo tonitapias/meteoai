@@ -92,6 +92,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
 
   // AVÍS D'AEROSOLS (pols/partícules del CAMS): només informa de la càrrega d'aerosols, no de la visibilitat.
   const tr = (TRANSLATIONS[props.lang] || TRANSLATIONS['ca']) as unknown as TranslationMap;
+  const favLabels = TRANSLATIONS[props.lang] || TRANSLATIONS.ca;
   const dustAdvisory = resolveDustAdvisory(props.aqiData?.current, parseMetric(weather.stats.humidity), currentPrecip);
   const advisoryText = dustAdvisory.kind === 'dust' ? tr.alertDust : dustAdvisory.kind === 'particles' ? tr.alertParticles : undefined;
   const advisoryLabel = dustAdvisory.kind === 'dust' ? tr.dustLabel : dustAdvisory.kind === 'particles' ? tr.particlesLabel : null;
@@ -189,6 +190,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
               regionalModelLabel={props.activeRegionalModel?.label ?? null}
               isFavorite={props.isFavorite}
               onToggleFavorite={props.onToggleFavorite}
+              favoriteLabels={{ add: favLabels.addFavorite, remove: favLabels.removeFavorite }}
             />
           </div>
         </div>

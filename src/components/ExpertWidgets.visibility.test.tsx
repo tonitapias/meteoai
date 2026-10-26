@@ -59,7 +59,7 @@ describe('ExpertWidgets → giny de Visibilitat (cablejat del codi efectiu)', ()
     it('amb el codi efectiu de boira (45), el giny mostra el valor del model i "Boira"', () => {
         const { container } = renderExpert(45);
         const text = container.textContent ?? '';
-        expect(text).toContain('0.8');
+        expect(text).toContain('0,8');
         expect(text).toContain('Boira');
     });
 });

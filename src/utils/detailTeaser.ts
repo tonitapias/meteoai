@@ -2,7 +2,7 @@
 // Valors d'ara de la vista completa que la vista essencial no ensenya, per a la targeta "Vols més detall?".
 // Cada valor surt de la mateixa font i amb el mateix format que el seu giny: si la targeta diu 1019 hPa,
 // el giny de pressió també ha de dir 1019.
-import { getMoonPhase, getMoonPhaseName } from './lunarPhases';
+import { getMoonPhaseName, getNamedMoonPhase } from './lunarPhases';
 import { AQI_TRANSLATIONS, extractAqiData, getAqiLevel, getAqiSafeLang } from './aqiLevel';
 import { formatVisibilityKm, resolveCurrentDisplayVisibility } from './visibilityDisplay';
 
@@ -48,14 +48,15 @@ export function buildDetailTeaser({ current, aqiCurrent, effectiveCode, nowMs, l
     items.push({ key: 'air', text: fill(templates.teaserAir, label.toLocaleLowerCase(lang)) });
   }
 
-  const phase = getMoonPhase(new Date(nowMs));
+  // Nom del dia (getNamedMoonPhase): el dia de la plena és "Lluna Plena", com a la targeta Fase lunar.
+  const phase = getNamedMoonPhase(new Date(nowMs));
   if (Number.isFinite(phase)) {
     items.push({ key: 'moon', text: getMoonPhaseName(phase, lang) });
   }
 
   const { meters, bound } = resolveCurrentDisplayVisibility(current, effectiveCode);
   if (meters !== null) {
-    items.push({ key: 'visibility', text: fill(templates.teaserVisibility, formatVisibilityKm(Math.max(0, meters), bound)) });
+    items.push({ key: 'visibility', text: fill(templates.teaserVisibility, formatVisibilityKm(Math.max(0, meters), bound, getAqiSafeLang(lang))) });
   }
 
   return items;

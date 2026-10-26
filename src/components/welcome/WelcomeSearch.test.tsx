@@ -84,3 +84,17 @@ describe('WelcomeSearch', () => {
     expect(onSelect).toHaveBeenCalledWith(5, 2, 'E', undefined);
   });
 });
+
+describe('WelcomeSearch — idioma dels resultats', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("demana els noms en l'idioma de la interfície", async () => {
+    const { searchCity } = await import('../../services/geocodingService');
+    render(<WelcomeSearch labels={LABELS} favorites={[]} lang="en" onSelect={vi.fn()} />);
+    const input = screen.getByRole('combobox', { name: LABELS.placeholder });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Londres' } });
+    await screen.findAllByRole('option');
+    expect(searchCity).toHaveBeenLastCalledWith('Londres', 'en');
+  });
+});

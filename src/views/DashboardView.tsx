@@ -12,6 +12,7 @@ import { DashboardModals } from '../components/dashboard/DashboardModals';
 
 // Hook del context
 import { useAppContext } from '../context/AppContext';
+import { isRegionalModelActive } from '../constants/regionalModels';
 
 export default function DashboardView() {
   // 1. RECUPEREM EL CONTROLADOR DEL CONTEXT
@@ -33,7 +34,13 @@ export default function DashboardView() {
       header={<Header />}
       
       // Footer (Assegurem que quedi per sobre de possibles fons espacials)
-      footer={<Footer className="mt-auto relative z-20" />}
+      footer={
+        <Footer
+            className="mt-auto relative z-20"
+            lang={flags?.lang}
+            regionalModelLabel={isRegionalModelActive(weatherData?.current?.source) ? String(weatherData?.current?.source) : null}
+        />
+      }
       
       // Toast amb accessos segurs
       toast={

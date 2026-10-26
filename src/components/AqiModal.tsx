@@ -6,6 +6,7 @@ import { useState, useRef, useMemo, memo } from 'react';
 import { X, Wind, AlertTriangle, CloudOff, Flower2, Sparkles } from 'lucide-react';
 import { AirQualityData } from '../types/weather';
 import { Language } from '../translations';
+import { formatDecimal } from '../utils/formatters';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
@@ -306,8 +307,8 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                 </div>
                 {(current?.pm2_5 !== undefined || current?.pm10 !== undefined) && (
                   <div className="flex items-center gap-3 mt-1 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5 text-[11px] font-mono font-bold text-slate-300">
-                    {typeof current?.pm2_5 === 'number' && <span>PM2.5 <span className="text-white">{current.pm2_5.toFixed(1)}</span></span>}
-                    {typeof current?.pm10 === 'number' && <span>PM10 <span className="text-white">{current.pm10.toFixed(1)}</span></span>}
+                    {typeof current?.pm2_5 === 'number' && <span>PM2.5 <span className="text-white">{formatDecimal(current.pm2_5, safeLang)}</span></span>}
+                    {typeof current?.pm10 === 'number' && <span>PM10 <span className="text-white">{formatDecimal(current.pm10, safeLang)}</span></span>}
                   </div>
                 )}
               </div>
@@ -396,7 +397,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                   {pollutants.map(p => (
                     <div key={p.key} className="rounded-xl border border-white/5 astro-card-fill p-3 flex flex-col gap-1">
                       <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{p.key}</span>
-                      <span className="text-lg font-black tabular-nums leading-none text-white">{p.value?.toFixed(1)}</span>
+                      <span className="text-lg font-black tabular-nums leading-none text-white">{typeof p.value === 'number' ? formatDecimal(p.value, safeLang) : '--'}</span>
                       <span className="text-[9px] font-bold text-slate-500 tracking-wide">µg/m³</span>
                     </div>
                   ))}
@@ -410,7 +411,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5"><Flower2 className="w-3 h-3" />{t.pollen}</span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {pollenEntries.map(p => (
-                    <StatCard key={p.key} label={t[p.key] || p.key} value={`${p.value.toFixed(1)} ${p.unit}`} icon={p.key === 'dust' ? <Sparkles className="w-3.5 h-3.5" /> : <Flower2 className="w-3.5 h-3.5" />} />
+                    <StatCard key={p.key} label={t[p.key] || p.key} value={`${formatDecimal(p.value, safeLang)} ${p.unit}`} icon={p.key === 'dust' ? <Sparkles className="w-3.5 h-3.5" /> : <Flower2 className="w-3.5 h-3.5" />} />
                   ))}
                 </div>
               </div>

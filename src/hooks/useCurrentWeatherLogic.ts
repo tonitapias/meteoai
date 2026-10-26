@@ -4,7 +4,7 @@ import type { ExtendedWeatherData, StrictCurrentWeather, LocationMeta } from '..
 import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
 import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
-import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getCurrentDisplayTemp, getInversionCorrectedApparent } from '../utils/rules/temperatureCorrections';
 import { extractValidArrayNum, getSafeLatitude } from '../utils/weatherMath';
 import { isRegionalModelActive } from '../constants/regionalModels';
 import { generateHourlyChartData } from '../utils/weatherMappers';
@@ -57,7 +57,8 @@ export const useCurrentWeatherLogic = ({
         // (Això és segur perquè getInversionCorrectedTemp fa servir safeNum internament)
         // [FIX PRECISIÓ] Passem la latitud perquè la correcció d'inversió sàpiga en
         // quin hemisferi és realment hivern (vegeu inversionRules.ts).
-        const realTemp = getInversionCorrectedTemp(current as unknown as StrictCurrentWeather, new Date().getMonth(), getSafeLatitude(location));
+        // La mateixa funció dona el "ARA" de la tira de 24 h (Forecast24h): totes dues xifres han de coincidir.
+        const realTemp = getCurrentDisplayTemp(current as unknown as StrictCurrentWeather, getSafeLatitude(location));
 
         const renderTemp = (t: number | null | undefined) => {
             const val = formatTemp(t, unit);

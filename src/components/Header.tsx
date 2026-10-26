@@ -119,7 +119,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const favorites: LocationData[] = contextFavorites ?? hookFavorites ?? [];
 
   // Cerca compartida amb la benvinguda (espera, sanejament i "últim guanyador").
-  const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch();
+  const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch(activeLang);
   const [isFocused, setIsFocused] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -379,7 +379,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                         </div>
                         {favorites.map((fav, idx) => (
                             <button
-                                key={fav.name}
+                                key={`${fav.name}_${fav.latitude}_${fav.longitude}`}
                                 onClick={() => handleSelectFavorite(fav)}
                                 onMouseEnter={() => setSelectedIndex(idx)}
                                 className={`w-full px-4 py-3 sm:py-4 flex items-center justify-between transition-all duration-200 group text-left cursor-pointer border-l-2 ${selectedIndex === idx ? 'bg-sky-950/40 border-sky-400' : 'hover:bg-white/5 border-transparent'}`}

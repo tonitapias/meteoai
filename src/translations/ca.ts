@@ -475,6 +475,7 @@ export const ca = {
   max: "Màx",
   min: "Mín",
   freezingLevelAt: "Isoterma 0ºC a",
+  addFavorite: "Afegir als favorits",
   removeFavorite: "Eliminar favorit",
   myLocation: "La meva ubicació",
   openExternal: "Obrir fora",
@@ -527,5 +528,23 @@ export const ca = {
     hPa: "hPa",
     mm: "mm",
     kmh: "km/h"
+  },
+
+  // 5. PEU DE PÀGINA
+  footer: {
+    online: "En línia",
+    offline: "Sense connexió",
+    statusTitle: "Estat de la connexió. Clic per buidar la memòria cau",
+    statusAria: "Estat de la connexió: {state}. Fes clic per buidar la memòria cau.",
+    resetConfirm: "Vols buidar la memòria cau i tornar a carregar l'app?\n\nS'esborraran les previsions i les anàlisis desades. Els favorits i les preferències es mantenen.",
+    secureProxy: "Proxy segur",
+    secureProxyTitle: "Les claus de les APIs es queden al servidor intermediari",
+    data: "Dades: Open-Meteo",
+    dataTitle: "Proveïdor de dades principal",
+    model: "Model: {name}",
+    globalModel: "Global",
+    regionalModelTitle: "Model regional d'alta resolució d'aquesta ubicació",
+    globalModelTitle: "Aquí no hi ha model regional: previsió dels models mundials",
+    versionTitle: "Versió de l'app"
   }
 };

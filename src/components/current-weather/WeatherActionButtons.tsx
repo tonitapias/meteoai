@@ -6,6 +6,8 @@ interface WeatherActionButtonsProps {
   regionalModelLabel?: string | null;
   isFavorite: boolean;
   onToggleFavorite: () => void;
+  /** Etiquetes de l'estrella en l'idioma de la interfície (abans, sempre en català). */
+  favoriteLabels?: { add: string; remove: string };
 }
 
 export const WeatherActionButtons = ({
@@ -14,6 +16,7 @@ export const WeatherActionButtons = ({
   regionalModelLabel = null, // DOCTRINA RISC ZERO: Valor per defecte segur
   isFavorite,
   onToggleFavorite,
+  favoriteLabels = { add: 'Afegir als favorits', remove: 'Eliminar favorit' },
 }: WeatherActionButtonsProps) => {
   const showRegionalModelBtn = Boolean(regionalModelLabel);
   
@@ -50,7 +53,8 @@ export const WeatherActionButtons = ({
       <button
         onClick={onToggleFavorite}
         className="relative overflow-hidden flex items-center justify-center p-3 bg-[#0a0b10]/80 hover:bg-white/10 rounded-xl border border-white/10 text-slate-400 hover:text-amber-400 transition-all duration-300 active:scale-95 shadow-[inset_0_1px_4px_rgba(255,255,255,0.05)] w-[52px] flex-shrink-0 group"
-        aria-label={isFavorite ? 'Eliminar de favorits' : 'Afegir a favorits'}
+        aria-label={isFavorite ? favoriteLabels.remove : favoriteLabels.add}
+        aria-pressed={isFavorite}
       >
         <div className={MATRIX_BG}></div>
         <Star className={`relative z-10 w-5 h-5 transition-all duration-500 ${isFavorite ? 'fill-amber-400 text-amber-400 scale-110 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'group-hover:scale-110'}`} />

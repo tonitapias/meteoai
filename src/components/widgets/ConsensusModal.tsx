@@ -4,6 +4,7 @@ import { Language } from '../../translations';
 import { Thermometer, CloudRain, Wind, X, ArrowUpRight, ArrowDownRight, MoveRight } from 'lucide-react';
 import { ModalType } from './ConsensusWidget';
 import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
+import { formatDecimal } from '../../utils/formatters';
 
 interface ConsensusModalProps {
   activeModal: ModalType;
@@ -59,7 +60,8 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
 
-  const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? val : '--';
+  // Decimals en el format de l'idioma ("18,3", no "18.3"), com la resta de l'app.
+  const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? formatDecimal(val, safeLang, 1, true) : '--';
   
   const formatTimeSafely = (timeStr: string) => {
     try {
@@ -122,7 +124,8 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
           
           const isValidLoc = typeof locVal === 'number' && !isNaN(locVal);
           const isValidGlo = typeof gloVal === 'number' && !isNaN(gloVal);
-          const diff = (isValidLoc && isValidGlo) ? (gloVal - locVal).toFixed(1) : '--';
+          const diffRounded = (isValidLoc && isValidGlo) ? Math.round((gloVal - locVal) * 10) / 10 : null;
+          const diff = diffRounded !== null ? formatDecimal(diffRounded, safeLang) : '--';
           const isNow = i === 0;
 
           const refVal = isValidLoc ? locVal : (isValidGlo ? gloVal : null);
@@ -135,7 +138,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
           const diffBadge = (
             <div className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center justify-center gap-1 sm:gap-1.5 border backdrop-blur-md shadow-sm ${isNow ? 'bg-black/80 border-sky-500/30 shadow-[inset_0_0_8px_rgba(14,165,233,0.3)]' : 'bg-black/40 border-slate-700/50 group-hover:border-slate-500/60'} transition-colors`}>
               <span className="text-xs sm:text-sm font-black text-white leading-none font-mono drop-shadow-md">
-                {diff !== '--' && Number(diff) > 0 ? `+${diff}` : diff}
+                {diffRounded !== null && diffRounded > 0 ? `+${diff}` : diff}
               </span>
               {renderTrend(locVal, gloVal, activeModal as 'temp' | 'rain' | 'wind')}
             </div>
@@ -161,7 +164,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                   </span>
                   {activeModal === 'wind' && (
                     <span className="text-[10px] text-amber-400 font-mono mt-1 font-black flex items-center gap-0.5 drop-shadow-[0_0_4px_rgba(245,158,11,0.4)] animate-pulse">
-                      ⚡ {formatVal(locGustVal)}<span className="text-[8px] text-amber-500/70 font-bold uppercase">kmh</span>
+                      ⚡ {formatVal(locGustVal)}<span className="text-[8px] text-amber-500/70 font-bold uppercase">km/h</span>
                     </span>
                   )}
                 </div>
@@ -175,7 +178,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                   </span>
                   {activeModal === 'wind' && (
                     <span className="text-[10px] text-slate-500 font-mono mt-1 font-bold flex items-center gap-0.5">
-                      ⚡ {formatVal(gloGustVal)}<span className="text-[8px] text-slate-600/70 font-bold uppercase">kmh</span>
+                      ⚡ {formatVal(gloGustVal)}<span className="text-[8px] text-slate-600/70 font-bold uppercase">km/h</span>
                     </span>
                   )}
                 </div>

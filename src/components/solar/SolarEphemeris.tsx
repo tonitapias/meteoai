@@ -102,7 +102,7 @@ export const SolarEphemeris = memo(function SolarEphemeris({ model, cellStates, 
 
   const noonTT = text.noon;
   const noonOffset = tm.noon !== null ? formatOffsetFromNoon(localClockMinute(tm.noon, model.zone) - 720, t) : null;
-  const noonShadow = shadowRatio(model.noonAltApp);
+  const noonShadow = shadowRatio(model.noonAltApp, lang);
   const nadirTT = text.nadir;
 
   return (

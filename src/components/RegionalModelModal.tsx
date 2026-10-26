@@ -3,6 +3,7 @@ import { useRegionalModel } from '../hooks/useRegionalModel';
 import { X, Wind, Droplets, Snowflake, Activity, Zap, AlertOctagon, ShieldCheck, Mountain, ArrowUp } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../translations';
+import { formatDecimal } from '../utils/formatters';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -282,7 +283,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                 <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${totalRain > 0 ? 'text-cyan-200' : 'text-slate-400'}`}>{t.precip}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${totalRain > 0 ? 'text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]' : 'text-slate-200'}`}>
-                                {totalRain.toFixed(1)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>mm</span>
+                                {formatDecimal(totalRain, safeLang)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>mm</span>
                             </div>
                          </div>
 
@@ -407,7 +408,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                                         <div className="flex items-center gap-1.5 text-cyan-100 font-bold text-[10px] sm:text-xs bg-cyan-950/60 px-2 sm:px-2.5 py-1 rounded-md border border-cyan-500/30 shadow-[inset_0_1px_4px_rgba(6,182,212,0.2)] relative overflow-hidden">
                                                             <div className="absolute bottom-0 left-0 w-full bg-cyan-500/30 transition-all duration-500" style={{ height: `${Math.min(100, (row.precip / 10) * 100)}%` }}></div>
                                                             {isSnow ? <Snowflake className="w-3 h-3 text-cyan-300 relative z-10" /> : <Droplets className="w-3 h-3 text-cyan-400 relative z-10 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]" />}
-                                                            <span className="relative z-10">{row.precip.toFixed(1)}</span>
+                                                            <span className="relative z-10">{formatDecimal(row.precip, safeLang)}</span>
                                                         </div>
                                                     ) : (
                                                         <span className="text-[10px] font-mono font-bold text-slate-700/50">-</span>

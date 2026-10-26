@@ -115,7 +115,7 @@ export const DashboardContent = () => {
                 unit={flags.unit} 
                 lang={flags.lang} 
                 shiftedNow={calculations.shiftedNow}
-                isFavorite={flags.isFavorite(loc?.name || "")} 
+                isFavorite={!!loc && flags.isFavorite(loc)}
                 onToggleFavorite={actions.handleToggleFavorite}
                 onShowRadar={() => actions.setShowRadar(true)}
                 onShowRegionalModel={() => actions.setShowRegionalModel(true)}
@@ -127,6 +127,7 @@ export const DashboardContent = () => {
             <MinutelyPreciseChart
                 data={calculations.minutelyPreciseData}
                 label={t.preciseRain || "SCAN PRECIPITACIÓ (1H)"}
+                lang={flags.lang}
                 currentPrecip={calculations.chartData24h?.[0]?.precip || 0}
             />
 

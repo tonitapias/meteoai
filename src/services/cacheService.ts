@@ -1,6 +1,7 @@
 // src/services/cacheService.ts
-import { get, set, del, entries, keys } from 'idb-keyval';
+import { get, set, del, keys } from 'idb-keyval';
 import { CACHE_TTL } from '../constants/cacheConfig';
+import { distanceKm } from '../utils/geoDistance';
 
 // DEFINIM LA VERSIÓ ACTUAL DE LA MEMÒRIA
 // Cada entrada la porta: get, getEntry i la poda de previsions descarten les d'una altra versió.
@@ -34,15 +35,6 @@ export interface CacheEntry<T> {
 // Clau de previsió (generateWeatherKey) desglossada: lat, lon, unitat i idioma.
 const WEATHER_KEY_PATTERN = new RegExp(`^${WEATHER_PREFIX}(-?\\d+(?:\\.\\d+)?)_(-?\\d+(?:\\.\\d+)?)_(\\w+)_(\\w+)$`);
 
-// Distància ortodròmica (km) entre dos punts.
-const distanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const rad = Math.PI / 180;
-    const dLat = (lat2 - lat1) * rad;
-    const dLon = (lon2 - lon1) * rad;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
-    return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
-};
-
 // Entrada que getEntry encara torna: de la versió actual i desada fa com a molt CACHE_TTL.CLEANUP. La poda de previsions
 // esborra exactament les altres, així que mai treu una previsió que la desada sense connexió encara podria mostrar
 // (vegeu WeatherRepository.findOfflineSnapshot).
@@ -68,25 +60,24 @@ const pruneOldWeather = async (): Promise<void> => {
 // Poda d'aquesta sessió (vegeu pruneOldWeatherOnce): una sola per càrrega de la pàgina.
 let weatherPruneRun: Promise<void> | null = null;
 
-// NETEJA D'ÀMBIT SEGUR: esborra només claus pròpies d'aquesta app (IndexedDB
-// + LocalStorage), mai la resta de l'origen. Exportat perquè el reinici
-// manual de Footer.tsx ("SYSTEM ONLINE" -> reset) faci servir exactament
-// la mateixa lògica, en lloc de repetir un clear() global propi.
-const clearAppStorage = async (): Promise<void> => {
+// Claus de LocalStorage que eren memòria cau en versions antigues. Avui totes les caches són a IndexedDB i a LocalStorage
+// només hi ha preferències (idioma, unitat, vista, favorits, avisos ja vistos).
+const LEGACY_LOCAL_CACHE_KEY = /^meteoai_(cache_|v\d+_cache_|ai_|version_control)/;
+
+// REINICI DE LA MEMÒRIA CAU (botó d'estat del peu, Footer.tsx): esborra les previsions i les anàlisis desades, que són el
+// que pot fer veure dades antigues, i res més. Els favorits i les preferències es queden: abans s'esborraven sense que el
+// diàleg ho digués. Neteja d'àmbit segur: només claus pròpies d'aquesta app, mai un clear() de tot l'origen.
+const clearCachedData = async (): Promise<void> => {
     try {
-        const allEntries = await entries();
-        await Promise.all(
-            allEntries
-                .filter(([key]) => typeof key === 'string' && key.startsWith(APP_KEY_PREFIX))
-                .map(([key]) => del(key))
-        );
+        const appKeys = (await keys()).filter((key): key is string => typeof key === 'string' && key.startsWith(APP_KEY_PREFIX));
+        await Promise.all(appKeys.map((key) => del(key)));
     } catch (e) {
         console.warn('Could not clear IndexedDB cache', e);
     }
 
     try {
         Object.keys(localStorage)
-            .filter((key) => key.startsWith(APP_KEY_PREFIX))
+            .filter((key) => LEGACY_LOCAL_CACHE_KEY.test(key))
             .forEach((key) => localStorage.removeItem(key));
     } catch (e) {
         console.warn('Could not clear legacy localStorage', e);
@@ -192,7 +183,7 @@ export const cacheService = {
 
     // PODA UN COP PER SESSIÓ (vegeu pruneOldWeather). WeatherRepository la llança en desar la primera previsió nova, no a
     // l'arrencada, perquè no competeixi amb la primera càrrega. Substitueix l'antic clean(), que ningú no cridava i que,
-    // en no trobar la clau de versió (mai escrita als usuaris nous), feia clearAppStorage(): la primera crida hauria
+    // en no trobar la clau de versió (mai escrita als usuaris nous), ho esborrava tot (IndexedDB i LocalStorage de l'app): la primera crida hauria
     // esborrat també les preferències i els preferits. La versió ja la comprova cada entrada.
     pruneOldWeatherOnce: (): Promise<void> => {
         if (!weatherPruneRun) weatherPruneRun = pruneOldWeather();
@@ -201,9 +192,6 @@ export const cacheService = {
 
     pruneOldWeather,
 
-    // Reinici manual complet (botó de diagnòstic a Footer.tsx): neteja
-    // d'àmbit segur (vegeu clearAppStorage), exposada perquè cap altre punt
-    // de l'app torni a fer un clear() global pel seu compte. Esborra també
-    // les preferències: només quan l'usuari ho demana.
-    clearAppStorage
+    // Reinici manual de la memòria cau (botó d'estat de Footer.tsx). Vegeu clearCachedData.
+    clearCachedData
 };

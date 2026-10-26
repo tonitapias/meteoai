@@ -13,7 +13,7 @@ describe('VisibilityWidget — alineat amb la política de boira', () => {
 
     it('amb boira confirmada mostra el valor del model i "Boira"', () => {
         const { container } = render(<VisibilityWidget visibility={840} lang="ca" />);
-        expect(container.textContent).toContain('0.8');
+        expect(container.textContent).toContain('0,8');
         expect(container.textContent).toContain('Boira');
     });
 

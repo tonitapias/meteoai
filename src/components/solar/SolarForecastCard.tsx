@@ -5,7 +5,7 @@
 import { memo, useId, type ReactNode } from 'react';
 import type { Language } from '../../translations';
 import { getUVCategory } from '../../utils/uvIndexUtils';
-import { formatHoursMinutes } from '../../utils/formatters';
+import { formatDecimal, formatHoursMinutes } from '../../utils/formatters';
 import { uvDisplay } from '../../utils/solar/solarFormat';
 import type { ForecastRow } from '../../utils/solar/solarForecast';
 import { fill, type SolarStrings } from './solarI18n';
@@ -41,7 +41,7 @@ export const SolarForecastCard = memo(function SolarForecastCard({
   } else if (!forecast || !forecast.available) {
     body = <p className="mt-2 text-[13px] leading-relaxed text-slate-300">{fill(t.noForecast, { date: lastDateLabel ?? '' })}</p>;
   } else {
-    const uv = uvDisplay(forecast.uvMax);
+    const uv = uvDisplay(forecast.uvMax, lang);
     const sun = forecast.sunshineSec;
     const pct = forecast.pct;
     const rad = forecast.radiation;
@@ -58,7 +58,7 @@ export const SolarForecastCard = memo(function SolarForecastCard({
             </>
           ) : DASH}
           {forecast.uvClear !== null && (
-            <span className="block mt-0.5 text-[12px] leading-4 text-slate-400">{fill(t.uvClear, { v: forecast.uvClear.toFixed(1) })}</span>
+            <span className="block mt-0.5 text-[12px] leading-4 text-slate-400">{fill(t.uvClear, { v: formatDecimal(forecast.uvClear, lang) })}</span>
           )}
         </Row>
         <Row label={t.sunshine}>
@@ -81,7 +81,7 @@ export const SolarForecastCard = memo(function SolarForecastCard({
         <Row label={t.radiation}>
           {rad !== null ? (
             <>
-              <span className="text-[15px] font-semibold tabular-nums text-slate-50">{`${rad.toFixed(1)} MJ/m²`}</span>
+              <span className="text-[15px] font-semibold tabular-nums text-slate-50">{`${formatDecimal(rad, lang)} MJ/m²`}</span>
               <span className="block mt-0.5 text-[12px] leading-4 text-slate-400">{t.radiationSub}</span>
             </>
           ) : DASH}

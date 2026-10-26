@@ -11,7 +11,7 @@ import type { Language } from '../../translations';
 import { WIDGET_BASE_STYLE, TITLE_STYLE } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { getCardinalLabel, getMoonCompassPosition, getNextMoonEvent } from '../../utils/astronomyMath';
-import { getMoonPhaseName } from '../../utils/lunarPhases';
+import { getMoonPhaseName, getNamedMoonPhase } from '../../utils/lunarPhases';
 import { MoonWithRing } from '../MoonDisc';
 
 interface MoonWidgetProps {
@@ -90,7 +90,6 @@ export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: M
 
     // Càlcul de la il·luminació real (0-100%) protegit contra divisions o nuls
     const illumination = hasData ? Math.round(((1 - Math.cos(phase * 2 * Math.PI)) / 2) * 100) : 0;
-    const moonText = hasData ? getMoonPhaseName(phase, lang) : '--';
     // Edat real (dies des de la lluna nova), no fase × 29,53: les lunacions no duren igual.
     const moonAge = hasData && typeof ageDays === 'number' && !isNaN(ageDays) ? ageDays : '--';
 
@@ -99,6 +98,9 @@ export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: M
         return isNaN(d.getTime()) ? new Date() : d;
     }, [date]);
     const instantMs = instant.getTime();
+    // El nom és el del dia (getNamedMoonPhase: el dia de la plena és "Lluna Plena", com el "Plena avui" de sota);
+    // la il·luminació, la de la fase real d'ara.
+    const moonText = hasData ? getMoonPhaseName(getNamedMoonPhase(instant), lang) : '--';
 
     // Sortida i posta: depenen només del dia local (es recalculen quan canvia la data, no cada minut).
     const localDay = useMemo(() => {

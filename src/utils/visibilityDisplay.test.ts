@@ -58,7 +58,9 @@ describe('formatVisibilityKm', () => {
     it('formata km amb límit', () => {
         expect(formatVisibilityKm(2000, 'min')).toBe('≥2');
         expect(formatVisibilityKm(1000, 'max')).toBe('≤1');
-        expect(formatVisibilityKm(840)).toBe('0.8');
+        expect(formatVisibilityKm(840)).toBe('0,8');
+        expect(formatVisibilityKm(840, null, 'en')).toBe('0.8');
+        expect(formatVisibilityKm(19600, null, 'fr')).toBe('19,6');
         expect(formatVisibilityKm(10000)).toBe('10');
         expect(formatVisibilityKm(null, 'min')).toBe('--');
     });

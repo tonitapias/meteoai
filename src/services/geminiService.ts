@@ -318,6 +318,10 @@ const resolveLatitude = (weatherData: ExtendedWeatherData): number | undefined =
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
+// La temperatura d'"ara" va amb un decimal (el tallafocs i la IA han de veure que -0,5 °C és sota zero), però el text ha de
+// dir la xifra de la capçalera: amb "17.5°C" la IA escrivia "17 °C" sota un 18° (Girona, 26-10-2026).
+const shownTempNote = (t: number): string => (Number.isInteger(t) ? '' : ` (a la pantalla: ${Math.round(t)}°C)`);
+
 /** Pluja horària mínima per comptar l'hora com "amb pluja": el mateix 0,2 mm que usa l'app per dir que plou (aiContext.calculateIsRaining). */
 const RAIN_HOUR_MIN_MM = 0.2;
 
@@ -551,7 +555,9 @@ const buildWindowSummary = (rows: WindowRow[]): string => {
     if (temps.length > 0) {
         const lo = temps.reduce((a, b) => (b.v < a.v ? b : a));
         const hi = temps.reduce((a, b) => (b.v > a.v ? b : a));
-        lines.push(`Temperatura: mínima ${lo.v}°C (${at(lo.i)}) | màxima ${hi.v}°C (${at(hi.i)})`);
+        // Graus enters, com els mostra la tira de 24 h: el prompt demana copiar aquestes xifres "tal qual" i "sense decimals",
+        // i amb "14.9°C" aquí la IA escrivia "baixarà fins a 14.9°C" sota una tira que deia 15°.
+        lines.push(`Temperatura: mínima ${Math.round(lo.v)}°C (${at(lo.i)}) | màxima ${Math.round(hi.v)}°C (${at(hi.i)})`);
     }
 
     const gusts = rows.map((r, i) => ({ i, v: r.gust })).filter((x): x is { i: number; v: number } => x.v !== null);
@@ -883,7 +889,7 @@ export const getGeminiAnalysis = async (
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
           Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
-          Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
+          Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C${shownTempNote(currentDisplayTemp)}` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentDisplayTemp, currentDisplayApparent, currentHumidity)}
           Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}${lightningLine}
           MODEL EN ÚS: ${modelInfo.name}

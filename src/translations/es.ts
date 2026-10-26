@@ -472,6 +472,7 @@ export const es = {
   max: "Máx",
   min: "Mín",
   freezingLevelAt: "Isoterma 0ºC a",
+  addFavorite: "Añadir a favoritos",
   removeFavorite: "Eliminar favorito",
   myLocation: "Mi ubicación",
   openExternal: "Abrir fuera",
@@ -522,5 +523,22 @@ export const es = {
     hPa: "hPa",
     mm: "mm",
     kmh: "km/h"
+  },
+
+  footer: {
+    online: "En línea",
+    offline: "Sin conexión",
+    statusTitle: "Estado de la conexión. Clic para vaciar la caché",
+    statusAria: "Estado de la conexión: {state}. Haz clic para vaciar la caché.",
+    resetConfirm: "¿Quieres vaciar la caché y volver a cargar la app?\n\nSe borrarán las previsiones y los análisis guardados. Los favoritos y las preferencias se mantienen.",
+    secureProxy: "Proxy seguro",
+    secureProxyTitle: "Las claves de las API se quedan en el servidor intermediario",
+    data: "Datos: Open-Meteo",
+    dataTitle: "Proveedor de datos principal",
+    model: "Modelo: {name}",
+    globalModel: "Global",
+    regionalModelTitle: "Modelo regional de alta resolución de esta ubicación",
+    globalModelTitle: "Aquí no hay modelo regional: previsión de los modelos mundiales",
+    versionTitle: "Versión de la app"
   }
 };

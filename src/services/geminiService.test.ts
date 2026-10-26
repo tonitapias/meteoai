@@ -241,6 +241,14 @@ describe('getGeminiAnalysis — temperatura mostrada (correcció d\'inversió t�
         expect(prompt).not.toContain('º');
     });
 
+    // Girona, 26-10-2026: amb "17.5°C" la IA escrivia "17 °C" sota la capçalera, que en deia 18.
+    it('amb decimals, la línia d\'ara diu també la xifra de la capçalera', async () => {
+        const { prompt } = await run(calm({ date: '2026-09-15', temp: 17.5, wind: 10, day: 1 }), 0);
+        expect(prompt).toContain('Temperatura Real: 17.5°C (a la pantalla: 18°C)');
+        const { prompt: frost } = await run(calm({ date: '2027-01-15', temp: 1.25 }), 0);
+        expect(frost).toContain('Temperatura Real: -0.5°C (a la pantalla: 0°C)');
+    });
+
     it('la mateixa nit al setembre (fora de la temporada d\'inversió) no es corregeix', async () => {
         const { prompt } = await run(calm({ date: '2026-09-15', temp: 2 }), 0);
         expect(prompt).toContain('Temperatura Real: 2°C');
@@ -286,6 +294,15 @@ describe('getGeminiAnalysis — resum calculat de la finestra', () => {
         expect(s).toContain('Temperatura: mínima 20°C (00:00, ara) | màxima 24°C (03:00)');
         expect(s).toContain('Ràfega màxima: 30km/h (02:00)');
         expect(s).toContain('Pluja: cap hora amb pluja apreciable (totes < 0.2mm/h)');
+    });
+
+    // Girona, 26-10-2026: "baixarà fins a 14.9°C a les 00:00" sota una tira que deia 15°.
+    it('la mínima i la màxima van en graus enters, com a la tira de 24 h', async () => {
+        const weather = calm({ date: '2026-09-15', temp: 20, day: 1 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.temperature_2m = [18.2, 17.4, 16.1, 14.9, 15.3, 15.6, 16, 17];
+        const { prompt } = await run(weather, 0);
+        expect(summaryOf(prompt)).toContain('Temperatura: mínima 15°C (03:00) | màxima 18°C (00:00, ara)');
     });
 
     // Cas real d'abans: hores de 14, 17, 20 i 23 mm/h → la IA escrivia "acumulacions de 23 mil·límetres" (n'hi havia ~80).

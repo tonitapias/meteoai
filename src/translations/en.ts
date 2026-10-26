@@ -473,6 +473,7 @@ export const en = {
   max: "Max",
   min: "Min",
   freezingLevelAt: "Freezing level at",
+  addFavorite: "Add to favorites",
   removeFavorite: "Remove favorite",
   myLocation: "My location",
   openExternal: "Open external",
@@ -523,5 +524,22 @@ export const en = {
     hPa: "hPa",
     mm: "mm",
     kmh: "km/h"
+  },
+
+  footer: {
+    online: "Online",
+    offline: "Offline",
+    statusTitle: "Connection status. Click to clear the cache",
+    statusAria: "Connection status: {state}. Click to clear the cache.",
+    resetConfirm: "Clear the cache and reload the app?\n\nSaved forecasts and analyses will be deleted. Your favourites and preferences are kept.",
+    secureProxy: "Secure proxy",
+    secureProxyTitle: "API keys stay on the intermediate server",
+    data: "Data: Open-Meteo",
+    dataTitle: "Main data provider",
+    model: "Model: {name}",
+    globalModel: "Global",
+    regionalModelTitle: "High-resolution regional model for this location",
+    globalModelTitle: "No regional model here: forecast from the global models",
+    versionTitle: "App version"
   }
 };

@@ -191,13 +191,13 @@ describe('SolarModal — avui a Girona (2026-10-07 16:07)', () => {
     expect(screen.queryByRole('button', { name: "Ara, torna a l'hora actual" })).toBeNull();
   });
 
-  it('previsió d\'avui: UV 5.5 ALT, cel serè 6.1, hores de sol, radiació i qualitat /100', () => {
+  it('previsió d\'avui: UV 5,5 ALT, cel serè 6,1, hores de sol, radiació i qualitat /100', () => {
     const { container } = renderModal();
     const fc = container.querySelector('.sm-a-fc')!;
-    expect(fc.textContent).toContain('5.5');
-    expect(fc.textContent).toContain('Amb cel serè: 6.1');
+    expect(fc.textContent).toContain('5,5');
+    expect(fc.textContent).toContain('Amb cel serè: 6,1');
     expect(fc.textContent).toContain('6h 26m');
-    expect(fc.textContent).toContain('14.2 MJ/m²');
+    expect(fc.textContent).toContain('14,2 MJ/m²');
     expect(fc.textContent).toContain('/100');
     expect(fc.textContent).toContain('Estimació');
   });
@@ -216,7 +216,7 @@ describe('SolarModal — avui a Girona (2026-10-07 16:07)', () => {
   it('nota de fonts: coordenades i fus de la ubicació, i horitzó d\'Open-Meteo', () => {
     const { container } = renderModal();
     const foot = container.querySelector('.sm-a-foot')!.textContent ?? '';
-    expect(foot).toContain('41.98°\u00A0N 2.82°\u00A0E (Europe/Madrid)');   // cap coordenada es parteix
+    expect(foot).toContain('41,98°\u00A0N 2,82°\u00A0E (Europe/Madrid)');   // cap coordenada es parteix
     expect(foot).toContain('Open-Meteo');
   });
 });

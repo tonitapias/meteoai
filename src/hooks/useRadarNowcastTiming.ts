@@ -13,10 +13,8 @@
 // trobada, no cicles humit-sec-humit dins la mateixa hora.
 import { useEffect, useState } from 'react';
 import { useRadarData } from './useRadarData';
-import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel } from '../utils/radarSampling';
+import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel, radarTileUrl, sampleZoomForHost } from '../utils/radarSampling';
 
-// Mateix zoom fix que la capa principal de radar a useRadarAnimation.ts (maxzoom: 8).
-const SAMPLE_ZOOM = 8;
 const REFRESH_MS = 5 * 60 * 1000; // Igual que useRadarData.ts CACHE_TTL.
 
 // Mateix llindar que useRadarRealityCheck.ts per considerar "hi ha pluja" en un frame.
@@ -24,12 +22,11 @@ const PRECIP_MM_H_THRESHOLD = 0.5;
 
 export type NowcastTransition = { type: 'start' | 'end'; inMinutes: number };
 
-const buildTileUrl = (host: string, path: string, tile: { z: number; x: number; y: number }) =>
-  `${host}${path}/512/${tile.z}/${tile.x}/${tile.y}/6/1_1.png`;
-
-const isWet = async (tileUrl: string, px: number, py: number): Promise<boolean> => {
+// null = la tessel·la no s'ha pogut llegir (xarxa, CORS, error del servidor). Abans comptava com a "sec": amb la imatge
+// d'ara plujosa i una de les següents fallida, el bàner anunciava que la pluja s'acabava.
+const isWet = async (tileUrl: string, px: number, py: number): Promise<boolean | null> => {
   const pixel = await fetchTilePixel(tileUrl, px, py);
-  if (!pixel) return false;
+  if (!pixel) return null;
   const [r, g, b, a] = pixel;
   const dbz = rgbaToClosestDbz(r, g, b, a);
   return dbz !== null && dbzToMmPerHour(dbz) >= PRECIP_MM_H_THRESHOLD;
@@ -63,19 +60,23 @@ export function useRadarNowcastTiming(
     }
 
     let cancelled = false;
-    const tile = lonLatToTile(lon, lat, SAMPLE_ZOOM);
+    const tile = lonLatToTile(lon, lat, sampleZoomForHost(radarData.host));
     const latestFrame = pastFrames[pastFrames.length - 1];
-    const currentTileUrl = buildTileUrl(radarData.host, latestFrame.path, tile);
+    const currentTileUrl = radarTileUrl(radarData.host, latestFrame.path, tile);
 
     (async () => {
       const currentlyWet = await isWet(currentTileUrl, tile.px, tile.py);
       if (cancelled) return;
+      // Sense saber si ara plou, no es pot anunciar cap canvi.
+      if (currentlyWet === null) { setTransition(null); return; }
 
       for (const frame of nowcastFrames) {
         if (frame.time === null) continue;
-        const tileUrl = buildTileUrl(radarData.host, frame.path, tile);
+        const tileUrl = radarTileUrl(radarData.host, frame.path, tile);
         const wetHere = await isWet(tileUrl, tile.px, tile.py);
         if (cancelled) return;
+        // Una imatge il·legible talla la seqüència: el canvi que es trobés després tindria l'hora equivocada.
+        if (wetHere === null) { setTransition(null); return; }
 
         if (wetHere !== currentlyWet) {
           const inMinutes = Math.round((frame.time * 1000 - Date.now()) / 60000);

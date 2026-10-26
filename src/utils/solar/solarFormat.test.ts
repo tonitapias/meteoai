@@ -62,18 +62,19 @@ describe('graus i ombra', () => {
   });
 
   it('shadowRatio', () => {
-    expect(shadowRatio(42.43)).toBe('1.1');
-    expect(shadowRatio(31.37)).toBe('1.6');
-    expect(shadowRatio(4.9)).toBeNull();
-    expect(shadowRatio(5.5)).toBe('10');
-    expect(shadowRatio(5.75)).toBe('9.9');
+    expect(shadowRatio(42.43, 'ca')).toBe('1,1');
+    expect(shadowRatio(31.37, 'ca')).toBe('1,6');
+    expect(shadowRatio(31.37, 'en')).toBe('1.6');
+    expect(shadowRatio(4.9, 'ca')).toBeNull();
+    expect(shadowRatio(5.5, 'ca')).toBe('10');
+    expect(shadowRatio(5.75, 'ca')).toBe('9,9');
     // r ≈ 9.97: toFixed(1) donaria "10.0"; a partir de 10 va sense decimals.
-    expect(shadowRatio(5.727)).toBe('10');
-    expect(shadowRatio(90)).toBe('0.0');
+    expect(shadowRatio(5.727, 'ca')).toBe('10');
+    expect(shadowRatio(90, 'ca')).toBe('0,0');
   });
 
   it('readoutCoords', () => {
-    expect(readoutCoords(225.3, 31.37, 'ca', CA)).toBe('225° SO · +31° · ombra 1.6× cap a NE');
+    expect(readoutCoords(225.3, 31.37, 'ca', CA)).toBe('225° SO · +31° · ombra 1,6× cap a NE');
     expect(readoutCoords(225.3, 31.37, 'en', EN)).toBe('225° SW · +31° · shadow 1.6× toward NE');
     expect(readoutCoords(100, 3, 'ca', CA)).toBe('100° E · +3°');
     expect(readoutCoords(359.7, -12.2, 'ca', CA)).toBe('0° N · −12°');
@@ -90,10 +91,10 @@ describe('intervals, coordenades i migdia', () => {
 
   it('formatLatLon (espai no separable dins de cada coordenada: mai es parteix)', () => {
     const nb = (s: string) => s.replace(/° /g, '°\u00A0');
-    expect(formatLatLon(41.98, 2.82, 'ca')).toBe(nb('41.98° N') + ' ' + nb('2.82° E'));
+    expect(formatLatLon(41.98, 2.82, 'ca')).toBe(nb('41,98° N') + ' ' + nb('2,82° E'));
     expect(formatLatLon(-33.87, 151.21, 'en')).toBe(nb('33.87° S') + ' ' + nb('151.21° E'));
     expect(formatLatLon(64.15, -21.94, 'en')).toBe(nb('64.15° N') + ' ' + nb('21.94° W'));
-    expect(formatLatLon(64.15, -21.94, 'fr')).toBe(nb('64.15° N') + ' ' + nb('21.94° O'));
+    expect(formatLatLon(64.15, -21.94, 'fr')).toBe(nb('64,15° N') + ' ' + nb('21,94° O'));
   });
 
   it('untilDateText: article català apostrofat l\'1 i l\'11; "1er" en francès', () => {
@@ -127,11 +128,11 @@ describe('intervals, coordenades i migdia', () => {
 
 describe('uvDisplay', () => {
   it('un decimal i el color de la categoria (vermell i porpra al to 400)', () => {
-    expect(uvDisplay(5.45)).toEqual({ text: '5.5', cls: 'text-orange-500' });
-    expect(uvDisplay(9.2)).toEqual({ text: '9.2', cls: 'text-red-400' });
-    expect(uvDisplay(11.4)).toEqual({ text: '11.4', cls: 'text-purple-400' });
-    expect(uvDisplay(2.4)).toEqual({ text: '2.4', cls: 'text-emerald-400' });
-    expect(uvDisplay(null)).toBeNull();
-    expect(uvDisplay(NaN)).toBeNull();
+    expect(uvDisplay(5.45, 'ca')).toEqual({ text: '5,5', cls: 'text-orange-500' });
+    expect(uvDisplay(9.2, 'ca')).toEqual({ text: '9,2', cls: 'text-red-400' });
+    expect(uvDisplay(11.4, 'ca')).toEqual({ text: '11,4', cls: 'text-purple-400' });
+    expect(uvDisplay(2.4, 'en')).toEqual({ text: '2.4', cls: 'text-emerald-400' });
+    expect(uvDisplay(null, 'ca')).toBeNull();
+    expect(uvDisplay(NaN, 'ca')).toBeNull();
   });
 });

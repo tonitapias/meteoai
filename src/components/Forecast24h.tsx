@@ -7,7 +7,7 @@ import { Language } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './widgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
-import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
+import { getCurrentDisplayTemp, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeNum, extractValidArrayNum } from '../utils/weatherMath';
 import { isRegionalModelActive } from '../constants/regionalModels';
 
@@ -48,6 +48,10 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         const hourlySeries = hourly as unknown as HourlySeries;
         const rows: ChartDataPoint[] = [];
         const MAX_HOURS = 25;
+
+        // La targeta "ARA" mostra la temperatura de la capçalera (bloc `current`), no la de l'hora en punt: a les 19:26
+        // l'hora de les 19 h podia dir 19° sota un 18° a dalt. Sense `current`, es queda la de l'hora.
+        const nowTemp = getCurrentDisplayTemp(current as unknown as StrictCurrentWeather, safeLatitude);
         
         // Helper d'idioma per la targeta "Ara"
         const NOW_LABEL = lang === 'en' ? 'NOW' : lang === 'es' ? 'AHORA' : lang === 'fr' ? 'ACTU' : 'ARA';
@@ -89,7 +93,9 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
             // temperatura de superfície real i no amb la del model en brut.
             // Passem el mes de CADA hora (no el d'avui), tal com exigeix la firma
             // actualitzada de getInversionCorrectedTemp per a hores futures.
-            const temp = rawTemp !== null
+            const temp = i === 0 && nowTemp !== null
+                ? nowTemp
+                : rawTemp !== null
                 ? getInversionCorrectedTemp(
                     {
                         temperature_2m: rawTemp,
@@ -111,7 +117,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
 
             let precipString = '';
             if (pAmt > 0) {
-                precipString = formatPrecipitation(pAmt, sAmt);
+                precipString = formatPrecipitation(pAmt, sAmt, lang);
             } else if (pProb > 0) {
                 precipString = `${pProb}%`;
             }
@@ -127,7 +133,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
         }
         
         return rows;
-    }, [hourly, lang, utc_offset_seconds, safeElevation, hourlyComparison, safeLatitude]);
+    }, [hourly, current, lang, utc_offset_seconds, safeElevation, hourlyComparison, safeLatitude]);
 
     if (hourlyChartData.length === 0) return null;
 

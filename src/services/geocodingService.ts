@@ -60,13 +60,14 @@ export const reverseGeocode = async (
 /**
  * Servei de cerca de ciutats (Text -> Llista Coords)
  */
-export const searchCity = async (query: string): Promise<GeoSearchResult[]> => {
+export const searchCity = async (query: string, lang: Language = 'ca'): Promise<GeoSearchResult[]> => {
     try {
         // [FIX] Abans era l'única crida de xarxa de tota l'app sense timeout: si
         // l'API es penjava, la cerca de Header.tsx es quedava en isSearching=true
         // per sempre, sense error ni possibilitat de reintent.
+        // Noms en l'idioma de la interfície (abans sempre en català: un usuari en anglès hi veia "Londres").
         const response = await fetchWithTimeout(
-          `${SEARCH_API_URL}?name=${encodeURIComponent(query)}&count=5&language=ca&format=json`,
+          `${SEARCH_API_URL}?name=${encodeURIComponent(query)}&count=5&language=${encodeURIComponent(lang)}&format=json`,
           GEO_TIMEOUT_MS
         );
 

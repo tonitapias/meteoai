@@ -5,6 +5,7 @@ import { ConsensusMetrics, HourlySeriesBundle } from '../../utils/consensusMath'
 import { Language } from '../../translations';
 import { ConsensusModal } from './ConsensusModal';
 import { ConsensusChartsModal } from './ConsensusChartsModal';
+import { formatDecimal } from '../../utils/formatters';
 import {
   CheckCircle2,
   Activity,
@@ -121,16 +122,26 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
   };
 
-  const formatVal = (val: number | null | undefined) => isValidNum(val) ? val : '--';
-  const formatDelta = (val: number | null | undefined) => isValidNum(val) ? val.toFixed(1) : '--';
+  // Decimals en el format de l'idioma ("18,3", no "18.3"), com la resta de l'app.
+  const formatVal = (val: number | null | undefined) => isValidNum(val) ? formatDecimal(val, safeLang, 1, true) : '--';
+  const formatDelta = (val: number | null | undefined) => isValidNum(val) ? formatDecimal(val, safeLang) : '--';
 
   // PROTECCIÓ HISTORY API: Prevé dobles clicks ràpids que trenquen el "botó enrere" natiu
   const openModal = useCallback((type: ModalType) => {
-    if (activeModal) return; 
-    setNowTimestamp(Date.now()); 
+    if (activeModal) return;
+    setNowTimestamp(Date.now());
     window.history.pushState({ modalOpen: 'consensus' }, '');
     setActiveModal(type);
   }, [activeModal]);
+
+  // Targetes que obren el detall: també amb el teclat i el lector de pantalla (mateix patró que WidgetCard d'ExpertWidgets).
+  const cardButtonProps = (type: ModalType) => ({
+    onClick: () => openModal(type),
+    role: 'button' as const,
+    tabIndex: 0,
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(type); } }
+  });
+  const CARD_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60';
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
@@ -226,7 +237,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
 
               <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 w-full preserve-3d [transform:translateZ(40px)]">
                  {/* MIDES DE TEXT I CONTRAST MILLORATS PER A LECTURA EXTERIOR */}
-                 <div onClick={() => openModal('temp')} className="cursor-pointer group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-rose-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95">
+                 <div {...cardButtonProps('temp')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-rose-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95`}>
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
                         <Thermometer className="w-4 h-4 md:w-5 md:h-5 group-hover:text-rose-500 transition-colors duration-300 drop-shadow-md" />
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.temp}</span>
@@ -241,7 +252,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
 
-                 <div onClick={() => openModal('rain')} className={`cursor-pointer group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-black/60 md:hover:-translate-y-1 active:scale-95 ${isSnowRisk ? 'border-sky-500/30' : 'border-white/10 hover:border-sky-500/30'}`}>
+                 <div {...cardButtonProps('rain')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-black/60 md:hover:-translate-y-1 active:scale-95 ${isSnowRisk ? 'border-sky-500/30' : 'border-white/10 hover:border-sky-500/30'}`}>
                     {isSnowRisk && <div className="absolute inset-0 bg-sky-500/10 rounded-[20px] md:rounded-[24px] animate-pulse pointer-events-none"></div>}
                     <div className={`flex items-center gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4 ${isSnowRisk ? 'text-sky-300 drop-shadow-[0_0_8px_currentColor]' : 'text-slate-300'}`}>
                         {isSnowRisk ? <CloudSnow className="w-4 h-4 md:w-5 md:h-5 text-white transition-colors duration-300" /> : <CloudRain className="w-4 h-4 md:w-5 md:h-5 group-hover:text-sky-400 transition-colors duration-300 drop-shadow-md" />}
@@ -257,14 +268,14 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                  </div>
 
-                 <div onClick={() => openModal('wind')} className="cursor-pointer group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95">
+                 <div {...cardButtonProps('wind')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95`}>
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
                         <Wind className="w-4 h-4 md:w-5 md:h-5 group-hover:text-amber-400 transition-colors duration-300 drop-shadow-md" />
                         <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.wind}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">kmh</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[9px] font-normal text-slate-400 ml-[1px]">km</span></span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">km/h</span></div>
+                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[9px] font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>

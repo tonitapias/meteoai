@@ -120,7 +120,7 @@ export function buildAlmanacRows(input: AlmanacInput): AlmanacRow[] {
 
     const idx = dailyIndexOf(daily, dateStr);
     const uvRaw = idx >= 0 && Array.isArray(daily?.uv_index_max) ? daily.uv_index_max[idx] : null;
-    const uv = uvDisplay(uvRaw);
+    const uv = uvDisplay(uvRaw, lang);
 
     const label = offset === 0
       ? t.today

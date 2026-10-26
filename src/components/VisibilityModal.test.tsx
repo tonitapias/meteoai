@@ -59,7 +59,7 @@ describe('VisibilityModal — alineat amb la política de boira', () => {
         const weather = buildWeather(99);
         const { container } = render(<VisibilityModal weatherData={weather} effectiveCode={45} onClose={() => {}} lang="ca" />);
         const text = container.textContent ?? '';
-        expect(heroValue(container)).toBe('0.8');
+        expect(heroValue(container)).toBe('0,8');
         expect(text).toContain('Boira');
         expect(text).toContain('Activa ara mateix');
         expect(text).not.toContain('Sense boira prevista en 48h');

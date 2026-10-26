@@ -3,6 +3,8 @@ import { useMemo } from 'react';
 import { usePreferences } from './usePreferences';
 import { TRANSLATIONS } from '../translations';
 import { useAppActions } from './useAppActions';
+import { useI18nLanguageSync } from './useI18nLanguageSync';
+import type { PlaceRef } from '../utils/geoDistance';
 
 // Importem els nous controladors especialitzats
 import { useDataController } from './controllers/useDataController';
@@ -17,6 +19,9 @@ export function useAppController() {
   } = usePreferences();
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+
+  // i18next (radar, avís d'actualització) en l'idioma triat des de la primera pantalla, no només dins del tauler.
+  useI18nLanguageSync(lang);
 
   // 2. CAPA VISUAL (UI)
   // Necessitem instanciar-la aviat perquè conté el rellotge ('now')
@@ -100,7 +105,7 @@ export function useAppController() {
           // Fusionem flags
           activeRegionalModel: data.flags.activeRegionalModel,
           showDebug: ui.state.showDebug,
-          isFavorite: (name: string) => isFavorite(name),
+          isFavorite: (place: PlaceRef) => isFavorite(place),
           unit,
           lang,
           viewMode

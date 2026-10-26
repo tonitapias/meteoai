@@ -3,6 +3,7 @@ import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, CARD_VEIL, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { AQI_TRANSLATIONS, AqiLevel, AqiResult, extractAqiData, getAqiLevel, getAqiSafeLang } from '../../utils/aqiLevel';
+import { formatDecimal } from '../../utils/formatters';
 
 type AqiStyle = { color: string; bg: string; shadow: string };
 
@@ -133,8 +134,8 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
                     {/* Renderitzat impecable a nivell de tipatge per als contaminants principals */}
                     {hasValidData && hasMicroTelemetry && (
                         <div className="flex gap-2 text-[9px] sm:text-[10px] font-mono text-slate-500 bg-black/30 px-1.5 py-0.5 rounded border border-white/5">
-                            {pm25 !== null && <span>PM2.5 <span className="text-slate-300">{pm25.toFixed(1)}</span></span>}
-                            {pm10 !== null && <span>PM10 <span className="text-slate-300">{pm10.toFixed(1)}</span></span>}
+                            {pm25 !== null && <span>PM2.5 <span className="text-slate-300">{formatDecimal(pm25, safeLang)}</span></span>}
+                            {pm10 !== null && <span>PM10 <span className="text-slate-300">{formatDecimal(pm10, safeLang)}</span></span>}
                         </div>
                     )}
                 </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 import { readStorage, writeStorage } from '../utils/safeStorage';
+import { isSamePlace, type PlaceRef } from '../utils/geoDistance';
 
 export interface LocationData {
   name: string;
@@ -63,19 +64,21 @@ export function usePreferences() {
   // PreferencesContext.tsx): sense això, cada render en creava funcions noves,
   // fent que qualsevol useCallback aigües avall (p.ex. handleToggleFavorite a
   // useAppActions.ts) mai tingués unes dependències estables.
+  // Un favorit és un lloc, no un nom (vegeu isSamePlace): abans dos pobles que es diuen igual eren el mateix favorit i
+  // l'estrella sortia encesa al que no era.
   const addFavorite = useCallback((location: LocationData) => {
     setFavorites(prev => {
-      if (prev.some(f => f.name === location.name)) return prev;
+      if (prev.some(f => isSamePlace(f, location))) return prev;
       return [...prev, location];
     });
   }, []);
 
-  const removeFavorite = useCallback((name: string) => {
-    setFavorites(prev => prev.filter(f => f.name !== name));
+  const removeFavorite = useCallback((place: PlaceRef) => {
+    setFavorites(prev => prev.filter(f => !isSamePlace(f, place)));
   }, []);
 
-  const isFavorite = useCallback((name: string) => {
-    return favorites.some(f => f.name === name);
+  const isFavorite = useCallback((place: PlaceRef) => {
+    return favorites.some(f => isSamePlace(f, place));
   }, [favorites]);
 
   return {

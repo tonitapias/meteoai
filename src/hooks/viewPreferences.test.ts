@@ -52,3 +52,31 @@ describe('preferències de vista', () => {
         expect(later.result.current.compact).toBe(true);
     });
 });
+
+describe('favorits', () => {
+    afterEach(() => { localStorage.clear(); });
+
+    const ribes = { name: 'Sant Pere', country: 'Espanya', latitude: 41.26, longitude: 1.77 };
+    const pescador = { name: 'Sant Pere', country: 'Espanya', latitude: 42.19, longitude: 3.08 };
+
+    it('dos pobles que es diuen igual poden ser favorits alhora, i l\'estrella només surt al que toca', () => {
+        const { result } = renderHook(() => usePreferences());
+        act(() => result.current.addFavorite(ribes));
+        expect(result.current.isFavorite(pescador)).toBe(false);
+
+        act(() => result.current.addFavorite(pescador));
+        expect(result.current.favorites).toHaveLength(2);
+
+        act(() => result.current.removeFavorite(ribes));
+        expect(result.current.favorites).toEqual([pescador]);
+        expect(result.current.isFavorite(ribes)).toBe(false);
+        expect(result.current.isFavorite(pescador)).toBe(true);
+    });
+
+    it('el mateix lloc no es desa dues vegades encara que el GPS el doni una mica desplaçat', () => {
+        const { result } = renderHook(() => usePreferences());
+        act(() => result.current.addFavorite(ribes));
+        act(() => result.current.addFavorite({ ...ribes, latitude: 41.2605, longitude: 1.7708 }));
+        expect(result.current.favorites).toHaveLength(1);
+    });
+});

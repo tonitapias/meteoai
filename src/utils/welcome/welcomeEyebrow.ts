@@ -44,7 +44,9 @@ export function welcomeEyebrow(sky: WelcomeSky | null, now: Date, locale: string
   } else if (sky.phase === 'posta') {
     if (exact && set !== null && nowMs < set) moment = w.sunsetAt.replace('{time}', clock.format(set));
   } else if (sky.moon.angle !== null) {
-    moment = w[welcomeMoonKey(sky.moon.phase, sky.moon.illumination)];
+    // El dia de la plena es diu "Lluna plena" tot el dia, com la targeta Fase lunar (getNamedMoonPhase).
+    const namePhase = Number.isFinite(sky.moon.namePhase) ? (sky.moon.namePhase as number) : sky.moon.phase;
+    moment = w[welcomeMoonKey(namePhase, sky.moon.illumination)];
     moon = true;
   }
   return { head, moment, moon };

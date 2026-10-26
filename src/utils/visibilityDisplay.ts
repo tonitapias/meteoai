@@ -12,6 +12,8 @@
 //
 // No s'inventa cap xifra: es fixa un límit i es marca amb `bound` perquè la UI mostri "≥" / "≤".
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { formatDecimal } from './formatters';
+import type { Language } from '../translations';
 
 const { VISIBILITY, PRECIPITATION } = WEATHER_THRESHOLDS;
 
@@ -67,9 +69,9 @@ export const resolveCurrentDisplayVisibility = (
     return resolveDisplayVisibility(raw, effectiveCode, precip);
 };
 
-/** "2", "0.8" — km amb un decimal sense ".0". Amb límit: "≥2" / "≤1". */
-export const formatVisibilityKm = (meters: number | null, bound: VisibilityBound = null): string => {
+/** "2", "0,8" — km amb un decimal sense ",0", en el format de l'idioma ("0.8" en anglès). Amb límit: "≥2" / "≤1". */
+export const formatVisibilityKm = (meters: number | null, bound: VisibilityBound = null, lang: Language = 'ca'): string => {
     if (meters === null) return '--';
-    const km = (meters / 1000).toFixed(1).replace('.0', '');
+    const km = formatDecimal(meters / 1000, lang, 1, true);
     return `${bound === 'min' ? '≥' : bound === 'max' ? '≤' : ''}${km}`;
 };

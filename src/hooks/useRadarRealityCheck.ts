@@ -7,10 +7,19 @@
 // no cal muntar cap mapa.
 import { useEffect, useState } from 'react';
 import { useRadarData } from './useRadarData';
-import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel } from '../utils/radarSampling';
+import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel, radarTileUrl, sampleZoomForHost } from '../utils/radarSampling';
 
-// Mateix zoom fix que la capa principal de radar a useRadarAnimation.ts (maxzoom: 8).
-const SAMPLE_ZOOM = 8;
+type RadarSource = { host: string; radar?: { past: Array<{ path: string }> } };
+
+// Píxel del punt a la darrera imatge d'una font, al zoom que la font serveix (vegeu sampleZoomForHost). null = no s'ha
+// pogut llegir (xarxa, CORS, error del servidor): no vol dir "sense pluja".
+const sampleLatest = (source: RadarSource, lat: number, lon: number): Promise<[number, number, number, number] | null> => {
+  const frames = source.radar?.past;
+  if (!frames?.length) return Promise.resolve(null);
+  const tile = lonLatToTile(lon, lat, sampleZoomForHost(source.host));
+  return fetchTilePixel(radarTileUrl(source.host, frames[frames.length - 1].path, tile), tile.px, tile.py);
+};
+
 const REFRESH_MS = 5 * 60 * 1000; // Igual que useRadarData.ts CACHE_TTL.
 
 // Llindars conservadors: només avisem quan el radar detecta un eco clar
@@ -37,7 +46,7 @@ export function useRadarRealityCheck(
   lon: number | undefined,
   modelMmPerHourNow: number
 ): RadarRealityStatus {
-  const { radarData, fetchRadarData } = useRadarData();
+  const { radarData, rainviewerData, fetchRadarData } = useRadarData();
   const [sample, setSample] = useState<RadarSample>(IDLE_SAMPLE);
 
   // Refresc periòdic: useRadarData ja no torna a demanar dades si la cache
@@ -62,12 +71,11 @@ export function useRadarRealityCheck(
     }
 
     let cancelled = false;
-    const pastFrames = radarData.radar.past;
-    const latestFrame = pastFrames[pastFrames.length - 1];
-    const tile = lonLatToTile(lon, lat, SAMPLE_ZOOM);
-    const tileUrl = `${radarData.host}${latestFrame.path}/512/${tile.z}/${tile.x}/${tile.y}/6/1_1.png`;
+    // Si la tessel·la de LibreWXR no es pot llegir (el 26-10-2026 en van fallar per CORS), la de RainViewer.
+    const fallback = rainviewerData && rainviewerData !== radarData && rainviewerData.radar?.past?.length ? rainviewerData : null;
 
-    fetchTilePixel(tileUrl, tile.px, tile.py).then((pixel) => {
+    sampleLatest(radarData, lat, lon).then(async (first) => {
+      const pixel = first ?? (fallback && !cancelled ? await sampleLatest(fallback, lat, lon) : null);
       if (cancelled) return;
       if (!pixel) {
         setSample(IDLE_SAMPLE);
@@ -80,7 +88,7 @@ export function useRadarRealityCheck(
     });
 
     return () => { cancelled = true; };
-  }, [radarData, lat, lon]);
+  }, [radarData, rainviewerData, lat, lon]);
 
   const effectiveSample = hasValidInputs ? sample : IDLE_SAMPLE;
   const hasDiscrepancy = effectiveSample.radarMmPerHour >= RADAR_MM_H_THRESHOLD && modelMmPerHourNow < MODEL_MM_H_THRESHOLD;

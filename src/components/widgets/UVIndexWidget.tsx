@@ -4,6 +4,7 @@ import { Sun, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Language } from '../../translations';
 import { MATRIX_BG, CARD_VEIL } from './widgetStyles';
 import { getUVCategory } from '../../utils/uvIndexUtils';
+import { formatDecimal } from '../../utils/formatters';
 
 interface UVIndexWidgetProps {
   uvIndex?: number | null;
@@ -108,7 +109,7 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
             )}
             
             <span className={`text-4xl sm:text-5xl font-mono font-black tabular-nums tracking-tighter leading-none relative z-10 transition-colors duration-500 ${isDataMissing ? 'text-slate-600' : 'text-white drop-shadow-md'}`}>
-              {isDataMissing ? '--' : safeUV.toFixed(1)}
+              {isDataMissing ? '--' : formatDecimal(safeUV, safeLang)}
             </span>
             <span className={`text-[10px] sm:text-[11px] font-black tracking-widest mt-1 uppercase relative z-10 transition-colors duration-500 ${isDataMissing ? 'text-slate-600' : category.color}`}>
               {isDataMissing ? 'NO DATA' : displayLabel}

@@ -29,7 +29,7 @@ describe('buildDetailTeaser', () => {
         expect(items[0].text).toBe('Pressió 1019 hPa'); // CircularGauge arrodoneix a l'enter
         expect(items[1].text).toBe("Qualitat de l'aire raonable");
         expect(items[2].text).toBe(getMoonPhaseName(getMoonPhase(new Date(NOW)), 'ca'));
-        expect(items[3].text).toBe('Visibilitat 42.3 km');
+        expect(items[3].text).toBe('Visibilitat 42,3 km');
     });
 
     it("el nivell d'aire i la fase lunar coincideixen amb el que pinten els ginys", () => {

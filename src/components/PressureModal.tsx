@@ -7,6 +7,7 @@ import { useState, useRef, useMemo, memo } from 'react';
 import { X, Gauge, TrendingUp, TrendingDown, Minus, CloudOff } from 'lucide-react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
+import { formatDecimal } from '../utils/formatters';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
@@ -301,7 +302,7 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
                 {currentDelta3h !== null && (
                   <div className="flex items-center gap-2 mt-1 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.trend3h}</span>
-                    <span className={`text-xs font-mono font-bold ${trend.color}`}>{currentDelta3h > 0 ? '+' : ''}{currentDelta3h} hPa</span>
+                    <span className={`text-xs font-mono font-bold ${trend.color}`}>{currentDelta3h > 0 ? '+' : ''}{formatDecimal(currentDelta3h, safeLang)} hPa</span>
                   </div>
                 )}
               </div>
@@ -319,7 +320,7 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.steepestChange}</span>
                     <span className={`text-sm font-bold ${steepTrend.color}`}>
-                      {steepTrend.label} ({steepestChange.delta > 0 ? '+' : ''}{steepestChange.delta} hPa) {t.at_} {entry.timeStr.slice(11, 16)}
+                      {steepTrend.label} ({steepestChange.delta > 0 ? '+' : ''}{formatDecimal(steepestChange.delta, safeLang)} hPa) {t.at_} {entry.timeStr.slice(11, 16)}
                     </span>
                   </div>
                 </div>

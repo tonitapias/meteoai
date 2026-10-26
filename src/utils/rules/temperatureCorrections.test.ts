@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getInversionCorrectedApparent, getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './temperatureCorrections';
+import { getCurrentDisplayTemp, getInversionCorrectedApparent, getInversionCorrectedTemp, MAX_INVERSION_CORRECTION_C } from './temperatureCorrections';
 import { StrictCurrentWeather } from '../../types/weatherLogicTypes';
 
 describe('getInversionCorrectedTemp', () => {
@@ -77,5 +77,27 @@ describe('getInversionCorrectedApparent', () => {
   it('sense alguna de les dues temperatures no se sap la correcció: la sensació es deixa tal com ve', () => {
     expect(getInversionCorrectedApparent(1, null, 0.25)).toBe(1);
     expect(getInversionCorrectedApparent(1, 2, null)).toBe(1);
+  });
+});
+
+describe('getCurrentDisplayTemp', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2024, 0, 15, 2, 0)); // Nit de gener: risc d'inversió
+  });
+
+  const calmNight = {
+    temperature_2m: 5.0, wind_speed_10m: 0, cloud_cover_low: 0, cloud_cover_mid: 0, cloud_cover_high: 0, is_day: 0
+  } as StrictCurrentWeather;
+
+  it("és la temperatura de `current` amb la correcció d'inversió (la de la capçalera)", () => {
+    expect(getCurrentDisplayTemp(calmNight, 41.98)).toBeCloseTo(getInversionCorrectedTemp(calmNight, 0, 41.98));
+    expect(getCurrentDisplayTemp({ ...calmNight, is_day: 1 }, 41.98)).toBe(5.0);
+  });
+
+  it('sense temperatura (o sense `current`): null, mai un 0 fals', () => {
+    expect(getCurrentDisplayTemp({ ...calmNight, temperature_2m: null } as unknown as StrictCurrentWeather)).toBeNull();
+    expect(getCurrentDisplayTemp(undefined)).toBeNull();
+    expect(getCurrentDisplayTemp(null)).toBeNull();
   });
 });

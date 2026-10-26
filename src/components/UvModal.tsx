@@ -6,6 +6,7 @@ import { useState, useRef, useMemo, memo } from 'react';
 import { X, Sun, ShieldAlert, ShieldCheck, CloudOff } from 'lucide-react';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
+import { formatDecimal } from '../utils/formatters';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
@@ -237,7 +238,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
               <div className="flex flex-col items-center sm:items-start gap-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.uvNow}</span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${severity.color}`}>
-                  {typeof currentUV === 'number' ? currentUV.toFixed(1) : '--'}
+                  {typeof currentUV === 'number' ? formatDecimal(currentUV, safeLang) : '--'}
                 </span>
               </div>
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
@@ -276,8 +277,8 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
                 {hasHourlyUv && activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
-                    {' · UV '}<span className={getUVCategory((isScrubbing ? activeEntry.uv : currentUV) ?? 0).color}>{(isScrubbing ? activeEntry.uv : currentUV ?? null) !== null ? (isScrubbing ? activeEntry.uv as number : currentUV as number).toFixed(1) : '--'}</span>
-                    {activeEntry.uvClear !== null && <span className="text-slate-500"> · {t.clearSky} {activeEntry.uvClear.toFixed(1)}</span>}
+                    {' · UV '}<span className={getUVCategory((isScrubbing ? activeEntry.uv : currentUV) ?? 0).color}>{(isScrubbing ? activeEntry.uv : currentUV ?? null) !== null ? formatDecimal(isScrubbing ? activeEntry.uv as number : currentUV as number, safeLang) : '--'}</span>
+                    {activeEntry.uvClear !== null && <span className="text-slate-500"> · {t.clearSky} {formatDecimal(activeEntry.uvClear, safeLang)}</span>}
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
@@ -341,7 +342,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
             </div>
 
             {/* TARGETES D'ESTADÍSTIQUES */}
-            <StatsSection t={t} maxUvToday={maxUvToday} maxUvClearToday={maxUvClearToday} hoursProtection={protectionEntries.length} />
+            <StatsSection t={t} lang={safeLang} maxUvToday={maxUvToday} maxUvClearToday={maxUvClearToday} hoursProtection={protectionEntries.length} />
           </div>
         )}
       </div>
@@ -351,16 +352,17 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
 
 interface StatsSectionProps {
   t: Record<string, string>;
+  lang: Language;
   maxUvToday: number | null;
   maxUvClearToday: number | null;
   hoursProtection: number;
 }
 
-const StatsSection = memo(function StatsSection({ t, maxUvToday, maxUvClearToday, hoursProtection }: StatsSectionProps) {
+const StatsSection = memo(function StatsSection({ t, lang, maxUvToday, maxUvClearToday, hoursProtection }: StatsSectionProps) {
   return (
     <div className="grid grid-cols-3 gap-3">
-      <StatCard label={t.maxUvToday} value={maxUvToday !== null ? maxUvToday.toFixed(1) : '--'} icon={<Sun className="w-3.5 h-3.5" />} />
-      <StatCard label={t.maxUvClear} value={maxUvClearToday !== null ? maxUvClearToday.toFixed(1) : '--'} icon={<Sun className="w-3.5 h-3.5" />} />
+      <StatCard label={t.maxUvToday} value={maxUvToday !== null ? formatDecimal(maxUvToday, lang) : '--'} icon={<Sun className="w-3.5 h-3.5" />} />
+      <StatCard label={t.maxUvClear} value={maxUvClearToday !== null ? formatDecimal(maxUvClearToday, lang) : '--'} icon={<Sun className="w-3.5 h-3.5" />} />
       <StatCard label={t.hoursProtection} value={`${hoursProtection}${t.hoursShort}`} icon={<ShieldAlert className="w-3.5 h-3.5" />} />
     </div>
   );

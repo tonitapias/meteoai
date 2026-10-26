@@ -23,7 +23,7 @@ export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: Visi
   const hasValidData = typeof visibility === 'number' && !isNaN(visibility);
   const safeVis = hasValidData ? Math.max(0, visibility) : 0;
   // Amb límit ("≥2" / "≤1"): la visibilitat del model no es creu si la política de boira no la confirma.
-  const visibilityKm = hasValidData ? formatVisibilityKm(safeVis, bound) : '--';
+  const visibilityKm = hasValidData ? formatVisibilityKm(safeVis, bound, safeLang) : '--';
   
   // Lògica d'estat visual
   let status = t.nodata;

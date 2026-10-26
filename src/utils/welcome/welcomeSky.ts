@@ -6,7 +6,7 @@
 import * as SunCalc from 'suncalc';
 import { geometricAltitude, lightPhase, RISE_SET_GEO, sunTimesForLocalDay } from '../solar/solarDay';
 import { SKY_BASE, mixLinear, skyColorAt } from '../solar/solarSky';
-import { getMoonPhase } from '../lunarPhases';
+import { getMoonPhase, getNamedMoonPhase } from '../lunarPhases';
 import { getMoonIlluminationPercent } from '../astronomyMath';
 import { TIMEZONE_COORDS } from './timezoneCoords';
 
@@ -31,7 +31,8 @@ export interface WelcomeSky {
   sunEast: boolean;
   /** Sortida, posta i migdia solar del dia local del dispositiu (ms); null si no n'hi ha (dia o nit polar). */
   sunTimes: { rise: number | null; set: number | null; noon: number | null };
-  moon: { phase: number; illumination: number; angle: number | null };
+  /** `namePhase`: la fase amb què es diu el nom del dia (getNamedMoonPhase); sense, `phase`. */
+  moon: { phase: number; illumination: number; angle: number | null; namePhase?: number };
   colors: { top: string; mid: string; bottom: string; glow: string };
 }
 
@@ -155,7 +156,7 @@ export function computeWelcomeSky(now: Date, place: SkyPlace): WelcomeSky {
     sunAltitude,
     sunEast,
     sunTimes: { rise: msOf(times?.sunrise), set: msOf(times?.sunset), noon: msOf(times?.solarNoon) },
-    moon: { phase: Number.isFinite(moonPhase) ? moonPhase : 0, illumination, angle: moonAngle },
+    moon: { phase: Number.isFinite(moonPhase) ? moonPhase : 0, illumination, angle: moonAngle, namePhase: getNamedMoonPhase(now) },
     colors: {
       top: mixLinear(zenith, '#03050b', 0.7),
       mid: mixLinear(zenith, SKY_BASE, 0.35),

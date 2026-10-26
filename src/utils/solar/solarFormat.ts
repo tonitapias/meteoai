@@ -1,9 +1,11 @@
 // src/utils/solar/solarFormat.ts
 // Format de xifres del modal Cicle solar: compte enrere (idèntic a la targeta), Δ de durada, graus,
-// lectura de la posició, intervals, coordenades i UV. Punt decimal sempre (toFixed), com UvModal i la targeta.
+// lectura de la posició, intervals, coordenades i UV. Decimals en el format de l'idioma (formatDecimal: "1,6" en català,
+// "1.6" en anglès), com UvModal i la resta de l'app.
 import type { Language } from '../../translations';
 import { getCardinalLabel } from '../astronomyMath';
 import { getUVCategory } from '../uvIndexUtils';
+import { formatDecimal } from '../formatters';
 import { fill, type SolarStrings } from '../../components/solar/solarI18n';
 import type { TimeText } from './solarDay';
 import { formatDateStr } from './solarTime';
@@ -66,17 +68,17 @@ export function signedDeg(alt: number): string {
 }
 
 /** Ombra d'un objecte vertical en múltiples de la seva alçada: 1 decimal per sota de 10, enter a partir de 10; sol < 5° => null. */
-export function shadowRatio(alt: number): string | null {
+export function shadowRatio(alt: number, lang: Language): string | null {
   if (!Number.isFinite(alt) || alt < 5) return null;
   const r = 1 / Math.tan((alt * Math.PI) / 180);
   const oneDecimal = r.toFixed(1);
-  return Number(oneDecimal) < 10 ? oneDecimal : String(Math.round(r));
+  return Number(oneDecimal) < 10 ? formatDecimal(Number(oneDecimal), lang) : String(Math.round(r));
 }
 
-/** Lectura de la posició: "225° SO · +31° · ombra 1.6× cap a NE" (l'ombra, només amb el sol ≥ 5°). */
+/** Lectura de la posició: "225° SO · +31° · ombra 1,6× cap a NE" (l'ombra, només amb el sol ≥ 5°). */
 export function readoutCoords(az: number, alt: number, lang: Language, t: Pick<SolarStrings, 'shadow'>): string {
   const base = `${azText(az, lang)} · ${signedDeg(alt)}`;
-  const r = shadowRatio(alt);
+  const r = shadowRatio(alt, lang);
   return r === null ? base : `${base} · ${fill(t.shadow, { r, dir: getCardinalLabel(az + 180, lang) })}`;
 }
 
@@ -92,11 +94,11 @@ export function formatRange(a: string | TimeText | null | undefined, b: string |
   return null;
 }
 
-/** Coordenades amb 2 decimals i hemisferi: "41.98° N 2.82° E"; oest = "W" en anglès, "O" en ca/es/fr. */
+/** Coordenades amb 2 decimals i hemisferi: "41,98° N 2,82° E" ("41.98° N" en anglès); oest = "W" en anglès, "O" en ca/es/fr. */
 export function formatLatLon(lat: number, lon: number, lang: Language): string {
   const west = lang === 'en' ? 'W' : 'O';
-  // Espai no separable dins de cada coordenada: "2.82° E" mai es parteix entre dues línies.
-  return `${Math.abs(lat).toFixed(2)}°\u00A0${lat < 0 ? 'S' : 'N'} ${Math.abs(lon).toFixed(2)}°\u00A0${lon < 0 ? west : 'E'}`;
+  // Espai no separable dins de cada coordenada: "2,82° E" mai es parteix entre dues línies.
+  return `${formatDecimal(Math.abs(lat), lang, 2)}°\u00A0${lat < 0 ? 'S' : 'N'} ${formatDecimal(Math.abs(lon), lang, 2)}°\u00A0${lon < 0 ? west : 'E'}`;
 }
 
 /**
@@ -127,8 +129,8 @@ const UV_CLASS_REMAP: Readonly<Record<string, string>> = {
 };
 
 /** UV amb un decimal (com la targeta) i la classe de color de la seva categoria; dada absent => null. */
-export function uvDisplay(v: number | null | undefined): { text: string; cls: string } | null {
+export function uvDisplay(v: number | null | undefined, lang: Language): { text: string; cls: string } | null {
   if (typeof v !== 'number' || !Number.isFinite(v)) return null;
   const cls = getUVCategory(v).color;
-  return { text: v.toFixed(1), cls: UV_CLASS_REMAP[cls] ?? cls };
+  return { text: formatDecimal(v, lang), cls: UV_CLASS_REMAP[cls] ?? cls };
 }

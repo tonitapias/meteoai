@@ -16,7 +16,7 @@ import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { swipeDirection } from '../utils/dayNavigation';
 import { getMoonPhase } from '../utils/weatherMath';
-import { getMoonAgeDays } from '../utils/lunarPhases';
+import { getMoonAgeDays, getNamedMoonPhase } from '../utils/lunarPhases';
 import {
   getMoonCompassPosition,
   getMoonRiseSetForDate,
@@ -200,7 +200,14 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
     const age = at ? getMoonAgeDays(at) : NaN;
     return isNaN(age) ? 0 : age;
   }, [isToday, now, viewAnchor]);
-  const phaseName = getPhaseName(phase, safeLang);
+  // El nom és el del dia (getNamedMoonPhase: el dia de la plena és "Lluna Plena", com a la targeta); la il·luminació i el
+  // dibuix, de la fase real.
+  const namePhase = useMemo(() => {
+    const at = isToday ? now : viewAnchor;
+    const p = at ? getNamedMoonPhase(at) : NaN;
+    return Number.isFinite(p) ? p : phase;
+  }, [isToday, now, viewAnchor, phase]);
+  const phaseName = getPhaseName(namePhase, safeLang);
 
   // Posició real "ara mateix" (la mateixa funció que la targeta): només es mostra avui.
   const livePos = useMemo(() => (hasValidCoords ? getMoonCompassPosition(now, lat, lon) : null), [now, hasValidCoords, lat, lon]);

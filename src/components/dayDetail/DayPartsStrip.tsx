@@ -3,6 +3,7 @@ import { getWeatherIcon } from '../WeatherIcons';
 import { MATRIX_BG } from '../widgets/widgetStyles';
 import { formatPrecipitation } from '../../utils/formatters';
 import type { DayPartKey, DayPartSummary } from '../../utils/dayParts';
+import type { Language } from '../../translations';
 
 interface DayPartsStripProps {
   parts: ReadonlyArray<DayPartSummary>;
@@ -12,6 +13,8 @@ interface DayPartsStripProps {
   nowLabel: string;
   /** Hora local actual (0-23) si el dia mostrat és avui; null si no. Marca la franja en curs i atenua les passades. */
   nowHour: number | null;
+  /** Idioma dels decimals de la pluja ("0,4 mm"). */
+  lang?: Language;
 }
 
 const formatTempRange = (min: number | null, max: number | null): string => {
@@ -22,7 +25,7 @@ const formatTempRange = (min: number | null, max: number | null): string => {
 };
 
 /** Resum del dia per franges (matinada, matí, tarda, nit): una lectura ràpida abans de les 24 hores. */
-export const DayPartsStrip = ({ parts, title, labels, nowLabel, nowHour }: DayPartsStripProps) => {
+export const DayPartsStrip = ({ parts, title, labels, nowLabel, nowHour, lang = 'ca' }: DayPartsStripProps) => {
   if (parts.length === 0) return null;
 
   return (
@@ -78,7 +81,7 @@ export const DayPartsStrip = ({ parts, title, labels, nowLabel, nowHour }: DayPa
                       <Droplets className="w-3 h-3 text-blue-400" />
                       {part.precipProbMax !== null && <span className="text-blue-300">{Math.round(part.precipProbMax)}%</span>}
                       {part.precipSum !== null && part.precipSum > 0 && (
-                        <span className="text-slate-400 font-mono">{formatPrecipitation(part.precipSum, part.snowfall)}</span>
+                        <span className="text-slate-400 font-mono">{formatPrecipitation(part.precipSum, part.snowfall, lang)}</span>
                       )}
                     </>
                   ) : (

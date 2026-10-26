@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import { MATRIX_BG, CARD_VEIL } from './widgetStyles';
+import { formatDecimal } from '../../utils/formatters';
 
 interface CircularGaugeProps {
     icon: React.ReactNode;
@@ -63,7 +64,7 @@ export const CircularGauge = ({
 
     if (typeof trendValue === 'number' && !isNaN(trendValue)) {
         showTrend = true;
-        safeTrendValue = `${trendValue > 0 ? '+' : ''}${trendValue.toFixed(1)}`;
+        safeTrendValue = `${trendValue > 0 ? '+' : ''}${formatDecimal(trendValue, lang)}`;
 
         if (trendValue <= -2.0) {
             // Caiguda brusca (Roig Tàctic)

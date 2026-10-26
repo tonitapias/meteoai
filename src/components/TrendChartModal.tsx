@@ -327,7 +327,7 @@ const TrendChartModal = memo(function TrendChartModal({
       `${mDict.aria.max} ${formatDegrees(d.max)}`,
       `${mDict.aria.min} ${formatDegrees(d.min)}`,
       `${mDict.aria.rain} ${d.precipProb !== null ? `${d.precipProb}%` : '--'}`,
-      d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum) : null,
+      d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum, lang) : null,
       d.spread.reliability ? mDict.reliability[d.spread.reliability] : null,
       showSourceStrip ? (d.regional ? (regionalModelLabel || 'HD') : mDict.globalModel) : null
     ].filter((p): p is string => !!p);
@@ -355,7 +355,7 @@ const TrendChartModal = memo(function TrendChartModal({
 
       {/* Quantitat prevista (només si n'hi ha); l'espai es reserva perquè les columnes quedin alineades */}
       <span data-testid="precip-amount" className="min-h-[12px] md:min-h-[14px] text-[10px] font-black tabular-nums text-cyan-300/90">
-        {d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum) : ''}
+        {d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum, lang) : ''}
       </span>
 
       {d.spread.reliability

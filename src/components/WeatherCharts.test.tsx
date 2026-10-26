@@ -24,8 +24,8 @@ describe('MinutelyPreciseChart', () => {
         const card = container.firstElementChild;
         expect(card?.classList.contains('bento-card')).toBe(true);
         expect(card?.contains(screen.getByText(LABEL))).toBe(true);
-        expect(screen.getByText('0.3')).toBeTruthy();
-        expect(screen.getByText('1.2')).toBeTruthy();
+        expect(screen.getByText('0,3')).toBeTruthy();
+        expect(screen.getByText('1,2')).toBeTruthy();
         // el quart sense pluja i el que faltava (s'omple fins a quatre) surten com a "-"
         expect(screen.getAllByText('-')).toHaveLength(2);
     });

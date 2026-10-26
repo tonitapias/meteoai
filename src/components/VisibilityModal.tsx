@@ -295,7 +295,7 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
               <div className="flex flex-col items-center sm:items-start gap-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.visNow}</span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${severity.color}`}>
-                  {formatVisibilityKm(currentVisibility, currentResolved.bound)}
+                  {formatVisibilityKm(currentVisibility, currentResolved.bound, safeLang)}
                 </span>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">km</span>
               </div>
@@ -317,7 +317,7 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
                 {nextFogWindow ? (
                   <span className={`text-sm font-bold ${severity.color}`}>
                     {nextFogWindow.startIdx === 0 ? t.activeNow : `${t.in_} ${nextFogWindow.startIdx}${t.hoursShort}`}
-                    {' · '}{t.minVisPeak} {formatVisibilityKm(nextFogWindow.min, nextFogWindow.minBound)} km
+                    {' · '}{t.minVisPeak} {formatVisibilityKm(nextFogWindow.min, nextFogWindow.minBound, safeLang)} km
                   </span>
                 ) : (
                   <span className="text-sm font-bold text-emerald-400">{t.noFog}</span>
@@ -334,7 +334,7 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
                 {activeEntry ? (
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
-                    {' · '}<span className={getVisibilitySeverity(displayVisibility, t).color}>{formatVisibilityKm(displayVisibility, displayBound)} km</span>
+                    {' · '}<span className={getVisibilitySeverity(displayVisibility, t).color}>{formatVisibilityKm(displayVisibility, displayBound, safeLang)} km</span>
                   </span>
                 ) : (
                   <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
@@ -400,7 +400,7 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
             </div>
 
             {/* TARGETES D'ESTADÍSTIQUES */}
-            <StatsSection t={t} minVisibility={minVisibility} hoursReduced={hoursReduced} />
+            <StatsSection t={t} lang={safeLang} minVisibility={minVisibility} hoursReduced={hoursReduced} />
           </div>
         )}
       </div>
@@ -410,14 +410,15 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
 
 interface StatsSectionProps {
   t: Record<string, string>;
+  lang: Language;
   minVisibility: { meters: number; bound: VisibilityBound } | null;
   hoursReduced: number;
 }
 
-const StatsSection = memo(function StatsSection({ t, minVisibility, hoursReduced }: StatsSectionProps) {
+const StatsSection = memo(function StatsSection({ t, lang, minVisibility, hoursReduced }: StatsSectionProps) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <StatCard label={t.minVis} value={minVisibility !== null ? `${formatVisibilityKm(minVisibility.meters, minVisibility.bound)} km` : '--'} icon={<Eye className="w-3.5 h-3.5" />} />
+      <StatCard label={t.minVis} value={minVisibility !== null ? `${formatVisibilityKm(minVisibility.meters, minVisibility.bound, lang)} km` : '--'} icon={<Eye className="w-3.5 h-3.5" />} />
       <StatCard label={t.hoursReduced} value={`${hoursReduced}${t.hoursShort}`} icon={<AlertTriangle className="w-3.5 h-3.5" />} />
     </div>
   );

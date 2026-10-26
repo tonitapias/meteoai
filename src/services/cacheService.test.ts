@@ -193,3 +193,37 @@ describe('cacheService.pruneOldWeatherOnce — un cop per sessió i sense purga 
         expect(localStorage.getItem('meteoai_unit')).toBe('C');
     });
 });
+
+describe('cacheService.clearCachedData — botó del peu', () => {
+    beforeEach(() => {
+        db.clear();
+        localStorage.clear();
+    });
+
+    it('esborra les previsions i les anàlisis desades, però no els favorits ni les preferències', async () => {
+        db.set(cacheService.generateWeatherKey(41.98, 2.82, 'C', 'ca'), { data: {}, timestamp: T0, version: 'v2_indexeddb_fast' });
+        db.set(cacheService.generateAiKey('100', 41.98, 2.82, 'ca'), { data: {}, timestamp: T0, version: 'v2_indexeddb_fast' });
+        localStorage.setItem('meteoai_favorites', '[{"name":"Girona"}]');
+        localStorage.setItem('meteoai_lang', 'es');
+        localStorage.setItem('meteoai_view_mode', 'expert');
+        localStorage.setItem('meteoai_v7_cache_41_2', '{}');
+
+        await cacheService.clearCachedData();
+
+        expect(db.size).toBe(0);
+        expect(localStorage.getItem('meteoai_v7_cache_41_2')).toBeNull();
+        expect(localStorage.getItem('meteoai_favorites')).toBe('[{"name":"Girona"}]');
+        expect(localStorage.getItem('meteoai_lang')).toBe('es');
+        expect(localStorage.getItem('meteoai_view_mode')).toBe('expert');
+    });
+
+    it("no toca les claus d'altres apps del mateix origen", async () => {
+        db.set('meteo_cache_altra_app', 1);
+        localStorage.setItem('meteo_favorites', '[]');
+
+        await cacheService.clearCachedData();
+
+        expect(db.get('meteo_cache_altra_app')).toBe(1);
+        expect(localStorage.getItem('meteo_favorites')).toBe('[]');
+    });
+});

@@ -7,7 +7,7 @@ import { DayPartsStrip } from './dayDetail/DayPartsStrip';
 import { SunTimesCard } from './dayDetail/SunTimesCard';
 import { TRANSLATIONS, Language } from '../translations';
 import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale, formatTemp } from '../utils/formatters';
+import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale, formatTemp, formatDecimal } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { hasVisibleRange, type ModelRange } from '../utils/dailyModelSpread';
@@ -171,10 +171,10 @@ export default function DayDetailModal({
         return { val: "--", unit: "" };
     }
 
-    const rawString = formatPrecipitation(dayData.precipSum, snowSum);
+    const rawString = formatPrecipitation(dayData.precipSum, snowSum, lang);
     const [val, u] = rawString.split(' '); 
     return { val, unit: u };
-  }, [dayData, weatherData, selectedDayIndex]);
+  }, [dayData, weatherData, selectedDayIndex, lang]);
 
   const tableRows = useMemo<TableRowData[]>(() => {
     if (!weatherData || !weatherData.hourly || !Array.isArray(weatherData.hourly.time) || dayIndices.length === 0) return [];
@@ -295,7 +295,7 @@ export default function DayDetailModal({
   const safeMaxTemp = typeof extremes?.max === 'number' && !isNaN(extremes.max) ? Math.round(extremes.max) : '--';
   const safeMinTemp = typeof extremes?.min === 'number' && !isNaN(extremes.min) ? Math.round(extremes.min) : '--';
   const safeWindMax = typeof windMax === 'number' && !isNaN(windMax) ? Math.round(windMax) : '--';
-  const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? dayData.uvMax.toFixed(1) : '--';
+  const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? formatDecimal(dayData.uvMax, lang) : '--';
 
   const safeSnowLevel = snowLevelText;
   const snowLevelUnit = '';
@@ -577,6 +577,7 @@ export default function DayDetailModal({
                 labels={partLabels}
                 nowLabel={labelNow}
                 nowHour={nowHour}
+                lang={lang}
             />
 
             <div data-no-swipe className="relative overflow-hidden bg-[#0a0b10] border border-white/5 rounded-3xl p-5 md:p-8 shadow-inner">
@@ -661,7 +662,7 @@ export default function DayDetailModal({
                                             )}
                                             {row.precipSum !== null && row.precipSum > 0 && (
                                                 <span className="text-[9px] text-slate-400 font-mono font-bold bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-inner">
-                                                    {formatPrecipitation(row.precipSum, row.snowfall)}
+                                                    {formatPrecipitation(row.precipSum, row.snowfall, lang)}
                                                 </span>
                                             )}
                                         </>

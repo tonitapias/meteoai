@@ -88,6 +88,20 @@ export const getInversionCorrectedTemp = (
 };
 
 /**
+ * Temperatura d'"ara" tal com la mostra la capçalera: el bloc `current` (lectura de cada 15 minuts) amb la correcció
+ * d'inversió del mes del rellotge. Font única de tot el que diu "ara" (capçalera i targeta "ARA" de la tira de 24 h): l'hora
+ * en punt de `hourly` pot diferir un grau o més (Girona, 26-10-2026 a les 19:26: capçalera 18°, hora de les 19 h 19°).
+ * Sense temperatura, null (mai un 0 fals).
+ */
+export const getCurrentDisplayTemp = (
+    current: StrictCurrentWeather | null | undefined,
+    latitude?: number
+): number | null => {
+    if (!current || extractValidNum(current.temperature_2m) === null) return null;
+    return getInversionCorrectedTemp(current, new Date().getMonth(), latitude);
+};
+
+/**
  * Sensació tèrmica MOSTRADA: la del model desplaçada tant com la temperatura per la correcció d'inversió.
  *
  * Open-Meteo calcula la sensació a partir de la temperatura crua (més el vent, la humitat i el sol). Sense això, en una

@@ -3,6 +3,7 @@ import React, { useId, useState } from 'react';
 import { Language } from '../../translations';
 import { X, LineChart } from 'lucide-react';
 import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
+import { formatDecimal } from '../../utils/formatters';
 
 interface ConsensusChartsModalProps {
   closeModal: () => void;
@@ -86,9 +87,11 @@ interface ChartSeriesInput {
 // ('series.slice(1)': GLO/ECMWF/AIFS/GFS/ICON) es dibuixen com a línies fines
 // de referència sense etiquetes per evitar el caos de N textos superposats.
 const TacticalSvgChart = ({
-  title, unit, times, series, type, zeroBased = false
+  title, unit, times, series, type, zeroBased = false, lang
 }: {
   title: string; unit: string; times: string[];
+  /** Idioma dels decimals ("18,3" / "18.3"), com la resta de l'app. */
+  lang: string;
   series: ChartSeriesInput[];
   type: 'line' | 'bar'; zeroBased?: boolean;
 }) => {
@@ -235,7 +238,7 @@ const TacticalSvgChart = ({
                        <g key={`grid-h-${i}`}>
                           <line x1={padX} y1={y} x2={padX + drawW} y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeDasharray="4 4" />
                           <text x={padX - 8} y={y + 4} fill="#475569" fontSize="11" fontWeight="bold" textAnchor="end" fontFamily="monospace">
-                              {val.toFixed(isZeroBased ? 1 : 0)}
+                              {formatDecimal(val, lang, isZeroBased ? 1 : 0)}
                           </text>
                        </g>
                     );
@@ -289,7 +292,7 @@ const TacticalSvgChart = ({
                                 <circle cx={x} cy={y} r="5" fill="#000000" stroke={primary.colorHex} strokeWidth="1" opacity="0.5" />
                                 <circle cx={x} cy={y} r="2.5" fill={primary.colorHex} />
                                 <text x={x} y={y - 10} fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 2px 4px rgba(0,0,0,1)` }}>
-                                   {val.toFixed(1)}
+                                   {formatDecimal(val, lang)}
                                 </text>
                              </g>
                           );
@@ -315,7 +318,7 @@ const TacticalSvgChart = ({
                                         <rect x={xBase - 6} y={yPrimary} width={12} height={hPrimary} fill={primary.colorHex} opacity="0.3" rx="4" />
                                         <rect x={xBase - 3} y={yPrimary} width={6} height={hPrimary} fill={primary.colorHex} rx="3" />
                                         <text x={xBase} y={yPrimary - 6} fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle" fontFamily="monospace" style={{ textShadow: `0px 2px 4px rgba(0,0,0,1)` }}>
-                                           {(valPrimary as number).toFixed(1)}
+                                           {formatDecimal(valPrimary as number, lang)}
                                         </text>
                                     </>
                                 )}
@@ -358,7 +361,7 @@ const TacticalSvgChart = ({
                           </text>
                           {rows.map((r, i) => {
                              const rowY = tipY + 15 + (i + 1) * 16;
-                             const displayVal = typeof r.val === 'number' && !isNaN(r.val) ? `${r.val.toFixed(1)} ${unit}` : '—';
+                             const displayVal = typeof r.val === 'number' && !isNaN(r.val) ? `${formatDecimal(r.val, lang)} ${unit}` : '—';
                              return (
                                 <g key={`tip-row-${r.s.id}`}>
                                    <circle cx={tipX + 12} cy={rowY - 4} r="3.5" fill={r.s.colorHex} />
@@ -433,10 +436,10 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
              </div>
           ) : (
              <div className="flex flex-col gap-6 md:gap-8 pb-10 max-w-full">
-                <TacticalSvgChart title={t.temp} unit="°C" times={displayTimes} type="line" series={seriesFor('temp', { loc: '#f43f5e', ...SERIES_COLORS })} />
-                <TacticalSvgChart title={t.rain} unit="mm" times={displayTimes} type="bar" series={seriesFor('rain', { loc: '#38bdf8', ...SERIES_COLORS })} />
-                <TacticalSvgChart title={t.wind} unit="km/h" times={displayTimes} type="line" zeroBased series={seriesFor('wind', { loc: '#fbbf24', ...SERIES_COLORS })} />
-                <TacticalSvgChart title={t.gusts} unit="km/h" times={displayTimes} type="line" zeroBased series={seriesFor('gusts', { loc: '#f97316', ...SERIES_COLORS })} />
+                <TacticalSvgChart lang={safeLang} title={t.temp} unit="°C" times={displayTimes} type="line" series={seriesFor('temp', { loc: '#f43f5e', ...SERIES_COLORS })} />
+                <TacticalSvgChart lang={safeLang} title={t.rain} unit="mm" times={displayTimes} type="bar" series={seriesFor('rain', { loc: '#38bdf8', ...SERIES_COLORS })} />
+                <TacticalSvgChart lang={safeLang} title={t.wind} unit="km/h" times={displayTimes} type="line" zeroBased series={seriesFor('wind', { loc: '#fbbf24', ...SERIES_COLORS })} />
+                <TacticalSvgChart lang={safeLang} title={t.gusts} unit="km/h" times={displayTimes} type="line" zeroBased series={seriesFor('gusts', { loc: '#f97316', ...SERIES_COLORS })} />
              </div>
           )}
         </div>

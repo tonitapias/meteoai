@@ -46,6 +46,20 @@ export interface TileCoord {
 }
 
 /**
+ * Zoom de mostreig per a cada servidor. RainViewer no passa del 7: al zoom 8 respon 200 amb una imatge grisa
+ * "Zoom Level Not Supported" (comprovat el 26-10-2026), que llegida com a píxel de radar semblaria pluja. El mapa ja ho
+ * evita amb maxzoom: 7 (useRadarAnimation); LibreWXR serveix el 8.
+ */
+export function sampleZoomForHost(host: string): number {
+  return /rainviewer\.com/i.test(host) ? 7 : 8;
+}
+
+/** URL de la tessel·la de 512 px amb l'esquema de colors NEXRAD Level III (6), el que descodifica rgbaToClosestDbz. */
+export function radarTileUrl(host: string, path: string, tile: { z: number; x: number; y: number }): string {
+  return `${host}${path}/512/${tile.z}/${tile.x}/${tile.y}/6/1_1.png`;
+}
+
+/**
  * Web Mercator estàndard: converteix lat/lon a coordenades de tessel·la
  * (x, y, z) i a la posició en píxels dins d'aquella tessel·la.
  */

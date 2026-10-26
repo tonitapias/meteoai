@@ -3,11 +3,13 @@
 // de l'última tecla, bloqueja caràcters perillosos i descarta respostes velles ("últim guanyador").
 import { useEffect, useRef, useState } from 'react';
 import { searchCity, GeoSearchResult } from '../services/geocodingService';
+import type { Language } from '../translations';
 
 // DOCTRINA RISC ZERO: Regex de llista negra per sanitejar inputs
 const DANGEROUS_CHARS = /[<>{}[\]\\/]/;
 
-export function useCitySearch() {
+/** `lang`: idioma dels noms dels resultats (el de la interfície). */
+export function useCitySearch(lang: Language = 'ca') {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<GeoSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -34,7 +36,7 @@ export function useCitySearch() {
       const requestId = ++searchRequestIdRef.current;
       setIsSearching(true);
       try {
-        const results = await searchCity(cleanQuery);
+        const results = await searchCity(cleanQuery, lang);
         // Una cerca més recent ja ha començat mentrestant: descartem aquest
         // resultat obsolet en lloc de sobreescriure els suggeriments actuals.
         if (searchRequestIdRef.current !== requestId) return;
@@ -50,7 +52,7 @@ export function useCitySearch() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, lang]);
 
   return { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex };
 }

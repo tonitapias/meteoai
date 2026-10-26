@@ -51,6 +51,17 @@ export const getSafeLocale = (lang: Language): string => {
   }
 };
 
+/**
+ * Nombre amb decimals en el format de l'idioma: "18,3" en català, castellà i francès, "18.3" en anglès. Abans alguns ginys
+ * feien toFixed() i deien "18.3°" al costat d'un "3,9°" d'un altre. `trimZero`: sense ",0" final ("2" i no "2,0").
+ */
+export const formatDecimal = (value: number, lang: Language | string, digits = 1, trimZero = false): string =>
+  value.toLocaleString(getSafeLocale(lang as Language), {
+    minimumFractionDigits: trimZero ? 0 : digits,
+    maximumFractionDigits: digits,
+    useGrouping: false
+  });
+
 export const formatDate = (
   dateString: string | undefined,
   lang: Language,
@@ -96,18 +107,19 @@ export const formatHoursMinutes = (totalSeconds: number | null | undefined): str
   return `${h}h ${m.toString().padStart(2, '0')}m`;
 };
 
-export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null): string => {
+// Decimals en el format de l'idioma ("0,4 mm"; "0.4 mm" en anglès), com formatDecimal.
+export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null, lang: Language = 'ca'): string => {
   const safePrecip = precipitationTotal ?? 0;
   const safeSnow = snowfall ?? 0;
 
   if (safeSnow >= 0.2) {
     return safeSnow < 1 
-      ? `${safeSnow.toFixed(1)} cm` 
+      ? `${formatDecimal(safeSnow, lang)} cm`
       : `${Math.round(safeSnow)} cm`;
   }
   
   if (safePrecip < 1 && safePrecip > 0) {
-    return `${safePrecip.toFixed(1)} mm`;
+    return `${formatDecimal(safePrecip, lang)} mm`;
   }
   return `${Math.round(safePrecip)} mm`;
 };
