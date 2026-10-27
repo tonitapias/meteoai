@@ -506,6 +506,10 @@ export const es = {
     copyCoordsHint: "Para dictarlas o pegarlas donde haga falta",
     coordsCopied: "Coordenadas copiadas al portapapeles"
   },
+  home: {
+    button: "Inicio",
+    aria: "Volver al inicio"
+  },
 
     // --- NUEVAS CLAVES: WIDGETS, RADAR Y 7 DÍAS ---
   

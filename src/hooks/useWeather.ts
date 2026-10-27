@@ -165,6 +165,20 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
 
   const getLastLoadedAt = useCallback(() => loadedRef.current?.at ?? null, []);
 
+  // Tornar a la benvinguda (botó Inici del tauler): es buida la pantalla i es desfà tot el que hi podria tornar a
+  // carregar el lloc: la petició en curs i el resultat tardà d'una previsió desada (requestIdRef), el refresc en segon
+  // pla (loadedRef) i l'antirrebot de 3 s (triar el mateix lloc just després l'ha de carregar de nou).
+  const clearWeather = useCallback(() => {
+    requestIdRef.current++;
+    loadedRef.current = null;
+    lastFetchRef.current = null;
+    setWeatherData(null);
+    setAqiData(null);
+    setLoadedPlace(null);
+    setError(null);
+    setLoading(false);
+  }, []);
+
   return {
     weatherData,
     loadedPlace,
@@ -173,6 +187,7 @@ export function useWeather(lang: Language, unit: WeatherUnit) {
     error,
     fetchWeatherByCoords,
     refreshLoadedLocation,
-    getLastLoadedAt
+    getLastLoadedAt,
+    clearWeather
   };
 }

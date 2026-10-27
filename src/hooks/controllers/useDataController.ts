@@ -19,7 +19,7 @@ interface DataControllerProps {
 
 export function useDataController({ lang, unit, now }: DataControllerProps) {
   // 1. Obtenció de Dades Pures
-  const { weatherData, loadedPlace, aqiData, loading, error, fetchWeatherByCoords, refreshLoadedLocation, getLastLoadedAt } = useWeather(lang, unit);
+  const { weatherData, loadedPlace, aqiData, loading, error, fetchWeatherByCoords, refreshLoadedLocation, getLastLoadedAt, clearWeather } = useWeather(lang, unit);
   const { getCoordinates } = useGeoLocation();
 
   // Sense això la previsió només es carregava en canviar d'ubicació i, amb l'app
@@ -67,6 +67,8 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
       fetchWeatherByCoords,
       // Torna a demanar la ubicació carregada sense esquelet de càrrega (botó "Reintenta" de la previsió desada).
       refreshLoadedLocation,
+      // Buida la previsió i atura'n els refrescos (botó Inici).
+      clearWeather,
       getCoordinates
     },
     flags: {

@@ -513,6 +513,11 @@ export const ca = {
     copyCoordsHint: "Per dictar-les o enganxar-les on calgui",
     coordsCopied: "Coordenades copiades al porta-retalls"
   },
+  // Botó del tauler per tornar a la benvinguda (Header). L'aria conté el text visible (WCAG 2.5.3).
+  home: {
+    button: "Inici",
+    aria: "Torna a l'inici"
+  },
 
     // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
   weekdays: {

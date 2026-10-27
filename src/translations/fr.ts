@@ -507,6 +507,10 @@ export const fr = {
     copyCoordsHint: "Pour les dicter ou les coller où il faut",
     coordsCopied: "Coordonnées copiées dans le presse-papiers"
   },
+  home: {
+    button: "Accueil",
+    aria: "Retour à l'accueil"
+  },
 
     // --- NOUVELLES CLÉS : WIDGETS, RADAR ET 7 JOURS ---
   
