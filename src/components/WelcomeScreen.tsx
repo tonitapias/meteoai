@@ -30,9 +30,11 @@ const SkyScene = lazy(() => import('./welcome/SkyScene'));
 // Del mateix tros: quan hi ha lluna a la línia de dalt, el cel (i doncs aquest codi) ja ha arribat.
 const EyebrowMoon = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowMoon })));
 const EyebrowSun = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowSun })));
-// El secret de la columna (estirar-la cap amunt tres cops): només es baixa si algú el troba.
+// Els secrets de la columna (estirar-la cap amunt tres cops, o aixafar-la cap avall): només es baixen si algú els troba.
 const loadSkyElevator = () => import('./welcome/SkyElevator');
 const SkyElevator = lazy(loadSkyElevator);
+const loadEarthElevator = () => import('./welcome/EarthElevator');
+const EarthElevator = lazy(loadEarthElevator);
 
 interface WelcomeScreenProps {
   lang: Language;
@@ -146,27 +148,36 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
     setShowHelp(true);
   };
 
-  // --- L'ascensor de la Columna del cel: el secret de la benvinguda (estirar la columna cap amunt tres cops). També
-  // amb entrada d'historial, perquè el botó enrere en surti. ---
-  const [elevatorOpen, setElevatorOpen] = useState(false);
+  // --- Els secrets de la Columna del cel: l'ascensor fins al Meteosat (estirar la columna cap amunt tres cops) i el
+  // que baixa fins a les antípodes (aixafar-la tres cops). També amb entrada d'historial, perquè el botó enrere en surti. ---
+  const [elevatorOpen, setElevatorOpen] = useState<'sky' | 'earth' | null>(null);
   const elevatorHistoryPushedRef = useRef(false);
   const columnRef = useRef<HTMLDivElement>(null);
-  const openElevator = useCallback(() => {
-    window.history.pushState({ modal: 'meteo_sky_elevator' }, '');
+  const openElevator = useCallback((which: 'sky' | 'earth') => {
+    window.history.pushState({ modal: which === 'sky' ? 'meteo_sky_elevator' : 'meteo_earth_elevator' }, '');
     elevatorHistoryPushedRef.current = true;
-    setElevatorOpen(true);
+    setElevatorOpen(which);
   }, []);
+  const openSkyElevator = useCallback(() => openElevator('sky'), [openElevator]);
+  const openEarthElevator = useCallback(() => openElevator('earth'), [openElevator]);
   const closeElevator = useCallback(() => {
     if (elevatorHistoryPushedRef.current) {
       elevatorHistoryPushedRef.current = false;
       window.history.back();
     } else {
-      setElevatorOpen(false);
+      setElevatorOpen(null);
     }
   }, []);
-  // A la primera estirada ja es comença a baixar l'ascensor: a la tercera hi ha de ser.
-  const prefetchElevator = useCallback(() => { void loadSkyElevator(); }, []);
-  useColumnStretch(columnRef, { onPull: prefetchElevator, onOpen: openElevator, enabled: !!sky && !elevatorOpen });
+  // Al primer gest ja es comença a baixar l'ascensor: al tercer hi ha de ser.
+  const prefetchSkyElevator = useCallback(() => { void loadSkyElevator(); }, []);
+  const prefetchEarthElevator = useCallback(() => { void loadEarthElevator(); }, []);
+  useColumnStretch(columnRef, {
+    onPull: prefetchSkyElevator,
+    onOpen: openSkyElevator,
+    onPush: prefetchEarthElevator,
+    onOpenDown: openEarthElevator,
+    enabled: !!sky && !elevatorOpen,
+  });
   // En tocar terra, l'avís de l'app (sobreviu al canvi de pantalla) i, si ja hi havia permís d'ubicació, la previsió
   // d'on és l'usuari; si no, es queda a la benvinguda.
   const landsOnForecast = sky?.place.source === 'gps';
@@ -180,7 +191,7 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
       helpHistoryPushedRef.current = false;
       setShowHelp(false);
       elevatorHistoryPushedRef.current = false;
-      setElevatorOpen(false);
+      setElevatorOpen(null);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -409,7 +420,20 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         <span className="font-mono">v{APP_VERSION}</span>
       </footer>
 
-      {elevatorOpen && sky && (
+      {elevatorOpen === 'earth' && sky && (
+        <Suspense fallback={null}>
+          <EarthElevator
+            sky={sky}
+            lang={lang}
+            unit={unit}
+            cardinals={{ north: w.cardinalNorth, south: w.cardinalSouth, east: w.cardinalEast, west: w.cardinalWest }}
+            onClose={closeElevator}
+            onLand={handleLanded}
+          />
+        </Suspense>
+      )}
+
+      {elevatorOpen === 'sky' && sky && (
         <Suspense fallback={null}>
           <SkyElevator
             sky={sky}
