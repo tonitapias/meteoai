@@ -1,7 +1,8 @@
 // src/components/welcome/elevatorI18n.ts
 // Textos de l'ascensor de la Columna del cel (el secret de la benvinguda), als quatre idiomes. Van amb el tros de
 // l'ascensor i no amb les traduccions de l'app: només es baixen si algú el troba.
-// {km}, {range}, {alt}, {speed}: distàncies ja formatades en km o en milles segons la unitat de l'usuari.
+// {km}, {range}, {alt}, {speed}: distàncies ja formatades en km o en milles segons la unitat de l'usuari. {n}: quants
+// secrets de la benvinguda ha trobat (utils/welcome/secretsFound).
 import type { Language } from '../../translations';
 
 const ca = {
@@ -54,7 +55,7 @@ const ca = {
   reentryTitle: "Agafa't fort",
   reentryBody: "Tornem a la teva previsió a tota velocitat.",
   reentryBodyHome: "Tornem a terra a tota velocitat.",
-  landed: "Has pujat {km} i has tornat. Secret trobat: 1\u00a0de\u00a0?"
+  landed: "Has pujat {km} i has tornat. Secret trobat: {n}\u00a0de\u00a0?"
 };
 
 export type ElevatorText = typeof ca;
@@ -109,7 +110,7 @@ const es: ElevatorText = {
   reentryTitle: "Agárrate fuerte",
   reentryBody: "Volvemos a tu previsión a toda velocidad.",
   reentryBodyHome: "Volvemos a tierra a toda velocidad.",
-  landed: "Has subido {km} y has vuelto. Secreto encontrado: 1\u00a0de\u00a0?"
+  landed: "Has subido {km} y has vuelto. Secreto encontrado: {n}\u00a0de\u00a0?"
 };
 
 const en: ElevatorText = {
@@ -162,7 +163,7 @@ const en: ElevatorText = {
   reentryTitle: "Hold on tight",
   reentryBody: "Heading back to your forecast at full speed.",
   reentryBodyHome: "Heading back down at full speed.",
-  landed: "You went up {km} and came back. Secret found: 1\u00a0of\u00a0?"
+  landed: "You went up {km} and came back. Secret found: {n}\u00a0of\u00a0?"
 };
 
 const fr: ElevatorText = {
@@ -215,7 +216,7 @@ const fr: ElevatorText = {
   reentryTitle: "Accrochez-vous",
   reentryBody: "Retour à votre prévision à toute vitesse.",
   reentryBodyHome: "Retour sur Terre à toute vitesse.",
-  landed: "Aller-retour jusqu'à {km} réussi. Secret trouvé\u00a0: 1\u00a0sur\u00a0?"
+  landed: "Aller-retour jusqu'à {km} réussi. Secret trouvé\u00a0: {n}\u00a0sur\u00a0?"
 };
 
 export const ELEVATOR_TEXT: Readonly<Record<Language, ElevatorText>> = { ca, es, en, fr };

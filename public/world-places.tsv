@@ -1,0 +1,7343 @@
+# Natural Earth 10m populated places (public domain), naturalearthdata.com. lat	lon	rank_max	iso_a2	name
+42.7	20.3	9		Pec
+42.7	21.2	10		Pristina
+42.2	20.8	9		Prizren
+35.3	33.3	7		Kyrenia
+35.1	34	7		Famagusta
+11	47.1	7		Maydh
+10.6	47.3	9		Ceerigaabo
+10.4	45	10		Berbera
+9.9	43.2	8		Boorama
+9.6	44.1	10		Hargeisa
+9.5	45.5	9		Burco
+8.4	47.3	8		Laascaanood
+42.5	1.5	8	AD	Andorra
+25.8	55.9	9	AE	Ras al Khaymah
+25.6	55.6	7	AE	Umm al Qaywayn
+25.4	55.4	12	AE	Sharjah
+25.2	55.3	12	AE	Dubai
+25.1	56.3	8	AE	Al Fujayrah
+25	55	8	AE	Jabal Ali
+24.5	54.4	11	AE	Abu Dhabi
+24.2	55.7	10	AE	Al Ayn
+37.1	70.6	8	AF	Feyzabad
+36.9	65.1	8	AF	Andkhvoy
+36.8	66.9	9	AF	Balkh
+36.7	65.7	8	AF	Sheberghan
+36.7	67.1	10	AF	Mazar-i-Sharif
+36.7	68.9	10	AF	Kondoz
+36.7	69.5	8	AF	Taloqan
+36.3	68	7	AF	Aybak
+36.1	68.7	10	AF	Baghlan
+36	68.7	8	AF	Pol-e Khomri
+35.9	64.8	9	AF	Meymaneh
+35	63.1	4	AF	Qala i Naw
+35	69.2	8	AF	Charikar
+35	69.3	5	AF	Mahmud-E Eraqi
+34.9	71.2	7	AF	Asadabad
+34.8	67.5	8	AF	Bamian
+34.6	70.2	6	AF	Mehtar Lam
+34.5	62.6	6	AF	Karokh
+34.5	65.3	6	AF	Chaghcharan
+34.5	68.8	7	AF	Mayda Shahr
+34.5	69.2	12	AF	Kabul
+34.4	70.4	11	AF	Jalalabad
+34.3	62.2	10	AF	Herat
+34	69	7	AF	Baraki Barak
+33.6	68.4	9	AF	Ghazni
+33.6	69.2	9	AF	Gardiz
+32.9	68.4	6	AF	Zareh Sharan
+32.6	65.9	5	AF	Tarin Kowt
+32.4	62.1	8	AF	Farah
+32.1	66.9	6	AF	Qalat
+31.6	64.4	10	AF	Lashkar Gah
+31.6	65.7	11	AF	Kandahar
+31.1	61.9	7	AF	Zaranj
+17.1	-61.9	7	AG	Saint John's
+42.3	20.1	5	AL	Bajram Curri
+42.1	19.5	9	AL	Shkodër
+42.1	20.4	6	AL	Kukës
+42	19.9	5	AL	Pukë
+41.8	19.7	6	AL	Lezhë
+41.8	19.8	6	AL	Rrëshen
+41.7	20.4	6	AL	Peshkopi
+41.6	20	6	AL	Burrel
+41.5	19.8	7	AL	Krujë
+41.3	19.4	9	AL	Durrës
+41.3	19.8	11	AL	Tirana
+41.2	20.4	6	AL	Librazhd
+41.1	20.1	9	AL	Elbasan
+40.9	19.7	7	AL	Lushnjë
+40.9	20.2	6	AL	Gramsh
+40.9	20.7	7	AL	Pogradec
+40.7	19.6	8	AL	Fier
+40.7	20	7	AL	Berat
+40.6	20.8	8	AL	Korçë
+40.5	19.5	8	AL	Vlorë
+40.5	20.2	6	AL	Çorovodë
+40.3	20	6	AL	Tepelenë
+40.3	20.7	5	AL	Ersekë
+40.2	20.4	6	AL	Përmet
+40.1	20.1	7	AL	Gjirokastër
+39.9	20	6	AL	Sarandë
+40.9	45.1	6	AM	Ijevan
+40.8	43.8	9	AM	Gyumri
+40.8	44.5	9	AM	Vanadzor
+40.4	45.1	7	AM	Gavarr
+40.3	44.4	6	AM	Ashtarak
+40.2	44.5	12	AM	Yerevan
+40	44.6	7	AM	Artashat
+39.8	45.3	5	AM	Yeghegnadzor
+-5.6	12.2	8	AO	Cabinda
+-6.1	12.4	8	AO	Soyo
+-6.3	14.2	8	AO	Mbanza-Congo
+-7.2	12.9	7	AO	Nzeto
+-7.3	14.8	6	AO	Songo
+-7.4	20.8	6	AO	Dundo
+-7.6	15	8	AO	Uíge
+-7.9	13.1	6	AO	Ambriz
+-8.2	15.4	6	AO	Camabatela
+-8.4	20.7	7	AO	Lucapa
+-8.6	13.7	7	AO	Caxito
+-8.8	13.2	13	AO	Luanda
+-9.3	14.9	5	AO	Ndalatando
+-9.4	18.4	8	AO	Capenda-Camulemba
+-9.5	16.3	9	AO	Malanje
+-9.7	14.4	4	AO	Dondo
+-9.7	20.4	7	AO	Saurimo
+-10	14.9	2	AO	Calulo
+-10.1	19.3	2	AO	Cacolo
+-10.6	21.3	4	AO	Muconda
+-10.7	15	5	AO	Quibala
+-10.7	22.2	6	AO	Luau
+-11.2	13.8	7	AO	Sumbe
+-11.3	16.2	2	AO	Calucinga
+-11.4	15.1	6	AO	Waku Kungo
+-11.8	19.9	7	AO	Luena
+-11.9	22.9	2	AO	Cazombo
+-12	17.5	6	AO	Camacupa
+-12.4	13.5	10	AO	Lobito
+-12.4	16.9	9	AO	Kuito
+-12.6	13.4	9	AO	Benguela
+-12.7	15.8	12	AO	Huambo
+-13	14.2	4	AO	Cubal
+-13.7	19.9	3	AO	Cangamba
+-14.1	21.4	1	AO	Lumbala Nguimbo
+-14.7	17.7	6	AO	Menongue
+-14.8	14.6	1	AO	Quipungo
+-14.9	13.5	9	AO	Lubango
+-15.2	12.2	9	AO	Moçâmedes
+-15.2	13.7	3	AO	Chibia
+-15.2	19.2	1	AO	Cuito Caunavale
+-15.7	14.1	3	AO	Chibemba
+-15.8	11.9	7	AO	Tômbua
+-15.8	20.4	7	AO	Mavinga
+-16.7	15	2	AO	Xangongo
+-17.1	15.7	6	AO	Ondjiva
+-17.3	13.9	2	AO	Chitado
+-17.4	23	1	AO	Luiana
+-18	21.4	1	AO	Mucusso
+-60.6	-45.6	1	AQ	Signy Research Station
+-60.7	-44.7	1	AQ	Orcadas Station
+-62	-58	1	AQ	Elephant Island
+-62.2	-59	1	AQ	Great Wall Station
+-62.2	-59	1	AQ	Escudero Base
+-62.2	-58.9	1	AQ	Artigas Base
+-62.2	-58.9	1	AQ	Base Presidente Montalva
+-62.2	-58.8	1	AQ	King Sejong Station
+-62.2	-58.7	1	AQ	Carlini Base
+-62.5	-59.7	1	AQ	Capitan Arturo Prat Station
+-63.3	-57.9	1	AQ	Gen. O'Higgins Base
+-63.4	-57	2	AQ	Esperanza Base
+-64.2	-56.7	1	AQ	Marambio Base
+-64.8	-64	1	AQ	Palmer Station
+-66.3	110.5	1	AQ	Casey Station
+-66.6	93	1	AQ	Mirny Station
+-66.8	140	1	AQ	Dumont d'Urville Station
+-67.6	-68.1	1	AQ	Rothera Station
+-67.6	62.9	1	AQ	Mawson Station
+-68.1	-67.1	1	AQ	San Martín Base
+-68.8	-90.6	1	AQ	Peter I Island
+-68.8	78.1	1	AQ	Davis Station
+-69	39.7	1	AQ	Showa Station
+-69.4	76.3	1	AQ	Zhongshan Station
+-70.8	11.7	1	AQ	Maitri Station
+-70.9	-7.8	1	AQ	Neumayer Station III
+-71.3	-11.9	1	AQ	Novolazarevskaya Station
+-72	2.5	1	AQ	Troll Station
+-73	-13.4	1	AQ	Wasa Station
+-74.6	-11.2	1	AQ	Svea Station
+-74.6	164.2	1	AQ	Zucchelli Station
+-74.7	124.2	1	AQ	Concordia Research Station
+-75	-13.4	1	AQ	Aboa Station
+-76.1	-26.5	1	AQ	Halley Station
+-77.7	166.9	2	AQ	McMurdo Station
+-77.8	166.7	1	AQ	Scott Base
+-77.9	-34.6	1	AQ	Belgrano II Base
+-78.5	106.8	1	AQ	Vostok Station
+-81.2	-40.5	1	AQ	Sobral Base
+-90	177	1	AQ	Amundsen–Scott South Pole Station
+-22	-63.7	8	AR	Yacuíba
+-22.4	-66.2	5	AR	Rinconada
+-22.5	-62.3	5	AR	Doctor Pedro P. Peña
+-22.6	-63.8	8	AR	Tartagal
+-22.7	-65.7	4	AR	Abra Pampa
+-23.1	-64.3	8	AR	San Ramón de la Nueva Orán
+-23.2	-65.3	6	AR	Humahuaca
+-23.4	-66.5	3	AR	Susques
+-23.6	-62.6	3	AR	Los Blancos
+-23.8	-64.8	7	AR	Libertador General San Martín
+-23.9	-61.8	5	AR	Ingeniero Guillermo N. Juarez
+-24.2	-66.4	4	AR	San Antonio de los Cobres
+-24.2	-65.3	10	AR	San Salvador de Jujuy
+-24.2	-64.9	8	AR	San Pedro
+-24.7	-65	6	AR	General Guemes
+-24.7	-60.6	5	AR	Las Lomitas
+-24.8	-65.4	11	AR	Salta
+-24.9	-65.5	6	AR	Cerrillos
+-25.1	-64.2	6	AR	Joaquín V. González
+-25.3	-59.7	4	AR	Comandante Fontana
+-25.8	-62.9	6	AR	Monte Quemado
+-25.9	-60.6	5	AR	Juan José Castelli
+-26.1	-66	6	AR	Cafayate
+-26.2	-65.3	3	AR	Trancas
+-26.2	-58.2	10	AR	Formosa
+-26.2	-54.6	6	AR	Eldorado
+-26.5	-61.2	4	AR	Pampa del Infierno
+-26.8	-65.2	11	AR	Tucumán
+-26.8	-60.5	8	AR	Presidencia Roque Saenz Pena
+-27.2	-61.2	6	AR	Charata
+-27.4	-55.9	10	AR	Posadas
+-27.5	-59	10	AR	Resistencia
+-27.5	-58.8	10	AR	Corrientes
+-27.6	-67	6	AR	Belen
+-27.6	-60.7	7	AR	Villa Ángela
+-27.8	-64.3	10	AR	Santiago del Estero
+-28.1	-67.6	2	AR	Tinogasta
+-28.1	-58.8	7	AR	San Lorenzo
+-28.5	-65.8	9	AR	Catamarca
+-28.5	-62.8	6	AR	Añatuya
+-28.6	-65.1	6	AR	Frias
+-28.9	-66.2	4	AR	Chumbicha
+-29.1	-59.7	8	AR	Reconquista
+-29.1	-59.3	8	AR	Goya
+-29.2	-67.5	7	AR	Chilecito
+-29.2	-58.1	7	AR	Mercedes
+-29.4	-66.8	9	AR	La Rioja
+-29.5	-60.2	5	AR	Vera
+-30.2	-69.1	2	AR	Rodeo
+-30.3	-66.3	5	AR	Chamical
+-30.8	-60.6	5	AR	San Justo
+-30.9	-61.6	6	AR	Sunchales
+-31.3	-66.6	5	AR	Chepes
+-31.3	-61.5	8	AR	Rafaela
+-31.4	-64.5	8	AR	Villa Carlos Paz
+-31.4	-64.2	12	AR	Córdoba
+-31.4	-62.1	8	AR	San Francisco
+-31.4	-58	9	AR	Concordia
+-31.6	-68.5	10	AR	San Juan
+-31.6	-60.7	10	AR	Santa Fe
+-31.7	-64.4	7	AR	Alta Gracia
+-31.7	-60.5	10	AR	Paraná
+-32.2	-64.5	3	AR	Villa Rumipal
+-32.2	-64.1	8	AR	Río Tercero
+-32.4	-63.3	8	AR	Villa María
+-32.5	-58.2	8	AR	Concepción del Uruguay
+-32.6	-69.3	4	AR	Uspallata
+-32.6	-62.7	7	AR	Bell Ville
+-32.6	-60.2	7	AR	Victoria
+-32.8	-68.8	8	AR	Las Heras
+-32.9	-68.8	11	AR	Mendoza
+-32.9	-60.7	12	AR	Rosario
+-33	-58.5	8	AR	Gualeguaychú
+-33.1	-68.5	9	AR	San Martín
+-33.1	-64.3	9	AR	Río Cuarto
+-33.2	-60.4	7	AR	Villa Constitución
+-33.2	-59.3	7	AR	Gualeguay
+-33.3	-66.4	10	AR	San Luis
+-33.3	-60.2	9	AR	San Nicolas
+-33.5	-67.5	4	AR	La Paz
+-33.6	-69	7	AR	Tunuyán
+-33.7	-65.5	7	AR	Mercedes
+-33.7	-62	8	AR	Venado Tuerto
+-33.9	-60.6	8	AR	Pergamino
+-34.1	-59	8	AR	Zárate
+-34.2	-59	8	AR	Campana
+-34.6	-68.3	9	AR	San Rafael
+-34.6	-61	8	AR	Junín
+-34.6	-59.1	8	AR	Luján
+-34.6	-58.4	14	AR	Buenos Aires
+-34.7	-60.5	7	AR	Chacabuco
+-34.7	-59.4	8	AR	Mercedes
+-34.9	-61.5	7	AR	Lincoln
+-34.9	-60	8	AR	Chivilcoy
+-34.9	-58	11	AR	La Plata
+-35.2	-59.1	6	AR	Lobos
+-35.4	-60.9	7	AR	Nueve de Julio
+-35.4	-60.2	7	AR	Veinticinco de Mayo
+-35.5	-69.6	6	AR	Malargüe
+-35.6	-58	7	AR	Chascomús
+-35.7	-63.8	8	AR	General Pico
+-36.2	-65.5	4	AR	Victorica
+-36.3	-57.7	7	AR	Dolores
+-36.6	-64.3	9	AR	Santa Rosa
+-36.7	-56.7	6	AR	Mar de Ajó
+-36.8	-59.9	8	AR	Azul
+-36.9	-60.3	8	AR	Olavarría
+-37.2	-62.7	5	AR	Carhué
+-37.3	-59.2	9	AR	Tandil
+-37.4	-70.3	5	AR	Chos Malal
+-37.5	-61.9	7	AR	Coronel Suárez
+-37.7	-63.2	4	AR	Darregueira
+-37.7	-59.8	6	AR	Benito Juárez
+-37.8	-67.7	6	AR	25 de Mayo
+-37.8	-58.2	6	AR	Balcarce
+-38	-57.6	11	AR	Mar del Plata
+-38.4	-60.3	7	AR	Tres Arroyos
+-38.5	-70.4	3	AR	Las Lajas
+-38.6	-58.7	8	AR	Necochea
+-38.7	-62.3	10	AR	Bahía Blanca
+-38.9	-70.1	6	AR	Zapala
+-38.9	-69.2	7	AR	Cutral Có
+-38.9	-62.1	8	AR	Punta Alta
+-39	-68.1	10	AR	Neuquén
+-39	-67.6	8	AR	General Roca
+-39	-64.1	6	AR	Río Colorado
+-39.3	-65.7	5	AR	Choele Choel
+-39.5	-62.7	5	AR	Pedro Luro
+-39.9	-62.6	4	AR	Villalonga
+-40.1	-64.4	4	AR	General Conesa
+-40.6	-67.8	3	AR	Sierra Colorado
+-40.7	-64.9	5	AR	San Antonio Oeste
+-40.8	-63	8	AR	Viedma
+-41	-70.3	2	AR	Comallo
+-41.1	-71.3	8	AR	Bariloche
+-41.3	-69.6	5	AR	Ingeniero Jacobacci
+-42.1	-71.2	4	AR	El Maitén
+-42.3	-69.2	2	AR	Gastre
+-42.4	-67	2	AR	Telsen
+-42.8	-65	8	AR	Puerto Madryn
+-42.9	-71.3	7	AR	Esquel
+-43.3	-65.3	8	AR	Trelew
+-43.3	-65.1	7	AR	Rawson
+-43.4	-67.2	2	AR	Las Plumas
+-45	-70.8	3	AR	Alto Rio Sanguer
+-45.6	-69.1	5	AR	Sarmiento
+-45.7	-70.3	3	AR	Paso Río Mayo
+-45.9	-67.5	9	AR	Comodoro Rivadavia
+-46.6	-70.9	4	AR	Perito Moreno
+-47.8	-65.9	4	AR	Puerto Deseado
+-48.8	-70.3	4	AR	Gobernador Gregores
+-49.3	-67.7	4	AR	Puerto San Julián
+-50	-68.9	2	AR	Comondante Luis Piedrabuena
+-50.3	-72.3	5	AR	El Calafate
+-51.6	-69.2	8	AR	Río Gallegos
+-51.7	-72.3	5	AR	28 de Noviembre
+-53.8	-67.7	7	AR	Rio Grande
+-54.8	-68.3	8	AR	Ushuaia
+-14.3	-170.7	6	AS	Pago Pago
+48.3	14.3	10	AT	Linz
+48.2	16.4	12	AT	Vienna
+47.8	13	10	AT	Salzburg
+47.8	16.2	8	AT	Wiener Neustadt
+47.8	16.5	6	AT	Eisenstadt
+47.5	9.8	7	AT	Bregenz
+47.3	11.4	9	AT	Innsbruck
+47.1	15.4	10	AT	Graz
+46.6	14.3	8	AT	Klagenfurt
+-12.4	130.9	8	AU	Darwin
+-12.5	131.1	5	AU	McMinns Lagoon
+-12.7	141.9	4	AU	Weipa
+-13.2	131.1	2	AU	Adelaide River
+-13.8	131.8	2	AU	Pine Creek
+-14.5	132.3	6	AU	Katherine
+-15.4	128.4	2	AU	Wyndham
+-15.8	128.7	5	AU	Kununurra
+-16.5	145.5	4	AU	Port Douglas
+-16.9	145.8	9	AU	Cairns
+-17.3	124	4	AU	Derby
+-17.3	145.5	5	AU	Atherton
+-17.5	140.8	1	AU	Karumba
+-17.5	146	6	AU	Innisfail
+-17.6	133.5	1	AU	Newcastle Waters
+-17.7	139.6	1	AU	Burketown
+-18	122.2	6	AU	Broome
+-18.3	127.8	3	AU	Halls Creek
+-18.3	143.5	2	AU	Georgetown
+-18.6	146.2	5	AU	Ingham
+-19.2	146.8	9	AU	Townsville
+-19.6	147.4	5	AU	Ayr
+-19.7	134.2	4	AU	Tennant Creek
+-19.9	138.1	1	AU	Camooweal
+-20	148.2	6	AU	Bowen
+-20.1	146.3	5	AU	Charters Towers
+-20.3	118.6	6	AU	Port Hedland
+-20.4	148.6	4	AU	Proserpine
+-20.7	116.9	6	AU	Karratha
+-20.7	139.5	7	AU	Mount Isa
+-20.7	140.5	3	AU	Cloncurry
+-20.7	143.1	2	AU	Richmond
+-20.8	117.1	6	AU	Roebourne
+-20.9	144.2	2	AU	Hughenden
+-21.1	149.2	8	AU	Mackay
+-21.6	116.3	2	AU	Pannawonica
+-21.7	115.1	2	AU	Onslow
+-21.9	114.1	3	AU	Exmouth
+-22	148	5	AU	Moranbah
+-22.4	143	3	AU	Winton
+-22.7	117.8	4	AU	Tom Price
+-22.9	139.9	2	AU	Boulia
+-23.1	150.8	6	AU	Yeppoon
+-23.4	119.7	5	AU	Newman
+-23.4	144.3	4	AU	Longreach
+-23.4	150.5	8	AU	Rockhampton
+-23.5	148.2	5	AU	Emerald
+-23.6	145.3	3	AU	Barcaldine
+-23.7	133.9	7	AU	Alice Springs
+-23.9	151.2	7	AU	Gladstone
+-24.3	139.5	1	AU	Bedourie
+-24.4	150.5	5	AU	Biloela
+-24.9	113.7	5	AU	Carnarvon
+-24.9	150.1	2	AU	Theodore
+-24.9	152.4	8	AU	Bundaberg
+-25.2	131	2	AU	Yulara
+-25.2	133.2	1	AU	Erldunda
+-25.3	152.8	7	AU	Hervey Bay
+-25.4	142.7	1	AU	Windorah
+-25.4	151.1	2	AU	Eidsvold
+-25.5	152.7	7	AU	Maryborough
+-25.8	129	2	AU	Kaltukatjara
+-25.9	139.4	2	AU	Birdsville
+-26.2	152.7	6	AU	Gympie
+-26.4	146.3	3	AU	Charleville
+-26.5	151.8	5	AU	Kingaroy
+-26.6	118.5	2	AU	Meekatharra
+-26.6	144.3	2	AU	Quilpie
+-26.6	148.8	5	AU	Roma
+-26.7	153.1	8	AU	Sunshine Coast
+-26.8	153.1	7	AU	Caloundra
+-27.1	152.9	7	AU	Caboolture
+-27.1	153.2	6	AU	Bongaree
+-27.2	151.3	5	AU	Dalby
+-27.5	153	12	AU	Brisbane
+-27.6	152	8	AU	Toowoomba
+-27.7	114.2	3	AU	Kalbarri
+-28	143.8	2	AU	Thargomindah
+-28.1	117.8	2	AU	Mount Magnet
+-28.1	153.4	11	AU	Gold Coast
+-28.2	152	6	AU	Warwick
+-28.2	153.5	7	AU	Tweed Heads
+-28.6	122.4	2	AU	Laverton
+-28.6	150.3	4	AU	Goondiwindi
+-28.7	153.6	5	AU	Byron Bay
+-28.8	114.6	7	AU	Geraldton
+-28.8	153.3	7	AU	Lismore
+-28.9	121.3	2	AU	Leonara
+-28.9	153.6	6	AU	Ballina
+-29.2	116	2	AU	Morawa
+-29.3	114.9	3	AU	Port Denison
+-29.4	153.4	3	AU	Yamba
+-29.5	115.7	1	AU	Three Springs
+-29.5	149.8	5	AU	Moree
+-29.7	152.9	5	AU	Grafton
+-29.8	151.1	5	AU	Inverell
+-30.1	145.9	4	AU	Bourke
+-30.3	149.8	5	AU	Narrabri
+-30.3	153.1	8	AU	Coffs Harbour
+-30.4	137.2	2	AU	Andamooka
+-30.5	151.7	7	AU	Armidale
+-30.7	121.5	7	AU	Kalgoorlie
+-30.9	135.3	1	AU	Kingoonya
+-31	150.3	5	AU	Gunnedah
+-31.1	136.8	2	AU	Woomera
+-31.1	150.9	7	AU	Tamworth
+-31.1	152.8	6	AU	Kempsey
+-31.2	119.3	1	AU	Southern Cross
+-31.3	115.9	3	AU	Gingin
+-31.4	152.9	7	AU	Port Macquarie
+-31.5	118.3	4	AU	Merredin
+-31.6	143.4	2	AU	Wilcannia
+-31.7	116.7	5	AU	Northam
+-31.9	141.4	6	AU	Broken Hill
+-31.9	152.5	7	AU	Taree
+-32	115.8	12	AU	Perth
+-32.1	133.7	3	AU	Ceduna
+-32.1	150.9	4	AU	Scone
+-32.2	115.8	7	AU	Kwinana
+-32.2	121.8	3	AU	Norseman
+-32.2	152.5	6	AU	Forster-Tuncurry
+-32.3	148.6	7	AU	Dubbo
+-32.3	150.9	6	AU	Muswellbrook
+-32.5	115.7	8	AU	Mandurah
+-32.5	137.8	6	AU	Port Augusta
+-32.6	149.6	5	AU	Mudgee
+-32.6	151.2	6	AU	Singleton
+-32.7	151.6	6	AU	Maitland
+-32.8	134.2	3	AU	Streaky Bay
+-32.8	151.8	11	AU	Newcastle
+-32.9	117.2	4	AU	Narrogin
+-32.9	144.3	2	AU	Ivanhoe
+-33	137.6	7	AU	Whyalla
+-33	138.8	3	AU	Peterborough
+-33.1	136.4	2	AU	Kimba
+-33.1	148.2	6	AU	Parkes
+-33.2	138	6	AU	Port Pirie
+-33.3	115.7	7	AU	Bunbury
+-33.3	117.3	3	AU	Wagin
+-33.3	149.1	7	AU	Orange
+-33.4	148	4	AU	Forbes
+-33.4	149.6	5	AU	Bathurst
+-33.4	151.3	4	AU	Central Coast
+-33.5	150.2	6	AU	Lithgow
+-33.6	120	3	AU	Ravensthorpe
+-33.6	150.7	6	AU	Richmond
+-33.7	115.3	6	AU	Busselton
+-33.7	117.6	4	AU	Katanning
+-33.7	136.9	2	AU	Cowell
+-33.7	150.3	7	AU	Katoomba
+-33.8	138.6	4	AU	Clare
+-33.8	148.7	5	AU	Cowra
+-33.9	121.9	5	AU	Esperance
+-33.9	137.6	4	AU	Wallaroo
+-33.9	151.2	12	AU	Sydney
+-34.2	116.2	4	AU	Manjimup
+-34.2	142.2	7	AU	Mildura
+-34.3	140.6	4	AU	Berri
+-34.3	146	6	AU	Griffith
+-34.3	148.3	5	AU	Young
+-34.4	136.1	3	AU	Tumby Bay
+-34.4	150.9	10	AU	Wollongong
+-34.5	146.4	5	AU	Leeton
+-34.6	117.7	3	AU	Mount Barker
+-34.6	138.7	6	AU	Gawler
+-34.7	135.9	6	AU	Port Lincoln
+-34.7	149.7	7	AU	Goulburn
+-34.7	150.8	6	AU	Kiama
+-34.9	138.6	12	AU	Adelaide
+-34.9	150.6	8	AU	Nowra
+-35	117.9	7	AU	Albany
+-35.1	139.3	6	AU	Murray Bridge
+-35.1	142.3	3	AU	Ouyen
+-35.1	147.3	8	AU	Wagga Wagga
+-35.3	143.5	5	AU	Swan Hill
+-35.3	148.2	5	AU	Tumut
+-35.3	149.1	10	AU	Canberra
+-35.3	150.5	5	AU	Ulladulla
+-35.4	149.2	7	AU	Queanbeyan
+-35.5	145	5	AU	Deniliquin
+-35.6	138.6	5	AU	Victor Harbor
+-35.7	139.3	3	AU	Meningie
+-35.7	150.2	6	AU	Batemans Bay
+-35.9	145.7	4	AU	Cobram
+-36.1	144.8	6	AU	Echuca
+-36.1	146.9	9	AU	Albury
+-36.2	149.1	5	AU	Cooma
+-36.3	140.8	4	AU	Bordertown
+-36.4	145.4	7	AU	Shepparton
+-36.4	146.3	6	AU	Wangaratta
+-36.7	142.2	6	AU	Horsham
+-36.8	139.9	2	AU	Kingston South East
+-36.8	144.3	8	AU	Bendigo
+-36.9	149.9	5	AU	Merimbula
+-37	143.7	5	AU	Maryborough
+-37	145.1	4	AU	Seymour
+-37.1	142.8	5	AU	Stawell
+-37.3	142.9	5	AU	Ararat
+-37.4	140.8	3	AU	Penola
+-37.6	143.8	8	AU	Ballarat
+-37.6	144.7	7	AU	Sunbury
+-37.7	142	5	AU	Hamilton
+-37.7	144.6	7	AU	Melton
+-37.8	140.8	7	AU	Mount Gambier
+-37.8	145	12	AU	Melbourne
+-37.8	147.6	6	AU	Bairnsdale
+-38.1	145.3	10	AU	Cranbourne
+-38.1	147.1	7	AU	Sale
+-38.2	144.4	9	AU	Geelong
+-38.2	146.5	6	AU	Traralgon
+-38.3	141.6	6	AU	Portland
+-38.3	143.6	5	AU	Colac
+-38.4	142.5	7	AU	Warrnambool
+-38.6	145.6	5	AU	Wonthaggi
+-40.8	145.1	4	AU	Smithton
+-41.1	145.9	6	AU	Burnie
+-41.1	147.5	4	AU	Scottsdale
+-41.2	146.3	6	AU	Devonport
+-41.4	147.1	8	AU	Launceston
+-41.9	148.3	1	AU	Bicheno
+-42.1	145.6	4	AU	Queenstown
+-42.3	147.4	3	AU	Oatlands
+-42.9	147.3	8	AU	Hobart
+-43	147.3	6	AU	Kingston
+12.5	-70	8	AW	Oranjestad
+60.1	19.9	6	AX	Mariehamn
+41.2	47.2	8	AZ	Saki
+41.1	47.5	5	AZ	Oğuz
+41	45.6	6	AZ	Tovuz
+41	47.8	6	AZ	Qabala
+40.9	45.6	0	AZ	Agdam
+40.7	46.4	10	AZ	Ganca
+40.7	47.7	7	AZ	Goycay
+40.6	45.8	5	AZ	Gadabay
+40.6	46.8	5	AZ	Goranboy
+40.6	47.2	8	AZ	Yevlax
+40.6	49.6	10	AZ	Sumqayt
+40.4	49.9	12	AZ	Baku
+39.9	48.9	8	AZ	Şirvan
+39.8	46.8	8	AZ	Stepanakert
+39.2	45.4	8	AZ	Naxcivan
+39.2	46.4	7	AZ	Kapan
+38.8	48.9	8	AZ	Lankaran
+45	16.7	9	BA	Prijedor
+44.8	17.2	10	BA	Banja Luka
+44.6	18.7	9	BA	Tuzla
+44.2	17.9	9	BA	Zenica
+43.9	18.4	11	BA	Sarajevo
+43.4	17.8	9	BA	Mostar
+13.1	-59.6	9	BB	Bridgetown
+25.8	89	10	BD	Saidpur
+25.8	89.3	10	BD	Rangpur
+24.9	90	9	BD	Jamalpur
+24.9	91.9	10	BD	Sylhet
+24.8	90.4	10	BD	Mymensingh
+24.6	88.3	9	BD	Nawabganj
+24.4	88.6	11	BD	Rajshahi
+24.2	89.9	9	BD	Tangail
+24	89.2	9	BD	Pabna
+23.7	90.4	14	BD	Dhaka
+23.6	90.5	10	BD	Narayanganj
+23.5	91.2	10	BD	Comilla
+23.2	89.2	10	BD	Jashore
+22.8	89.6	12	BD	Khulna
+22.7	90.4	10	BD	Barishal
+22.3	91.8	12	BD	Chattogram
+51.2	3.2	9	BE	Brugge
+51.2	4.4	11	BE	Antwerpen
+51	3.7	10	BE	Gent
+51	5.5	8	BE	Hasselt
+50.8	4.3	12	BE	Brussels
+50.6	5.6	11	BE	Liège
+50.5	4.9	9	BE	Namur
+50.4	3.9	8	BE	Mons
+50.4	4.5	10	BE	Charleroi
+49.7	5.8	7	BE	Arlon
+14.5	-0.2	5	BF	Gorom Gorom
+14.1	-1.6	7	BF	Djibo
+14	-0	7	BF	Dori
+13.6	-2.4	8	BF	Ouahigouya
+13.4	0.5	4	BF	Sebba
+13.1	-3.1	6	BF	Tougan
+13.1	-1.1	7	BF	Kaya
+13	-2.3	7	BF	Yako
+13	-0.1	5	BF	Bogandé
+12.7	-3.9	7	BF	Nouna
+12.7	-0.6	6	BF	Boulsa
+12.6	-1.3	6	BF	Ziniaré
+12.5	-3.5	7	BF	Dédougou
+12.4	-1.5	12	BF	Ouagadougou
+12.3	-2.5	7	BF	Réo
+12.3	-2.4	8	BF	Koudougou
+12.2	-4.1	6	BF	Solenzo
+12.2	-0.6	7	BF	Zorgo
+12.2	-0.4	7	BF	Koupéla
+12.1	-1.3	7	BF	Kombissiri
+12.1	0.4	7	BF	Fada Ngourma
+12.1	1.8	7	BF	Diapaga
+11.8	-0.4	7	BF	Tenkodogo
+11.7	-1.1	6	BF	Manga
+11.6	-1.8	4	BF	Sapouy
+11.2	-4.3	10	BF	Bobo Dioulasso
+11.2	-1.1	6	BF	Pô
+11.1	-2.1	7	BF	Leo
+11	-4.9	6	BF	Orodara
+11	-3.2	6	BF	Diébougou
+10.6	-4.8	8	BF	Banfora
+10.3	-3.2	7	BF	Gaoua
+43.9	26	9	BG	Ruse
+43.6	27.8	8	BG	Dobrich
+43.5	26.5	7	BG	Razgrad
+43.4	23.2	7	BG	Montana
+43.4	24.6	9	BG	Pleven
+43.3	26.9	8	BG	Shumen
+43.2	23.6	8	BG	Vratsa
+43.2	27.9	10	BG	Varna
+43.1	24.7	7	BG	Lovec
+43.1	25.7	8	BG	Turnovo
+42.7	23.3	12	BG	Sofia
+42.7	26.3	8	BG	Sliven
+42.6	23	8	BG	Pernik
+42.5	27.5	9	BG	Burgas
+42.4	25.6	9	BG	Stara Zagora
+42.3	22.7	8	BG	Kyustendil
+42.2	24.8	10	BG	Plovdiv
+41.9	25.6	8	BG	Khaskovo
+26.2	50.6	11	BH	Manama
+-2.6	30.1	5	BI	Kirundo
+-2.9	29.6	6	BI	Kayanza
+-2.9	29.8	7	BI	Ngozi
+-2.9	30.3	8	BI	Muyinga
+-3.1	29.4	6	BI	Bubanza
+-3.1	30.2	6	BI	Karusi
+-3.2	30.5	5	BI	Cankuzo
+-3.3	29.6	6	BI	Muramvya
+-3.4	29.4	10	BI	Bujumbura
+-3.4	29.8	7	BI	Gitega
+-3.5	30.2	7	BI	Ruyigi
+-3.9	30	7	BI	Rutana
+-4	29.6	7	BI	Bururi
+-4.1	29.8	6	BI	Makamba
+11.1	2.9	9	BJ	Kandi
+10.3	1.4	8	BJ	Natitingou
+9.7	1.7	10	BJ	Djougou
+9.3	2.6	9	BJ	Parakou
+7.2	2	8	BJ	Abomey
+6.6	1.7	8	BJ	Lokossa
+6.5	2.6	10	BJ	Porto-Novo
+6.4	2.1	8	BJ	Ouidah
+6.4	2.5	11	BJ	Cotonou
+32.3	-64.8	8	BM	Hamilton
+4.9	114.9	10	BN	Bandar Seri Begawan
+-10.8	-65.4	7	BO	Guayaramerín
+-11	-68.8	7	BO	Cobija
+-11	-66.1	8	BO	Riberalta
+-12.5	-68.7	1	BO	Puerto Heath
+-13.3	-64.7	5	BO	San Ramón
+-13.3	-64.1	4	BO	Magdalena
+-13.6	-63.6	4	BO	Baures
+-13.7	-61.9	1	BO	Piso Firme
+-13.8	-65.6	10	BO	Santa Ana
+-14.3	-67.4	5	BO	Reyes
+-14.5	-67.6	6	BO	Rurrenabaque
+-14.7	-68.4	4	BO	Apolo
+-14.8	-66.8	6	BO	San Borja
+-14.8	-64.9	8	BO	Trinidad
+-15.5	-69.2	3	BO	Puerto Acosta
+-15.7	-63.1	6	BO	Ascension
+-15.8	-68.7	4	BO	Sorata
+-16.1	-68.7	5	BO	Achacachi
+-16.2	-67.7	4	BO	Coroico
+-16.3	-62.5	4	BO	San Javier
+-16.4	-61	7	BO	San Ignacio
+-16.4	-58.4	5	BO	San Matias
+-16.5	-68.2	12	BO	La Paz
+-16.7	-68.3	7	BO	Viacha
+-16.8	-60.7	3	BO	San Rafael
+-16.9	-64.8	3	BO	Puerto Villarroel
+-17	-67.2	4	BO	Quime
+-17.2	-68.4	3	BO	Coro Coro
+-17.3	-67.7	3	BO	Sica Sica
+-17.3	-63.3	8	BO	Montero
+-17.4	-66.3	10	BO	Quillacollo
+-17.4	-66.2	11	BO	Cochabamba
+-17.4	-63.7	5	BO	San Carlos
+-17.4	-63.4	6	BO	Portachuelo
+-17.6	-69.5	1	BO	Charaña
+-17.6	-65.9	6	BO	Cliza
+-17.6	-65.8	7	BO	Punata
+-17.8	-63.2	12	BO	Santa Cruz
+-17.8	-57.8	6	BO	Puerto Quijarro
+-17.9	-60.8	5	BO	San Jose
+-18	-67.1	10	BO	Oruro
+-18.2	-65.2	5	BO	Aiquile
+-18.2	-63.8	4	BO	Samaipata
+-18.3	-59.8	6	BO	Roboré
+-18.4	-66.6	7	BO	Llallagua
+-18.5	-66.6	4	BO	Uncia
+-18.5	-64.1	5	BO	Vallegrande
+-18.9	-66.8	5	BO	Challapata
+-18.9	-57.8	7	BO	Puerto Suárez
+-19	-68.4	2	BO	Sabaya
+-19	-65.3	10	BO	Sucre
+-19.2	-64.9	4	BO	Tarabuco
+-19.3	-64.3	4	BO	Padilla
+-19.6	-65.8	9	BO	Potosí
+-19.6	-65.5	4	BO	Betanzos
+-19.8	-68.3	2	BO	Llica
+-19.8	-63.2	4	BO	Charagua
+-20.1	-63.5	7	BO	Camiri
+-20.5	-66.8	6	BO	Uyuni
+-20.5	-63.5	2	BO	Cuevo
+-20.6	-65.2	4	BO	Camargo
+-20.8	-67.8	1	BO	Villa Martin
+-21.2	-63.5	6	BO	Villamontes
+-21.4	-65.7	7	BO	Tupiza
+-21.5	-64.8	4	BO	San Lorenzo
+-21.5	-64.7	9	BO	Tarija
+-21.5	-64.2	4	BO	Entre Ríos
+-22.1	-65.6	7	BO	Villazón
+-22.7	-64.3	7	BO	Bermejo
+3.2	-51.2	12	BR	Vila Velha
+2.8	-60.7	10	BR	Boa Vista
+2	-50.8	3	BR	Amapá
+1.8	-61.1	6	BR	Caracaraí
+-0	-51.2	8	BR	Porto Santana
+0	-51.1	10	BR	Macapá
+-0.1	-67.1	6	BR	São Gabriel da Cachoeira
+-0.6	-47.3	7	BR	Salinópolis
+-0.9	-52.5	7	BR	Laranjal do Jari
+-1	-62.9	6	BR	Barcelos
+-1.1	-46.8	8	BR	Bragança
+-1.2	-47.2	7	BR	Capanema
+-1.2	-46.1	6	BR	Viseu
+-1.3	-47.9	9	BR	Castanhal
+-1.4	-48.5	12	BR	Belém
+-1.7	-50.5	7	BR	Breves
+-1.7	-48.9	8	BR	Abaetetuba
+-1.7	-47.1	7	BR	Capitão Poço
+-1.8	-55.9	7	BR	Oriximiná
+-1.9	-55.5	7	BR	Óbidos
+-1.9	-54.8	7	BR	Alenquer
+-1.9	-50.8	7	BR	Portel
+-2.2	-49.5	7	BR	Cametá
+-2.4	-54.7	10	BR	Santarém
+-2.5	-66.1	6	BR	Fonte Boa
+-2.5	-45.1	7	BR	Pinheiro
+-2.5	-44.3	12	BR	São Luís
+-2.5	-44.1	8	BR	São José de Ribamar
+-2.6	-60.9	5	BR	Novo Airão
+-2.6	-56.7	8	BR	Parintins
+-2.9	-67.8	4	BR	Tonantins
+-2.9	-44.3	5	BR	Rosário
+-2.9	-41.8	9	BR	Parnaíba
+-2.9	-40.9	7	BR	Camocim
+-2.9	-40.1	7	BR	Acaraú
+-3	-47.5	8	BR	Paragominas
+-3.1	-60	12	BR	Manaus
+-3.1	-58.4	8	BR	Itacoatiara
+-3.1	-40.8	7	BR	Granja
+-3.2	-52.2	8	BR	Altamira
+-3.2	-45	7	BR	Viana
+-3.3	-60.6	8	BR	Manacapuru
+-3.4	-64.7	8	BR	Tefé
+-3.4	-57.7	7	BR	Maués
+-3.4	-44.4	7	BR	Itapecuru Mirim
+-3.4	-39	7	BR	Paracuru
+-3.5	-39.6	8	BR	Itapipoca
+-3.7	-49.7	8	BR	Tucuruí
+-3.7	-45.4	8	BR	Santa Inês
+-3.7	-43.4	7	BR	Chapadinha
+-3.7	-40.4	9	BR	Sobral
+-3.7	-38.6	12	BR	Fortaleza
+-3.8	-54	1	BR	Uruará
+-4.1	-63.1	8	BR	Coari
+-4.1	-44.2	7	BR	Coroatá
+-4.2	-44.8	8	BR	Bacabal
+-4.3	-55.9	8	BR	Itaituba
+-4.3	-42.3	7	BR	Barras
+-4.3	-41.8	7	BR	Piripiri
+-4.3	-40.7	7	BR	Ipú
+-4.3	-38.9	7	BR	Baturité
+-4.4	-49.1	8	BR	Jacundá
+-4.4	-39.3	7	BR	Canindé
+-4.5	-43.9	8	BR	Codó
+-4.6	-44.7	6	BR	Pedreiras
+-4.6	-37.8	7	BR	Aracati
+-4.8	-43.4	9	BR	Caxias
+-4.8	-42.2	7	BR	Campo Maior
+-4.9	-38	7	BR	Russas
+-5	-39	7	BR	Quixadá
+-5.1	-49.3	7	BR	Itupiranga
+-5.1	-42.8	10	BR	Timon
+-5.1	-42.8	11	BR	Teresina
+-5.2	-40.7	8	BR	Crateús
+-5.2	-37.3	10	BR	Mossoró
+-5.3	-49.1	9	BR	Marabá
+-5.3	-44.5	7	BR	Presidente Dutra
+-5.5	-47.5	10	BR	Imperatriz
+-5.5	-45.3	7	BR	Barra do Corda
+-5.6	-36.9	7	BR	Açu
+-5.7	-37.8	6	BR	Apodi
+-5.8	-61.3	7	BR	Manicoré
+-5.8	-46.1	7	BR	Grajau
+-5.8	-35.2	12	BR	Natal
+-6	-44.2	7	BR	Colinas
+-6	-40.3	7	BR	Tauá
+-6.2	-36	7	BR	Santa Cruz
+-6.3	-57.7	7	BR	Jacareacanga
+-6.3	-47.4	5	BR	Tocantinópolis
+-6.4	-39.3	8	BR	Iguatu
+-6.4	-38.8	7	BR	Icó
+-6.5	-37.1	8	BR	Caicó
+-6.5	-35.4	7	BR	Nova Cruz
+-6.7	-69.9	7	BR	Eirunepé
+-6.8	-43	7	BR	Floriano
+-7	-60.3	11	BR	Natal
+-7	-37.3	8	BR	Patos
+-7.1	-49.9	4	BR	Xinguara
+-7.1	-41.4	8	BR	Picos
+-7.1	-34.9	11	BR	João Pessoa
+-7.2	-48.2	8	BR	Araguaína
+-7.2	-39.4	10	BR	Crato
+-7.2	-39.3	10	BR	Juazeiro do Norte
+-7.2	-35.9	10	BR	Campina Grande
+-7.5	-63	10	BR	Crato
+-7.5	-46	8	BR	Balsas
+-7.5	-35.3	8	BR	Timbaúba
+-7.6	-72.7	8	BR	Cruzeiro do Sul
+-7.6	-35	8	BR	Goiana
+-7.8	-35.3	9	BR	Carpina
+-8	-34.8	11	BR	Olinda
+-8.1	-39.1	7	BR	Salgueiro
+-8.1	-35	11	BR	Jaboatao
+-8.1	-34.9	12	BR	Recife
+-8.3	-49.3	7	BR	Conceição do Araguaia
+-8.3	-36	10	BR	Caruaru
+-8.3	-35	9	BR	Cabo de Santo Agostinho
+-8.4	-37.1	8	BR	Arcoverde
+-8.8	-63.9	10	BR	Porto Velho
+-8.8	-35.2	7	BR	Barreiros
+-8.9	-36.5	9	BR	Garanhuns
+-9.1	-68.7	7	BR	Sena Madureira
+-9.3	-38.3	8	BR	Paulo Afonso
+-9.4	-40.5	8	BR	Juazeiro
+-9.4	-40.5	10	BR	Petrolina
+-9.4	-36.6	7	BR	Palmeira dos Índios
+-9.5	-35.8	9	BR	Rio Largo
+-9.6	-42.1	7	BR	Remanso
+-9.6	-35.7	12	BR	Maceió
+-9.7	-65.4	3	BR	Abunã
+-9.8	-36.7	9	BR	Arapiraca
+-9.9	-63.1	8	BR	Ariquemes
+-9.9	-55.9	7	BR	Alta Floresta
+-10	-67.8	10	BR	Rio Branco
+-10.2	-59.4	7	BR	Aripuanã
+-10.2	-48.3	10	BR	Palmas
+-10.3	-36.6	7	BR	Penedo
+-10.4	-40.2	7	BR	Senhor do Bonfim
+-10.7	-48.4	5	BR	Porto Nacional
+-10.8	-65.3	8	BR	Guajara-Miram
+-10.8	-62	8	BR	Ji-Paraná
+-10.8	-55.5	7	BR	Colíder
+-10.8	-42.7	7	BR	Xique-Xique
+-10.9	-37.1	11	BR	Aracaju
+-11	-38.8	7	BR	Tucano
+-11.3	-41.9	8	BR	Irecê
+-11.3	-37.5	8	BR	Estância
+-11.4	-59.5	2	BR	Juina
+-11.6	-61.2	7	BR	Pimenta Bueno
+-11.6	-39	8	BR	Serrinha
+-11.7	-61.8	7	BR	Rolim de Moura
+-11.7	-49.1	8	BR	Gurupi
+-11.8	-55.5	5	BR	Sinop
+-12.1	-45	9	BR	Barreiras
+-12.1	-38.4	9	BR	Alagoinhas
+-12.3	-39	10	BR	Feira de Santana
+-12.4	-64.4	2	BR	Principe da Beira
+-12.5	-49.1	6	BR	Alvorada
+-12.5	-40.3	7	BR	Itaberaba
+-12.7	-60.1	8	BR	Vilhena
+-13	-38.5	12	BR	Salvador
+-13.2	-43.4	7	BR	Bom Jesus da Lapa
+-13.4	-44.2	7	BR	Santa Maria da Vitória
+-13.4	-39.1	8	BR	Valença
+-13.5	-40	7	BR	Jaguaquara
+-13.9	-40.1	9	BR	Jequié
+-14.2	-42.8	8	BR	Guanambi
+-14.2	-41.7	7	BR	Brumado
+-14.3	-39.3	7	BR	Ubaitaba
+-14.5	-48.5	7	BR	Niquelândia
+-14.8	-39.3	10	BR	Itabuna
+-14.8	-39.1	10	BR	Ilhéus
+-14.9	-40.8	10	BR	Vitória da Conquista
+-15	-60	6	BR	Santissima Trindade
+-15.1	-57.2	7	BR	Barra do Bugres
+-15.2	-59.3	7	BR	Pontes e Lacerda
+-15.2	-40.6	7	BR	Itambé
+-15.2	-40.2	8	BR	Itapetinga
+-15.3	-49.6	6	BR	Ceres
+-15.3	-49.1	7	BR	Goianésia
+-15.5	-47.3	8	BR	Formosa
+-15.5	-44.4	7	BR	Januária
+-15.6	-56.1	11	BR	Cuiabá
+-15.6	-39	7	BR	Canavieiras
+-15.7	-56.1	10	BR	Várzea Grande
+-15.8	-47.9	12	BR	Brasília
+-15.8	-43.3	8	BR	Janaúba
+-15.9	-52.3	8	BR	Barra do Garças
+-16	-49.8	7	BR	Itaberaí
+-16.1	-57.5	8	BR	Cáceres
+-16.2	-40.7	7	BR	Almenara
+-16.3	-49	10	BR	Anápolis
+-16.3	-39	6	BR	Santa Cruz Cabrália
+-16.4	-49.5	7	BR	Inhumas
+-16.4	-39.1	9	BR	Porto Seguro
+-16.5	-54.6	9	BR	Rondonópolis
+-16.5	-51.1	7	BR	Iporá
+-16.7	-49.5	8	BR	Trindade
+-16.7	-49.3	12	BR	Goiânia
+-16.7	-43.9	10	BR	Montes Claros
+-16.8	-47.6	7	BR	Cristalina
+-16.9	-42.1	7	BR	Araçuaí
+-17	-39.5	7	BR	Itamaraju
+-17.1	-43.8	7	BR	Bocaiúva
+-17.2	-46.9	8	BR	Paracatu
+-17.3	-48.3	7	BR	Pires do Rio
+-17.3	-44.9	8	BR	Pirapora
+-17.6	-52.6	7	BR	Mineiros
+-17.7	-49.1	7	BR	Morrinhos
+-17.8	-50.9	7	BR	Rio Verde
+-17.8	-40.4	7	BR	Nanuque
+-17.9	-51.8	8	BR	Jataí
+-17.9	-41.5	9	BR	Teófilo Otoni
+-17.9	-39.4	8	BR	Nova Viçosa
+-18.2	-48	8	BR	Catalão
+-18.2	-43.6	7	BR	Diamantina
+-18.4	-49.2	8	BR	Itumbiara
+-18.6	-48.2	8	BR	Araguari
+-18.7	-39.9	8	BR	São Mateus
+-18.8	-44.4	8	BR	Curvelo
+-18.8	-43	7	BR	Guanhães
+-18.9	-48.3	11	BR	Uberlândia
+-18.9	-42	10	BR	Governador Valadares
+-19	-57.7	8	BR	Corumbá
+-19	-49.5	8	BR	Ituiutaba
+-19.4	-44.2	10	BR	Sete Lagoas
+-19.4	-40.1	9	BR	Linhares
+-19.5	-42.5	10	BR	Ipatinga
+-19.6	-47	8	BR	Araxá
+-19.7	-51.2	7	BR	Paranaíba
+-19.7	-50.2	7	BR	Iturama
+-19.8	-48	10	BR	Uberaba
+-19.8	-42.1	8	BR	Caratinga
+-19.9	-43.9	13	BR	Belo Horizonte
+-20	-48.9	7	BR	Frutal
+-20	-43.9	8	BR	Nova Lima
+-20.1	-44.9	9	BR	Divinópolis
+-20.1	-44.6	8	BR	Itaúna
+-20.3	-50.3	8	BR	Fernandópolis
+-20.3	-40.4	12	BR	Vitória
+-20.4	-54.6	11	BR	Campo Grande
+-20.4	-42.9	7	BR	Ponte Nova
+-20.4	-40.3	12	BR	Vila Velha
+-20.5	-55.8	7	BR	Aquidauana
+-20.5	-47.4	10	BR	Franca
+-20.5	-45.4	8	BR	Formiga
+-20.6	-48.6	9	BR	Barretos
+-20.7	-46.6	8	BR	Passos
+-20.7	-43.8	9	BR	Conselheiro Lafaiete
+-20.8	-51.7	8	BR	Três Lagoas
+-20.8	-49.4	10	BR	São José do Rio Preto
+-20.9	-51.4	8	BR	Andradina
+-20.9	-47.6	8	BR	Batatais
+-20.9	-45.3	7	BR	Campo Belo
+-20.9	-41.1	9	BR	Cachoeiro de Itapemirim
+-21.1	-49	9	BR	Catanduva
+-21.1	-44.2	8	BR	São João del Rei
+-21.1	-43	8	BR	Ubá
+-21.1	-42.4	8	BR	Muriaé
+-21.2	-50.5	9	BR	Araçatuba
+-21.2	-47.8	11	BR	Ribeirão Preto
+-21.2	-45	8	BR	Lavras
+-21.2	-43.8	9	BR	Barbacena
+-21.3	-48.3	8	BR	Jaboticabal
+-21.3	-46.7	7	BR	Guaxupé
+-21.4	-50.1	8	BR	Penápolis
+-21.4	-42.2	7	BR	Miracema
+-21.5	-56.2	7	BR	Jardim
+-21.5	-49.2	7	BR	Novo Horizonte
+-21.5	-42.6	7	BR	Leopoldina
+-21.6	-55.2	7	BR	Maracaju
+-21.7	-41.3	10	BR	Campos
+-21.8	-46.6	9	BR	Poços de Caldas
+-21.8	-43.4	10	BR	Juiz de Fora
+-21.9	-50.5	8	BR	Tupã
+-22	-47.9	10	BR	São Carlos
+-22	-47.4	8	BR	Pirassununga
+-22	-46.8	8	BR	São João da Boa Vista
+-22.1	-51.4	10	BR	Presidente Prudente
+-22.2	-54.8	9	BR	Dourados
+-22.2	-50	10	BR	Marília
+-22.2	-49.7	7	BR	Garça
+-22.2	-45.9	9	BR	Pouso Alegre
+-22.3	-49.1	10	BR	Bauru
+-22.3	-48.6	9	BR	Jaú
+-22.3	-42.5	9	BR	Nova Friburgo
+-22.4	-47.6	9	BR	Rio Claro
+-22.4	-41.8	9	BR	Macaé
+-22.5	-55.7	8	BR	Ponta Porã
+-22.5	-47.4	10	BR	Limeira
+-22.5	-44.1	10	BR	Volta Redonda
+-22.5	-43.2	10	BR	Petrópolis
+-22.6	-44.2	9	BR	Barra Mansa
+-22.7	-50.4	8	BR	Assis
+-22.7	-47.6	10	BR	Piracicaba
+-22.7	-47.3	10	BR	Americana
+-22.7	-43.5	11	BR	Nova Iguaçu
+-22.8	-45.2	10	BR	Guaratinguetá
+-22.8	-43.3	11	BR	Duque de Caxias
+-22.9	-48.4	9	BR	Botucatu
+-22.9	-47.1	12	BR	Campinas
+-22.9	-45.5	9	BR	Pindamonhangaba
+-22.9	-43.2	14	BR	Rio de Janeiro
+-22.9	-43.1	12	BR	Niterói
+-22.9	-42	10	BR	Cabo Frio
+-23	-49.9	8	BR	Ourinhos
+-23	-46.5	9	BR	Bragança Paulista
+-23	-45.6	10	BR	Taubaté
+-23.1	-48.9	8	BR	Avaré
+-23.2	-50	7	BR	Jacarezinho
+-23.2	-46.9	11	BR	Jundiaí
+-23.2	-45.9	11	BR	São José dos Campos
+-23.3	-51.2	11	BR	Londrina
+-23.3	-47.3	10	BR	Itu
+-23.4	-51.9	10	BR	Maringá
+-23.4	-51.4	8	BR	Arapongas
+-23.4	-47.9	8	BR	Tatuí
+-23.5	-51.5	9	BR	Apucarana
+-23.5	-47.5	11	BR	Sorocaba
+-23.6	-48	9	BR	Itapetininga
+-23.6	-46.6	14	BR	São Paulo
+-23.7	-46.5	11	BR	Santo André
+-24	-52.4	8	BR	Campo Murao
+-24	-48.9	8	BR	Itapeva
+-24	-46.3	12	BR	Santos
+-24.1	-54.3	7	BR	Guaira
+-24.2	-46.8	8	BR	Itanhaem
+-24.3	-50.6	8	BR	Telêmaco Borba
+-24.5	-47.8	8	BR	Registro
+-24.7	-47.6	7	BR	Iguape
+-24.8	-50	7	BR	Castro
+-25	-53.5	10	BR	Cascavel
+-25.1	-50.2	10	BR	Ponta Grossa
+-25.4	-51.5	9	BR	Guarapuava
+-25.4	-49.3	12	BR	Curitiba
+-25.5	-54.5	10	BR	Foz do Iguaçu
+-25.5	-50.7	7	BR	Irati
+-25.5	-48.5	9	BR	Paranaguá
+-25.6	-49.2	11	BR	São José dos Pinhais
+-25.8	-49.7	7	BR	Lapa
+-26.1	-49.8	8	BR	Rio Negro
+-26.2	-51.1	8	BR	Porto União
+-26.2	-50.4	7	BR	Canoinhas
+-26.2	-48.6	7	BR	São Francisco do Sul
+-26.3	-48.8	11	BR	Joinville
+-26.5	-52	7	BR	Palmas
+-26.5	-49.1	9	BR	Jaraguá do Sul
+-26.8	-51	8	BR	Caçador
+-26.9	-49.1	10	BR	Blumenau
+-26.9	-48.7	10	BR	Itajaí
+-27.1	-52.6	9	BR	Xapeco
+-27.1	-48.9	8	BR	Brusque
+-27.2	-52	8	BR	Concórdia
+-27.2	-51.5	7	BR	Joaçaba
+-27.6	-52.3	8	BR	Erechim
+-27.6	-48.5	12	BR	Florianópolis
+-27.8	-50.3	9	BR	Lajes
+-27.9	-54.5	8	BR	Santa Rosa
+-28.2	-48.7	7	BR	Imbituba
+-28.3	-54.3	8	BR	Santo Ângelo
+-28.3	-52.8	8	BR	Carazinho
+-28.3	-52.4	9	BR	Passo Fundo
+-28.4	-55	7	BR	São Luiz Gonzaga
+-28.4	-53.9	8	BR	Ijuí
+-28.5	-50.9	8	BR	Vacaria
+-28.5	-49	8	BR	Tubarão
+-28.5	-48.8	7	BR	Laguna
+-28.7	-56	8	BR	São Borja
+-28.7	-49.4	10	BR	Criciúma
+-28.9	-49.5	7	BR	Araranguá
+-29.2	-51.5	8	BR	Bento Gonçalves
+-29.2	-51.2	10	BR	Caxias do Sul
+-29.4	-50.8	8	BR	Canela
+-29.7	-53.8	10	BR	Santa Maria
+-29.7	-52.4	9	BR	Santa Cruz do Sul
+-29.7	-51.1	11	BR	Novo Hamburgo
+-29.8	-57.1	9	BR	Uruguaiana
+-29.9	-51.2	11	BR	Canoas
+-29.9	-50.3	7	BR	Osório
+-30	-52.9	8	BR	Cachoeira do Sul
+-30	-51.2	12	BR	Porto Alegre
+-30.3	-54.9	7	BR	Rosário do Sul
+-30.3	-54.3	8	BR	São Gabriel
+-30.4	-56.5	7	BR	Quaraí
+-30.8	-51.8	8	BR	Camaquã
+-30.9	-55.5	8	BR	Santana do Livramento
+-31.3	-54.1	9	BR	Bagé
+-31.4	-52	7	BR	São Lourenço do Sul
+-31.8	-52.3	10	BR	Pelotas
+-32	-52.1	9	BR	Rio Grande
+-32.6	-53.4	7	BR	Jaguarão
+-33.5	-53.4	7	BR	Santa Vitória do Palmar
+26.5	-78.7	7	BS	Freeport
+25.1	-77.4	10	BS	Nassau
+27.6	89.9	4	BT	Punakha
+27.5	89.6	8	BT	Thimphu
+27.4	89.4	6	BT	Paro
+27.4	89.9	4	BT	Wangdue Prodrang
+-17.8	25.2	5	BW	Kasane
+-18.3	21.8	2	BW	Mohembo
+-19.7	22.3	3	BW	Nokaneng
+-20	23.4	7	BW	Maun
+-20.2	22.5	3	BW	Tsau
+-20.2	26.2	4	BW	Nata
+-21.2	24.9	4	BW	Mopipi
+-21.2	27.5	8	BW	Francistown
+-21.7	21.6	5	BW	Ghanzi
+-22.4	26.7	7	BW	Serowe
+-22.6	27.1	7	BW	Palapye
+-23.1	26.8	8	BW	Mahalapye
+-24	21.9	3	BW	Lehututu
+-24.2	21.8	3	BW	Lokhwabe
+-24.4	25.5	8	BW	Molepolole
+-24.4	26.2	7	BW	Mochudi
+-24.6	25.9	10	BW	Gaborone
+-25	25.3	7	BW	Kanye
+-25.2	25.7	8	BW	Lobatse
+-26	22.4	5	BW	Tshabong
+55.5	28.8	8	BY	Polatsk
+55.2	30.2	10	BY	Vitsyebsk
+54.5	30.4	9	BY	Orsha
+54.3	26.9	9	BY	Maladzyechna
+54.2	28.5	9	BY	Barysaw
+53.9	25.3	9	BY	Lida
+53.9	27.6	12	BY	Minsk
+53.9	30.3	10	BY	Mahilyow
+53.7	23.8	10	BY	Hrodna
+53.1	26	9	BY	Baranavichy
+53.1	29.2	10	BY	Babruysk
+52.4	31	10	BY	Homyel
+52.1	23.7	10	BY	Brest
+52.1	26.1	9	BY	Pinsk
+52	29.3	9	BY	Mazyr
+18.4	-88.4	5	BZ	Corozal
+18.1	-88.6	7	BZ	Orange Walk
+17.5	-88.2	8	BZ	Belize City
+17.3	-88.8	6	BZ	Belmopan
+17.2	-89.1	6	BZ	El Cayo
+17	-88.2	6	BZ	Dangriga
+16.1	-88.8	5	BZ	Punta Gorda
+82.5	-62.2	1	CA	Alert
+76.4	-82.9	1	CA	Grise Fiord
+74.7	-94.9	2	CA	Resolute
+73	-85.2	2	CA	Arctic Bay
+72.7	-78	3	CA	Pond Inlet
+70.7	-117.7	2	CA	Holman
+69.5	-133	2	CA	Tuktoyaktuk
+69.5	-93.5	2	CA	Taloyoak
+69.4	-124	2	CA	Paulatuk
+69.3	-81.8	3	CA	Igloolik
+69.1	-105	3	CA	Cambridge Bay
+68.8	-81.2	2	CA	Hall Beach
+68.6	-95.9	3	CA	Gjoa Haven
+68.3	-133.7	4	CA	Inuvik
+67.8	-115.1	3	CA	Kugluktuk
+67.5	-134.9	3	CA	Fort McPherson
+67.4	-133.7	1	CA	Tsiigehtchic
+66.5	-86.3	2	CA	Naujaat
+66.3	-128.6	2	CA	Fort Good Hope
+66.1	-65.8	3	CA	Pangnirtung
+65.3	-126.8	3	CA	Norman Wells
+65.2	-123.4	2	CA	Doline
+64.3	-96	3	CA	Baker Lake
+64.3	-76.5	3	CA	Cape Dorset
+64.2	-83.2	2	CA	Coral Harbour
+64.1	-139.4	3	CA	Dawson City
+63.8	-68.5	5	CA	Iqaluit
+63.3	-90.7	2	CA	Chesterfield Inlet
+62.9	-69.9	2	CA	Kimmirut
+62.8	-92.1	4	CA	Rankin Inlet
+62.4	-114.4	6	CA	Yellowknife
+62.4	-110.7	1	CA	Lutselke
+62.4	-77.9	1	CA	Ivugivik
+62.2	-75.7	1	CA	Salluit
+61.8	-121.3	2	CA	Fort Simpson
+61.4	-139	1	CA	Burwash Landing
+61.2	-113.7	2	CA	Fort Resolution
+61.1	-100.9	0	CA	Ennadai
+61.1	-94.1	3	CA	Arviat
+60.8	-115.7	4	CA	Hay River
+60.7	-135	7	CA	Whitehorse
+60.3	-64.7	4	CA	Port Burwell
+60.1	-128.8	2	CA	Watson Lake
+60	-111.9	2	CA	Fort Smith
+60	-70	2	CA	Kangirsuk
+59.6	-108.6	1	CA	Uranium City
+59.3	-105.8	1	CA	Stony Rapids
+59	-117.7	1	CA	Meander River
+58.8	-122.5	5	CA	Fort Nelson
+58.8	-94.2	2	CA	Churchill
+58.7	-111.1	4	CA	Fort Chipewyan
+58.5	-130	2	CA	Dease Lake
+58.5	-78.1	3	CA	Inukjuak
+58.1	-68.4	3	CA	Kuujjuaq
+57.9	-101.7	2	CA	Brochet
+56.9	-101	2	CA	Lynn Lake
+56.7	-111.4	7	CA	Fort McMurray
+56.5	-61.7	3	CA	Nain
+56.3	-94.7	3	CA	Gillam
+56.2	-120.8	6	CA	Fort St. John
+56.2	-117.3	5	CA	Peace River
+56	-87.6	1	CA	Fort Severn
+55.9	-92.1	2	CA	Shamattawa
+55.8	-120.2	6	CA	Dawson Creek
+55.8	-98.9	4	CA	Nelson House
+55.7	-101.3	2	CA	Pukatawagan
+55.7	-97.9	6	CA	Thompson
+55.4	-60.2	2	CA	Hopedale
+55.3	-77.8	3	CA	Kuujjuarapik
+55.2	-118.8	7	CA	Grand Prairie
+55.1	-105.3	4	CA	La Ronge
+55	-95.3	1	CA	Oxford House
+54.8	-127.2	5	CA	Smithers
+54.8	-112	4	CA	Lac La Biche
+54.8	-101.9	5	CA	Flin Flon
+54.8	-66.8	2	CA	Schefferville
+54.7	-113.3	4	CA	Athabasca
+54.5	-128.6	6	CA	Terrace
+54.3	-130.3	6	CA	Prince Rupert
+54.2	-125.8	4	CA	Burns Lake
+54.2	-58.4	1	CA	Rigolet
+54.1	-108.4	5	CA	Meadow Lake
+54	-97.8	5	CA	Norway House
+54	-94.8	1	CA	Island Lake
+53.9	-122.8	8	CA	Prince George
+53.8	-101.2	5	CA	The Pas
+53.8	-77.6	2	CA	Radisson
+53.7	-57	2	CA	Cartwright
+53.6	-113.5	12	CA	Edmonton
+53.5	-112	5	CA	Vegreville
+53.5	-64	1	CA	Churchill Falls
+53.4	-117.6	6	CA	Hinton
+53.3	-60.3	5	CA	Happy Valley - Goose Bay
+53.2	-131.8	2	CA	Sandspit
+53.2	-105.7	7	CA	Prince Albert
+53	-122.5	6	CA	Quesnel
+53	-113.4	6	CA	Wetaskiwin
+53	-112.8	6	CA	Camrose
+52.9	-118.1	4	CA	Jasper
+52.9	-102.4	4	CA	Hudson Bay
+52.9	-89.9	1	CA	Big Beaver House
+52.9	-82.4	3	CA	Attawapiskat
+52.9	-66.9	6	CA	Labrador City
+52.8	-108.3	6	CA	North Battleford
+52.6	-94.1	4	CA	Deer Lake
+52.5	-56.3	1	CA	Port Hope Simpson
+52.4	-97	2	CA	Berens River
+52.3	-113.8	8	CA	Red Deer
+52.3	-112.7	5	CA	Stettler
+52.2	-106.7	9	CA	Saskatoon
+52.2	-87.9	1	CA	Lansdowne House
+52.2	-78.5	2	CA	Eastmain
+52.1	-128.1	3	CA	Bella Bella
+52.1	-122.1	6	CA	Williams Lake
+52.1	-108	4	CA	Biggar
+51.7	-91.8	2	CA	Cat Lake
+51.5	-109.1	4	CA	Kindersley
+51.5	-56.9	2	CA	Forteau
+51.4	-116.2	3	CA	Lake Louise
+51.4	-55.6	2	CA	St. Anthony
+51.3	-80.7	3	CA	Moosonee
+51.2	-115.6	5	CA	Banff
+51.2	-102.5	6	CA	Yorkton
+51.2	-100	5	CA	Dauphin
+51.2	-58.6	4	CA	St-Augustin
+51.1	-114.1	12	CA	Calgary
+51	-118.2	5	CA	Revelstoke
+51	-93.8	3	CA	Red Lake
+50.9	-102.8	4	CA	Melville
+50.7	-127.5	4	CA	Port Hardy
+50.7	-121.9	4	CA	Lillooet
+50.7	-120.3	8	CA	Kamloops
+50.6	-111.9	6	CA	Brooks
+50.6	-97	4	CA	Gimli
+50.5	-104.6	9	CA	Regina
+50.5	-59.6	2	CA	Chevery
+50.4	-105.6	7	CA	Moose Jaw
+50.4	-73.9	4	CA	Mistassini
+50.3	-107.8	6	CA	Swift Current
+50.3	-91.9	4	CA	Sioux Lookout
+50.3	-66.4	7	CA	Sept-Îles
+50.3	-64	2	CA	Mingan
+50.2	-96.9	5	CA	Selkirk
+50.2	-61.8	2	CA	Natashquan
+50	-125.2	7	CA	Campbell River
+50	-110.7	8	CA	Medicine Hat
+50	-55.6	2	CA	La Scie
+49.9	-124.5	6	CA	Powell River
+49.9	-119.5	9	CA	Kelowna
+49.9	-97.2	11	CA	Winnipeg
+49.8	-99.9	7	CA	Brandon
+49.8	-94.5	6	CA	Kenora
+49.8	-92.8	5	CA	Dryden
+49.8	-77.6	3	CA	Matagami
+49.8	-64.3	2	CA	Port-Menier
+49.7	-125	7	CA	Courtenay
+49.7	-112.8	8	CA	Lethbridge
+49.7	-103.9	5	CA	Weyburn
+49.7	-87	3	CA	Geraldton
+49.7	-83.7	5	CA	Hearst
+49.5	-119.6	7	CA	Penticton
+49.5	-117.3	6	CA	Nelson
+49.5	-115.8	6	CA	Cranbrook
+49.5	-96.7	5	CA	Steinbach
+49.5	-58.1	2	CA	Trout River
+49.4	-82.4	5	CA	Kapuskasing
+49.3	-123.1	12	CA	Vancouver
+49.2	-121.9	8	CA	Chilliwack
+49.2	-68.2	6	CA	Baie-Comeau
+49.2	-57.4	4	CA	Deer Lake
+49.1	-125.9	3	CA	Tofino
+49.1	-123.9	8	CA	Nanaimo
+49.1	-122.3	9	CA	Abbotsford
+49.1	-116.5	4	CA	Creston
+49.1	-81	4	CA	Cochrane
+49.1	-66.7	3	CA	Cap-Chat
+49	-88.2	3	CA	Nipigon
+48.9	-72.2	6	CA	Dolbeau
+48.9	-57.9	7	CA	Corner Brook
+48.9	-54.5	4	CA	Gander
+48.8	-91.6	4	CA	Atikokan
+48.8	-86.4	4	CA	Marathon
+48.8	-79.2	5	CA	La Sarre
+48.8	-64.5	4	CA	Gaspé
+48.8	-56.9	2	CA	Buchans
+48.6	-78.1	6	CA	Amos
+48.6	-58.6	5	CA	Stephenville
+48.5	-81.3	7	CA	Timmins
+48.4	-123.4	10	CA	Victoria
+48.4	-89.3	8	CA	Thunder Bay
+48.4	-71.1	8	CA	Chicoutimi
+48.4	-68.5	7	CA	Rimouski
+48.3	-79	7	CA	Rouyn-Noranda
+48.1	-77.8	7	CA	Val d'Or
+48	-84.8	4	CA	Wawa
+47.8	-83.4	4	CA	Chapleau
+47.8	-69.5	6	CA	Rivière-du-Loup
+47.6	-65.6	5	CA	Bathurst
+47.6	-59.2	4	CA	Channel-Port aux Basques
+47.6	-52.7	9	CA	St. John's
+47.5	-79.7	5	CA	New Liskeard
+47.4	-79.7	3	CA	Cobalt
+47.4	-68.3	6	CA	Edmundston
+47.3	-54	3	CA	Argentia
+46.8	-71.2	11	CA	Québec
+46.7	-53.4	2	CA	Trepassey
+46.6	-75.5	6	CA	Mont-Laurier
+46.6	-72.7	7	CA	Shawinigan
+46.5	-81	9	CA	Sudbury
+46.3	-79.4	8	CA	North Bay
+46.3	-72.5	9	CA	Trois-Rivières
+46.2	-83.6	3	CA	Thessalon
+46.2	-63.1	7	CA	Charlottetown
+46.1	-72	7	CA	Victoriaville
+46.1	-70.7	7	CA	Saint-Georges
+46.1	-64.8	8	CA	Moncton
+46.1	-60.8	2	CA	Baddeck
+46.1	-60.2	7	CA	Sydney
+46	-81.9	3	CA	Little Current
+46	-73.4	7	CA	Joliette
+45.9	-77.1	6	CA	Pembroke
+45.9	-72.5	8	CA	Drummondville
+45.9	-66.6	8	CA	Fredericton
+45.8	-74	8	CA	St.-Jerome
+45.8	-64.2	5	CA	Amherst
+45.6	-62.6	7	CA	New Glasgow
+45.6	-62	5	CA	Antigonish
+45.5	-73.6	12	CA	Montréal
+45.4	-75.7	12	CA	Ottawa
+45.4	-71.9	9	CA	Sherbrooke
+45.3	-80	5	CA	Parry Sound
+45.3	-66.1	8	CA	Saint John
+45	-74.7	7	CA	Cornwall
+45	-64.1	4	CA	Windsor
+44.7	-81.1	4	CA	Wiarton
+44.7	-63.6	10	CA	Halifax
+44.6	-80.8	7	CA	Owen Sound
+44.6	-79.4	7	CA	Orillia
+44.6	-75.7	7	CA	Brockville
+44.6	-65.8	4	CA	Digby
+44.4	-79.7	9	CA	Barrie
+44.3	-78.3	8	CA	Peterborough
+44.2	-77.4	7	CA	Belleville
+44.2	-76.5	9	CA	Kingston
+44	-64.7	4	CA	Liverpool
+43.9	-80.1	7	CA	Orangeville
+43.9	-78.8	10	CA	Oshawa
+43.8	-66.1	5	CA	Yarmouth
+43.8	-65.3	4	CA	Shelburne
+43.7	-79.4	13	CA	Toronto
+43.4	-80.5	10	CA	Kitchener
+43.2	-79.8	11	CA	Hamilton
+43	-82.4	9	CA	Sarnia
+43	-81.2	10	CA	London
+42.3	-83	10	CA	Windsor
+4.3	18.6	6	CD	Zongo
+4.3	21	8	CD	Gbadolite
+4.2	19.9	6	CD	Bosobolo
+3.8	23.7	7	CD	Bondo
+3.7	18.6	7	CD	Libenge
+3.3	19.8	9	CD	Gemena
+3.3	20.9	7	CD	Businga
+3	29.5	7	CD	Watsa
+2.8	24.7	7	CD	Buta
+2.8	27.6	9	CD	Isiro
+2.7	23.8	8	CD	Aketi
+2.4	20.4	8	CD	Binga
+2.2	22.5	9	CD	Bumba
+2.1	21.5	8	CD	Lisala
+2.1	28	9	CD	Wamba
+2	30	4	CD	Mongbwalu
+1.6	30.2	8	CD	Bunia
+1.5	21.1	4	CD	Bongandanga
+1.2	19.8	8	CD	Basankusu
+1.2	23.6	7	CD	Basoko
+1.1	27.3	1	CD	Bafwasende
+0.8	24.4	7	CD	Yangambi
+0.5	25.2	11	CD	Kisangani
+0.5	29.5	10	CD	Beni
+0.1	29.3	10	CD	Butembo
+0	18.3	10	CD	Mbandaka
+-0.2	20.9	7	CD	Boende
+-0.7	26.6	3	CD	Lubutu
+-0.8	28.5	3	CD	Buluko
+-1.2	23.3	2	CD	Ikela
+-1.7	29.2	9	CD	Goma
+-1.9	18.3	7	CD	Inongo
+-2.2	16.2	7	CD	Bolobo
+-2.5	26.4	1	CD	Kalima
+-2.5	28.8	10	CD	Bukavu
+-3	16.9	7	CD	Mushie
+-3	25.9	10	CD	Kindu
+-3	28.4	4	CD	Mwenga
+-3.3	17.4	9	CD	Bandundu
+-3.4	29.1	9	CD	Uvira
+-3.5	23.4	8	CD	Lodja
+-3.6	26.7	7	CD	Kampene
+-4	19.5	7	CD	Mangai
+-4.3	15.3	13	CD	Kinshasa
+-4.3	20.6	9	CD	Ilebo
+-4.5	18.6	7	CD	Bulungu
+-4.5	26.7	8	CD	Kasongo
+-4.6	15.2	7	CD	Kasangulu
+-4.8	16.9	2	CD	Kenge
+-4.8	21.6	8	CD	Mweka
+-5	12.9	7	CD	Tshela
+-5	18.9	11	CD	Kikwit
+-5	23.4	7	CD	Lusambo
+-5.2	14.9	9	CD	Mbanza-Ngungu
+-5.3	21.4	7	CD	Luebo
+-5.4	25.7	7	CD	Lubao
+-5.4	27	9	CD	Kongolo
+-5.5	14.4	6	CD	Kimpese
+-5.5	22.3	7	CD	Demba
+-5.6	16.5	1	CD	Lusanga
+-5.8	13	9	CD	Boma
+-5.8	13.5	10	CD	Matadi
+-5.9	12.4	9	CD	Moanda
+-5.9	22.4	11	CD	Kananga
+-5.9	28	6	CD	Nyunzu
+-5.9	29.2	10	CD	Kalemie
+-6	26.9	7	CD	Kabalo
+-6.1	23.6	12	CD	Mbuji-Mayi
+-6.1	24.5	8	CD	Kabinda
+-6.4	20.8	10	CD	Tshikapa
+-6.5	16.8	7	CD	Kasongo-Lunda
+-6.5	22.9	2	CD	Dibaya
+-6.7	24	9	CD	Gandajika
+-7	23.4	9	CD	Mwene-Ditu
+-7.1	29.7	6	CD	Moba
+-7.3	19	7	CD	Kahemba
+-7.3	27.4	7	CD	Manono
+-7.6	24.2	7	CD	Kaniama
+-8.7	25	9	CD	Kamina
+-8.7	28.7	2	CD	Luanza
+-9.2	25.8	7	CD	Bukama
+-10.4	23.4	6	CD	Kasaji
+-10.7	22.3	5	CD	Dilolo
+-10.7	25.5	10	CD	Kolwezi
+-10.9	26.6	7	CD	Kambove
+-11	26.8	10	CD	Likasi
+-11.7	27.5	12	CD	Lubumbashi
+-11.8	27.3	9	CD	Kipushi
+10.3	22.8	6	CF	Birao
+8.4	20.7	6	CF	N'Délé
+8.1	22.4	5	CF	Ouadda
+7	19.2	8	CF	Kaga Bandoro
+6.5	17.4	8	CF	Bossangoa
+6.5	22	7	CF	Bria
+6.3	16.4	7	CF	Bozoum
+6	15.6	7	CF	Bouar
+5.8	20.7	8	CF	Bambari
+5.7	19.1	7	CF	Sibut
+5.6	23.3	2	CF	Yakossi
+5.4	26.5	6	CF	Obo
+5.3	17.7	5	CF	Bossembélé
+5	25.1	6	CF	Zemio
+4.9	15.9	7	CF	Carnot
+4.7	22.8	7	CF	Bangassou
+4.4	18.6	11	CF	Bangui
+4.3	21.2	6	CF	Mobaye
+4.2	15.8	8	CF	Berbérati
+3.9	18	8	CF	Mbaïki
+3.5	16.1	7	CF	Nola
+2	15.2	6	CG	Moloundou
+1.6	14.6	5	CG	Sembe
+1.6	16.1	7	CG	Ouésso
+1.6	18	7	CG	Impfondo
+-0	15.6	6	CG	Makoua
+-0.5	15.9	7	CG	Owando
+-0.9	14.8	6	CG	Ewo
+-1.9	15.9	7	CG	Gamboma
+-2.5	14.7	5	CG	Djambala
+-2.9	12.7	7	CG	Mossendjo
+-3.7	13.4	7	CG	Sibiti
+-4.2	12.7	9	CG	Loubomo
+-4.2	13.3	8	CG	Kayes
+-4.2	13.6	7	CG	Madingou
+-4.3	15.3	12	CG	Brazzaville
+-4.4	14.8	6	CG	Kinkala
+-4.8	11.9	11	CG	Pointe-Noire
+47.7	8.6	7	CH	Schaffhausen
+47.6	7.6	11	CH	Basel
+47.6	9.1	7	CH	Frauenfeld
+47.5	7.7	6	CH	Liestal
+47.4	7.3	6	CH	Delémont
+47.4	8	6	CH	Aarau
+47.4	8.5	12	CH	Zürich
+47.4	9.3	6	CH	Herisau
+47.4	9.4	8	CH	Saint Gallen
+47.3	9.4	5	CH	Appenzell
+47.2	7.3	8	CH	Biel
+47.2	7.5	6	CH	Solothurn
+47.2	8.5	7	CH	Zug
+47.1	8.3	10	CH	Luzern
+47.1	9.1	5	CH	Glarus
+47	6.9	7	CH	Neuchâtel
+47	8.4	5	CH	Stans
+47	8.6	6	CH	Schwyz
+46.9	7.5	10	CH	Bern
+46.9	8.2	5	CH	Sarnen
+46.9	8.6	5	CH	Altdorf
+46.9	9.5	7	CH	Chur
+46.8	7.1	7	CH	Fribourg
+46.5	6.7	10	CH	Lausanne
+46.2	6.1	12	CH	Geneva
+46.2	7.4	7	CH	Sion
+46.2	9	6	CH	Bellinzona
+46	9	9	CH	Lugano
+9.6	-5.2	8	CI	Ferkessédougou
+9.5	-7.6	7	CI	Odienné
+9.5	-5.6	9	CI	Korhogo
+8.3	-7.7	7	CI	Touba
+8	-6.7	8	CI	Séguéla
+8	-2.8	8	CI	Bondoukou
+7.7	-5	11	CI	Bouaké
+7.4	-7.5	9	CI	Man
+7	-5.7	8	CI	Bouaflé
+6.9	-6.5	10	CI	Daloa
+6.8	-5.3	10	CI	Yamoussoukro
+6.7	-4.7	8	CI	Dimbokro
+6.7	-3.5	9	CI	Abengourou
+6.6	-7.5	7	CI	Guiglo
+6.6	-5	7	CI	Toumodi
+6.2	-5.9	9	CI	Gagnoa
+5.9	-4.3	8	CI	Agboville
+5.8	-6.6	9	CI	Soubré
+5.8	-5.4	9	CI	Divo
+5.5	-3.2	7	CI	Aboisso
+5.3	-4.4	8	CI	Dabou
+5.3	-4	12	CI	Abidjan
+5.2	-3.7	8	CI	Grand Bassam
+5	-6.1	7	CI	Sassandra
+4.8	-6.6	10	CI	San-Pedro
+-21.2	-159.8	5	CK	Avarua
+-18.5	-70.3	9	CL	Arica
+-19.1	-70.1	1	CL	Cuya
+-20.2	-70.1	10	CL	Iquique
+-20.3	-69.8	6	CL	Pozo Almonte
+-21	-69.7	1	CL	Lagunas
+-22.1	-70.2	7	CL	Tocopilla
+-22.3	-68.9	0	CL	Chuquicamata
+-22.4	-69.7	4	CL	María Elena
+-22.5	-68.9	9	CL	Calama
+-23.1	-70.5	4	CL	Mejillones
+-23.2	-68	2	CL	Toconao
+-23.6	-70.4	10	CL	Antofagasta
+-25.4	-70.5	6	CL	Taltal
+-26.3	-70.6	6	CL	Chañaral
+-26.4	-70	6	CL	Diego de Almagro
+-27.1	-70.8	6	CL	Caldera
+-27.4	-70.3	9	CL	Copiapó
+-27.5	-70.3	6	CL	Tierra Amarilla
+-28.5	-71.2	4	CL	Huasco
+-28.6	-70.8	7	CL	Vallenar
+-29.9	-71.2	9	CL	La Serena
+-30	-71.3	9	CL	Coquimbo
+-30	-70.7	6	CL	Vicuña
+-30.6	-71.2	8	CL	Ovalle
+-31.2	-71	5	CL	Combarbalá
+-31.6	-71.2	7	CL	Illapel
+-31.8	-71	7	CL	Salamanca
+-32.5	-71.2	7	CL	La Ligua
+-32.8	-70.7	8	CL	San Felipe
+-32.8	-70.6	8	CL	Los Andes
+-32.9	-71.3	8	CL	Quillota
+-33	-71.6	11	CL	Valparaíso
+-33	-71.5	11	CL	Viña del Mar
+-33.4	-70.7	13	CL	Santiago
+-33.6	-71.6	9	CL	San Antonio
+-33.6	-70.7	10	CL	San Bernardo
+-34.2	-70.7	10	CL	Rancagua
+-34.4	-72	6	CL	Pichilemu
+-34.6	-71	8	CL	San Fernando
+-35	-71.2	9	CL	Curicó
+-35.3	-72.4	7	CL	Constitución
+-35.5	-71.7	9	CL	Talca
+-35.8	-71.6	8	CL	Linares
+-36	-72.3	7	CL	Cauquenes
+-36.3	-72.5	5	CL	Quirihue
+-36.6	-72.1	9	CL	Chillán
+-36.7	-73.1	10	CL	Talcahuano
+-36.8	-73.1	11	CL	Concepción
+-37	-73.2	8	CL	Coronel
+-37.1	-73.2	7	CL	Lota
+-37.5	-73.3	7	CL	Curanilahue
+-37.5	-72.4	9	CL	Los Angeles
+-37.6	-73.6	7	CL	Lebu
+-37.7	-72	4	CL	Santa Bárbara
+-37.8	-72.7	7	CL	Angol
+-38	-72.4	6	CL	Collipulli
+-38.2	-72.3	7	CL	Victoria
+-38.4	-71.2	6	CL	Lonquimay
+-38.7	-73.2	6	CL	Carahue
+-38.7	-73	6	CL	Nueva Imperial
+-38.7	-72.6	10	CL	Temuco
+-39.2	-73.2	4	CL	Toltén
+-39.3	-72.2	7	CL	Villarica
+-39.4	-72.6	6	CL	Loncoche
+-39.8	-73.2	9	CL	Valdivia
+-39.8	-72.8	6	CL	Los Lagos
+-40.3	-73.1	7	CL	La Unión
+-40.3	-73	6	CL	Río Bueno
+-40.6	-73.2	9	CL	Osorno
+-41.3	-73	7	CL	Puerto Varas
+-41.5	-72.9	9	CL	Puerto Montt
+-41.8	-73.1	6	CL	Calbuco
+-41.9	-73.8	7	CL	Ancud
+-42.5	-73.8	7	CL	Castro
+-42.6	-73.8	2	CL	Chonchi
+-43.1	-73.6	5	CL	Quellón
+-45.4	-72.7	5	CL	Puerto Aisén
+-45.6	-72.1	7	CL	Coihaique
+-47.3	-72.5	4	CL	Cochrane
+-48.5	-72.6	2	CL	Villa O'Higgins
+-51.7	-72.5	6	CL	Puerto Natales
+-52.6	-71.5	2	CL	Río Verde
+-53.2	-70.9	9	CL	Punta Arenas
+-54.9	-67.6	4	CL	Puerto Williams
+10.6	14.3	10	CM	Maroua
+9.9	13.9	8	CM	Guider
+9.3	13.4	10	CM	Garoua
+8	12.2	5	CM	Kontcha
+7.9	13.6	4	CM	Mbe
+7.3	13.6	10	CM	Ngaoundéré
+6.5	12.6	7	CM	Tibati
+6.5	14.3	8	CM	Meiganga
+6.4	10.1	8	CM	Wum
+6.2	10.7	9	CM	Kumbo
+6	10.2	10	CM	Bamenda
+5.8	9	5	CM	Eyumojok
+5.7	10.9	8	CM	Foumban
+5.5	10.4	10	CM	Bafoussam
+5.2	10.2	8	CM	Bafang
+5	9.9	9	CM	Nkongsamba
+4.9	13.3	7	CM	Bélabo
+4.8	11.2	8	CM	Bafia
+4.6	9.4	9	CM	Kumba
+4.6	13.7	10	CM	Bertoua
+4.4	14.4	7	CM	Batouri
+4.2	9.2	8	CM	Buea
+4.1	9.7	12	CM	Douala
+4	9.2	10	CM	Limbe
+4	13.2	6	CM	Abong Mbang
+3.9	11.5	12	CM	Yaoundé
+3.8	10.1	10	CM	Edéa
+3.7	10.8	7	CM	Eséka
+3.5	11.5	8	CM	Mbalmayo
+2.9	9.9	8	CM	Kribi
+2.9	11.2	8	CM	Ebolowa
+50.8	121.5	7	CN	Genhe
+50.7	121.5	6	CN	Yitulihe
+50.6	123.7	7	CN	Orongen Zizhiqi
+50.3	127.4	9	CN	Heihe
+49.6	117.4	8	CN	Manzhouli
+49.3	120.7	9	CN	Yakeshi
+49.2	119.7	10	CN	Hailar
+49.2	125.2	8	CN	Nenjiang
+48.8	121.9	6	CN	Bugt
+48.5	124.9	9	CN	Nehe
+48.2	126.5	9	CN	Bei'an
+48.2	129.5	8	CN	Xinqing
+48	122.7	9	CN	Zalantun
+48	125.9	8	CN	Keshan
+47.9	88.1	9	CN	Altay
+47.9	123.5	8	CN	Gannan
+47.9	125.3	7	CN	Yian
+47.7	128.9	11	CN	Yichun
+47.6	126.1	8	CN	Baiquan
+47.5	126.9	9	CN	Hailun
+47.4	130.4	11	CN	Hegang
+47.3	123.2	9	CN	Longjiang
+47.3	124	12	CN	Qiqihar
+47.3	132	8	CN	Fujin
+47.2	120	7	CN	Arxan
+47.2	123.6	10	CN	Hulan Ergi
+47.2	123.8	7	CN	Angangxi
+47.2	127.1	8	CN	Suileng
+47.1	129.3	9	CN	Nancha
+47	89.5	8	CN	Koktokay
+47	128.1	9	CN	Tieli
+46.9	127.5	8	CN	Qingan
+46.8	83	7	CN	Tacheng
+46.8	130.3	12	CN	Jiamusi
+46.7	126.1	8	CN	Qinggang
+46.7	131.4	10	CN	Shuangyashan
+46.6	125	12	CN	Daqing
+46.6	127	10	CN	Suihua
+46.4	123.4	8	CN	Tailai
+46.4	125.3	9	CN	Anda
+46.3	126.3	8	CN	Lanxi
+46.1	122.1	10	CN	Ulan Hot
+46.1	126	9	CN	Zhaodong
+45.8	126.6	12	CN	Harbin
+45.8	130.6	8	CN	Boli
+45.8	130.9	10	CN	Qitaihe
+45.8	133	7	CN	Hulin
+45.6	84.9	10	CN	Karamay
+45.6	122.8	10	CN	Baicheng
+45.6	131.9	8	CN	Mishan
+45.5	124.3	8	CN	Daan
+45.4	126.3	9	CN	Shuangcheng
+45.3	122.8	9	CN	Taonan
+45.3	130.3	8	CN	Linkou
+45.3	131	11	CN	Jixi
+45.2	124.8	10	CN	Songyuan
+45.2	128	8	CN	Shangzhi
+44.6	129.6	12	CN	Mudangiang
+44.4	125.2	9	CN	Nongan
+44.4	126.9	8	CN	Shulan
+44.3	86	11	CN	Shihezi
+44.3	124	8	CN	Changling
+44.3	129.5	8	CN	Ningan
+44.1	125.8	10	CN	Jiutai
+44	119.2	7	CN	Bairin Zuoqi
+43.9	81.4	11	CN	Yining
+43.9	116	9	CN	Xilinhot
+43.9	125.3	12	CN	Changchun
+43.9	126.5	12	CN	Jilin
+43.8	87.6	12	CN	Ürümqi
+43.7	112	7	CN	Erenhot
+43.7	127.3	9	CN	Jiaohe
+43.6	121.2	4	CN	Kailu
+43.6	122.3	11	CN	Tongliao
+43.5	118	2	CN	Linxi
+43.4	128.2	9	CN	Dunhua
+43.3	129.7	8	CN	Wangqing
+43.2	124.3	11	CN	Siping
+43	129.8	8	CN	Tumen
+42.9	89.2	11	CN	Turpan
+42.9	125.1	11	CN	Liaoyuan
+42.9	126.1	8	CN	Panshi
+42.9	129.5	10	CN	Yanji
+42.8	93.5	11	CN	Hami
+42.6	126.3	8	CN	Huinan
+42.5	129	8	CN	Helong
+42.3	118.9	12	CN	Chifeng
+42.3	123.8	10	CN	Tieling
+42.3	125.7	8	CN	Liuhe
+42	121.7	11	CN	Fuxin
+41.9	123.9	12	CN	Fushun
+41.9	126.4	10	CN	Baishan
+41.8	110	7	CN	Bayan Obo
+41.8	120.8	10	CN	Beipiao
+41.8	123.4	12	CN	Shenyeng
+41.8	126.9	8	CN	Linjiang
+41.7	82.9	10	CN	Kuqa
+41.7	86.2	11	CN	Korla
+41.7	125.7	7	CN	Tonghua
+41.6	120.4	10	CN	Chaoyang
+41.5	113.5	6	CN	Shangdu
+41.3	123.2	11	CN	Liaoyang
+41.3	123.7	12	CN	Benxi
+41.3	125.3	9	CN	Huanren
+41.2	80.3	11	CN	Aksu
+41.2	119.4	11	CN	Lingyuan
+41.1	108.3	7	CN	Wuyuan
+41.1	111.4	7	CN	Wuchuan
+41.1	121.1	11	CN	Jinzhou
+41.1	122.9	12	CN	Anshan
+41	113.1	10	CN	Jining
+41	117.9	10	CN	Chengde
+40.9	107.1	7	CN	Hanggin Houqi
+40.8	111.7	12	CN	Hohhot
+40.8	114.9	12	CN	Zhangjiakou
+40.8	120.8	12	CN	Jinxi
+40.7	109.8	12	CN	Baotou
+40.7	122.3	11	CN	Yingkow
+40.6	115	10	CN	Xuanhua
+40.5	95.8	6	CN	Anxi
+40.5	113.1	8	CN	Fengzhen
+40.2	116.2	11	CN	Changping
+40.1	94.7	9	CN	Dunhuang
+40.1	113.3	12	CN	Datong
+40.1	124.4	11	CN	Dandong
+39.9	116.4	14	CN	Beijing
+39.9	119.6	12	CN	Qinhuangdao
+39.8	97.7	10	CN	Yumen
+39.8	98.3	9	CN	Jiayuguan
+39.7	106.8	10	CN	Wuhai
+39.7	123	10	CN	Zhuanghe
+39.6	118.2	12	CN	Tangshan
+39.6	122	10	CN	Wafangdian
+39.5	76	11	CN	Kashgar
+39.5	115.8	11	CN	Zhuozhou
+39.5	116.7	11	CN	Langfang
+39.3	112.4	11	CN	Shuozhou
+39.2	106.8	9	CN	Shizuishan
+39.2	117.8	10	CN	Hangu
+39.1	117.2	13	CN	Tianjin
+38.9	100.5	10	CN	Zhangye
+38.9	115.5	12	CN	Baoding
+38.9	121.6	12	CN	Dalian
+38.8	105.7	8	CN	Alxa Zuoqi
+38.5	102.2	9	CN	Jinchang
+38.5	106.3	11	CN	Yinchuan
+38.5	115	9	CN	Dingzhou
+38.4	77.3	11	CN	Shache
+38.4	112.7	10	CN	Xinzhou
+38.4	117.3	9	CN	Huanghua
+38.3	109.7	9	CN	Yulin
+38.3	116.9	11	CN	Cangzhou
+38.1	85.5	8	CN	Quiemo
+38.1	114.5	12	CN	Shijiazhuang
+37.9	102.6	10	CN	Wuwei
+37.9	112.5	12	CN	Taiyuan
+37.9	113.6	11	CN	Yangquan
+37.7	112.7	11	CN	Yuci
+37.7	115.7	10	CN	Hengshui
+37.5	116.3	10	CN	Dezhou
+37.5	121.4	12	CN	Yantai
+37.5	122.1	11	CN	Weihai
+37.4	115.4	8	CN	Nangong
+37.4	118	9	CN	Buizhou
+37.1	79.9	10	CN	Hotan
+37	111.9	8	CN	Jiexiu
+37	114.5	11	CN	Xiangtai
+37	120.7	10	CN	Laiyang
+36.9	115.7	9	CN	Linqing
+36.8	118	12	CN	Zibo
+36.8	119.9	8	CN	Pingdu
+36.7	117	12	CN	Jinan
+36.7	119.1	12	CN	Weifang
+36.6	101.8	12	CN	Xining
+36.6	114.5	12	CN	Handan
+36.4	94.9	9	CN	Golmud
+36.4	116	10	CN	Liaocheng
+36.2	98.3	1	CN	Dulan
+36.2	113.1	11	CN	Changzhi
+36.2	117.1	12	CN	Taian
+36.2	117.7	9	CN	Laiwu
+36.1	103.8	12	CN	Lanzhou
+36.1	111.5	11	CN	Linfen
+36.1	114.3	11	CN	Anyang
+36.1	120.3	12	CN	Qingdao
+36	101.4	5	CN	Guide
+36	114.2	10	CN	Hebi
+36	119.4	12	CN	Zhucheng
+35.8	118.6	8	CN	Yishui
+35.7	115	11	CN	Puyang
+35.6	103.2	11	CN	Linxia
+35.6	111.2	9	CN	Houma
+35.5	106.7	10	CN	Pingliang
+35.5	110.4	10	CN	Hancheng
+35.5	112.8	11	CN	Jincheng
+35.5	117.6	8	CN	Pingyi
+35.4	116.5	12	CN	Jining
+35.4	119.5	11	CN	Rizhao
+35.3	113.2	11	CN	Jiaozuo
+35.3	113.9	11	CN	Xinxiang
+35.2	115.4	12	CN	Heze
+35.1	109	10	CN	Tongchuan
+35.1	118.3	12	CN	Linyi
+35	104.6	10	CN	Longxi
+34.9	114.3	11	CN	Kaifeng
+34.9	117.6	12	CN	Zaozhuang
+34.8	109.9	9	CN	Dali
+34.8	113.7	12	CN	Zhengzhou
+34.8	116.1	8	CN	Shanxian
+34.7	112.5	12	CN	Luoyang
+34.6	105.9	12	CN	Tianshui
+34.6	119.2	11	CN	Lianyungang
+34.5	109.5	9	CN	Weinan
+34.5	115.6	12	CN	Shangqiu
+34.4	104	8	CN	Minxian
+34.4	107.1	11	CN	Baoji
+34.4	118.4	11	CN	Xinyi
+34.3	108.7	12	CN	Xianyang
+34.3	108.9	12	CN	Xian
+34.3	117.2	12	CN	Xuzhou
+34.1	118.8	12	CN	Shuyang
+34	113.8	10	CN	Xuchang
+34	116.7	11	CN	Huaibei
+33.7	113.3	11	CN	Pingdingshan
+33.6	114	10	CN	Luohe
+33.6	114.6	10	CN	Zhoukou
+33.6	117	12	CN	Suzhou
+33.6	119	12	CN	Huaiyin
+33.4	120.1	11	CN	Yancheng
+33.3	115.4	9	CN	Jieshou
+33.1	107	9	CN	Hanzhong
+33	96.7	7	CN	Jyekundo
+33	112.5	12	CN	Nanyang
+33	117.3	11	CN	Bengbu
+32.9	115.8	9	CN	Fuyang
+32.8	110.8	9	CN	Yunxian
+32.7	109	12	CN	Ankang
+32.7	112.1	8	CN	Dengzhou
+32.6	110.8	11	CN	Shiyan
+32.6	117	12	CN	Huainan
+32.5	111.5	8	CN	Danjiangkou
+32.5	119.9	11	CN	Taizhou
+32.4	105.9	10	CN	Guangyuan
+32.4	119.4	11	CN	Yangzhou
+32.2	80	5	CN	Gar
+32.2	119.4	11	CN	Zhenjiang
+32.1	114.1	12	CN	Xinyang
+32.1	118.8	12	CN	Nanjing
+32	112.1	12	CN	Xiangyang
+32	120.8	11	CN	Nantong
+31.9	117.3	12	CN	Hefei
+31.8	116.5	12	CN	Luan
+31.8	120	12	CN	Changzhou
+31.7	118.5	12	CN	Maanshan
+31.6	106	8	CN	Langzhong
+31.6	114	9	CN	Guangshui
+31.6	120.3	12	CN	Wuxi
+31.5	92.1	4	CN	Nagchu
+31.5	104.8	12	CN	Mianyang
+31.4	118.4	11	CN	Wuhu
+31.3	113.7	8	CN	Anlu
+31.3	120.6	12	CN	Suzhou
+31.2	97.2	8	CN	Chamdo
+31.2	115	9	CN	Macheng
+31.2	121.4	14	CN	Shanghai
+31.1	104.4	9	CN	Deyang
+31.1	109.5	7	CN	Fengjie
+31	101.9	8	CN	Rongzhag
+31	112.1	10	CN	Jingmen
+31	117.8	11	CN	Tongling
+31	118.8	11	CN	Xuanzhou
+30.9	113.9	9	CN	Xiaogan
+30.9	120.1	12	CN	Huzhou
+30.8	106.1	12	CN	Nanchong
+30.8	108.4	12	CN	Wanzhou
+30.8	120.7	11	CN	Jiaxing
+30.7	104.1	12	CN	Chengdu
+30.7	111.3	11	CN	Yichang
+30.7	113.2	12	CN	Jianmen
+30.6	114.3	13	CN	Wuhan
+30.5	105.5	12	CN	Suining
+30.5	117.1	11	CN	Anqing
+30.4	113.4	12	CN	Xiantao
+30.3	111.5	10	CN	Zicheng
+30.3	112.2	11	CN	Jingzhou
+30.3	120.2	12	CN	Hangzhou
+30.2	115.1	11	CN	Huangshi
+30.1	119.9	11	CN	Fuyang
+30	103.1	10	CN	Yaan
+30	120.6	11	CN	Shaoxing
+29.9	121.5	12	CN	Ningbo
+29.7	112.4	10	CN	Shishou
+29.7	113.9	10	CN	Puqi
+29.7	116	11	CN	Jiujiang
+29.6	91.1	10	CN	Lhasa
+29.6	103.7	12	CN	Leshan
+29.6	105	12	CN	Neijiang
+29.6	106.6	13	CN	Chongqing
+29.6	111.9	10	CN	Jinshi
+29.5	94.4	1	CN	Nyingchi
+29.4	102.7	3	CN	Fulin
+29.4	104.8	12	CN	Zigong
+29.4	113.1	11	CN	Yueyang
+29.3	88.9	8	CN	Xigaze
+29.3	117.2	10	CN	Jingdezhen
+29.1	119.6	12	CN	Jinhua
+29	89.6	5	CN	Gyangze
+29	111.7	12	CN	Changde
+29	118.9	10	CN	Quzhou
+28.9	105.4	12	CN	Luzhou
+28.9	121.1	10	CN	Linhai
+28.8	104.6	11	CN	Yibin
+28.7	115.9	12	CN	Nanchang
+28.7	121.3	9	CN	Huangyan
+28.7	121.4	10	CN	Jiaojing
+28.6	112.3	12	CN	Yiyang
+28.5	118	12	CN	Shangrao
+28.5	119.9	9	CN	Lishui
+28.2	113	12	CN	Changsha
+28.2	115.8	8	CN	Fengcheng
+28	116.4	10	CN	Linchuan
+28	120.6	12	CN	Wenzhou
+27.9	102.3	10	CN	Xichang
+27.9	112.9	12	CN	Xiangtan
+27.8	113.1	12	CN	Zhuzhou
+27.8	114.4	11	CN	Yichun
+27.8	114.9	11	CN	Xinyu
+27.7	106.9	11	CN	Zunyi
+27.7	109.1	9	CN	Tongren
+27.6	113.8	11	CN	Pingxiang
+27.4	109.7	9	CN	Zhijiang
+27.3	103.7	11	CN	Zhaotang
+27.3	117.5	9	CN	Shaowu
+27.1	115	11	CN	Jian
+27.1	119.6	8	CN	Fuan
+27	111.2	7	CN	Shaoyang
+26.9	112.6	12	CN	Hengyang
+26.8	100.3	6	CN	Lijiang
+26.7	119.5	10	CN	Ninde
+26.6	104.8	12	CN	Liupanshui
+26.6	106.7	12	CN	Guiyang
+26.6	118.2	10	CN	Nanping
+26.5	101.7	10	CN	Panzhihua
+26.4	103.4	5	CN	Huize
+26.3	105.9	11	CN	Anshun
+26.2	111.6	11	CN	Yongzhou
+26.2	117.6	10	CN	Sanming
+26.1	119.3	12	CN	Fuzhou
+26	113.4	5	CN	Zixing
+25.9	115	12	CN	Ganzhou
+25.9	116.3	8	CN	Changting
+25.8	113	10	CN	Chenzhou
+25.7	100.2	9	CN	Dali
+25.6	103.8	11	CN	Zhanyi
+25.4	119	10	CN	Putian
+25.3	110.3	11	CN	Guilin
+25.2	117	10	CN	Longyan
+25.1	99.2	11	CN	Baoshan
+25.1	102.7	12	CN	Kunming
+25.1	104.9	11	CN	Xingyi
+25	98.5	9	CN	Tengchong
+25	101.5	10	CN	Chuxiong
+24.9	118.6	12	CN	Quanzhou
+24.8	112.4	10	CN	Lianxian
+24.8	113.6	11	CN	Shaoguan
+24.7	108.1	12	CN	Hechi
+24.5	108.7	7	CN	Yishan
+24.5	117.7	12	CN	Zhangzhou
+24.5	118.1	12	CN	Xiamen
+24.4	102.6	10	CN	Yuxi
+24.3	109.2	12	CN	Liuzhou
+24.3	116.1	10	CN	Meizhou
+23.9	106.6	9	CN	Bose
+23.7	113	11	CN	Qingyuan
+23.7	114.7	10	CN	Heyuan
+23.7	116.6	10	CN	Chaozhou
+23.5	111.3	10	CN	Wuzhou
+23.4	103.2	9	CN	Gejiu
+23.4	103.4	10	CN	Mengzi
+23.4	104.2	9	CN	Wenshan
+23.4	116.7	12	CN	Shantou
+23.1	112.5	10	CN	Zhaoqing
+23.1	113.3	13	CN	Guangzhou
+23.1	113.7	12	CN	Dongguan
+23.1	114.4	10	CN	Huizhou
+23	113.1	11	CN	Foshan
+22.8	101	9	CN	Simao
+22.8	108.3	12	CN	Nanning
+22.6	110.1	12	CN	Yulin
+22.6	113.1	11	CN	Jiangmen
+22.6	114.1	13	CN	Shenzhen
+22.3	113.6	12	CN	Zhuhai
+22.1	106.8	7	CN	Pingxiang
+22	108.6	10	CN	Qinzhou
+21.9	110.9	12	CN	Maoming
+21.9	112	11	CN	Yangjiang
+21.5	109.1	11	CN	Beihai
+21.2	110.4	12	CN	Zhanjiang
+20.1	110.3	12	CN	Haikou
+18.3	109.5	10	CN	Sanya
+12.6	-81.7	8	CO	San Andrés
+11.5	-72.9	9	CO	Riohacha
+11.2	-74.2	10	CO	Santa Marta
+11	-74.8	12	CO	Barranquilla
+11	-74.2	9	CO	Ciénaga
+10.9	-74.8	11	CO	Soledad
+10.6	-74.9	8	CO	Sabanalarga
+10.5	-73.3	10	CO	Valledupar
+10.4	-75.5	11	CO	Cartagena
+10.3	-75.3	8	CO	Arjona
+9.7	-75.1	8	CO	El Carmen de Bolívar
+9.5	-75.6	7	CO	Tolú
+9.3	-75.4	10	CO	Sincelejo
+9.2	-75.8	8	CO	Lorica
+9.2	-74.7	9	CO	Magangué
+9	-74	8	CO	El Banco
+8.8	-75.9	10	CO	Montería
+8.3	-75.2	7	CO	Ayapel
+8.2	-73.4	8	CO	Ocaña
+8.1	-76.7	8	CO	Turbo
+7.9	-72.5	11	CO	Cúcuta
+7.4	-72.7	8	CO	Pamplona
+7.1	-77.8	4	CO	Juradó
+7.1	-73.8	9	CO	Barrancabermeja
+7.1	-73.1	12	CO	Bucaramanga
+7.1	-70.8	8	CO	Arauca
+7	-75.6	7	CO	Yarumal
+6.5	-74.4	7	CO	Puerto Berrío
+6.5	-73.3	7	CO	Socorro
+6.5	-71.7	7	CO	Tame
+6.3	-75.6	11	CO	Bello
+6.3	-75.6	12	CO	Medellín
+6.2	-67.5	6	CO	Puerto Carreño
+5.8	-73	9	CO	Duitama
+5.7	-77.3	4	CO	Nuquí
+5.7	-76.7	8	CO	Quibdó
+5.7	-75.3	6	CO	Sonsón
+5.7	-72.9	9	CO	Sogamoso
+5.6	-73.8	8	CO	Chiquinquirá
+5.6	-73.4	9	CO	Tunja
+5.3	-72.4	8	CO	Yopal
+5.2	-74.7	7	CO	Honda
+5.1	-75.5	10	CO	Manizales
+4.8	-75.7	11	CO	Pereira
+4.8	-71.3	4	CO	Orocue
+4.7	-75.9	9	CO	Cartago
+4.6	-74.1	13	CO	Bogota
+4.5	-75.7	10	CO	Armenia
+4.4	-75.2	10	CO	Ibagué
+4.3	-74.8	9	CO	Girardot
+4.2	-73.6	10	CO	Villavicencio
+4.1	-76.2	9	CO	Tuluá
+4.1	-73	6	CO	Puerto López
+3.9	-77.1	10	CO	Buenaventura
+3.9	-67.9	5	CO	Inírida
+3.7	-73.7	6	CO	San Martín
+3.4	-76.5	12	CO	Cali
+2.9	-75.3	10	CO	Neiva
+2.7	-75.3	7	CO	Campoalegre
+2.6	-77.9	6	CO	Guapi
+2.6	-72.6	7	CO	San José del Guaviare
+2.4	-76.6	10	CO	Popayán
+2.2	-75.6	8	CO	Garzón
+2.1	-74.6	3	CO	San Vicente del Caguán
+1.8	-78.8	8	CO	Tumaco
+1.6	-75.6	9	CO	Florencia
+1.2	-77.3	10	CO	Pasto
+1.2	-70.2	5	CO	Mitú
+1.1	-77.6	7	CO	Túquerres
+1.1	-76.6	7	CO	Mocoa
+0.8	-77.7	9	CO	Ipiales
+-4.2	-70	8	CO	Leticia
+11.1	-85.6	4	CR	La Cruz
+10.6	-85.4	7	CR	Liberia
+10.4	-85.1	7	CR	Cañas
+10.3	-84.4	7	CR	Quesada
+10	-84.8	8	CR	Puntarenas
+10	-84.2	10	CR	Alajuela
+10	-84.1	7	CR	Heredia
+10	-83	8	CR	Limón
+9.9	-84.1	12	CR	San José
+9.9	-83.9	9	CR	Cartago
+9.5	-82.6	3	CR	Sixaola
+9	-83.5	4	CR	Ciudad Cortés
+8.7	-83.1	5	CR	Golfito
+23.1	-82.4	12	CU	Havana
+23	-81.6	9	CU	Matanzas
+22.9	-82.5	7	CU	San Antonio de los Baños
+22.8	-82.8	8	CU	Artemisa
+22.8	-82	8	CU	Güines
+22.8	-80.1	8	CU	Sagua la Grande
+22.7	-80.9	8	CU	Colón
+22.5	-79.5	7	CU	Caibarién
+22.4	-83.7	9	CU	Pinar del Rio
+22.4	-80	10	CU	Santa Clara
+22.3	-79.7	8	CU	Placetas
+22.1	-80.4	9	CU	Cienfuegos
+22.1	-78.6	8	CU	Morón
+21.9	-82.8	7	CU	Nueva Gerona
+21.9	-79.4	9	CU	Sancti Spíritus
+21.8	-78.8	9	CU	Ciego de Ávila
+21.5	-77.3	8	CU	Nuevitas
+21.4	-77.9	10	CU	Camagüey
+21	-77	10	CU	Las Tunas
+21	-75.7	8	CU	Banes
+20.9	-76.3	10	CU	Holguín
+20.4	-76.6	9	CU	Bayamo
+20.3	-77.1	9	CU	Manzanillo
+20.2	-76	9	CU	Palma Soriano
+20.1	-75.2	10	CU	Guantánamo
+20	-75.8	11	CU	Santiago de Cuba
+16.9	-25	8	CV	Mindelo
+14.9	-23.5	9	CV	Praia
+12.2	-69	9	CW	Willemstad
+35.2	33.4	10	CY	Nicosia
+34.9	33.6	7	CY	Larnaka
+34.8	32.4	7	CY	Paphos
+34.7	33	9	CY	Lemosos
+50.8	15.1	9	CZ	Liberec
+50.7	14.1	8	CZ	Usti Nad Labem
+50.2	15.8	8	CZ	Hradec Králové
+50.1	14.5	12	CZ	Prague
+50	15.8	9	CZ	Pardubice
+49.8	18.2	10	CZ	Ostrava
+49.7	13.4	9	CZ	Pizen
+49.6	17.2	9	CZ	Olomouc
+49.4	15.6	8	CZ	Jihlava
+49.2	16.6	10	CZ	Brno
+49.2	17.7	9	CZ	Zlín
+49	14.5	8	CZ	České Budějovice
+54.8	9.4	8	DE	Flensburg
+54.3	10.1	10	DE	Kiel
+54.3	13.1	8	DE	Stralsund
+54.1	12.1	10	DE	Rostock
+53.9	10.7	10	DE	Lübeck
+53.6	8.6	9	DE	Bremerhaven
+53.6	10	12	DE	Hamburg
+53.6	11.4	8	DE	Schwerin
+53.4	7.2	8	DE	Emden
+53.1	8.2	9	DE	Oldenburg
+53.1	8.8	11	DE	Bremen
+52.5	13.4	12	DE	Berlin
+52.4	9.7	11	DE	Hanover
+52.4	13.1	10	DE	Potsdam
+52.3	8	10	DE	Osnabrück
+52.2	10.5	10	DE	Braunschweig
+52.1	11.6	10	DE	Magdeburg
+52	7.6	10	DE	Münster
+52	8.5	10	DE	Bielefeld
+51.8	14.3	9	DE	Cottbus
+51.5	7.5	11	DE	Dortmund
+51.5	9.9	9	DE	Göttingen
+51.4	6.8	12	DE	Duisburg
+51.4	7	12	DE	Essen
+51.3	7.2	11	DE	Wuppertal
+51.3	9.5	10	DE	Kassel
+51.3	12.4	11	DE	Leipzig
+51.2	6.8	12	DE	Düsseldorf
+51	11	10	DE	Erfurt
+51	13.8	11	DE	Dresden
+50.9	6.9	12	DE	Cologne
+50.9	11.6	9	DE	Jena
+50.9	12.1	9	DE	Gera
+50.8	12.9	10	DE	Chemnitz
+50.7	7.1	11	DE	Bonn
+50.6	8.7	8	DE	Gießen
+50.4	7.6	10	DE	Koblenz
+50.3	11	8	DE	Coburg
+50.3	11.9	8	DE	Hof
+50.1	8.3	11	DE	Wiesbaden
+50.1	8.7	12	DE	Frankfurt
+50	8.3	9	DE	Mainz
+49.8	10	9	DE	Würzburg
+49.5	8.5	12	DE	Mannheim
+49.5	11	10	DE	Fürth
+49.4	8.7	10	DE	Heidelberg
+49.4	11.1	11	DE	Nürnberg
+49.3	7	11	DE	Saarbrücken
+49	8.4	10	DE	Karlsruhe
+49	12.1	9	DE	Regensburg
+48.8	9.2	12	DE	Stuttgart
+48.8	11.4	9	DE	Ingolstadt
+48.6	13.4	8	DE	Passau
+48.4	10	9	DE	Ulm
+48.4	10.9	10	DE	Augsburg
+48.1	11.6	12	DE	Munich
+48	7.9	10	DE	Freiburg
+47.9	12.1	8	DE	Rosenheim
+12	43.3	6	DJ	Obock
+11.8	42.9	7	DJ	Tadjoura
+11.6	43.1	11	DJ	Djibouti
+11.2	42.7	7	DJ	Ali Sabih
+11.1	42.4	6	DJ	Dikhil
+57.4	10.5	7	DK	Frederikshavn
+57	9.9	9	DK	Aalborg
+56.4	9.4	7	DK	Viborg
+56.2	10.2	10	DK	Århus
+55.9	12.3	7	DK	Hillerød
+55.7	9.5	8	DK	Vejle
+55.7	12.6	12	DK	København
+55.6	12.1	7	DK	Roskilde
+55.5	8.5	8	DK	Esbjerg
+55.4	10.4	9	DK	Odense
+55.4	11.6	5	DK	Sorø
+55.1	10.6	7	DK	Svendborg
+15.3	-61.4	7	DM	Roseau
+19.9	-71.7	6	DO	Monte Cristi
+19.8	-70.7	9	DO	Puerto Plata
+19.6	-71.1	7	DO	Mao
+19.5	-71.7	6	DO	Dajabón
+19.5	-71.3	6	DO	Sabaneta
+19.5	-70.7	12	DO	Santiago
+19.4	-70.5	8	DO	Moca
+19.4	-70.4	7	DO	Salcedo
+19.4	-69.8	7	DO	Nagua
+19.3	-70.3	9	DO	San Francisco de Macorís
+19.2	-70.5	9	DO	La Vega
+19.2	-69.3	6	DO	Samaná
+19.1	-70.2	7	DO	Cotuí
+18.9	-71.7	7	DO	Comendador
+18.9	-70.4	8	DO	Bonao
+18.8	-71.2	8	DO	San Juan
+18.8	-69.8	6	DO	Monte Plata
+18.8	-69.3	7	DO	Hato Mayor
+18.8	-69	7	DO	El Seibo
+18.7	-68.4	2	DO	Bávaro
+18.6	-68.7	9	DO	Higuey
+18.5	-71.9	5	DO	Jimaní
+18.5	-71.4	7	DO	Neiba
+18.5	-70.7	8	DO	Azua
+18.5	-69.9	12	DO	Santo Domingo
+18.5	-69.3	10	DO	San Pedro de Macorís
+18.4	-70.1	9	DO	San Cristóbal
+18.4	-69	10	DO	La Romana
+18.3	-70.3	8	DO	Baní
+18.2	-71.1	8	DO	Barahona
+18	-71.7	6	DO	Pedernales
+36.9	6.9	10	DZ	Skikda
+36.9	7.8	11	DZ	Annaba
+36.8	3	12	DZ	Algiers
+36.8	5.1	10	DZ	Béjaïa
+36.8	5.8	9	DZ	Jijel
+36.7	4	9	DZ	Tizi-Ouzou
+36.5	7.4	9	DZ	Guelma
+36.4	2.8	11	DZ	Blida
+36.4	3.9	9	DZ	Bouïra
+36.4	6.6	11	DZ	Constantine
+36.3	2.8	9	DZ	Médéa
+36.3	7.9	9	DZ	Souk Ahras
+36.2	1.3	10	DZ	Chlef
+36.2	5.4	10	DZ	Sétif
+36.1	4.8	9	DZ	Bordj Bou Arréridj
+35.9	0.1	9	DZ	Mostaganem
+35.8	7.1	9	DZ	Oum el Bouaghi
+35.7	-0.6	11	DZ	Oran
+35.7	4.5	9	DZ	M'sila
+35.6	6.2	10	DZ	Batna
+35.4	0.1	9	DZ	Mascara
+35.4	1.3	9	DZ	Tiarat
+35.4	8.1	9	DZ	Tébessa
+35.2	-0.6	10	DZ	Sidi bel Abbes
+34.9	-1.3	10	DZ	Tlimcen
+34.9	5.7	10	DZ	Biskra
+34.8	0.1	9	DZ	Saïda
+34.7	3.3	9	DZ	Djelfa
+33.8	2.9	9	DZ	Laghouat
+33.7	1	8	DZ	El Bayadh
+33.4	6.9	9	DZ	El Oued
+33.1	6.1	9	DZ	Touggourt
+32.8	-0.6	8	DZ	Sefra
+32.5	3.7	9	DZ	Ghardaia
+32	-1.3	5	DZ	Béni Ounif
+32	5.3	9	DZ	Ouargla
+31.7	6.1	6	DZ	Hassi Messaoud
+31.6	-2.2	9	DZ	Béchar
+31	-2.7	6	DZ	Abadla
+30.6	2.9	7	DZ	El Goléa
+29.2	0.3	7	DZ	Timimoun
+28.1	9.6	2	DZ	I-n-Amenas
+27.9	-0.3	8	DZ	Adrar
+27.7	-8.1	6	DZ	Tindouf
+27.2	2.5	7	DZ	I-n-Salah
+26.7	0.2	7	DZ	Reggane
+26.5	8.5	5	DZ	Illizi
+25.3	3.7	10	DZ	Arak
+24.6	9.5	2	DZ	Djanet
+23.7	5.2	4	DZ	In Amguel
+22.8	5.5	8	DZ	Tamanrasset
+1.3	-79	6	EC	Valdez
+1.3	-78.9	7	EC	San Lorenzo
+0.9	-79.7	9	EC	Esmeraldas
+0.8	-77.7	8	EC	Tulcán
+0.6	-80	6	EC	Muisne
+0.6	-77.8	6	EC	San Gabriel
+0.4	-78.1	9	EC	Ibarra
+0.1	-78.2	7	EC	Cayambe
+-0.2	-78.5	12	EC	Quito
+-0.3	-78.5	9	EC	Sangolquí
+-0.5	-90.3	6	EC	Santa Cruz
+-0.7	-80.1	7	EC	Chone
+-0.9	-91	4	EC	Puerto Villamil
+-0.9	-89.6	5	EC	Puerto Baquerizo Moreno
+-0.9	-78.6	8	EC	Latacunga
+-1	-80.7	9	EC	Manta
+-1	-77.8	7	EC	Tena
+-1.1	-80.5	10	EC	Portoviejo
+-1.3	-80.6	7	EC	Jipijapa
+-1.3	-78.6	10	EC	Ambato
+-1.5	-78	7	EC	Puyo
+-1.6	-79	7	EC	Guaranda
+-1.7	-78.7	9	EC	Riobamba
+-1.8	-79.5	8	EC	Babahoyo
+-2.2	-81	7	EC	Salinas
+-2.2	-79.9	12	EC	Guayaquil
+-2.2	-79.6	9	EC	Milagro
+-2.2	-78.8	6	EC	Alausí
+-2.3	-78.1	7	EC	Macas
+-2.7	-78.8	8	EC	Azogues
+-2.9	-79	10	EC	Cuenca
+-2.9	-77.9	2	EC	Yaupi
+-3.3	-80	10	EC	Machala
+-3.7	-79.6	6	EC	Piñas
+-4	-79.2	9	EC	Loja
+-4.1	-79	6	EC	Zamora
+-4.4	-79.9	6	EC	Macará
+59.4	24.7	10	EE	Tallinn
+59.4	27.3	7	EE	Kohtla-Järve
+59.4	28.2	8	EE	Narva
+58.9	23.5	6	EE	Haapsalu
+58.4	24.5	7	EE	Pärnu
+58.4	25.6	7	EE	Viljandi
+58.4	26.7	9	EE	Tartu
+31.6	25.2	5	EG	Salum
+31.5	30.4	9	EG	Rashid
+31.4	27.2	9	EG	Matruh
+31.4	31.8	10	EG	Dumyat
+31.3	32.3	11	EG	Bur Said
+31.2	29.9	12	EG	Alexandria
+31.1	30.5	10	EG	Damanhûr
+31.1	30.9	9	EG	Kafr el Sheikh
+31.1	31.4	11	EG	El Mansura
+31.1	33.8	9	EG	El Arish
+31	28.4	6	EG	El Daba
+30.8	28.9	5	EG	El Alamein
+30.8	31	10	EG	Tanta
+30.6	30.9	9	EG	Shibin el Kom
+30.6	31.5	10	EG	Zagazig
+30.6	32.3	11	EG	Ismaïlia
+30.5	31.2	9	EG	Benha
+30.1	31.2	14	EG	Cairo
+30	31.2	12	EG	Giza
+30	32.5	11	EG	Suez
+29.3	30.8	10	EG	El Faiyum
+29.2	25.5	7	EG	Siwa
+29.1	31.1	10	EG	Beni Suef
+28.5	30.8	8	EG	Beni Mazar
+28.3	30.7	9	EG	Samalut
+28.2	33.6	7	EG	El Tur
+28.1	30.7	10	EG	El Minya
+27.7	30.8	10	EG	Mallawi
+27.2	31.2	10	EG	Asyut
+27.2	33.8	9	EG	Hurghada
+27.1	28	4	EG	Qasr Farafra
+26.7	33.9	7	EG	Bur Safaga
+26.6	31.7	11	EG	Sohag
+26.3	31.9	9	EG	Girga
+26.2	32.7	10	EG	Qena
+25.7	28.9	3	EG	El Qasr
+25.7	32.7	11	EG	Luxor
+25.4	30.6	7	EG	El Kharga
+25.3	32.5	8	EG	Isna
+24.5	33	10	EG	Kom Ombo
+24.1	32.9	10	EG	Aswan
+23.9	35.5	1	EG	Berenice
+26.1	-9.7	2	EH	Bir Lehlou
+15.7	38.4	9	ER	Keren
+15.6	39.5	9	ER	Massawa
+15.5	37.9	7	ER	Agordat
+15.3	38.9	11	ER	Asmara
+15.1	36.7	6	ER	Tessenei
+14.9	38.8	10	ER	Mendefera
+13	42.7	9	ER	Assab
+43.5	-5.7	10	ES	Gijón
+43.4	-5.8	10	ES	Oviedo
+43.4	-3.8	10	ES	Santander
+43.3	-8.4	10	ES	La Coruña
+43.3	-2	10	ES	San Sebastián
+43.2	-2.9	11	ES	Bilbao
+42.9	-8.5	8	ES	Santiago de Compostela
+42.8	-2.7	10	ES	Vitoria
+42.8	-1.6	10	ES	Pamplona
+42.6	-5.6	9	ES	León
+42.5	-2.4	9	ES	Logroño
+42.4	-3.7	9	ES	Burgos
+42.3	-7.9	9	ES	Ourense
+42.2	-8.7	10	ES	Vigo
+41.7	-4.8	10	ES	Valladolid
+41.7	-0.9	11	ES	Zaragoza
+41.5	2.5	9	ES	Mataró
+41.4	2.2	12	ES	Barcelona
+41.1	1.2	9	ES	Tarragona
+41	-5.7	9	ES	Salamanca
+40.6	-3.2	8	ES	Guadalajara
+40.4	-3.7	13	ES	Madrid
+40	-0.1	9	ES	Castello
+39.9	-4	8	ES	Toledo
+39.6	2.7	10	ES	Palma
+39.5	-0.4	11	ES	Valencia
+39	-1.9	9	ES	Albacete
+38.9	-7	9	ES	Badajoz
+38.9	-6.3	8	ES	Mérida
+38.4	-0.5	10	ES	Alicante
+38.1	-3.6	8	ES	Linares
+38	-1.1	10	ES	Murcia
+37.9	-4.8	10	ES	Córdoba
+37.8	-3.8	9	ES	Jaén
+37.7	-1.7	8	ES	Lorca
+37.6	-1	10	ES	Cartagena
+37.4	-6	12	ES	Seville
+37.3	-6.9	9	ES	Huelva
+37.2	-3.6	10	ES	Granada‎
+36.8	-2.4	9	ES	Almería
+36.7	-4.4	11	ES	Málaga
+36.5	-6.2	10	ES	Cádiz
+36.5	-4.9	9	ES	Marbella
+36.1	-5.5	9	ES	Algeciras
+35.9	-5.3	8	ES	Ceuta
+35.3	-3	9	ES	Melilla
+29	-13.5	8	ES	Arrecife
+28.5	-16.3	10	ES	Santa Cruz de Tenerife
+28.1	-15.4	10	ES	Las Palmas
+14.3	39.5	9	ET	Adigrat
+14.1	38.7	7	ET	Aksum
+13.5	39.5	8	ET	Mekele
+12.6	37.5	9	ET	Gondar
+11.6	37.4	10	ET	Bahir Dar
+11.2	40	6	ET	Bati
+11.1	39.6	9	ET	Dese
+10.3	37.7	8	ET	Debre Markos
+10.1	34.5	7	ET	Asosa
+9.7	39.5	8	ET	Debre Birhan
+9.6	41.9	10	ET	Dire Dawa
+9.4	42.8	8	ET	Jijiga
+9.3	42.2	9	ET	Harar
+9.2	35.8	7	ET	Gimbi
+9.1	36.5	8	ET	Nekemte
+9	37.9	7	ET	Hagere Hiywet
+9	38.7	12	ET	Addis Ababa
+8.5	34.8	7	ET	Dembi Dolo
+8.5	38	9	ET	Giyon
+8.5	39.3	10	ET	Nazret
+8.1	35.5	5	ET	Gore
+8	39.1	8	ET	Asela
+7.7	36.8	9	ET	Jima
+7.6	37.9	8	ET	Hosaina
+7.2	38.6	9	ET	Shashemene
+7.1	38.5	9	ET	Awasa
+7	40	7	ET	Goba
+6.9	37.7	8	ET	Sodo
+6.8	38.4	7	ET	Yirga Alem
+6.4	38.3	7	ET	Dila
+6	37.5	8	ET	Arba Minch
+6	43.4	8	ET	Gode
+5.3	39.6	6	ET	Negele Boran
+4.2	42.1	6	ET	Dolo Bay
+67.4	26.6	5	FI	Sodankylä
+66.7	27.4	5	FI	Kemijärvi
+66.5	25.7	7	FI	Rovaniemi
+65.7	24.6	7	FI	Kemi
+65	25.5	9	FI	Oulu
+63.8	23.1	7	FI	Kokkola
+63.1	21.6	8	FI	Vaasa
+62.9	27.7	8	FI	Kuopio
+62.6	29.8	8	FI	Joensuu
+62.3	25.7	8	FI	Jyväskylä
+61.9	28.9	7	FI	Savonlinna
+61.7	27.3	7	FI	Mikkeli
+61.5	21.8	8	FI	Pori
+61.5	23.8	10	FI	Tampere
+61.1	28.2	8	FI	Lappeenranta
+61	24.5	7	FI	Hämeenlinna
+61	25.7	8	FI	Lahti
+60.9	26.7	7	FI	Kouvola
+60.5	22.3	9	FI	Turku
+60.4	25.7	6	FI	Porvoo
+60.2	24.9	12	FI	Helsinki
+-16.4	179.4	7	FJ	Labasa
+-17.6	177.5	8	FJ	Lautoka
+-17.8	177.4	7	FJ	Nandi
+-18.1	178.4	9	FJ	Suva
+-51.7	-57.8	4	FK	Stanley
+-52	-60.1	1	FK	Fox Bay
+6.9	158.1	4	FM	Palikir
+62.2	-6.5	4	FO	Klaksvík
+62	-6.8	6	FO	Tórshavn
+51	1.8	8	FR	Calais
+50.7	3.1	12	FR	Lille
+50.3	2.8	8	FR	Arras
+49.9	1.1	7	FR	Dieppe
+49.9	2.3	9	FR	Amiens
+49.7	-1.6	8	FR	Cherbourg
+49.5	0.1	10	FR	Le Havre
+49.4	1.1	11	FR	Rouen
+49.3	4	9	FR	Reims
+49.2	-0.3	9	FR	Caen
+49.1	6.2	10	FR	Metz
+48.9	2.3	13	FR	Paris
+48.8	2.1	8	FR	Versailles
+48.7	6.2	10	FR	Nancy
+48.6	7.8	10	FR	Strasbourg
+48.5	-2.8	8	FR	St.-Brieuc
+48.5	2.7	10	FR	Melun
+48.4	-4.5	9	FR	Brest
+48.3	4.1	8	FR	Troyes
+48.1	-1.7	10	FR	Rennes
+48	0.1	9	FR	Le Mans
+47.9	1.9	10	FR	Orléans
+47.8	-3.4	8	FR	Lorient
+47.8	3.6	7	FR	Auxerre
+47.8	7.3	10	FR	Mulhouse
+47.5	-0.5	9	FR	Angers
+47.4	0.7	10	FR	Tours
+47.3	5	9	FR	Dijon
+47.2	-1.6	10	FR	Nantes
+47.2	6	9	FR	Besançon
+47.1	2.4	8	FR	Bourges
+47	3.2	7	FR	Nevers
+46.6	0.3	8	FR	Poitier
+46.2	-1.1	8	FR	La Rochelle
+46.1	3.4	7	FR	Vichy
+46	4.1	8	FR	Roanne
+45.9	6.1	9	FR	Annecy
+45.8	1.2	9	FR	Limoges
+45.8	3.1	10	FR	Clermont-Ferrand
+45.8	4.8	12	FR	Lyon
+45.4	4.4	10	FR	Saint-Étienne
+45.2	1.5	8	FR	Brive
+45.2	5.7	10	FR	Grenoble
+44.9	-0.6	11	FR	Bordeaux
+44.2	0.6	8	FR	Agen
+43.8	4.4	9	FR	Nîmes
+43.7	7.3	11	FR	Nice
+43.6	1.4	11	FR	Toulouse
+43.6	3.9	10	FR	Montpellier
+43.5	-1.6	9	FR	Biarritz
+43.5	5.4	9	FR	Aix-en-Provence
+43.4	3.2	8	FR	Béziers
+43.3	5.4	12	FR	Marseille
+43.2	0.1	8	FR	Tarbes
+43.1	5.9	10	FR	Toulon
+42.7	2.9	9	FR	Perpignan
+42.7	9.5	7	FR	Bastia
+41.9	8.7	8	FR	Ajaccio
+2.2	11.3	7	GA	Ebebiyín
+2.1	11.5	6	GA	Bitam
+1.6	11.6	7	GA	Oyem
+1	13.9	4	GA	Mékambo
+0.8	11.6	4	GA	Mitzik
+0.6	12.9	6	GA	Makokou
+0.4	9.5	11	GA	Libreville
+-0.3	10.4	1	GA	Bifoum
+-0.7	8.8	9	GA	Port-Gentil
+-0.7	10.2	7	GA	Lambaréné
+-0.7	13.8	5	GA	Okandja
+-1.1	12.5	6	GA	Koulamoutou
+-1.6	9.2	3	GA	Omboué
+-1.6	13.2	7	GA	Moanda
+-1.6	13.6	7	GA	Franceville
+-1.9	11	7	GA	Mouila
+-2.4	11.4	5	GA	Ndende
+-2.7	10	5	GA	Gamba
+-2.9	11	6	GA	Tchibanga
+-3.4	10.7	4	GA	Mayumba
+60.2	-1.1	5	GB	Lerwick
+59	-3	5	GB	Kirkwall
+58.4	-3.1	5	GB	Wick
+57.5	-4.2	7	GB	Inverness
+57.2	-2.1	9	GB	Aberdeen
+56.8	-5.1	5	GB	Fort William
+56.5	-3	9	GB	Dundee
+56.4	-3.5	7	GB	Perth
+55.9	-4.8	8	GB	Greenock
+55.9	-4.3	12	GB	Glasgow
+55.9	-3.2	11	GB	Edinburgh
+55.5	-4.6	8	GB	Ayr
+55.1	-3.6	7	GB	Dumfries
+55	-7.3	8	GB	Londonderry/Derry
+55	-1.6	11	GB	Newcastle
+54.9	-2.9	8	GB	Carlisle
+54.9	-1.4	10	GB	Sunderland
+54.6	-7.3	7	GB	Omagh
+54.6	-6	10	GB	Belfast
+54.6	-1.2	10	GB	Middlesbrough
+54.5	-6.7	6	GB	Lisburn
+54.3	-0.4	8	GB	Scarborough
+54	-1.1	9	GB	York
+53.8	-3.1	10	GB	Blackpool
+53.8	-1.7	11	GB	Bradford
+53.8	-1.6	12	GB	Leeds
+53.8	-0.3	10	GB	Kingston upon Hull
+53.5	-2.2	12	GB	Manchester
+53.4	-2.9	11	GB	Liverpool
+53.4	-1.5	12	GB	Sheffield
+53.2	-2.9	8	GB	Chester
+53	-2.2	10	GB	Stoke
+53	-1.2	11	GB	Nottingham
+52.6	-1.1	10	GB	Leicester
+52.6	-0.2	9	GB	Peterborough
+52.6	1.3	9	GB	Norwich
+52.5	-1.9	12	GB	Birmingham
+52.4	-1.5	10	GB	Coventry
+52.2	0.1	9	GB	Cambridge
+52.1	1.2	9	GB	Ipswich
+51.9	-0.4	10	GB	Luton
+51.8	-1.2	9	GB	Oxford
+51.6	-4	10	GB	Swansea
+51.6	0.7	11	GB	Southend-on-Sea
+51.5	-3.2	11	GB	Cardiff
+51.5	-1	10	GB	Reading
+51.5	-0.1	13	GB	London
+51.4	-2.6	11	GB	Bristol
+51.4	-2.4	8	GB	Bath
+51.1	1.3	7	GB	Dover
+50.9	-1.4	10	GB	Southampton
+50.8	-1.1	10	GB	Portsmouth
+50.8	-0.2	11	GB	Brighton
+50.7	-3.5	9	GB	Exeter
+50.7	-1.9	10	GB	Bournemouth
+50.4	-4.2	10	GB	Plymouth
+50.1	-5.6	7	GB	Penzance
+12.1	-61.7	7	GD	Saint George's
+43	41	8	GE	Sukhumi
+42.2	41.7	7	GE	Poti
+42.2	42.7	9	GE	Kutaisi
+42.2	44	7	GE	Tskhinvali
+41.7	44.8	12	GE	Tbilisi
+41.6	41.6	9	GE	Batumi
+41.6	45.1	9	GE	Rustavi
+5.5	-54	7	GF	Saint-Laurent-du-Maroni
+5.5	-53.2	3	GF	Iracoubo
+5.4	-53	4	GF	Sinnamary
+5.2	-52.6	7	GF	Kourou
+4.9	-52.3	8	GF	Cayenne
+4.7	-52.3	4	GF	Roura
+3.9	-51.8	4	GF	Saint-Georges
+11.1	-0.2	8	GH	Bawku
+10.8	-0.8	8	GH	Bolgatanga
+10.1	-2.5	8	GH	Wa
+9.4	-0.8	10	GH	Tamale
+9.4	-0	7	GH	Yendi
+7.5	-2.6	7	GH	Berekum
+7.3	-2.3	8	GH	Sunyani
+6.7	-1.6	12	GH	Kumasi
+6.6	-0.8	8	GH	Nkawkaw
+6.6	0.5	8	GH	Ho
+6.2	-1.7	9	GH	Obuasi
+6.1	-0.3	9	GH	Koforidua
+5.6	-0.2	12	GH	Accra
+5.6	0	10	GH	Tema
+5.4	-0.6	7	GH	Winneba
+5.1	-1.2	9	GH	Cape Coast
+4.9	-1.7	10	GH	Sekondi
+36.1	-5.4	9	GI	Gibraltar
+81.7	-17.8	1	GL	Nord
+77.5	-69.3	2	GL	Qaanaaq
+76	-65.1	1	GL	Savissivik
+74.6	-57.2	2	GL	Kullorsuaq
+74.1	-57.1	2	GL	Nuussuaq
+73.4	-56.1	2	GL	Tasiusaq
+72.7	-56.1	3	GL	Upernavik
+72.4	-55.5	1	GL	Kangersuatsiaq
+70.7	-52.1	3	GL	Uummannaq
+70.5	-22	2	GL	Ittoqqortoormiit
+69.2	-53.6	1	GL	Qeqertasuaq
+69.2	-51.1	4	GL	Ilulissat
+68.8	-51.2	3	GL	Qasigiannguit
+67	-53.7	5	GL	Sisimiut
+67	-50.7	2	GL	Kangerlussuaq
+65.6	-37.6	3	GL	Tasiilaq
+65.6	-37.2	2	GL	Kulusuk
+64.2	-51.7	6	GL	Nuuk
+62.5	-42.2	1	GL	Timmiarmiut
+62	-49.6	3	GL	Paamiut
+61.2	-45.4	1	GL	Narsarsuaq
+60.7	-46	4	GL	Qaqortoq
+13.6	-14.8	4	GM	Georgetown
+13.5	-16.6	7	GM	Banjul
+13.5	-16.1	4	GM	Kerewan
+13.4	-15.7	6	GM	Mansa Konko
+13.4	-14.7	5	GM	Bansang
+13.3	-16.7	9	GM	Brikama
+13.3	-14.2	6	GM	Basse Santa Su
+12.5	-13.3	6	GN	Koundara
+12.1	-12.3	5	GN	Mali
+11.8	-13.2	5	GN	Gaoual
+11.4	-11.7	7	GN	Tongue
+11.4	-9.2	8	GN	Siguiri
+11.3	-12.3	9	GN	Labé
+11.3	-10.7	5	GN	Dinguiraye
+11.1	-12.4	7	GN	Pita
+10.9	-14.3	9	GN	Boké
+10.9	-13	7	GN	Télimélé
+10.7	-14.6	7	GN	Kamsar
+10.7	-12.3	5	GN	Dalaba
+10.7	-11.1	6	GN	Dabola
+10.7	-9.9	6	GN	Kouroussa
+10.4	-13.5	7	GN	Fria
+10.4	-12.1	8	GN	Mamou
+10.4	-9.3	9	GN	Kankan
+10.2	-14	4	GN	Boffa
+10.1	-12.9	9	GN	Kindia
+10	-10.8	6	GN	Faranah
+9.5	-13.7	12	GN	Conakry
+9.4	-13.1	6	GN	Forecariah
+9.3	-9	6	GN	Kérouané
+9.2	-10.1	8	GN	Kissidougou
+8.7	-8.7	6	GN	Beyla
+8.6	-10.2	10	GN	Gueckedou
+8.6	-9.5	7	GN	Macenta
+7.8	-8.8	9	GN	Nzérékoré
+7.6	-9.3	4	GN	Yomou
+16.2	-61.5	9	GP	Pointe-à-Pitre
+16	-61.7	2	GP	Basse-terre
+3.8	8.8	9	GQ	Malabo
+3.4	8.6	5	GQ	Luba
+1.9	9.8	9	GQ	Bata
+1.6	11.3	5	GQ	Mongomo
+1.4	10.6	5	GQ	Evinayong
+1.1	9.4	2	GQ	Calatrava
+41.1	23.5	8	GR	Seres
+41.1	24.9	8	GR	Xanthi
+41.1	25.4	7	GR	Komatini
+40.9	24.4	8	GR	Kavala
+40.8	25.9	8	GR	Alexandroupoli
+40.7	22.9	11	GR	Thessaloniki
+40.4	23.5	5	GR	Polygyros
+40.3	22.5	8	GR	Katerini
+39.7	20.9	8	GR	Ioanina
+39.6	19.9	7	GR	Kerkira
+39.6	22.4	9	GR	Larissa
+39.4	23	9	GR	Volos
+39.1	26.6	7	GR	Mitilini
+38.9	22.4	7	GR	Lamia
+38.6	21.4	8	GR	Agrinio
+38.5	23.6	8	GR	Chalkida
+38.4	26.1	7	GR	Hios
+38.2	21.7	9	GR	Patra
+38	23.7	10	GR	Piraeus
+38	23.7	12	GR	Athens
+37.7	21.4	7	GR	Pirgos
+37.5	22.4	7	GR	Tripoli
+37.5	24.9	6	GR	Ermoupoli
+37.1	22.4	6	GR	Sparti
+37	22.1	8	GR	Kalamata
+36.9	27.3	6	GR	Kos
+36.4	28.2	8	GR	Rodos
+35.5	24	8	GR	Hania
+35.3	25.1	9	GR	Iraklio
+35.2	26.1	5	GR	Sitia
+-54.3	-36.5	1	GS	Grytviken
+16.9	-89.9	7	GT	Flores
+16.8	-90.1	5	GT	La Libertad
+16.2	-89.4	9	GT	San Luis
+15.8	-88.8	6	GT	Livingston
+15.7	-88.6	8	GT	Puerto Barrios
+15.5	-90.4	8	GT	Cobán
+15.3	-91.5	8	GT	Huehuetenango
+15.1	-90.3	7	GT	Salamá
+15	-91.8	7	GT	San Marcos
+15	-91.1	7	GT	Santa Cruz Del Quiche
+15	-89.5	7	GT	Zacapa
+14.9	-91.4	8	GT	Totonicapán
+14.8	-91.5	11	GT	Quetzaltenango
+14.8	-91.2	7	GT	Sololá
+14.8	-90	9	GT	El Progreso
+14.8	-89.5	7	GT	Chiquimula
+14.7	-90.8	8	GT	Chimaltenango
+14.6	-90.7	7	GT	Antigua Guatemala
+14.6	-90.5	12	GT	Guatemala City
+14.6	-90	7	GT	Jalapa
+14.5	-91.7	7	GT	Retalhuleu
+14.5	-91.5	8	GT	Mazatenango
+14.3	-90.8	9	GT	Escuintla
+14.3	-90.3	6	GT	Cuilapa
+14.3	-89.9	8	GT	Jutiapa
+13.9	-90.8	6	GT	San Jose
+13.5	144.8	9	GU	Agana
+12.5	-15.2	5	GW	Farim
+12.3	-16.2	6	GW	Cacheu
+12.3	-14.2	6	GW	Gabú
+12.2	-14.7	7	GW	Bafatá
+11.9	-15.6	10	GW	Bissau
+11.8	-15.2	3	GW	Fulacunda
+11.6	-15.5	6	GW	Bolama
+11.2	-15.2	5	GW	Catió
+8.2	-59.8	4	GY	Mabaruma
+7.3	-58.5	4	GY	Anna Regina
+6.8	-58.2	10	GY	Georgetown
+6.4	-58.6	6	GY	Bartica
+6.3	-57.5	7	GY	New Amsterdam
+6	-58.3	7	GY	Linden
+5.9	-57.2	6	GY	Corriverton
+5.4	-58.2	1	GY	Ituni
+3.9	-58.4	4	GY	Kumaka
+3.4	-59.8	2	GY	Lethem
+22.3	114.2	13	HK	Hong Kong
+16.3	-86.5	5	HN	Roatán
+15.9	-86	5	HN	Trujillo
+15.8	-86.8	9	HN	La Ceiba
+15.8	-84.5	4	HN	Brus Laguna
+15.5	-88	11	HN	San Pedro Sula
+15.3	-83.8	4	HN	Puerto Lempira
+15.1	-87.3	6	HN	Yoro
+14.9	-88.2	6	HN	Santa Bárbara
+14.8	-88.8	7	HN	Santa Rosa de Copán
+14.7	-86.2	7	HN	Juticalpa
+14.6	-88.6	5	HN	Gracias
+14.5	-87.6	8	HN	Comayagua
+14.4	-89.2	5	HN	Nueva Ocotepeque
+14.3	-88.2	5	HN	La Esperanza
+14.3	-87.7	6	HN	La Paz
+14.1	-87.2	11	HN	Tegucigalpa
+13.9	-86.9	4	HN	Yuscarán
+13.5	-87.5	7	HN	Nacaome
+13.3	-87.2	8	HN	Choluteca
+45.8	16	11	HR	Zagreb
+45.6	18.7	8	HR	Osijek
+45.5	15.5	8	HR	Karlovac
+45.3	14.5	9	HR	Rijeka
+45.2	18	8	HR	Slavonski Brod
+44.9	13.8	8	HR	Pula
+44.1	15.3	8	HR	Zadar
+43.7	15.9	7	HR	Šibenik
+43.5	16.5	10	HR	Split
+42.7	18.1	7	HR	Dubrovnik
+19.9	-72.8	7	HT	Port-De-Paix
+19.8	-72.2	10	HT	Cap-Haïtien
+19.7	-71.8	6	HT	Fort-Liberté
+19.5	-72.7	9	HT	Gonaïves
+19.1	-72	6	HT	Hinche
+18.6	-74.1	7	HT	Jérémie
+18.5	-72.3	12	HT	Port-au-Prince
+18.2	-73.7	9	HT	Les Cayes
+18.2	-72.5	7	HT	Jacmel
+48.1	19.8	7	HU	Salgótarján
+48.1	20.8	10	HU	Miskolc
+48	21.7	9	HU	Nyíregyháza
+47.9	20.4	8	HU	Eger
+47.8	19.1	7	HU	Vác
+47.7	17.6	9	HU	Győr
+47.5	18.4	8	HU	Tatabánya
+47.5	19.1	12	HU	Budapest
+47.5	21.6	10	HU	Debrecen
+47.2	16.6	9	HU	Szombathely
+47.2	18.4	9	HU	Székesfehérvár
+47.2	20.2	9	HU	Szolnok
+47.1	17.9	8	HU	Veszprém
+46.9	19.7	9	HU	Kecskemét
+46.8	16.8	8	HU	Zalaegerszeg
+46.7	21.1	8	HU	Békéscsaba
+46.4	17.8	9	HU	Kaposvár
+46.3	18.7	7	HU	Szekszárd
+46.3	20.2	9	HU	Szeged
+46.1	18.2	9	HU	Pécs
+5.5	95.3	11	ID	Banda Aceh
+5.2	97.1	9	ID	Lhokseumawe
+4.7	98	9	ID	Langsa
+4.2	108.2	1	ID	Telukbutun
+3.6	98.5	11	ID	Binjai
+3.6	98.6	12	ID	Medan
+3.3	99.1	10	ID	Tebingtinggi
+3.3	117.6	9	ID	Tarakan
+3	99.1	10	ID	Pematangsiantar
+2	99	3	ID	Tarutung
+1.7	98.8	10	ID	Sibolga
+1.5	124.8	10	ID	Manado
+1.4	99.3	10	ID	Padangsidempuan
+0.9	104.5	10	ID	Tanjungpinang
+0.9	109	10	ID	Singkawang
+0.8	127.4	9	ID	Ternate
+0.7	127.4	8	ID	Tidore
+0.6	101.4	11	ID	Pekanbaru
+0.5	123.1	10	ID	Gorontalo
+0.1	117.5	9	ID	Bontang
+-0	109.3	11	ID	Pontianak
+-0.3	100.4	11	ID	Bukittinggi
+-0.4	100.4	7	ID	Padangpanjang
+-0.5	117.1	11	ID	Samarinda
+-0.7	100.8	8	ID	Sawahlunto
+-0.9	119.8	11	ID	Palu
+-0.9	122.8	7	ID	Luwuk
+-0.9	131.3	9	ID	Sorong
+-0.9	134.1	8	ID	Manokwari
+-1	100.4	11	ID	Padang
+-1.2	136	9	ID	Biak
+-1.3	116.8	10	ID	Balikpapan
+-1.4	120.8	7	ID	Poso
+-1.6	103.6	10	ID	Jambi
+-2.1	101.4	8	ID	Sungaipenuh
+-2.1	106.2	9	ID	Pangkalpinang
+-2.2	113.9	9	ID	Palangkaraya
+-2.5	113	8	ID	Sampit
+-2.5	140.7	9	ID	Jayapura
+-2.8	107.7	8	ID	Tanjung Pandan
+-3	104.7	12	ID	Palembang
+-3.1	114.4	7	ID	Kualakapuas
+-3.1	119.9	5	ID	Makale
+-3.1	120.2	4	ID	Palopo
+-3.3	114.6	11	ID	Bandjarmasin
+-3.3	128.9	7	ID	Amahai
+-3.4	104.2	9	ID	Perabumulih
+-3.4	114.8	9	ID	Martapura
+-3.4	135.5	7	ID	Nabire
+-3.5	119	10	ID	Majene
+-3.7	128.2	10	ID	Ambon
+-3.8	102.3	10	ID	Bengkulu
+-3.8	103.5	8	ID	Lahat
+-3.8	119.7	9	ID	Pinrang
+-4	119.6	8	ID	Parepare
+-4	122.6	9	ID	Kendari
+-4.5	120.3	8	ID	Watampone
+-4.5	136.9	7	ID	Timika
+-4.8	104.9	7	ID	Kotabumi
+-5.1	119.4	12	ID	Makassar
+-5.4	105.3	11	ID	Bandar Lampung
+-5.4	105.3	11	ID	Bandar Lampung
+-5.5	122.6	7	ID	Baubau
+-6.1	106.1	9	ID	Serang
+-6.2	106.8	13	ID	Jakarta
+-6.2	107	12	ID	Bekasi
+-6.3	108.3	9	ID	Indramayu
+-6.6	106.7	11	ID	Bogor
+-6.7	108.6	10	ID	Cirebon
+-6.7	111	9	ID	Pati
+-6.9	106.9	10	ID	Sukabumi
+-6.9	107.6	12	ID	Bandung
+-6.9	109.1	10	ID	Tegal
+-6.9	109.7	10	ID	Pakalongan
+-6.9	112	8	ID	Tuban
+-7	110.4	12	ID	Semarang
+-7	113.8	8	ID	Sumenep
+-7.2	112.7	12	ID	Surabaya
+-7.3	108.2	10	ID	Tasikmalaya
+-7.3	110.5	9	ID	Salatiga
+-7.5	110.2	9	ID	Magelang
+-7.5	112.4	9	ID	Mojokerto
+-7.6	110.8	11	ID	Surakarta
+-7.6	111.5	9	ID	Madiun
+-7.6	112.9	10	ID	Pasuruan
+-7.7	109	12	ID	Cilacap
+-7.7	113.2	9	ID	Probolinggo
+-7.8	110.4	11	ID	Yogyakarta
+-7.8	112	10	ID	Kediri
+-8	112.6	11	ID	Malang
+-8.1	112.1	9	ID	Blitar
+-8.1	115.1	10	ID	Singaraja
+-8.2	113.7	10	ID	Jember
+-8.2	114.4	9	ID	Banyuwangi
+-8.4	118.8	9	ID	Raba
+-8.5	140.4	7	ID	Merauke
+-8.6	116.1	10	ID	Mataram
+-8.6	120.5	8	ID	Ruteng
+-8.6	122.2	9	ID	Maumere
+-8.7	115.2	7	ID	Kuta
+-8.7	115.2	11	ID	Denpasar
+-8.7	116.3	7	ID	Praya
+-8.9	121.6	8	ID	Ende
+-9.7	120.3	7	ID	Waingapu
+-10.2	123.6	10	ID	Kupang
+54.7	-8.1	4	IE	Donegal
+54.3	-8.5	7	IE	Sligo
+54.2	-7	5	IE	Muineachan
+54	-6.4	7	IE	Dundalk
+53.7	-6.3	7	IE	Drogheda
+53.6	-8.2	4	IE	Ros Comain
+53.3	-9	8	IE	Galway
+53.3	-6.3	12	IE	Dublin
+52.7	-8.9	5	IE	Shannon
+52.7	-8.6	8	IE	Limerick
+52.7	-7.3	7	IE	Kilkenny
+52.3	-9.7	7	IE	Tralee
+52.3	-7.1	7	IE	Waterford
+52.1	-9.5	6	IE	Killarney
+51.9	-8.5	9	IE	Cork
+32.8	35	12	IL	Haifa
+32.7	35.3	9	IL	Nazareth
+32.1	34.8	12	IL	Tel Aviv
+31.9	34.9	8	IL	Ramla
+31.8	35.2	12	IL	Jerusalem
+31.3	34.8	10	IL	Beer Sheva
+54.2	-4.5	7	IM	Douglas
+34.3	74.5	8	IN	Sopore
+34.2	74.4	9	IN	Baramula
+34.2	77.6	7	IN	Leh
+34.1	74.8	12	IN	Srinagar
+32.7	74.8	11	IN	Jammu
+32.3	75.7	10	IN	Pathankot
+31.6	74.9	12	IN	Amritsar
+31.5	76	9	IN	Hoshiarpur
+31.3	75.6	11	IN	Jullundur
+31.1	77.2	9	IN	Simla
+30.9	75.9	12	IN	Ludhiana
+30.7	76.8	11	IN	Chandigarh
+30.3	76.4	10	IN	Patiala
+30.3	76.8	9	IN	Ambala
+30.3	78.1	11	IN	Dehra Dun
+30.1	74.3	9	IN	Abohar
+30	77.6	10	IN	Saharanpur
+29.7	77	10	IN	Karnal
+29.5	75	9	IN	Sirsa
+29.5	77.7	10	IN	Muzaffarnagar
+29.4	77	10	IN	Panipat
+29.2	75.7	11	IN	Hisar
+29	77	10	IN	Sonipat
+29	77.7	12	IN	Meerut
+28.9	76.6	10	IN	Rohtak
+28.8	76.1	9	IN	Bhiwani
+28.8	78.8	11	IN	Moradabad
+28.8	79	10	IN	Rampur
+28.7	77.2	14	IN	Delhi
+28.7	77.4	12	IN	Ghaziabad
+28.7	77.8	10	IN	Hapur
+28.6	77.2	10	IN	New Delhi
+28.6	79.8	9	IN	Pilibhit
+28.5	77	9	IN	Gurgaon
+28.4	77.3	12	IN	Faridabad
+28.4	77.8	9	IN	Bulandshahr
+28.3	79.4	11	IN	Bareilly
+28	73.3	11	IN	Bikaner
+28	79.1	9	IN	Budaun
+27.9	78.1	11	IN	Aligarh
+27.9	79.9	10	IN	Shahjahanpur
+27.6	75.1	10	IN	Sikar
+27.6	78.1	9	IN	Hathras
+27.6	80.7	9	IN	Sitapur
+27.6	81.7	9	IN	Bahraich
+27.5	76.6	10	IN	Alwar
+27.5	77.7	10	IN	Mathura
+27.5	94.9	9	IN	Dibrugarh
+27.3	77.5	10	IN	Bharatpur
+27.3	88.6	8	IN	Gangtok
+27.2	78	12	IN	Agra
+27.1	78.4	10	IN	Firozabad
+27.1	93.6	7	IN	Itanagar
+26.9	75.8	12	IN	Jaipur
+26.9	80.9	12	IN	Lucknow
+26.8	79	10	IN	Etawah
+26.8	82.2	9	IN	Faizabad
+26.8	83.4	11	IN	Gorakhpur
+26.7	88.5	11	IN	Siliguri
+26.7	94.2	8	IN	Jorhat
+26.6	92.8	8	IN	Tezpur
+26.5	80.3	12	IN	Kanpur
+26.5	89.6	9	IN	Alipur Duar
+26.4	74.6	11	IN	Ajmer
+26.3	73	11	IN	Jodhpur
+26.2	75.8	9	IN	Tonk
+26.2	78.2	11	IN	Gwalior
+26.2	91.8	11	IN	Guwahati
+26.1	85.4	10	IN	Muzaffarpur
+26.1	91.8	6	IN	Dispur
+25.9	80.8	9	IN	Fatehpur
+25.8	73.3	10	IN	Pali
+25.8	87.5	9	IN	Purnia
+25.7	94.1	8	IN	Kohima
+25.6	85.1	12	IN	Patna
+25.6	91.9	10	IN	Shillong
+25.5	78.6	11	IN	Jhansi
+25.5	81.8	12	IN	Allahabad
+25.4	74.6	10	IN	Bhilwara
+25.3	83	12	IN	Varanasi
+25.2	75.8	11	IN	Kota
+25.2	87	10	IN	Bhagalpur
+25.1	82.6	10	IN	Mirzapur
+24.8	84.4	8	IN	Aurangabad
+24.8	85	10	IN	Gaya
+24.8	92.8	9	IN	Silchar
+24.8	94	10	IN	Imphal
+24.6	73.7	10	IN	Udaipur
+23.9	78.8	10	IN	Sagar
+23.8	86.4	12	IN	Dhanbad
+23.8	91.3	10	IN	Agartala
+23.7	87	12	IN	Asansol
+23.7	92.7	10	IN	Aizawl
+23.4	75	10	IN	Ratlam
+23.4	85.3	12	IN	Ranchi
+23.4	88.5	9	IN	Krishnanagar
+23.3	69.8	10	IN	Bhuj
+23.3	72.6	9	IN	Gandhinagar
+23.3	77.4	12	IN	Bhopal
+23.3	87.9	10	IN	Barddhaman
+23.2	75.8	11	IN	Ujjain
+23.2	80	12	IN	Jabalpur
+23	72.6	13	IN	Ahmedabad
+22.9	88.5	10	IN	Bhatpara
+22.8	86.2	12	IN	Jamshedpur
+22.7	75.9	12	IN	Indore
+22.6	88.3	12	IN	Haora
+22.5	88.3	14	IN	Kolkata
+22.3	70.8	12	IN	Rajkot
+22.3	73.2	12	IN	Vadodara
+22.3	87.2	9	IN	Medinipur
+22.2	84.8	11	IN	Raurkela
+22.1	82.2	11	IN	Bilaspur
+22	88.1	10	IN	Haldia
+21.8	72.1	11	IN	Bhavnagar
+21.7	69.7	10	IN	Porbandar
+21.5	84	10	IN	Sambalpur
+21.3	76.1	9	IN	Burhanpur
+21.2	72.8	12	IN	Surat
+21.2	79.1	12	IN	Nagpur
+21.2	81.4	12	IN	Bhilai
+21.2	81.6	11	IN	Raipur
+21	75.8	9	IN	Bhusawal
+20.9	72.9	9	IN	Navsari
+20.9	74.8	10	IN	Dhule
+20.9	77.8	11	IN	Amravati
+20.7	71	7	IN	Diu
+20.7	77	11	IN	Akola
+20.6	74.5	11	IN	Malegaon
+20.5	85.9	11	IN	Cuttack
+20.4	72.9	7	IN	Daman
+20.3	73	7	IN	Silvassa
+20.3	85.8	11	IN	Bhubaneswar
+20	73.8	12	IN	Nasik
+20	79.3	11	IN	Chandrapur
+19.9	75.3	12	IN	Aurangabad
+19.8	85.9	10	IN	Puri
+19.4	73.1	11	IN	Bhiwandi
+19.3	73.2	12	IN	Kalyan
+19.3	76.8	10	IN	Parbhani
+19.3	84.8	10	IN	Brahmapur
+19.2	77.3	11	IN	Nanded
+19.1	74.8	10	IN	Ahmednagar
+19	72.9	14	IN	Mumbai
+18.7	78.1	10	IN	Nizamabad
+18.5	73.8	12	IN	Pune
+18.5	79.1	10	IN	Karimnagar
+18.4	76.6	10	IN	Latur
+18.1	83.5	9	IN	Vizianagaram
+18	79.6	12	IN	Warangal
+17.9	77.5	10	IN	Bidar
+17.7	75.9	12	IN	Sholapur
+17.7	83.3	12	IN	Vishakhapatnam
+17.4	78.5	13	IN	Hyderabad
+17.3	76.8	10	IN	Kalaburagi
+17.3	80.2	10	IN	Khammam
+17	81.8	10	IN	Rajahmundry
+17	82.2	10	IN	Kakinada
+16.9	74.6	11	IN	Sangli
+16.8	75.7	10	IN	Vijayapura
+16.7	74.2	11	IN	Kolhapur
+16.5	80.5	13	IN	Amaravati
+16.5	80.6	12	IN	Vijayawada
+16.3	80.5	11	IN	Guntur
+16.2	77.4	10	IN	Raichur
+16.2	81.2	9	IN	Machilipatnam
+15.9	74.5	11	IN	Belagavi
+15.9	80.3	10	IN	Chirala
+15.8	78	10	IN	Kurnool
+15.6	80.1	10	IN	Ongole
+15.5	73.8	8	IN	Panaji
+15.5	78.5	9	IN	Nandyal
+15.4	75.1	11	IN	Hubballi
+15.3	76.4	10	IN	Hosapete
+15.2	76.9	10	IN	Ballari
+14.8	78.6	9	IN	Proddatur
+14.5	75.9	11	IN	Davangere
+14.4	80	11	IN	Nellore
+13.9	75.6	11	IN	Shivamogga
+13.8	77.5	9	IN	Hindupur
+13.7	79.4	10	IN	Tirupati
+13.3	77.1	10	IN	Tumakuru
+13.1	78.1	9	IN	Kolar
+13.1	80.3	13	IN	Chennai
+13	77.6	13	IN	Bengaluru
+12.9	74.8	11	IN	Mangaluru
+12.9	79.2	9	IN	Vellore
+12.8	79.7	9	IN	Kanchipuram
+12.6	76.9	10	IN	Mandya
+12.3	76.7	11	IN	Mysuru
+12.3	79.1	9	IN	Tiruvannamalai
+11.9	79.8	10	IN	Puducherry
+11.7	78.2	11	IN	Salem
+11.7	79.8	9	IN	Cuddalore
+11.7	92.7	9	IN	Port Blair
+11.3	75.8	11	IN	Kozhikode
+11.1	77.3	11	IN	Tiruppur
+11	76.9	12	IN	Coimbatore
+11	78.1	8	IN	Karur
+11	79.4	9	IN	Kumbakonam
+10.8	78.7	11	IN	Tiruchirappalli
+10.8	79.2	10	IN	Thanjavur
+10.6	72.6	6	IN	Kavaratti
+10.4	78	10	IN	Dindigul
+10.3	77	9	IN	Valparai
+10	76.2	12	IN	Kochi
+9.9	78.1	12	IN	Madurai
+9.5	76.4	9	IN	Alappuzha
+9.4	77.6	10	IN	Rajapalaiyam
+8.9	76.6	10	IN	Kollam
+8.8	78.1	10	IN	Tuticorin
+8.7	77.7	11	IN	Tirunelveli
+8.5	76.9	11	IN	Thiruvananthapuram
+8.2	77.4	10	IN	Nagercoil
+37.1	42.7	9	IQ	Zakho
+36.9	43	11	IQ	Duhok
+36.4	42.4	9	IQ	Tall Afar
+36.3	43.1	12	IQ	Mosul
+36.2	44	11	IQ	Irbil
+35.6	45.4	11	IQ	As Sulaymaniyah
+35.5	44.4	11	IQ	Kirkuk
+34.6	43.7	8	IQ	Tikrit
+34.2	43.9	9	IQ	Samarra
+33.7	44.7	10	IQ	Baqubah
+33.7	45.5	7	IQ	Mandali
+33.4	43.3	10	IQ	Ar Ramadi
+33.3	43.8	10	IQ	Al Fallujah
+33.3	44.4	13	IQ	Baghdad
+33	40.3	7	IQ	Ar Rutbah
+32.8	44.3	8	IQ	Al Musayyib
+32.6	44	11	IQ	Karbala
+32.5	44.4	11	IQ	Al Hillah
+32.5	45.8	10	IQ	Al Kut
+32	44.3	11	IQ	Najaf
+32	44.9	10	IQ	Ad Diwaniyah
+31.8	47.2	10	IQ	Al Amarah
+31.4	46.2	9	IQ	Ash Shatrah
+31.3	45.3	9	IQ	As Samawah
+31	46.3	10	IQ	An Nasiriyah
+30.5	47.8	11	IQ	Basra
+30.4	47.7	10	IQ	Az Aubayr
+38.5	45	10	IR	Khvoy
+38.5	47.1	9	IR	Ahar
+38.3	48.3	10	IR	Ardabil
+38.1	46.3	12	IR	Tabriz
+37.5	45	11	IR	Urmia
+37.5	57.3	10	IR	Bojnurd
+37.4	46.2	9	IR	Maragheh
+37.3	49.6	11	IR	Rasht
+37.3	55.2	9	IR	Gonbad-e Kavus
+37.1	58.5	9	IR	Quchan
+36.8	45.7	9	IR	Mahabad
+36.8	54.5	10	IR	Gorgan
+36.7	48.5	10	IR	Zanjan
+36.6	53.1	10	IR	Sari
+36.5	52.4	10	IR	Amol
+36.4	55	9	IR	Shahrud
+36.3	50	10	IR	Qazvin
+36.3	59.6	12	IR	Mashhad
+36.2	57.6	10	IR	Sabzewar
+36.2	58.8	10	IR	Neyshabur
+35.9	47.6	8	IR	Bijar
+35.8	51	12	IR	Karaj
+35.7	51.4	13	IR	Tehran
+35.6	53.4	9	IR	Semnan
+35.3	47	10	IR	Sanandaj
+35.3	51.6	9	IR	Varamin
+35.2	58.5	9	IR	Kashmar
+35.2	60.6	9	IR	Torbat-e Jam
+35	50.3	9	IR	Saveh
+34.8	48.5	11	IR	Hamadan
+34.7	50.9	11	IR	Qom
+34.5	45.6	6	IR	Qasr-e Shirin
+34.4	47.1	11	IR	Kermanshah
+34.3	48.8	9	IR	Malayer
+34.1	49.7	11	IR	Arak
+34	51.6	10	IR	Kashan
+33.9	48.8	10	IR	Borujerd
+33.6	46.4	9	IR	Ilam
+33.5	48.4	10	IR	Khorramabad
+33.5	60.9	3	IR	Yazdan
+32.9	59.2	10	IR	Birjand
+32.7	51.5	10	IR	Khomeini Shahr
+32.7	51.7	12	IR	Isfahan
+32.4	48.5	10	IR	Dezful
+32.3	50.9	9	IR	Shahrekord
+32	49.3	9	IR	Masjed Soleyman
+32	51.9	9	IR	Qomsheh
+31.9	54.4	10	IR	Yazd
+31.3	48.7	11	IR	Ahvaz
+31	61.5	10	IR	Zabol
+30.7	51.6	8	IR	Yasuj
+30.6	50.3	8	IR	Behbehan
+30.3	48.3	10	IR	Abadan
+30.3	57.1	11	IR	Kerman
+29.8	52.8	9	IR	Marv Dasht
+29.6	52.6	12	IR	Shiraz
+29.5	55.7	9	IR	Sirjan
+29.5	60.8	11	IR	Zahedan
+29.1	58.4	8	IR	Bam
+29	53.7	9	IR	Fasa
+28.9	50.8	9	IR	Bandar-e Bushehr
+27.2	56.3	10	IR	Bandar-e-Abbas
+25.3	60.6	8	IR	Chabahar
+66.1	-23.1	4	IS	Ísafjörður
+65.7	-19.6	4	IS	Sauðárkrókur
+65.7	-18.1	6	IS	Akureyri
+65.3	-14.4	4	IS	Egilsstaðir
+64.6	-21.9	3	IS	Borgarnes
+64.3	-15.2	3	IS	Höfn
+64.2	-22	9	IS	Reykjavík
+64	-22.6	5	IS	Keflavík
+63.9	-21	5	IS	Selfoss
+46.5	11.4	8	IT	Bolzano
+46.1	11.1	9	IT	Trento
+46.1	13.2	9	IT	Udine
+45.8	9.1	10	IT	Como
+45.7	7.3	7	IT	Aosta
+45.7	9.7	9	IT	Bergamo
+45.7	12.2	9	IT	Treviso
+45.7	13.8	10	IT	Trieste
+45.5	8.6	9	IT	Novara
+45.5	9.2	12	IT	Milan
+45.4	11	10	IT	Verona
+45.4	12.3	10	IT	Venice
+45.1	7.7	12	IT	Turin
+44.9	8.2	8	IT	Asti
+44.9	11.6	9	IT	Ferrara
+44.8	10.3	9	IT	Parma
+44.7	10.9	9	IT	Modena
+44.5	11.3	10	IT	Bologna
+44.4	8.9	11	IT	Genoa
+44.4	12.2	9	IT	Ravenna
+43.8	11.2	12	IT	Florence
+43.7	10.4	10	IT	Pisa
+43.6	10.3	9	IT	Livorno
+43.6	13.5	9	IT	Ancona
+43.5	11.9	8	IT	Arezzo
+43.3	11.3	8	IT	Siena
+43.1	12.4	9	IT	Perugia
+42.5	14.2	10	IT	Pescara
+42.4	13.4	8	IT	L'Aquila
+42.1	11.8	8	IT	Civitavecchia
+41.9	12.5	12	IT	Rome
+41.6	14.7	8	IT	Campobasso
+41.5	15.6	9	IT	Foggia
+41.3	16.3	9	IT	Barletta
+41.1	14.3	10	IT	Caserta
+41.1	14.7	8	IT	Benevento
+41.1	16.9	11	IT	Bari
+40.9	9.5	7	IT	Olbia
+40.8	14.2	12	IT	Naples
+40.7	8.6	9	IT	Sassari
+40.7	14.8	11	IT	Salerno
+40.6	15.8	8	IT	Potenza
+40.6	17.9	9	IT	Brindisi
+40.5	17.2	10	IT	Taranto
+40.4	18.1	9	IT	Lecce
+39.2	9.1	10	IT	Cagliari
+39.1	17.1	8	IT	Crotone
+38.9	16.6	8	IT	Catanzaro
+38.7	16.1	7	IT	Vibo Valentia
+38.2	15.5	10	IT	Messina
+38.1	13.3	11	IT	Palermo
+38.1	15.6	9	IT	Reggio di Calabria
+37.8	12.4	8	IT	Marsala
+37.5	15.1	11	IT	Catania
+37.1	15.3	9	IT	Siracusa
+36.9	14.7	8	IT	Ragusa
+18.5	-77.9	9	JM	Montego Bay
+18.5	-77.7	5	JM	Falmouth
+18.4	-78.2	5	JM	Lucea
+18.4	-77.2	6	JM	Saint Ann's Bay
+18.4	-76.9	5	JM	Port Maria
+18.2	-77.9	7	JM	Savanna-la-Mar
+18.2	-76.4	6	JM	Port Antonio
+18	-77.9	4	JM	Black River
+18	-77.5	7	JM	Mandeville
+18	-77.2	9	JM	May Pen
+18	-76.9	10	JM	Spanish Town
+18	-76.8	8	JM	Half Way Tree
+18	-76.8	11	JM	Kingston
+17.9	-76.3	6	JM	Port Morant
+32.5	35.8	11	JO	Irbid
+32.3	36.2	8	JO	Al Mafraq
+32.1	36.1	11	JO	Az Zarqa
+32	35.7	9	JO	As Salt
+32	35.9	12	JO	Amman
+31.2	35.7	8	JO	Al Karak
+30.8	35.6	7	JO	At Tafilah
+30.2	35.7	8	JO	Ma'an
+29.5	35.1	8	JO	Al Aqabah
+43.9	143.9	9	JP	Kitami
+43.8	142.4	10	JP	Asahikawa
+43.2	141	9	JP	Otaru
+43.1	141.3	12	JP	Sapporo
+43	144.4	9	JP	Kushiro
+42.9	143.2	9	JP	Obihiro
+42.7	141.6	9	JP	Tomakomai
+42.3	141	9	JP	Muroran
+41.8	140.7	10	JP	Hakodate
+40.8	140.7	10	JP	Aomori
+40.6	140.5	9	JP	Hirosaki
+40.5	141.5	10	JP	Hachinohe
+39.7	140.1	10	JP	Akita
+39.7	141.1	10	JP	Morioka
+38.9	139.9	9	JP	Sakata
+38.7	139.8	8	JP	Tsuruoka
+38.3	140.3	10	JP	Yamagata
+38.3	141	12	JP	Sendai
+37.9	139	11	JP	Niigata
+37.7	140.5	10	JP	Fukushima
+37.5	138.9	9	JP	Nagaoka
+37.4	140.4	10	JP	Kōriyama
+37.1	140.9	10	JP	Iwaki
+36.7	137	9	JP	Takaoka
+36.7	137.2	10	JP	Toyama
+36.6	136.6	11	JP	Kanazawa
+36.6	138.2	11	JP	Nagano
+36.5	139.9	11	JP	Utsunomiya
+36.4	139.1	10	JP	Maebashi
+36.4	140.5	10	JP	Mito
+36.2	138	10	JP	Matsumoto
+36.1	136.2	10	JP	Fukui
+35.9	139.5	10	JP	Kawagoe
+35.7	138.6	9	JP	Kōfu
+35.7	139.3	11	JP	Hachiōji
+35.7	139.7	14	JP	Tokyo
+35.5	133.1	9	JP	Matsue
+35.5	134.2	9	JP	Tottori
+35.5	135.3	8	JP	Maizuru
+35.5	139.7	12	JP	Kawasaki
+35.4	136.8	10	JP	Gifu
+35.4	139.6	12	JP	Yokohama
+35.2	136.9	12	JP	Nagoya
+35	135.7	12	JP	Kyoto
+35	135.9	11	JP	Ōtsu
+35	138.4	11	JP	Shizuoka
+34.8	135.5	14	JP	Ōsaka
+34.7	133.9	11	JP	Okayama
+34.7	135.2	12	JP	Kōbe
+34.7	136.5	10	JP	Tsu
+34.7	137.7	11	JP	Hamamatsu
+34.4	132.4	12	JP	Hiroshima
+34.3	132.6	9	JP	Kure
+34.3	134	10	JP	Takamatsu
+34.2	135.2	10	JP	Wakayama
+34.1	134.6	10	JP	Tokushima
+34	130.9	10	JP	Shimonoseki
+33.9	130.8	11	JP	Kitakyūshū
+33.8	132.8	11	JP	Matsuyama
+33.6	130.4	12	JP	Fukuoka
+33.6	133.5	10	JP	Kōchi
+33.2	129.7	10	JP	Sasebo
+33.2	131.6	10	JP	Ōita
+32.8	129.9	10	JP	Nagasaki
+32.8	130.7	11	JP	Kumamoto
+31.9	131.4	10	JP	Miyazaki
+31.6	130.6	11	JP	Kagoshima
+31.4	130.9	8	JP	Kanoya
+26.2	127.7	11	JP	Naha
+3.5	39.1	7	KE	Moyale
+3.1	35.6	7	KE	Lodwar
+2.3	38	6	KE	Marsabit
+1.8	40	7	KE	Wajir
+1.1	36.7	7	KE	Maralal
+1	35	9	KE	Kitale
+0.6	34.6	8	KE	Bungoma
+0.5	35.3	10	KE	Eldoret
+0.3	34.7	8	KE	Kakamega
+0.1	35.7	6	KE	Eldama Ravine
+0.1	37.6	7	KE	Meru
+0	37.1	7	KE	Nanyuki
+-0.1	34.8	10	KE	Kisumu
+-0.3	36.1	10	KE	Nakuru
+-0.4	34.6	8	KE	Kendu Bay
+-0.4	35.3	8	KE	Kericho
+-0.4	37	8	KE	Nyeri
+-0.4	39.7	8	KE	Garissa
+-0.5	37.5	8	KE	Embu
+-0.7	34.8	7	KE	Kisii
+-0.7	35.1	8	KE	Sotik
+-0.7	36.4	7	KE	Naivasha
+-0.8	34.1	4	KE	Karungu
+-0.9	38.1	6	KE	Mwingi
+-1	37.1	8	KE	Thika
+-1.3	36.8	12	KE	Nairobi
+-1.5	37.3	9	KE	Machakos
+-1.7	37.1	4	KE	Konza
+-2.3	40.9	7	KE	Lamu
+-2.4	40.4	5	KE	Witu
+-2.5	36.8	6	KE	Namanga
+-3	38.5	2	KE	Tsavo
+-3.2	40.1	8	KE	Malindi
+-3.4	38.6	7	KE	Voi
+-3.6	39.9	8	KE	Kilifi
+-4	39.7	11	KE	Mombasa
+42.9	74.6	11	KG	Bishkek
+42.8	73.9	8	KG	Kara Balta
+42.8	75.3	9	KG	Tokmak
+42.7	77.1	6	KG	Cholpon Ata
+42.5	72.2	7	KG	Talas
+42.5	76.2	7	KG	Balykchy
+42.5	78.4	8	KG	Karakol
+41.9	72.9	7	KG	Toktogul
+41.4	76	8	KG	Naryn
+41.3	72.2	7	KG	Tash Komur
+41.2	75.8	6	KG	At Bashy
+41	73.2	6	KG	Kok Yangak
+40.9	73	10	KG	Jalal Abad
+40.5	72.8	10	KG	Osh
+13.8	105	7	KH	Phnum Tbeng Meanchey
+13.6	103	8	KH	Sisophon
+13.5	106	7	KH	Stoeng Treng
+13.5	107	6	KH	Lumphat
+13.4	103.9	9	KH	Siem Reap
+13.1	103.2	9	KH	Battambang
+12.7	104.9	6	KH	Kampong Thum
+12.5	103.9	8	KH	Pursat
+12.5	106	6	KH	Kracheh
+12.4	107.2	5	KH	Senmonorom
+12.3	104.7	8	KH	Kompong Chhnang
+12	105.5	8	KH	Kampong Cham
+11.6	103	7	KH	Krong Koh Kong
+11.6	104.9	12	KH	Phnom Penh
+11.5	104.5	7	KH	Kampong Spoe
+11.5	105.3	8	KH	Prey Veng
+11.1	105.8	7	KH	Svay Rieng
+11	104.8	6	KH	Takéo
+10.6	104.2	8	KH	Kampot
+1.3	173	7	KI	Tarawa
+-11.7	43.2	9	KM	Moroni
+17.3	-62.7	7	KN	Basseterre
+42.3	130.4	8	KP	Rason
+42.2	129.2	8	KP	Musan
+41.8	129.8	11	KP	Chongjin
+41.4	128.2	10	KP	Hyeson
+41.1	126.3	9	KP	Manpo
+41	126.6	10	KP	Kanggye
+41	129.3	9	KP	Kilchu
+40.8	125.8	5	KP	Chosan
+40.8	128.2	4	KP	Kimhyonggwon
+40.7	129.2	9	KP	Kimchaek
+40.6	125.5	3	KP	Taedong
+40.1	124.4	10	KP	Sinuiju
+39.9	127.5	11	KP	Hamhung
+39.7	125.2	9	KP	Chongju
+39.5	125.5	6	KP	Sin-Ni
+39.4	125.9	10	KP	Sunchon
+39.4	127.3	8	KP	Munchon
+39.2	127.4	10	KP	Wonsan
+39	125.8	12	KP	Pyongyang
+39	127.5	7	KP	Anbyon
+38.8	125.5	12	KP	Nampo
+38.5	125.8	9	KP	Sariwon
+38.3	125.1	7	KP	Changyon
+38.3	126.4	8	KP	Pyongsan
+38	125.7	10	KP	Haeju
+38	126.6	10	KP	Kaesong
+37.9	125.4	8	KP	Ongjin
+38.2	128.6	8	KR	Sokcho
+37.9	127.7	10	KR	Chuncheon
+37.8	128.9	9	KR	Gangneung
+37.7	126.8	11	KR	Goyang
+37.6	127	13	KR	Seoul
+37.5	126.6	12	KR	Incheon
+37.5	126.8	11	KR	Bucheon
+37.4	127.1	11	KR	Songnam
+37.4	127.9	10	KR	Wonju
+37.3	126.9	11	KR	Ansan
+37.3	127	12	KR	Suwon
+36.9	127.7	6	KR	Eumseong
+36.6	127.5	11	KR	Cheongju
+36.6	128.7	9	KR	Andong
+36.3	127.4	12	KR	Daejeon
+36	126.7	10	KR	Gunsan
+36	129.4	10	KR	Pohang
+35.9	126.9	10	KR	Iksan
+35.9	128.6	12	KR	Daegu
+35.8	127.1	11	KR	Jeonju
+35.8	129.2	9	KR	Gyeongju
+35.5	129.3	12	KR	Ulsan
+35.2	126.9	12	KR	Gwangju
+35.2	128.6	12	KR	Changwon
+35.1	129	12	KR	Busan
+34.8	126.4	10	KR	Mokpo
+34.7	127.7	10	KR	Yeosu
+33.5	126.5	10	KR	Jeju
+29.4	48	12	KW	Kuwait City
+29.3	47.7	9	KW	Al Jahra
+29.3	48	9	KW	Hawalli
+29.1	48.1	8	KW	Al Ahmadi
+19.3	-81.3	4	KY	George Town
+54.9	69.2	10	KZ	Petropavlovsk
+54.9	70.4	5	KZ	Bulaevo
+53.8	62.1	5	KZ	Komsomolets
+53.8	69.8	6	KZ	Tayynsha
+53.6	72.3	5	KZ	Kishkenekol
+53.3	69.4	9	KZ	Kokshetau
+53.3	75.4	5	KZ	Ertis
+53.2	63.6	10	KZ	Oostanay
+53.1	76.1	5	KZ	Kachiry
+53	63.1	9	KZ	Rudniy
+52.7	62.6	5	KZ	Tobol
+52.6	70.4	7	KZ	Makinsk
+52.5	64.6	5	KZ	Qusmuryn
+52.5	72	5	KZ	Aqsu
+52.5	73.1	5	KZ	Bestobe
+52.5	78.1	1	KZ	Sharbaqty
+52.3	77	10	KZ	Pavlodar
+52.2	61.2	7	KZ	Zhetiqara
+52	66.4	6	KZ	Esil
+51.8	68.3	7	KZ	Atbasar
+51.8	71.7	5	KZ	Zholymbet
+51.7	75.3	9	KZ	Ekibastuz
+51.6	69.8	2	KZ	Zhaltyr
+51.6	73.1	7	KZ	Erymentau
+51.3	51.3	10	KZ	Oral
+51.2	53	7	KZ	Aqsay
+51.2	71.4	10	KZ	Nur-Sultan
+51.1	66.3	6	KZ	Derzhavinsk
+50.6	72.6	5	KZ	Osakarovka
+50.6	81.9	7	KZ	Shemonaikha
+50.4	80.3	10	KZ	Semey
+50.4	83.5	8	KZ	Ridder
+50.3	57.2	10	KZ	Aqtobe
+50.3	58.4	7	KZ	Khromtau
+50.2	51.1	5	KZ	Chapaev
+50.2	66.9	8	KZ	Arqalyq
+50.1	73	9	KZ	Temirtau
+50	82.6	10	KZ	Oskemen
+49.9	57.3	7	KZ	Algha
+49.9	73.1	10	KZ	Qaraghandy
+49.7	83.4	2	KZ	Serebryansk
+49.7	84.3	7	KZ	Zyryanovsk
+49.6	63.5	5	KZ	Turgay
+49.6	81.1	5	KZ	Shar
+49.5	57.4	7	KZ	Oktyabrsk
+49.4	46.9	5	KZ	Zhanibek
+49.4	75.5	5	KZ	Qarqaraly
+48.8	58.1	6	KZ	Embi
+48.7	55.9	5	KZ	Bayghanin
+48.7	71.6	6	KZ	Atasu
+48.3	72.9	5	KZ	Aqadyr
+48	70.8	7	KZ	Qarazhal
+48	80.4	7	KZ	Ayakoz
+47.8	59.6	7	KZ	Shalqar
+47.8	67.8	9	KZ	Zhezqazghan
+47.7	51.6	5	KZ	Makhambet
+47.6	53.3	6	KZ	Maqat
+47.5	84.9	6	KZ	Zaysan
+47.1	51.9	7	KZ	Balyqshy
+47.1	51.9	9	KZ	Atyrau
+47.1	81.6	6	KZ	Urzhar
+47	54	7	KZ	Qulsary
+46.9	75	8	KZ	Balqash
+46.8	61.7	7	KZ	Aral
+46.1	73.6	4	KZ	Saryshaghan
+45.8	62.1	5	KZ	Qazaly
+45.7	63.2	7	KZ	Baykonur
+45.5	64.1	7	KZ	Zhosaly
+45.4	79.9	8	KZ	Sarqan
+45.3	78	7	KZ	Ushtobe
+45.2	55.1	7	KZ	Beyneu
+45	78.4	8	KZ	Taldyqorghan
+44.9	74	1	KZ	Burylbaytal
+44.8	65.5	10	KZ	Qyzylorda
+44.5	50.3	5	KZ	Fort Shevchenko
+44.2	66.8	7	KZ	Shieli
+44.2	80	7	KZ	Zharkent
+43.9	77.1	7	KZ	Qapshaghay
+43.7	51.1	9	KZ	Mangyshlak
+43.6	51.2	4	KZ	Aqtau
+43.6	73.7	7	KZ	Shu
+43.5	68.5	8	KZ	Kentau
+43.5	75.2	6	KZ	Otar
+43.5	79.5	4	KZ	Shonzhy
+43.4	77.4	7	KZ	Esik
+43.3	52.8	5	KZ	Zhangaozen
+43.3	68.3	8	KZ	Turkistan
+43.3	76.8	7	KZ	Boralday
+43.3	76.9	12	KZ	Almaty
+43.2	70.5	7	KZ	Qaratau
+42.9	71.4	10	KZ	Taraz
+42.9	72.7	6	KZ	Qulan
+42.9	73.3	7	KZ	Oytal
+42.4	68.8	7	KZ	Arys
+42.3	69.6	10	KZ	Shymkent
+42.2	69.9	7	KZ	Lenger
+21.7	102.1	5	LA	Phongsali
+21	101.4	4	LA	Louang Namtha
+20.4	104	7	LA	Xam Nua
+20.3	100.4	5	LA	Ban Houayxay
+19.9	102.1	9	LA	Louangphrabang
+19.5	103.2	7	LA	Phonsavan
+19.3	101.8	6	LA	Xaignabouri
+18	102.6	11	LA	Vientiane
+17.4	104.8	8	LA	Thakhek
+16.5	104.8	8	LA	Savannakhet
+15.7	106.4	5	LA	Saravan
+15.1	105.8	9	LA	Pakxe
+14.9	105.9	6	LA	Champasak
+14.8	106.8	4	LA	Attapu
+34.4	35.9	11	LB	Ṭarābulus
+33.9	35.5	12	LB	Beirut
+33.9	35.9	8	LB	Zahlé
+33.8	35.5	5	LB	B'abda
+33.6	35.4	9	LB	Saida
+33.4	35.5	8	LB	Nabatiye et Tahta
+14	-61	7	LC	Castries
+47.1	9.5	7	LI	Vaduz
+9.7	80	10	LK	Jaffna
+9.4	80.4	9	LK	Kilinochchi
+8.6	81.2	9	LK	Trincomalee
+8.3	80.4	9	LK	Anuradhapura
+8	79.8	7	LK	Puttalan
+7.7	81.7	9	LK	Batticaloa
+7.3	80.7	9	LK	Kandy
+7	81	7	LK	Badulla
+6.9	79.9	9	LK	Sri Jayawardenepura Kotte
+6.9	79.9	10	LK	Colombo
+6.8	79.9	9	LK	Moratuwa
+6.7	80.4	7	LK	Ratnapura
+6	80.2	8	LK	Galle
+5.9	80.5	8	LK	Matara
+8.4	-9.7	7	LR	Voinjama
+7.4	-8.7	6	LR	Sanniquellie
+7	-9.5	7	LR	Gbarnga
+6.8	-11.4	6	LR	Robertsport
+6.5	-10.3	7	LR	Kakata
+6.4	-10.6	4	LR	Bensonville
+6.3	-10.8	12	LR	Monrovia
+6.1	-8.1	7	LR	Zwedru
+5.9	-10.1	7	LR	Buchanan
+5.5	-9.6	4	LR	Rivercess
+5	-9	6	LR	Greenville
+4.8	-8.2	4	LR	Barclayville
+4.4	-7.7	7	LR	Harper
+-28.7	28.3	6	LS	Butha-Buthe
+-28.9	28.1	7	LS	Hlotse
+-29.2	27.8	5	LS	Teyateyaneng
+-29.3	27.5	10	LS	Maseru
+-29.3	29.1	5	LS	Mokhotlong
+-29.8	27.3	8	LS	Mafetang
+-30.2	27.5	7	LS	Mohales Hoek
+-30.4	27.7	7	LS	Moyeni
+55.9	23.3	9	LT	Šiauliai
+55.7	21.1	9	LT	Klaipėda
+55.7	24.4	9	LT	Panevežys
+55	23.9	10	LT	Kaunas
+54.7	25.3	11	LT	Vilnius
+49.9	6.2	5	LU	Diekirch
+49.7	6.3	4	LU	Grevenmacher
+49.6	6.1	9	LU	Luxembourg
+57.4	21.6	7	LV	Ventspils
+57	24.1	11	LV	Riga
+56.7	23.7	8	LV	Jelgava
+56.5	21	8	LV	Liepaga
+56.5	27.3	7	LV	Rēzekne
+55.9	26.5	9	LV	Daugavpils
+32.9	12.1	9	LY	Zuwara
+32.9	13.2	12	LY	Tripoli
+32.8	12.7	9	LY	Az Zawiyah
+32.8	21.6	3	LY	Al Bayda
+32.8	21.9	7	LY	Shahhat
+32.8	22.6	9	LY	Darnah
+32.7	14.3	10	LY	Al Khums
+32.5	20.8	9	LY	Al Marj
+32.4	15.1	10	LY	Misrata
+32.2	13	9	LY	Gharyan
+32.1	20.1	12	LY	Banghazi
+32.1	24	10	LY	Tubruq
+31.9	11	8	LY	Nalut
+31.8	14	8	LY	Bani Walid
+31.7	20	5	LY	Qaminis
+31.4	13	7	LY	Mizdah
+31.2	16.6	9	LY	Surt
+30.8	20.2	9	LY	Ajdabiya
+30.7	18.3	1	LY	As Sidr
+30.3	19.2	1	LY	El Agheila
+30.2	10.5	2	LY	Dirj
+30.1	9.5	5	LY	Ghadamis
+29.8	24.5	3	LY	Al Jaghbub
+29.2	19.2	4	LY	Maradah
+29.1	15.9	6	LY	Hun
+29.1	21.3	5	LY	Awjilah
+28.6	17.6	1	LY	Zillah
+27.5	14.3	7	LY	Birak
+27.5	15	2	LY	Umm al Abid
+27	14.4	9	LY	Sabha
+26.4	15.8	2	LY	Tmassa
+25.9	13.9	8	LY	Marzuq
+25	10.2	7	LY	Ghat
+24.4	14.5	3	LY	Tajarhi
+24.2	23.3	7	LY	Al Jawf
+35.7	-5.8	11	MA	Tangier
+35.2	-6.2	9	MA	Larache
+35	-5.9	10	MA	Ksar El Kebir
+34.8	-5.6	8	MA	Ouezzane
+34.7	-1.9	10	MA	Oujda
+34.3	-6.6	11	MA	Kenitra
+34.2	-4	9	MA	Taza
+34.1	-5	12	MA	Fez
+34	-6.8	12	MA	Rabat
+33.9	-5.6	11	MA	Meknes
+33.6	-7.6	12	MA	Casablanca
+33.3	-8.5	9	MA	El Jadida
+33	-7.6	9	MA	Settat
+32.3	-9.2	10	MA	Safi
+31.9	-4.4	10	MA	Er Rachidia
+31.6	-8	11	MA	Marrakesh
+30.4	-9.6	11	MA	Agadir
+29.7	-9.7	8	MA	Tiznit
+29	-10.1	9	MA	Goulimine
+28.4	-11.1	8	MA	Tan Tan
+27.5	-13	1	MA	Dawra
+27.1	-13.2	9	MA	Laayoune
+26.7	-11.7	7	MA	Smara
+26.5	-13.8	1	MA	Lemsid
+23.9	-14.5	5	MA	Bir Anzarane
+23.7	-15.9	8	MA	Ad Dakhla
+43.7	7.4	7	MC	Monaco
+47.8	27.9	9	MD	Bălți
+47.3	29.2	7	MD	Dubăsari
+47	28.9	11	MD	Chișinău
+46.9	29.6	9	MD	Tiraspol
+45.9	28.2	8	MD	Cahul
+42.5	19.3	9	ME	Podgorica
+-12.3	49.3	8	MG	Antsiranana
+-13.4	48.3	7	MG	Andoany
+-13.7	48.5	7	MG	Ambanja
+-14.3	50.2	7	MG	Sambava
+-14.9	48	7	MG	Antsohihy
+-14.9	50.3	7	MG	Antalaha
+-15.4	49.7	7	MG	Maroantsetra
+-15.7	46.3	9	MG	Mahajanga
+-15.8	48.8	5	MG	Mandritsara
+-16.1	46.6	7	MG	Marovoay
+-16.7	44.5	3	MG	Besalampy
+-17.8	48.4	7	MG	Ambatondrazaka
+-18.1	44	5	MG	Maintirano
+-18.2	49.4	10	MG	Toamasina
+-18.9	47.5	12	MG	Antananarivo
+-19.5	45.5	7	MG	Miandrivazo
+-19.9	47	10	MG	Antsirabe
+-20.3	44.3	7	MG	Morondava
+-21.2	48.3	7	MG	Mananjary
+-21.4	44.3	3	MG	Manja
+-21.4	47.1	9	MG	Fianarantsoa
+-21.7	43.4	6	MG	Morombe
+-22.4	46.1	6	MG	Ihosy
+-22.8	47.8	7	MG	Farafangana
+-23.4	43.7	9	MG	Toliara
+-24.2	45.3	4	MG	Bekiy
+-25	44.1	1	MG	Androka
+-25	47	6	MG	Tôlanaro
+7.1	171.4	7	MH	Majuro
+42	21	9	MK	Tetovo
+42	21.4	10	MK	Skopje
+41	21.3	8	MK	Bitola
+22.7	-4	4	ML	Taoudenni
+20.2	1.1	5	ML	Tessalit
+19.5	0.9	5	ML	Aguelhok
+18.9	-3.5	4	ML	Araouane
+16.9	-0.3	7	ML	Bourem
+16.8	-3	8	ML	Timbuktu
+16.4	-3.7	5	ML	Goundam
+16.3	-0.1	9	ML	Gao
+15.9	2.4	5	ML	Ménaka
+15.2	-9.6	6	ML	Nioro du Sahel
+15.2	-7.3	6	ML	Nara
+15.1	-10.6	2	ML	Yélimané
+14.7	-6.1	4	ML	Sokolo
+14.5	-4.2	9	ML	Mopti
+14.4	-11.4	8	ML	Kayes
+13.9	-4.5	7	ML	Djenné
+13.8	-10.8	7	ML	Bafoulabé
+13.7	-6.1	8	ML	Markala
+13.6	-7.4	7	ML	Banamba
+13.4	-6.3	9	ML	Ségou
+13.3	-4.9	7	ML	San
+13.1	-9.5	7	ML	Kita
+12.9	-7.5	7	ML	Koulikoro
+12.8	-8.1	8	ML	Kati
+12.7	-8	12	ML	Bamako
+12.6	-11.4	2	ML	Satadougou
+12.4	-5.5	9	ML	Koutiala
+11.9	-8.4	6	ML	Kangaba
+11.4	-7.5	7	ML	Bougouni
+11.3	-5.7	10	ML	Sikasso
+25.4	97.4	9	MM	Myitkyina
+23.1	97.4	7	MM	Namtu
+22.7	93.6	6	MM	Hakha
+22.6	95.7	8	MM	Shwebo
+22.1	95.1	10	MM	Monywa
+22	96.1	12	MM	Mandalay
+21.9	96	8	MM	Sagaing
+21.5	95.4	9	MM	Myingyan
+21.3	95.1	9	MM	Pakokku
+20.9	94.8	8	MM	Chauk
+20.8	97	9	MM	Taunggyi
+20.5	94.9	9	MM	Yaynangyoung
+20.1	92.9	9	MM	Sittwe
+20.1	94.9	9	MM	Magway
+19.8	96.1	11	MM	Naypyidaw
+19.7	97.2	6	MM	Loikaw
+19.4	93.5	4	MM	Kyaukphyu
+19.4	95.2	8	MM	Allanmyo
+18.9	96.4	9	MM	Taungoo
+18.8	95.2	9	MM	Pyay
+18.5	96.4	7	MM	Pyu
+17.8	95.7	9	MM	Letpadan
+17.6	95.5	9	MM	Hinthada
+17.3	96.5	10	MM	Bago
+17	95.6	7	MM	Yandoon
+16.8	94.7	10	MM	Pathein
+16.8	96.2	12	MM	Yangon
+16.8	96.5	8	MM	Thongwa
+16.8	97.6	7	MM	Pa-an
+16.6	95.2	7	MM	Wakema
+16.5	97.7	10	MM	Mawlamyine
+16.3	95.7	8	MM	Phyarpon
+16.3	97.7	9	MM	Mudon
+16.2	94.7	3	MM	Labutta
+15.3	97.9	8	MM	Ye
+14.1	98.2	9	MM	Dawei
+12.5	98.6	10	MM	Myeik
+50.2	106.2	7	MN	Suchboatar
+50	92.1	7	MN	Ulaangom
+49.6	100.2	7	MN	Mörön
+49.6	106.4	8	MN	Darkhan
+49.1	104.1	8	MN	Erdenet
+49	96.8	1	MN	Hodrogo
+48.9	90	7	MN	Olgiy
+48.9	106.5	6	MN	Züünkharaa
+48.8	103.5	6	MN	Bulgan
+48.1	114.5	7	MN	Choibalsan
+48	91.6	7	MN	Dund-Us
+47.9	106.9	11	MN	Ulaanbaatar
+47.8	96.8	5	MN	Uliastay
+47.7	106.9	6	MN	Dzuunmod
+47.5	101.5	6	MN	Tsetserleg
+47.3	110.7	6	MN	Öndörkhaan
+46.7	113.3	6	MN	Baruun-Urt
+46.4	95.8	7	MN	Altai
+46.3	101	7	MN	Bayankhongor
+46.2	102.8	7	MN	Arvaikheer
+45.7	106.3	4	MN	Mandalgovi
+44.9	110.2	5	MN	Buyant-Uhaa
+44.3	111.2	4	MN	Ulaan-Uul
+43.6	104.4	6	MN	Dalandzadgad
+22.2	113.5	11	MO	Macau
+15.2	145.8	4	MP	Capitol Hill
+14.6	-61.1	10	MQ	Fort-de-France
+25.4	-5.8	1	MR	Chegga
+25.2	-11.6	1	MR	Bir Mogrein
+22.7	-12.7	5	MR	Fderik
+22.7	-12.5	8	MR	Zouirat
+20.9	-17.1	8	MR	Nouadhibou
+20.5	-13	7	MR	Atar
+19.7	-14.4	2	MR	Akjoujt
+18.6	-11.4	6	MR	Tidjikdja
+18.1	-16	11	MR	Nouakchott
+17.6	-14.7	6	MR	Boutilimit
+17.1	-13.9	5	MR	Aleg
+17	-13.5	1	MR	Magta Lajar
+16.7	-9.6	3	MR	Ayoun el Atrous
+16.6	-14.3	6	MR	Bogue
+16.6	-11.4	8	MR	Kiffa
+16.6	-7.3	9	MR	Nema
+16.5	-15.8	7	MR	Rosso
+16.3	-8.2	2	MR	Timbedra
+16	-16.5	10	MR	Saint-Louis
+15.2	-12.2	2	MR	Sélibaby
+35.9	14.5	10	MT	Valletta
+-20.2	57.5	11	MU	Port Louis
+-20.3	57.5	10	MU	Curepipe
+4.2	73.5	9	MV	Malé
+-9.7	33.3	6	MW	Chitipa
+-9.9	33.9	7	MW	Karonga
+-11.5	34	9	MW	Mzuzu
+-11.6	34.3	7	MW	Nkhata Bay
+-11.9	33.6	6	MW	Mzimba
+-12.9	34.3	8	MW	Nkhotakota
+-13.8	32.9	6	MW	Mchinji
+-13.8	34.4	8	MW	Salima
+-14	33.8	11	MW	Lilongwe
+-14.4	34.3	6	MW	Dedza
+-14.5	35.3	8	MW	Mangochi
+-14.8	34.6	6	MW	Ntcheu
+-15	35.5	3	MW	Machinga
+-15.4	35.3	8	MW	Zomba
+-15.6	34.5	6	MW	Mwanza
+-15.7	35.2	3	MW	Chiradzulu
+-15.8	35	11	MW	Blantyre
+-16	35.5	6	MW	Mulanje
+-16.6	35.1	7	MW	Chiromo
+-16.9	35.3	7	MW	Nsanje
+32.7	-115.5	11	MX	Mexicali
+32.5	-117.1	12	MX	Tijuana
+31.9	-116.6	10	MX	Ensenada
+31.7	-106.5	12	MX	Ciudad Juárez
+31.3	-110.9	9	MX	Nogales
+31.3	-109.6	8	MX	Agua Prieta
+31.1	-108	6	MX	Ascensión
+31	-114.8	7	MX	San Felipe
+31	-110.3	7	MX	Cananea
+30.8	-116	6	MX	Vicente Guerrero
+30.7	-112.2	8	MX	Caborca
+30.6	-111	7	MX	Magdalena
+30.6	-106.5	5	MX	Villa Ahumada
+30.5	-115.9	5	MX	San Quintín
+30.4	-109.6	6	MX	Nacozari de García
+30.4	-107.9	8	MX	Nuevo Casas Grandes
+29.5	-104.4	7	MX	Ojinaga
+29.1	-111	11	MX	Hermosillo
+29	-110.1	10	MX	Mazatlán
+28.9	-114.2	2	MX	Punta Prieta
+28.7	-100.5	9	MX	Piedras Negras
+28.6	-106.1	11	MX	Chihuahua
+28.4	-106.9	8	MX	Cuauhtémoc
+28.3	-100.8	6	MX	Allende
+28.2	-105.5	9	MX	Delicias
+28	-114.2	6	MX	Guerrero Negro
+27.9	-110.9	9	MX	Guaymas
+27.9	-101.2	7	MX	Nueva Rosita
+27.7	-105.2	7	MX	Ciudad Camargo
+27.6	-109.9	4	MX	Esperanza
+27.5	-109.9	10	MX	Ciudad Obregon
+27.5	-99.6	10	MX	Nuevo Laredo
+27.3	-112.3	6	MX	Santa Rosalía
+27.3	-103.3	1	MX	Sierra Mojada
+27.1	-109.5	9	MX	Navajoa
+26.9	-105.7	9	MX	Hidalgo del Parral
+26.9	-101.4	10	MX	Monclova
+26.8	-109.6	7	MX	Huatabampo
+26.8	-105.8	6	MX	Santa Barbara
+26.5	-100.2	7	MX	Sabinas Hidalgo
+26.4	-108.6	6	MX	El Fuerte
+26.1	-98.3	10	MX	Reynosa
+26	-111.4	6	MX	Loreto
+25.9	-97.5	11	MX	Matamoros
+25.8	-109	10	MX	Los Mochis
+25.8	-103	8	MX	San Pedro de las Colonias
+25.7	-100.3	12	MX	Monterrey
+25.6	-108.5	8	MX	Guasave
+25.6	-103.5	10	MX	Gómez Palacio
+25.6	-103.4	12	MX	Torreón
+25.5	-108.1	8	MX	Guamúchil
+25.4	-102.2	7	MX	Parras
+25.4	-101	11	MX	Saltillo
+25.2	-99.8	7	MX	Montemorelos
+25	-111.7	7	MX	Ciudad Constitución
+24.9	-103.7	5	MX	Cuencame
+24.9	-99.6	8	MX	Linares
+24.9	-98.2	7	MX	San Fernando
+24.8	-107.4	11	MX	Culiacán
+24.8	-105.3	7	MX	Papasquiaro
+24.6	-107.9	2	MX	Altata
+24.5	-104.8	6	MX	Canatlan
+24.3	-107.4	6	MX	Eldorado
+24.3	-103.4	6	MX	Juan Aldama
+24.1	-110.3	9	MX	La Paz
+24	-104.7	10	MX	Durango
+23.9	-106.9	6	MX	La Cruz
+23.7	-100.7	8	MX	Matehuala
+23.7	-99.1	10	MX	Ciudad Victoria
+23.2	-106.4	10	MX	Mazatlán
+23.2	-106.2	6	MX	Villa Unión
+23.2	-102.9	9	MX	Fresnillo
+23	-99.7	5	MX	Tula
+22.9	-109.9	7	MX	Cabo San Lucas
+22.9	-105.8	7	MX	Escuinapa
+22.9	-98.1	6	MX	Aldama
+22.8	-103.6	6	MX	Valparaíso
+22.8	-102.6	10	MX	Zacatecas
+22.7	-99	8	MX	Ciudad Mante
+22.4	-105.5	6	MX	Tecuala
+22.4	-102.9	6	MX	Villanueva
+22.3	-97.9	11	MX	Tampico
+22.3	-97.8	9	MX	Ciudad Madero
+22.2	-101	11	MX	San Luis Potosí
+22.1	-98.2	7	MX	Pánuco
+22	-99.7	6	MX	Cardenas
+22	-99	9	MX	Ciudad Valles
+22	-98.8	6	MX	Tamuín
+21.9	-105.3	7	MX	Tuxpan
+21.9	-102.3	11	MX	Aguascalientes
+21.9	-100	8	MX	Rio Verde
+21.8	-105.2	6	MX	Santiago Ixcuintla
+21.5	-104.9	10	MX	Tepic
+21.4	-101.9	8	MX	Lagos de Moreno
+21.3	-98.8	8	MX	Tamazunchale
+21.3	-89.7	7	MX	Progreso
+21.2	-104.9	6	MX	Compostela
+21.2	-101.7	12	MX	León
+21.2	-86.8	11	MX	Cancún
+21.2	-86.7	6	MX	Isla Mujeres
+21.1	-89.3	7	MX	Motul
+21.1	-88.1	7	MX	Tizimín
+21	-101.3	9	MX	Guanajuato
+21	-97.4	9	MX	Tuxpam
+21	-89.6	11	MX	Mérida
+20.9	-89	6	MX	Izamal
+20.7	-105.2	9	MX	Puerto Vallarta
+20.7	-103.3	12	MX	Guadalajara
+20.7	-101.5	10	MX	Irapuato
+20.7	-88.2	7	MX	Valladolid
+20.6	-101.2	9	MX	Salamanca
+20.6	-100.4	11	MX	Querétaro
+20.6	-97.5	10	MX	Poza Rica de Hidalgo
+20.5	-100.8	10	MX	Celaya
+20.5	-90.1	5	MX	Halachó
+20.5	-87	8	MX	Cozumel
+20.4	-100	9	MX	San Juan del Río
+20.4	-89.5	7	MX	Ticul
+20.3	-102.6	7	MX	La Barca
+20.2	-98.7	10	MX	Pachuca
+20.2	-96.8	4	MX	Nautla
+20.2	-89.3	7	MX	Tekax
+20.1	-88.9	6	MX	Peto
+20	-102.3	10	MX	Zamora
+19.8	-104.4	7	MX	Autlan
+19.8	-99.1	10	MX	Zumpango
+19.8	-97.4	9	MX	Teziutlán
+19.8	-90.5	10	MX	Campeche
+19.7	-103.5	8	MX	Ciudad Guzman
+19.7	-101.2	11	MX	Morelia
+19.7	-100.6	8	MX	Ciudad Hidalgo
+19.6	-88	7	MX	Felipe Carrillo Puerto
+19.5	-96.9	10	MX	Xalapa
+19.4	-102.1	10	MX	Uruapan
+19.4	-99.1	14	MX	Mexico City
+19.4	-99	12	MX	Nezahualcoyotl
+19.4	-90.7	7	MX	Champotón
+19.3	-99.7	12	MX	Toluca
+19.3	-98.2	11	MX	Tlaxcala
+19.2	-103.7	10	MX	Colima
+19.2	-96.2	11	MX	Veracruz
+19.1	-102.4	8	MX	Apatzingán
+19.1	-98.2	12	MX	Puebla
+19	-104.3	9	MX	Manzanillo
+18.9	-103.9	8	MX	Tecoman
+18.9	-99.2	11	MX	Cuernavaca
+18.9	-98.4	8	MX	Atlixco
+18.9	-97.1	10	MX	Orizaba
+18.9	-96.9	10	MX	Córdoba
+18.8	-103.1	6	MX	Coalcoman
+18.7	-91.8	9	MX	Ciudad del Carmen
+18.6	-99.6	8	MX	Taxco
+18.6	-92.6	7	MX	Frontera
+18.5	-97.4	10	MX	Tehuacan
+18.5	-95.3	6	MX	Santiago Tuxtla
+18.5	-88.3	9	MX	Chetumal
+18.4	-99.5	9	MX	Iguala
+18.4	-93.2	7	MX	Paraíso
+18.3	-100.7	7	MX	Ciudad Altamirano
+18.2	-98	6	MX	Acatlan
+18.1	-94.4	10	MX	Coatzacoalcos
+18	-102.2	9	MX	Lázaro Cárdenas
+18	-94.5	10	MX	Minatitlán
+18	-92.9	10	MX	Villahermosa
+17.9	-94.7	8	MX	Jaltipan
+17.8	-97.8	7	MX	Huajuapan de León
+17.8	-91.5	6	MX	Balancán
+17.5	-101.3	7	MX	Petatlán
+17.5	-99.5	9	MX	Chilpancingo
+17.5	-91.4	7	MX	Tenosique
+17.3	-97.7	7	MX	Tlaxiaco
+17.2	-100.7	6	MX	Tecpan
+17.2	-100.4	7	MX	Atoyac
+17.1	-96.7	11	MX	Oaxaca
+16.9	-99.2	5	MX	Ayutla
+16.9	-96.4	5	MX	Mitla
+16.8	-99.9	11	MX	Acapulco
+16.7	-98.4	7	MX	Ometepec
+16.7	-93.2	10	MX	Tuxtla Gutiérrez
+16.7	-92.6	9	MX	San Cristobal de Las Casas
+16.4	-95	8	MX	Juchitan
+16.3	-96.6	6	MX	Miahuatlán
+16.3	-95.2	7	MX	Tehuantepec
+16.2	-95.2	8	MX	Salina Cruz
+15.9	-97.1	6	MX	Puerto Escondido
+15.7	-96.5	7	MX	Pochutla
+15.7	-93.2	7	MX	Pijijiapan
+15.3	-92.6	9	MX	Escuintla
+14.9	-92.3	10	MX	Tapachula
+6.4	100.2	8	MY	Kangar
+6.1	100.4	10	MY	Alor Setar
+6.1	102.2	11	MY	Kota Baharu
+6	116.1	11	MY	Kota Kinabalu
+5.8	118.1	10	MY	Sandakan
+5.6	100.5	10	MY	Sungai Petani
+5.4	100.3	12	MY	George Town
+5.4	100.4	11	MY	Butterworth
+5.3	103.1	10	MY	Kuala Terengganu
+5	118.3	9	MY	Lahad Datu
+4.9	100.7	10	MY	Taiping
+4.6	101.1	11	MY	Ipoh
+4.4	114	10	MY	Miri
+4.3	117.9	10	MY	Tawau
+4.2	102	6	MY	Kuala Lipis
+4.2	103.4	8	MY	Chukai
+4	101	9	MY	Teluk Intan
+3.8	101.8	7	MY	Raub
+3.8	103.3	10	MY	Kuantan
+3.2	101.7	12	MY	Kuala Lumpur
+3.2	113	9	MY	Bintulu
+3.1	101.5	10	MY	Shah Alam
+3	101.5	11	MY	Kelang
+2.9	101.7	8	MY	Putrajaya
+2.7	101.9	10	MY	Seremban
+2.3	111.8	10	MY	Sibu
+2.2	102.2	11	MY	Malacca
+2	102.6	9	MY	Muar
+2	103.3	9	MY	Keluang
+1.9	102.9	9	MY	Batu Pahat
+1.5	103.7	11	MY	Johor Bahru
+1.5	110.3	11	MY	Kuching
+-11.3	40.3	7	MZ	Mocimboa
+-13	40.5	9	MZ	Pemba
+-13.1	39	8	MZ	Montepuez
+-13.2	37.5	5	MZ	Marrupa
+-13.3	35.2	9	MZ	Lichinga
+-14.5	40.7	10	MZ	Nacala
+-14.8	36.5	8	MZ	Cuamba
+-15	40.7	8	MZ	Mocambique
+-15.1	39.3	10	MZ	Nampula
+-15.2	37.7	4	MZ	Ligonha
+-15.6	30.4	4	MZ	Luangwa
+-16.1	34	7	MZ	Moatize
+-16.2	33.6	9	MZ	Tete
+-16.2	39.9	8	MZ	Angoche
+-16.8	38.3	8	MZ	Mocuba
+-16.9	34.7	2	MZ	Chiramba
+-17.6	36.8	5	MZ	Nicuadala
+-17.9	36.9	9	MZ	Quelimane
+-19	32.9	4	MZ	Manica
+-19.1	33.5	10	MZ	Chimoio
+-19.6	34.7	8	MZ	Dondo
+-19.8	34.9	11	MZ	Beira
+-20.5	32.8	2	MZ	Espungabera
+-21.5	33	2	MZ	Massangena
+-22	35.3	1	MZ	Vilanculos
+-22.8	32	2	MZ	Mapai
+-23.9	35.3	9	MZ	Inhambane
+-23.9	35.4	9	MZ	Maxixe
+-24.1	34.7	2	MZ	Panda
+-24.7	34.8	3	MZ	Quissico
+-25	33.1	7	MZ	Macia
+-25	33.6	9	MZ	Xai-Xai
+-26	32.5	11	MZ	Matola
+-26	32.6	12	MZ	Maputo
+-17.4	15.9	6	NA	Oshikango
+-17.5	24.3	7	NA	Katima Mulilo
+-17.6	18.6	2	NA	Cuangar
+-17.8	15.8	7	NA	Ongwediva
+-17.9	19.7	8	NA	Rundu
+-18.1	13.8	4	NA	Opuwo
+-19.2	17.7	6	NA	Tsumeb
+-19.6	17.3	4	NA	Otavi
+-19.6	18.1	7	NA	Grootfontein
+-20.1	16.1	5	NA	Outjo
+-20.5	16.6	7	NA	Otjiwarongo
+-21.4	16	6	NA	Omaruru
+-21.9	15.9	5	NA	Karibib
+-22	15.6	5	NA	Usakos
+-22	16.9	7	NA	Okahandja
+-22.5	19	6	NA	Gobabis
+-22.6	17.1	10	NA	Windhoek
+-22.7	14.5	7	NA	Swakopmund
+-23	14.5	8	NA	Walvis Bay
+-23.3	17.1	7	NA	Rehoboth
+-24.6	18	6	NA	Mariental
+-24.8	16.9	4	NA	Maltahöhe
+-26.5	17.2	6	NA	Bethanie
+-26.6	15.2	6	NA	Lüderitz
+-26.6	18.1	6	NA	Keetmanshoop
+-28	18.7	5	NA	Karasburg
+-28.5	16.4	5	NA	Oranjemund
+-22.3	166.4	8	NC	Nouméa
+21	12.3	1	NE	Djado
+18.8	7.3	8	NE	Arlit
+17	8	9	NE	Agadez
+14.9	5.3	9	NE	Tahoua
+14.7	0.9	7	NE	Ayorou
+14.3	13.1	6	NE	Nguigmi
+14.2	1.5	6	NE	Tillabéri
+14.1	6	7	NE	Madaoua
+14	10.3	6	NE	Gouré
+13.8	5.3	8	NE	Birni Nkonni
+13.8	9	10	NE	Zinder
+13.5	2.1	11	NE	Niamey
+13.5	7.1	10	NE	Niamey
+13.3	12.6	7	NE	Diffa
+13.1	3.2	7	NE	Dosso
+11.9	3.4	7	NE	Gaya
+13.1	5.2	11	NG	Sokoto
+13	7.6	10	NG	Katsina
+12.9	10.4	9	NG	Nguru
+12.9	11	9	NG	Gashua
+12.5	4.2	9	NG	Birnin Kebbi
+12.2	6.7	10	NG	Gusau
+12	8.5	12	NG	Kano
+11.9	13.2	11	NG	Maiduguri
+11.8	9.4	6	NG	Dutse
+11.7	10.2	9	NG	Azare
+11.7	11.1	8	NG	Potiskum
+11.7	12	10	NG	Damaturu
+11.5	7.3	9	NG	Funtua
+11.5	13.7	9	NG	Bama
+11.4	4.5	7	NG	Koko
+11.1	7.7	11	NG	Zaria
+10.6	12.2	8	NG	Biu
+10.5	7.4	12	NG	Kaduna
+10.4	5.5	8	NG	Kontagora
+10.3	9.8	10	NG	Bauchi
+10.3	11.2	10	NG	Gombe
+10.3	13.3	10	NG	Mubi
+10	11.2	7	NG	Kumo
+9.9	8.9	11	NG	Jos
+9.6	6.6	10	NG	Minna
+9.5	12	8	NG	Numan
+9.2	12.5	8	NG	Yola
+9.1	6	9	NG	Bida
+9.1	7.5	12	NG	Abuja
+8.9	11.4	9	NG	Jalingo
+8.8	7.9	8	NG	Keffi
+8.5	4.5	11	NG	Ilorin
+8.5	8.5	9	NG	Lafia
+8.1	4.2	11	NG	Ogbomosho
+8	3.6	8	NG	Iseyin
+7.9	3.9	11	NG	Oyo
+7.9	9.8	8	NG	Wukari
+7.8	4.6	10	NG	Oshogbo
+7.8	6.7	8	NG	Lokoja
+7.7	8.5	10	NG	Makurdi
+7.6	4.2	10	NG	Iwo
+7.6	5.2	10	NG	Ado Ekiti
+7.5	4.6	10	NG	Ife
+7.5	5.8	12	NG	Ikare
+7.4	3.9	12	NG	Ibadan
+7.3	5.2	10	NG	Akure
+7.2	3.4	11	NG	Abeokuta
+7.2	5.6	10	NG	Owo
+7.2	8.1	8	NG	Oturkpo
+7.1	4.8	10	NG	Ondo
+7.1	6.7	8	NG	Idah
+6.9	7.4	9	NG	Nsukka
+6.8	3.9	10	NG	Ijebu Ode
+6.5	7.5	11	NG	Enugu
+6.4	3.4	13	NG	Lagos
+6.3	5.6	12	NG	Benin City
+6.2	7.1	10	NG	Awka
+6.1	6.8	8	NG	Onitsha
+5.9	5.7	10	NG	Sapele
+5.8	7	5	NG	Orlu
+5.5	5.8	11	NG	Warri
+5.5	7	10	NG	Owerri
+5.5	7.5	10	NG	Umuahia
+5.1	7.3	11	NG	Aba
+5	7.8	11	NG	Uyo
+5	8.3	10	NG	Calabar
+4.8	7	12	NG	Port Harcourt
+4.6	7.6	7	NG	Opobo
+14	-83.4	7	NI	Bilwi
+13.6	-86.5	7	NI	Ocotal
+13.5	-86.6	7	NI	Somoto
+13.1	-86.4	9	NI	Estelí
+13.1	-86	8	NI	Jinotega
+12.9	-85.9	9	NI	Matagalpa
+12.6	-87.1	9	NI	Chinandega
+12.5	-85.7	7	NI	Boaco
+12.4	-86.9	9	NI	León
+12.2	-86.3	11	NI	Managua
+12.1	-85.4	8	NI	Juigalpa
+12	-86.1	9	NI	Masaya
+12	-83.8	7	NI	Bluefields
+11.9	-85.9	9	NI	Granada‎
+11.8	-86.2	7	NI	Jinotepe
+11.4	-85.8	7	NI	Rivas
+11.2	-85.9	5	NI	San Juan del Sur
+11.2	-84.8	6	NI	San Carlos
+10.9	-83.7	2	NI	San Juan de Nicaragua
+53.3	5.8	9	NL	Leeuwarden
+53.2	6.6	10	NL	Groningen
+53	6.6	8	NL	Assen
+52.5	6.1	9	NL	Zwolle
+52.4	4.6	10	NL	Haarlem
+52.4	4.9	12	NL	Amsterdam
+52.1	4.3	12	NL	The Hague
+52.1	5.1	11	NL	Utrecht
+52	5.9	9	NL	Arnhem
+51.9	4.5	12	NL	Rotterdam
+51.7	5.3	9	NL	's-Hertogenbosch
+51.5	3.6	7	NL	Middelburg
+51.4	5.5	10	NL	Eindhoven
+50.9	5.7	9	NL	Maastricht
+70.7	23.7	5	NO	Hammerfest
+70.1	29.8	5	NO	Vadsø
+70	23.2	6	NO	Alta
+69.7	30.1	4	NO	Kirkenes
+69.6	19	8	NO	Tromsø
+69.2	18	4	NO	Finnsnes
+68.8	16.5	6	NO	Harstad
+68.4	17.3	6	NO	Narvik
+68.2	14.6	4	NO	Svolvær
+67.3	14.4	7	NO	Bodø
+66.3	14.2	7	NO	Mo i Rana
+64.9	11.2	4	NO	Rørvik
+64.5	11.5	5	NO	Namsos
+64	11.5	6	NO	Steinkjer
+63.4	10.4	9	NO	Trondheim
+62.7	7.2	6	NO	Molde
+62.5	6.4	7	NO	Ålesund
+61.2	6.8	3	NO	Leikanger
+61.1	10.5	6	NO	Lillehammer
+60.8	10.7	7	NO	Gjøvik
+60.8	11.1	7	NO	Hamar
+60.6	6.4	5	NO	Vossavangen
+60.4	5.3	10	NO	Bergen
+59.9	10.7	11	NO	Oslo
+59.9	11.3	9	NO	Bærum
+59.8	10.2	8	NO	Drammen
+59.4	5.3	7	NO	Haugesund
+59.4	10.7	7	NO	Moss
+59.3	10.4	7	NO	Tønsberg
+59.2	9.6	8	NO	Skien
+59	5.7	9	NO	Stavanger
+58.8	5.7	7	NO	Sandnes
+58.5	8.8	7	NO	Arendal
+58.2	8	8	NO	Kristiansand
+29.3	80.6	6	NP	Dandeldhura
+29.2	82.2	5	NP	Jumla
+28.7	80.6	8	NP	Dhangarhi
+28.4	82.2	6	NP	Salyan
+28.3	83.6	7	NP	Baglung
+28.3	84	9	NP	Pokhara
+28.1	81.6	8	NP	Nepalganj
+27.7	85.3	10	NP	Lalitpur
+27.7	85.3	11	NP	Kathmandu
+27.6	85.1	6	NP	Bhimphedi
+27.5	83.4	8	NP	Bhairawa
+27.4	85	10	NP	Hetauda
+27.3	86.1	6	NP	Ramechhap
+27	84.9	9	NP	Birganj
+26.9	87.9	6	NP	Ilam
+26.5	86.7	7	NP	Rajbiraj
+26.5	87.3	9	NP	Biratnagar
+-8.5	-172.5	2	NZ	Atafu
+-19.1	-169.9	2	NZ	Alofi
+-29.2	-177.9	0	NZ	Raoul Island Station
+-35.1	173.3	5	NZ	Kaitaia
+-35.2	174	5	NZ	Kerikeri
+-35.7	174.3	8	NZ	Whangarei
+-36.8	174.8	10	NZ	North Shore
+-36.8	174.8	12	NZ	Auckland
+-36.9	174.6	10	NZ	Waitakere
+-37	174.9	10	NZ	Manukau
+-37.1	175.6	5	NZ	Thames
+-37.2	174.9	7	NZ	Pukekohe
+-37.7	176.2	9	NZ	Tauranga
+-37.8	175.3	9	NZ	Hamilton
+-37.9	175.5	6	NZ	Cambridge
+-38	177	6	NZ	Whakatane
+-38.1	176.2	8	NZ	Rotorua
+-38.2	175.9	6	NZ	Tokoroa
+-38.7	176.1	7	NZ	Taupo
+-38.7	178	7	NZ	Gisborne
+-39	175.8	4	NZ	Turangi
+-39.1	174.1	8	NZ	New Plymouth
+-39.5	176.9	8	NZ	Napier
+-39.6	174.3	6	NZ	Hawera
+-39.6	176.8	8	NZ	Hastings
+-39.9	175	7	NZ	Whanganui
+-40.4	175.6	8	NZ	Palmerston North
+-40.6	175.3	6	NZ	Levin
+-40.9	175	7	NZ	Paraparaumu
+-40.9	175.6	7	NZ	Masterton
+-41.1	174.9	8	NZ	Porirua
+-41.1	175	7	NZ	Upper Hutt
+-41.2	174.9	9	NZ	Lower Hutt
+-41.3	173.2	8	NZ	Nelson
+-41.3	174	4	NZ	Picton
+-41.3	174.8	10	NZ	Wellington
+-41.5	174	7	NZ	Blenheim
+-41.8	171.6	4	NZ	Westport
+-42.4	173.7	4	NZ	Kaikoura
+-42.5	171.2	6	NZ	Greymouth
+-42.7	171	4	NZ	Hokitika
+-43.4	172.7	6	NZ	Kaiapoi
+-43.5	172.6	10	NZ	Christchurch
+-43.9	171.7	6	NZ	Ashburton
+-44	-176.4	2	NZ	Waitangi
+-44.4	171.2	7	NZ	Timaru
+-44.7	169.1	5	NZ	Wanaka
+-45	168.7	6	NZ	Queenstown
+-45.1	171	6	NZ	Oamaru
+-45.4	167.8	3	NZ	Te Anau
+-45.9	170.5	9	NZ	Dunedin
+-46.1	169	5	NZ	Gore
+-46.4	168.4	7	NZ	Invercargill
+-46.9	168.2	2	NZ	Oban
+24.4	56.7	9	OM	Suhar
+23.7	58.2	10	OM	Seeb
+23.6	58.6	11	OM	Muscat
+23.3	58	7	OM	Alayat Samail
+23.2	56.5	9	OM	Ibri
+22.9	57.5	8	OM	Nizwa
+22.6	59.5	8	OM	Sur
+20.7	58.9	5	OM	Hilf
+17	54.1	10	OM	Salalah
+17	54.7	3	OM	Mirbat
+9.5	-79	1	PA	El Porvenir
+9.4	-79.9	10	PA	Colón
+9.3	-82.4	5	PA	Almirante
+9.3	-82.2	5	PA	Bocas del Toro
+9	-79.5	12	PA	Panama City
+8.9	-79.6	8	PA	Balboa
+8.5	-80.4	7	PA	Penonome
+8.4	-82.4	9	PA	David
+8.4	-78.1	3	PA	La Palma
+8.3	-82.9	7	PA	Puerto Armuelles
+8.1	-81	7	PA	Santiago
+8	-80.4	7	PA	Chitré
+7.8	-80.3	6	PA	Las Tablas
+7.5	-78.2	3	PA	Jaqué
+-0.1	-75.2	1	PE	Gueppi
+-0.9	-75.4	1	PE	Nuevo Rocafuerte
+-2.3	-71.9	1	PE	Puca Urco
+-2.5	-75.8	1	PE	Soldado Bartra
+-2.9	-76.4	1	PE	Andoas
+-3.6	-80.5	9	PE	Tumbes
+-3.8	-73.3	10	PE	Iquitos
+-3.9	-70.5	4	PE	Caballococha
+-4.6	-81.3	8	PE	Talara
+-4.6	-73.8	4	PE	Nauta
+-4.9	-80.7	9	PE	Sullana
+-5.1	-81.1	8	PE	Paita
+-5.1	-80.2	8	PE	Chulucanas
+-5.1	-73.9	6	PE	Requena
+-5.2	-80.6	10	PE	Piura
+-5.6	-80.8	7	PE	Sechura
+-5.7	-78.8	8	PE	Jaén
+-6	-79.7	5	PE	Olmos
+-6	-77	7	PE	Moyobamba
+-6.2	-79.7	6	PE	Motupe
+-6.2	-77.9	7	PE	Chachapoyas
+-6.4	-76.5	6	PE	Lamas
+-6.5	-78.7	6	PE	Chota
+-6.5	-76.5	2	PE	Tarapoto
+-6.6	-79.8	8	PE	Ferreñafe
+-6.8	-79.9	6	PE	Pimentel
+-6.8	-79.8	11	PE	Chiclayo
+-7.2	-78.5	9	PE	Cajamarca
+-7.2	-76.7	7	PE	Juanjuí
+-7.3	-75	6	PE	Contamana
+-7.4	-79.6	7	PE	Pacasmayo
+-7.6	-78	6	PE	Cajabamba
+-7.8	-78	7	PE	Huamachuco
+-7.9	-78.6	6	PE	Otuzco
+-8.1	-79	11	PE	Trujillo
+-8.2	-79	6	PE	Salaverry
+-8.2	-76.5	7	PE	Tocache
+-8.4	-74.5	10	PE	Pucallpa
+-8.9	-74.7	2	PE	Tournavista
+-9.1	-78.6	10	PE	Chimbote
+-9.3	-76	8	PE	Tingo María
+-9.4	-78.2	7	PE	Casma
+-9.5	-77.5	8	PE	Huaraz
+-9.9	-76.2	9	PE	Huánuco
+-10.1	-78.2	6	PE	Huarmey
+-10.7	-77.8	7	PE	Pativilca
+-10.7	-76.3	9	PE	Cerro de Pasco
+-11.1	-77.6	7	PE	Huaura
+-11.1	-77.6	8	PE	Huacho
+-11.1	-76	6	PE	Junín
+-11.1	-75.3	6	PE	San Ramon
+-11.3	-74.7	6	PE	Satipo
+-11.4	-75.7	8	PE	Tarma
+-11.5	-75.9	7	PE	La Oroya
+-11.6	-77.3	7	PE	Chancay
+-11.8	-75.5	7	PE	Jauja
+-11.9	-76.7	8	PE	Chosica
+-12	-77.1	13	PE	Lima
+-12.1	-77.1	11	PE	Callao
+-12.1	-75.2	10	PE	Huancayo
+-12.5	-76.7	6	PE	Chilca
+-12.6	-69.2	8	PE	Puerto Maldonado
+-12.8	-75	7	PE	Huancavelica
+-12.9	-74.2	6	PE	Huanta
+-13.2	-74.2	9	PE	Ayacucho
+-13.3	-72.1	5	PE	Urubamba
+-13.4	-76.1	9	PE	Chincha Alta
+-13.5	-72	10	PE	Cusco
+-13.6	-72.9	8	PE	Abancay
+-13.7	-76.2	8	PE	Pisco
+-14.1	-75.7	10	PE	Ica
+-14.2	-75.7	6	PE	Santiago
+-14.3	-71.2	7	PE	Sicuani
+-14.5	-72.1	4	PE	Santo Tomas
+-14.7	-74.1	6	PE	Puquio
+-14.8	-74.9	7	PE	Nasca
+-14.9	-70.6	6	PE	Ayaviri
+-15	-73.8	5	PE	Coracora
+-15.5	-70.1	10	PE	Juliaca
+-15.5	-69.4	5	PE	Putina
+-15.8	-70	9	PE	Puno
+-16.1	-69.7	6	PE	Ilave
+-16.4	-71.5	11	PE	Arequipa
+-16.6	-72.7	7	PE	Camaná
+-16.6	-69	5	PE	Desaguadero
+-17	-72	7	PE	Mollendo
+-17.2	-70.9	8	PE	Moquegua
+-17.6	-71.3	8	PE	Ilo
+-18	-70.3	10	PE	Tacna
+-17.5	-149.6	9	PF	Papeete
+-2	147.3	5	PG	Lorengau
+-2.6	150.8	6	PG	Kavieng
+-2.7	141.3	6	PG	Vanimo
+-3.6	143.6	7	PG	Wewak
+-4.2	152.1	5	PG	Rabaul
+-5.2	145.8	8	PG	Madang
+-5.4	154.7	4	PG	Sohano
+-5.5	143.7	4	PG	Wabag
+-5.5	150.4	2	PG	Hoskins
+-5.6	150.1	6	PG	Kimbe
+-5.9	144.2	8	PG	Mt.  Hagen
+-6	145	5	PG	Kundiawa
+-6.1	143.6	7	PG	Mendi
+-6.1	145.4	7	PG	Goroka
+-6.2	155.6	7	PG	Arawa
+-6.2	155.6	5	PG	Kieta
+-6.7	147	9	PG	Lae
+-7.9	145.8	5	PG	Kerema
+-8.8	148.2	7	PG	Popondetta
+-9.1	143.2	6	PG	Daru
+-9.5	147.2	10	PG	Port Moresby
+-10	148.6	2	PG	Abau
+-10.3	150.5	6	PG	Alotau
+18.2	120.6	10	PH	Laoag
+17.6	120.4	7	PH	Vigan
+17.6	121.7	9	PH	Tuguegarao
+16.4	120.6	10	PH	Baguio
+16	120.3	9	PH	Dagupan
+15.5	120.6	9	PH	Tarlac
+15.5	121	10	PH	Cabanatuan
+15.1	120.5	10	PH	Angeles
+14.8	120.3	10	PH	Olongapo
+14.7	121	12	PH	Quezon City
+14.6	121	10	PH	Pasay City
+14.6	121	14	PH	Manila
+14.1	121.3	10	PH	San Pablo
+13.8	121	10	PH	Batangas
+13.6	123.2	11	PH	Naga
+13.2	123.8	10	PH	Legazpi
+12.1	124.6	8	PH	Calbayog
+11.6	122.8	9	PH	Roxas
+11.3	125	10	PH	Tacloban
+11.1	124.6	9	PH	Ormac
+11	123.3	10	PH	Cadiz
+10.7	122.5	10	PH	Iloilo
+10.6	123	11	PH	Bacolod
+10.6	123.4	5	PH	San Carlos
+10.3	123.9	11	PH	Cebu
+9.8	118.7	9	PH	Puerto Princesa
+9.8	125.5	8	PH	Surigao
+8.9	125.5	9	PH	Butuan
+8.8	125.1	2	PH	Gingoog
+8.5	124.7	12	PH	Cagayan de Oro
+8.2	124.2	10	PH	Iligan
+8.1	123.8	8	PH	Ozamis
+7.9	123.5	9	PH	Pagadian
+7.4	125.8	5	PH	Tagum
+7.2	124.2	10	PH	Cotabato
+7.1	125.6	12	PH	Davao
+6.9	122.1	11	PH	Zamboanga
+6.1	125.2	11	PH	General Santos
+35.9	74.3	10	PK	Gilgit
+34.8	72.3	12	PK	Saidu
+34.3	73.2	8	PK	Mansehra
+34.2	72	10	PK	Mardan
+34.1	73.2	12	PK	Abbottabad
+34	71.5	12	PK	Peshawar
+33.9	70.1	8	PK	Parachinar
+33.7	73.2	11	PK	Islamabad
+33.6	71.4	10	PK	Kohat
+33.6	73	12	PK	Rawalpindi
+33	70.6	11	PK	Bannu
+32.6	74.1	10	PK	Gujrat
+32.5	71.5	7	PK	Kundian
+32.5	74.6	10	PK	Sialkote
+32.2	74.2	12	PK	Gujranwala
+32.1	72.7	11	PK	Sargodha
+31.8	70.9	9	PK	Dera Ismail Khan
+31.7	73	10	PK	Chiniot
+31.7	74	10	PK	Sheikhu Pura
+31.6	74.3	13	PK	Lahore
+31.4	73.1	12	PK	Faisalabad
+31.3	69.4	8	PK	Zhob
+31.3	72.3	10	PK	Jhang
+31.1	74.5	10	PK	Kasur
+30.9	66.4	8	PK	Chaman
+30.8	73.5	10	PK	Okara
+30.7	73.1	10	PK	Sahiwal
+30.2	67	11	PK	Quetta
+30.2	71.5	12	PK	Multan
+30.1	70.6	10	PK	Dera Ghazi Khan
+29.4	71.7	11	PK	Bahawalpur
+28.4	70.3	10	PK	Rahim Yar Khan
+28.3	70.1	9	PK	Sadiqabad
+27.7	68.8	10	PK	Sukkur
+27.6	68.2	10	PK	Larkana
+26.2	68.4	10	PK	Nawabshah
+26	63.1	9	PK	Turbat
+25.5	69	10	PK	Mirpur Khas
+25.4	68.4	12	PK	Hyderabad
+25.1	62.3	8	PK	Gwadar
+24.9	67	14	PK	Karachi
+54.5	18.5	10	PL	Gdynia
+54.4	18.6	11	PL	Gdańsk
+54.2	16.2	9	PL	Koszalin
+54.2	19.4	9	PL	Elbląg
+53.8	20.5	9	PL	Olsztyn
+53.8	22.3	8	PL	Ełk
+53.5	18.8	9	PL	Grudziądz
+53.4	14.5	10	PL	Szczecin
+53.2	23.2	10	PL	Białystok
+53.1	18	10	PL	Bydgoszcz
+52.8	18.2	8	PL	Inowrocław
+52.4	16.9	11	PL	Poznań
+52.3	21	12	PL	Warsaw
+52	15.5	9	PL	Zielona Góra
+51.8	19.4	11	PL	Łódź
+51.3	22.6	10	PL	Lublin
+51.1	17	11	PL	Wrocław
+50.9	20.7	10	PL	Kielce
+50.7	17.9	9	PL	Opole
+50.4	18.9	11	PL	Bytom
+50.3	18.7	11	PL	Gliwice
+50.3	19	12	PL	Katowice
+50.1	20	11	PL	Kraków
+50.1	22	10	PL	Rzeszów
+18.4	-66.7	8	PR	Arecibo
+18.4	-66.1	12	PR	San Juan
+18.2	-67.1	10	PR	Mayagüez
+18	-66.6	9	PR	Ponce
+32.2	35.3	10	PS	Nablus
+31.9	35.2	7	PS	Ramallah
+31.5	34.4	11	PS	Gaza City
+31.5	35.1	10	PS	Al Khalil
+41.8	-6.8	7	PT	Bragança
+41.7	-8.8	6	PT	Viana Do Castelo
+41.6	-8.4	11	PT	Braga
+41.3	-7.7	6	PT	Vila Real
+41.2	-8.6	12	PT	Porto
+40.7	-7.9	7	PT	Viseu
+40.6	-8.7	8	PT	Aveiro
+40.5	-7.3	7	PT	Guarda
+40.3	-7.5	7	PT	Covilhã
+40.2	-8.4	9	PT	Coimbra
+39.8	-7.5	7	PT	Castelo Branco
+39.7	-8.8	7	PT	Leiria
+39.3	-7.4	6	PT	Portalegre
+39.2	-8.7	7	PT	Santarém
+38.7	-27.2	6	PT	Angra do Heroísmo
+38.7	-9.1	12	PT	Lisbon
+38.6	-7.9	8	PT	Évora
+38.5	-28.6	5	PT	Horta
+38.5	-8.9	9	PT	Setúbal
+38	-7.9	7	PT	Beja
+37.7	-25.7	8	PT	Ponta Delgada
+37.1	-8.5	8	PT	Portimão
+37	-7.9	7	PT	Faro
+32.6	-16.9	10	PT	Funchal
+7.5	134.6	5	PW	Melekeok
+7.3	134.5	6	PW	Koror
+-19.9	-60.8	3	PY	Capitan Pablo Lagerenza
+-20.5	-62.2	2	PY	General Eugenio Alejandrino Garay
+-21.1	-57.9	4	PY	Fuerte Olimpo
+-22	-60.6	4	PY	Mariscal Estigarribia
+-22.1	-56.5	6	PY	Bella Vista
+-22.3	-60	6	PY	Filadelfia
+-22.3	-57.9	4	PY	La Victoria
+-22.5	-55.8	9	PY	Pedro Juan Caballero
+-22.6	-57.8	2	PY	Puerto Pinasco
+-23.1	-59.8	0	PY	Fortin Falcon
+-23.3	-57.1	6	PY	Horqueta
+-23.4	-58.9	4	PY	Pozo Colorado
+-23.4	-57.4	8	PY	Concepción
+-23.5	-57.2	6	PY	Belén
+-23.9	-55.5	2	PY	Ype Jhu
+-24.1	-57.1	5	PY	San Pedro
+-24.1	-55.5	4	PY	Ygatimí
+-24.4	-57.1	5	PY	Rosario
+-25	-57.1	4	PY	Arroyos y Esteros
+-25.1	-57.5	6	PY	Villa Hayes
+-25.3	-57.6	12	PY	Asunción
+-25.3	-57.5	10	PY	San Lorenzo
+-25.4	-57.3	7	PY	Ypacaraí
+-25.4	-57.1	7	PY	Caacupé
+-25.4	-56.4	8	PY	Coronel Oviedo
+-25.5	-57.4	7	PY	Itá
+-25.5	-54.6	10	PY	Ciudad del Este
+-25.6	-57.2	6	PY	Paraguarí
+-25.8	-56.4	7	PY	Villarrica
+-26	-55.9	4	PY	Abaí
+-26	-54.8	3	PY	Ñacunday
+-26.2	-56.4	5	PY	Caazapá
+-26.7	-57.2	5	PY	San Juan Bautista
+-26.9	-58.3	7	PY	Pilar
+-27.1	-55.7	5	PY	Hohenau
+-27.2	-56.3	6	PY	Coronel Bogado
+-27.3	-55.9	10	PY	Encarnación
+25.3	51.5	12	QA	Doha
+-20.9	55.4	9	RE	St.-Denis
+-21	55.7	7	RE	St.-Benoit
+47.8	22.9	9	RO	Satu Mare
+47.7	23.6	9	RO	Baia Mare
+47.7	26.7	9	RO	Botoșani
+47.6	26.3	9	RO	Suceava
+47.2	23.1	8	RO	Zalău
+47.2	27.6	10	RO	Iași
+47.1	24.5	8	RO	Bistrița
+47	21.9	10	RO	Oradea
+46.9	26.4	9	RO	Piatra-Neamt
+46.8	23.6	10	RO	Cluj-Napoca
+46.6	24.6	9	RO	Tirgu Mures
+46.6	26.9	9	RO	Bacău
+46.6	27.7	8	RO	Vaslui
+46.4	25.5	7	RO	Miercurea Cuic
+46.2	21.3	9	RO	Arad
+46.1	23.6	8	RO	Alba Lulia
+45.9	22.9	8	RO	Deva
+45.9	25.8	8	RO	Sfintu-Gheorghe
+45.8	21.2	10	RO	Timișoara
+45.8	24.1	9	RO	Sibiu
+45.7	27.2	9	RO	Focșani
+45.6	25.6	10	RO	Brașov
+45.5	28	10	RO	Galați
+45.3	21.9	8	RO	Reșița
+45.3	28	10	RO	Brăila
+45.2	26.8	9	RO	Buzău
+45.2	28.8	8	RO	Tulcea
+45.1	24.4	9	RO	Rimnicu Vilcea
+45	23.3	8	RO	Târgu Jiu
+44.9	24.9	9	RO	Pitești
+44.9	25.5	8	RO	Târgoviște
+44.9	26	10	RO	Ploiești
+44.6	22.7	9	RO	Drobeta-Turnu Severin
+44.6	27.4	8	RO	Slobozia
+44.4	24.4	8	RO	Slatina
+44.4	26.1	12	RO	Bucharest
+44.3	23.8	10	RO	Craiova
+44.2	27.3	8	RO	Călărași
+44.2	28.6	10	RO	Constanța
+43.9	25.3	7	RO	Alexandria
+43.9	25.8	8	RO	Giurgiu
+46.1	19.7	8	RS	Subotica
+45.4	20.4	8	RS	Zrenjanin
+45.3	19.8	10	RS	Novi Sad
+44.8	20.5	12	RS	Belgrade
+44	20.9	9	RS	Kragujevac
+43.9	20.3	9	RS	Čačak
+43.3	21.9	10	RS	Niš
+77.7	104.3	2	RU	Chelyuskin
+75.1	87	1	RU	Mikhaylova
+74.9	142.1	1	RU	Zemlya Bunge
+74	111.5	0	RU	Nordvik
+73.5	80.5	3	RU	Dikson
+73.5	113.6	1	RU	Khorgo
+73.4	126.6	1	RU	Sagastyr
+73.3	56.4	1	RU	Matočkin Šar
+73.2	143.2	1	RU	Shalaurova
+73	119.8	1	RU	Ust-Olenyok
+72.8	104.8	1	RU	Starorybnoye
+72.6	127	1	RU	Trofimovsk
+72	102.5	4	RU	Khatanga
+71.9	114.1	3	RU	Saskylakh
+71.7	83.6	1	RU	Vorontsovo
+71.6	128.8	5	RU	Tiksi
+71.5	89.2	1	RU	Agapa
+71.4	136.1	2	RU	Nizhneyansk
+71	-179.6	1	RU	Zvëzdnyj
+70.9	78.5	1	RU	Gyda
+70.9	153.9	0	RU	Logashkino
+70.8	97.5	7	RU	Boyarka
+70.7	54.4	1	RU	Krasino
+70.7	136.2	0	RU	Kazachye
+70.6	56.4	1	RU	Rusanovo
+70.6	147.9	4	RU	Chokurdakh
+70.2	126	2	RU	Govorovo
+70.1	114	1	RU	Zhilinda
+70	135.6	3	RU	Ust Kuyga
+69.8	61.7	2	RU	Amderma
+69.7	60.1	1	RU	Varnek
+69.7	162.3	0	RU	Ambarchik
+69.7	170.3	4	RU	Pevek
+69.4	30.2	6	RU	Nikel
+69.4	86.2	7	RU	Dudinka
+69.4	161.5	2	RU	Mikhalkino
+69.3	88.2	9	RU	Norilsk
+69.2	33.5	6	RU	Polyarnyy
+69.1	33.4	8	RU	Severomorsk
+69	33.1	10	RU	Murmansk
+68.9	-179.5	2	RU	Mys Shmidta
+68.8	49.3	2	RU	Bugrino
+68.8	161.3	4	RU	Chersky
+68.5	102.2	1	RU	Yessey
+68.5	107.8	2	RU	Put Lenina
+68.5	112.5	1	RU	Olenyok
+68.4	123.9	1	RU	Natara
+68.1	166.3	5	RU	Bilibino
+68	123.4	1	RU	Menkere
+67.9	32.8	7	RU	Monchegorsk
+67.9	44.1	2	RU	Shoyna
+67.9	74.9	7	RU	Yamburg
+67.8	77.5	9	RU	Nakhodka
+67.7	49	1	RU	Indiga
+67.7	72.9	3	RU	Novy Port
+67.7	134.6	4	RU	Batagay
+67.6	33.4	8	RU	Apatity
+67.6	33.7	7	RU	Kirovsk
+67.6	53.1	7	RU	Naryan Mar
+67.6	64.1	6	RU	Severnyy
+67.5	64	8	RU	Vorkuta
+67.5	78.7	5	RU	Tazovsky
+67.5	86.6	5	RU	Igarka
+67.5	133.4	3	RU	Verkhoyansk
+67.5	153.7	4	RU	Srednekolymsk
+67.2	32.4	7	RU	Kandalaksha
+67	-171.8	2	RU	Enurmino
+66.8	123.4	4	RU	Zhigansk
+66.7	32.9	1	RU	Kovda
+66.7	34.3	5	RU	Umba
+66.5	66.6	7	RU	Salekhard
+66.4	112.4	6	RU	Udachny
+66.4	173.3	1	RU	Mukhomornoye
+66.3	-179.2	4	RU	Egvekinot
+66.2	-169.8	2	RU	Uelen
+66.1	76.6	8	RU	Novy Urengoy
+66	60.2	7	RU	Inta
+65.9	44.2	4	RU	Mezen
+65.9	57.4	7	RU	Usinsk
+65.8	88	4	RU	Turukhansk
+65.7	150.9	4	RU	Zyryanka
+65.6	-171	3	RU	Lavrentiya
+65.5	72.5	7	RU	Nadym
+65.2	57.2	7	RU	Pechora
+65.2	160.5	3	RU	Omolon
+65	34.6	6	RU	Kem
+64.9	125.3	1	RU	Tunguskhaya
+64.7	177.5	6	RU	Anadyr
+64.7	177.7	4	RU	Ugolnye Kopi
+64.6	39.8	9	RU	Severodvinsk
+64.6	40.5	10	RU	Archangel
+64.6	143.2	5	RU	Ust-Nera
+64.5	34.8	6	RU	Belomorsk
+64.5	91.2	10	RU	Noginsk
+64.4	-173.2	4	RU	Provideniya
+64.4	120.5	1	RU	Terbyas
+64.3	61	4	RU	Saranpaul
+64.3	100.3	5	RU	Tura
+63.9	38.1	7	RU	Onega
+63.9	127.5	4	RU	Sangar
+63.8	34.3	7	RU	Segezha
+63.8	121.6	5	RU	Vilyuysk
+63.7	71.3	1	RU	Numto
+63.6	53.7	9	RU	Ukhta
+63.6	53.9	7	RU	Sosnogorsk
+63.4	120.3	5	RU	Verkhnevilyuysk
+63.4	142.8	2	RU	Oymyakon
+63.2	64.4	5	RU	Igrim
+63.2	75.6	9	RU	Noyabrsk
+63.1	179.3	3	RU	Beringovskiy
+63	65.1	1	RU	Peregrebnoye
+63	112.5	5	RU	Chernyshevsky
+62.8	148.2	5	RU	Susuman
+62.7	135.6	5	RU	Khandyga
+62.5	114	7	RU	Mirny
+62.5	155.8	4	RU	Omsukchan
+62.5	165.3	1	RU	Manily
+62.2	34.3	7	RU	Kondopoga
+62.1	65.4	8	RU	Nyagan
+62.1	117.6	5	RU	Suntar
+62	74.5	8	RU	Kogalym
+62	129.7	10	RU	Yakutsk
+61.9	89.3	1	RU	Komsa
+61.9	152.3	1	RU	Strelka
+61.9	159.2	4	RU	Evensk
+61.8	34.3	10	RU	Petrozavodsk
+61.7	50.8	10	RU	Syktyvkar
+61.6	90.1	1	RU	Podkamennaya Tunguska
+61.6	147.9	1	RU	Omchak
+61.5	129.1	5	RU	Pokrovsk
+61.3	46.7	8	RU	Kotlas
+61.3	73.4	10	RU	Surgut
+61.1	28.9	7	RU	Svetogorsk
+61.1	42.1	7	RU	Velsk
+61.1	72.7	9	RU	Nefteyugansk
+61.1	76.1	7	RU	Megion
+61.1	80.3	1	RU	Laryak
+61	69	8	RU	Khanty Mansiysk
+60.9	76.6	10	RU	Nizhenvartovsk
+60.8	46.3	7	RU	Velikiy Ustyug
+60.8	135.2	3	RU	Eldikan
+60.7	28.8	9	RU	Vyborg
+60.7	60.4	6	RU	Ivdel
+60.7	77.6	7	RU	Strezhevoy
+60.7	114.9	7	RU	Lensk
+60.6	169	1	RU	Pakhachi
+60.5	120.4	5	RU	Olyokminsk
+60.5	134.5	4	RU	Ust-Maya
+60.4	107.8	2	RU	Yerema
+60.3	165.8	2	RU	Korf
+60.2	60	7	RU	Severouralsk
+60.2	151.2	1	RU	Karamken
+60.1	64.8	7	RU	Uray
+60.1	133.9	1	RU	Chagda
+60.1	150.9	7	RU	Palatka
+60	164.2	1	RU	Il'pyrskiy
+59.9	30.3	12	RU	St.  Petersburg
+59.9	32.3	7	RU	Volkhov
+59.8	60	7	RU	Karpinsk
+59.8	60.5	8	RU	Krasnoturinsk
+59.7	30.7	10	RU	Kolpino
+59.7	56.7	9	RU	Solikamsk
+59.6	30.1	8	RU	Gatchina
+59.6	33.5	8	RU	Tikhvin
+59.6	60.6	8	RU	Serov
+59.6	150.8	8	RU	Magadan
+59.5	40.1	7	RU	Sokol
+59.5	112.6	4	RU	Vitim
+59.4	56.8	9	RU	Berezniki
+59.4	143.2	5	RU	Okhotsk
+59.3	52.2	6	RU	Kirs
+59.2	39.9	10	RU	Vologda
+59.1	28.1	7	RU	Slantsy
+59.1	37.9	10	RU	Cherepovets
+59.1	57.6	7	RU	Kizel
+59.1	160	4	RU	Palana
+59	54.6	7	RU	Kudymkar
+59	152.4	1	RU	Siglan
+58.9	57.6	7	RU	Gubakha
+58.7	29.8	7	RU	Luga
+58.7	50.2	7	RU	Slobodskoy
+58.7	52.2	7	RU	Omutninsk
+58.7	99.2	6	RU	Kodinskiy
+58.6	49.7	10	RU	Kirov
+58.6	50	8	RU	Kirovo-Chepetsk
+58.6	59.8	8	RU	Nizhnyaya Tura
+58.6	125.4	7	RU	Aldan
+58.5	31.3	10	RU	Velikiy Novgorod
+58.5	41.5	7	RU	Buy
+58.5	92.2	6	RU	Yeniseysk
+58.4	33.9	8	RU	Borovichi
+58.4	45.5	7	RU	Sharya
+58.4	60.1	7	RU	Krasnouralsk
+58.3	48.3	7	RU	Kotelnich
+58.3	57.8	8	RU	Chusovoy
+58.3	83	7	RU	Kolpashevo
+58.2	68.3	9	RU	Tobolsk
+58.2	92.5	8	RU	Lesosibirsk
+58.1	38.8	10	RU	Rybinsk
+58.1	52.6	9	RU	Glazov
+58.1	55.7	8	RU	Krasnokamsk
+58.1	60.5	7	RU	Verkhnyaya Salda
+58.1	65.3	7	RU	Tavda
+58	31.4	7	RU	Staraya Russa
+58	56.2	11	RU	Perm
+58	102.6	9	RU	Ust-Ilimsk
+58	114.3	6	RU	Bodaybo
+57.9	34.1	7	RU	Bologoye
+57.9	60	10	RU	Nizhny Tagil
+57.8	28.3	10	RU	Pskov
+57.8	36.7	7	RU	Bezhetsk
+57.8	40.9	10	RU	Kostroma
+57.8	61.7	7	RU	Alapayevsk
+57.8	108.1	6	RU	Kirensk
+57.7	135.4	1	RU	Khakhar
+57.6	34.6	8	RU	Vyshnniy Volochek
+57.6	39.9	11	RU	Yaroslavl
+57.6	49	6	RU	Sovetsk
+57.6	157.2	1	RU	Utkholok
+57.5	38.3	7	RU	Uglich
+57.5	42.1	8	RU	Kineshma
+57.5	60.2	7	RU	Nevyansk
+57.4	57	8	RU	Kungur
+57.4	61.9	7	RU	Artemovskiy
+57.4	139.5	1	RU	Tukchi
+57.2	39.4	7	RU	Rostov
+57.2	41.9	7	RU	Vichuga
+57.1	65.5	11	RU	Tyumen
+57	35	7	RU	Torzhok
+57	41	10	RU	Ivanovo
+57	54	8	RU	Votkinsk
+57	61.5	8	RU	Asbest
+57	86.2	7	RU	Asino
+56.9	35.9	10	RU	Tver
+56.9	37.3	8	RU	Kimry
+56.9	41.4	8	RU	Shuya
+56.9	53.2	11	RU	Izhevsk
+56.9	60	9	RU	Pervouralsk
+56.9	60.6	12	RU	Yekaterinburg
+56.9	74.4	7	RU	Tara
+56.8	105.8	7	RU	Ust-Kut
+56.7	66.3	7	RU	Yalutorovsk
+56.7	124.7	8	RU	Neryungri
+56.6	47.9	10	RU	Yoshkar Ola
+56.6	57.8	7	RU	Krasnoufimsk
+56.6	104.1	7	RU	Zheleznogorsk Ilimskiy
+56.5	43.6	8	RU	Balakhna
+56.5	52.2	7	RU	Mozhga
+56.5	53.8	9	RU	Sarapul
+56.5	84.9	5	RU	Timiryazevskiy
+56.5	85	11	RU	Tomsk
+56.5	121.6	1	RU	Nyukzha
+56.5	138.2	3	RU	Ayan
+56.4	41.3	9	RU	Kovrov
+56.4	60.2	8	RU	Polevskoy
+56.4	61.9	9	RU	Kamensk Uralskiy
+56.4	68.4	6	RU	Golyshmanovo
+56.3	30.5	9	RU	Velikiye Luki
+56.3	34.3	8	RU	Rzhev
+56.3	36.7	8	RU	Klin
+56.3	38.2	9	RU	Sergiyev Posad
+56.3	43.5	10	RU	Dzerzhinsk
+56.3	44	12	RU	Nizhny Novgorod
+56.3	90.5	9	RU	Achinsk
+56.3	114.9	6	RU	Taksimo
+56.3	160.9	3	RU	Klyuchi
+56.2	32.8	7	RU	Nelidovo
+56.2	37	8	RU	Solnechnogorsk
+56.2	69.4	8	RU	Ishim
+56.2	87.8	7	RU	Mariinsk
+56.2	89.5	7	RU	Bogotol
+56.2	95.7	9	RU	Kansk
+56.2	101.6	10	RU	Bratsk
+56.2	162.4	4	RU	Ust-Kamchatsk
+56.1	40.4	10	RU	Vladimir
+56.1	47.3	10	RU	Cheboksary
+56.1	54.3	9	RU	Neftekamsk
+56.1	60.2	7	RU	Verkhniy Ufaley
+56.1	63.6	8	RU	Shadrinsk
+56.1	86	8	RU	Anzhero Sudzhensk
+56.1	101.2	1	RU	Vikhorevka
+56.1	111.7	4	RU	Novyy Uoyin
+56	92.9	11	RU	Krasnoyarsk
+56	94.7	7	RU	Zaozernyy
+56	97.8	5	RU	Biryusinsk
+55.9	38.5	10	RU	Noginsk
+55.9	98	8	RU	Tayshet
+55.9	107.8	1	RU	Ulkan
+55.8	37.6	14	RU	Moscow
+55.8	39	9	RU	Orekhovo-Zuevo
+55.8	48.7	8	RU	Zelenodolsk
+55.8	49.1	12	RU	Kazan
+55.8	94.3	6	RU	Uyar
+55.7	52.3	10	RU	Naberezhnyye Chelny
+55.7	60.6	8	RU	Kyshtym
+55.7	84.9	8	RU	Yurga
+55.6	42	9	RU	Murom
+55.6	51.8	10	RU	Nizhnekamsk
+55.6	71.4	6	RU	Nazyvayevsk
+55.6	109.3	7	RU	Severobaykalsk
+55.5	46.4	7	RU	Shumerlya
+55.5	47.5	7	RU	Kanash
+55.5	65.3	10	RU	Kurgan
+55.4	37.5	10	RU	Podolsk
+55.4	39	8	RU	Yegoryevsk
+55.4	43.8	9	RU	Arzamas
+55.4	50.6	8	RU	Chistopol
+55.4	55.5	7	RU	Birsk
+55.4	78.4	7	RU	Barabinsk
+55.3	42.2	8	RU	Vyska
+55.3	85.6	7	RU	Topki
+55.3	86.1	10	RU	Kemerovo
+55.3	89.8	6	RU	Uzhur
+55.2	34.3	8	RU	Vyazma
+55.2	59.6	9	RU	Zlatoust
+55.2	61.4	12	RU	Chelyabinsk
+55.2	76	7	RU	Tatarsk
+55.2	80.3	6	RU	Kargat
+55.2	84.4	7	RU	Toguchin
+55.2	124.7	7	RU	Tynda
+55.1	21.9	7	RU	Sovetsk
+55.1	33.2	7	RU	Safonovo
+55.1	36.6	9	RU	Obninsk
+55.1	38.8	9	RU	Kolomna
+55	57.3	7	RU	Asha
+55	60.1	9	RU	Miass
+55	73.4	12	RU	Omsk
+55	74.6	7	RU	Kalachinsk
+55	82.7	7	RU	Ob
+55	83	12	RU	Novosibirsk
+54.9	37.4	9	RU	Serpukhov
+54.9	41.4	7	RU	Kasimov
+54.9	46.6	7	RU	Alatyr
+54.9	52.3	9	RU	Almetyevsk
+54.9	58.8	7	RU	Bakal
+54.9	64.4	6	RU	Kurtamysh
+54.9	71.3	7	RU	Isikul
+54.9	99	7	RU	Nizhneudinsk
+54.8	32	10	RU	Smolensk
+54.8	56	12	RU	Ufa
+54.7	20.5	10	RU	Kaliningrad
+54.7	61.3	7	RU	Yemanzhelinsk
+54.7	83.3	8	RU	Iskitim
+54.7	86.2	9	RU	Leninsk Kuznetsky
+54.7	135.3	3	RU	Chumikan
+54.6	21.8	7	RU	Chernyakhovsk
+54.6	39.7	11	RU	Ryazan
+54.6	52.4	8	RU	Leninogorsk
+54.6	52.8	8	RU	Bugulma
+54.6	53.7	8	RU	Tuymazy
+54.6	100.6	8	RU	Tulun
+54.5	36.3	10	RU	Kaluga
+54.5	37.1	8	RU	Aleksin
+54.5	53.5	9	RU	Oktyabrskiy
+54.5	90	5	RU	Shira
+54.4	60.8	6	RU	Plast
+54.4	77.3	6	RU	Kupina
+54.4	113.6	4	RU	Bagdarin
+54.3	41.9	7	RU	Sasovo
+54.3	48.4	11	RU	Ulyanovsk
+54.3	49.6	9	RU	Dimitrovgrad
+54.3	85.9	7	RU	Guryevsk
+54.3	93.4	4	RU	Artemovsk
+54.2	37.6	10	RU	Tula
+54.2	45.2	10	RU	Saransk
+54.2	74.8	6	RU	Cherlak
+54.2	83.4	7	RU	Cherepanovo
+54.1	34.3	7	RU	Kirov
+54.1	38.2	9	RU	Novomoskovsk
+54.1	44.9	7	RU	Ruzayevka
+54.1	54.1	8	RU	Belebey
+54.1	54.9	7	RU	Rayevskiy
+54.1	61.6	8	RU	Troitsk
+54	32.9	8	RU	Roslavl
+54	37.5	8	RU	Shchekino
+54	86.6	9	RU	Kiselevsk
+54	123.9	6	RU	Skovorodino
+53.9	86.7	10	RU	Prokopyevsk
+53.9	102	8	RU	Zima
+53.8	38.1	7	RU	Bogoroditsk
+53.8	81.3	7	RU	Kamenna Obi
+53.8	87.1	11	RU	Novokuznetsk
+53.8	91.2	8	RU	Chernogorsk
+53.8	127.3	7	RU	Zeya
+53.7	52.4	8	RU	Buguruslan
+53.7	78	7	RU	Karasuk
+53.7	91.4	9	RU	Abakan
+53.7	119.8	6	RU	Mogocha
+53.6	34.3	7	RU	Dyatkovo
+53.6	56	10	RU	Sterlitamak
+53.6	142.9	7	RU	Okha
+53.5	41.8	7	RU	Morshansk
+53.5	49.5	11	RU	Tolyatti
+53.4	51.3	8	RU	Otradnyy
+53.4	55.9	9	RU	Salavat
+53.4	59	10	RU	Magnitogorsk
+53.4	83.7	11	RU	Barnaul
+53.4	84	8	RU	Novoaltaysk
+53.4	125.8	6	RU	Magdagachi
+53.3	34.4	10	RU	Bryansk
+53.3	36.5	7	RU	Mtsensk
+53.2	44	6	RU	Kamenka
+53.2	45	11	RU	Penza
+53.2	48.5	9	RU	Syzran
+53.2	50.1	12	RU	Samara
+53.2	87.3	5	RU	Mundybash
+53.2	103.1	8	RU	Cheremkhovo
+53.1	38.1	7	RU	Yefremov
+53.1	46.6	8	RU	Kuznetsk
+53.1	49.9	9	RU	Novokuybishevsk
+53.1	91.4	8	RU	Sayanogorsk
+53.1	140.7	7	RU	Nikolayevsk na Amure
+53.1	158.6	9	RU	Petropavlovsk-Kamchatsky
+53	36.1	10	RU	Orel
+53	49.7	9	RU	Chapayevsk
+53	60.7	7	RU	Kartaly
+53	78.7	7	RU	Slavgorod
+53	116.9	4	RU	Bukachacha
+52.9	40.5	8	RU	Michurinsk
+52.8	32.2	8	RU	Klintsy
+52.8	52.3	8	RU	Buzuluk
+52.8	55.8	8	RU	Kumertau
+52.8	87.9	7	RU	Tashtagol
+52.8	103.6	8	RU	Usolye Sibirskoye
+52.8	104.7	6	RU	Ust' Ordynskiy
+52.7	41.4	10	RU	Tambov
+52.7	42.7	6	RU	Kirsanov
+52.7	58.6	8	RU	Sibay
+52.7	90.1	6	RU	Abaza
+52.7	156.2	3	RU	Oktyabrsky
+52.6	38.5	9	RU	Yelets
+52.6	39.6	11	RU	Lipetsk
+52.6	41.5	7	RU	Kotovsk
+52.6	78.9	6	RU	Kulunda
+52.6	103.9	10	RU	Angarsk
+52.5	31.9	7	RU	Novozybkov
+52.5	39.9	7	RU	Gryazi
+52.5	44.2	7	RU	Serdobsk
+52.5	82.8	7	RU	Aleysk
+52.5	85.2	10	RU	Biysk
+52.4	35.4	8	RU	Zheleznogorsk
+52.4	37.6	8	RU	Livny
+52.4	156.4	1	RU	Bol'sheretsk
+52.3	104.2	11	RU	Irkutsk
+52.1	113.5	10	RU	Chita
+52	47.4	8	RU	Volsk
+52	47.8	9	RU	Balakovo
+52	48.8	7	RU	Pugachev
+52	86	8	RU	Gorno Altaysk
+52	116.5	6	RU	Nerchinsk
+52	127.7	7	RU	Shimanovsk
+51.9	45	7	RU	Atkarsk
+51.9	116	6	RU	Shilka
+51.8	55.1	11	RU	Orenburg
+51.8	107.6	10	RU	Ulan-Ude
+51.8	143.2	6	RU	Nogliki
+51.7	35.3	7	RU	Lgov
+51.7	36.2	10	RU	Kursk
+51.7	39.3	11	RU	Voronezh
+51.7	94.4	9	RU	Kyzyl
+51.7	103.7	6	RU	Slyudyanka
+51.6	43.2	8	RU	Balashov
+51.6	46	11	RU	Saratov
+51.5	46.1	9	RU	Engels
+51.5	58.5	7	RU	Gay
+51.5	81.2	9	RU	Rubtsovsk
+51.5	140.8	4	RU	De-Kastri
+51.4	42.1	8	RU	Borisoglebsk
+51.4	57.6	7	RU	Mednogorsk
+51.4	110.5	6	RU	Khilok
+51.4	128.1	8	RU	Svobodnyy
+51.3	37.4	2	RU	Gubkin
+51.3	37.8	10	RU	Starsy Oskol
+51.3	106.5	7	RU	Gusinoozyorsk
+51.3	108.8	7	RU	Petrovsk Zabaykalskiy
+51.2	55	7	RU	Sol-lletsk
+51.2	58.3	9	RU	Novotroitsk
+51.2	58.6	10	RU	Orsk
+51.2	82.2	6	RU	Zmeinogorsk
+51.1	114.5	6	RU	Aginskoye
+51.1	133	6	RU	Chegdomyn
+51	45.7	7	RU	Krasnoarmeysk
+51	81.5	6	RU	Gornyak
+51	90.2	4	RU	Teeli
+50.9	115.6	5	RU	Olovyannaya
+50.9	128.5	8	RU	Belogorsk
+50.9	142.2	6	RU	Aleksandrovsk Sakhalinskiy
+50.8	42	7	RU	Uryupinsk
+50.8	59.5	5	RU	Dombarovskiy
+50.7	38.7	7	RU	Alekseyevka
+50.7	156.1	4	RU	Severo Kurilsk
+50.6	36.6	10	RU	Belgorod
+50.6	137	10	RU	Komsomolsk na Amure
+50.5	116.3	2	RU	Sherlovaya Gora
+50.4	36.9	7	RU	Shebekino
+50.4	106.5	6	RU	Kyakhta
+50.4	116.5	7	RU	Borzya
+50.3	127.5	10	RU	Blagoveshchensk
+50.2	38.1	7	RU	Valuyki
+50.2	136.9	7	RU	Amursk
+50.1	43.2	8	RU	Mikhaylovka
+50.1	45.4	9	RU	Kamyshin
+50.1	118	8	RU	Krasnokamensk
+50	45.4	6	RU	Nikolayevsk
+50	46.9	6	RU	Pallasovka
+49.8	43.7	7	RU	Frolovo
+49.8	129.6	1	RU	Progress
+49.2	143.1	6	RU	Poronaysk
+49.1	140.2	6	RU	Vanino
+49.1	142	6	RU	Uglegorsk
+49	131.1	5	RU	Obluchye
+49	140.3	7	RU	Sovetskaya Gavan
+48.9	40.4	7	RU	Millerovo
+48.8	44.8	10	RU	Volzhskiy
+48.8	133	8	RU	Birobidzhan
+48.7	44.5	11	RU	Volgograd
+48.6	142.8	5	RU	Makarov
+48.5	135.1	11	RU	Khabarovsk
+48.5	142.1	4	RU	Krasnogorsk
+48.3	40.3	8	RU	Kamensk Shakhtinskiy
+48.3	46.2	7	RU	Akhtubinsk
+48.2	40.8	7	RU	Belaya Kalitva
+47.8	39.9	8	RU	Novoshakhtinsk
+47.7	40.3	10	RU	Shakhty
+47.5	42.2	9	RU	Volgodonsk
+47.5	134.7	6	RU	Vyazemskiy
+47.4	40.1	9	RU	Novocherkassk
+47.4	142.8	6	RU	Dolinsk
+47.2	38.9	10	RU	Taganrog
+47.2	39.7	12	RU	Rostov
+47.1	39.7	9	RU	Bataysk
+47	142.1	7	RU	Kholmsk
+47	142.7	9	RU	Yuzhno Sakhalinsk
+46.8	134.3	6	RU	Bikin
+46.7	38.3	8	RU	Yeysk
+46.7	141.9	6	RU	Nevelsk
+46.6	142.8	7	RU	Korsakov
+46.5	41.5	8	RU	Salsk
+46.3	44.2	9	RU	Elista
+46.3	48.1	11	RU	Astrakhan
+45.9	40.1	8	RU	Tikhoretsk
+45.9	133.7	7	RU	Dalnerechensk
+45.7	34.4	7	RU	Dzhankoy
+45.6	38.9	7	RU	Timashevsk
+45.5	133.4	7	RU	Lesozavodsk
+45.4	36.5	9	RU	Kerch
+45.4	40.6	8	RU	Kropotkin
+45.2	33.4	9	RU	Yevpatoriya
+45.1	42	10	RU	Stavropol
+45.1	43.4	7	RU	Blagodarnyy
+45	39	11	RU	Krasnodar
+45	41.1	9	RU	Armavir
+44.9	34.1	10	RU	Simferopol
+44.7	37.8	10	RU	Novorossiysk
+44.6	33.5	10	RU	Sevastopol
+44.6	38.1	8	RU	Gelendzhik
+44.6	40.1	9	RU	Maykop
+44.6	40.7	8	RU	Labinsk
+44.6	42	9	RU	Nevinnomyssk
+44.6	132.8	7	RU	Spassk Dalniy
+44.5	34.2	8	RU	Yalta
+44.5	39.7	7	RU	Apsheronsk
+44.5	135.5	5	RU	Dalnegorsk
+44.4	43.9	7	RU	Zelenokumsk
+44.3	42.1	9	RU	Cherkessk
+44.3	135	6	RU	Kavalerovo
+44.2	43.5	8	RU	Georgievsk
+44.2	133.3	8	RU	Arsenyev
+44.1	39.1	8	RU	Tuapse
+44.1	43.1	9	RU	Pyatigorsk
+43.9	42.7	9	RU	Kislovodsk
+43.8	44.7	7	RU	Mozdok
+43.8	132	9	RU	Ussuriysk
+43.6	39.7	10	RU	Sochi
+43.5	43.6	10	RU	Nalchik
+43.3	45.7	10	RU	Grozny
+43.2	44.8	8	RU	Nazran
+43.1	44.7	10	RU	Vladikavkaz
+43.1	131.9	11	RU	Vladivostok
+43.1	133.1	7	RU	Partizansk
+43	47.5	11	RU	Makhachkala
+42.9	47.6	8	RU	Kaspiysk
+42.8	47.1	8	RU	Buynaksk
+42.8	132.9	9	RU	Nakhodka
+42.1	48.3	9	RU	Derbent
+-1.5	29.6	8	RW	Ruhengeri
+-1.6	30.1	8	RW	Byumba
+-1.7	29.3	8	RW	Gisenyi
+-2	30.1	11	RW	Kigali
+-2.1	29.4	7	RW	Kibuye
+-2.1	29.8	8	RW	Gitarama
+-2.2	30.5	7	RW	Kibungo
+-2.3	29.7	10	RW	Nyanza
+-2.5	28.9	6	RW	Cyangugu
+-2.5	29.6	6	RW	Gikongoro
+-2.6	29.7	8	RW	Butare
+31.3	37.3	5	SA	An Nabk
+31	41	10	SA	Arar
+30	40.1	9	SA	Sakakah
+29.8	39.9	7	SA	Dawmat al Jandal
+29.6	43.5	8	SA	Rafha
+28.4	36.6	11	SA	Tabuk
+28.4	46	10	SA	Hafar al Batin
+27.5	41.7	10	SA	Hail
+27	49.6	10	SA	Al Jubayl
+26.5	50	10	SA	Al-Qatif
+26.4	44	10	SA	Buraydah
+26.4	50.1	12	SA	Dammam
+26.3	50.2	8	SA	Az Zahran
+26.2	36.5	7	SA	Al Wajh
+25.4	49.6	10	SA	Al Mubarraz
+25.3	49.6	11	SA	Hofuf
+24.6	46.8	12	SA	Riyadh
+24.5	39.6	12	SA	Medina
+24.2	47.3	10	SA	Al Kharj
+24.1	38	10	SA	Yanbu al Bahr
+24.1	45.3	5	SA	Al Quwayiyah
+23.5	46.8	11	SA	Al Hillah
+21.5	39.2	12	SA	Jeddah
+21.4	39.8	12	SA	Makkah
+21.3	40.4	11	SA	At Taif
+20.5	45.6	7	SA	As Sulayyil
+20	42.6	8	SA	Qal at Bishah
+19.1	41.1	1	SA	Al Qunfudhah
+18.2	42.5	10	SA	Abha
+17.5	44.1	10	SA	Najran
+16.9	42.6	9	SA	Jizan
+-8.1	156.8	5	SB	Gizo
+-9.4	159.9	8	SB	Honiara
+-10.7	165.9	2	SB	Lata
+-4.6	55.4	7	SC	Victoria
+21.8	31.3	6	SD	Wadi Halfa
+19.6	30.4	4	SD	Kerma
+19.6	37.2	10	SD	Port Sudan
+19.2	30.5	7	SD	Dongola
+18.5	31.8	6	SD	Merowe
+18.4	37.7	8	SD	Tokar
+18.3	36.4	6	SD	Haiya
+18	34	7	SD	Berber
+17.7	34	9	SD	Atbarah
+17.6	34	9	SD	Ad-Damir
+16.7	33.4	9	SD	Shendi
+15.6	32.5	12	SD	Omdurman
+15.6	32.5	12	SD	Khartoum
+15.5	36.4	10	SD	Kassala
+14.4	33.5	10	SD	Medani
+14.3	33	9	SD	El Manaqil
+14	32.3	8	SD	Ed Dueim
+14	35.4	10	SD	Gedaref
+13.6	25.4	10	SD	El Fasher
+13.5	22.4	9	SD	Geneina
+13.5	33.6	9	SD	Sennar
+13.2	30.2	10	SD	Al-Ubayyid
+13.2	32.7	10	SD	Kosti
+12.9	31.2	8	SD	Umm Ruwaba
+12.7	28.4	9	SD	En Nuhud
+12.1	24.9	10	SD	Nyala
+11.8	34.3	9	SD	Ad Damazīn
+11.3	27.8	6	SD	Babanusa
+11	27.7	6	SD	Muglad
+11	29.7	9	SD	Kadugli
+67.9	20.2	6	SE	Kiruna
+65.6	22.2	7	SE	Luleå
+64.8	21	7	SE	Skellefteå
+63.8	20.2	8	SE	Umeå
+63.3	18.7	7	SE	Örnsköldsvik
+63.2	14.7	7	SE	Östersund
+62.6	17.9	6	SE	Härnösand
+62.4	17.3	8	SE	Sundsvall
+61.4	16.4	6	SE	Bollnäs
+60.7	17.2	8	SE	Gävle
+60.6	15.6	7	SE	Falun
+60.5	15.4	7	SE	Borlänge
+59.9	17.6	9	SE	Uppsala
+59.6	16.5	9	SE	Västerås
+59.4	13.5	8	SE	Karlstad
+59.4	18.1	12	SE	Stockholm
+59.3	15.2	8	SE	Örebro
+58.8	17	7	SE	Nyköping
+58.7	13.8	6	SE	Mariestad
+58.6	16.2	8	SE	Norrköping
+58.4	12.3	7	SE	Vannersborg
+58.4	15.6	8	SE	Linköping
+58.3	12.3	7	SE	Trollhättan
+57.8	12	11	SE	Göteborg
+57.8	14.2	8	SE	Jönköping
+57.7	12.9	8	SE	Borås
+57.6	18.3	7	SE	Visby
+56.9	14.8	8	SE	Växjö
+56.7	12.9	8	SE	Halmstad
+56.7	16.4	7	SE	Kalmar
+56.2	15.3	7	SE	Karlskrona
+56.1	12.7	8	SE	Helsingborg
+56	14.1	7	SE	Kristianstad
+55.6	13	10	SE	Malmö
+1.3	103.9	13	SG	Singapore
+46.5	15.7	9	SI	Maribor
+46.1	14.5	10	SI	Ljubljana
+78.2	15.5	3	SJ	Longyearbyen
+49.2	18.7	8	SK	Žilina
+49	21.2	8	SK	Prešov
+48.7	19.1	8	SK	Banská Bystrica
+48.7	21.3	10	SK	Košice
+48.6	19.1	7	SK	Zvolen
+48.4	17.6	8	SK	Trnava
+48.2	17.1	10	SK	Bratislava
+8.9	-12	8	SL	Makeni
+8.5	-13.2	11	SL	Freetown
+8.4	-10.8	8	SL	Koidu
+8	-11.7	9	SL	Bo
+7.9	-11.2	9	SL	Kenema
+43.9	12.4	7	SM	San Marino
+16.2	-13.5	7	SN	Kaédi
+15.6	-16.3	8	SN	Louga
+14.8	-16.9	10	SN	Thiès
+14.7	-17.5	12	SN	Dakar
+14.7	-16.2	9	SN	Diourbel
+14.3	-16.4	7	SN	Fatick
+14.1	-16.1	10	SN	Kaolack
+13.8	-13.7	8	SN	Tambacounda
+12.9	-15	8	SN	Kolda
+12.6	-16.3	9	SN	Ziguinchor
+12.6	-12.2	6	SN	Kédougou
+12	50.8	2	SO	Caluula
+11.3	49.2	7	SO	Boosaaso
+10.6	51.1	1	SO	Hurdiyo
+9.5	49.2	3	SO	Qardho
+9.5	50.8	6	SO	Bandarbeyla
+8.4	48.5	4	SO	Garoowe
+8	49.8	6	SO	Eyl
+6.8	47.4	8	SO	Gaalkacyo
+5.7	46.5	2	SO	Dhuusa Mareeb
+5.1	45.2	5	SO	Ferfer
+4.7	45.2	8	SO	Beledweyne
+4.2	43.9	3	SO	Hudur
+3.9	41.9	8	SO	Mandera
+3.8	42.6	7	SO	Luuq
+3.8	47.3	2	SO	Mereeg
+3.3	42.2	6	SO	Garbahaarey
+3.1	43.6	9	SO	Baydhabo
+2.8	44.1	7	SO	Buurhakaba
+2.8	45.5	9	SO	Jawhar
+2.1	45.4	12	SO	Mogadishu
+1.8	44.9	3	SO	Marka
+1.1	42.6	3	SO	Bu'aale
+0.1	42.8	9	SO	Jamaame
+-0.4	42.5	10	SO	Kismaayo
+-1.2	41.9	4	SO	Buur Gaabo
+6	-57	6	SR	Nieuw Nickerie
+5.9	-56.3	3	SR	Totness
+5.9	-55.1	4	SR	Nieuw Amsterdam
+5.8	-55.5	4	SR	Groningen
+5.8	-55.2	10	SR	Paramaribo
+5.6	-55.2	4	SR	Onverwacht
+5.6	-54.4	5	SR	Moengo
+5	-55.2	4	SR	Brownsweg
+5	-55	5	SR	Brokopondo
+3.9	-54.2	7	SR	Cottica
+10.4	32.2	5	SS	Melut
+9.5	31.7	9	SS	Malakal
+9.2	29.8	5	SS	Bentiu
+8.8	27.4	7	SS	Aweil
+8.6	33.1	3	SS	Nasir
+8.5	28.1	8	SS	Gogrial
+7.7	28	9	SS	Wau
+6.8	29.7	7	SS	Rumbek
+6.2	31.6	7	SS	Bor
+4.9	29.5	6	SS	Maridi
+4.8	31.6	9	SS	Juba
+4.8	33.6	5	SS	Kapoeta
+4.6	28.4	7	SS	Yambio
+4.1	30.7	9	SS	Yei
+3.6	32.1	2	SS	Nimule
+1.6	7.4	3	ST	Santo António
+0.3	6.7	8	ST	São Tomé
+14.1	-89.1	7	SV	Chalatenango
+14	-89.6	10	SV	Santa Ana
+13.9	-89.8	7	SV	Ahuachapán
+13.9	-88.6	7	SV	Sensuntepeque
+13.7	-89.7	9	SV	Sonsonate
+13.7	-89.3	9	SV	Nueva San Salvador
+13.7	-89.2	12	SV	San Salvador
+13.7	-88.9	7	SV	Cojutepeque
+13.7	-88.1	6	SV	San Francisco Gotera
+13.6	-88.8	7	SV	San Vicente
+13.5	-88.9	7	SV	Zacatecoluca
+13.5	-88.2	10	SV	San Miguel
+13.3	-88.4	8	SV	Usulután
+13.3	-87.8	7	SV	La Unión
+37	41.2	9	SY	Al Qamishli
+36.6	37	7	SY	Izaz
+36.5	38	9	SY	Manbij
+36.5	40.8	9	SY	Al Hasakah
+36.2	37.2	12	SY	Aleppo
+35.9	36.6	9	SY	Idlib
+35.9	39	9	SY	Ar Raqqah
+35.8	38.5	8	SY	Madinat ath Thawrah
+35.5	35.8	11	SY	Latakia
+35.3	40.1	10	SY	Dayr az Zawr
+35.2	36.7	10	SY	Hamah
+34.9	35.9	9	SY	Tartus
+34.7	36.7	12	SY	Homs
+34.6	38.3	8	SY	Tadmur
+34.5	40.9	8	SY	Abu Kamal
+34	36.7	8	SY	Ad Nabk
+33.6	36.4	10	SY	Douma
+33.5	36.3	12	SY	Damascus
+33.1	35.8	4	SY	Al Qunaytirah
+32.7	36.6	8	SY	As Suwayda
+32.6	36.1	9	SY	Dar'a
+-26	31.2	5	SZ	Piggs Peak
+-26.3	31.1	8	SZ	Mbabane
+-26.5	31.2	5	SZ	Lobamba
+-26.5	31.4	9	SZ	Manzini
+-26.5	32	5	SZ	Siteki
+-27	31.4	4	SZ	Hlatikulu
+-27.3	31.9	4	SZ	Golela
+21.5	-71.1	5	TC	Grand Turk
+20.5	16.5	2	TD	Zouar
+17.9	19.1	6	TD	Faya Largeau
+17.2	21.6	2	TD	Fada
+14.5	20.9	6	TD	Biltine
+14.1	15.3	6	TD	Mao
+13.8	20.8	9	TD	Abéché
+13.5	14.7	4	TD	Bol
+13.3	19.7	6	TD	Oum Hadjer
+13.2	18.3	7	TD	Ati
+12.2	18.7	7	TD	Mongo
+12.1	15	11	TD	N'Djamena
+11	20.3	7	TD	Am Timan
+10.3	15.4	9	TD	Bongor
+9.4	15	7	TD	Pala
+9.4	16.3	6	TD	Laï
+9.3	15.8	8	TD	Kelo
+9.1	18.4	9	TD	Sarh
+8.7	16.9	7	TD	Doba
+8.5	16.1	9	TD	Moundou
+10.4	0.5	7	TG	Mango
+9.3	0.8	8	TG	Bassar
+9	1.1	9	TG	Sokodé
+8.6	1	7	TG	Sotouboua
+7.5	1.1	8	TG	Atakpamé
+6.9	0.6	9	TG	Kpalimé
+6.1	1.2	12	TG	Lomé
+19.9	99.8	9	TH	Chiang Rai
+19.3	98	5	TH	Mae Hong Son
+19.2	99.9	7	TH	Phayao
+18.8	99	10	TH	Chiang Mai
+18.8	100.8	8	TH	Nan
+18.5	99.1	6	TH	Lamphun
+18.3	99.5	10	TH	Lampang
+18.2	100.2	7	TH	Phrae
+17.9	102.7	9	TH	Nong Khai
+17.6	100.1	8	TH	Uttaradit
+17.5	101.7	7	TH	Loei
+17.4	102.8	10	TH	Udon Thani
+17.4	104.8	8	TH	Nakhon Phanom
+17.2	104.1	8	TH	Sakhon Nakhon
+17	99.8	6	TH	Sukhothai
+16.9	99.1	7	TH	Tak
+16.8	100.3	9	TH	Phitsanulok
+16.7	98.6	7	TH	Mae Sot
+16.5	99.5	8	TH	Kamphaeng Phet
+16.4	100.3	7	TH	Phichit
+16.4	101.2	8	TH	Phetchabun
+16.4	102.8	10	TH	Khon Kaen
+16.4	103.5	8	TH	Kalasin
+16.2	103.3	8	TH	Maha Sarakham
+16.1	103.7	7	TH	Roi Et
+15.8	102	8	TH	Chaiyaphum
+15.8	104.2	7	TH	Yasothon
+15.7	100.1	9	TH	Nakhon Sawan
+15.6	102.4	6	TH	Bua Yai
+15.4	100	7	TH	Uthai Thani
+15.2	100.1	6	TH	Chainat
+15.2	104.8	10	TH	Ubon Ratchathani
+15.1	104.3	7	TH	Sisaket
+15	102.1	10	TH	Nakhon Ratchasima
+15	103.1	7	TH	Buriram
+14.9	100.4	7	TH	Sing Buri
+14.9	103.5	8	TH	Surin
+14.8	100.6	8	TH	Lop Buri
+14.6	100.5	6	TH	Ang Thong
+14.5	100.1	8	TH	Supham Buri
+14.5	100.9	8	TH	Saraburi
+14.4	100.6	9	TH	Ayutthaya
+14.2	101.2	7	TH	Nakhon Nayok
+14.1	101.4	8	TH	Prachin Buri
+14	99.5	8	TH	Kanchanaburi
+14	100.5	9	TH	Pathum Thani
+13.8	100.1	9	TH	Nakhon Pathom
+13.8	100.5	10	TH	Nonthaburi
+13.8	100.5	13	TH	Bangkok
+13.7	101.1	7	TH	Chachoengsao
+13.7	102.5	7	TH	Aranyaprathet
+13.6	100.6	10	TH	Samut Prakan
+13.5	99.8	9	TH	Ratchaburi
+13.5	100.3	8	TH	Samut Sakhon
+13.4	100	7	TH	Samut Songkhram
+13.4	101	10	TH	Chon Buri
+13.2	100.9	9	TH	Si Racha
+13.1	99.9	8	TH	Phetchaburi
+12.7	101.3	7	TH	Rayong
+12.6	99.9	8	TH	Hua Hin
+12.6	102.1	8	TH	Chanthaburi
+12.2	102.5	7	TH	Trat
+11.8	99.8	7	TH	Prachuap Khiri Khan
+10.5	99.2	8	TH	Chumphon
+10	98.6	7	TH	Ranong
+9.2	99.3	9	TH	Surat Thani
+8.5	98.5	5	TH	Phangnga
+8.4	100	10	TH	Nakhon Si Thammarat
+8.2	99.7	7	TH	Thung Song
+8.1	98.9	7	TH	Krabi
+7.9	98.4	9	TH	Phuket
+7.6	99.6	9	TH	Trang
+7.6	100.1	7	TH	Phatthalung
+7.2	100.6	7	TH	Songkhla
+7	100.5	10	TH	Hat Yai
+6.9	101.3	9	TH	Pattani
+6.6	100.1	7	TH	Satun
+6.6	101.3	9	TH	Yala
+6.4	101.8	8	TH	Narathiwat
+40.3	69.6	10	TJ	Khujand
+40.3	70.4	10	TJ	Konibodom
+39.9	69	9	TJ	Uroteppa
+39.8	69	6	TJ	Leninobod
+38.6	68.8	12	TJ	Dushanbe
+38	68.7	5	TJ	Kuybyshevskiy
+37.9	69.8	9	TJ	Kulob
+37.8	68.8	10	TJ	Qurghonteppa
+37.5	71.5	7	TJ	Khorugh
+-8.6	125.6	10	TL	Dili
+42.3	59.2	7	TM	Koneurgench
+41.8	60	10	TM	Daşoguz
+40	53	8	TM	Türkmenbaşy
+39.5	54.4	9	TM	Balkanabat
+39.4	53.1	3	TM	Celeken
+39.1	63.6	10	TM	Türkmenabat
+39	56.3	7	TM	Serdar
+38.1	58.2	7	TM	Buzmeyin
+37.9	58.4	11	TM	Ashgabat
+37.8	65.2	7	TM	Atamyrat
+37.6	61.8	9	TM	Mary
+37.4	59.6	7	TM	Kaka
+37.4	60.5	8	TM	Tejen
+37.3	9.9	9	TN	Bizerte
+36.9	10.2	8	TN	L'Ariana
+36.8	10.2	12	TN	Tunis
+36.7	9.2	8	TN	Béja
+36.5	8.7	8	TN	Jendouba
+36.5	10.7	9	TN	Nabeul
+36.4	10.1	6	TN	Zaghouan
+36.2	8.7	7	TN	El Kef
+36.1	9.4	7	TN	Siliana
+35.8	10.6	10	TN	Sousse
+35.7	10.1	9	TN	Qairouan
+35.7	10.8	8	TN	Monastir
+35.5	11	7	TN	Mahdia
+35.2	8.7	8	TN	Kasserine
+35.2	8.8	8	TN	Qasserine
+35	9.5	7	TN	Sdid Bouzid
+34.8	10.7	10	TN	Sfax
+34.4	8.8	9	TN	Gafsa
+33.9	8.1	7	TN	Tozeur
+33.9	10.1	10	TN	Gabès
+33.7	9	6	TN	Kebili
+33.5	11.1	9	TN	Zarzis
+33.4	10.4	8	TN	Medenine
+33.1	11.2	6	TN	Ben Gardane
+33	10.5	8	TN	Tataouine
+32	10.7	4	TN	Dehibat
+-18.6	-174	5	TO	Neiafu
+-21.1	-175.2	7	TO	Nuku'alofa
+42	35.2	7	TR	Sinop
+41.7	26.6	9	TR	Edirne
+41.7	27.2	8	TR	Kırklareli
+41.6	35.9	8	TR	Bafra
+41.4	27.4	8	TR	Lüleburgaz
+41.4	31.8	9	TR	Zonguldak
+41.4	33.8	8	TR	Kastamonu
+41.3	36.3	11	TR	Samsun
+41.2	32.6	9	TR	Karabük
+41.2	41.8	7	TR	Artvin
+41.1	29	14	TR	Istanbul
+41	27.5	9	TR	Tekirdağ
+41	37.9	9	TR	Ordu
+41	39.7	11	TR	Trabzon
+41	40.5	10	TR	Rize
+40.9	38.4	8	TR	Giresun
+40.8	29.9	10	TR	İzmit
+40.8	30.4	10	TR	Sakarya
+40.8	30.4	10	TR	Adapazarı
+40.7	31.6	8	TR	Bolu
+40.7	35.8	8	TR	Amasya
+40.6	33.6	8	TR	Çankırı
+40.6	43.1	8	TR	Kars
+40.5	35	9	TR	Corum
+40.5	39.5	7	TR	Gümüşhane
+40.3	36.6	9	TR	Tokat
+40.2	29.1	12	TR	Bursa
+40.1	26.4	8	TR	Çanakkale
+40.1	30	7	TR	Bilecik
+39.9	32.9	12	TR	Ankara
+39.9	33.5	10	TR	Kırıkkale
+39.9	41.3	10	TR	Erzurum
+39.8	30.5	11	TR	Eskişehir
+39.8	34.8	8	TR	Yozgat
+39.8	39.5	9	TR	Erzincan
+39.7	27.9	10	TR	Balıkesir
+39.7	37	10	TR	Sivas
+39.7	43.1	8	TR	Ağrı
+39.6	32.1	8	TR	Polatlı
+39.4	29.9	9	TR	Kütahya
+39.1	34.2	8	TR	Kırşehir
+39.1	39.5	7	TR	Tunceli
+38.9	40.5	8	TR	Bingöl
+38.8	30.6	9	TR	Afyon
+38.7	29.4	9	TR	Uşak
+38.7	35.5	11	TR	Kayseri
+38.7	39.2	10	TR	Elâzığ
+38.7	41.5	8	TR	Muş
+38.6	27.4	10	TR	Manisa
+38.6	34.7	8	TR	Nevşehir
+38.5	42.3	8	TR	Tatvan
+38.5	43.4	10	TR	Van
+38.4	27.1	12	TR	İzmir
+38.4	38.3	10	TR	Malatya
+38.4	42.1	8	TR	Bitlis
+38	34.7	8	TR	Niğde
+37.9	32.5	11	TR	Konya
+37.9	40.2	11	TR	Diyarbakır
+37.9	41.1	10	TR	Batman
+37.9	41.9	9	TR	Siirt
+37.8	27.4	8	TR	Söke
+37.8	27.9	9	TR	Aydın
+37.8	29.1	10	TR	Denizli
+37.8	30.5	9	TR	Isparta
+37.8	38.3	10	TR	Adıyaman
+37.7	30.3	8	TR	Burdur
+37.6	36.9	10	TR	Kahramanmaraş
+37.6	43.7	8	TR	Hakkâri
+37.5	34.1	8	TR	Ereğli
+37.3	40.7	8	TR	Mardin
+37.2	28.4	7	TR	Muğla
+37.2	33.2	9	TR	Karaman
+37.2	38.8	10	TR	Şanlıurfa
+37.1	37.4	12	TR	Gaziantep
+37.1	41.2	9	TR	Nusaybin
+37	35.3	12	TR	Adana
+36.9	30.7	11	TR	Antalya
+36.9	34.9	11	TR	Tarsus
+36.8	34.6	11	TR	Icel
+36.7	37.1	8	TR	Kilis
+36.6	36.2	10	TR	İskenderun
+36.2	36.1	9	TR	Antakya
+36.1	35.9	8	TR	Samandagi
+10.7	-61.5	10	TT	Port-of-Spain
+10.3	-61.5	9	TT	San Fernando
+-8.5	179.2	4	TV	Funafuti
+25.1	121.7	10	TW	Keelung
+25	121.2	12	TW	Zhongli
+25	121.3	9	TW	Bade
+25	121.3	10	TW	Taoyuan
+25	121.5	12	TW	New Taipei
+25	121.6	13	TW	Taipei
+24.9	121.2	10	TW	Pingzhen
+24.9	121.2	9	TW	Yangmei
+24.8	121	9	TW	Zhubei
+24.8	121	11	TW	Hsinchu
+24.8	121.8	9	TW	Yilan
+24.6	120.8	9	TW	Miaoli
+24.2	120.7	12	TW	Taichung
+24.1	120.5	11	TW	Changhua
+24	121.6	10	TW	Hualien
+23.9	120.7	9	TW	Nantou
+23.7	120.5	9	TW	Douliou
+23.6	119.6	8	TW	Magong
+23.5	120.2	7	TW	Puzi
+23.5	120.4	10	TW	Chiayi
+23.4	120.3	7	TW	Taibao
+23	120.2	12	TW	Tainan
+22.8	121.1	9	TW	Taitung
+22.7	120.5	11	TW	Pingtung
+22.6	120.3	12	TW	Kaohsiung
+-1.3	31.8	9	TZ	Bukoba
+-1.5	33.8	9	TZ	Musoma
+-2.4	33.6	6	TZ	Nyahanga
+-2.5	30.7	6	TZ	Ngara
+-2.5	32.9	10	TZ	Mwanza
+-2.6	31.3	7	TZ	Biharamulo
+-2.9	32.2	3	TZ	Geita
+-3.2	35.5	6	TZ	Ngorongoro
+-3.3	31	7	TZ	Kakonko
+-3.3	35.6	5	TZ	Oldeani
+-3.3	37.3	11	TZ	Moshi
+-3.4	36.7	10	TZ	Arusha
+-3.7	33.4	9	TZ	Shinyanga
+-3.8	32.6	7	TZ	Kahama
+-3.8	35.5	6	TZ	Mbulu
+-4.1	37.7	6	TZ	Same
+-4.2	33.2	7	TZ	Nzega
+-4.2	35.8	7	TZ	Babati
+-4.5	30.3	2	TZ	Kanyato
+-4.6	30.1	7	TZ	Kasulu
+-4.8	34.7	8	TZ	Singida
+-4.9	29.6	9	TZ	Kigoma
+-5	32.8	9	TZ	Tabora
+-5.1	30.4	8	TZ	Uvinza
+-5.1	38.5	7	TZ	Korogwe
+-5.1	39.1	10	TZ	Tanga
+-5.1	39.7	7	TZ	Wete
+-5.2	39.8	7	TZ	Chake Chake
+-5.6	32.8	7	TZ	Sikonge
+-5.7	34.5	6	TZ	Itigi
+-5.8	34.9	2	TZ	Manyoni
+-5.9	39.3	4	TZ	Mkokotoni
+-6.2	35.8	10	TZ	Dodoma
+-6.2	39.2	10	TZ	Zanzibar
+-6.3	36.5	6	TZ	Mpwapwa
+-6.4	31.1	8	TZ	Mpanda
+-6.4	38.9	8	TZ	Bagamoyo
+-6.8	30.4	6	TZ	Karema
+-6.8	37	8	TZ	Kilosa
+-6.8	37.7	10	TZ	Morogoro
+-6.8	38.9	7	TZ	Kibaha
+-6.8	39.3	12	TZ	Dar es Salaam
+-7.4	30.6	3	TZ	Kipili
+-7.4	37	6	TZ	Mikumi
+-7.7	39	7	TZ	Kibiti
+-7.8	35.7	9	TZ	Iringa
+-7.9	39.7	6	TZ	Kilindoni
+-8	31.6	8	TZ	Sumbawanga
+-8.1	36.7	7	TZ	Ifakara
+-8.9	33.4	10	TZ	Mbeya
+-9.2	33.6	9	TZ	Tukuyu
+-9.3	32.8	7	TZ	Tunduma
+-9.3	34.8	7	TZ	Njombe
+-10	39.7	7	TZ	Lindi
+-10.3	40.2	8	TZ	Mtwara
+-10.7	35.7	9	TZ	Songea
+-10.7	38.8	7	TZ	Masasi
+-11.1	37.4	2	TZ	Tunduru
+-11.3	34.8	5	TZ	Mbamba Bay
+51.9	33.5	8	UA	Shostka
+51.5	31.3	10	UA	Chernihiv
+51.4	30.1	0	UA	Chernobyl
+51.2	24.7	8	UA	Kovel
+51.2	33.2	9	UA	Konotop
+51.1	31.9	9	UA	Nizhyn
+51	28.7	8	UA	Korosten
+50.9	34.8	10	UA	Sumy
+50.7	25.3	10	UA	Lutsk
+50.6	26.3	10	UA	Rivne
+50.5	30.8	8	UA	Brovary
+50.4	30.5	12	UA	Kyiv
+50.2	28.7	10	UA	Zhytomyr
+50	36.2	12	UA	Kharkiv
+49.8	24	11	UA	Lviv
+49.8	30.1	9	UA	Bila Tserkva
+49.7	37.6	8	UA	Kupyansk
+49.6	34.6	10	UA	Poltava
+49.5	25.6	10	UA	Ternopil
+49.4	27	10	UA	Khmelnytskyy
+49.4	32.1	10	UA	Cherkasy
+49.3	23.5	9	UA	Drohobych
+49.2	28.5	10	UA	Vinnytsya
+49.1	33.4	10	UA	Kremenchuk
+48.9	24.7	10	UA	Ivano-Frankivsk
+48.9	38.4	9	UA	Lysychansk
+48.8	30.2	8	UA	Uman
+48.7	26.6	9	UA	Kamyanets-Podilskyy
+48.7	37.5	9	UA	Kramatorsk
+48.6	22.3	9	UA	Uzhgorod
+48.6	39.3	10	UA	Luhansk
+48.5	32.3	10	UA	Kirovohrad
+48.5	35	12	UA	Dnipro
+48.3	25.9	10	UA	Chernivtsi
+48.3	38.1	10	UA	Horlivka
+48	37.8	11	UA	Donetsk
+48	38	10	UA	Makiyivka
+47.9	33.3	11	UA	Kryvyy Rih
+47.9	35.2	11	UA	Zaporizhzhya
+47.6	31.3	7	UA	Voznesensk
+47.6	34.4	9	UA	Nikopol
+47.1	37.6	10	UA	Mariupol
+47	32	11	UA	Mykolayiv
+46.8	35.4	9	UA	Melitopol
+46.8	36.8	9	UA	Berdyansk
+46.6	32.6	10	UA	Kherson
+46.5	30.7	11	UA	Odessa
+46.3	30.7	8	UA	Illichivsk
+45.4	28.8	8	UA	Izmayil
+3.7	31.7	7	UG	Moyo
+3.5	34.1	3	UG	Kaabong
+3.4	31.8	7	UG	Adjumani
+3.3	32.9	8	UG	Kitgum
+3	30.9	10	UG	Arua
+2.8	32.3	9	UG	Gulu
+2.5	31.1	7	UG	Nebbi
+2.5	31.5	6	UG	Pakwach
+2.5	34.6	2	UG	Moroto
+2.3	32.9	9	UG	Lira
+1.9	34	5	UG	Katakwi
+1.7	31.7	7	UG	Masindi
+1.7	32.1	5	UG	Masindi-Port
+1.7	33.2	4	UG	Kaberamaido
+1.7	33.6	3	UG	Soroti
+1.5	33.9	6	UG	Kumi
+1.3	32.5	5	UG	Nakasongola
+1.2	34.3	6	UG	Sironko
+1.1	33.7	7	UG	Pallisa
+1.1	34.2	10	UG	Mbale
+0.9	31.8	6	UG	Kiboga
+0.9	33.1	6	UG	Kamuli
+0.8	31.1	5	UG	Kibale
+0.7	30.3	7	UG	Fort Portal
+0.7	32.9	7	UG	Kayunga
+0.7	34.2	9	UG	Tororo
+0.6	31.4	6	UG	Mubende
+0.6	32.5	8	UG	Bombo
+0.6	33.5	7	UG	Iganga
+0.5	34.1	7	UG	Busia
+0.4	32.1	7	UG	Mityana
+0.4	33.2	10	UG	Jinja
+0.3	32.6	12	UG	Kampala
+0.2	30	8	UG	Kasese
+0.2	32.3	6	UG	Mpigi
+0.1	32.5	9	UG	Entebbe
+-0.1	29.9	3	UG	Katwe
+-0.3	31.7	8	UG	Masaka
+-0.3	32.2	5	UG	Kalangala
+-0.6	30.7	8	UG	Mbarara
+-0.9	30.3	6	UG	Ntungamo
+-1.2	30	7	UG	Kabale
+-1.4	29.7	6	UG	Kisoro
+71.3	-156.8	4	US	Utqiaġvik
+70.6	-160	1	US	Wainwright
+70.5	-157.4	2	US	Atqasuk
+70.3	-148.7	4	US	Prudhoe Bay
+70.1	-143.6	1	US	Kaktovik
+68.3	-166.8	2	US	Point Hope
+67.7	-164.5	2	US	Kivalina
+67.4	-150.1	1	US	Wiseman
+67.1	-157.9	2	US	Ambler
+66.9	-162.6	4	US	Kotzebue
+66.9	-156.9	1	US	Kobuk
+66.6	-160	2	US	Selawik
+66.6	-152.6	1	US	Allakaket
+66.6	-145.3	2	US	Fort Yukon
+66.3	-166.1	2	US	Shishmaref
+66	-154.3	1	US	Hughes
+65.8	-144.1	1	US	Circle
+65.6	-168.1	1	US	Wales
+65.3	-166.4	1	US	Teller
+65.2	-152.1	2	US	Tanana
+64.9	-161.2	2	US	Koyuk
+64.9	-157.7	1	US	Koyukuk
+64.8	-147.7	8	US	Fairbanks
+64.8	-141.2	1	US	Eagle
+64.7	-156.9	2	US	Galena
+64.6	-149.1	1	US	Nenana
+64.5	-165.4	4	US	Nome
+64.3	-158.7	1	US	Kaltag
+64.2	-145.8	2	US	Big Delta
+63.9	-160.8	2	US	Unalakleet
+63.9	-152.3	1	US	Lake Minchumina
+63.8	-171.7	2	US	Gambell
+63.7	-148.9	3	US	Denali Park
+63.4	-149	2	US	Cantwell
+63.4	-143.3	1	US	Tanacross
+63	-163.6	3	US	Kotlit
+63	-155.6	1	US	McGrath
+62.8	-164.5	1	US	Emmonak
+62.3	-150.1	3	US	Talkeetna
+62.3	-145.4	1	US	Gulkana
+62.1	-163.7	2	US	Mountain Village
+62.1	-150.1	1	US	Montana
+61.8	-157.3	1	US	Red Devil
+61.6	-159.5	2	US	Aniak
+61.6	-149.4	5	US	Wasilla
+61.6	-149.1	6	US	Palmer
+61.5	-166.1	3	US	Hooper Bay
+61.2	-149.9	10	US	Anchorage
+61.1	-146.3	4	US	Valdez
+61	-159.9	1	US	Nyac
+60.8	-161.8	5	US	Bethel
+60.8	-148.7	1	US	Whittier
+60.6	-165.3	2	US	Tununak
+60.6	-151.3	5	US	Kenai
+60.5	-145.8	4	US	Cordova
+60.4	-166.2	1	US	Mekoryuk
+60.1	-149.5	4	US	Seward
+59.7	-161.9	2	US	Quinhagak
+59.7	-154.9	1	US	Newhalen
+59.6	-151.5	5	US	Homer
+59.5	-139.7	1	US	Yakutat
+59.5	-135.3	2	US	Skagway
+59.1	-161.6	2	US	Goodnews Bay
+59.1	-160.4	2	US	Togiak
+59.1	-158.5	4	US	Dillingham
+58.7	-156.7	2	US	King Salmon
+58.3	-134.4	7	US	Juneau
+58.1	-135.4	2	US	Hoonah
+57.8	-152.4	5	US	Kodiak
+57.6	-157.6	1	US	Pilot Point
+57.6	-154.5	1	US	Karluk
+57.1	-135.3	5	US	Sitka
+56.9	-158.6	1	US	Port Heiden
+56.5	-132.4	4	US	Wrangell
+56.3	-158.4	1	US	Chignik
+55.9	-159.2	1	US	Perryville
+55.4	-131.7	5	US	Ketchikan
+55.3	-160.5	2	US	Sand Point
+55.2	-162.7	1	US	Cold Bay
+55.2	-132.8	2	US	Hydaburg
+54.9	-163.4	1	US	False Pass
+53.9	-166.5	4	US	Unalaska
+52.9	-168.9	1	US	Nikolski
+52.2	-174.2	1	US	Atka
+48.8	-122.5	8	US	Bellingham
+48.6	-93.4	6	US	International Falls
+48.5	-109.7	6	US	Havre
+48.2	-114.3	7	US	Kalispell
+48.2	-106.6	4	US	Glasgow
+48.2	-103.6	6	US	Williston
+48.2	-101.3	7	US	Minot
+48.1	-98.9	5	US	Devils Lake
+48	-122.2	10	US	Everett
+47.9	-97	8	US	Grand Forks
+47.9	-91.8	4	US	Ely
+47.8	-96.6	5	US	Crookston
+47.7	-117.4	10	US	Spokane
+47.7	-116.8	7	US	Coeur d'Alene
+47.7	-114.2	5	US	Polson
+47.6	-122.6	9	US	Bremerton
+47.6	-122.3	12	US	Seattle
+47.5	-115.9	3	US	Wallace
+47.5	-111.3	8	US	Great Falls
+47.5	-94.9	6	US	Bemidji
+47.5	-92.5	5	US	Virginia
+47.4	-120.3	8	US	Wenatchee
+47.2	-122.5	11	US	Tacoma
+47.1	-104.7	5	US	Glendive
+47.1	-88.6	6	US	Hancock
+47	-123.8	7	US	Aberdeen
+47	-122.9	9	US	Olympia
+46.9	-114	8	US	Missoula
+46.9	-102.8	6	US	Dickinson
+46.9	-98.7	6	US	Jamestown
+46.9	-96.8	9	US	Fargo
+46.9	-96.7	7	US	Moorhead
+46.8	-100.8	8	US	Bismarck
+46.8	-92.1	8	US	Duluth
+46.8	-68	5	US	Presque Isle
+46.7	-123	6	US	Centralia
+46.7	-92.1	7	US	Superior
+46.6	-120.5	8	US	Yakima
+46.6	-112	7	US	Helena
+46.5	-90.2	5	US	Ironwood
+46.5	-87.4	7	US	Marquette
+46.5	-84.3	8	US	Sault Ste. Marie
+46.4	-117	7	US	Lewiston
+46.4	-105.8	5	US	Miles City
+46.4	-94.2	7	US	Brainerd
+46.3	-119.3	7	US	Richland
+46.2	-123.8	6	US	Astoria
+46.2	-119.1	9	US	Kennewick
+46.1	-122.9	8	US	Longview
+46.1	-118.3	7	US	Walla Walla
+46.1	-67.8	5	US	Houlton
+46	-112.5	7	US	Butte
+45.8	-108.5	9	US	Billings
+45.8	-88.1	6	US	Iron Mountain
+45.7	-118.8	6	US	Pendleton
+45.7	-111	7	US	Bozeman
+45.7	-107.6	4	US	Hardin
+45.7	-87.1	6	US	Escanaba
+45.6	-122.6	11	US	Vancouver
+45.6	-94.2	9	US	St. Cloud
+45.6	-89.4	6	US	Rhinelander
+45.5	-123.8	5	US	Tillamook
+45.5	-122.7	12	US	Portland
+45.5	-100.4	4	US	Mobridge
+45.5	-98.5	7	US	Aberdeen
+45.4	-85	6	US	Petoskey
+45.3	-118.1	6	US	La Grande
+45.2	-113.9	4	US	Salmon
+45.2	-112.7	4	US	Dillon
+45.2	-67.2	4	US	Calais
+45.1	-95	6	US	Willmar
+45.1	-87.6	7	US	Marinette
+45.1	-83.4	6	US	Alpena
+45	-93.3	12	US	Minneapolis
+45	-89.6	8	US	Wausau
+44.9	-123	10	US	Salem
+44.9	-93.1	11	US	St.  Paul
+44.8	-108.8	5	US	Powell
+44.8	-91.5	8	US	Eau Claire
+44.8	-85.6	7	US	Traverse City
+44.8	-68.8	8	US	Bangor
+44.7	-93.2	10	US	Lakeville
+44.7	-73.5	7	US	Plattsburgh
+44.6	-123.3	8	US	Corvallis
+44.6	-123.1	8	US	Albany
+44.6	-69.6	7	US	Waterville
+44.5	-109.1	5	US	Cody
+44.5	-88	9	US	Green Bay
+44.5	-73.2	8	US	Burlington
+44.4	-119	3	US	John Day
+44.4	-103.8	4	US	Lead
+44.4	-100.4	6	US	Pierre
+44.4	-68.2	5	US	Bar Harbor
+44.3	-105.5	7	US	Gillette
+44.3	-96.8	7	US	Brookings
+44.3	-93.3	7	US	Faribault
+44.3	-88.4	10	US	Appleton
+44.3	-85.4	6	US	Cadillac
+44.3	-72.6	5	US	Montpelier
+44.3	-69.8	7	US	Augusta
+44.2	-94	8	US	Mankato
+44.1	-123.1	10	US	Eugene
+44.1	-123	8	US	Springfield
+44.1	-121.3	8	US	Bend
+44.1	-103.2	8	US	Rapid City
+44.1	-91.6	7	US	Winona
+44.1	-70.2	8	US	Lewiston
+44	-117	6	US	Ontario
+44	-92.5	9	US	Rochester
+44	-90.5	6	US	Tomah
+44	-88.5	8	US	Oshkosh
+44	-75.9	7	US	Watertown
+43.8	-91.2	8	US	La Crosse
+43.8	-88.4	8	US	Fond du Lac
+43.8	-87.7	8	US	Sheboygan
+43.7	-116.7	9	US	Caldwell
+43.7	-98	6	US	Mitchell
+43.7	-70.2	9	US	Portland
+43.6	-116.2	10	US	Boise
+43.6	-108.2	4	US	Thermopolis
+43.6	-93.4	7	US	Albert Lea
+43.6	-83.9	8	US	Bay City
+43.5	-112	8	US	Idaho Falls
+43.5	-96.7	9	US	Sioux Falls
+43.4	-124.2	7	US	Coos Bay
+43.4	-88.2	7	US	West Bend
+43.4	-84	9	US	Saginaw
+43.2	-123.4	7	US	Roseburg
+43.2	-93.2	7	US	Mason City
+43.2	-86.2	9	US	Muskegon
+43.2	-77.6	11	US	Rochester
+43.2	-71.5	7	US	Concord
+43.1	-95.1	6	US	Spencer
+43.1	-89.4	10	US	Madison
+43.1	-87.9	12	US	Milwaukee
+43.1	-79	9	US	Niagara Falls
+43.1	-75.2	9	US	Utica
+43.1	-73.8	8	US	Saratoga Springs
+43	-108.4	6	US	Riverton
+43	-88.2	10	US	Waukesha
+43	-85.7	11	US	Grand Rapids
+43	-83.7	10	US	Flint
+43	-76.2	11	US	Syracuse
+43	-71.5	9	US	Manchester
+42.9	-112.4	8	US	Pocatello
+42.9	-106.3	8	US	Casper
+42.9	-97.4	6	US	Yankton
+42.9	-78.9	12	US	Buffalo
+42.8	-108.7	5	US	Lander
+42.8	-105.4	5	US	Douglas
+42.8	-103	5	US	Chadron
+42.8	-73.9	9	US	Schenectady
+42.7	-89	8	US	Janesville
+42.7	-87.8	9	US	Racine
+42.7	-84.5	10	US	Lansing
+42.7	-83.3	8	US	Pontiac
+42.7	-73.8	11	US	Albany
+42.6	-114.5	7	US	Twin Falls
+42.6	-71.3	11	US	Lowell
+42.5	-113.8	6	US	Burley
+42.5	-96.4	8	US	Sioux City
+42.5	-94.2	7	US	Ft. Dodge
+42.5	-92.3	8	US	Waterloo
+42.5	-90.7	8	US	Dubuque
+42.5	-70.9	10	US	Salem
+42.4	-123.3	7	US	Grants Pass
+42.4	-87.8	9	US	Waukegan
+42.4	-76.5	8	US	Ithaca
+42.4	-73.3	7	US	Pittsfield
+42.3	-122.9	9	US	Medford
+42.3	-111.3	4	US	Montpelier
+42.3	-89.1	10	US	Rockford
+42.3	-85.6	9	US	Kalamazoo
+42.3	-85.2	8	US	Battle Creek
+42.3	-83.7	10	US	Ann Arbor
+42.3	-83.1	12	US	Detroit
+42.3	-71.8	10	US	Worcester
+42.3	-71.1	12	US	Boston
+42.2	-121.8	7	US	Klamath Falls
+42.1	-102.9	5	US	Alliance
+42.1	-93.6	8	US	Ames
+42.1	-86.5	8	US	Benton Harbor
+42.1	-80.1	9	US	Erie
+42.1	-79.2	7	US	Jamestown
+42.1	-76.8	8	US	Elmira
+42.1	-75.9	9	US	Binghamton
+42.1	-72.6	10	US	Springfield
+42	-97.4	7	US	Norfolk
+42	-91.7	9	US	Cedar Rapids
+42	-88.3	10	US	Elgin
+42	-87.7	10	US	Evanston
+41.9	-103.7	7	US	Scottsbluff
+41.8	-124.2	6	US	Crescent City
+41.8	-107.2	5	US	Rawlins
+41.8	-88.3	10	US	Aurora
+41.8	-87.8	13	US	Chicago
+41.8	-72.7	11	US	Hartford
+41.8	-71.4	12	US	Providence
+41.7	-111.8	8	US	Logan
+41.7	-91.5	8	US	Iowa City
+41.7	-86.3	10	US	South Bend
+41.7	-86	9	US	Elkhart
+41.7	-83.6	10	US	Toledo
+41.7	-73.9	9	US	Poughkeepsie
+41.7	-70.9	9	US	New Bedford
+41.6	-93.6	10	US	Des Moines
+41.6	-90.6	10	US	Davenport
+41.6	-87.3	11	US	Gary
+41.6	-73.1	9	US	Waterbury
+41.5	-109.5	6	US	Green River
+41.5	-90.5	9	US	Rock Island
+41.5	-88.1	11	US	Joliet
+41.5	-81.7	12	US	Cleveland
+41.5	-71.3	7	US	Newport
+41.4	-83.7	7	US	Bowling Green
+41.4	-75.7	9	US	Scranton
+41.4	-72.1	8	US	New London
+41.3	-122.3	4	US	Mt. Shasta
+41.3	-105.6	7	US	Laramie
+41.3	-95.9	9	US	Council Bluffs
+41.3	-72.9	11	US	New Haven
+41.2	-112	10	US	Ogden
+41.2	-96	11	US	Omaha
+41.2	-77	8	US	Williamsport
+41.2	-75.9	9	US	Wilkes-Barre
+41.2	-73.2	12	US	Bridgeport
+41.1	-104.8	8	US	Cheyenne
+41.1	-103	5	US	Sidney
+41.1	-100.8	7	US	North Platte
+41.1	-87.9	8	US	Kankakee
+41.1	-85.1	10	US	Fort Wayne
+41.1	-81.5	11	US	Akron
+41.1	-80.6	10	US	Youngstown
+41.1	-73.5	11	US	Stamford
+41	-117.7	5	US	Winnemucca
+41	-92.4	7	US	Ottumwa
+40.9	-124.1	7	US	Arcata
+40.9	-98.4	7	US	Grand Island
+40.9	-90.4	7	US	Galesburg
+40.9	-74.2	9	US	Paterson
+40.8	-124.1	7	US	Eureka
+40.8	-115.8	6	US	Elko
+40.8	-111.9	11	US	Salt Lake City
+40.8	-96.7	10	US	Lincoln
+40.8	-91.1	7	US	Burlington
+40.8	-82.5	8	US	Mansfield
+40.8	-81.4	10	US	Canton
+40.8	-80.3	9	US	Beaver Falls
+40.8	-77.9	8	US	State College
+40.8	-74	14	US	New York
+40.7	-99.1	7	US	Kearney
+40.7	-89.7	9	US	Peoria
+40.7	-84.1	8	US	Lima
+40.7	-74.2	10	US	Newark
+40.6	-122.4	8	US	Redding
+40.6	-105.1	10	US	Fort Collins
+40.6	-85.7	7	US	Marion
+40.6	-75.5	10	US	Allentown
+40.5	-109.5	6	US	Vernal
+40.5	-107.6	5	US	Craig
+40.5	-89	9	US	Bloomington
+40.5	-86.1	8	US	Kokomo
+40.5	-78.4	8	US	Altoona
+40.4	-104.7	9	US	Greeley
+40.4	-86.9	9	US	Lafayette
+40.4	-80	12	US	Pittsburgh
+40.3	-78.9	8	US	Johnstown
+40.3	-76.9	11	US	Harrisburg
+40.2	-111.6	10	US	Provo
+40.2	-100.6	5	US	McCook
+40.2	-92.6	6	US	Kirksville
+40.2	-85.4	8	US	Muncie
+40.2	-74.7	10	US	Trenton
+40.1	-88.2	9	US	Urbana
+40.1	-80.7	8	US	Wheeling
+40	-105.2	9	US	Boulder
+40	-83	12	US	Columbus
+40	-76.7	10	US	York
+40	-76.3	10	US	Lancaster
+40	-75.2	13	US	Philadelphia
+39.9	-91.4	7	US	Quincy
+39.9	-83.8	8	US	Springfield
+39.9	-82	7	US	Zanesville
+39.8	-94.8	8	US	St. Joseph
+39.8	-89.7	9	US	Springfield
+39.8	-89	8	US	Decatur
+39.8	-86.2	12	US	Indianapolis
+39.8	-84.9	7	US	Richmond
+39.8	-84.2	11	US	Dayton
+39.7	-121.8	8	US	Chico
+39.7	-111.8	5	US	Nephi
+39.7	-105	12	US	Denver
+39.7	-104.8	11	US	Aurora
+39.7	-82.6	7	US	Lancaster
+39.7	-78.8	7	US	Cumberland
+39.7	-75.5	9	US	Wilmington
+39.6	-110.8	6	US	Price
+39.6	-80	8	US	Morgantown
+39.6	-77.7	8	US	Hagerstown
+39.5	-119.8	10	US	Reno
+39.5	-107.3	6	US	Glenwood Springs
+39.5	-87.4	8	US	Terre Haute
+39.4	-74.4	8	US	Atlantic City
+39.3	-123.8	2	US	Mendocino
+39.3	-101.7	4	US	Goodland
+39.3	-81.6	8	US	Parkersburg
+39.3	-80.3	7	US	Clarksburg
+39.3	-76.6	12	US	Baltimore
+39.2	-123.2	7	US	Ukiah
+39.2	-119.8	8	US	Carson City
+39.2	-114.9	4	US	Ely
+39.2	-96.6	8	US	Manhattan
+39.2	-86.5	9	US	Bloomington
+39.2	-84.5	12	US	Cincinnati
+39.2	-78.2	8	US	Winchester
+39.2	-75.5	8	US	Dover
+39.1	-121.6	9	US	Yuba City
+39.1	-108.5	9	US	Grand Junction
+39.1	-95.7	9	US	Topeka
+39.1	-94.6	11	US	Kansas City
+39.1	-94.6	12	US	Kansas City
+39.1	-94.4	9	US	Independence
+39.1	-84.5	11	US	Covington
+39	-95.3	8	US	Lawrence
+39	-92.3	10	US	Columbia
+39	-76.5	8	US	Annapolis
+38.9	-104.8	10	US	Colorado Springs
+38.9	-99.3	7	US	Hays
+38.9	-90.2	8	US	Alton
+38.9	-77	12	US	Washington,  D.C.
+38.8	-112.1	5	US	Richfield
+38.8	-97.6	7	US	Salina
+38.8	-90.5	10	US	St. Charles
+38.8	-77.1	9	US	Alexandria
+38.6	-121.5	12	US	Sacramento
+38.6	-109.5	5	US	Moab
+38.6	-92.2	8	US	Jefferson City
+38.6	-90.2	12	US	St. Louis
+38.6	-76.9	8	US	St. Charles
+38.5	-122.7	10	US	Santa Rosa
+38.5	-107.9	7	US	Montrose
+38.5	-106.9	5	US	Gunnison
+38.5	-90	9	US	Belleville
+38.4	-96.2	7	US	Emporia
+38.4	-82.4	8	US	Huntington
+38.4	-78.9	7	US	Harrisonburg
+38.3	-104.6	9	US	Pueblo
+38.3	-85.8	9	US	New Albany
+38.3	-81.6	9	US	Charleston
+38.3	-77.5	9	US	Fredericksburg
+38.2	-85.8	11	US	Louisville
+38.2	-84.9	7	US	Frankfort
+38.1	-122.3	9	US	Vallejo
+38.1	-117.2	4	US	Tonopah
+38.1	-102.6	5	US	Lamar
+38.1	-97.9	7	US	Hutchinson
+38.1	-84.5	10	US	Lexington
+38	-121.3	11	US	Stockton
+38	-100.9	7	US	Garden City
+38	-87.6	9	US	Evansville
+38	-78.5	8	US	Charlottesville
+37.9	-122.3	10	US	Berkeley
+37.9	-109.3	3	US	Monticello
+37.8	-122.4	12	US	San Francisco
+37.8	-122.2	12	US	Oakland
+37.8	-112.8	4	US	Parowan
+37.8	-100	7	US	Dodge City
+37.8	-87.1	8	US	Owensboro
+37.8	-81.2	7	US	Beckley
+37.8	-80.3	4	US	White Sulphur Springs
+37.7	-121	10	US	Modesto
+37.7	-113.1	7	US	Cedar City
+37.7	-97.3	10	US	Wichita
+37.7	-89.2	7	US	Carbondale
+37.6	-122.3	11	US	San Mateo
+37.6	-77.5	11	US	Richmond
+37.4	-118.4	4	US	Bishop
+37.4	-79.1	9	US	Lynchburg
+37.3	-121.9	12	US	San Jose
+37.3	-120.5	8	US	Merced
+37.3	-107.9	7	US	Durango
+37.3	-89.5	7	US	Cape Girardeau
+37.3	-87.5	7	US	Madisonville
+37.3	-79.9	9	US	Roanoke
+37.2	-104.5	5	US	Trinidad
+37.2	-93.3	10	US	Springfield
+37.2	-80.4	8	US	Blacksburg
+37.2	-77.4	9	US	Petersburg
+37.1	-113.6	8	US	St. George
+37.1	-94.5	8	US	Joplin
+37.1	-88.6	7	US	Paducah
+37.1	-84.1	5	US	London
+37	-122	9	US	Santa Cruz
+37	-112.5	4	US	Kanab
+37	-95.6	6	US	Coffeyville
+37	-86.4	8	US	Bowling Green
+37	-76.3	10	US	Hampton
+36.9	-104.4	5	US	Raton
+36.9	-87.5	7	US	Hopkinsville
+36.9	-76	12	US	Virginia Beach
+36.8	-108.2	7	US	Farmington
+36.8	-90.4	7	US	Poplar Bluff
+36.8	-76.3	12	US	Norfolk
+36.7	-121.6	9	US	Salinas
+36.7	-119.8	11	US	Fresno
+36.7	-101.5	6	US	Guymon
+36.7	-97.1	7	US	Ponca City
+36.7	-96	7	US	Bartlesville
+36.6	-121.9	9	US	Monterey
+36.6	-82.2	7	US	Bristol
+36.6	-79.4	7	US	Danville
+36.5	-87.4	9	US	Clarksville
+36.5	-82.6	8	US	Kingsport
+36.4	-99.4	6	US	Woodward
+36.4	-97.9	7	US	Enid
+36.3	-119.3	9	US	Visalia
+36.3	-82.4	8	US	Johnson City
+36.2	-119.3	8	US	Tulare
+36.2	-115.2	12	US	Las Vegas
+36.2	-86.8	11	US	Nashville
+36.1	-112.1	3	US	Grand Canyon
+36.1	-102.5	5	US	Dalhart
+36.1	-97.1	7	US	Stillwater
+36.1	-95.9	11	US	Tulsa
+36.1	-94.2	9	US	Fayetteville
+36.1	-90.5	7	US	Paragould
+36.1	-80.3	10	US	Winston-Salem
+36.1	-79.8	10	US	Greensboro
+36.1	-75.7	4	US	Kitty Hawk
+36	-114.8	6	US	Boulder City
+36	-84.3	7	US	Oak Ridge
+36	-83.9	11	US	Knoxville
+36	-78.9	10	US	Durham
+35.9	-106.3	6	US	Los Alamos
+35.9	-102	6	US	Dumas
+35.9	-77.8	8	US	Rocky Mount
+35.8	-119.2	7	US	Delano
+35.8	-90.7	8	US	Jonesboro
+35.8	-86.4	9	US	Murfreesboro
+35.8	-78.6	12	US	Raleigh
+35.7	-105.9	8	US	Santa Fe
+35.7	-95.4	7	US	Muskogee
+35.7	-81.3	8	US	Hickory
+35.7	-80.5	7	US	Salisbury
+35.6	-120.7	7	US	Paso Robles
+35.6	-105.2	6	US	Las Vegas
+35.6	-88.8	8	US	Jackson
+35.6	-87	9	US	Columbia
+35.6	-82.6	9	US	Asheville
+35.6	-77.4	8	US	Greenville
+35.5	-108.7	7	US	Gallup
+35.5	-97.5	11	US	Oklahoma City
+35.4	-119	10	US	Bakersfield
+35.4	-94.4	8	US	Fort Smith
+35.4	-78	7	US	Goldsboro
+35.3	-120.7	8	US	San Luis Obispo
+35.3	-96.9	7	US	Shawnee
+35.2	-114.1	7	US	Kingman
+35.2	-111.7	8	US	Flagstaff
+35.2	-103.7	5	US	Tucumcari
+35.2	-101.8	9	US	Amarillo
+35.2	-97.3	9	US	Norman
+35.2	-89.8	10	US	Barlett
+35.2	-80.8	11	US	Charlotte
+35.1	-114.6	7	US	Bullhead City
+35.1	-106.6	11	US	Albuquerque
+35.1	-92.5	8	US	Conway
+35.1	-90	12	US	Memphis
+35.1	-85.3	10	US	Chattanooga
+35.1	-78.9	10	US	Fayetteville
+35	-110.7	5	US	Winslow
+35	-90	9	US	Southaven
+34.9	-120.4	9	US	Santa Maria
+34.9	-117	7	US	Barstow
+34.9	-95.8	7	US	McAlester
+34.9	-82.4	10	US	Greenville
+34.9	-81.9	9	US	Spartanburg
+34.9	-81	8	US	Rock Hill
+34.8	-114.6	5	US	Needles
+34.8	-102.4	6	US	Hereford
+34.8	-87.7	7	US	Florence
+34.8	-85	8	US	Dalton
+34.8	-77.4	8	US	Jacksonville
+34.7	-118.1	10	US	Lancaster
+34.7	-92.3	10	US	Little Rock
+34.7	-86.6	10	US	Huntsville
+34.6	-112.4	8	US	Prescott
+34.6	-98.4	8	US	Lawton
+34.6	-79	7	US	Lumberton
+34.5	-117.3	8	US	Victorville
+34.5	-114.3	8	US	Lake Havasu City
+34.5	-93.1	7	US	Hot Springs
+34.5	-82.7	8	US	Anderson
+34.4	-119.7	9	US	Santa Barbara
+34.4	-103.2	7	US	Clovis
+34.4	-100.2	5	US	Childress
+34.3	-88.7	7	US	Tupelo
+34.2	-118.1	9	US	Pasadena
+34.2	-99.3	6	US	Vernon
+34.2	-97.1	7	US	Ardmore
+34.2	-92	8	US	Pine Bluff
+34.2	-79.8	8	US	Florence
+34.2	-77.9	9	US	Wilmington
+34.1	-117.3	12	US	San Bernardino
+34.1	-106.9	5	US	Socorro
+34	-118.2	14	US	Los Angeles
+34	-86	7	US	Gadsden
+34	-84.5	8	US	Marietta
+34	-83.4	9	US	Athens
+34	-80.9	10	US	Columbia
+33.9	-117.4	10	US	Riverside
+33.9	-98.5	9	US	Wichita Falls
+33.9	-80.3	8	US	Sumter
+33.8	-118.2	12	US	Long Beach
+33.8	-116.5	10	US	Palm Springs
+33.8	-84.4	12	US	Atlanta
+33.7	-117.8	12	US	Irvine
+33.7	-111.9	6	US	Scottsdale
+33.7	-78.9	7	US	Myrtle Beach
+33.6	-112.2	10	US	Glendale
+33.6	-101.9	10	US	Lubbock
+33.6	-96.6	7	US	Sherman
+33.5	-112.1	12	US	Phoenix
+33.5	-86.8	12	US	Birmingham
+33.5	-82	10	US	Augusta
+33.5	-81.7	7	US	Aiken
+33.5	-80.9	7	US	Orangeburg
+33.4	-111.7	12	US	Mesa
+33.4	-104.5	7	US	Roswell
+33.4	-94	8	US	Texarkana
+33.4	-91.1	7	US	Greenville
+33.2	-117.3	11	US	Oceanside
+33.2	-97.1	9	US	Denton
+33.2	-92.7	7	US	El Dorado
+33.2	-87.5	9	US	Tuscaloosa
+33.1	-107.3	5	US	Truth or Consequences
+33	-112.7	4	US	Gila Bend
+33	-85	7	US	La Grange
+32.9	-111.8	7	US	Casa Grande
+32.9	-106	7	US	Alamogordo
+32.9	-83.6	9	US	Macon
+32.8	-117.2	12	US	San Diego
+32.8	-115.6	7	US	El Centro
+32.8	-109.7	6	US	Safford
+32.8	-96.8	12	US	Dallas
+32.8	-80	10	US	Charleston
+32.7	-117.1	9	US	National City
+32.7	-114.6	8	US	Yuma
+32.7	-103.1	7	US	Hobbs
+32.7	-97.3	12	US	Ft.  Worth
+32.7	-97	11	US	Arlington
+32.6	-85.5	8	US	Auburn
+32.5	-94.7	8	US	Longview
+32.5	-93.8	10	US	Shreveport
+32.5	-92.1	9	US	Monroe
+32.5	-85	10	US	Columbus
+32.5	-82.9	7	US	Dublin
+32.4	-104.2	7	US	Carlsbad
+32.4	-99.7	9	US	Abilene
+32.4	-97.4	7	US	Cleburne
+32.4	-95.3	9	US	Tyler
+32.4	-90.9	7	US	Vicksburg
+32.4	-88.7	7	US	Meridian
+32.4	-87	7	US	Selma
+32.4	-86.3	9	US	Montgomery
+32.4	-80.7	7	US	Beaufort
+32.3	-109.8	5	US	Willcox
+32.3	-107.8	6	US	Deming
+32.3	-106.8	9	US	Las Cruces
+32.3	-90.2	10	US	Jackson
+32.2	-110.9	11	US	Tucson
+32.2	-101.5	7	US	Big Spring
+32	-102.1	8	US	Midland
+32	-81.1	9	US	Savannah
+31.8	-106.5	11	US	El Paso
+31.8	-102.4	9	US	Odessa
+31.7	-110.1	3	US	Tombstone
+31.7	-99	7	US	Brownwood
+31.7	-89.1	7	US	Laurel
+31.6	-94.7	7	US	Nacogdoches
+31.6	-91.4	7	US	Natchez
+31.6	-84.2	8	US	Albany
+31.5	-100.4	8	US	San Angelo
+31.5	-97.1	9	US	Waco
+31.5	-82.9	6	US	Douglas
+31.4	-109.5	7	US	Douglas
+31.4	-103.5	5	US	Pecos
+31.3	-94.7	7	US	Lufkin
+31.3	-92.4	8	US	Alexandria
+31.3	-89.3	8	US	Hattiesburg
+31.3	-85.8	7	US	Enterprise
+31.2	-85.4	8	US	Dothan
+31.2	-82.4	6	US	Waycross
+31.1	-97.7	9	US	Killeen
+31.1	-97.4	8	US	Temple
+31.1	-81.5	7	US	Brunswick
+31	-104.8	4	US	Van Horn
+30.9	-102.9	5	US	Fort Stockton
+30.8	-86.6	7	US	Crestview
+30.8	-83.3	8	US	Valdosta
+30.7	-96.4	9	US	Bryan
+30.7	-95.6	7	US	Huntsville
+30.7	-88	10	US	Mobile
+30.5	-91.1	10	US	Baton Rouge
+30.4	-103.7	5	US	Alpine
+30.4	-89.1	8	US	Gulfport
+30.4	-88.9	8	US	Biloxi
+30.4	-87.2	10	US	Pensacola
+30.4	-84.3	10	US	Tallahassee
+30.3	-97.7	12	US	Austin
+30.3	-95.5	7	US	Conroe
+30.3	-89.8	8	US	Slidell
+30.3	-81.7	11	US	Jacksonville
+30.2	-93.2	8	US	Lake Charles
+30.2	-92	9	US	Lafayette
+30.2	-85.7	9	US	Panama City
+30.2	-82.6	7	US	Lake City
+30.1	-94.1	9	US	Beaumont
+30	-91.8	7	US	New Iberia
+30	-90.2	10	US	Metairie
+30	-90	11	US	New Orleans
+29.9	-97.9	8	US	San Marcos
+29.9	-93.9	8	US	Port Arthur
+29.9	-81.3	8	US	St. Augustine
+29.8	-95.3	12	US	Houston
+29.8	-95	8	US	Baytown
+29.7	-98.1	7	US	New Braunfels
+29.7	-95.1	11	US	Pasadena
+29.7	-85	4	US	Apalachicola
+29.7	-82.3	9	US	Gainesville
+29.6	-90.7	8	US	Houma
+29.6	-81.7	7	US	Palatka
+29.5	-98.5	12	US	San Antonio
+29.5	-81.2	7	US	Palm Coast
+29.4	-100.9	7	US	Del Rio
+29.4	-95	8	US	Texas City
+29.3	-94.8	8	US	Galveston
+29.2	-82.1	9	US	Ocala
+29.2	-81	10	US	Daytona Beach
+29	-96	6	US	Bay City
+29	-95.4	8	US	Freeport
+28.8	-97	8	US	Victoria
+28.8	-81.9	7	US	Leesburg
+28.8	-81.3	10	US	Sanford
+28.7	-100.5	8	US	Eagle Pass
+28.6	-96.6	6	US	Port Lavaca
+28.6	-80.8	8	US	Titusville
+28.5	-82.5	9	US	Spring Hill
+28.5	-81.4	12	US	Orlando
+28.4	-97.8	6	US	Beeville
+28.3	-81.4	10	US	Kissimmee
+28.1	-80.6	10	US	Melbourne
+28	-81.7	9	US	Winter Haven
+27.9	-82.5	12	US	Tampa
+27.8	-98.1	7	US	Alice
+27.8	-82.7	11	US	St. Petersburg
+27.7	-97.4	10	US	Corpus Christi
+27.6	-80.4	8	US	Vero Beach
+27.5	-99.5	10	US	Laredo
+27.5	-97.9	7	US	Kingsville
+27.4	-80.3	10	US	Fort Pierce
+27.3	-82.5	11	US	Sarasota
+27.2	-98.1	5	US	Falfurrias
+27	-82.1	8	US	Port Charlotte
+26.7	-80.1	12	US	West Palm Beach
+26.6	-82	9	US	Cape Coral
+26.6	-81.9	9	US	Ft. Myers
+26.3	-98.2	9	US	Edinburg
+26.3	-80.3	10	US	Coral Springs
+26.2	-98.2	10	US	McAllen
+26.2	-97.7	9	US	Harlingen
+26.1	-81.8	10	US	Naples
+26.1	-80.1	12	US	Fort Lauderdale
+25.9	-97.5	9	US	Brownsville
+25.8	-80.2	13	US	Miami
+25.8	-80.1	10	US	Miami Beach
+25.7	-80.3	9	US	Coral Gables
+25.5	-80.5	8	US	Homestead
+24.6	-81.8	7	US	Key West
+22	-159.4	6	US	Lihue
+21.5	-158	9	US	Wahiawa
+21.3	-157.9	11	US	Honolulu
+20.9	-156.5	8	US	Wailuku
+19.7	-156	5	US	Kailua-Kona
+19.7	-155.1	8	US	Hilo
+-30.3	-57.6	7	UY	Bella Unión
+-30.4	-56.5	7	UY	Artigas
+-30.7	-57.3	4	UY	Baltasar Brum
+-30.9	-55.6	9	UY	Rivera
+-31.2	-55.7	5	UY	Tranqueras
+-31.4	-58	9	UY	Salto
+-31.7	-56	8	UY	Tacuarembó
+-32.3	-58.1	8	UY	Paysandú
+-32.4	-54.2	8	UY	Melo
+-32.8	-56.5	6	UY	Paso de los Toros
+-32.9	-53.9	4	UY	Vergara
+-33.1	-58.3	7	UY	Fray Bentos
+-33.2	-54.4	7	UY	Treinta y Tres
+-33.3	-58	7	UY	Mercedes
+-33.4	-56.5	7	UY	Durazno
+-33.5	-56.9	7	UY	Trinidad
+-33.5	-55.1	4	UY	José Batlle y Ordóñez
+-33.7	-54.2	5	UY	Lascano
+-34	-58.3	6	UY	Carmelo
+-34.1	-56.2	7	UY	Florida
+-34.2	-54.8	4	UY	Aiguá
+-34.2	-53.8	5	UY	Castillos
+-34.3	-56.7	7	UY	San José de Mayo
+-34.4	-55.2	7	UY	Minas
+-34.5	-57.8	7	UY	Colonia del Sacramento
+-34.5	-56.4	6	UY	Santa Lucía
+-34.5	-56.3	6	UY	Canelones
+-34.5	-54.3	7	UY	Rocha
+-34.7	-54.2	4	UY	La Paloma
+-34.9	-56.2	12	UY	Montevideo
+-34.9	-55	8	UY	Maldonado
+-35	-54.9	9	UY	Punta del Este
+43.8	59	6	UZ	Muynoq
+43.1	58.9	8	UZ	Qunghirot
+42.9	59.8	7	UZ	Chimboy
+42.5	59.6	10	UZ	Nukus
+42.4	59.5	8	UZ	Khujayli
+41.6	60.6	9	UZ	Urgentch
+41.6	64.2	8	UZ	Zarafshon
+41.6	69.7	9	UZ	Iskandar
+41.5	69.6	9	UZ	Chirchiq
+41.4	60.4	9	UZ	Khiwa
+41.3	69.3	12	UZ	Tashkent
+41	70.2	10	UZ	Angren
+41	71.7	11	UZ	Namangan
+40.9	69.6	9	UZ	Olmaliq
+40.8	72.3	11	UZ	Andijan
+40.5	68.8	8	UZ	Guliston
+40.5	70.9	10	UZ	Qoqon
+40.4	71.8	11	UZ	Fargona
+40.1	65.4	10	UZ	Navoi
+40.1	67.8	10	UZ	Jizzax
+39.9	66.3	10	UZ	Kattaqorgon
+39.8	64.4	10	UZ	Bukhara
+39.7	64.5	9	UZ	Kogon
+39.7	66.9	11	UZ	Samarkand
+39.4	67.3	8	UZ	Urgut
+39.1	66.8	10	UZ	Shahrisabz
+38.9	65.8	10	UZ	Qarshi
+38.3	67.9	10	UZ	Denow
+37.2	67.3	9	UZ	Termiz
+41.9	12.5	2	VA	Vatican City
+13.1	-61.2	7	VC	Kingstown
+11.7	-70.2	10	VE	Punto Fijo
+11.4	-69.7	9	VE	Coro
+11	-63.9	7	VE	La Asunción
+11	-63.8	9	VE	Porlamar
+10.7	-71.7	12	VE	Maracaibo
+10.7	-63.2	9	VE	Carúpano
+10.6	-67	10	VE	Maiquetía
+10.5	-71.5	7	VE	Santa Rita
+10.5	-68.2	9	VE	Puerto Cabello
+10.5	-66.9	12	VE	Caracas
+10.4	-71.4	10	VE	Cabimas
+10.4	-67	10	VE	Los Teques
+10.4	-64.2	10	VE	Cumaná
+10.3	-68.7	8	VE	San Felipe
+10.2	-70.1	9	VE	Carora
+10.2	-68	12	VE	Valencia
+10.2	-67.6	12	VE	Maracay
+10.2	-64.7	11	VE	Puerto la Cruz
+10.1	-72.5	8	VE	Machiques
+10.1	-69.3	12	VE	Barquisimeto
+10.1	-66.8	9	VE	Ocumare del Tuy
+10.1	-64.7	11	VE	Barcelona
+9.9	-67.4	8	VE	San Juan De Los Morros
+9.9	-66.4	7	VE	Altagracia de Orituco
+9.7	-68.6	8	VE	San Carlos
+9.7	-63.2	10	VE	Maturín
+9.6	-69.2	10	VE	Acarigua
+9.4	-70.4	8	VE	Trujillo
+9.4	-64.5	9	VE	Anaco
+9.3	-70.6	9	VE	Valera
+9.3	-66.3	6	VE	Chaguaramas
+9.3	-65.3	7	VE	Zaraza
+9.2	-66	8	VE	Valle de la Pascua
+9.1	-62.1	8	VE	Tucupita
+9	-71.9	8	VE	San Carlos del Zulia
+9	-69.8	9	VE	Guanare
+8.9	-67.4	9	VE	Calabozo
+8.9	-64.3	9	VE	El Tigre
+8.6	-70.3	10	VE	Barinas
+8.4	-71.1	10	VE	Mérida
+8.4	-62.6	11	VE	Ciudad Guayana
+8.1	-63.6	10	VE	Ciudad Bolívar
+8	-62.4	8	VE	Upata
+7.9	-67.5	9	VE	San Fernando de Apure
+7.8	-72.2	10	VE	San Cristóbal
+7.4	-62.5	4	VE	El Manteco
+7.2	-70.7	7	VE	Guasdualito
+6.7	-61.6	4	VE	El Dorado
+5.7	-67.6	8	VE	Puerto Ayacucho
+3.2	-65.5	1	VE	La Esmeralda
+17.8	-64.7	7	VI	Christiansted
+22.8	105	7	VN	Ha Giang
+22.7	106.3	7	VN	Cao Bằng
+22.5	104	8	VN	Lao Chi
+22.1	105.8	7	VN	Bắc Kạn
+21.8	105.2	7	VN	Tuyên Quang
+21.8	106.8	9	VN	Lạng Sơn
+21.7	103.3	5	VN	Luan Chau
+21.7	104.9	8	VN	Yên Bái
+21.6	105.8	10	VN	Thái Nguyên
+21.3	103.9	6	VN	Sơn La
+21.3	105.4	10	VN	Việt Trì
+21.3	106.2	8	VN	Bắc Giang
+21.1	105.5	9	VN	Sơn Tây
+21	105.8	12	VN	Hanoi
+21	107.1	9	VN	Hong Gai
+21	107.3	9	VN	Cẩm Phả
+20.9	106.3	8	VN	Hai Duong
+20.8	105.3	9	VN	Hoa Binh
+20.8	106.7	12	VN	Haiphong
+20.5	106.3	10	VN	Thái Bình
+20.4	106.2	10	VN	Nam Định
+20.3	106	9	VN	Ninh Bình
+19.8	105.8	9	VN	Thanh Hóa
+18.7	105.7	11	VN	Vinh
+18.3	105.9	9	VN	Hà Tĩnh
+17.5	106.6	9	VN	Đồng Hới
+16.8	107.1	6	VN	Đông Hà
+16.8	107.2	8	VN	Quảng Trị
+16.5	107.6	11	VN	Hue
+16.1	108.2	11	VN	Da Nang
+15.2	108.8	10	VN	Quảng Ngãi
+14.4	108	9	VN	Kon Tum
+14	108	9	VN	Play Ku
+13.8	109.2	11	VN	Qui Nhon
+13.1	109.3	8	VN	Tuy Hòa
+12.7	108	10	VN	Buon Me Thuot
+12.3	109.2	10	VN	Nha Trang
+11.9	108.4	10	VN	Da Lat
+11.9	109.2	9	VN	Cam Ranh
+11.7	106.6	7	VN	Hon Quan
+11.6	109	9	VN	Phan Rang
+11.3	106.1	9	VN	Tây Ninh
+11	106.7	10	VN	Thu Dau Mot
+11	106.8	11	VN	Biên Hòa
+10.9	108.1	10	VN	Phan Thiet
+10.8	106.7	13	VN	Ho Chi Minh City
+10.7	105.1	8	VN	Châu Đốc
+10.5	105.6	9	VN	Cao Lãnh
+10.5	106.4	9	VN	Tan An
+10.4	105.4	10	VN	Long Xuyen
+10.4	106.4	9	VN	Mỹ Tho
+10.4	107.1	10	VN	Vung Tau
+10.3	106	9	VN	Vĩnh Long
+10.2	106.4	8	VN	Truc Giang
+10	105.1	10	VN	Rạch Giá
+10	105.8	12	VN	Can Tho
+9.9	106.3	9	VN	Tra Vinh
+9.6	106	10	VN	Sóc Trăng
+9.3	105.7	10	VN	Bạc Liêu
+9.2	105.2	10	VN	Cà Mau
+-15.5	167.2	6	VU	Luganville
+-17.7	168.3	7	VU	Port Vila
+-13.8	-171.7	8	WS	Apia
+16.9	43.8	9	YE	Sadah
+16.2	52.2	7	YE	Al Ghaydah
+15.9	48.8	8	YE	Saywun
+15.7	43.6	10	YE	Hajjah
+15.4	44.2	12	YE	Sanaa
+15.4	45.3	6	YE	Marib
+15.2	51.2	1	YE	Sayhut al Ghamirah
+14.8	43	11	YE	Al Hudaydah
+14.8	49.6	8	YE	Ash Shihr
+14.6	44.4	9	YE	Dhamar
+14.6	46.8	7	YE	'Ataq
+14.5	49.1	10	YE	Al Mukalla
+14.4	44.8	7	YE	Rida
+14.2	43.3	9	YE	Zabīd
+14	44.2	10	YE	Ibb
+14	45.6	7	YE	Al Bayda
+13.6	44	11	YE	Taizz
+13.1	44.9	8	YE	Lahij
+12.8	45	11	YE	Aden
+12.7	54	6	YE	Hadiboh
+-12.8	45.3	7	YT	Dzaoudzi
+-22.3	30	7	ZA	Musina
+-23	30.5	10	ZA	Thohoyandou
+-23.8	30.2	8	ZA	Tzaneen
+-23.9	29.5	10	ZA	Polokwane
+-24.2	29.5	7	ZA	Lebowakgomo
+-25.4	31.9	7	ZA	Komatipoort
+-25.5	31	10	ZA	Mbombela
+-25.6	27.8	9	ZA	Brits
+-25.7	27.2	9	ZA	Rustenburg
+-25.7	28.2	12	ZA	Pretoria
+-25.8	25.6	9	ZA	Mmabatho
+-25.8	29.5	9	ZA	Middelburg
+-26.1	28.3	12	ZA	Benoni
+-26.2	28	12	ZA	Johannesburg
+-26.3	28.4	10	ZA	Springs
+-26.5	29.5	9	ZA	Bethal
+-26.6	28	12	ZA	Vereeniging
+-26.7	27.1	9	ZA	Potchefstroom
+-26.9	26.6	9	ZA	Klerksdorp
+-26.9	29.2	8	ZA	Standerton
+-27	24.7	7	ZA	Vryburg
+-27.4	23.4	6	ZA	Kuruman
+-27.4	29.9	7	ZA	Volksrust
+-27.6	25.6	6	ZA	Bloemhof
+-27.6	32.1	2	ZA	Ubomba
+-27.7	27.2	9	ZA	Kroonstad
+-27.8	30.8	9	ZA	Vryheid
+-28	26.7	10	ZA	Welkom
+-28.2	28.3	8	ZA	Bethlehem
+-28.3	31.4	7	ZA	Ulundi
+-28.5	21.2	8	ZA	Upington
+-28.5	29.8	7	ZA	Ladysmith
+-28.6	16.5	3	ZA	Alexander Bay
+-28.7	24.8	9	ZA	Kimberley
+-28.7	26.5	6	ZA	Brandfort
+-29.1	19.4	4	ZA	Poffader
+-29.1	26.2	10	ZA	Bloemfontein
+-29.6	30.4	11	ZA	Pietermaritzburg
+-29.7	17.9	6	ZA	Springbok
+-29.7	22.7	6	ZA	Prieska
+-29.9	31	12	ZA	Durban
+-30.1	28.7	7	ZA	Qacha's Nek
+-30.6	24	7	ZA	De Aar
+-30.7	25.1	6	ZA	Colesberg
+-30.7	26.7	7	ZA	Aliwal North
+-30.7	30.5	8	ZA	Port Shepstone
+-30.9	22.1	5	ZA	Carnarvon
+-31.5	25	6	ZA	Middelburg
+-31.6	18.7	4	ZA	Vanhynsdorp
+-31.6	28.8	9	ZA	Umtata
+-31.6	29.5	5	ZA	Port St. Johns
+-31.9	26.9	9	ZA	Queenstown
+-32.2	25.6	7	ZA	Cradock
+-32.3	22.6	7	ZA	Beaufort West
+-32.3	24.5	8	ZA	Graaff Reinet
+-32.9	27.4	9	ZA	Bhisho
+-33	17.9	8	ZA	Saldanha
+-33	27.9	10	ZA	East London
+-33.3	26.5	8	ZA	Grahamstown
+-33.6	19.4	9	ZA	Worcester
+-33.6	22.2	8	ZA	Oudtshoorn
+-33.6	26.9	6	ZA	Port Alfred
+-33.7	19	9	ZA	Paarl
+-33.8	25.4	10	ZA	Uitenhage
+-33.9	18.4	12	ZA	Cape Town
+-34	20.4	6	ZA	Swellendam
+-34	22.5	9	ZA	George
+-34	23	8	ZA	Knysna
+-34	25.6	12	ZA	Port Elizabeth
+-34.2	22.1	6	ZA	Mossel Bay
+-34.4	19.2	7	ZA	Hermanus
+-34.5	20	6	ZA	Bredasdorp
+-8.8	31.4	7	ZM	Mbala
+-9.3	28.7	7	ZM	Nchelenge
+-9.8	29.1	7	ZM	Kawambwa
+-10.2	31.2	9	ZM	Kasama
+-10.5	32.1	6	ZM	Chinsali
+-11.2	28.9	7	ZM	Mansa
+-11.7	24.4	6	ZM	Mwinilunga
+-11.8	31.5	7	ZM	Mpika
+-12.2	26.4	8	ZM	Solwezi
+-12.3	33.2	6	ZM	Lundazi
+-12.4	27.8	8	ZM	Chililabombwe
+-12.5	27.9	9	ZM	Chingola
+-12.5	28.3	9	ZM	Mufulira
+-12.8	28.2	10	ZM	Kitwe
+-13	28.7	10	ZM	Ndola
+-13.1	28.4	9	ZM	Luanshya
+-13.5	23.1	5	ZM	Zambezi
+-13.5	25.8	5	ZM	Kasempa
+-13.6	32.6	8	ZM	Chipata
+-14	28.7	7	ZM	Kapiri Mposhi
+-14.4	23.2	4	ZM	Lukulu
+-14.4	28.4	9	ZM	Kabwe
+-14.5	30.8	3	ZM	Nyimba
+-14.8	24.8	6	ZM	Kaoma
+-15	22.7	5	ZM	Kalabo
+-15	27.1	6	ZM	Mumbwa
+-15.3	23.1	8	ZM	Mongu
+-15.4	28.3	12	ZM	Lusaka
+-15.8	28.2	7	ZM	Kafue
+-15.9	27.8	8	ZM	Mazabuka
+-16.1	23.3	6	ZM	Senanga
+-16.8	27	7	ZM	Choma
+-17.5	24.3	7	ZM	Sesheke
+-17.9	25.9	9	ZM	Livingstone
+-16.5	28.8	7	ZW	Kariba
+-16.8	29.7	7	ZW	Karoi
+-17.3	31.6	6	ZW	Shamva
+-17.4	30.2	8	ZW	Chinhoyi
+-17.5	31	5	ZW	Mazowe
+-17.8	31	12	ZW	Harare
+-17.9	25.8	7	ZW	Victoria Falls
+-18	31.1	10	ZW	Chitungwiza
+-18.3	29.9	8	ZW	Kadoma
+-18.4	26.5	7	ZW	Hwange
+-18.9	29.8	8	ZW	Kwekwe
+-19	32.7	10	ZW	Mutare
+-19.5	29.8	9	ZW	Gweru
+-20.1	30.8	8	ZW	Masvingo
+-20.2	28.6	11	ZW	Bulawayo
+-20.3	30	7	ZW	Zvishavane
+-20.5	27.8	4	ZW	Plumtree
+-20.9	29	6	ZW	Gwanda
+-21	31.7	7	ZW	Chiredzi
+-22.2	30	7	ZW	Beitbridge

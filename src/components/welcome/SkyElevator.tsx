@@ -23,6 +23,7 @@ import {
 import { ELEVATOR_TEXT } from './elevatorI18n';
 import { MeteosatDisc } from './MeteosatDisc';
 import { useMeteosatImage } from '../../hooks/welcome/useMeteosatImage';
+import { markSecretFound } from '../../utils/welcome/secretsFound';
 
 export interface SkyElevatorProps {
   sky: WelcomeSky;
@@ -272,7 +273,7 @@ export default function SkyElevator({ sky, lang, unit, cloudNames, landsOnForeca
   useEffect(() => {
     if (phase !== 'landing') return;
     const raf = requestAnimationFrame(() => setChuteDown(true));
-    const message = fill(labels.landed, { km: km(GEO_ALTITUDE_M / 1000) });
+    const message = fill(labels.landed, { km: km(GEO_ALTITUDE_M / 1000), n: String(markSecretFound('sky')) });
     const timer = window.setTimeout(() => onLand(message), reduced ? 400 : LANDING_MS);
     return () => { cancelAnimationFrame(raf); window.clearTimeout(timer); };
   }, [phase, reduced, onLand, labels, km]);

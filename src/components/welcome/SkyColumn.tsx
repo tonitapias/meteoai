@@ -84,11 +84,13 @@ const ALTOCUMULUS: ReadonlyArray<readonly [number, number, 'top' | 'mid' | 'shad
   ...[284, 300, 316, 332, 348].map(x => [x, 356, 'shade'] as const),
 ];
 
-// El secret de la benvinguda (hooks/welcome/useColumnStretch): quan s'estira la columna, el contenidor canvia la
-// variable --sky-stretch i la columna s'allarga des de terra sense que React la torni a pintar. L'astronauta de dalt
-// (la pista) no s'estira: puja amb el capdamunt, que es mou (s − 1) × 380 unitats.
+// Els secrets de la benvinguda (hooks/welcome/useColumnStretch): quan s'estira o s'aixafa la columna, el contenidor
+// canvia la variable --sky-stretch i la columna s'allarga o s'escurça des de terra sense que React la torni a pintar.
+// L'astronauta de dalt (la pista de l'ascensor) no s'estira: es mou amb el capdamunt, (s − 1) × 380 unitats. Quan
+// s'aixafa, --sky-press (0–1) fa aparèixer les esquerdes del disc; el casc de miner de sota és la pista del viatge avall.
 const STRETCH: CSSProperties = { transform: 'scaleY(var(--sky-stretch, 1))', transformOrigin: '320px 500px' };
 const ASTRONAUT_LIFT: CSSProperties = { transform: 'translateY(calc((1 - var(--sky-stretch, 1)) * 380px))' };
+const PRESS: CSSProperties = { opacity: 'var(--sky-press, 0)' };
 
 const pct = (v: number) => `${(v / 640) * 100}%`;
 /** Diàmetre de la lluna, en unitats del viewBox: al mòbil la columna és petita i ha de fer uns 26 px, no 15. */
@@ -323,6 +325,21 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
           <path d={contours.index} stroke={theme.contourIndex} strokeWidth={1.3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <ellipse cx={shadowX} cy={shadowY} rx={96} ry={23} fill="#000" opacity={theme.shadow[2]} />
           <ellipse cx={shadowX} cy={shadowY} rx={70} ry={16} fill="#000" opacity={theme.shadow[2]} />
+          {/* Un casc de miner minúscul que treu el cap per sota del disc: la pista que també s'hi pot baixar. */}
+          <g transform="translate(398 597) scale(0.8)">
+            <path d="M-3 4L-22 30H14Z" fill="#fef3c7" opacity={0.18} />
+            <path d="M-16 0A16 13 0 0 1 16 0Z" fill="#f59e0b" />
+            <path d="M-2 -12.6V0M-9 -10V0M5 -12V0" stroke="#b45309" strokeOpacity={0.5} strokeWidth={1.2} />
+            <rect x={-20} y={-1} width={40} height={5} rx={2.5} fill="#d97706" />
+            <circle cx={-3} cy={-5} r={4.2} fill="#fef3c7" stroke="#b45309" strokeWidth={1} />
+          </g>
+        </g>
+
+        {/* El disc cedeix quan s'aixafa la columna: s'enfosqueix al voltant de la base i s'hi obren esquerdes. */}
+        <g style={PRESS}>
+          <ellipse cx={320} cy={508} rx={118} ry={34} fill="#000" opacity={0.28} />
+          <ellipse cx={320} cy={510} rx={88} ry={25} fill="#000" opacity={0.22} />
+          <path d="M196 520q-14 6-30 6M444 520q14 6 30 6M226 538q-8 8-22 12M414 538q8 8 22 12" stroke="#fdba74" strokeOpacity={0.6} strokeWidth={1.6} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </g>
 
         <g

@@ -1,15 +1,17 @@
 // src/hooks/welcome/useColumnStretch.ts
-// El gest secret de la benvinguda: estirar la columna del cel cap amunt. Mentre el dit (o el ratolí) puja, la columna
-// s'allarga com una goma: només canvia la variable CSS --sky-stretch del contenidor, sense tornar a pintar la columna
-// amb React a cada moviment. En deixar-la torna al seu lloc amb un petit rebot, i tres estirades seguides obren
-// l'ascensor (utils/welcome/columnStretch.ts).
+// Els gestos secrets de la benvinguda: estirar la columna del cel cap amunt o aixafar-la cap avall. Mentre el dit (o el
+// ratolí) es mou, la columna s'allarga o s'escurça com una goma: només canvien les variables CSS --sky-stretch i
+// --sky-press del contenidor, sense tornar a pintar la columna amb React a cada moviment. En deixar-la torna al seu
+// lloc amb un petit rebot. Tres estirades seguides obren l'ascensor fins al Meteosat; tres aixafades seguides, el que
+// baixa fins a les antípodes (utils/welcome/columnStretch.ts).
 import { RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 import { createStretchCounter, rubberBand, STRETCH_MIN_FRACTION } from '../../utils/welcome/columnStretch';
 
 /** Part de l'alçada del contenidor que fa la columna (de 0 a 12 km, 380 de les 640 unitats del viewBox). */
 const COLUMN_SHARE = 380 / 640;
-/** La columna s'allarga com a molt un 30 % de la seva alçada. */
+/** La columna s'allarga com a molt un 30 % de la seva alçada, i s'escurça com a molt un 30 %. */
 const MAX_STRETCH = 0.3;
+const MAX_PRESS = 0.3;
 const SPRING_MS = 420;
 // Torna amb un rebot: passa una mica de llarg (la columna s'aixafa un moment) i s'atura.
 const easeOutBack = (t: number) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2;
@@ -22,18 +24,24 @@ interface Options {
   onPull?: () => void;
   /** La tercera estirada seguida. */
   onOpen: () => void;
+  /** Una aixafada prou llarga (per avançar la càrrega de l'ascensor cap avall). */
+  onPush?: () => void;
+  /** La tercera aixafada seguida. */
+  onOpenDown?: () => void;
   enabled: boolean;
 }
 
-export function useColumnStretch(ref: RefObject<HTMLElement | null>, { onPull, onOpen, enabled }: Options) {
+export function useColumnStretch(ref: RefObject<HTMLElement | null>, { onPull, onOpen, onPush, onOpenDown, enabled }: Options) {
   // Les funcions, sempre les darreres, sense tornar a enganxar els oients.
-  const callbacks = useRef({ onPull, onOpen });
-  useLayoutEffect(() => { callbacks.current = { onPull, onOpen }; }, [onPull, onOpen]);
+  const callbacks = useRef({ onPull, onOpen, onPush, onOpenDown });
+  useLayoutEffect(() => { callbacks.current = { onPull, onOpen, onPush, onOpenDown }; }, [onPull, onOpen, onPush, onOpenDown]);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || !enabled) return;
-    const counter = createStretchCounter();
+    // Un comptador per a cada sentit: "tres seguides" vol dir tres del mateix sentit.
+    const pulls = createStretchCounter();
+    const pushes = createStretchCounter();
     let drag: { id: number; y0: number; dy: number } | null = null;
     let stretch = 1;
     let spring = 0;
@@ -41,6 +49,9 @@ export function useColumnStretch(ref: RefObject<HTMLElement | null>, { onPull, o
     const setStretch = (s: number) => {
       stretch = s;
       el.style.setProperty('--sky-stretch', s.toFixed(4));
+      // Quant s'ha aixafat (0–1): el disc s'hi esquerda una mica. Calculat aquí i no amb calc()/max() al CSS, que
+      // els WebView antics no entenen dins d'una opacitat.
+      el.style.setProperty('--sky-press', Math.max(0, (1 - s) / MAX_PRESS).toFixed(3));
     };
     const columnPx = () => el.clientHeight * COLUMN_SHARE;
     const springBack = () => {
@@ -71,16 +82,26 @@ export function useColumnStretch(ref: RefObject<HTMLElement | null>, { onPull, o
       if (!drag || e.pointerId !== drag.id) return;
       drag.dy = drag.y0 - e.clientY;
       const px = columnPx();
-      if (px > 0) setStretch(1 + rubberBand(drag.dy, px * MAX_STRETCH) / px);
+      if (px <= 0) return;
+      if (drag.dy >= 0) setStretch(1 + rubberBand(drag.dy, px * MAX_STRETCH) / px);
+      else setStretch(1 - rubberBand(-drag.dy, px * MAX_PRESS) / px);
     };
     const onUp = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.id) return;
-      const pulled = drag.dy >= columnPx() * STRETCH_MIN_FRACTION;
+      const { dy } = drag;
+      const min = columnPx() * STRETCH_MIN_FRACTION;
       drag = null;
       springBack();
-      if (!pulled) return;
-      callbacks.current.onPull?.();
-      if (counter.pull(performance.now())) callbacks.current.onOpen();
+      const now = performance.now();
+      if (dy > 0 && dy >= min) {
+        pushes.reset();
+        callbacks.current.onPull?.();
+        if (pulls.pull(now)) callbacks.current.onOpen();
+      } else if (dy < 0 && -dy >= min && callbacks.current.onOpenDown) {
+        pulls.reset();
+        callbacks.current.onPush?.();
+        if (pushes.pull(now)) callbacks.current.onOpenDown();
+      }
     };
     const onCancel = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.id) return;
@@ -99,6 +120,7 @@ export function useColumnStretch(ref: RefObject<HTMLElement | null>, { onPull, o
       el.removeEventListener('pointercancel', onCancel);
       cancelAnimationFrame(spring);
       el.style.removeProperty('--sky-stretch');
+      el.style.removeProperty('--sky-press');
     };
   }, [ref, enabled]);
 }
