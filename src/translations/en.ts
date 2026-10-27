@@ -482,6 +482,31 @@ export const en = {
   radarFail: "If it fails, press \"Open external\" ↗",
   favAdded: "Added to favorites",
   favRemoved: "Removed from favorites",
+  share: {
+    button: "Share this place",
+    title: "Weather in {place}",
+    text: "Check the weather in {place} on MeteoToni AI",
+    positionTitle: "My location",
+    positionLine: "My location: {coords}",
+    sharedPosition: "Shared location",
+    sharedPositionLine: "Shared location: {coords}",
+    weatherHere: "The weather here, on MeteoToni AI:",
+    openInMaps: "Open in Google Maps",
+    directions: "Directions",
+    copied: "Link copied to clipboard",
+    positionCopied: "Location copied to clipboard",
+    failed: "Couldn't copy the link",
+    sheetTitle: "What do you want to share?",
+    yourPosition: "Your location",
+    sharePosition: "Share my location",
+    sharePositionHint: "Exact coordinates and a Google Maps link",
+    shareWeatherOnly: "Share only the weather in {place}",
+    shareWeatherOnlyHere: "Share only the weather here",
+    shareWeatherOnlyHint: "Without your exact location (within ~1 km)",
+    copyCoords: "Copy coordinates",
+    copyCoordsHint: "To read them out or paste them anywhere",
+    coordsCopied: "Coordinates copied to clipboard"
+  },
 
     // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
   

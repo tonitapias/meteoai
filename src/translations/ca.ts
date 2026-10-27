@@ -484,7 +484,36 @@ export const ca = {
   radarFail: "Si falla, prem \"Obrir fora\" ↗",
   favAdded: "Afegit als favorits",
   favRemoved: "Eliminat dels favorits",
-  
+  // Botó Compartir del tauler (enllaç ?lat&lon&nom, vegeu utils/shareMessage.ts). title/text = lloc consultat
+  // ({place} = nom del lloc); position* = la posició del GPS ({coords} = "41.98315, 2.82493", després hi va el mapa);
+  // sharedPosition* = una posició rebuda amb un enllaç origen=gps (capçalera, botons de Google Maps i si es reenvia).
+  share: {
+    button: "Compartir aquest lloc",
+    title: "El temps a {place}",
+    text: "Mira el temps a {place} amb MeteoToni AI",
+    positionTitle: "La meva posició",
+    positionLine: "La meva posició: {coords}",
+    sharedPosition: "Posició compartida",
+    sharedPositionLine: "Posició compartida: {coords}",
+    weatherHere: "El temps aquí, a MeteoToni AI:",
+    openInMaps: "Obre a Google Maps",
+    directions: "Com arribar-hi",
+    copied: "Enllaç copiat al porta-retalls",
+    positionCopied: "Posició copiada al porta-retalls",
+    failed: "No s'ha pogut copiar l'enllaç",
+    // Finestra "Què vols compartir?" (posició del GPS, vegeu SharePositionSheet)
+    sheetTitle: "Què vols compartir?",
+    yourPosition: "La teva posició",
+    sharePosition: "Comparteix la meva posició",
+    sharePositionHint: "Coordenades exactes i enllaç de Google Maps",
+    shareWeatherOnly: "Comparteix només el temps de {place}",
+    shareWeatherOnlyHere: "Comparteix només el temps d'aquí",
+    shareWeatherOnlyHint: "Sense la teva posició exacta (a ~1 km)",
+    copyCoords: "Copia les coordenades",
+    copyCoordsHint: "Per dictar-les o enganxar-les on calgui",
+    coordsCopied: "Coordenades copiades al porta-retalls"
+  },
+
     // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
   weekdays: {
     long: ["Diumenge", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte"],

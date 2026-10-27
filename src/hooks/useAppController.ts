@@ -1,10 +1,13 @@
 // src/hooks/useAppController.ts
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { usePreferences } from './usePreferences';
 import { TRANSLATIONS } from '../translations';
 import { useAppActions } from './useAppActions';
 import { useI18nLanguageSync } from './useI18nLanguageSync';
+import { usePlaceLink } from './usePlaceLink';
 import type { PlaceRef } from '../utils/geoDistance';
+import { placeForLink } from '../utils/placeLink';
+import type { LocationMeta } from '../types/weatherLogicTypes';
 
 // Importem els nous controladors especialitzats
 import { useDataController } from './controllers/useDataController';
@@ -35,6 +38,20 @@ export function useAppController() {
     now: ui.state.now 
   });
 
+  // El lloc per a l'enllaç i per compartir: coordenades demanades (les del GPS tal qual), nom de pantalla i origen.
+  const { weatherData, loadedPlace } = data.state;
+  const sharedPlace = useMemo(
+    () => placeForLink(
+      loadedPlace,
+      weatherData?.location as LocationMeta | undefined,
+      typeof weatherData?.offlineSnapshot?.distanceKm === 'number'
+    ),
+    [loadedPlace, weatherData]
+  );
+
+  const { setShowShareSheet } = ui.actions;
+  const openShareSheet = useCallback(() => setShowShareSheet(true), [setShowShareSheet]);
+
   // 4. CAPA D'ACCIONS (Bridge)
   // Connectem les peces. Les accions necessiten accés creuat (ex: UI necessita saber errors de Dades)
   const appActions = useAppActions({
@@ -43,10 +60,20 @@ export function useAppController() {
     fetchWeatherByCoords: data.actions.fetchWeatherByCoords,
     setNotification: ui.actions.setNotification,
     weatherData: data.state.weatherData,
+    sharedPlace,
+    openShareSheet,
     isFavorite,
     addFavorite,
     removeFavorite
   });
+
+  // 4b. ENLLAÇ DEL LLOC (?lat&lon&nom): obre el lloc de la URL i la manté al dia amb el lloc a pantalla.
+  // Mentre l'enllaç carrega (encara sense dades ni error) es mostra el tauler amb l'esquelet, no la benvinguda.
+  const { openedFromLink } = usePlaceLink({
+    place: sharedPlace,
+    fetchWeatherByCoords: data.actions.fetchWeatherByCoords
+  });
+  const openingLink = openedFromLink && !data.state.weatherData && !data.state.error;
 
   // 5. RETORN RETRO-COMPATIBLE (memoitzat)
   // Reconstruïm l'objecte gegant original perquè les Vistes no es trenquin.
@@ -64,6 +91,8 @@ export function useAppController() {
           weatherData: data.state.weatherData,
           aqiData: data.state.aqiData,
           loading: data.state.loading,
+          openingLink,
+          sharedPlace,
           error: data.state.error,
           aiAnalysis: data.state.aiAnalysis,
           lightning: data.state.lightning,
@@ -80,6 +109,11 @@ export function useAppController() {
 
           // Accions de Preferències
           handleToggleFavorite: appActions.handleToggleFavorite,
+          handleSharePlace: appActions.handleSharePlace,
+          shareMyPosition: appActions.shareMyPosition,
+          shareWeatherOnly: appActions.shareWeatherOnly,
+          copyCoordinates: appActions.copyCoordinates,
+          setShowShareSheet,
           setLang,
           setViewMode,
 
@@ -113,10 +147,11 @@ export function useAppController() {
       modals: ui.modals, // Pas directe
       t
   }), [
-      data.state.weatherData, data.state.aqiData, data.state.loading, data.state.error,
+      data.state.weatherData, data.state.aqiData, data.state.loading, openingLink, sharedPlace, data.state.error,
       data.state.aiAnalysis, data.state.lightning, data.state.calculations, favorites, ui.state.notification, ui.state.now,
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation,
-      appActions.handleGetCurrentLocation, appActions.handleToggleFavorite,
+      appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
+      appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,
       setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,
       ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,

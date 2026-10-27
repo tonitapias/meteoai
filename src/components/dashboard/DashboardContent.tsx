@@ -87,7 +87,8 @@ export const DashboardContent = () => {
 
     // Gestió d'estats de càrrega i error
     if (state.error) return <ErrorBanner message={state.error} />;
-    if (state.loading && !weatherData) return <LoadingSkeleton />;
+    // openingLink: el primer render d'un enllaç, abans que l'efecte que el carrega hagi posat `loading`.
+    if ((state.loading || state.openingLink) && !weatherData) return <LoadingSkeleton />;
     if (!weatherData) return null;
 
     // Forcem el tipatge de location per corregir la pèrdua d'inferència (Risc Zero)
@@ -117,6 +118,8 @@ export const DashboardContent = () => {
                 shiftedNow={calculations.shiftedNow}
                 isFavorite={!!loc && flags.isFavorite(loc)}
                 onToggleFavorite={actions.handleToggleFavorite}
+                onShare={actions.handleSharePlace}
+                sharedPlace={state.sharedPlace}
                 onShowRadar={() => actions.setShowRadar(true)}
                 onShowRegionalModel={() => actions.setShowRegionalModel(true)}
                 aqiData={state.aqiData}

@@ -481,6 +481,31 @@ export const es = {
   radarFail: "Si falla, pulsa \"Abrir fuera\" ↗",
   favAdded: "Añadido a favoritos",
   favRemoved: "Eliminado de favoritos",
+  share: {
+    button: "Compartir este lugar",
+    title: "El tiempo en {place}",
+    text: "Mira el tiempo en {place} con MeteoToni AI",
+    positionTitle: "Mi posición",
+    positionLine: "Mi posición: {coords}",
+    sharedPosition: "Posición compartida",
+    sharedPositionLine: "Posición compartida: {coords}",
+    weatherHere: "El tiempo aquí, en MeteoToni AI:",
+    openInMaps: "Abrir en Google Maps",
+    directions: "Cómo llegar",
+    copied: "Enlace copiado al portapapeles",
+    positionCopied: "Posición copiada al portapapeles",
+    failed: "No se ha podido copiar el enlace",
+    sheetTitle: "¿Qué quieres compartir?",
+    yourPosition: "Tu posición",
+    sharePosition: "Compartir mi posición",
+    sharePositionHint: "Coordenadas exactas y enlace de Google Maps",
+    shareWeatherOnly: "Compartir solo el tiempo de {place}",
+    shareWeatherOnlyHere: "Compartir solo el tiempo de aquí",
+    shareWeatherOnlyHint: "Sin tu posición exacta (a ~1 km)",
+    copyCoords: "Copiar las coordenadas",
+    copyCoordsHint: "Para dictarlas o pegarlas donde haga falta",
+    coordsCopied: "Coordenadas copiadas al portapapeles"
+  },
 
     // --- NUEVAS CLAVES: WIDGETS, RADAR Y 7 DÍAS ---
   

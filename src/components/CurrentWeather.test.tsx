@@ -116,6 +116,24 @@ describe('CurrentWeather Component', () => {
     expect(apparentTemp.length).toBeGreaterThan(0);
   });
 
+  it('una posició rebuda (origen=gps) es mostra com a tal amb Google Maps; la meva posició, no', () => {
+    mockedUsePreferences.mockReturnValue(createMockPrefs('C', 'ca'));
+    const props = {
+      data: mockData, effectiveCode: 1, unit: 'C' as const, lang: 'ca' as const, isFavorite: false,
+      onToggleFavorite: () => {}, onShowRadar: () => {}, onShowRegionalModel: () => {}, aqiData: null
+    };
+
+    const { rerender } = render(
+      <CurrentWeather {...props} sharedPlace={{ name: 'Barcelona', latitude: 41.38123, longitude: 2.17456, origin: 'sharedPosition' }} />
+    );
+    expect(screen.getByText('Posició compartida')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Obre a Google Maps' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=41.38123,2.17456');
+
+    rerender(<CurrentWeather {...props} sharedPlace={{ name: 'Barcelona', latitude: 41.38123, longitude: 2.17456, origin: 'gps' }} />);
+    expect(screen.queryByText('Posició compartida')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Obre a Google Maps' })).toBeNull();
+  });
+
   it('hauria de mostrar l\'etiqueta AROME HD si la font és AROME', () => {
     mockedUsePreferences.mockReturnValue(createMockPrefs('C', 'ca'));
 

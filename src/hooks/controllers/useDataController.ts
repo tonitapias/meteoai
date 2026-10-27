@@ -19,7 +19,7 @@ interface DataControllerProps {
 
 export function useDataController({ lang, unit, now }: DataControllerProps) {
   // 1. Obtenció de Dades Pures
-  const { weatherData, aqiData, loading, error, fetchWeatherByCoords, refreshLoadedLocation, getLastLoadedAt } = useWeather(lang, unit);
+  const { weatherData, loadedPlace, aqiData, loading, error, fetchWeatherByCoords, refreshLoadedLocation, getLastLoadedAt } = useWeather(lang, unit);
   const { getCoordinates } = useGeoLocation();
 
   // Sense això la previsió només es carregava en canviar d'ubicació i, amb l'app
@@ -55,6 +55,7 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
   return {
     state: {
       weatherData,
+      loadedPlace,
       aqiData,
       loading,
       error,

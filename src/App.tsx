@@ -15,7 +15,8 @@ export default function MeteoIA() {
   return (
     <AppProvider controller={controller}>
       {/* LOGICA DE ROUTING SIMPLE */}
-      {!state.weatherData && !state.error ? (
+      {/* Obrint un enllaç d'un lloc (?lat&lon&nom), directament al tauler mentre carrega (vegeu usePlaceLink). */}
+      {!state.weatherData && !state.error && !state.openingLink ? (
          <WelcomeView controller={controller} />
       ) : (
          <DashboardView />
