@@ -32,6 +32,8 @@ export function useViewState() {
     const [showCloudLayersModal, setShowCloudLayersModal] = useState(false);
     const [showSnowLevelModal, setShowSnowLevelModal] = useState(false);
     const [showWindModal, setShowWindModal] = useState(false);
+    // Finestra "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace).
+    const [showShareSheet, setShowShareSheet] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
     useEffect(() => { 
@@ -60,6 +62,7 @@ export function useViewState() {
     useModalHistory(showCloudLayersModal, useCallback(() => setShowCloudLayersModal(false), []));
     useModalHistory(showSnowLevelModal, useCallback(() => setShowSnowLevelModal(false), []));
     useModalHistory(showWindModal, useCallback(() => setShowWindModal(false), []));
+    useModalHistory(showShareSheet, useCallback(() => setShowShareSheet(false), []));
 
     // --- 5. Helpers d'Acció UI ---
     const toggleDebug = useCallback(() => {
@@ -91,7 +94,8 @@ export function useViewState() {
                 showVisibilityModal,
                 showCloudLayersModal,
                 showSnowLevelModal,
-                showWindModal
+                showWindModal,
+                showShareSheet
             }
         },
         actions: {
@@ -114,7 +118,8 @@ export function useViewState() {
             setShowVisibilityModal,
             setShowCloudLayersModal,
             setShowSnowLevelModal,
-            setShowWindModal
+            setShowWindModal,
+            setShowShareSheet
         }
     };
 }

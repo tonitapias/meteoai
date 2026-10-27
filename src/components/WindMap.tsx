@@ -100,6 +100,8 @@ export default function WindMap({ lat, lon }: WindMapProps) {
             key={`windy-iframe-${retryCount}`}
             title="Mapa de Vent Tàctic"
             src={windyUrl}
+            // L'adreça porta les coordenades del lloc: Sentry Replay no la grava (vegeu utils/telemetryPrivacy.ts).
+            data-sentry-block
             loading="lazy"
             onLoad={() => {
                 if (isLoading) {

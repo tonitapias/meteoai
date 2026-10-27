@@ -11,7 +11,8 @@ import { useCurrentWeatherLogic } from '../hooks/useCurrentWeatherLogic';
 import type { RegionalModel } from '../constants/regionalModels';
 
 // Sub-components "Building Blocks"
-import { CurrentWeatherHeader } from './current-weather/CurrentWeatherHeader';
+import { CurrentWeatherHeader, type SharedPositionInfo } from './current-weather/CurrentWeatherHeader';
+import { formatCoordsText, googleMapsDirectionsLink, googleMapsLink, type SharedPlace } from '../utils/placeLink';
 import { MainTemperatureDisplay } from './current-weather/MainTemperatureDisplay';
 import { WeatherStatsGrid } from './current-weather/WeatherStatsGrid';
 import { WeatherActionButtons } from './current-weather/WeatherActionButtons';
@@ -26,6 +27,10 @@ interface CurrentWeatherProps {
   lang: Language;
   isFavorite: boolean;
   onToggleFavorite: () => void;
+  /** Botó Compartir (a dalt a la dreta de la targeta, vegeu CurrentWeatherHeader). Sense, no es mostra. */
+  onShare?: () => void;
+  /** El lloc a pantalla amb l'origen (vegeu placeForLink): una posició rebuda es mostra com a tal a la capçalera. */
+  sharedPlace?: SharedPlace | null;
   onShowRadar: () => void;
   onShowRegionalModel: () => void;
   aqiData: AirQualityData | null;
@@ -92,7 +97,17 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
 
   // AVÍS D'AEROSOLS (pols/partícules del CAMS): només informa de la càrrega d'aerosols, no de la visibilitat.
   const tr = (TRANSLATIONS[props.lang] || TRANSLATIONS['ca']) as unknown as TranslationMap;
-  const favLabels = TRANSLATIONS[props.lang] || TRANSLATIONS.ca;
+  const uiText = TRANSLATIONS[props.lang] || TRANSLATIONS.ca;
+  // Posició rebuda (enllaç origen=gps): coordenades del punt i com arribar-hi amb Google Maps.
+  const shared = props.sharedPlace?.origin === 'sharedPosition' ? props.sharedPlace : null;
+  const sharedPosition: SharedPositionInfo | null = shared ? {
+    label: uiText.share.sharedPosition,
+    coords: formatCoordsText(shared.latitude, shared.longitude),
+    mapsUrl: googleMapsLink(shared.latitude, shared.longitude),
+    directionsUrl: googleMapsDirectionsLink(shared.latitude, shared.longitude),
+    openLabel: uiText.share.openInMaps,
+    directionsLabel: uiText.share.directions
+  } : null;
   const dustAdvisory = resolveDustAdvisory(props.aqiData?.current, parseMetric(weather.stats.humidity), currentPrecip);
   const advisoryText = dustAdvisory.kind === 'dust' ? tr.alertDust : dustAdvisory.kind === 'particles' ? tr.alertParticles : undefined;
   const advisoryLabel = dustAdvisory.kind === 'dust' ? tr.dustLabel : dustAdvisory.kind === 'particles' ? tr.particlesLabel : null;
@@ -134,6 +149,9 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             date={weather.meta.date as string}
             modelLabel={weather.meta.regionalModelLabel as string | null}
             elevation={parseMetric(rawData.elevation) ?? parseMetric(weatherMeta.elevation)}
+            sharedPosition={sharedPosition}
+            onShare={props.onShare}
+            shareLabel={uiText.share.button}
           />
 
           <div className="mt-4 md:mt-0">
@@ -190,7 +208,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
               regionalModelLabel={props.activeRegionalModel?.label ?? null}
               isFavorite={props.isFavorite}
               onToggleFavorite={props.onToggleFavorite}
-              favoriteLabels={{ add: favLabels.addFavorite, remove: favLabels.removeFavorite }}
+              favoriteLabels={{ add: uiText.addFavorite, remove: uiText.removeFavorite }}
             />
           </div>
         </div>

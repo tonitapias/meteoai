@@ -187,7 +187,8 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
     try {
       const { lat, lon } = await getCoordinates();
       const { city, country } = await reverseGeocode(lat, lon, safeLang);
-      onSearch(lat, lon, city, country);
+      // 'gps': és la posició de l'usuari, no un lloc consultat (vegeu PlaceOrigin).
+      onSearch(lat, lon, city, country, 'gps');
     } catch (err) {
       reportGeoError(err);
     } finally {

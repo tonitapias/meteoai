@@ -7,6 +7,7 @@ import { getCurrentUV } from '../../utils/uvIndexUtils';
 import { getCurrentDewPoint } from '../../utils/weatherMath';
 import { loadSolarModal } from '../solar/preloadSolarModal';
 import { SolarModalSkeleton } from '../solar/SolarModalSkeleton';
+import { formatCoordsText } from '../../utils/placeLink';
 
 // Lazy loading dels modals (es manté igual)
 const DayDetailModal = lazy(() => import('../DayDetailModal'));
@@ -24,13 +25,14 @@ const VisibilityModal = lazy(() => import('../VisibilityModal'));
 const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
 const SnowLevelModal = lazy(() => import('../SnowLevelModal'));
 const WindModal = lazy(() => import('../WindModal'));
+const SharePositionSheet = lazy(() => import('../SharePositionSheet'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
-    const { state, actions, flags, modals } = useAppContext();
-    const { weatherData, aqiData, calculations } = state;
+    const { state, actions, flags, modals, t } = useAppContext();
+    const { weatherData, aqiData, calculations, sharedPlace } = state;
 
     // L'idioma d'i18next (radar) ja el sincronitza useAppController des de l'arrencada (useI18nLanguageSync).
 
@@ -152,6 +154,19 @@ export const DashboardModals = () => {
                     weatherData={weatherData}
                     onClose={() => actions.setShowWindModal(false)}
                     lang={flags.lang}
+                />
+            )}
+            {/* "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace) */}
+            {modals.showShareSheet && sharedPlace?.origin === 'gps' && (
+                <SharePositionSheet
+                    coords={formatCoordsText(sharedPlace.latitude, sharedPlace.longitude)}
+                    placeName={sharedPlace.name}
+                    texts={t.share}
+                    closeLabel={t.closeWindow}
+                    onSharePosition={actions.shareMyPosition}
+                    onShareWeatherOnly={actions.shareWeatherOnly}
+                    onCopyCoords={actions.copyCoordinates}
+                    onClose={() => actions.setShowShareSheet(false)}
                 />
             )}
         </Suspense>

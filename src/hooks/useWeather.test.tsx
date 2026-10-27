@@ -379,3 +379,72 @@ describe('useWeather — previsió desada', () => {
         expect(nameOf(result.current.weatherData)).toBe('Paris');
     });
 });
+
+describe('useWeather — lloc carregat (per a l\'enllaç i per compartir)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-27T10:00:00Z'));
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("desa les coordenades demanades tal qual (les del GPS, no les de les dades) i l'origen", async () => {
+        // Les dades porten un altre punt (p. ex. una previsió desada d'un poble del costat).
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Salt'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+
+        await act(async () => {
+            await result.current.fetchWeatherByCoords(41.9831458, 2.8249319, 'La Meva Ubicació', undefined, 'gps');
+        });
+
+        expect(result.current.loadedPlace).toEqual({
+            lat: 41.9831458, lon: 2.8249319, name: 'La Meva Ubicació', country: undefined, origin: 'gps'
+        });
+    });
+
+    it("sense origen és un lloc consultat (cercador, favorit, enllaç)", async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+
+        expect(result.current.loadedPlace?.origin).toBe('consulted');
+    });
+
+    it("el refresc en segon pla manté l'origen", async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.9831458, 2.8249319, 'La Meva Ubicació', undefined, 'gps'); });
+
+        vi.setSystemTime(Date.now() + 20 * 60 * 1000);
+        await act(async () => { await result.current.refreshLoadedLocation(); });
+
+        expect(WeatherRepository.get).toHaveBeenCalledTimes(2);
+        expect(result.current.loadedPlace?.origin).toBe('gps');
+    });
+
+    it("el mateix punt tornat a triar amb el GPS just després de cercar-lo passa a ser la meva posició", async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya', 'gps'); });
+
+        expect(result.current.loadedPlace?.origin).toBe('gps');
+    });
+
+    it("si la càrrega falla, el lloc carregat continua sent l'anterior (el de les dades a pantalla)", async () => {
+        vi.mocked(WeatherRepository.get)
+            .mockResolvedValueOnce(repoResponse('Girona'))
+            .mockRejectedValueOnce(new Error('offline'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+        await act(async () => { await result.current.fetchWeatherByCoords(42.18, 2.49, 'Olot', 'Espanya'); });
+
+        expect(result.current.loadedPlace).toMatchObject({ lat: 41.98, name: 'Girona' });
+    });
+});
