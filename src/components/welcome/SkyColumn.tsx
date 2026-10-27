@@ -6,7 +6,7 @@
 // Cap dada de xarxa: tot surt de useWelcomeSky. Un sol SVG sense filtres (les resplendors són degradats); l'única
 // animació és l'entrada, una sola vegada: la columna s'aixeca, l'arc del dia es dibuixa i el sol (o la lluna) hi
 // avança des de l'horitzó de l'est fins a l'hora d'ara. Respecta "reduir el moviment".
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MoonDisc } from '../MoonDisc';
 import { contourPaths, DISC } from '../../utils/welcome/contourTexture';
 import { ORBIT, orbitPoint, WelcomePhase, WelcomeSky } from '../../utils/welcome/welcomeSky';
@@ -83,6 +83,12 @@ const ALTOCUMULUS: ReadonlyArray<readonly [number, number, 'top' | 'mid' | 'shad
   ...[264, 280, 296, 312, 328, 344, 360, 376].map(x => [x, 348, 'mid'] as const),
   ...[284, 300, 316, 332, 348].map(x => [x, 356, 'shade'] as const),
 ];
+
+// El secret de la benvinguda (hooks/welcome/useColumnStretch): quan s'estira la columna, el contenidor canvia la
+// variable --sky-stretch i la columna s'allarga des de terra sense que React la torni a pintar. L'astronauta de dalt
+// (la pista) no s'estira: puja amb el capdamunt, que es mou (s − 1) × 380 unitats.
+const STRETCH: CSSProperties = { transform: 'scaleY(var(--sky-stretch, 1))', transformOrigin: '320px 500px' };
+const ASTRONAUT_LIFT: CSSProperties = { transform: 'translateY(calc((1 - var(--sky-stretch, 1)) * 380px))' };
 
 const pct = (v: number) => `${(v / 640) * 100}%`;
 /** Diàmetre de la lluna, en unitats del viewBox: al mòbil la columna és petita i ha de fer uns 26 px, no 15. */
@@ -327,6 +333,7 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
             transition: 'transform 900ms cubic-bezier(.2,.7,.2,1) 160ms, opacity 600ms ease-out 160ms',
           }}
         >
+          <g style={STRETCH}>
           <path d="M250 405A70 21 0 0 0 390 405V500A70 21 0 0 1 250 500Z" fill="#4f46e5" opacity={theme.bands[0]} />
           <path d="M250 247A70 21 0 0 0 390 247V405A70 21 0 0 1 250 405Z" fill="#3b82f6" opacity={theme.bands[1]} />
           <path d="M250 120A70 21 0 0 0 390 120V247A70 21 0 0 1 250 247Z" fill="#7dd3fc" opacity={theme.bands[2]} />
@@ -359,6 +366,21 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
           <path d="M250 405A70 21 0 0 0 390 405" stroke="#818cf8" strokeOpacity={0.85} vectorEffect="non-scaling-stroke" />
           <path d="M250 247A70 21 0 0 0 390 247" stroke="#60a5fa" strokeOpacity={0.85} vectorEffect="non-scaling-stroke" />
           <path d="M242 500H250M245 436.7H250M245 373.3H250M245 310H250M242 246.7H250M245 183.3H250M242 120H250" stroke="#cbd5e1" strokeOpacity={0.6} vectorEffect="non-scaling-stroke" />
+          </g>
+
+          {/* Un astronauta minúscul dret al capdamunt de la columna: la pista que la columna amaga alguna cosa. */}
+          <g style={ASTRONAUT_LIFT}>
+            <g transform="translate(320 100) scale(0.8)">
+              <path d="M6 11L13 2" stroke="#e2e8f0" strokeWidth={3.2} strokeLinecap="round" />
+              <rect x={-9} y={9} width={5} height={10} rx={2} fill="#94a3b8" />
+              <rect x={-6} y={8} width={12} height={12} rx={3.5} fill="#e2e8f0" />
+              <rect x={-6} y={18} width={5} height={8} rx={2} fill="#e2e8f0" />
+              <rect x={1} y={18} width={5} height={8} rx={2} fill="#e2e8f0" />
+              <circle cy={3} r={7} fill="#f8fafc" />
+              <ellipse cx={1.6} cy={3} rx={4.4} ry={3.2} fill="#1e293b" />
+              <ellipse cx={3} cy={1.8} rx={1.3} ry={0.9} fill={theme.sun.mid} />
+            </g>
+          </g>
         </g>
       </svg>
 

@@ -1,5 +1,8 @@
 // src/constants/apiConfig.ts
 
+// Previsió d'Open-Meteo: la principal (services/weatherApi) i la consulta mínima de l'ascensor de la benvinguda.
+export const OPEN_METEO_FORECAST_URL: string = import.meta.env.VITE_API_WEATHER_BASE || "https://api.open-meteo.com/v1/forecast";
+
 export const API_TIMEOUT_DEFAULT = 10000;
 // Peticions a api.open-meteo.com (la principal i el model regional): UN sol intent llarg. Amb el servidor lent
 // (13-10-2026: 13-16 s) els 3 intents tallats als 10 s no arribaven mai a la resposta i l'app es quedava sense dades.

@@ -17,6 +17,8 @@ import { splitHeadline, WELCOME_ACCENT } from '../utils/welcome/welcomeAccent';
 import WelcomeSearch from './welcome/WelcomeSearch';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { useMinWidth } from './solar/useMinWidth';
+import { useColumnStretch } from '../hooks/welcome/useColumnStretch';
+import type { WeatherUnit } from '../utils/formatters';
 
 // Carregat de manera diferida: és un modal que la immensa majoria de visites mai obren, però
 // abans s'importava estàticament i inflava el bundle crític que bloqueja el primer pintat (LCP)
@@ -28,6 +30,9 @@ const SkyScene = lazy(() => import('./welcome/SkyScene'));
 // Del mateix tros: quan hi ha lluna a la línia de dalt, el cel (i doncs aquest codi) ja ha arribat.
 const EyebrowMoon = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowMoon })));
 const EyebrowSun = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowSun })));
+// El secret de la columna (estirar-la cap amunt tres cops): només es baixa si algú el troba.
+const loadSkyElevator = () => import('./welcome/SkyElevator');
+const SkyElevator = lazy(loadSkyElevator);
 
 interface WelcomeScreenProps {
   lang: Language;
@@ -39,6 +44,10 @@ interface WelcomeScreenProps {
   loading: boolean;
   /** 5 tocs seguits a la marca: panell de depuració (com el títol de la capçalera). */
   onDebugToggle?: () => void;
+  /** °C o °F: l'ascensor de la columna dona les altituds en metres i km o en peus i milles. */
+  unit?: WeatherUnit;
+  /** Avís de l'app (el toast), que es manté si en aterrar s'obre el tauler. */
+  onNotify?: (notification: { type: 'success' | 'error' | 'info'; msg: string }) => void;
 }
 
 type LocateStatus = 'idle' | 'locating' | 'error';
@@ -74,7 +83,7 @@ function starMaskOutside({ left, top, right, bottom }: TextBox): string {
   ].join(', ');
 }
 
-export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, loading, onDebugToggle }: WelcomeScreenProps) {
+export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, loading, onDebugToggle, unit = 'C', onNotify }: WelcomeScreenProps) {
   const w = t.welcome;
   const permission = useGeoPermission();
   // Arriba quan s'ha carregat SkyScene; fins llavors, fons fosc neutre i la línia de dalt sense el moment del dia.
@@ -136,10 +145,42 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
     helpHistoryPushedRef.current = true;
     setShowHelp(true);
   };
+
+  // --- L'ascensor de la Columna del cel: el secret de la benvinguda (estirar la columna cap amunt tres cops). També
+  // amb entrada d'historial, perquè el botó enrere en surti. ---
+  const [elevatorOpen, setElevatorOpen] = useState(false);
+  const elevatorHistoryPushedRef = useRef(false);
+  const columnRef = useRef<HTMLDivElement>(null);
+  const openElevator = useCallback(() => {
+    window.history.pushState({ modal: 'meteo_sky_elevator' }, '');
+    elevatorHistoryPushedRef.current = true;
+    setElevatorOpen(true);
+  }, []);
+  const closeElevator = useCallback(() => {
+    if (elevatorHistoryPushedRef.current) {
+      elevatorHistoryPushedRef.current = false;
+      window.history.back();
+    } else {
+      setElevatorOpen(false);
+    }
+  }, []);
+  // A la primera estirada ja es comença a baixar l'ascensor: a la tercera hi ha de ser.
+  const prefetchElevator = useCallback(() => { void loadSkyElevator(); }, []);
+  useColumnStretch(columnRef, { onPull: prefetchElevator, onOpen: openElevator, enabled: !!sky && !elevatorOpen });
+  // En tocar terra, l'avís de l'app (sobreviu al canvi de pantalla) i, si ja hi havia permís d'ubicació, la previsió
+  // d'on és l'usuari; si no, es queda a la benvinguda.
+  const landsOnForecast = sky?.place.source === 'gps';
+  const handleLanded = useCallback((message: string) => {
+    closeElevator();
+    onNotify?.({ type: 'success', msg: message });
+    if (landsOnForecast) void handleLocate();
+  }, [closeElevator, onNotify, landsOnForecast, handleLocate]);
   useEffect(() => {
     const handlePopState = () => {
       helpHistoryPushedRef.current = false;
       setShowHelp(false);
+      elevatorHistoryPushedRef.current = false;
+      setElevatorOpen(false);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -294,7 +335,8 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
       <main className="relative z-20 mx-auto w-full max-w-[1440px] flex-1 px-4 min-[360px]:px-5 sm:px-8 lg:px-16 pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-6 lg:gap-10">
         <div className="order-1 lg:order-2 mx-auto lg:mx-0 w-full shrink-0 max-w-[min(340px,40vh)] sm:max-w-[min(440px,46vh)] lg:max-w-[min(600px,calc(100vh_-_230px),44vw)]">
           <div className="relative w-full pt-[100%]">
-            <div className="absolute inset-0">
+            {/* pan-x: estirar la columna cap amunt és el gest secret, no un desplaçament de la pàgina. */}
+            <div ref={columnRef} className="absolute inset-0" style={{ touchAction: 'pan-x' }}>
               <Suspense fallback={null}>
                 <SkyScene permission={permission} labels={wide ? columnLabels : columnLabelsShort} compact={!wide} onSky={handleSky} />
               </Suspense>
@@ -366,6 +408,20 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
         <span>{w.dataCredit}</span>
         <span className="font-mono">v{APP_VERSION}</span>
       </footer>
+
+      {elevatorOpen && sky && (
+        <Suspense fallback={null}>
+          <SkyElevator
+            sky={sky}
+            lang={lang}
+            unit={unit}
+            cloudNames={{ high: w.cloudsHigh, mid: w.cloudsMid, low: w.cloudsLow }}
+            landsOnForecast={landsOnForecast}
+            onClose={closeElevator}
+            onLand={handleLanded}
+          />
+        </Suspense>
+      )}
 
       {showHelp && (
         <Suspense fallback={null}>

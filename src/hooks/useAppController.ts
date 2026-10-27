@@ -129,6 +129,7 @@ export function useAppController() {
 
           // Accions d'UI
           toggleDebug: ui.actions.toggleDebug,
+          setNotification: ui.actions.setNotification,
           dismissNotification: ui.actions.dismissNotification,
           setSelectedDayIndex: ui.actions.setSelectedDayIndex,
           setShowRadar: ui.actions.setShowRadar,
@@ -162,7 +163,7 @@ export function useAppController() {
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation, goHome,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
       appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,
-      setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,
+      setLang, setViewMode, ui.actions.toggleDebug, ui.actions.setNotification, ui.actions.dismissNotification,
       ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,
       ui.actions.setShowAqiModal, ui.actions.setShowUvModal, ui.actions.setShowPressureModal,
