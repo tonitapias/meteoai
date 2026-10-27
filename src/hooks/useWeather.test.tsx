@@ -448,3 +448,130 @@ describe('useWeather — lloc carregat (per a l\'enllaç i per compartir)', () =
         expect(result.current.loadedPlace).toMatchObject({ lat: 41.98, name: 'Girona' });
     });
 });
+
+// --- TORNAR A L'INICI (botó Inici del tauler: la benvinguda no pot tornar a carregar el lloc tota sola) ---
+describe("useWeather — tornar a l'inici", () => {
+    const T0 = new Date('2026-10-27T10:00:00Z').getTime();
+    type RepoOptions = { onLateResult?: (response: ReturnType<typeof repoResponse>) => void };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(T0);
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it("buida la previsió, l'aire, el lloc carregat i l'error", async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+
+        act(() => { result.current.clearWeather(); });
+
+        expect(result.current.weatherData).toBeNull();
+        expect(result.current.aqiData).toBeNull();
+        expect(result.current.loadedPlace).toBeNull();
+        expect(result.current.error).toBeNull();
+        expect(result.current.loading).toBe(false);
+    });
+
+    it("també treu l'error d'una càrrega fallida (el tauler mostrava l'avís d'error)", async () => {
+        vi.mocked(WeatherRepository.get).mockRejectedValue(new Error('offline'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+        expect(result.current.error).not.toBeNull();
+
+        act(() => { result.current.clearWeather(); });
+
+        expect(result.current.error).toBeNull();
+    });
+
+    it('ja no hi ha res a refrescar: ni en tornar a l\'app (getLastLoadedAt) ni amb "Reintenta"', async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+
+        act(() => { result.current.clearWeather(); });
+        vi.setSystemTime(T0 + 60 * 60 * 1000);
+
+        expect(result.current.getLastLoadedAt()).toBeNull();
+        let res: unknown = 'no';
+        await act(async () => { res = await result.current.refreshLoadedLocation(); });
+        expect(res).toBeNull();
+        expect(WeatherRepository.get).toHaveBeenCalledTimes(1);
+        expect(result.current.weatherData).toBeNull();
+    });
+
+    it('una càrrega en curs que respon després es descarta i no deixa loading encallat', async () => {
+        const slow = deferred<ReturnType<typeof repoResponse>>();
+        vi.mocked(WeatherRepository.get).mockReturnValueOnce(slow.promise);
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+
+        let loading!: Promise<unknown>;
+        act(() => { loading = result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+        expect(result.current.loading).toBe(true);
+
+        act(() => { result.current.clearWeather(); });
+        expect(result.current.loading).toBe(false);
+
+        await act(async () => { slow.resolve(repoResponse('Girona')); await loading; });
+
+        expect(result.current.weatherData).toBeNull();
+        expect(result.current.loadedPlace).toBeNull();
+        expect(result.current.loading).toBe(false);
+        expect(result.current.getLastLoadedAt()).toBeNull();
+    });
+
+    it('un refresc en segon pla en curs que respon després es descarta', async () => {
+        const slowRefresh = deferred<ReturnType<typeof repoResponse>>();
+        vi.mocked(WeatherRepository.get)
+            .mockResolvedValueOnce(repoResponse('Girona v1'))
+            .mockReturnValueOnce(slowRefresh.promise);
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+        vi.setSystemTime(T0 + 20 * 60 * 1000);
+
+        let refreshing!: Promise<unknown>;
+        act(() => { refreshing = result.current.refreshLoadedLocation() as Promise<unknown>; });
+        act(() => { result.current.clearWeather(); });
+        await act(async () => { slowRefresh.resolve(repoResponse('Girona v2')); await refreshing; });
+
+        expect(result.current.weatherData).toBeNull();
+        expect(result.current.getLastLoadedAt()).toBeNull();
+    });
+
+    it('la previsió nova que arriba tard darrere d\'una de desada es descarta', async () => {
+        let late!: RepoOptions['onLateResult'];
+        vi.mocked(WeatherRepository.get).mockImplementation(async (...args: unknown[]) => {
+            late = (args[7] as RepoOptions).onLateResult;
+            return {
+                success: true as const,
+                data: { ...weatherAt('Girona desada'), offlineSnapshot: { savedAt: T0 - 3600000, issuedAt: '2026-10-27T09:00', distanceKm: null } } as ExtendedWeatherData,
+                aqi: null
+            };
+        });
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+
+        act(() => { result.current.clearWeather(); });
+        act(() => { late?.(repoResponse('Girona nova')); });
+
+        expect(result.current.weatherData).toBeNull();
+        expect(result.current.loadedPlace).toBeNull();
+        expect(result.current.getLastLoadedAt()).toBeNull();
+    });
+
+    it('el mateix lloc tornat a triar just després es torna a carregar (sense l\'antirrebot de 3 s)', async () => {
+        vi.mocked(WeatherRepository.get).mockResolvedValue(repoResponse('Girona'));
+        const { result } = renderHook(() => useWeather('ca', 'C'));
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+
+        act(() => { result.current.clearWeather(); });
+        vi.setSystemTime(T0 + 1000);
+        await act(async () => { await result.current.fetchWeatherByCoords(41.98, 2.82, 'Girona', 'Espanya'); });
+
+        expect(WeatherRepository.get).toHaveBeenCalledTimes(2);
+        expect((result.current.weatherData?.location as { name: string } | undefined)?.name).toBe('Girona');
+        expect(result.current.getLastLoadedAt()).toBe(T0 + 1000);
+    });
+});

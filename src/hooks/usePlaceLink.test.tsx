@@ -1,6 +1,6 @@
 // src/hooks/usePlaceLink.test.tsx
 import { StrictMode, type ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { usePlaceLink } from './usePlaceLink';
 import type { PlaceOnScreen, PlaceOrigin } from '../utils/placeLink';
@@ -147,5 +147,65 @@ describe('usePlaceLink', () => {
         const replaceState = vi.spyOn(window.history, 'replaceState');
         rerender({ place: { ...GIRONA } });
         expect(replaceState).not.toHaveBeenCalled();
+    });
+
+    describe("tornar a l'inici (clearPlaceLink)", () => {
+        it('treu el lloc de la URL (també origen=gps) i conserva la resta, sense entrades noves a l\'historial', () => {
+            goTo('/meteoai/?utm_source=x');
+            const pushState = vi.spyOn(window.history, 'pushState');
+            const lengthBefore = window.history.length;
+            const { result, rerender } = renderHook(
+                ({ place }) => usePlaceLink({ place, fetchWeatherByCoords: fetchWeather }),
+                { initialProps: { place: { ...GIRONA, origin: 'sharedPosition' as PlaceOrigin } as PlaceOnScreen & { origin?: PlaceOrigin } | null } }
+            );
+            expect(currentUrl()).toBe('/meteoai/?utm_source=x&lat=41.9834&lon=2.82493&nom=Girona&pais=Espanya&origen=gps');
+
+            act(() => { result.current.clearPlaceLink(); });
+            rerender({ place: null });
+
+            expect(currentUrl()).toBe('/meteoai/?utm_source=x');
+            expect(pushState).not.toHaveBeenCalled();
+            expect(window.history.length).toBe(lengthBefore);
+        });
+
+        it("obert des d'un enllaç: deixa de comptar com a enllaç carregant (si no, el tauler es quedaria amb l'esquelet)", () => {
+            goTo('/meteoai/?lat=41.98315&lon=2.82493&nom=Girona');
+            const { result, rerender } = renderHook(
+                ({ place }) => usePlaceLink({ place, fetchWeatherByCoords: fetchWeather }),
+                { initialProps: { place: null as PlaceOnScreen | null } }
+            );
+            rerender({ place: GIRONA });
+            expect(result.current.openedFromLink).toBe(true);
+
+            act(() => { result.current.clearPlaceLink(); });
+            rerender({ place: null });
+
+            expect(result.current.openedFromLink).toBe(false);
+            expect(currentUrl()).toBe('/meteoai/');
+            expect(fetchWeather).toHaveBeenCalledTimes(1);
+        });
+
+        it("amb un enllaç que encara carrega (sense lloc a pantalla) també deixa la URL neta", () => {
+            goTo('/meteoai/?lat=41.98&lon=2.82&nom=Girona#modal-x');
+            const { result } = renderHook(() => usePlaceLink({ place: null, fetchWeatherByCoords: fetchWeather }));
+
+            act(() => { result.current.clearPlaceLink(); });
+
+            expect(result.current.openedFromLink).toBe(false);
+            expect(currentUrl()).toBe('/meteoai/#modal-x');
+        });
+
+        it("després, l'enrere (popstate) ja no torna a posar el lloc a la URL", () => {
+            const { result, rerender } = renderHook(
+                ({ place }) => usePlaceLink({ place, fetchWeatherByCoords: fetchWeather }),
+                { initialProps: { place: GIRONA as PlaceOnScreen | null } }
+            );
+            act(() => { result.current.clearPlaceLink(); });
+            rerender({ place: null });
+
+            window.dispatchEvent(new PopStateEvent('popstate'));
+
+            expect(currentUrl()).toBe('/meteoai/');
+        });
     });
 });

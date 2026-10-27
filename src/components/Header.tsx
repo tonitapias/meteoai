@@ -1,6 +1,6 @@
 // src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft } from 'lucide-react';
+import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, House } from 'lucide-react';
 import { usePreferences, LocationData, ViewMode } from '../hooks/usePreferences';
 import ViewModeChip from './ViewModeChip';
 import { scrollToCompleteView } from './dashboard/completeViewAnchor';
@@ -123,6 +123,12 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const [isFocused, setIsFocused] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  // Amb el botó Inici la capçalera desapareix: un GPS que respon després no ha de tornar a obrir el tauler.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // --- LÒGICA DEBUG MODE (5 CLICS) ---
   const [debugClicks, setDebugClicks] = useState(0);
@@ -187,12 +193,13 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
     try {
       const { lat, lon } = await getCoordinates();
       const { city, country } = await reverseGeocode(lat, lon, safeLang);
+      if (!mountedRef.current) return;
       // 'gps': és la posició de l'usuari, no un lloc consultat (vegeu PlaceOrigin).
       onSearch(lat, lon, city, country, 'gps');
     } catch (err) {
-      reportGeoError(err);
+      if (mountedRef.current) reportGeoError(err);
     } finally {
-      setIsLocating(false);
+      if (mountedRef.current) setIsLocating(false);
     }
   };
 
@@ -299,8 +306,22 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           </div>
       </div>
 
+      {/* BOTÓ INICI + BARRA DE CERCA. Inici a l'esquerra del cercador: a 375 px no cap a la primera fila (marca i xip).
+          Màxim = el del cercador (max-w-2xl) + el botó i l'espai (3.25rem). */}
+      <div className="basis-full md:basis-auto md:flex-1 w-full md:max-w-[45.25rem] flex items-stretch gap-2 order-2 md:order-1">
+      <button
+        type="button"
+        onClick={actions.goHome}
+        className="header-glass shrink-0 min-w-[44px] min-h-[44px] px-3 flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/40 text-slate-300 shadow-lg transition-colors hover:border-sky-400/40 hover:bg-black/50 hover:text-sky-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+        title={contextT.home.aria}
+        aria-label={contextT.home.aria}
+      >
+          <House aria-hidden="true" className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline text-xs sm:text-sm font-mono font-bold uppercase tracking-wider">{contextT.home.button}</span>
+      </button>
+
       {/* BARRA DE CERCA (Spatial UI) */}
-      <div ref={wrapperRef} className="basis-full md:basis-auto md:flex-1 w-full max-w-2xl relative order-2 md:order-1">
+      <div ref={wrapperRef} className="flex-1 min-w-0 max-w-2xl relative">
           <form 
             onSubmit={handleSubmit}
             className={`
@@ -330,7 +351,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
               onFocus={() => setIsFocused(true)}
               onKeyDown={handleKeyDown}
               placeholder={dict.searchPlaceholder}
-              className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm font-mono font-bold text-white placeholder:text-slate-500 h-9 px-2 uppercase tracking-wider w-full min-w-0"
+              className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm font-mono font-bold text-white placeholder:text-slate-500 h-9 px-2 uppercase tracking-wider w-full min-w-0 text-ellipsis"
               disabled={loading}
               autoComplete="off"
             />
@@ -424,6 +445,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                 )}
             </div>
           )}
+      </div>
       </div>
 
       {/* SELECTOR DE VISTA: al mòbil al costat de la marca; a PC a la dreta del cercador i amb la seva alçada.

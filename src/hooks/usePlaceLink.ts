@@ -1,5 +1,5 @@
 // src/hooks/usePlaceLink.ts
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   hasPlaceParams, readPlaceFromSearch, writePlaceToSearch, type LinkedPlace, type PlaceOnScreen, type PlaceOrigin
 } from '../utils/placeLink';
@@ -21,11 +21,13 @@ const readInitialPlace = (): LinkedPlace | null =>
  *   entrades noves a l'historial, i l'enrere continua sent dels modals (useModalHistory, useTacticalModal, ConsensusWidget,
  *   RadarModal) i, al final, per sortir de l'app.
  *
- * Torna si l'app s'ha obert des d'un enllaç amb lloc (per mostrar el tauler carregant en lloc de la benvinguda).
+ * Torna si l'app s'ha obert des d'un enllaç amb lloc (per mostrar el tauler carregant en lloc de la benvinguda) i
+ * `clearPlaceLink`, per tornar a la benvinguda (botó Inici).
  */
-export function usePlaceLink({ place, fetchWeatherByCoords }: UsePlaceLinkProps): { openedFromLink: boolean } {
+export function usePlaceLink({ place, fetchWeatherByCoords }: UsePlaceLinkProps): { openedFromLink: boolean; clearPlaceLink: () => void } {
   // Es llegeix una sola vegada: un cop arrencada, la URL ja és el reflex del lloc a pantalla, no l'ordre de carregar-lo.
   const [linkedPlace] = useState(readInitialPlace);
+  const [leftLink, setLeftLink] = useState(false);
   const bootedRef = useRef(false);
 
   useEffect(() => {
@@ -67,7 +69,14 @@ export function usePlaceLink({ place, fetchWeatherByCoords }: UsePlaceLinkProps)
     return () => window.removeEventListener('popstate', sync);
   }, [lat, lon, name, country, markPosition]);
 
-  return { openedFromLink: linkedPlace !== null };
+  // Tornar a la benvinguda: la URL perd el lloc (recarregar no l'ha de tornar a obrir) i l'enllaç d'arrencada ja no
+  // compta (sense dades, el tauler es quedaria carregant en lloc de mostrar la benvinguda).
+  const clearPlaceLink = useCallback(() => {
+    setLeftLink(true);
+    replaceSearch(writePlaceToSearch(window.location.search, null));
+  }, []);
+
+  return { openedFromLink: linkedPlace !== null && !leftLink, clearPlaceLink };
 }
 
 /**

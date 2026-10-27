@@ -69,11 +69,20 @@ export function useAppController() {
 
   // 4b. ENLLAÇ DEL LLOC (?lat&lon&nom): obre el lloc de la URL i la manté al dia amb el lloc a pantalla.
   // Mentre l'enllaç carrega (encara sense dades ni error) es mostra el tauler amb l'esquelet, no la benvinguda.
-  const { openedFromLink } = usePlaceLink({
+  const { openedFromLink, clearPlaceLink } = usePlaceLink({
     place: sharedPlace,
     fetchWeatherByCoords: data.actions.fetchWeatherByCoords
   });
   const openingLink = openedFromLink && !data.state.weatherData && !data.state.error;
+
+  // 4c. BOTÓ INICI del tauler: torna a la benvinguda sense previsió, sense refrescos pendents i amb la URL neta. Els
+  // favorits, l'idioma i la vista són preferències i no es toquen.
+  const { clearWeather } = data.actions;
+  const goHome = useCallback(() => {
+    clearWeather();
+    clearPlaceLink();
+    window.scrollTo(0, 0);
+  }, [clearWeather, clearPlaceLink]);
 
   // 5. RETORN RETRO-COMPATIBLE (memoitzat)
   // Reconstruïm l'objecte gegant original perquè les Vistes no es trenquin.
@@ -105,6 +114,7 @@ export function useAppController() {
           // Accions de Dades
           fetchWeatherByCoords: data.actions.fetchWeatherByCoords,
           refreshLoadedLocation: data.actions.refreshLoadedLocation,
+          goHome,
           handleGetCurrentLocation: appActions.handleGetCurrentLocation,
 
           // Accions de Preferències
@@ -149,7 +159,7 @@ export function useAppController() {
   }), [
       data.state.weatherData, data.state.aqiData, data.state.loading, openingLink, sharedPlace, data.state.error,
       data.state.aiAnalysis, data.state.lightning, data.state.calculations, favorites, ui.state.notification, ui.state.now,
-      data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation,
+      data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation, goHome,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
       appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,
       setLang, setViewMode, ui.actions.toggleDebug, ui.actions.dismissNotification,

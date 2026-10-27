@@ -507,6 +507,10 @@ export const en = {
     copyCoordsHint: "To read them out or paste them anywhere",
     coordsCopied: "Coordinates copied to clipboard"
   },
+  home: {
+    button: "Home",
+    aria: "Back to home"
+  },
 
     // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
   
