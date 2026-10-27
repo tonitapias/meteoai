@@ -6,6 +6,7 @@ import { WeatherData, AirQualityData } from "../types/weather";
 import { fetchWithTimeout } from "../utils/networkUtils";
 
 import {
+    OPEN_METEO_FORECAST_URL,
     API_TIMEOUT_DEFAULT,
     API_FORECAST_TIMEOUT,
     API_RETRY_DELAYS_MS,
@@ -21,7 +22,7 @@ import {
 } from "../constants/apiConfig";
 import type { RegionalModel } from "../constants/regionalModels";
 
-const BASE_URL = import.meta.env.VITE_API_WEATHER_BASE || "https://api.open-meteo.com/v1/forecast";
+const BASE_URL = OPEN_METEO_FORECAST_URL;
 const AIR_QUALITY_URL = import.meta.env.VITE_API_AQI_BASE || "https://air-quality-api.open-meteo.com/v1/air-quality";
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT) || API_TIMEOUT_DEFAULT;
 // En producció VITE_API_TIMEOUT surt d'un secret de GitHub (deploy.yml): si mai és més llarg, mana aquell.

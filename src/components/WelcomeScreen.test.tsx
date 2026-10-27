@@ -6,6 +6,7 @@ import { TRANSLATIONS, type Language } from '../translations';
 import type { LocateResult } from '../hooks/useAppActions';
 import type { LocationData } from '../hooks/usePreferences';
 import { WELCOME_ACCENT } from '../utils/welcome/welcomeAccent';
+import { ELEVATOR_TEXT } from './welcome/elevatorI18n';
 
 // El cel (la columna, l'accent del titular i el moment del dia) es carrega amb un import dinàmic després del
 // primer pintat. L'espera per defecte d'1 s no n'hi ha prou quan la màquina va carregada (la prova de l'accent
@@ -115,5 +116,31 @@ describe('WelcomeScreen', () => {
     expect(screen.getByText(TRANSLATIONS.ca.welcome.cloudsLowShort)).toBeInTheDocument();
     // Quan arriba el cel, la línia de dalt hi afegeix el moment del dia (alba, dia, posta, nit o la lluna).
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).previousElementSibling?.textContent).toMatch(/·/), SKY_WAIT);
+  });
+
+  it("estirar la columna cap amunt tres cops obre l'ascensor, i el botó de sortir el tanca", async () => {
+    // L'ascensor demana els núvols a Open-Meteo i l'hora de la foto a EUMETSAT: a les proves, sense xarxa.
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('sense xarxa'));
+    renderWelcome();
+    // El contenidor que escolta el gest: el pare de l'arrel de la columna (svg → arrel → contenidor).
+    const column = (await screen.findByRole('img', { name: TRANSLATIONS.ca.welcome.columnAlt }, SKY_WAIT)).parentElement!.parentElement!;
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).previousElementSibling?.textContent).toMatch(/·/), SKY_WAIT);
+    // jsdom no té PointerEvent: un MouseEvent amb el tipus i els camps del punter.
+    const pointer = (type: string, clientY: number) => {
+      const event = new MouseEvent(type, { bubbles: true, clientY, button: 0 });
+      Object.defineProperties(event, { pointerId: { value: 1 }, isPrimary: { value: true }, pointerType: { value: 'touch' } });
+      column.dispatchEvent(event);
+    };
+    const pull = () => { pointer('pointerdown', 300); pointer('pointermove', 150); pointer('pointerup', 150); };
+
+    pull();
+    pull();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    pull();
+    expect(await screen.findByRole('dialog', { name: ELEVATOR_TEXT.ca.dialog }, SKY_WAIT)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: ELEVATOR_TEXT.ca.close }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fetchSpy.mockRestore();
   });
 });

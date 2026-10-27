@@ -41,6 +41,8 @@ export default function WelcomeView({ controller }: WelcomeViewProps) {
            favorites={state.favorites}
            loading={state.loading}
            onDebugToggle={actions.toggleDebug}
+           unit={flags.unit}
+           onNotify={actions.setNotification}
        />
     </div>
   );
