@@ -11,6 +11,12 @@ import { TRANSLATIONS } from '../translations';
 const sent: unknown[] = [];
 const MY_POSITION: SharedPlace = { name: 'Girona', country: 'Espanya', latitude: 41.9831458, longitude: 2.8249319, origin: 'gps' };
 
+/**
+ * Un número que comença just aquí (no és la cua d'un altre): les hores de l'esdeveniment i de les molles de pa són
+ * segons amb decimals ("1793132642.822") i, sense això, de tant en tant hi apareixia "2.822" i la prova fallava.
+ */
+const standalone = (pattern: string) => new RegExp(`(?<![\\d.])${pattern}`);
+
 describe('Sentry amb el filtre de privadesa', () => {
     beforeAll(() => {
         window.history.replaceState(null, '', '/meteoai/');
@@ -43,9 +49,9 @@ describe('Sentry amb el filtre de privadesa', () => {
 
         const payload = JSON.stringify(sent);
         expect(payload).toContain('Error de previsió');
-        expect(payload).toContain('41.98');
-        expect(payload).not.toMatch(/41\.98\d/); // cap coordenada amb més de 2 decimals
-        expect(payload).not.toMatch(/2\.82\d/);
+        expect(payload).toMatch(standalone('41\\.98(?!\\d)'));
+        expect(payload).not.toMatch(standalone('41\\.98\\d')); // cap coordenada amb més de 2 decimals
+        expect(payload).not.toMatch(standalone('2\\.82\\d'));
         expect(payload).not.toContain('Girona');
 
         // La còpia neta no toca res de l'app.
