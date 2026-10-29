@@ -8,7 +8,7 @@ import { PLACE_PARAMS } from './placeLink';
 export interface TelemetryPrivacyContext {
     /** window.location.origin: per reconèixer l'adreça de l'app. */
     appOrigin: string;
-    /** import.meta.env.BASE_URL ('/meteoai/'). */
+    /** import.meta.env.BASE_URL ('/'). */
     appBase: string;
 }
 

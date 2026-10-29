@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: '/meteoai/', //[cite: 3]
+  base: '/', //[cite: 3]
   
   build: {
     sourcemap: true, //[cite: 3]
@@ -50,8 +50,8 @@ export default defineConfig({
         background_color: '#05060A', //[cite: 3]
         display: 'standalone', //[cite: 3]
         orientation: 'any', //[cite: 3]
-        scope: '/meteoai/', //[cite: 3]
-        start_url: '/meteoai/', //[cite: 3]
+        scope: '/', //[cite: 3]
+        start_url: '/', //[cite: 3]
         icons: [
           {
             src: 'android-chrome-192x192.png', //[cite: 3]
