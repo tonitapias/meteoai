@@ -1,22 +1,22 @@
-name: Deploy to GitHub Pages
+name: Deploy to Cloudflare
 
 on:
   push:
-    branches: [main]  # O 'master' si la teva branca principal es diu així
+    branches: [main]
 
-# Permisos necessaris per desplegar a Pages
+# Es publica a meteotoniai.com (wrangler.toml). GitHub Pages
+# (tonitapias.github.io/meteoai) ja no rep res de main: hi queda l'última
+# versió publicada fins que s'hi posi el pont de la mudança.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Permet només un desplegament alhora
 concurrency:
-  group: "pages"
+  group: "deploy"
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,19 +54,11 @@ jobs:
           VITE_API_TIMEOUT: ${{ secrets.VITE_API_TIMEOUT }}
           VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
         run: npm run build
-        
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: ./dist
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.136.3"
+          command: deploy --message "${{ github.sha }}"

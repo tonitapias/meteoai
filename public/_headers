@@ -1,0 +1,12 @@
+# Capçaleres de Cloudflare (meteotoniai.com). La resta de fitxers (index.html,
+# sw.js, manifest) es revaliden a cada visita, que és el que fa Cloudflare per
+# defecte, perquè l'avís d'actualització arribi a temps.
+
+# Els fitxers de /assets/ porten un hash al nom: si el contingut canvia, el nom també.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY

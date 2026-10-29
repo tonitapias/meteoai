@@ -11,6 +11,7 @@ build
 dist
 dev-dist/
 .vite/
+.wrangler/
 
 # Misc
 .DS_Store
