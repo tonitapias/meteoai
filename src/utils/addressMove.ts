@@ -13,8 +13,9 @@ export const NEW_ADDRESS = 'https://meteotoniai.com/';
 export const OLD_HOSTNAME = 'tonitapias.github.io';
 export const MOVE_FRAGMENT = '#migra=';
 
-// Fins que no s'hagi provat el pont en mòbils reals, l'avís només surt a l'adreça antiga amb ?pont=1.
-export const MOVE_NOTICE_LIVE = false;
+// Per a tothom des de la v3.46.0, un cop provat el pont en mòbils reals (Android i iPhone, amb l'app instal·lada de
+// nou). Amb false, l'avís només surt a l'adreça antiga amb ?pont=1, per provar-lo sense que el vegi ningú més.
+export const MOVE_NOTICE_LIVE = true;
 export const MOVE_TEST_PARAM = 'pont';
 
 const FAVORITES_KEY = 'meteoai_favorites';
