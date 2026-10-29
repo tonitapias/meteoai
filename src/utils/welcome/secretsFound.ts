@@ -5,12 +5,12 @@
 export type SecretId = 'sky' | 'earth';
 
 const KEY = 'meteoai_secrets_found';
-const IDS: readonly SecretId[] = ['sky', 'earth'];
+export const SECRET_IDS: readonly SecretId[] = ['sky', 'earth'];
 
 function readFound(): SecretId[] {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]');
-    return Array.isArray(raw) ? IDS.filter(id => raw.includes(id)) : [];
+    return Array.isArray(raw) ? SECRET_IDS.filter(id => raw.includes(id)) : [];
   } catch {
     return [];
   }

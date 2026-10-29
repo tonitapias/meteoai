@@ -4,9 +4,10 @@ on:
   push:
     branches: [main]
 
-# Es publica a meteotoniai.com (wrangler.toml). GitHub Pages
-# (tonitapias.github.io/meteoai) ja no rep res de main: hi queda l'última
-# versió publicada fins que s'hi posi el pont de la mudança.
+# Es publica a meteotoniai.com (wrangler.toml). Mentre duri la mudança, la mateixa
+# app (amb l'avís de l'adreça nova) també va a l'adreça antiga,
+# tonitapias.github.io/meteoai, per als que la tenen instal·lada o hi arriben per
+# un enllaç vell.
 permissions:
   contents: read
 
@@ -62,3 +63,33 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.136.3"
           command: deploy --message "${{ github.sha }}"
+
+      - name: Build (adreça antiga, /meteoai/)
+        env:
+          BASE_PATH: /meteoai/
+          VITE_PROXY_URL: ${{ secrets.VITE_PROXY_URL }}
+          VITE_API_WEATHER_BASE: ${{ secrets.VITE_API_WEATHER_BASE }}
+          VITE_API_AQI_BASE: ${{ secrets.VITE_API_AQI_BASE }}
+          VITE_API_GEOCODING: ${{ secrets.VITE_API_GEOCODING }}
+          VITE_API_TIMEOUT: ${{ secrets.VITE_API_TIMEOUT }}
+          VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+        run: npm run build -- --outDir dist-github-pages
+
+      - name: Upload artifact (adreça antiga)
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist-github-pages
+
+  github-pages:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -9,6 +9,7 @@ coverage
 # Production
 build
 dist
+dist-github-pages/
 dev-dist/
 .vite/
 .wrangler/

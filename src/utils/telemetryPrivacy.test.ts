@@ -11,6 +11,12 @@ describe('scrubUrl', () => {
         expect(scrubUrl('https://tonitapias.github.io/meteoai/?lat=41.98315&lon=2.82493', ctx)).toBe('https://tonitapias.github.io/meteoai/');
     });
 
+    it("l'enllaç de la mudança no hi porta mai els favorits (#migra=…), ni amb el lloc a la cerca", () => {
+        const fav = encodeURIComponent(JSON.stringify({ v: 1, fav: [{ name: 'Girona', latitude: 41.98315, longitude: 2.82493 }] }));
+        expect(scrubUrl(`https://meteotoniai.com/#migra=${fav}`, ctx)).toBe('https://meteotoniai.com/');
+        expect(scrubUrl(`https://tonitapias.github.io/meteoai/?lat=41.98315&lon=2.82493#migra=${fav}`, ctx)).toBe('https://tonitapias.github.io/meteoai/');
+    });
+
     it("les navegacions (adreces relatives de l'app) també", () => {
         expect(scrubUrl('/meteoai/?lat=41.98315&lon=2.82493&nom=Girona#modal-trendChart', ctx)).toBe('/meteoai/#modal-trendChart');
     });

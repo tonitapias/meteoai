@@ -5,6 +5,13 @@ export const es = {
   // Aviso de actualización (PWA)
   updateAvailable: "Hay una versión nueva disponible",
   updateAction: "Actualizar",
+
+  // Mudanza a meteotoniai.com
+  movedTitle: "MeteoToni AI se ha mudado",
+  movedText: "Ahora está en meteotoniai.com. Llévate tus favoritos y preferencias con un toque.",
+  movedAction: "Llévame",
+  movedInstalled: "Allí, vuelve a instalarla y luego borra este icono.",
+  movedImported: "Ya tienes aquí tus favoritos y preferencias.",
   closeWindow: "Cerrar ventana",
 
   // --- Menú de capes ---
