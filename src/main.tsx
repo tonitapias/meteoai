@@ -10,6 +10,10 @@ import './index.css';
 import { GeoLocationProvider } from './context/GeoLocationContext';
 import { APP_VERSION } from './utils/appVersion';
 import { createSentryPrivacy } from './utils/telemetryPrivacy';
+import { importMovedData } from './utils/addressMove';
+
+// Mudança de l'adreça antiga (#migra=…): es desa i es treu de l'adreça abans que Sentry la llegeixi.
+importMovedData();
 
 // Privadesa: res del que va a Sentry porta la posició exacta (coordenades a ~1 km, l'adreça de l'app sense el lloc).
 // Només es neteja la còpia que s'envia; l'enllaç per compartir i les peticions conserven tota la precisió.

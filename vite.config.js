@@ -3,8 +3,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// meteotoniai.com, a l'arrel. Mentre duri la mudança, deploy.yml també construeix l'adreça antiga
+// (tonitapias.github.io/meteoai) amb BASE_PATH=/meteoai/.
+const base = process.env.BASE_PATH || '/';
+
 export default defineConfig({
-  base: '/', //[cite: 3]
+  base,
   
   build: {
     sourcemap: true, //[cite: 3]
@@ -50,8 +54,8 @@ export default defineConfig({
         background_color: '#05060A', //[cite: 3]
         display: 'standalone', //[cite: 3]
         orientation: 'any', //[cite: 3]
-        scope: '/', //[cite: 3]
-        start_url: '/', //[cite: 3]
+        scope: base,
+        start_url: base,
         icons: [
           {
             src: 'android-chrome-192x192.png', //[cite: 3]

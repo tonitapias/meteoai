@@ -6,6 +6,7 @@ import { AppProvider } from './context/AppContext'; // Importem el nou Provider
 import WelcomeView from './views/WelcomeView';
 import DashboardView from './views/DashboardView';
 import UpdatePrompt from './components/UpdatePrompt';
+import AddressMoveNotice from './components/AddressMoveNotice';
 
 export default function MeteoIA() {
   // 1. INICIALITZACIÓ
@@ -14,6 +15,7 @@ export default function MeteoIA() {
 
   return (
     <AppProvider controller={controller}>
+      <AddressMoveNotice />
       {/* LOGICA DE ROUTING SIMPLE */}
       {/* Obrint un enllaç d'un lloc (?lat&lon&nom), directament al tauler mentre carrega (vegeu usePlaceLink). */}
       {!state.weatherData && !state.error && !state.openingLink ? (

@@ -4,6 +4,7 @@
 // o dels avisos) i l'adreça de l'app hi va sense el lloc (?lat&lon&nom&pais&origen, vegeu utils/placeLink.ts).
 // Només toca la còpia que s'envia: ni la URL real, ni l'enllaç per compartir, ni cap petició (que ja s'han fet).
 import { PLACE_PARAMS } from './placeLink';
+import { MOVE_FRAGMENT } from './addressMove';
 
 export interface TelemetryPrivacyContext {
     /** window.location.origin: per reconèixer l'adreça de l'app. */
@@ -61,7 +62,10 @@ const ABSOLUTE_URL = /^[a-z][a-z\d+.-]*:\/\//i;
  * Una adreça (absoluta, relativa com les de les navegacions, o només la cerca com `http.query`): l'adreça de l'app,
  * sense el lloc; qualsevol altra, amb les coordenades arrodonides.
  */
-export const scrubUrl = (raw: string, ctx: TelemetryPrivacyContext): string => {
+export const scrubUrl = (input: string, ctx: TelemetryPrivacyContext): string => {
+    // Els favorits que porta l'enllaç de la mudança (vegeu utils/addressMove.ts) no hi van mai, ni tan sols arrodonits.
+    const moveAt = input.indexOf(MOVE_FRAGMENT);
+    const raw = moveAt === -1 ? input : input.slice(0, moveAt);
     if (!SENSITIVE_PARAM.test(raw)) return raw;
     const queryOnly = raw.startsWith('?');
     let url: URL;
