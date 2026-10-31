@@ -144,7 +144,8 @@ export function useAppController() {
           setShowVisibilityModal: ui.actions.setShowVisibilityModal,
           setShowCloudLayersModal: ui.actions.setShowCloudLayersModal,
           setShowSnowLevelModal: ui.actions.setShowSnowLevelModal,
-          setShowWindModal: ui.actions.setShowWindModal
+          setShowWindModal: ui.actions.setShowWindModal,
+          setPlanetModalTab: ui.actions.setPlanetModalTab
       },
       flags: {
           // Fusionem flags
@@ -168,7 +169,7 @@ export function useAppController() {
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,
       ui.actions.setShowAqiModal, ui.actions.setShowUvModal, ui.actions.setShowPressureModal,
       ui.actions.setShowComfortModal, ui.actions.setShowVisibilityModal, ui.actions.setShowCloudLayersModal,
-      ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal,
+      ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal, ui.actions.setPlanetModalTab,
       data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang, viewMode,
       ui.modals, t
   ]);

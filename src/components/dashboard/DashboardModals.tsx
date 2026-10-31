@@ -26,6 +26,7 @@ const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
 const SnowLevelModal = lazy(() => import('../SnowLevelModal'));
 const WindModal = lazy(() => import('../WindModal'));
 const SharePositionSheet = lazy(() => import('../SharePositionSheet'));
+const PlanetExtremesModal = lazy(() => import('../planet/PlanetExtremesModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
 
@@ -154,6 +155,17 @@ export const DashboardModals = () => {
                     weatherData={weatherData}
                     onClose={() => actions.setShowWindModal(false)}
                     lang={flags.lang}
+                />
+            )}
+            {modals.planetModalTab !== null && (
+                <PlanetExtremesModal
+                    lang={flags.lang}
+                    unit={flags.unit}
+                    initialTab={modals.planetModalTab}
+                    place={loc && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)
+                        ? { name: loc.name, lat: loc.latitude, lon: loc.longitude }
+                        : null}
+                    onClose={() => actions.setPlanetModalTab(null)}
                 />
             )}
             {/* "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace) */}

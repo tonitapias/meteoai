@@ -31,6 +31,8 @@ const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 // últim també l'importa MinutelyPreciseChart de manera estàtica (necessari en Mode
 // Bàsic): compartir fitxer feia que Rollup mantingués tot el mòdul al chunk principal.
 const SmartForecastCharts = lazy(() => import('../SmartForecastCharts'));
+// També només en Mode Expert: l'última secció, «Més enllà del teu cel».
+const PlanetExtremesCard = lazy(() => import('../planet/PlanetExtremesCard'));
 
 // SPATIAL UI: Skeleton amb estètica Dark Dashboard (baix contrast, sense colors estridents)
 const SectionSkeleton = () => (
@@ -241,6 +243,13 @@ export const DashboardContent = () => {
                                 />
                             </Suspense>
                         </div>
+                    )}
+
+                    {/* 8. EXTREMS DEL PLANETA (MODE EXPERT): primer el teu cel, al final el planeta */}
+                    {isExpert && (
+                        <Suspense fallback={<SectionSkeleton />}>
+                            <PlanetExtremesCard lang={flags.lang} unit={flags.unit} onOpen={actions.setPlanetModalTab} />
+                        </Suspense>
                     )}
                 </div>
             </ErrorBoundary>

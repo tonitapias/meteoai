@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useModalHistory } from './useModalHistory';
 import { NOTIFICATION_TYPES } from '../constants/errorConstants';
+import type { PlanetTab } from '../utils/planetExtremes';
 
 
 
@@ -32,6 +33,8 @@ export function useViewState() {
     const [showCloudLayersModal, setShowCloudLayersModal] = useState(false);
     const [showSnowLevelModal, setShowSnowLevelModal] = useState(false);
     const [showWindModal, setShowWindModal] = useState(false);
+    // Detall d'«Extrems del planeta»: null tancat; si no, la pestanya amb què s'obre.
+    const [planetModalTab, setPlanetModalTab] = useState<PlanetTab | null>(null);
     // Finestra "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace).
     const [showShareSheet, setShowShareSheet] = useState(false);
 
@@ -62,6 +65,7 @@ export function useViewState() {
     useModalHistory(showCloudLayersModal, useCallback(() => setShowCloudLayersModal(false), []));
     useModalHistory(showSnowLevelModal, useCallback(() => setShowSnowLevelModal(false), []));
     useModalHistory(showWindModal, useCallback(() => setShowWindModal(false), []));
+    useModalHistory(planetModalTab !== null, useCallback(() => setPlanetModalTab(null), []));
     useModalHistory(showShareSheet, useCallback(() => setShowShareSheet(false), []));
 
     // --- 5. Helpers d'Acció UI ---
@@ -95,6 +99,7 @@ export function useViewState() {
                 showCloudLayersModal,
                 showSnowLevelModal,
                 showWindModal,
+                planetModalTab,
                 showShareSheet
             }
         },
@@ -119,6 +124,7 @@ export function useViewState() {
             setShowCloudLayersModal,
             setShowSnowLevelModal,
             setShowWindModal,
+            setPlanetModalTab,
             setShowShareSheet
         }
     };
