@@ -49,9 +49,13 @@ const timeOf = (iso: string, lang: Language) =>
 
 const cycloneTitle = (summary: CycloneSummary, s: PlanetStrings) => `${s.kinds[summary.kind]} ${summary.cyclone.name}`;
 
-const SectionTitle = ({ children, count }: { children: string; count?: string }) => (
+// `note`: el nom tècnic, petit i en gris al costat del planer ("Calor humida (bulb humit)").
+const SectionTitle = ({ children, count, note }: { children: string; count?: string; note?: string }) => (
     <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-white">{children}</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-white">
+            {children}
+            {note && <span className="font-mono font-medium normal-case tracking-normal text-slate-400">{` (${note})`}</span>}
+        </h3>
         {count && <span className="font-mono text-[10px] text-slate-400">{count}</span>}
     </div>
 );
@@ -247,7 +251,7 @@ function RecordsTab({ metar, summaries, s, lang, unit }: RecordsTabProps) {
         <>
             {metar.wetBulb.length > 0 && (
                 <Card label={s.wetBulb}>
-                    <SectionTitle count={s.top3}>{s.wetBulb}</SectionTitle>
+                    <SectionTitle count={s.top3} note={s.wetBulbNote}>{s.wetBulb}</SectionTitle>
                     <div className="flex flex-col gap-2.5">
                         {metar.wetBulb.map((record, i) => (
                             <div key={record.id} className="flex flex-col gap-1.5">

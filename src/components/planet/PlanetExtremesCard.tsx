@@ -88,6 +88,7 @@ export default function PlanetExtremesCard({ lang, unit, onOpen }: PlanetExtreme
                         {wetBulb && (
                             <div className="flex flex-col gap-1.5">
                                 <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">{s.wetBulbTop}</span>
+                                {s.wetBulbTerm && <span className="text-[11px] text-slate-400">{s.wetBulbTerm}</span>}
                                 <span className="text-5xl font-light tracking-tighter tabular-nums leading-none text-white mt-1">
                                     {tempText(wetBulb.value, unit, lang, 1)}
                                 </span>

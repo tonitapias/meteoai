@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import OrbitalViewer from './OrbitalViewer';
-import { buildOrbitMarkers, capPerKind, MAX_VISIBLE } from './orbitalMarkers';
+import { buildOrbitMarkers, capPerKind, MAX_VISIBLE, recordLabel } from './orbitalMarkers';
 import { PLANET_STRINGS } from './planetI18n';
 import { summarizeCyclone } from '../../utils/planetExtremes';
 import type { PlanetExtremes, StationRecord } from '../../services/planetExtremesApi';
@@ -46,6 +46,12 @@ describe('Marcadors del visor', () => {
         expect(markers[1].label).toBe('37\u00a0°C · Mount Isa');
         expect(markers[2].label).toBe('Barcelona');
         expect(markers[3].label).toBe('Incendis · Austràlia');
+    });
+
+    it('el bulb humit, amb el nom planer (el tècnic és al detall)', () => {
+        const record = station('VTSB', 'Surat Thani', 9.1, 99.2, 29);
+        expect(recordLabel('wetBulb', record, s, 'ca', 'C')).toBe('29,0' + String.fromCharCode(160) + '°C de calor humida');
+        expect(recordLabel('wetBulb', record, PLANET_STRINGS.en, 'en', 'C')).toBe('29.0' + String.fromCharCode(160) + '°C wet bulb');
     });
 
     it("un worker anterior (sense posicions per país) deixa, com a mínim, l'incendi més extens", () => {

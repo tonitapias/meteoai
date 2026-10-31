@@ -37,7 +37,12 @@ export interface PlanetStrings {
   tabEvents: string;
   tabsLabel: string;
   close: string;
+  // La temperatura de bulb humit, amb un nom planer al davant ("calor humida") i el tècnic al costat, petit:
+  // el valor és més baix que la temperatura de l'aire i, sense el nom tècnic, semblaria poca calor.
   wetBulb: string;
+  // Buit en anglès, on «wet-bulb» ja és el nom corrent.
+  wetBulbTerm: string;
+  wetBulbNote: string;
   top3: string;
   wetBulbExplain: string;
   whyHere: string;
@@ -118,7 +123,7 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     eyebrow: 'Més enllà del teu cel',
     title: 'Extrems del planeta',
     now: 'Ara',
-    wetBulbTop: 'Bulb humit més alt del món',
+    wetBulbTop: 'Calor humida més alta del món',
     tempDew: '{t} de temperatura i {td} de punt de rosada',
     danger: 'perill',
     limit: 'límit',
@@ -147,7 +152,9 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     tabEvents: 'Fenòmens actius',
     tabsLabel: 'Què vols veure',
     close: 'Tanca',
-    wetBulb: 'Bulb humit',
+    wetBulb: 'Calor humida',
+    wetBulbTerm: 'temperatura de bulb humit',
+    wetBulbNote: 'bulb humit',
     top3: 'Els 3 més alts',
     wetBulbExplain: "Combina calor i humitat. A partir de {danger}, fins i tot una persona sana, a l'ombra i amb aigua, ja no es pot refredar suant.",
     whyHere: 'Per què aquí?',
@@ -216,7 +223,7 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     infrared: 'Infraroig: els núvols més freds, que són els més alts, surten de colors.',
     discAlt: 'Imatge de satèl·lit de la Terra sencera ({sat})',
     catShort: 'cat. {n}',
-    wetBulbShort: 'bulb humit',
+    wetBulbShort: 'de calor humida',
     firesAt: 'Incendis · {place}',
     floodsAt: 'Inundacions · {place}',
     inView: 'En aquest disc',
@@ -229,7 +236,7 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     eyebrow: 'Más allá de tu cielo',
     title: 'Extremos del planeta',
     now: 'Ahora',
-    wetBulbTop: 'Bulbo húmedo más alto del mundo',
+    wetBulbTop: 'Calor húmeda más alta del mundo',
     tempDew: '{t} de temperatura y {td} de punto de rocío',
     danger: 'peligro',
     limit: 'límite',
@@ -258,7 +265,9 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     tabEvents: 'Fenómenos activos',
     tabsLabel: 'Qué quieres ver',
     close: 'Cerrar',
-    wetBulb: 'Bulbo húmedo',
+    wetBulb: 'Calor húmeda',
+    wetBulbTerm: 'temperatura de bulbo húmedo',
+    wetBulbNote: 'bulbo húmedo',
     top3: 'Los 3 más altos',
     wetBulbExplain: 'Combina calor y humedad. A partir de {danger}, incluso una persona sana, a la sombra y con agua, ya no puede refrescarse sudando.',
     whyHere: '¿Por qué aquí?',
@@ -327,7 +336,7 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     infrared: 'Infrarrojo: las nubes más frías, que son las más altas, salen de colores.',
     discAlt: 'Imagen de satélite de la Tierra entera ({sat})',
     catShort: 'cat. {n}',
-    wetBulbShort: 'bulbo húmedo',
+    wetBulbShort: 'de calor húmeda',
     firesAt: 'Incendios · {place}',
     floodsAt: 'Inundaciones · {place}',
     inView: 'En este disco',
@@ -370,6 +379,8 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     tabsLabel: 'What do you want to see',
     close: 'Close',
     wetBulb: 'Wet bulb',
+    wetBulbTerm: '',
+    wetBulbNote: '',
     top3: 'Top 3',
     wetBulbExplain: "It combines heat and humidity. From {danger} up, even a healthy person in the shade with water can no longer cool down by sweating.",
     whyHere: 'Why here?',
@@ -451,7 +462,7 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     eyebrow: 'Au-delà de ton ciel',
     title: 'Extrêmes de la planète',
     now: 'Maintenant',
-    wetBulbTop: 'Thermomètre mouillé le plus élevé du monde',
+    wetBulbTop: 'Chaleur humide la plus forte du monde',
     tempDew: "{t} de température et {td} de point de rosée",
     danger: 'danger',
     limit: 'limite',
@@ -480,7 +491,9 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     tabEvents: 'Phénomènes actifs',
     tabsLabel: 'Que veux-tu voir',
     close: 'Fermer',
-    wetBulb: 'Thermomètre mouillé',
+    wetBulb: 'Chaleur humide',
+    wetBulbTerm: 'température du thermomètre mouillé',
+    wetBulbNote: 'thermomètre mouillé',
     top3: 'Les 3 plus élevés',
     wetBulbExplain: "Il combine chaleur et humidité. À partir de {danger}, même une personne en bonne santé, à l'ombre et avec de l'eau, ne peut plus se refroidir en transpirant.",
     whyHere: 'Pourquoi ici ?',
@@ -549,7 +562,7 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     infrared: 'Infrarouge : les nuages les plus froids, qui sont les plus hauts, apparaissent en couleur.',
     discAlt: 'Image satellite de la Terre entière ({sat})',
     catShort: 'cat. {n}',
-    wetBulbShort: 'thermomètre mouillé',
+    wetBulbShort: 'de chaleur humide',
     firesAt: 'Incendies · {place}',
     floodsAt: 'Inondations · {place}',
     inView: 'Sur ce disque',
