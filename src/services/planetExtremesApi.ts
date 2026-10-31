@@ -47,6 +47,16 @@ export interface ActiveCyclone {
 export interface CountryCount {
     country: string;
     count: number;
+    // Centre dels esdeveniments del país, per al visor orbital (un worker anterior no el dona).
+    lat?: number;
+    lon?: number;
+}
+
+export interface Volcano {
+    name: string;
+    country: string | null;
+    lat?: number;
+    lon?: number;
 }
 
 export interface PlanetEvents {
@@ -57,7 +67,7 @@ export interface PlanetEvents {
         largest: { country: string | null; hectares: number; lat: number; lon: number } | null;
     };
     floods: { count: number; byCountry: CountryCount[] };
-    volcanoes: { name: string; country: string | null }[];
+    volcanoes: Volcano[];
 }
 
 export interface PlanetExtremes {
@@ -96,8 +106,13 @@ const toStation = (v: unknown): StationRecord | null => {
 
 const stations = (v: unknown): StationRecord[] => list(v).map(toStation).filter((s): s is StationRecord => s !== null);
 
+const position = (v: Record<string, unknown>): { lat: number; lon: number } | Record<string, never> =>
+    isNum(v.lat) && isNum(v.lon) && Math.abs(v.lat) <= 90 && Math.abs(v.lon) <= 180 ? { lat: v.lat, lon: v.lon } : {};
+
 const countryCounts = (v: unknown): CountryCount[] =>
-    list(v).filter((c): c is CountryCount => isObject(c) && !!str(c.country) && isNum(c.count));
+    list(v)
+        .filter((c): c is Record<string, unknown> => isObject(c) && !!str(c.country) && isNum(c.count))
+        .map((c) => ({ country: c.country as string, count: c.count as number, ...position(c) }));
 
 const toMetar = (v: unknown): MetarRecords | null => {
     if (!isObject(v) || !str(v.updatedAt) || !isNum(v.stations)) return null;
@@ -128,7 +143,7 @@ const toEvents = (v: unknown): PlanetEvents | null => {
         floods: { count: isNum(v.floods.count) ? v.floods.count : 0, byCountry: countryCounts(v.floods.byCountry) },
         volcanoes: list(v.volcanoes)
             .filter((x): x is Record<string, unknown> => isObject(x) && !!str(x.name))
-            .map((x) => ({ name: x.name as string, country: str(x.country) })),
+            .map((x) => ({ name: x.name as string, country: str(x.country), ...position(x) })),
     };
 };
 

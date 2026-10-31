@@ -2,9 +2,10 @@
 // Detall d'«Extrems del planeta». Pestanya de rècords: el bulb humit (els tres més alts), «Per què aquí?»
 // (fets físics calculats a partir de les dades, no frases fixes) i el control de qualitat. Pestanya de
 // fenòmens: ciclons tropicals, incendis grans, inundacions i volcans, amb la fitxa de cada cicló (corba
-// d'intensitat real, intensificació ràpida, moviment i avís oficial).
-import { useMemo, useRef, useState } from 'react';
-import { X, Globe, Sun, Snowflake, Wind, Flame, Waves, Mountain, ChevronLeft, ChevronRight, ExternalLink, CloudOff } from 'lucide-react';
+// d'intensitat real, intensificació ràpida, moviment i avís oficial). Cada pestanya acaba amb «Mira-ho des de
+// l'òrbita», que obre el visor orbital (OrbitalViewer, que es baixa a part) a l'ull que toca.
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type Ref } from 'react';
+import { X, Globe, Sun, Snowflake, Wind, Flame, Waves, Mountain, ChevronLeft, ChevronRight, ExternalLink, CloudOff, Satellite } from 'lucide-react';
 import type { Language } from '../../translations';
 import { getSafeLocale, type WeatherUnit } from '../../utils/formatters';
 import { distanceKm } from '../../utils/geoDistance';
@@ -21,6 +22,10 @@ import {
 import { PLANET_STRINGS, fill, type PlanetStrings } from './planetI18n';
 import { CycloneIcon, WetBulbBar } from './PlanetBits';
 import { tempText, kmhText, hpaText } from './planetFormat';
+import { TONES, cycloneTone } from './planetTones';
+import { initialEye, type OrbitEye } from '../../utils/orbitalView';
+
+const OrbitalViewer = lazy(() => import('./OrbitalViewer'));
 
 interface PlanetExtremesModalProps {
     lang: Language;
@@ -42,23 +47,6 @@ const FLOOD_COUNTRIES_NAMED = 4;
 const timeOf = (iso: string, lang: Language) =>
     new Date(iso).toLocaleTimeString(getSafeLocale(lang), { hour: '2-digit', minute: '2-digit' });
 
-interface Tone { text: string; border: string; bg: string; icon: string }
-
-const TONES: Record<'extreme' | 'severe' | 'notable' | 'quiet', Tone> = {
-    extreme: { text: 'text-rose-300', border: 'border-rose-400/45', bg: 'bg-rose-400/[0.08]', icon: 'text-rose-400' },
-    severe: { text: 'text-orange-300', border: 'border-orange-400/45', bg: 'bg-orange-400/[0.08]', icon: 'text-orange-400' },
-    notable: { text: 'text-amber-200', border: 'border-amber-300/40', bg: 'bg-amber-300/[0.06]', icon: 'text-amber-300' },
-    quiet: { text: 'text-slate-300', border: 'border-white/10', bg: 'bg-white/[0.03]', icon: 'text-slate-400' },
-};
-
-// El color diu la intensitat física (no l'alerta humanitària de GDACS): categoria 3 o més, 1-2,
-// tempesta tropical, depressió.
-const cycloneTone = (summary: CycloneSummary): Tone =>
-    summary.category >= 3 ? TONES.extreme
-        : summary.category >= 1 ? TONES.severe
-            : summary.kind === 'storm' || summary.kind === 'medicane' ? TONES.notable
-                : TONES.quiet;
-
 const cycloneTitle = (summary: CycloneSummary, s: PlanetStrings) => `${s.kinds[summary.kind]} ${summary.cyclone.name}`;
 
 const SectionTitle = ({ children, count }: { children: string; count?: string }) => (
@@ -74,12 +62,25 @@ const Card = ({ children, label }: { children: React.ReactNode; label: string })
     </section>
 );
 
+const OrbitButton = ({ label, onClick, buttonRef }: { label: string; onClick: () => void; buttonRef: Ref<HTMLButtonElement> }) => (
+    <button
+        ref={buttonRef}
+        type="button"
+        onClick={onClick}
+        className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-[14px] border border-amber-200/50 bg-amber-200/[0.08] text-[15px] font-semibold text-amber-200 cursor-pointer transition-colors hover:bg-amber-200/[0.14] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/60"
+    >
+        <Satellite aria-hidden="true" className="w-[18px] h-[18px]" />{label}
+    </button>
+);
+
 export default function PlanetExtremesModal({ lang, unit, initialTab, place, onClose }: PlanetExtremesModalProps) {
     const s = PLANET_STRINGS[lang] ?? PLANET_STRINGS.ca;
     const { handleClose, now } = useAstroModalShell(onClose);
     const { status, data } = usePlanetExtremes();
     const [tab, setTab] = useState<PlanetTab>(initialTab);
     const [cycloneId, setCycloneId] = useState<string | null>(null);
+    // Visor orbital obert i l'ull que s'hi mira. Si s'hi obre la fitxa d'un cicló, tornar en surt cap al visor.
+    const [orbitEye, setOrbitEye] = useState<OrbitEye | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const summaries = useMemo(
@@ -93,15 +94,33 @@ export default function PlanetExtremesModal({ lang, unit, initialTab, place, onC
         setCycloneId(id);
         scrollRef.current?.scrollTo({ top: 0 });
     };
+    const openOrbit = () => {
+        if (data) setOrbitEye(initialEye(tab, data, summaries));
+    };
+    // El visor tapa el detall: el que queda a sota no ha de rebre el focus, i el full no s'ha d'encongir fins a
+    // l'alçada d'una pestanya curta.
+    const orbitOpen = !!data && orbitEye !== null && !selected;
+    // En tornar del visor, el focus torna al botó que l'ha obert.
+    const orbitButtonRef = useRef<HTMLButtonElement>(null);
+    const returnFocusRef = useRef(false);
+    useEffect(() => {
+        if (orbitEye !== null || !returnFocusRef.current) return;
+        returnFocusRef.current = false;
+        orbitButtonRef.current?.focus();
+    }, [orbitEye]);
+    const closeOrbit = () => {
+        returnFocusRef.current = true;
+        setOrbitEye(null);
+    };
 
     return (
         <div role="dialog" aria-modal="true" aria-labelledby="planet-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
             {/* Alçades en % de l'overlay i no en dvh, com la resta de fulls (motors sense dvh). */}
-            <div className={`w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl flex flex-col min-h-0 bg-gradient-to-b ${SHEET_GRADIENT} rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-cyan-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative`} style={SHEET_VARS}>
+            <div className={`w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl flex flex-col ${orbitOpen ? 'min-h-0 sm:min-h-[min(46rem,90%)]' : 'min-h-0'} bg-gradient-to-b ${SHEET_GRADIENT} rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-cyan-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative`} style={SHEET_VARS}>
                 <div className={MATRIX_BG}></div>
                 <div className={SHEET_HALO} style={sheetHaloStyle('cyan', 'slate')}></div>
 
-                <div className="shrink-0 relative z-20 border-b border-white/[0.04]">
+                <div inert={orbitOpen} className="shrink-0 relative z-20 border-b border-white/[0.04]">
                     <div className="flex justify-between items-center p-4 md:p-6 pb-3 md:pb-4">
                         <div className="flex items-center gap-3">
                             <div className="relative flex items-center justify-center w-10 h-10 rounded-full border bg-black/40 border-cyan-500/30 text-cyan-300">
@@ -138,7 +157,7 @@ export default function PlanetExtremesModal({ lang, unit, initialTab, place, onC
                     )}
                 </div>
 
-                <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 p-4 md:p-6 space-y-4">
+                <div ref={scrollRef} inert={orbitOpen} className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 p-4 md:p-6 space-y-4">
                     {status === 'loading' && <p className="text-sm text-slate-400">{s.loading}</p>}
                     {status === 'error' && (
                         <div className="flex flex-col items-center justify-center text-center gap-3 py-12 text-slate-400 text-sm">
@@ -147,7 +166,7 @@ export default function PlanetExtremesModal({ lang, unit, initialTab, place, onC
                         </div>
                     )}
                     {data && selected && (
-                        <CycloneSheet summary={selected} s={s} lang={lang} place={place} onBack={() => openCyclone(null)} />
+                        <CycloneSheet summary={selected} s={s} lang={lang} place={place} backLabel={orbitEye ? s.orbitTitle : s.back} onBack={() => openCyclone(null)} />
                     )}
                     {data && !selected && (
                         <div role="tabpanel" id="planet-tabpanel" aria-labelledby={`planet-tab-${tab}`} className="space-y-4">
@@ -156,9 +175,28 @@ export default function PlanetExtremesModal({ lang, unit, initialTab, place, onC
                                     ? <RecordsTab metar={data.metar} summaries={summaries} s={s} lang={lang} unit={unit} />
                                     : <p className="text-sm text-slate-400">{s.unavailable}</p>
                                 : <EventsTab events={data.events} summaries={summaries} hasCyclones={!!data.cyclones} s={s} lang={lang} nowMs={now.getTime()} onOpenCyclone={openCyclone} />}
+                            <OrbitButton label={s.orbitOpen} onClick={openOrbit} buttonRef={orbitButtonRef} />
                         </div>
                     )}
                 </div>
+
+                {orbitOpen && orbitEye && (
+                    <Suspense fallback={<div className="absolute inset-0 z-30 bg-[#010208]" />}>
+                        <OrbitalViewer
+                            data={data}
+                            summaries={summaries}
+                            eye={orbitEye}
+                            onEyeChange={setOrbitEye}
+                            s={s}
+                            lang={lang}
+                            unit={unit}
+                            place={place}
+                            onBack={closeOrbit}
+                            onClose={handleClose}
+                            onOpenCyclone={(id) => openCyclone(id)}
+                        />
+                    </Suspense>
+                )}
             </div>
         </div>
     );
@@ -374,10 +412,12 @@ interface CycloneSheetProps {
     s: PlanetStrings;
     lang: Language;
     place: { name: string; lat: number; lon: number } | null;
+    // On torna la fletxa: la llista de fenòmens o el visor orbital.
+    backLabel: string;
     onBack: () => void;
 }
 
-function CycloneSheet({ summary, s, lang, place, onBack }: CycloneSheetProps) {
+function CycloneSheet({ summary, s, lang, place, backLabel, onBack }: CycloneSheetProps) {
     const { last, cyclone, basin, category, maxGain24hKt, maxGainStart, motion } = summary;
     const tone = cycloneTone(summary);
     const centre = OFFICIAL_CENTRE[basin];
@@ -392,7 +432,7 @@ function CycloneSheet({ summary, s, lang, place, onBack }: CycloneSheetProps) {
     return (
         <div className="space-y-4">
             <button type="button" onClick={onBack} className="inline-flex items-center gap-1 min-h-[44px] -ml-1 -mt-2 px-1 rounded-lg text-[13px] font-semibold text-cyan-300 hover:text-cyan-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60">
-                <ChevronLeft aria-hidden="true" className="w-4 h-4" />{s.back}
+                <ChevronLeft aria-hidden="true" className="w-4 h-4" />{backLabel}
             </button>
 
             <div className="flex flex-col gap-2">

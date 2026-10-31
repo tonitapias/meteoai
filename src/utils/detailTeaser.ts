@@ -1,16 +1,19 @@
 // src/utils/detailTeaser.ts
 // Valors d'ara de la vista completa que la vista essencial no ensenya, per a la targeta "Vols més detall?".
 // Cada valor surt de la mateixa font i amb el mateix format que el seu giny: si la targeta diu 1019 hPa,
-// el giny de pressió també ha de dir 1019.
+// el giny de pressió també ha de dir 1019. Els dies amb un cicló de categoria 4 o 5, aquest va el primer
+// (el text el fa planetHeadline.ts, amb les dades d'«Extrems del planeta»).
 import { getMoonPhaseName, getNamedMoonPhase } from './lunarPhases';
 import { AQI_TRANSLATIONS, extractAqiData, getAqiLevel, getAqiSafeLang } from './aqiLevel';
 import { formatVisibilityKm, resolveCurrentDisplayVisibility } from './visibilityDisplay';
 
-export type DetailTeaserKey = 'pressure' | 'air' | 'moon' | 'visibility';
+export type DetailTeaserKey = 'planet' | 'pressure' | 'air' | 'moon' | 'visibility';
 
 export interface DetailTeaserItem {
   key: DetailTeaserKey;
   text: string;
+  /** Per a la línia curta de qui ja coneix la vista completa (només el fenomen del planeta en té). */
+  compactText?: string;
 }
 
 export interface DetailTeaserTemplates {
@@ -29,12 +32,16 @@ interface DetailTeaserInput {
   nowMs: number;
   lang: string;
   templates: DetailTeaserTemplates;
+  /** El fenomen gros del dia, si n'hi ha (usePlanetHeadline). */
+  planet?: { text: string; compactText: string } | null;
 }
 
 const fill = (template: string, value: string) => template.replace('{v}', value);
 
-export function buildDetailTeaser({ current, aqiCurrent, effectiveCode, nowMs, lang, templates }: DetailTeaserInput): DetailTeaserItem[] {
+export function buildDetailTeaser({ current, aqiCurrent, effectiveCode, nowMs, lang, templates, planet }: DetailTeaserInput): DetailTeaserItem[] {
   const items: DetailTeaserItem[] = [];
+
+  if (planet) items.push({ key: 'planet', text: planet.text, compactText: planet.compactText });
 
   // CircularGauge arrodoneix a l'enter.
   const pressure = current?.pressure_msl;

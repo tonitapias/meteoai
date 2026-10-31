@@ -2,6 +2,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useDetailHint } from '../../hooks/useDetailHint';
+import { usePlanetHeadline } from '../../hooks/usePlanetHeadline';
 import { getSafeLatitude } from '../../utils/weatherMath';
 import { findNowIndex } from '../../utils/hourlyChartSeries';
 import { buildDetailTeaser } from '../../utils/detailTeaser';
@@ -75,6 +76,8 @@ export const DashboardContent = () => {
 
     const nowMs = state.now.getTime();
     const currentConditions = weatherData?.current;
+    // El fenomen gros del dia (cicló de categoria 4 o 5): només a l'essencial i quan la previsió ja hi és.
+    const planetHeadline = usePlanetHeadline(!isExpert && !!currentConditions, flags.lang);
     const detailTeaser = useMemo(() => {
         if (isExpert || !currentConditions) return [];
         return buildDetailTeaser({
@@ -84,8 +87,9 @@ export const DashboardContent = () => {
             nowMs,
             lang: flags.lang,
             templates: t.viewModes,
+            planet: planetHeadline,
         });
-    }, [isExpert, currentConditions, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.viewModes]);
+    }, [isExpert, currentConditions, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.viewModes, planetHeadline]);
 
     // Gestió d'estats de càrrega i error
     if (state.error) return <ErrorBanner message={state.error} />;

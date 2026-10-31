@@ -2,7 +2,8 @@
 // Les dues peces del tauler que lliguen les vistes, al punt on apareix el contingut de la vista completa
 // (just després del resum de la IA):
 // - MoreDetailPrompt (vista essencial): "Vols més detall?" amb valors d'ara que la vista essencial no ensenya.
-//   Sencera només per a qui encara no coneix la vista completa; si no, una sola línia.
+//   Sencera només per a qui encara no coneix la vista completa; si no, una sola línia. Els dies amb un cicló de
+//   categoria 4 o 5, el primer xip (i el començament de la línia) és aquest fenomen.
 // - CompleteViewHeading (vista completa): una franja amb els colors i la icona de la vista completa que marca
 //   on comença el contingut nou, amb el botó per tornar a l'essencial (colors i icona de l'essencial).
 // Sense blur, filtres ni animacions contínues (mòbils modestos).
@@ -11,6 +12,7 @@ import { ChevronRight, Eye, Gauge, Leaf, Moon, Plus } from 'lucide-react';
 import type { TranslationType } from '../../translations';
 import type { DetailTeaserItem, DetailTeaserKey } from '../../utils/detailTeaser';
 import { VIEW_MODE_STYLE } from '../viewModeStyle';
+import { CycloneIcon } from '../planet/CycloneIcon';
 import { COMPLETE_VIEW_ANCHOR_ID } from './completeViewAnchor';
 
 type ViewModeStrings = TranslationType['viewModes'];
@@ -19,7 +21,8 @@ type ViewModeStrings = TranslationType['viewModes'];
 // del teclat si ho demana el tauler (takeFocus torna true una sola vegada per petició).
 export type TakeFocusRequest = (target: 'prompt' | 'heading') => boolean;
 
-const TEASER_ICONS: Record<DetailTeaserKey, typeof Gauge> = {
+const TEASER_ICONS: Record<DetailTeaserKey, typeof Gauge | typeof CycloneIcon> = {
+  planet: CycloneIcon,
   pressure: Gauge,
   air: Leaf,
   moon: Moon,
@@ -45,6 +48,7 @@ export function MoreDetailPrompt({ compact, teaser, strings, onShow, onDismiss, 
   }, [takeFocus, compact]);
 
   if (compact) {
+    const lead = teaser.find((item) => item.compactText)?.compactText;
     return (
       <button
         ref={(el) => { focusRef.current = el; }}
@@ -55,7 +59,7 @@ export function MoreDetailPrompt({ compact, teaser, strings, onShow, onDismiss, 
         <Plus aria-hidden="true" className="w-4 h-4 shrink-0 text-sky-400" />
         <span className="min-w-0 flex-1 truncate text-sm">
           <span className="font-semibold text-slate-100">{strings.sectionTitle}</span>
-          <span className="text-slate-400"> · {strings.compactRow}</span>
+          <span className="text-slate-400"> · {lead ? `${lead}, ${strings.compactRow}` : strings.compactRow}</span>
         </span>
         <ChevronRight aria-hidden="true" className="w-4 h-4 shrink-0 text-slate-500" />
       </button>
@@ -76,13 +80,15 @@ export function MoreDetailPrompt({ compact, teaser, strings, onShow, onDismiss, 
         <ul className="flex flex-wrap gap-2 md:flex-[1.4]">
           {teaser.map((item, index) => {
             const Icon = TEASER_ICONS[item.key];
+            // El fenomen del planeta, sobri: només la vora i la icona en to d'avís.
+            const planet = item.key === 'planet';
             return (
               // Al mòbil n'hi caben tres en una línia i mitja; la quarta, a partir de tauleta.
               <li
                 key={item.key}
-                className={`${index >= 3 ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs text-slate-200`}
+                className={`${index >= 3 ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 rounded-full border ${planet ? 'border-rose-400/35' : 'border-white/10'} bg-black/30 px-3 py-1 text-xs text-slate-200`}
               >
-                <Icon aria-hidden="true" className="w-3.5 h-3.5 text-slate-400" />
+                <Icon aria-hidden="true" className={`w-3.5 h-3.5 shrink-0 ${planet ? 'text-rose-300' : 'text-slate-400'}`} />
                 {item.text}
               </li>
             );
