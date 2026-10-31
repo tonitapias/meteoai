@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     saffirSimpsonCategory, cycloneBasin, cycloneKind, summarizeCyclone, compassIndex,
     solarTime, solarPeriod, isPolarNight, countryName, placeLabel, placeInline, wetBulbScalePct, KMH_PER_KT,
+    bigCyclone, basinOcean, BIG_CYCLONE_MAX_AGE_MS,
 } from './planetExtremes';
 import type { ActiveCyclone } from '../services/planetExtremesApi';
 
@@ -139,5 +140,29 @@ describe('«Per què aquí?»', () => {
         expect(wetBulbScalePct(37)).toBe(100);
         expect(wetBulbScalePct(15)).toBe(0);
         expect(wetBulbScalePct(28)).toBeCloseTo(47.06, 1);
+    });
+});
+
+describe('El fenomen gros del dia (xip de la Vista essencial)', () => {
+    const lastMs = Date.parse(IN_FA.track[IN_FA.track.length - 1].time);
+    const weak: ActiveCyclone = { ...IN_FA, id: 'W', name: 'Feble', track: IN_FA.track.map((p) => ({ ...p, windKt: 70 })) };
+
+    it('tria el cicló de categoria 4 o més amb la dada recent', () => {
+        expect(bigCyclone([weak, IN_FA], lastMs + 3 * 3600 * 1000)?.cyclone.name).toBe('In-fa');
+    });
+
+    it('per sota de categoria 4, o amb una dada de més de 12 h, no en treu cap', () => {
+        expect(bigCyclone([weak], lastMs)).toBeNull();
+        expect(bigCyclone([IN_FA], lastMs + BIG_CYCLONE_MAX_AGE_MS + 1)).toBeNull();
+        expect(bigCyclone([], lastMs)).toBeNull();
+    });
+
+    it('cada conca va al seu oceà', () => {
+        expect(basinOcean('westPacific')).toBe('pacific');
+        expect(basinOcean('southPacific')).toBe('pacific');
+        expect(basinOcean('southAtlantic')).toBe('atlantic');
+        expect(basinOcean('northIndian')).toBe('indian');
+        expect(basinOcean('australian')).toBe('australia');
+        expect(basinOcean('mediterranean')).toBe('mediterranean');
     });
 });

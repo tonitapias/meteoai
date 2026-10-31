@@ -32,6 +32,21 @@ describe('MoreDetailPrompt', () => {
         expect(onDismiss).toHaveBeenCalledTimes(1);
     });
 
+    it('els dies amb un cicló gros, el xip del planeta és el primer, i la línia curta també en parla', () => {
+        const planet: DetailTeaserItem = { key: 'planet', text: 'Tifó de categoria 4 al Pacífic', compactText: 'tifó de categoria 4 al Pacífic' };
+        const props = { teaser: [planet, ...TEASER], strings: ca.viewModes, onShow: vi.fn(), onDismiss: vi.fn(), takeFocus: noFocus };
+        const { rerender } = render(<MoreDetailPrompt compact={false} {...props} />);
+        expect(screen.getAllByRole('listitem')[0].textContent).toBe('Tifó de categoria 4 al Pacífic');
+
+        rerender(<MoreDetailPrompt compact {...props} />);
+        expect(screen.getByRole('button', { name: /Vista completa/ }).textContent).toBe(`Vista completa · tifó de categoria 4 al Pacífic, ${ca.viewModes.compactRow}`);
+    });
+
+    it('sense fenomen, la línia curta és la de sempre', () => {
+        render(<MoreDetailPrompt compact teaser={TEASER} strings={ca.viewModes} onShow={vi.fn()} onDismiss={vi.fn()} takeFocus={noFocus} />);
+        expect(screen.getByRole('button', { name: /Vista completa/ }).textContent).toBe(`Vista completa · ${ca.viewModes.compactRow}`);
+    });
+
     it('sense valors no deixa una llista buida', () => {
         render(<MoreDetailPrompt compact={false} teaser={[]} strings={ca.viewModes} onShow={vi.fn()} onDismiss={vi.fn()} takeFocus={noFocus} />);
         expect(screen.queryByRole('list')).toBeNull();

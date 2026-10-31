@@ -2,7 +2,7 @@
 // Textos de la secció «Extrems del planeta» (targeta i detall), en un fitxer propi perquè només es
 // carreguin amb la Vista completa. {x} es substitueix amb fill().
 import type { Language } from '../../translations';
-import type { CycloneBasin, CycloneKind } from '../../utils/planetExtremes';
+import type { CycloneBasin, CycloneKind, CycloneOcean } from '../../utils/planetExtremes';
 
 export interface PlanetStrings {
   eyebrow: string;
@@ -88,6 +88,29 @@ export interface PlanetStrings {
   // Amb la preposició i l'article que toquen ("de l'huracà", "del tifó", "de la tempesta tropical").
   ofKinds: Record<CycloneKind, string>;
   basins: Record<CycloneBasin, string>;
+  // Xip de «Vols més detall?» a la Vista essencial, en minúscula ("tifó de categoria 4 al Pacífic"):
+  // el xip en posa la primera lletra en majúscula i la línia curta el fa servir tal qual.
+  headline: string;
+  oceans: Record<CycloneOcean, string>;
+  // Visor orbital.
+  orbitOpen: string;
+  orbitTitle: string;
+  eyesLabel: string;
+  orbitLead: string;
+  imageLoading: string;
+  imageFailed: string;
+  imageCredit: string;
+  infrared: string;
+  discAlt: string;
+  catShort: string;
+  wetBulbShort: string;
+  firesAt: string;
+  floodsAt: string;
+  inView: string;
+  nothingInView: string;
+  elsewhereLead: string;
+  elsewhere: string;
+  openSheet: string;
 }
 
 export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
@@ -181,6 +204,26 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
       northIndian: 'Índic nord', southIndian: 'Índic sud', australian: 'Regió australiana', southPacific: 'Pacífic sud',
       southAtlantic: 'Atlàntic sud', mediterranean: 'Mediterrani',
     },
+    headline: '{kind} de categoria {n} {where}',
+    oceans: { atlantic: "a l'Atlàntic", pacific: 'al Pacífic', indian: "a l'Índic", australia: "prop d'Austràlia", mediterranean: 'a la Mediterrània' },
+    orbitOpen: "Mira-ho des de l'òrbita",
+    orbitTitle: 'Visor orbital',
+    eyesLabel: 'Tria el satèl·lit',
+    orbitLead: 'Què passa al planeta ara.',
+    imageLoading: 'Baixant la imatge del satèl·lit…',
+    imageFailed: 'Ara no arriba la imatge del satèl·lit. Els punts són al seu lloc igualment.',
+    imageCredit: 'Imatge',
+    infrared: 'Infraroig: els núvols més freds, que són els més alts, surten de colors.',
+    discAlt: 'Imatge de satèl·lit de la Terra sencera ({sat})',
+    catShort: 'cat. {n}',
+    wetBulbShort: 'bulb humit',
+    firesAt: 'Incendis · {place}',
+    floodsAt: 'Inundacions · {place}',
+    inView: 'En aquest disc',
+    nothingInView: 'Aquest ull no veu ara cap rècord ni cap fenomen actiu.',
+    elsewhereLead: "A l'altra banda del planeta",
+    elsewhere: '{what}. Mira-ho amb {eye}.',
+    openSheet: '{what}. Obre la fitxa.',
   },
   es: {
     eyebrow: 'Más allá de tu cielo',
@@ -272,6 +315,26 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
       northIndian: 'Índico norte', southIndian: 'Índico sur', australian: 'Región australiana', southPacific: 'Pacífico sur',
       southAtlantic: 'Atlántico sur', mediterranean: 'Mediterráneo',
     },
+    headline: '{kind} de categoría {n} {where}',
+    oceans: { atlantic: 'en el Atlántico', pacific: 'en el Pacífico', indian: 'en el Índico', australia: 'cerca de Australia', mediterranean: 'en el Mediterráneo' },
+    orbitOpen: 'Míralo desde la órbita',
+    orbitTitle: 'Visor orbital',
+    eyesLabel: 'Elige el satélite',
+    orbitLead: 'Qué pasa en el planeta ahora.',
+    imageLoading: 'Descargando la imagen del satélite…',
+    imageFailed: 'Ahora no llega la imagen del satélite. Los puntos están en su sitio igualmente.',
+    imageCredit: 'Imagen',
+    infrared: 'Infrarrojo: las nubes más frías, que son las más altas, salen de colores.',
+    discAlt: 'Imagen de satélite de la Tierra entera ({sat})',
+    catShort: 'cat. {n}',
+    wetBulbShort: 'bulbo húmedo',
+    firesAt: 'Incendios · {place}',
+    floodsAt: 'Inundaciones · {place}',
+    inView: 'En este disco',
+    nothingInView: 'Este ojo no ve ahora ningún récord ni ningún fenómeno activo.',
+    elsewhereLead: 'Al otro lado del planeta',
+    elsewhere: '{what}. Míralo con {eye}.',
+    openSheet: '{what}. Abre la ficha.',
   },
   en: {
     eyebrow: 'Beyond your sky',
@@ -363,6 +426,26 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
       northIndian: 'North Indian Ocean', southIndian: 'South Indian Ocean', australian: 'Australian region', southPacific: 'South Pacific',
       southAtlantic: 'South Atlantic', mediterranean: 'Mediterranean',
     },
+    headline: 'category {n} {kind} {where}',
+    oceans: { atlantic: 'in the Atlantic', pacific: 'in the Pacific', indian: 'in the Indian Ocean', australia: 'near Australia', mediterranean: 'in the Mediterranean' },
+    orbitOpen: 'See it from orbit',
+    orbitTitle: 'Orbital viewer',
+    eyesLabel: 'Choose the satellite',
+    orbitLead: "What's happening on the planet now.",
+    imageLoading: 'Downloading the satellite image…',
+    imageFailed: "The satellite image isn't coming through right now. The markers are still in place.",
+    imageCredit: 'Image',
+    infrared: 'Infrared: the coldest clouds, which are the highest, show in colour.',
+    discAlt: 'Satellite image of the whole Earth ({sat})',
+    catShort: 'cat. {n}',
+    wetBulbShort: 'wet bulb',
+    firesAt: 'Wildfires · {place}',
+    floodsAt: 'Floods · {place}',
+    inView: 'On this disc',
+    nothingInView: "This eye can't see any record or active event right now.",
+    elsewhereLead: 'On the other side of the planet',
+    elsewhere: '{what}. See it with {eye}.',
+    openSheet: '{what}. Open the details.',
   },
   fr: {
     eyebrow: 'Au-delà de ton ciel',
@@ -454,6 +537,26 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
       northIndian: 'Océan Indien nord', southIndian: 'Océan Indien sud', australian: 'Région australienne', southPacific: 'Pacifique sud',
       southAtlantic: 'Atlantique sud', mediterranean: 'Méditerranée',
     },
+    headline: '{kind} de catégorie {n} {where}',
+    oceans: { atlantic: "dans l'Atlantique", pacific: 'dans le Pacifique', indian: "dans l'océan Indien", australia: "près de l'Australie", mediterranean: 'en Méditerranée' },
+    orbitOpen: "Le voir depuis l'orbite",
+    orbitTitle: 'Visionneuse orbitale',
+    eyesLabel: 'Choisir le satellite',
+    orbitLead: 'Ce qui se passe sur la planète maintenant.',
+    imageLoading: "Téléchargement de l'image satellite…",
+    imageFailed: "L'image satellite n'arrive pas pour l'instant. Les repères restent à leur place.",
+    imageCredit: 'Image',
+    infrared: 'Infrarouge : les nuages les plus froids, qui sont les plus hauts, apparaissent en couleur.',
+    discAlt: 'Image satellite de la Terre entière ({sat})',
+    catShort: 'cat. {n}',
+    wetBulbShort: 'thermomètre mouillé',
+    firesAt: 'Incendies · {place}',
+    floodsAt: 'Inondations · {place}',
+    inView: 'Sur ce disque',
+    nothingInView: "Cet œil ne voit pour l'instant aucun record ni aucun phénomène actif.",
+    elsewhereLead: "De l'autre côté de la planète",
+    elsewhere: '{what}. À voir avec {eye}.',
+    openSheet: '{what}. Ouvrir la fiche.',
   },
 };
 

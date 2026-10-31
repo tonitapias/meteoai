@@ -156,6 +156,32 @@ export const summarizeCyclone = (cyclone: ActiveCyclone): CycloneSummary => {
     };
 };
 
+// --- El fenomen gros del dia (xip de la Vista essencial) ---------------------------------------------
+// Només un cicló de categoria 4 o 5 justifica avisar a qui no ha obert la Vista completa. La dada ha de
+// ser recent: el JTWC i l'NHC la renoven cada 6 h, i amb més de 12 h el cicló pot haver-se afeblit.
+export const BIG_CYCLONE_CATEGORY = 4;
+export const BIG_CYCLONE_MAX_AGE_MS = 12 * 3600 * 1000;
+
+/** El cicló actiu més intens, si és de categoria 4 o més i la dada és recent. */
+export const bigCyclone = (cyclones: ActiveCyclone[], nowMs: number): CycloneSummary | null =>
+    cyclones
+        .map(summarizeCyclone)
+        .filter((s) => s.category >= BIG_CYCLONE_CATEGORY && nowMs - ms(s.last) <= BIG_CYCLONE_MAX_AGE_MS)
+        .sort((a, b) => b.last.windKt - a.last.windKt)[0] ?? null;
+
+/** L'oceà d'una conca, per a un text curt ("al Pacífic"). */
+export type CycloneOcean = 'atlantic' | 'pacific' | 'indian' | 'australia' | 'mediterranean';
+
+export const basinOcean = (basin: CycloneBasin): CycloneOcean => {
+    switch (basin) {
+        case 'atlantic': case 'southAtlantic': return 'atlantic';
+        case 'northIndian': case 'southIndian': return 'indian';
+        case 'australian': return 'australia';
+        case 'mediterranean': return 'mediterranean';
+        default: return 'pacific';
+    }
+};
+
 /** 0 = N, 1 = NE ... 7 = NO. */
 export const compassIndex = (deg: number): number => Math.round((((deg % 360) + 360) % 360) / 45) % 8;
 

@@ -53,6 +53,14 @@ describe('buildDetailTeaser', () => {
         expect(items.find((i) => i.key === 'air')?.text).toBe("Qualitat de l'aire sensible");
     });
 
+    it("el fenomen gros del planeta, quan n'hi ha, va el primer", () => {
+        const planet = { text: 'Tifó de categoria 4 al Pacífic', compactText: 'tifó de categoria 4 al Pacífic' };
+        const items = buildDetailTeaser({ ...BASE, planet });
+        expect(items.map((i) => i.key)).toEqual(['planet', 'pressure', 'air', 'moon', 'visibility']);
+        expect(items[0]).toEqual({ key: 'planet', ...planet });
+        expect(buildDetailTeaser({ ...BASE, planet: null })[0].key).toBe('pressure');
+    });
+
     it('sense dades no inventa res: només hi queda la lluna, que és astronòmica', () => {
         const items = buildDetailTeaser({ ...BASE, current: {}, aqiCurrent: null });
         expect(items.map((i) => i.key)).toEqual(['moon']);
