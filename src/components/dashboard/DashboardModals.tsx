@@ -157,15 +157,15 @@ export const DashboardModals = () => {
                     lang={flags.lang}
                 />
             )}
-            {modals.planetModalTab !== null && (
+            {modals.planetModal !== null && (
                 <PlanetExtremesModal
                     lang={flags.lang}
                     unit={flags.unit}
-                    initialTab={modals.planetModalTab}
+                    entry={modals.planetModal}
                     place={loc && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)
                         ? { name: loc.name, lat: loc.latitude, lon: loc.longitude }
                         : null}
-                    onClose={() => actions.setPlanetModalTab(null)}
+                    onClose={() => actions.setPlanetModal(null)}
                 />
             )}
             {/* "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace) */}

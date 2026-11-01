@@ -31,6 +31,7 @@ const DATA: PlanetExtremes = {
         },
         floods: { count: 1, byCountry: [{ country: 'IN', count: 1, lat: 17.2, lon: 81.7 }] },
         volcanoes: [{ name: 'Merapi', country: 'ID', lat: -7.5, lon: 110.4 }],
+        alerts: [],
     },
     cyclones: { updatedAt: '2026-10-31T03:00:00Z', cyclones: [] },
 };
@@ -50,8 +51,8 @@ describe('Marcadors del visor', () => {
 
     it('el bulb humit, amb el nom planer (el tècnic és al detall)', () => {
         const record = station('VTSB', 'Surat Thani', 9.1, 99.2, 29);
-        expect(recordLabel('wetBulb', record, s, 'ca', 'C')).toBe('29,0' + String.fromCharCode(160) + '°C de calor humida');
-        expect(recordLabel('wetBulb', record, PLANET_STRINGS.en, 'en', 'C')).toBe('29.0' + String.fromCharCode(160) + '°C wet bulb');
+        expect(recordLabel('wetBulb', record, s, 'ca', 'C')).toBe('29' + String.fromCharCode(160) + '°C de calor humida');
+        expect(recordLabel('wetBulb', record, PLANET_STRINGS.en, 'en', 'C')).toBe('29' + String.fromCharCode(160) + '°C wet bulb');
     });
 
     it("un worker anterior (sense posicions per país) deixa, com a mínim, l'incendi més extens", () => {
@@ -84,6 +85,7 @@ describe('OrbitalViewer', () => {
         render(
             <OrbitalViewer
                 data={DATA} summaries={[IN_FA]} eye={eye} s={s} lang="ca" unit="C" place={PLACE}
+                nowMs={Date.parse('2026-10-31T03:00:00Z')} titleId="viewer-title" eyebrow="Fenòmens actius" backLabel="Torna a Fenòmens actius"
                 onEyeChange={handlers.onEyeChange ?? vi.fn()} onBack={handlers.onBack ?? vi.fn()}
                 onClose={handlers.onClose ?? vi.fn()} onOpenCyclone={handlers.onOpenCyclone ?? vi.fn()}
             />,
@@ -95,7 +97,7 @@ describe('OrbitalViewer', () => {
         expect(screen.getByText('Himawari-9 · 140,7° E · 02:30 UTC')).toBeTruthy();
         expect(screen.getByAltText('Imatge de satèl·lit de la Terra sencera (Himawari-9)')).toBeTruthy();
         expect(screen.getByText(s.infrared)).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: 'Tifó In-fa · cat. 4. Obre la fitxa.' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Tifó In-fa · cat. 4 · fa 9 h. Obre la fitxa.' }));
         fireEvent.click(screen.getByRole('button', { name: /^Tifó In-fa.*Categoria 4/ }));
         expect(onOpenCyclone).toHaveBeenNthCalledWith(1, 'E1');
         expect(onOpenCyclone).toHaveBeenNthCalledWith(2, 'E1');
@@ -109,15 +111,17 @@ describe('OrbitalViewer', () => {
         expect(onEyeChange).toHaveBeenCalledWith('himawari');
     });
 
-    it('el selector dels tres ulls i la fletxa per tornar', () => {
+    it('el selector dels tres ulls i la capçalera comuna, amb la fletxa per tornar on érem', () => {
         const onEyeChange = vi.fn();
         const onBack = vi.fn();
         renderViewer('goes', { onEyeChange, onBack });
         expect(screen.getByRole('button', { name: 'GOES' }).getAttribute('aria-pressed')).toBe('true');
         fireEvent.click(screen.getByRole('button', { name: 'Meteosat' }));
         expect(onEyeChange).toHaveBeenCalledWith('meteosat');
-        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Extrems del planeta' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Extrems del planeta' }));
+        expect(screen.getByRole('heading', { name: "Des de l'òrbita" })).toBeTruthy();
+        expect(screen.getByText('Fenòmens actius')).toBeTruthy();
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Torna a Fenòmens actius' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Torna a Fenòmens actius' }));
         expect(onBack).toHaveBeenCalled();
     });
 });

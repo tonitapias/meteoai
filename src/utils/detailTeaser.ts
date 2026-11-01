@@ -1,11 +1,13 @@
 // src/utils/detailTeaser.ts
 // Valors d'ara de la vista completa que la vista essencial no ensenya, per a la targeta "Vols més detall?".
 // Cada valor surt de la mateixa font i amb el mateix format que el seu giny: si la targeta diu 1019 hPa,
-// el giny de pressió també ha de dir 1019. Els dies amb un cicló de categoria 4 o 5, aquest va el primer
-// (el text el fa planetHeadline.ts, amb les dades d'«Extrems del planeta»).
+// el giny de pressió també ha de dir 1019. Els dies amb un protagonista a «Extrems del planeta» (un cicló de
+// categoria 4 o 5, calor humida de perill, una alerta vermella...), aquest va el primer i n'obre la fitxa (el text
+// el fa planetHeadline.ts).
 import { getMoonPhaseName, getNamedMoonPhase } from './lunarPhases';
 import { AQI_TRANSLATIONS, extractAqiData, getAqiLevel, getAqiSafeLang } from './aqiLevel';
 import { formatVisibilityKm, resolveCurrentDisplayVisibility } from './visibilityDisplay';
+import type { PlanetEntry, PlanetHeadlineIcon } from './planetNav';
 
 export type DetailTeaserKey = 'planet' | 'pressure' | 'air' | 'moon' | 'visibility';
 
@@ -14,6 +16,9 @@ export interface DetailTeaserItem {
   text: string;
   /** Per a la línia curta de qui ja coneix la vista completa (només el fenomen del planeta en té). */
   compactText?: string;
+  /** El fenomen del planeta: la fitxa que obre i la icona del seu tipus. */
+  entry?: PlanetEntry;
+  icon?: PlanetHeadlineIcon;
 }
 
 export interface DetailTeaserTemplates {
@@ -33,7 +38,7 @@ interface DetailTeaserInput {
   lang: string;
   templates: DetailTeaserTemplates;
   /** El fenomen gros del dia, si n'hi ha (usePlanetHeadline). */
-  planet?: { text: string; compactText: string } | null;
+  planet?: { text: string; compactText: string; entry?: PlanetEntry; icon?: PlanetHeadlineIcon } | null;
 }
 
 const fill = (template: string, value: string) => template.replace('{v}', value);
@@ -41,7 +46,15 @@ const fill = (template: string, value: string) => template.replace('{v}', value)
 export function buildDetailTeaser({ current, aqiCurrent, effectiveCode, nowMs, lang, templates, planet }: DetailTeaserInput): DetailTeaserItem[] {
   const items: DetailTeaserItem[] = [];
 
-  if (planet) items.push({ key: 'planet', text: planet.text, compactText: planet.compactText });
+  if (planet) {
+    items.push({
+      key: 'planet',
+      text: planet.text,
+      compactText: planet.compactText,
+      ...(planet.entry ? { entry: planet.entry } : {}),
+      ...(planet.icon ? { icon: planet.icon } : {}),
+    });
+  }
 
   // CircularGauge arrodoneix a l'enter.
   const pressure = current?.pressure_msl;

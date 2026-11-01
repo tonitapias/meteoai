@@ -52,6 +52,16 @@ describe('normalizePlanetExtremes', () => {
         expect(data.cyclones?.cyclones.map((c) => c.name)).toEqual(['In-fa']);
     });
 
+    it('les alertes de GDACS: les vàlides, sense les mal formades; un worker anterior no en dona', () => {
+        const alert = { type: 'TC', level: 'red', name: 'Murasu', country: 'IN', lat: 13.6, lon: 82.6, from: '2026-11-01T00:00:00.000Z', url: 'https://www.gdacs.org/report.aspx?eventid=1' };
+        const data = normalizePlanetExtremes({
+            ...BODY,
+            events: { ...BODY.events, alerts: [alert, { ...alert, level: 'green' }, { ...alert, type: 'EQ' }, { ...alert, url: 'javascript:alert(1)', name: '' }] },
+        });
+        expect(data.events?.alerts).toEqual([alert, { ...alert, url: null, name: '' }]);
+        expect(normalizePlanetExtremes(BODY).events?.alerts).toEqual([]);
+    });
+
     it('qualsevol cosa estranya dona tots els blocs a null', () => {
         expect(normalizePlanetExtremes('<html>')).toEqual({ metar: null, events: null, cyclones: null });
     });

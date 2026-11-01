@@ -12,6 +12,46 @@ import { useEffect, useRef } from 'react';
 // dos de cop en lloc de revelar només el que quedava per sota.
 const modalStack: symbol[] = [];
 
+// --- Pantalles dins d'un modal (vegeu usePlanetNavigation) ---------------------------------------------
+// Un modal amb pantalles pròpies (una fitxa, un visor) hi posa un pas d'historial per pantalla i ocupa el cim de
+// la pila amb un nivell: així el seu «enrere» no tanca el modal sencer, sigui quin sigui l'ordre en què el
+// navegador crida els listeners (a `window` és el de registre, també en captura, i el modal sovint es carrega a
+// part, més tard). Un popstate que ja ha atès algú (o l'eco d'un retrocés fet amb la fletxa) no l'atén ningú més.
+const handledPopStates = new WeakSet<Event>();
+let pendingIgnoredPops = 0;
+
+export const pushHistoryLevel = (): symbol => {
+  const token = Symbol('historyLevel');
+  modalStack.push(token);
+  return token;
+};
+
+export const removeHistoryLevel = (token: symbol): void => {
+  const idx = modalStack.lastIndexOf(token);
+  if (idx !== -1) modalStack.splice(idx, 1);
+};
+
+/** L'esdeveniment ja l'ha atès una pantalla: cap modal no s'ha de tancar per ell. */
+export const markPopStateHandled = (event: Event): void => {
+  handledPopStates.add(event);
+};
+
+/** El proper popstate és l'eco d'un retrocés fet des de l'app (la fletxa): no s'ha d'atendre. */
+export const ignoreNextPopState = (): void => {
+  pendingIgnoredPops++;
+};
+
+/** Si l'esdeveniment ja està atès o és l'eco esperat (i, en aquest cas, el gasta). */
+export const isPopStateHandled = (event: Event): boolean => {
+  if (handledPopStates.has(event)) return true;
+  if (pendingIgnoredPops > 0) {
+    pendingIgnoredPops--;
+    handledPopStates.add(event);
+    return true;
+  }
+  return false;
+};
+
 /**
  * Hook per sincronitzar l'estat d'obertura d'un modal amb l'historial del navegador.
  * Permet que el botó "enrere" (mòbil/navegador) tanqui el modal en lloc de canviar de pàgina.
@@ -45,7 +85,9 @@ export const useModalHistory = (isOpen: boolean, onClose: () => void): void => {
       causedByBackRef.current = false;
 
       // 2. Definim l'escut per a l'esdeveniment 'popstate' (botó enrere físic)
-      const handlePopState = (_event: PopStateEvent) => {
+      const handlePopState = (event: PopStateEvent) => {
+        // Una pantalla de dins d'un modal ja l'ha atès (o és l'eco de la seva fletxa).
+        if (isPopStateHandled(event)) return;
         // Només reaccionem si SOM el modal de dalt de tot de la pila: si n'hi ha
         // un altre de més recent per sobre nostre, és ell qui s'ha de tancar.
         if (modalStack[modalStack.length - 1] !== token) return;

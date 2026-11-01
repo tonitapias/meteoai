@@ -59,6 +59,21 @@ export interface Volcano {
     lon?: number;
 }
 
+/**
+ * Un esdeveniment amb alerta taronja o vermella de GDACS. L'alerta és humanitària (quanta gent hi ha exposada),
+ * no física. `name`: el nom propi dels ciclons i dels volcans; buit als altres.
+ */
+export interface GdacsAlert {
+    type: 'TC' | 'FL' | 'VO' | 'WF';
+    level: 'orange' | 'red';
+    name: string;
+    country: string | null;
+    lat?: number;
+    lon?: number;
+    from: string | null;
+    url: string | null;
+}
+
 export interface PlanetEvents {
     updatedAt: string;
     fires: {
@@ -68,6 +83,8 @@ export interface PlanetEvents {
     };
     floods: { count: number; byCountry: CountryCount[] };
     volcanoes: Volcano[];
+    // Un worker anterior no les dona: llista buida.
+    alerts: GdacsAlert[];
 }
 
 export interface PlanetExtremes {
@@ -128,6 +145,25 @@ const toMetar = (v: unknown): MetarRecords | null => {
     };
 };
 
+const ALERT_TYPES = ['TC', 'FL', 'VO', 'WF'] as const;
+
+const toAlert = (v: unknown): GdacsAlert | null => {
+    if (!isObject(v)) return null;
+    const type = ALERT_TYPES.find((t) => t === v.type);
+    const level = v.level === 'red' || v.level === 'orange' ? v.level : null;
+    if (!type || !level) return null;
+    const url = str(v.url);
+    return {
+        type,
+        level,
+        name: str(v.name) ?? '',
+        country: str(v.country),
+        ...position(v),
+        from: str(v.from),
+        url: url && url.startsWith('https://') ? url : null,
+    };
+};
+
 const toEvents = (v: unknown): PlanetEvents | null => {
     if (!isObject(v) || !str(v.updatedAt) || !isObject(v.fires) || !isObject(v.floods)) return null;
     const largest = v.fires.largest;
@@ -144,6 +180,7 @@ const toEvents = (v: unknown): PlanetEvents | null => {
         volcanoes: list(v.volcanoes)
             .filter((x): x is Record<string, unknown> => isObject(x) && !!str(x.name))
             .map((x) => ({ name: x.name as string, country: str(x.country), ...position(x) })),
+        alerts: list(v.alerts).map(toAlert).filter((a): a is GdacsAlert => a !== null),
     };
 };
 
