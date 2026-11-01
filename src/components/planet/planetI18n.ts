@@ -2,7 +2,8 @@
 // Textos de la secció «Extrems del planeta» (targeta i detall), en un fitxer propi perquè només es
 // carreguin amb la Vista completa. {x} es substitueix amb fill().
 import type { Language } from '../../translations';
-import type { CycloneBasin, CycloneKind, CycloneOcean } from '../../utils/planetExtremes';
+import type { CycloneBasin, CycloneKind, CycloneOcean, RecordKey } from '../../utils/planetExtremes';
+import type { GdacsAlert } from '../../services/planetExtremesApi';
 
 export interface PlanetStrings {
   eyebrow: string;
@@ -97,6 +98,10 @@ export interface PlanetStrings {
   // el xip en posa la primera lletra en majúscula i la línia curta el fa servir tal qual.
   headline: string;
   oceans: Record<CycloneOcean, string>;
+  // Els altres protagonistes al xip de la Vista essencial (en minúscula, com `headline`).
+  headlineWetBulb: string;
+  headlineAlert: string;
+  headlineRecord: Record<'hottest' | 'gust' | 'lowPressure', string>;
   // Visor orbital.
   orbitOpen: string;
   orbitTitle: string;
@@ -116,6 +121,39 @@ export interface PlanetStrings {
   elsewhereLead: string;
   elsewhere: string;
   openSheet: string;
+  // Versió 2: capçalera comuna, protagonista del dia, alertes de GDACS i fitxes.
+  updated: string;
+  calm: string;
+  obsAge: string;
+  obsAgeOne: string;
+  allDetail: string;
+  highlight: string;
+  reasons: Record<'wetBulb' | 'cyclone' | 'alert' | 'hottest' | 'gust' | 'lowPressure', string>;
+  alertKinds: Record<GdacsAlert['type'], string>;
+  alertLevels: Record<GdacsAlert['level'], string>;
+  alertsTitle: string;
+  alertsNote: string;
+  since: string;
+  gdacsReport: string;
+  withAlert: string;
+  noTrack: string;
+  savanna: string;
+  recordTitles: Record<RecordKey, string>;
+  seaLevel: string;
+  summit: string;
+  backTo: string;
+  orbitRowSub: string;
+  orbitFor: string;
+  ageBanner: string;
+  dataFrom: string;
+  ageBannerFresh: string;
+  ageRenew: string;
+  ageShort: string;
+  trackSince: string;
+  warmingTitle: string;
+  cycloneWarmingBadge: string;
+  cycloneWarming: string;
+  ipcc: string;
 }
 
 export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
@@ -213,8 +251,11 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     },
     headline: '{kind} de categoria {n} {where}',
     oceans: { atlantic: "a l'Atlàntic", pacific: 'al Pacífic', indian: "a l'Índic", australia: "prop d'Austràlia", mediterranean: 'a la Mediterrània' },
+    headlineWetBulb: 'calor humida de {t} a {place}',
+    headlineAlert: '{level}: {what}',
+    headlineRecord: { hottest: '{v} de temperatura a {place}', gust: 'ratxa de {v} a {place}', lowPressure: 'pressió de {v} a {place}' },
     orbitOpen: "Mira-ho des de l'òrbita",
-    orbitTitle: 'Visor orbital',
+    orbitTitle: "Des de l'òrbita",
     eyesLabel: 'Tria el satèl·lit',
     orbitLead: 'Què passa al planeta ara.',
     imageLoading: 'Baixant la imatge del satèl·lit…',
@@ -231,6 +272,45 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     elsewhereLead: "A l'altra banda del planeta",
     elsewhere: '{what}. Mira-ho amb {eye}.',
     openSheet: '{what}. Obre la fitxa.',
+    updated: 'Actualitzat',
+    calm: 'Cap fenomen excepcional ara mateix. Aquests són els valors més extrems de les estacions del món.',
+    obsAge: 'mesures de fa {a} a {b} min',
+    obsAgeOne: 'mesures de fa {a} min',
+    allDetail: 'Tot el detall',
+    highlight: 'Fenomen destacat',
+    reasons: {
+      wetBulb: 'Es destaca perquè arriba al llindar de perill per a tothom ({t}).',
+      cyclone: 'Es destaca perquè és un cicló de categoria 4 o més.',
+      alert: 'Es destaca perquè té alerta vermella de GDACS: hi ha molta gent exposada.',
+      hottest: 'Es destaca perquè arriba a {t}.',
+      gust: 'Es destaca perquè és una ratxa de {v} per sota dels 1.000 m.',
+      lowPressure: 'Es destaca perquè la pressió baixa fins a {p}.',
+    },
+    alertKinds: { TC: 'Cicló tropical', FL: 'Inundacions', VO: 'Volcà', WF: 'Incendi' },
+    alertLevels: { red: 'alerta vermella', orange: 'alerta taronja' },
+    alertsTitle: 'Amb alerta de GDACS',
+    alertsNote: "L'alerta de GDACS diu quanta gent hi ha exposada, no la intensitat del fenomen.",
+    since: 'des del {date}',
+    gdacsReport: 'Informe de GDACS',
+    withAlert: '{n} amb alerta',
+    noTrack: 'NASA EONET encara no en té la trajectòria.',
+    savanna: "Moltes són cremes de sabana a l'Àfrica, que es fan cada any a l'estació seca.",
+    recordTitles: { wetBulb: 'Calor humida', hottest: 'El més calent', coldest: 'El més fred', gust: 'La ratxa més forta', lowPressure: 'La pressió més baixa' },
+    seaLevel: 'a nivell del mar',
+    summit: 'cim de {m} m',
+    backTo: 'Torna a {where}',
+    orbitRowSub: 'Meteosat, GOES i Himawari',
+    orbitFor: "Veure {what} des de l'òrbita",
+    ageBanner: 'Dada de les {time} UTC, fa {h} h',
+    dataFrom: 'Dada de les {time} UTC',
+    ageBannerFresh: "Dada de les {time} UTC, de fa menys d'una hora",
+    ageRenew: 'El {source} la renova cada 6 hores.',
+    ageShort: 'fa {h} h',
+    trackSince: 'La línia és el camí que ha fet des del {date}.',
+    warmingTitle: "I l'escalfament?",
+    cycloneWarmingBadge: 'Més forts, no més nombrosos',
+    cycloneWarming: 'No hi ha més ciclons que abans. Però una part més gran arriba a categoria 3, 4 o 5, porten més pluja i, amb el mar més alt, la marea de tempesta arriba més lluny.',
+    ipcc: 'IPCC AR6',
   },
   es: {
     eyebrow: 'Más allá de tu cielo',
@@ -326,8 +406,11 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     },
     headline: '{kind} de categoría {n} {where}',
     oceans: { atlantic: 'en el Atlántico', pacific: 'en el Pacífico', indian: 'en el Índico', australia: 'cerca de Australia', mediterranean: 'en el Mediterráneo' },
+    headlineWetBulb: 'calor húmeda de {t} en {place}',
+    headlineAlert: '{level}: {what}',
+    headlineRecord: { hottest: '{v} de temperatura en {place}', gust: 'racha de {v} en {place}', lowPressure: 'presión de {v} en {place}' },
     orbitOpen: 'Míralo desde la órbita',
-    orbitTitle: 'Visor orbital',
+    orbitTitle: 'Desde la órbita',
     eyesLabel: 'Elige el satélite',
     orbitLead: 'Qué pasa en el planeta ahora.',
     imageLoading: 'Descargando la imagen del satélite…',
@@ -344,6 +427,45 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     elsewhereLead: 'Al otro lado del planeta',
     elsewhere: '{what}. Míralo con {eye}.',
     openSheet: '{what}. Abre la ficha.',
+    updated: 'Actualizado',
+    calm: 'Ningún fenómeno excepcional ahora mismo. Estos son los valores más extremos de las estaciones del mundo.',
+    obsAge: 'medidas de hace {a} a {b} min',
+    obsAgeOne: 'medidas de hace {a} min',
+    allDetail: 'Todo el detalle',
+    highlight: 'Fenómeno destacado',
+    reasons: {
+      wetBulb: 'Se destaca porque llega al umbral de peligro para todo el mundo ({t}).',
+      cyclone: 'Se destaca porque es un ciclón de categoría 4 o más.',
+      alert: 'Se destaca porque tiene alerta roja de GDACS: hay mucha gente expuesta.',
+      hottest: 'Se destaca porque llega a {t}.',
+      gust: 'Se destaca porque es una racha de {v} por debajo de los 1.000 m.',
+      lowPressure: 'Se destaca porque la presión baja hasta {p}.',
+    },
+    alertKinds: { TC: 'Ciclón tropical', FL: 'Inundaciones', VO: 'Volcán', WF: 'Incendio' },
+    alertLevels: { red: 'alerta roja', orange: 'alerta naranja' },
+    alertsTitle: 'Con alerta de GDACS',
+    alertsNote: 'La alerta de GDACS dice cuánta gente está expuesta, no la intensidad del fenómeno.',
+    since: 'desde el {date}',
+    gdacsReport: 'Informe de GDACS',
+    withAlert: '{n} con alerta',
+    noTrack: 'NASA EONET aún no tiene su trayectoria.',
+    savanna: 'Muchas son quemas de sabana en África, que se hacen cada año en la estación seca.',
+    recordTitles: { wetBulb: 'Calor húmeda', hottest: 'El más caluroso', coldest: 'El más frío', gust: 'La racha más fuerte', lowPressure: 'La presión más baja' },
+    seaLevel: 'a nivel del mar',
+    summit: 'cima de {m} m',
+    backTo: 'Volver a {where}',
+    orbitRowSub: 'Meteosat, GOES y Himawari',
+    orbitFor: 'Ver {what} desde la órbita',
+    ageBanner: 'Dato de las {time} UTC, de hace {h} h',
+    dataFrom: 'Dato de las {time} UTC',
+    ageBannerFresh: 'Dato de las {time} UTC, de hace menos de una hora',
+    ageRenew: 'El {source} lo renueva cada 6 horas.',
+    ageShort: 'hace {h} h',
+    trackSince: 'La línea es el camino que ha hecho desde el {date}.',
+    warmingTitle: '¿Y el calentamiento?',
+    cycloneWarmingBadge: 'Más fuertes, no más numerosos',
+    cycloneWarming: 'No hay más ciclones que antes. Pero una parte mayor llega a categoría 3, 4 o 5, traen más lluvia y, con el mar más alto, la marea de tormenta llega más lejos.',
+    ipcc: 'IPCC AR6',
   },
   en: {
     eyebrow: 'Beyond your sky',
@@ -439,8 +561,11 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     },
     headline: 'category {n} {kind} {where}',
     oceans: { atlantic: 'in the Atlantic', pacific: 'in the Pacific', indian: 'in the Indian Ocean', australia: 'near Australia', mediterranean: 'in the Mediterranean' },
+    headlineWetBulb: '{t} wet-bulb temperature in {place}',
+    headlineAlert: '{level}: {what}',
+    headlineRecord: { hottest: '{v} in {place}', gust: '{v} gust in {place}', lowPressure: '{v} pressure in {place}' },
     orbitOpen: 'See it from orbit',
-    orbitTitle: 'Orbital viewer',
+    orbitTitle: 'From orbit',
     eyesLabel: 'Choose the satellite',
     orbitLead: "What's happening on the planet now.",
     imageLoading: 'Downloading the satellite image…',
@@ -457,6 +582,45 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     elsewhereLead: 'On the other side of the planet',
     elsewhere: '{what}. See it with {eye}.',
     openSheet: '{what}. Open the details.',
+    updated: 'Updated',
+    calm: 'Nothing exceptional right now. These are the most extreme readings from stations around the world.',
+    obsAge: 'readings from {a} to {b} min ago',
+    obsAgeOne: 'readings from {a} min ago',
+    allDetail: 'Full detail',
+    highlight: 'Featured event',
+    reasons: {
+      wetBulb: 'Featured because it reaches the danger threshold for everyone ({t}).',
+      cyclone: 'Featured because it is a category 4 or stronger cyclone.',
+      alert: 'Featured because GDACS has a red alert out: many people are exposed.',
+      hottest: 'Featured because it reaches {t}.',
+      gust: 'Featured because it is a {v} gust below 1,000 m.',
+      lowPressure: 'Featured because the pressure drops to {p}.',
+    },
+    alertKinds: { TC: 'Tropical cyclone', FL: 'Floods', VO: 'Volcano', WF: 'Wildfire' },
+    alertLevels: { red: 'red alert', orange: 'orange alert' },
+    alertsTitle: 'With a GDACS alert',
+    alertsNote: 'A GDACS alert measures how many people are exposed, not how intense the event is.',
+    since: 'since {date}',
+    gdacsReport: 'GDACS report',
+    withAlert: '{n} with alerts',
+    noTrack: 'NASA EONET does not have its track yet.',
+    savanna: 'Many are savanna burns in Africa, set every year in the dry season.',
+    recordTitles: { wetBulb: 'Wet-bulb temperature', hottest: 'Hottest', coldest: 'Coldest', gust: 'Strongest gust', lowPressure: 'Lowest pressure' },
+    seaLevel: 'at sea level',
+    summit: '{m} m summit',
+    backTo: 'Back to {where}',
+    orbitRowSub: 'Meteosat, GOES and Himawari',
+    orbitFor: 'See {what} from orbit',
+    ageBanner: 'Data from {time} UTC, {h} h ago',
+    dataFrom: 'Data from {time} UTC',
+    ageBannerFresh: 'Data from {time} UTC, less than an hour ago',
+    ageRenew: '{source} updates it every 6 hours.',
+    ageShort: '{h} h ago',
+    trackSince: 'The line is the path it has taken since {date}.',
+    warmingTitle: 'And global warming?',
+    cycloneWarmingBadge: 'Stronger, not more frequent',
+    cycloneWarming: 'There are no more cyclones than before. But a larger share reach category 3, 4 or 5, they bring more rain and, with higher seas, storm surges reach further inland.',
+    ipcc: 'IPCC AR6',
   },
   fr: {
     eyebrow: 'Au-delà de ton ciel',
@@ -552,8 +716,11 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     },
     headline: '{kind} de catégorie {n} {where}',
     oceans: { atlantic: "dans l'Atlantique", pacific: 'dans le Pacifique', indian: "dans l'océan Indien", australia: "près de l'Australie", mediterranean: 'en Méditerranée' },
+    headlineWetBulb: 'chaleur humide de {t} à {place}',
+    headlineAlert: '{level} : {what}',
+    headlineRecord: { hottest: '{v} à {place}', gust: 'rafale de {v} à {place}', lowPressure: 'pression de {v} à {place}' },
     orbitOpen: "Le voir depuis l'orbite",
-    orbitTitle: 'Visionneuse orbitale',
+    orbitTitle: "Depuis l'orbite",
     eyesLabel: 'Choisir le satellite',
     orbitLead: 'Ce qui se passe sur la planète maintenant.',
     imageLoading: "Téléchargement de l'image satellite…",
@@ -570,6 +737,45 @@ export const PLANET_STRINGS: Record<Language, PlanetStrings> = {
     elsewhereLead: "De l'autre côté de la planète",
     elsewhere: '{what}. À voir avec {eye}.',
     openSheet: '{what}. Ouvrir la fiche.',
+    updated: 'Mis à jour',
+    calm: "Aucun phénomène exceptionnel pour l'instant. Voici les valeurs les plus extrêmes des stations du monde.",
+    obsAge: 'mesures d’il y a {a} à {b} min',
+    obsAgeOne: 'mesures d’il y a {a} min',
+    allDetail: 'Tout le détail',
+    highlight: 'Phénomène marquant',
+    reasons: {
+      wetBulb: 'À la une parce que le seuil de danger pour tous est atteint ({t}).',
+      cyclone: 'À la une parce que c’est un cyclone de catégorie 4 ou plus.',
+      alert: 'À la une parce que GDACS a émis une alerte rouge : beaucoup de personnes sont exposées.',
+      hottest: 'À la une parce que la température atteint {t}.',
+      gust: 'À la une parce que c’est une rafale de {v} sous 1 000 m.',
+      lowPressure: 'À la une parce que la pression descend à {p}.',
+    },
+    alertKinds: { TC: 'Cyclone tropical', FL: 'Inondations', VO: 'Volcan', WF: 'Incendie' },
+    alertLevels: { red: 'alerte rouge', orange: 'alerte orange' },
+    alertsTitle: 'Avec une alerte GDACS',
+    alertsNote: "L'alerte GDACS mesure combien de personnes sont exposées, pas l'intensité du phénomène.",
+    since: 'depuis le {date}',
+    gdacsReport: 'Rapport GDACS',
+    withAlert: '{n} avec alerte',
+    noTrack: "NASA EONET n'a pas encore sa trajectoire.",
+    savanna: 'Beaucoup sont des feux de savane en Afrique, allumés chaque année à la saison sèche.',
+    recordTitles: { wetBulb: 'Chaleur humide', hottest: 'Le plus chaud', coldest: 'Le plus froid', gust: 'La rafale la plus forte', lowPressure: 'La pression la plus basse' },
+    seaLevel: 'au niveau de la mer',
+    summit: 'sommet à {m} m',
+    backTo: 'Retour à {where}',
+    orbitRowSub: 'Meteosat, GOES et Himawari',
+    orbitFor: "Voir {what} depuis l'orbite",
+    ageBanner: 'Donnée de {time} UTC, il y a {h} h',
+    dataFrom: 'Donnée de {time} UTC',
+    ageBannerFresh: "Donnée de {time} UTC, il y a moins d'une heure",
+    ageRenew: 'Le {source} la met à jour toutes les 6 heures.',
+    ageShort: 'il y a {h} h',
+    trackSince: 'La ligne est le chemin parcouru depuis le {date}.',
+    warmingTitle: 'Et le réchauffement ?',
+    cycloneWarmingBadge: 'Plus forts, pas plus nombreux',
+    cycloneWarming: "Il n'y a pas plus de cyclones qu'avant. Mais une plus grande part atteint la catégorie 3, 4 ou 5, ils apportent plus de pluie et, avec une mer plus haute, la marée de tempête va plus loin.",
+    ipcc: 'GIEC AR6',
   },
 };
 

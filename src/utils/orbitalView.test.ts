@@ -18,6 +18,7 @@ const DATA: PlanetExtremes = {
         fires: { count: 2, byCountry: [{ country: 'BW', count: 2, lat: -21, lon: 24 }], largest: { country: 'BW', hectares: 48700, lat: -21, lon: 24 } },
         floods: { count: 0, byCountry: [] },
         volcanoes: [],
+        alerts: [],
     },
     cyclones: { updatedAt: '2026-10-30T22:00:00Z', cyclones: [] },
 };

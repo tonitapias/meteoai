@@ -76,7 +76,8 @@ export const DashboardContent = () => {
 
     const nowMs = state.now.getTime();
     const currentConditions = weatherData?.current;
-    // El fenomen gros del dia (cicló de categoria 4 o 5): només a l'essencial i quan la previsió ja hi és.
+    // El protagonista del dia a «Extrems del planeta» (un cicló de categoria 4 o 5, calor humida de perill...):
+    // només a l'essencial i quan la previsió ja hi és.
     const planetHeadline = usePlanetHeadline(!isExpert && !!currentConditions, flags.lang);
     const detailTeaser = useMemo(() => {
         if (isExpert || !currentConditions) return [];
@@ -181,6 +182,7 @@ export const DashboardContent = () => {
                             onShow={showCompleteView}
                             onDismiss={dismissDetailPrompt}
                             takeFocus={takeFocus}
+                            onOpenPlanet={actions.setPlanetModal}
                         />
                     )}
                     {isExpert && (
@@ -252,7 +254,7 @@ export const DashboardContent = () => {
                     {/* 8. EXTREMS DEL PLANETA (MODE EXPERT): primer el teu cel, al final el planeta */}
                     {isExpert && (
                         <Suspense fallback={<SectionSkeleton />}>
-                            <PlanetExtremesCard lang={flags.lang} unit={flags.unit} onOpen={actions.setPlanetModalTab} />
+                            <PlanetExtremesCard lang={flags.lang} unit={flags.unit} nowMs={nowMs} onOpen={actions.setPlanetModal} />
                         </Suspense>
                     )}
                 </div>

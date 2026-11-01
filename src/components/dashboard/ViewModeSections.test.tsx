@@ -42,6 +42,14 @@ describe('MoreDetailPrompt', () => {
         expect(screen.getByRole('button', { name: /Vista completa/ }).textContent).toBe(`Vista completa · tifó de categoria 4 al Pacífic, ${ca.viewModes.compactRow}`);
     });
 
+    it('el xip del fenomen és un botó que obre directament la seva fitxa', () => {
+        const onOpenPlanet = vi.fn();
+        const planet: DetailTeaserItem = { key: 'planet', text: 'Alerta vermella: cicló tropical Murasu · Índia', compactText: 'x', entry: { kind: 'list', tab: 'events' }, icon: 'cyclone' };
+        render(<MoreDetailPrompt compact={false} teaser={[planet, ...TEASER]} strings={ca.viewModes} onShow={vi.fn()} onDismiss={vi.fn()} takeFocus={noFocus} onOpenPlanet={onOpenPlanet} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Alerta vermella: cicló tropical Murasu · Índia' }));
+        expect(onOpenPlanet).toHaveBeenCalledWith({ kind: 'list', tab: 'events' });
+    });
+
     it('sense fenomen, la línia curta és la de sempre', () => {
         render(<MoreDetailPrompt compact teaser={TEASER} strings={ca.viewModes} onShow={vi.fn()} onDismiss={vi.fn()} takeFocus={noFocus} />);
         expect(screen.getByRole('button', { name: /Vista completa/ }).textContent).toBe(`Vista completa · ${ca.viewModes.compactRow}`);

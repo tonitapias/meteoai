@@ -2,15 +2,17 @@
 // Les dues peces del tauler que lliguen les vistes, al punt on apareix el contingut de la vista completa
 // (just després del resum de la IA):
 // - MoreDetailPrompt (vista essencial): "Vols més detall?" amb valors d'ara que la vista essencial no ensenya.
-//   Sencera només per a qui encara no coneix la vista completa; si no, una sola línia. Els dies amb un cicló de
-//   categoria 4 o 5, el primer xip (i el començament de la línia) és aquest fenomen.
+//   Sencera només per a qui encara no coneix la vista completa; si no, una sola línia. Els dies amb un protagonista
+//   a «Extrems del planeta» (un cicló de categoria 4 o 5, calor humida de perill...), el primer xip (i el
+//   començament de la línia) és aquest fenomen, i el xip n'obre directament la fitxa.
 // - CompleteViewHeading (vista completa): una franja amb els colors i la icona de la vista completa que marca
 //   on comença el contingut nou, amb el botó per tornar a l'essencial (colors i icona de l'essencial).
 // Sense blur, filtres ni animacions contínues (mòbils modestos).
 import { useEffect, useId, useRef } from 'react';
-import { ChevronRight, Eye, Gauge, Leaf, Moon, Plus } from 'lucide-react';
+import { ChevronRight, Eye, Flame, Gauge, Leaf, Moon, Mountain, Plus, Thermometer, Waves, Wind } from 'lucide-react';
 import type { TranslationType } from '../../translations';
 import type { DetailTeaserItem, DetailTeaserKey } from '../../utils/detailTeaser';
+import type { PlanetEntry, PlanetHeadlineIcon } from '../../utils/planetNav';
 import { VIEW_MODE_STYLE } from '../viewModeStyle';
 import { CycloneIcon } from '../planet/CycloneIcon';
 import { COMPLETE_VIEW_ANCHOR_ID } from './completeViewAnchor';
@@ -29,6 +31,16 @@ const TEASER_ICONS: Record<DetailTeaserKey, typeof Gauge | typeof CycloneIcon> =
   visibility: Eye,
 };
 
+const PLANET_ICONS: Record<PlanetHeadlineIcon, typeof Gauge | typeof CycloneIcon> = {
+  cyclone: CycloneIcon,
+  heat: Thermometer,
+  flood: Waves,
+  fire: Flame,
+  volcano: Mountain,
+  wind: Wind,
+  pressure: Gauge,
+};
+
 interface MoreDetailPromptProps {
   compact: boolean;
   teaser: DetailTeaserItem[];
@@ -36,9 +48,11 @@ interface MoreDetailPromptProps {
   onShow: () => void;
   onDismiss: () => void;
   takeFocus: TakeFocusRequest;
+  /** Obre la fitxa del fenomen del planeta (el seu xip és un botó). */
+  onOpenPlanet?: (entry: PlanetEntry) => void;
 }
 
-export function MoreDetailPrompt({ compact, teaser, strings, onShow, onDismiss, takeFocus }: MoreDetailPromptProps) {
+export function MoreDetailPrompt({ compact, teaser, strings, onShow, onDismiss, takeFocus, onOpenPlanet }: MoreDetailPromptProps) {
   const titleId = useId();
   const focusRef = useRef<HTMLElement | null>(null);
 
@@ -79,17 +93,29 @@ export function MoreDetailPrompt({ compact, teaser, strings, onShow, onDismiss, 
       {teaser.length > 0 && (
         <ul className="flex flex-wrap gap-2 md:flex-[1.4]">
           {teaser.map((item, index) => {
-            const Icon = TEASER_ICONS[item.key];
-            // El fenomen del planeta, sobri: només la vora i la icona en to d'avís.
+            const Icon = item.key === 'planet' && item.icon ? PLANET_ICONS[item.icon] : TEASER_ICONS[item.key];
+            // El fenomen del planeta, sobri: només la vora i la icona en to d'avís. És un botó que n'obre la fitxa.
             const planet = item.key === 'planet';
+            const entry = planet ? item.entry : undefined;
             return (
               // Al mòbil n'hi caben tres en una línia i mitja; la quarta, a partir de tauleta.
-              <li
-                key={item.key}
-                className={`${index >= 3 ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 rounded-full border ${planet ? 'border-rose-400/35' : 'border-white/10'} bg-black/30 px-3 py-1 text-xs text-slate-200`}
-              >
-                <Icon aria-hidden="true" className={`w-3.5 h-3.5 shrink-0 ${planet ? 'text-rose-300' : 'text-slate-400'}`} />
-                {item.text}
+              <li key={item.key} className={index >= 3 ? 'hidden sm:inline-flex' : 'inline-flex'}>
+                {entry && onOpenPlanet ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPlanet(entry)}
+                    className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-rose-400/35 bg-black/30 px-3 py-1 text-left text-xs text-slate-200 cursor-pointer transition-colors hover:border-rose-300/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/60"
+                  >
+                    <Icon aria-hidden="true" className="w-3.5 h-3.5 shrink-0 text-rose-300" />
+                    {item.text}
+                    <ChevronRight aria-hidden="true" className="w-3.5 h-3.5 shrink-0 text-rose-300" />
+                  </button>
+                ) : (
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border ${planet ? 'border-rose-400/35' : 'border-white/10'} bg-black/30 px-3 py-1 text-xs text-slate-200`}>
+                    <Icon aria-hidden="true" className={`w-3.5 h-3.5 shrink-0 ${planet ? 'text-rose-300' : 'text-slate-400'}`} />
+                    {item.text}
+                  </span>
+                )}
               </li>
             );
           })}

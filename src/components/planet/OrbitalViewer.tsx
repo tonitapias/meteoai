@@ -4,8 +4,8 @@
 // rècords de les estacions, els incendis i les inundacions per país i els volcans; tocar un cicló n'obre la fitxa.
 // Es baixa a part, només si s'obre. Sense blur, filtres ni animacions en bucle (mòbils modestos): el disc és una
 // imatge, els marcadors són SVG estàtics i l'únic moviment és l'aparició de la imatge.
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import type { Language } from '../../translations';
 import { getSafeLocale, type WeatherUnit } from '../../utils/formatters';
 import type { PlanetExtremes, StationRecord } from '../../services/planetExtremesApi';
@@ -18,6 +18,7 @@ import { fill, type PlanetStrings } from './planetI18n';
 import { hpaText, kmhText, tempText } from './planetFormat';
 import { cycloneTone } from './planetTones';
 import { CycloneIcon } from './CycloneIcon';
+import { PlanetHeader } from './PlanetHeader';
 import { RECORD_COLORS, buildOrbitMarkers, capPerKind, cycloneLabel, type OrbitMarker, type RecordKey } from './orbitalMarkers';
 
 interface OrbitalViewerProps {
@@ -29,6 +30,11 @@ interface OrbitalViewerProps {
     lang: Language;
     unit: WeatherUnit;
     place: { name: string; lat: number; lon: number } | null;
+    nowMs: number;
+    titleId: string;
+    /** D'on s'hi ha arribat (la capçalera ho diu a sobre del títol i la fletxa hi porta). */
+    eyebrow: string;
+    backLabel: string;
     onBack: () => void;
     onClose: () => void;
     onOpenCyclone: (id: string) => void;
@@ -47,16 +53,15 @@ const lonText = (lon: number, lang: Language) => {
 
 const utcTime = (ms: number) => `${new Date(ms).toISOString().slice(11, 16)} UTC`;
 
-export default function OrbitalViewer({ data, summaries, eye, onEyeChange, s, lang, unit, place, onBack, onClose, onOpenCyclone }: OrbitalViewerProps) {
+export default function OrbitalViewer({ data, summaries, eye, onEyeChange, s, lang, unit, place, nowMs, titleId, eyebrow, backLabel, onBack, onClose, onOpenCyclone }: OrbitalViewerProps) {
     const info = eyeInfo(eye);
     const image = useOrbitalImage(eye);
-    const titleId = useId();
     const backRef = useRef<HTMLButtonElement>(null);
 
     // En obrir el visor, el focus hi entra (el botó que l'ha obert ja no es veu).
     useEffect(() => backRef.current?.focus(), []);
 
-    const markers = useMemo(() => buildOrbitMarkers({ data, summaries, s, lang, unit, place }), [data, summaries, s, lang, unit, place]);
+    const markers = useMemo(() => buildOrbitMarkers({ data, summaries, s, lang, unit, place, nowMs }), [data, summaries, s, lang, unit, place, nowMs]);
     const visible = useMemo(
         () => capPerKind(markers.flatMap((marker) => {
             const point = discPoint(marker.lat, marker.lon, info.subLon);
@@ -65,6 +70,14 @@ export default function OrbitalViewer({ data, summaries, eye, onEyeChange, s, la
         [markers, info.subLon],
     );
     const inView = (lat: number, lon: number) => discPoint(lat, lon, info.subLon) !== null;
+    // El camí de cada cicló que es veu, darrere del marcador (la posició és la de l'última dada, que pot ser de fa hores).
+    const trails = useMemo(
+        () => summaries.flatMap((summary) => {
+            const points = summary.cyclone.track.map((p) => discPoint(p.lat, p.lon, info.subLon)).filter((p): p is DiscPoint => p !== null);
+            return points.length > 1 ? [{ id: summary.cyclone.id, hex: cycloneTone(summary).hex, points }] : [];
+        }),
+        [summaries, info.subLon],
+    );
 
     // El cicló més intens, si aquest ull no el veu: un botó porta a l'ull que el té al centre.
     const strongest = summaries.find((summary) => summary.category >= 1);
@@ -84,21 +97,17 @@ export default function OrbitalViewer({ data, summaries, eye, onEyeChange, s, la
 
     return (
         <div className="absolute inset-0 z-30 flex flex-col bg-[#010208] text-slate-100" aria-labelledby={titleId} role="region">
-            <div className="shrink-0 flex items-center justify-between gap-2 px-4 pt-4 pb-3 md:px-6">
-                <button
-                    ref={backRef}
-                    type="button"
-                    onClick={onBack}
-                    className="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-slate-200/25 bg-[#0c0f17]/60 pl-2 pr-3.5 text-sm font-medium text-slate-200 cursor-pointer transition-colors hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/60"
-                >
-                    <ChevronLeft aria-hidden="true" className="w-5 h-5" />{s.title}
-                </button>
-                <div className="flex items-center gap-2">
-                    <span id={titleId} className="hidden min-[360px]:inline font-mono text-[10px] uppercase tracking-[0.16em] text-slate-300">{s.orbitTitle}</span>
-                    <button type="button" onClick={onClose} aria-label={s.close} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-slate-400 cursor-pointer transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/60">
-                        <X aria-hidden="true" className="w-5 h-5" />
-                    </button>
-                </div>
+            <div className="shrink-0 px-4 pt-3 pb-3 md:px-6 md:pt-5">
+                <PlanetHeader
+                    eyebrow={eyebrow}
+                    title={s.orbitTitle}
+                    titleId={titleId}
+                    onBack={onBack}
+                    backLabel={backLabel}
+                    backRef={backRef}
+                    onClose={onClose}
+                    closeLabel={s.close}
+                />
             </div>
 
             <div role="group" aria-label={s.eyesLabel} className="shrink-0 mx-4 md:mx-6 grid grid-cols-3 gap-[3px] rounded-[14px] border border-slate-200/15 bg-[#0c0f17]/70 p-[3px]">
@@ -121,6 +130,7 @@ export default function OrbitalViewer({ data, summaries, eye, onEyeChange, s, la
                         key={eye}
                         image={image}
                         visible={visible}
+                        trails={trails}
                         alt={fill(s.discAlt, { sat: info.satellite })}
                         s={s}
                         onOpenCyclone={onOpenCyclone}
@@ -232,7 +242,7 @@ const recordTitle = (key: RecordKey, s: PlanetStrings): string =>
 
 const recordValue = (key: RecordKey, record: StationRecord, unit: WeatherUnit, lang: Language): string => {
     switch (key) {
-        case 'wetBulb': return tempText(record.value, unit, lang, 1);
+        case 'wetBulb': return tempText(record.value, unit, lang);
         case 'gust': return kmhText(record.value);
         case 'lowPressure': return hpaText(record.value);
         default: return tempText(record.value, unit, lang);
@@ -244,6 +254,7 @@ const recordValue = (key: RecordKey, record: StationRecord, unit: WeatherUnit, l
 interface OrbitDiscProps {
     image: OrbitalImage;
     visible: { marker: OrbitMarker; point: DiscPoint }[];
+    trails: { id: string; hex: string; points: DiscPoint[] }[];
     alt: string;
     s: PlanetStrings;
     onOpenCyclone: (id: string) => void;
@@ -253,7 +264,7 @@ interface OrbitDiscProps {
 const markerRadius = (marker: OrbitMarker) =>
     marker.kind === 'cyclone' ? ((marker.category ?? 0) >= 3 ? 15 : 11) : 8;
 
-function OrbitDisc({ image, visible, alt, s, onOpenCyclone }: OrbitDiscProps) {
+function OrbitDisc({ image, visible, trails, alt, s, onOpenCyclone }: OrbitDiscProps) {
     // Mida del quadre (px), per col·locar les etiquetes; es mesura en enganxar-lo i quan canvia de debò.
     const [size, setSize] = useState(0);
     const attachBox = useCallback((el: HTMLDivElement | null) => {
@@ -271,11 +282,9 @@ function OrbitDisc({ image, visible, alt, s, onOpenCyclone }: OrbitDiscProps) {
     const [shownSrc, setShownSrc] = useState<string | null>(null);
 
     const disc = size * (1 - 2 * DISC_INSET);
-    const positioned = visible.map(({ marker, point }) => ({
-        marker,
-        x: size * DISC_INSET + disc * (0.5 + point.x / 2),
-        y: size * DISC_INSET + disc * (0.5 - point.y / 2),
-    }));
+    const toX = (point: DiscPoint) => size * DISC_INSET + disc * (0.5 + point.x / 2);
+    const toY = (point: DiscPoint) => size * DISC_INSET + disc * (0.5 - point.y / 2);
+    const positioned = visible.map(({ marker, point }) => ({ marker, x: toX(point), y: toY(point) }));
     const labels = size > 0
         ? placeLabels(positioned.map(({ marker, x, y }) => ({ x, y, w: labelWidth(marker.label), h: LABEL_HEIGHT, r: markerRadius(marker) })), size, size)
         : [];
@@ -303,6 +312,24 @@ function OrbitDisc({ image, visible, alt, s, onOpenCyclone }: OrbitDiscProps) {
                 </div>
                 <div aria-hidden="true" className="absolute inset-0 rounded-full border border-sky-200/45 pointer-events-none" />
             </div>
+
+            {size > 0 && trails.length > 0 && (
+                <svg aria-hidden="true" width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 pointer-events-none">
+                    {trails.map((trail) => (
+                        <polyline
+                            key={trail.id}
+                            points={trail.points.map((p) => `${toX(p).toFixed(1)},${toY(p).toFixed(1)}`).join(' ')}
+                            fill="none"
+                            stroke={trail.hex}
+                            strokeOpacity={0.85}
+                            strokeWidth={1.6}
+                            strokeDasharray="3 3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    ))}
+                </svg>
+            )}
 
             {size > 0 && drawOrder.map(({ marker, x, y }) => marker.kind === 'cyclone' && marker.cycloneId ? (
                 <button

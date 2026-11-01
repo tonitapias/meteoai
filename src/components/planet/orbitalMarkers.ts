@@ -6,12 +6,12 @@
 import type { Language } from '../../translations';
 import type { WeatherUnit } from '../../utils/formatters';
 import type { PlanetExtremes, StationRecord } from '../../services/planetExtremesApi';
-import { countryName, type CycloneSummary } from '../../utils/planetExtremes';
+import { countryName, STALE_CYCLONE_HOURS, type CycloneSummary, type RecordKey } from '../../utils/planetExtremes';
 import { fill, type PlanetStrings } from './planetI18n';
 import { hpaText, kmhText, tempText } from './planetFormat';
 import { cycloneTone } from './planetTones';
 
-export type RecordKey = 'hottest' | 'coldest' | 'wetBulb' | 'gust' | 'lowPressure';
+export type { RecordKey };
 export type OrbitMarkerKind = 'cyclone' | 'record' | 'here' | 'fires' | 'floods' | 'volcano';
 
 export interface MarkerColor {
@@ -77,7 +77,8 @@ export const cycloneLabel = (summary: CycloneSummary, s: PlanetStrings): string 
 
 export function recordLabel(key: RecordKey, record: StationRecord, s: PlanetStrings, lang: Language, unit: WeatherUnit): string {
     switch (key) {
-        case 'wetBulb': return `${tempText(record.value, unit, lang, 1)} ${s.wetBulbShort}`;
+        // Sense decimal, com a la targeta: els METAR donen graus sencers (vegeu l'empat tècnic al detall).
+        case 'wetBulb': return `${tempText(record.value, unit, lang)} ${s.wetBulbShort}`;
         case 'gust': return `${kmhText(record.value)} · ${shortPlace(record, lang)}`;
         case 'lowPressure': return `${hpaText(record.value)} · ${shortPlace(record, lang)}`;
         default: return `${tempText(record.value, unit, lang)} · ${shortPlace(record, lang)}`;
@@ -91,17 +92,20 @@ interface BuildInput {
     lang: Language;
     unit: WeatherUnit;
     place: { name: string; lat: number; lon: number } | null;
+    /** Per dir quant fa de la dada d'un cicló, si és vella (el marcador és a la seva última posició). */
+    nowMs?: number;
 }
 
-export function buildOrbitMarkers({ data, summaries, s, lang, unit, place }: BuildInput): OrbitMarker[] {
+export function buildOrbitMarkers({ data, summaries, s, lang, unit, place, nowMs }: BuildInput): OrbitMarker[] {
     const markers: OrbitMarker[] = summaries.map((summary) => {
         const tone = cycloneTone(summary);
+        const ageH = nowMs === undefined ? 0 : Math.floor((nowMs - Date.parse(summary.last.time)) / 3600000);
         return {
             id: `cyclone-${summary.cyclone.id}`,
             kind: 'cyclone',
             lat: summary.last.lat,
             lon: summary.last.lon,
-            label: cycloneLabel(summary, s),
+            label: ageH >= STALE_CYCLONE_HOURS ? `${cycloneLabel(summary, s)} · ${fill(s.ageShort, { h: ageH })}` : cycloneLabel(summary, s),
             color: { hex: tone.hex, text: tone.text, border: tone.border },
             cycloneId: summary.cyclone.id,
             category: summary.category,
