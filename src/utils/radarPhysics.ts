@@ -92,9 +92,11 @@ export type HdAgency = 'goes' | 'meteosat' | 'himawari';
 // Les que arriben via NASA GIBS.
 export type GibsAgency = Exclude<HdAgency, 'meteosat'>;
 
-// VITE_SAT_PROXY_HOST: només per provar en local un worker de `wrangler dev`
-// (p. ex. a .env.development.local, que no es puja).
-export const SAT_PROXY_HOST: string = import.meta.env.VITE_SAT_PROXY_HOST || 'https://meteo-sat-proxy.tonitapias.workers.dev';
+// Worker meteo-sat-proxy, amb domini propi des del 2026-11-02 (abans
+// meteo-sat-proxy.tonitapias.workers.dev, que continua actiu per a les apps
+// instal·lades que no s'han actualitzat). VITE_SAT_PROXY_HOST: només per provar
+// en local un worker de `wrangler dev` (p. ex. a .env.development.local, que no es puja).
+export const SAT_PROXY_HOST: string = import.meta.env.VITE_SAT_PROXY_HOST || 'https://sat.meteotoniai.com';
 
 // Límits MSG [oest, sud, est, nord]. Mapbox demana tessel·les SENCERES que
 // toquin els límits, així que la vora real depèn del zoom: 66.4°N queda just

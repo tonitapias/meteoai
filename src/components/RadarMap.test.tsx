@@ -324,7 +324,7 @@ describe('RadarMap', () => {
 
     // El fotograma actual (el més nou) és posterior a l'última imatge: la fa servir.
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
-    expect(hdSource(map, `mtg-${MTG_LATEST}`)?.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/mtg/v1/${MTG_LATEST}/{z}/{x}/{y}.png`]);
+    expect(hdSource(map, `mtg-${MTG_LATEST}`)?.tiles).toEqual([`https://sat.meteotoniai.com/hd/mtg/v1/${MTG_LATEST}/{z}/{x}/{y}.png`]);
     expect(hdSource(map, `mtg-${MTG_LATEST}`)?.bounds).toEqual([-40, -60, 60, 72]);
     const paint = layer(map, `hd-meteosat-layer-mtg-${MTG_LATEST}`)!.paint;
     expect([paint['raster-saturation'], paint['raster-contrast'], paint['raster-brightness-min']]).toEqual([-1, 0.47, 0.16]);
@@ -411,7 +411,7 @@ describe('RadarMap', () => {
     await click('Meteosat HD (Europa)');
 
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-msg-${msgLatest}`]);
-    expect(hdSource(map, `msg-${msgLatest}`)?.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/meteosat/${msgLatest}/{z}/{x}/{y}.png`]);
+    expect(hdSource(map, `msg-${msgLatest}`)?.tiles).toEqual([`https://sat.meteotoniai.com/hd/meteosat/${msgLatest}/{z}/{x}/{y}.png`]);
     expect(hdSource(map, `msg-${msgLatest}`)?.bounds).toEqual([-40, -60, 60, 66.4]);
     const paint = layer(map, `hd-meteosat-layer-msg-${msgLatest}`)!.paint;
     expect([paint['raster-contrast'], paint['raster-brightness-min']]).toEqual([0.3, 0]);
@@ -447,7 +447,7 @@ describe('RadarMap', () => {
     // publicada, així que en queda una sola.
     expect(ltg()).toEqual([`ltg-layer-${LIGHTNING_LATEST}`]);
     expect(map.sources.get(`ltg-src-${LIGHTNING_LATEST}`)).toMatchObject({
-      tiles: [`https://meteo-sat-proxy.tonitapias.workers.dev/lightning/v1/${LIGHTNING_LATEST}/{z}/{x}/{y}.png`],
+      tiles: [`https://sat.meteotoniai.com/lightning/v1/${LIGHTNING_LATEST}/{z}/{x}/{y}.png`],
       bounds: [-60, -60, 60, 72]
     });
     const order = map.layers.map((l) => l.id);
@@ -507,7 +507,7 @@ describe('RadarMap', () => {
     await click('Color');
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtgColour-${colourLatest}`]);
     expect(ids(map, 'hd-meteosat-layer-mtg-')).toEqual([]);
-    expect(hdSource(map, `mtgColour-${colourLatest}`)?.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/mtg/geocolour/v1/${colourLatest}/{z}/{x}/{y}.png`]);
+    expect(hdSource(map, `mtgColour-${colourLatest}`)?.tiles).toEqual([`https://sat.meteotoniai.com/hd/mtg/geocolour/v1/${colourLatest}/{z}/{x}/{y}.png`]);
     const order = map.layers.map((l) => l.id);
     expect(order.indexOf(`hd-meteosat-layer-mtgColour-${colourLatest}`)).toBeGreaterThan(order.indexOf('layer-night'));
     const paint = layer(map, `hd-meteosat-layer-mtgColour-${colourLatest}`)!.paint;
@@ -546,12 +546,12 @@ describe('RadarMap', () => {
     const map = await mountRadar();
     expect(gibsCalls).toEqual([]);
     await click('GOES HD (Amèrica)');
-    expect(gibsCalls).toEqual(['https://meteo-sat-proxy.tonitapias.workers.dev/hd/goes/latest']);
+    expect(gibsCalls).toEqual(['https://sat.meteotoniai.com/hd/goes/latest']);
 
     // El fotograma actual (el més nou) és posterior a l'última franja: la fa servir.
     expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-gibs-${GIBS_IR_LATEST}`]);
     const src = gibsSource(map, 'goes', `gibs-${GIBS_IR_LATEST}`)!;
-    expect(src.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/gibs/v1/goes/ir/${GIBS_IR_LATEST}/{z}/{x}/{y}.png`]);
+    expect(src.tiles).toEqual([`https://sat.meteotoniai.com/hd/gibs/v1/goes/ir/${GIBS_IR_LATEST}/{z}/{x}/{y}.png`]);
     expect([src.tileSize, src.minzoom, src.maxzoom]).toEqual([256, 3, 6]);
     expect(src.bounds).toEqual([-180, -60, -20, 66.4]);
     // La paleta realçada de GIBS es manté (saturació 0).
@@ -581,7 +581,7 @@ describe('RadarMap', () => {
     expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-${key}`]);
     expect(ids(map, 'hd-goes-layer-gibs-')).toEqual([]);
     const src = gibsSource(map, 'goes', key)!;
-    expect(src.tiles).toEqual([`https://meteo-sat-proxy.tonitapias.workers.dev/hd/gibs/v1/goes/colour/${GIBS_COLOUR_LATEST}/{z}/{x}/{y}.png`]);
+    expect(src.tiles).toEqual([`https://sat.meteotoniai.com/hd/gibs/v1/goes/colour/${GIBS_COLOUR_LATEST}/{z}/{x}/{y}.png`]);
     expect(src.maxzoom).toBe(7);
     const order = map.layers.map((l) => l.id);
     expect(order.indexOf(`hd-goes-layer-${key}`)).toBeGreaterThan(order.indexOf('layer-night'));

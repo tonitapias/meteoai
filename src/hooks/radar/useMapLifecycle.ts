@@ -8,6 +8,7 @@ import {
   getNightOpacityExp,
   getBlackMarbleOpacityExp,
   MAPBOX_DEM_URL,
+  SAT_PROXY_HOST,
   getNasaFiresWmsUrl,
   getNasaFiresOpacityExp,
   Z_LAYERS
@@ -366,7 +367,7 @@ export function useMapLifecycle({
         map.addSource('source-nasa-real', {
           type: 'raster',
           tiles: [
-            'https://meteo-sat-proxy.tonitapias.workers.dev/nasa-truecolor/{z}/{x}/{y}.jpg?v=2'
+            `${SAT_PROXY_HOST}/nasa-truecolor/{z}/{x}/{y}.jpg?v=2`
           ],
           tileSize: 256,
           maxzoom: 8,

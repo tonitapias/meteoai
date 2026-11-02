@@ -28,7 +28,7 @@ const MIN_TILE_BYTES = 4096;
 // igual que xyzToBbox al worker.
 const TILE = { z: 4, x: 8, y: 5 };
 const TIMEOUT_MS = 30000;
-const WORKER_URL = 'https://meteo-sat-proxy.tonitapias.workers.dev';
+const WORKER_URL = 'https://sat.meteotoniai.com';
 const WORKER_HEADERS = { Origin: 'https://tonitapias.github.io' };
 // Caps d'una sola capa: la mateixa URL que llegeix el worker (MTG_CAPS_URL).
 const MTG_CAPS_URL = 'https://view.eumetsat.int/geoserver/mtg_fd/ir105_hrfi/ows?service=WMS&version=1.3.0&request=GetCapabilities';
@@ -119,7 +119,7 @@ describe('EUMETSAT Meteosat (msg_fes:ir108) Contract Check', () => {
         // la memòria cau d'1 any — prova el camí sencer cada dia.
         const timestamp = Math.floor(Date.parse(defaultTime!) / 1000) - 3600 + 7;
 
-        const response = await fetch(`https://meteo-sat-proxy.tonitapias.workers.dev/hd/meteosat/${timestamp}/${TILE.z}/${TILE.x}/${TILE.y}.png`, {
+        const response = await fetch(`https://sat.meteotoniai.com/hd/meteosat/${timestamp}/${TILE.z}/${TILE.x}/${TILE.y}.png`, {
             headers: { Origin: 'https://tonitapias.github.io' },
         });
         expect(response.ok, `El worker ha respost amb status: ${response.status}`).toBe(true);
