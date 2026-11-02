@@ -5,11 +5,11 @@
 //     una vall o un cim (baixa i torna a pujar, o al revés: el pas d'un front), un canvi de mica en mica (recta) o un
 //     salt a partir d'un dia (graó). ABANS només es comparaven el primer i l'últim dia: una setmana plana amb un dilluns
 //     més càlid sortia com un "escalfament al llarg de la setmana".
-//   - INCERTESA amb el rang probable (80 %) calibrat que dibuixen els bigotis (probableRange.ts). ABANS es feia amb el
+//   - INCERTESA amb el rang probable (80 %) calibrat que dibuixen les bandes del gràfic (probableRange.ts). ABANS es feia amb el
 //     rang entre models, que només conté la real la meitat de les vegades: amb dades reals (11-2026, 16 ciutats) avisava
-//     de "poc segur" en 8 de 10 canvis que els bigotis del mateix gràfic donaven per clars.
+//     de "poc segur" en 8 de 10 canvis que els rangs probables del mateix gràfic donaven per clars.
 //   - PLUJA: els dies que el gràfic destaca (isLikelyWet) i la quantitat més gran d'un sol dia.
-import { isLikelyWet } from './precipSignal';
+import { isLikelyWet, SNOW_SHOWN_CM } from './precipSignal';
 
 export interface ValueRange {
     low: number;
@@ -19,7 +19,7 @@ export interface ValueRange {
 export interface TrendSummaryDay {
     max: number | null;
     min: number | null;
-    /** Rang probable (80 %) de la màxima i de la mínima mostrades (els bigotis del gràfic), si n'hi ha. */
+    /** Rang probable (80 %) de la màxima i de la mínima mostrades (les bandes del gràfic), si n'hi ha. */
     maxProbable?: ValueRange | null;
     minProbable?: ValueRange | null;
     precipProb?: number | null;
@@ -101,8 +101,6 @@ export const SHAPE_FIT_MIN = 0.6;
 const TURN_FLOOR_DEG = 1;
 /** Oscil·lació que es tolera a cada banda d'una vall o un cim abans de considerar-ho dents de serra. */
 const TURN_NOISE_DEG = 1;
-/** Neu a partir de la qual un dia és de neu (el mateix llindar a partir del qual formatPrecipitation la mostra). */
-const SNOW_MIN_CM = 0.2;
 /** Amb menys d'aquests dies amb màxima no es diu res: dues xifres no fan una tendència. */
 const MIN_DAYS = 3;
 
@@ -205,7 +203,7 @@ const fitShape = (points: ReadonlyArray<DayValue>, changeDeg: number): TempShape
 
 /**
  * El canvi anunciat és incert si el rang probable del dia on arriba encara inclou el nivell de sortida: és a dir, si
- * el mateix bigoti que veu l'usuari aquell dia arriba a l'altura d'on es parteix.
+ * la mateixa banda que veu l'usuari aquell dia arriba a l'altura d'on es parteix.
  */
 const arrivalUncertainty = (shape: ChangeShape, days: ReadonlyArray<TrendSummaryDay>, temp: 'max' | 'min'): TrendUncertainty | null => {
     const arrival = shape.kind === 'gradual' ? shape.to : shape.after.extreme;
@@ -226,7 +224,7 @@ const summarizePrecip = (days: ReadonlyArray<TrendSummaryDay>): PrecipSummary =>
     days.forEach((d, day) => {
         if (!isLikelyWet(d.precipProb ?? null)) return;
         const snow = d.snowSum ?? 0;
-        if (snow >= SNOW_MIN_CM) {
+        if (snow >= SNOW_SHOWN_CM) {
             snowDays.push(day);
             maxSnow = Math.max(maxSnow ?? 0, snow);
         } else {

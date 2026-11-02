@@ -132,35 +132,46 @@ describe('TrendChartModal — dades absents', () => {
 
 describe('TrendChartModal — rang probable i fiabilitat per dia', () => {
     const levels = () => screen.getAllByTestId('reliability').map(e => e.getAttribute('data-level'));
-    const whiskers = () => screen.getAllByTestId('probable-range');
-    // "Rang probable (80 %): 27–33°" -> amplada en graus
-    const widthOf = (el: HTMLElement) => {
-        const m = (el.getAttribute('title') ?? '').match(/(-?\d+)–(-?\d+)°/);
-        return m ? Number(m[2]) - Number(m[1]) : NaN;
+    const labels = () => screen.getAllByTestId('trend-day').map(d => d.getAttribute('aria-label') ?? '');
+    // "màxima 30° (probable 27–36°)" -> [27, 36]
+    const rangeIn = (label: string, kind: 'màxima' | 'mínima'): [number, number] | null => {
+        const m = label.match(new RegExp(`${kind} -?\\d+° \\(probable (-?\\d+)–(-?\\d+)°\\)`));
+        return m ? [Number(m[1]), Number(m[2])] : null;
     };
+    const band = (kind: 'max' | 'min') => screen.getByTestId(`range-band-${kind}`).getAttribute('d') ?? '';
+    const bandYs = (kind: 'max' | 'min') => (band(kind).match(/-?[\d.]+,-?[\d.]+/g) ?? []).map(pt => Number(pt.split(',')[1]));
 
-    it('cada dia complet té el rang probable de la màxima i de la mínima', () => {
+    it('el rang probable de la màxima i de la mínima és una banda contínua, i cada dia en diu les xifres', () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
-        expect(whiskers()).toHaveLength(14);
-        whiskers().forEach(w => expect(w.getAttribute('title')).toMatch(/^Rang probable \(80 %\): -?\d+–-?\d+°$/));
+        // Set dies complets: un sol tram per banda (una "M" al path).
+        expect(band('max').match(/M/g)).toHaveLength(1);
+        expect(band('min').match(/M/g)).toHaveLength(1);
+        labels().forEach(l => {
+            expect(rangeIn(l, 'màxima')).not.toBeNull();
+            expect(rangeIn(l, 'mínima')).not.toBeNull();
+        });
     });
 
     it("el dia on els models discrepen té el rang de la màxima més ample que els dies d'acord", () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
-        // Bigotis en ordre [màx, mín] per dia; el de desacord és l'índex 4 de daily, el 4t del gràfic (que comença al dia 1).
-        const maxWidths = whiskers().filter((_, i) => i % 2 === 0).map(widthOf);
+        // El de desacord és l'índex 4 de daily, el 4t del gràfic (que comença al dia 1).
+        const maxWidths = labels().map(l => { const r = rangeIn(l, 'màxima')!; return r[1] - r[0]; });
         const disagreeing = maxWidths[3];
         maxWidths.filter((_, i) => i !== 3).forEach(w => expect(disagreeing).toBeGreaterThan(w));
     });
 
-    it("els bigotis caben dins el gràfic: l'escala els compta i no queden tallats", () => {
+    it("les bandes caben dins el gràfic: l'escala les compta i no queden tallades", () => {
         renderModal(makeDaily(SEPT), [], { dailyComparison: COMPARISON });
-        whiskers().forEach(w => {
-            const top = parseFloat(w.style.top);
-            const bottom = top + parseFloat(w.style.height);
-            expect(top).toBeGreaterThanOrEqual(0);
-            expect(bottom).toBeLessThanOrEqual(100);
+        [...bandYs('max'), ...bandYs('min')].forEach(y => {
+            expect(y).toBeGreaterThanOrEqual(0);
+            expect(y).toBeLessThanOrEqual(100);
         });
+    });
+
+    it('un dia sense dada trenca la banda: dos trams, mai un pont per sobre del forat', () => {
+        renderModal(makeDaily(SEPT, { temperature_2m_max: [25, 24, 26, null, 30, 27, 25, 23] }));
+        expect(band('max').match(/M/g)).toHaveLength(2);
+        expect(band('min').match(/M/g)).toHaveLength(2);
     });
 
     it('cada dia té la seva fiabilitat: alta si els models coincideixen, baixa on n\'hi ha un que s\'allunya molt', () => {
@@ -180,7 +191,8 @@ describe('TrendChartModal — rang probable i fiabilitat per dia', () => {
         expect(screen.queryAllByTestId('reliability')).toHaveLength(0);
         expect(screen.queryByText('Fiabilitat (acord entre models)')).toBeNull();
         // Calibrat només pel dia vista (probableRange.ts, fila `all`).
-        expect(whiskers()).toHaveLength(14);
+        expect(band('max')).not.toBe('');
+        expect(rangeIn(labels()[0], 'màxima')).toEqual([22, 26]);
         expect(screen.getByText('Rang probable (80 %)')).toBeTruthy();
     });
 
@@ -198,9 +210,9 @@ describe('TrendChartModal — on la sèrie passa del model regional al global', 
     it('els dos primers dies del model regional i la resta del global: dos trams, amb l\'etiqueta del model', () => {
         // Dies mostrats: 21 al 27. Regionals: 21 i 22.
         renderModal(makeDaily(SEPT), chart(['2026-09-21', '2026-09-22']), { regionalModelLabel: 'AROME HD' });
-        expect(runs().map(r => [r.textContent, r.style.gridColumn])).toEqual([
-            ['AROME HD', 'span 2'],
-            ['Model global', 'span 5'],
+        expect(runs().map(r => [r.textContent, r.getAttribute('data-span')])).toEqual([
+            ['AROME HD', '2'],
+            ['Model global', '5'],
         ]);
         expect(runs().map(r => r.getAttribute('data-regional'))).toEqual(['true', 'false']);
     });
@@ -217,14 +229,26 @@ describe('TrendChartModal — on la sèrie passa del model regional al global', 
 
     it('un tram regional al mig també es marca (no es pressuposa que sigui al principi)', () => {
         renderModal(makeDaily(SEPT), chart(['2026-09-23']), { regionalModelLabel: 'AROME HD' });
-        expect(runs().map(r => [r.getAttribute('data-regional'), r.style.gridColumn])).toEqual([
-            ['false', 'span 2'], ['true', 'span 1'], ['false', 'span 4'],
+        expect(runs().map(r => [r.getAttribute('data-regional'), r.getAttribute('data-span')])).toEqual([
+            ['false', '2'], ['true', '1'], ['false', '4'],
         ]);
     });
 
     it('si hi ha dies regionals però no s\'ha passat l\'etiqueta, es mostra "HD" en lloc de deixar-ho en blanc', () => {
         renderModal(makeDaily(SEPT), chart(['2026-09-21']));
         expect(runs()[0].textContent).toBe('HD');
+    });
+
+    it('el canvi de model es marca dins el gràfic: el tram regional tenyit i una línia discontínua on canvia', () => {
+        renderModal(makeDaily(SEPT), chart(['2026-09-21', '2026-09-22']), { regionalModelLabel: 'AROME HD' });
+        const [regional, global] = runs();
+        expect(regional.className).toContain('bg-cyan-500');
+        expect(regional.className).not.toContain('border-dashed');   // el primer tram no té cap canvi a l'esquerra
+        expect(global.className).toContain('border-dashed');
+        // A l'altura dels dies: el tram global comença on comença el tercer dia.
+        expect(global.style.left).toBe(`${(2 / 7) * 100}%`);
+        // Dins el gràfic (decoratiu), no en una fila a part.
+        expect(regional.parentElement).toBe(columns()[0].closest('[aria-hidden="true"]'));
     });
 
     it('sota la tira, una nota visible explica el salt (un `title` no surt mai en una pantalla tàctil)', () => {
@@ -255,15 +279,40 @@ describe('TrendChartModal — quantitat de pluja i probabilitats baixes', () => 
         expect(amounts().every(t => t === '')).toBe(true);
     });
 
-    it('una probabilitat baixa (< 20 %) es mostra atenuada i una de real, ressaltada', () => {
-        renderModal(makeDaily(SEPT, { precipitation_probability_max: [0, 10, 19, 20, 60, 0, 0, 0] }));
-        const badge = (text: string) => screen.getByText(text).closest('div')!;
+    it('una probabilitat baixa (< 20 %) es mostra atenuada i una de real, ressaltada segons quanta en cau', () => {
+        renderModal(makeDaily(SEPT, {
+            precipitation_probability_max: [0, 10, 19, 80, 60, 70, 45, 0],
+            precipitation_sum: [0, 0, 0, 0.3, 3, 25, null, 0],
+        }));
+        const badge = (text: string) => screen.getByText(text).closest('[data-testid="precip-badge"]') as HTMLElement;
+        expect(badge('10%').getAttribute('data-tone')).toBe('dim');
+        expect(badge('19%').getAttribute('data-tone')).toBe('dim');
         expect(badge('10%').className).toContain('opacity-40');
-        expect(badge('19%').className).toContain('opacity-40');
-        expect(badge('20%').className).toContain('bg-blue-500/10');
+        // Un 80 % de 0,3 mm són quatre gotes: només contornejat, no ple com un dia de pluja.
+        expect(badge('80%').getAttribute('data-tone')).toBe('soft');
+        expect(badge('80%').className).toContain('border-dashed');
+        expect(badge('60%').getAttribute('data-tone')).toBe('normal');
         expect(badge('60%').className).toContain('bg-blue-500/10');
+        expect(badge('70%').getAttribute('data-tone')).toBe('heavy');
+        // Sense quantitat coneguda no es rebaixa: només la probabilitat.
+        expect(badge('45%').getAttribute('data-tone')).toBe('normal');
         // Atenuada no vol dir amagada: el valor continua sent visible.
         expect(screen.getByText('10%')).toBeTruthy();
+    });
+
+    it('la quantitat diu també la seva classe: a sota (a partir de md) i a l\'etiqueta del dia', () => {
+        renderModal(makeDaily(SEPT, {
+            precipitation_probability_max: [0, 10, 19, 80, 60, 70, 45, 60],
+            precipitation_sum: [0, 0, 0, 0.3, 3, 25, null, 6],
+            snowfall_sum: [0, 0, 0, 0, 0, 0, 0, 4],
+        }));
+        // La neu ja diu els cm: sense paraula de pluja.
+        expect(screen.getAllByTestId('precip-word').map(e => e.textContent)).toEqual(['', '', 'quatre gotes', 'feble', 'abundant', '', '']);
+        const labels = screen.getAllByTestId('trend-day').map(d => d.getAttribute('aria-label') ?? '');
+        expect(labels[2]).toContain('0,3 mm (quatre gotes)');
+        expect(labels[4]).toContain('25 mm (abundant)');
+        expect(labels[6]).toContain('4 cm');
+        expect(labels[6]).not.toMatch(/cm \(/);
     });
 });
 
@@ -320,9 +369,26 @@ describe('TrendChartModal — cada dia obre el seu detall', () => {
         expect(onClose).not.toHaveBeenCalled();
     });
 
+    it('tocar el gràfic a l\'altura d\'un dia (tota la columna, no només la càpsula) també n\'obre el detall', () => {
+        const onDayClick = vi.fn();
+        const onClose = vi.fn();
+        renderModal(makeDaily(SEPT), [], { onDayClick, onClose });
+        const hits = screen.getAllByTestId('trend-hit');
+        expect(hits).toHaveLength(7);
+        expect(hits[4].style.left).toBe(`${(4 / 7) * 100}%`);
+        expect(hits[4].style.width).toBe(`${100 / 7}%`);
+
+        fireEvent.click(hits[4]);
+        expect(onDayClick).toHaveBeenCalledWith(5);
+        expect(onClose).not.toHaveBeenCalled();
+        // Fora de l'ordre de tabulació: el teclat hi arriba per la fila de sota, que és la que llegeixen els lectors de pantalla.
+        expect(hits.every(h => h.getAttribute('tabindex') === '-1')).toBe(true);
+    });
+
     it('sense onDayClick els dies no són botons (no es promet cap acció que no existeix)', () => {
         renderModal(makeDaily(SEPT));
         expect(days().every(d => d.tagName !== 'BUTTON')).toBe(true);
+        expect(screen.getAllByTestId('trend-hit').every(h => h.tagName !== 'BUTTON')).toBe(true);
         expect(screen.queryAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Tancar modal']);
     });
 });
@@ -337,7 +403,7 @@ describe('TrendChartModal — accessibilitat', () => {
     it('cada dia diu en una frase el que el gràfic diu visualment', () => {
         renderModal(makeDaily(SEPT, { precipitation_probability_max: [0, 10, 0, 0, 0, 0, 0, 0] }));
         expect(screen.getAllByTestId('trend-day')[0].getAttribute('aria-label'))
-            .toBe('dilluns, màxima 24°, mínima 12°, pluja 10%');
+            .toBe('dilluns, màxima 24° (probable 22–26°), mínima 12° (probable 9–14°), pluja 10%');
     });
 
     it('amb fiabilitat, mm i origen, tot entra a l\'etiqueta; amb onDayClick s\'hi afegeix què fa el botó', () => {
@@ -356,7 +422,7 @@ describe('TrendChartModal — accessibilitat', () => {
 
     it('l\'etiqueta surt en l\'idioma de l\'usuari', () => {
         renderModal(makeDaily(SEPT), [], { lang: 'en' });
-        expect(screen.getAllByTestId('trend-day')[0].getAttribute('aria-label')).toBe('Monday, high 24°, low 12°, rain 10%');
+        expect(screen.getAllByTestId('trend-day')[0].getAttribute('aria-label')).toBe('Monday, high 24° (likely 22–26°), low 12° (likely 9–14°), rain 10%');
     });
 
     it('el gràfic visual és decoratiu per als lectors de pantalla (la informació és a les etiquetes dels dies)', () => {
@@ -495,8 +561,8 @@ describe('TrendChartModal — línies de tendència, resum i colors', () => {
             renderModal(makeDaily(SEPT, { temperature_2m_max: max }), [], { dailyComparison: cmp });
             expect(summary()).toContain('Les màximes baixen de mica en mica: de 30° dilluns a 26° diumenge.');
             expect(screen.getByTestId('trend-uncertain').textContent).toBe(' Encara no és segur: diumenge la màxima pot anar de 23° a 32°.');
-            // I és el mateix rang que dibuixa el bigoti de diumenge.
-            expect(screen.getAllByTestId('probable-range').map(w => w.getAttribute('title'))).toContain('Rang probable (80 %): 23–32°');
+            // I és el mateix rang que dibuixa la banda de diumenge i que diu l'etiqueta del dia.
+            expect(screen.getAllByTestId('trend-day')[6].getAttribute('aria-label')).toContain('màxima 26° (probable 23–32°)');
         });
 
         it('diu quins dies pot ploure i quant', () => {

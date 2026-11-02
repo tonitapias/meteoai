@@ -6,7 +6,7 @@ import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
 import { resolveDailySpread, hasVisibleRange, type DailyModelSpread } from '../utils/dailyModelSpread';
 import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
-import { isLikelyWet } from '../utils/precipSignal';
+import { isLikelyWet, classifyDailyPrecip, SNOW_SHOWN_CM, type DailyPrecipClass } from '../utils/precipSignal';
 import { ReliabilityDots } from './ReliabilityDots';
 import { buildCapsuleGradient } from '../utils/temperatureColors';
 import { summarizeTrend } from '../utils/trendSummary';
@@ -62,7 +62,7 @@ interface TrendDay {
   dayInitial: string;
   /** Nom complet del dia ("dilluns"), per a l'etiqueta accessible. */
   dayName: string;
-  /** Desacord entre models sobre les temperatures d'aquest dia (bigotis i fiabilitat). */
+  /** Desacord entre models sobre les temperatures d'aquest dia (rang probable i fiabilitat). */
   spread: DailyModelSpread;
   /** Alguna de les seves temperatures extremes surt del model regional (i no del global). */
   regional: boolean;
@@ -78,14 +78,14 @@ const formatDegrees = (val: number | null): string => (val !== null ? `${Math.ro
 const MAX_LINE_COLOR = '#fb923c';
 const MIN_LINE_COLOR = '#38bdf8';
 
-/** Trams consecutius de dies amb la mateixa font (model regional o global), per a la tira d'origen. */
-const sourceRuns = (days: ReadonlyArray<{ regional: boolean }>): Array<{ regional: boolean; span: number }> => {
-  const runs: Array<{ regional: boolean; span: number }> = [];
-  for (const d of days) {
+/** Trams consecutius de dies amb la mateixa font (model regional o global), per marcar-los dins el gràfic. */
+const sourceRuns = (days: ReadonlyArray<{ regional: boolean }>): Array<{ regional: boolean; start: number; span: number }> => {
+  const runs: Array<{ regional: boolean; start: number; span: number }> = [];
+  days.forEach((d, i) => {
     const last = runs[runs.length - 1];
     if (last && last.regional === d.regional) last.span += 1;
-    else runs.push({ regional: d.regional, span: 1 });
-  }
+    else runs.push({ regional: d.regional, start: i, span: 1 });
+  });
   return runs;
 };
 
@@ -101,17 +101,44 @@ const buildLinePath = (points: ReadonlyArray<{ x: number; y: number } | null>): 
   return path;
 };
 
-/** Bigoti vertical (amb topalls) que marca el rang probable (80 %) d'una temperatura, a la dreta de la càpsula. */
-const ProbableRangeWhisker = ({ x, top, height, title }: { x: number; top: number; height: number; title: string }) => (
-  <div
-    data-testid="probable-range"
-    title={title}
-    className="absolute w-1.5 ml-3.5 md:ml-[18px] border-y border-slate-300/60"
-    style={{ left: `${x}%`, top: `${top}%`, height: `${height}%` }}
-  >
-    <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-300/60"></div>
-  </div>
-);
+/**
+ * Banda (path SVG, coordenades 0-100) del rang probable: un tram per cada sèrie de dies seguits amb rang, que un `null`
+ * trenca. Cada tram s'allarga `halfWidth` a banda i banda perquè el primer i l'últim dia (i un dia sol) també es vegin.
+ */
+const buildBandPath = (points: ReadonlyArray<{ x: number; top: number; bottom: number } | null>, halfWidth: number): string => {
+  const runs: Array<Array<{ x: number; top: number; bottom: number }>> = [];
+  let current: Array<{ x: number; top: number; bottom: number }> = [];
+  for (const p of points) {
+    if (p) { current.push(p); continue; }
+    if (current.length) runs.push(current);
+    current = [];
+  }
+  if (current.length) runs.push(current);
+
+  return runs.map(run => {
+    const first = run[0];
+    const last = run[run.length - 1];
+    const upper = [{ x: first.x - halfWidth, y: first.top }, ...run.map(p => ({ x: p.x, y: p.top })), { x: last.x + halfWidth, y: last.top }];
+    const lower = [{ x: last.x + halfWidth, y: last.bottom }, ...[...run].reverse().map(p => ({ x: p.x, y: p.bottom })), { x: first.x - halfWidth, y: first.bottom }];
+    return `${[...upper, ...lower].map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')} Z`;
+  }).join(' ');
+};
+
+// Aspecte de la probabilitat de pluja segons quanta en cau (vegeu classifyDailyPrecip): atenuada si és poc probable,
+// només contornejada si és probable però de quatre gotes, plena si en cau de veritat i més intensa si és abundant.
+type PrecipTone = 'dim' | 'soft' | 'normal' | 'heavy';
+const PRECIP_BADGE_CLASS: Record<PrecipTone, string> = {
+  dim: 'bg-transparent border-transparent opacity-40',
+  soft: 'bg-transparent border-dashed border-blue-400/40',
+  normal: 'bg-blue-500/10 border-blue-500/20',
+  heavy: 'bg-blue-500/25 border-blue-400/50'
+};
+const PRECIP_TEXT_CLASS: Record<PrecipTone, string> = {
+  dim: 'text-slate-500', soft: 'text-blue-300/80', normal: 'text-blue-300', heavy: 'text-blue-100'
+};
+const PRECIP_AMOUNT_CLASS: Record<DailyPrecipClass, string> = {
+  trace: 'text-slate-400', light: 'text-cyan-300/90', moderate: 'text-cyan-200', heavy: 'text-white'
+};
 
 const I18N_MODAL = {
   ca: {
@@ -119,28 +146,32 @@ const I18N_MODAL = {
     ...CONFIDENCE_TEXT.ca, reliabilityLegend: "Fiabilitat (acord entre models)",
     maxLine: "Màximes", minLine: "Mínimes",
     sourceNote: "Un salt d'un tram a l'altre pot ser el canvi de model, no un canvi de temps.",
-    aria: { max: "màxima", min: "mínima", rain: "pluja", openDay: "veure el detall del dia" }
+    aria: { max: "màxima", min: "mínima", rain: "pluja", probable: "probable", openDay: "veure el detall del dia" },
+    precipClass: { trace: "quatre gotes", light: "feble", moderate: "moderada", heavy: "abundant" }
   },
   es: {
     title: "Gráfico de temperaturas", trend: "Tendencia de los próximos 7 días",
     ...CONFIDENCE_TEXT.es, reliabilityLegend: "Fiabilidad (acuerdo entre modelos)",
     maxLine: "Máximas", minLine: "Mínimas",
     sourceNote: "Un salto de un tramo a otro puede ser el cambio de modelo, no un cambio de tiempo.",
-    aria: { max: "máxima", min: "mínima", rain: "lluvia", openDay: "ver el detalle del día" }
+    aria: { max: "máxima", min: "mínima", rain: "lluvia", probable: "probable", openDay: "ver el detalle del día" },
+    precipClass: { trace: "cuatro gotas", light: "débil", moderate: "moderada", heavy: "abundante" }
   },
   fr: {
     title: "Graphique des températures", trend: "Tendance des 7 prochains jours",
     ...CONFIDENCE_TEXT.fr, reliabilityLegend: "Fiabilité (accord entre modèles)",
     maxLine: "Maximales", minLine: "Minimales",
     sourceNote: "Un saut d'un tronçon à l'autre peut venir du changement de modèle, pas d'un changement de temps.",
-    aria: { max: "maximale", min: "minimale", rain: "pluie", openDay: "voir le détail du jour" }
+    aria: { max: "maximale", min: "minimale", rain: "pluie", probable: "probable", openDay: "voir le détail du jour" },
+    precipClass: { trace: "quelques gouttes", light: "faible", moderate: "modérée", heavy: "abondante" }
   },
   en: {
     title: "Temperature chart", trend: "7-day trend",
     ...CONFIDENCE_TEXT.en, reliabilityLegend: "Reliability (model agreement)",
     maxLine: "Highs", minLine: "Lows",
     sourceNote: "A jump from one segment to the next may be the model switch, not a change in the weather.",
-    aria: { max: "high", min: "low", rain: "rain", openDay: "open day details" }
+    aria: { max: "high", min: "low", rain: "rain", probable: "likely", openDay: "open day details" },
+    precipClass: { trace: "a few drops", light: "light", moderate: "moderate", heavy: "heavy" }
   }
 };
 
@@ -262,7 +293,7 @@ const TrendChartModal = memo(function TrendChartModal({
   // L'escala només compta els dies complets: un dia sense dada no pot arrossegar-la cap a 0°.
   const completeDays = trendData.filter(isComplete);
   const hasScale = completeDays.length > 0;
-  // Els rangs probables també hi entren: així cap bigoti no queda tallat pel marge del gràfic.
+  // Els rangs probables també hi entren: així cap banda no queda tallada pel marge del gràfic.
   const chartMax = hasScale ? Math.max(...completeDays.map(d => Math.max(d.max, d.spread.maxProbable?.high ?? d.max))) : 1;
   const chartMin = hasScale ? Math.min(...completeDays.map(d => Math.min(d.min, d.spread.minProbable?.low ?? d.min))) : 0;
 
@@ -280,12 +311,35 @@ const TrendChartModal = memo(function TrendChartModal({
   const maxPath = buildLinePath(trendData.map((d, i) => (isComplete(d) ? { x: getX(i), y: getY(d.max) } : null)));
   const minPath = buildLinePath(trendData.map((d, i) => (isComplete(d) ? { x: getX(i), y: getY(d.min) } : null)));
 
+  // Bandes del rang probable (80 %): s'eixamplen amb els dies i on els models discrepen, i la frase resum avisa amb
+  // les mateixes xifres. ABANS eren 14 bigotis a la dreta de cada càpsula: al mòbil, una tanca difícil de llegir.
+  const BAND_HALF_WIDTH = (100 / N) * 0.3;
+  const bandPath = (key: 'maxProbable' | 'minProbable') => buildBandPath(trendData.map((d, i) => {
+    const r = d.spread[key];
+    return isComplete(d) && hasVisibleRange(r) ? { x: getX(i), top: getY(r.high), bottom: getY(r.low) } : null;
+  }), BAND_HALF_WIDTH);
+  const maxBand = bandPath('maxProbable');
+  const minBand = bandPath('minProbable');
+
   const showRangeLegend = completeDays.some(d => hasVisibleRange(d.spread.maxProbable) || hasVisibleRange(d.spread.minProbable));
   const showReliabilityLegend = trendData.some(d => d.spread.reliability !== null);
   const showSourceStrip = trendData.some(d => d.regional);
   const formatRange = (r: { low: number; high: number }) => `${Math.round(r.low)}–${Math.round(r.high)}°`;
+  const rangeNote = (r: { low: number; high: number } | null) => (hasVisibleRange(r) ? ` (${mDict.aria.probable} ${formatRange(r)})` : '');
 
-  // Frase resum: la forma de la setmana, amb la incertesa dels mateixos bigotis que es veuen (rang probable calibrat).
+  const precipTone = (d: TrendDay): PrecipTone => {
+    if (!isLikelyWet(d.precipProb)) return 'dim';
+    const amount = classifyDailyPrecip(d.precipSum);
+    // Sense quantitat coneguda no es rebaixa: només la probabilitat.
+    return amount === 'trace' ? 'soft' : amount === 'heavy' ? 'heavy' : 'normal';
+  };
+  // Paraula de la quantitat (quatre gotes, feble...): només per a la pluja; la neu ja diu els cm.
+  const rainWord = (d: TrendDay): string | null => {
+    const amount = classifyDailyPrecip(d.precipSum);
+    return amount && d.precipSum !== null && d.precipSum > 0 && d.snowSum < SNOW_SHOWN_CM ? mDict.precipClass[amount] : null;
+  };
+
+  // Frase resum: la forma de la setmana, amb la incertesa de les mateixes bandes que es veuen (rang probable calibrat).
   const summary = summarizeTrend(trendData.map(d => ({
     max: d.max, min: d.min, maxProbable: d.spread.maxProbable, minProbable: d.spread.minProbable,
     precipProb: d.precipProb, precipSum: d.precipSum, snowSum: d.snowSum
@@ -296,10 +350,12 @@ const TrendChartModal = memo(function TrendChartModal({
   const dayLabel = (d: TrendDay): string => {
     const parts = [
       d.dayName || d.dayInitial,
-      `${mDict.aria.max} ${formatDegrees(d.max)}`,
-      `${mDict.aria.min} ${formatDegrees(d.min)}`,
+      `${mDict.aria.max} ${formatDegrees(d.max)}${rangeNote(d.spread.maxProbable)}`,
+      `${mDict.aria.min} ${formatDegrees(d.min)}${rangeNote(d.spread.minProbable)}`,
       `${mDict.aria.rain} ${d.precipProb !== null ? `${d.precipProb}%` : '--'}`,
-      d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum, lang) : null,
+      d.precipSum !== null && d.precipSum > 0
+        ? `${formatPrecipitation(d.precipSum, d.snowSum, lang)}${rainWord(d) ? ` (${rainWord(d)})` : ''}`
+        : null,
       d.spread.reliability ? mDict.reliability[d.spread.reliability] : null,
       showSourceStrip ? (d.regional ? (regionalModelLabel || 'HD') : mDict.globalModel) : null
     ].filter((p): p is string => !!p);
@@ -308,7 +364,10 @@ const TrendChartModal = memo(function TrendChartModal({
   };
 
   const dayCellClass = 'flex flex-col items-center justify-end gap-1 md:gap-2 flex-1 group rounded-xl';
-  const dayCellContent = (d: TrendDay) => (
+  const dayCellContent = (d: TrendDay) => {
+    const tone = precipTone(d);
+    const amount = classifyDailyPrecip(d.precipSum);
+    return (
     <>
       <span className="text-[10px] md:text-sm font-black text-slate-400 uppercase tracking-widest">
         {d.dayInitial}
@@ -318,23 +377,29 @@ const TrendChartModal = memo(function TrendChartModal({
         {getWeatherIcon(d.code, "w-8 h-8 md:w-12 md:h-12", true, 0, d.wind, null, 0, d.avgClouds)}
       </div>
 
-      <div className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1 py-0.5 md:px-3 md:py-1.5 rounded border ${isLikelyWet(d.precipProb) ? 'bg-blue-500/10 border-blue-500/20' : 'bg-transparent border-transparent opacity-40'}`}>
-        <Droplets className={`hidden md:block md:w-4 md:h-4 ${isLikelyWet(d.precipProb) ? 'text-blue-400' : 'text-slate-600'}`} />
-        <span className={`text-[10px] md:text-[11px] font-black tabular-nums ${isLikelyWet(d.precipProb) ? 'text-blue-300' : 'text-slate-500'}`}>
+      <div data-testid="precip-badge" data-tone={tone} className={`flex items-center gap-0.5 md:gap-1.5 mt-1 px-1 py-0.5 md:px-3 md:py-1.5 rounded border ${PRECIP_BADGE_CLASS[tone]}`}>
+        <Droplets className={`hidden md:block md:w-4 md:h-4 ${tone === 'dim' ? 'text-slate-600' : 'text-blue-400'}`} />
+        <span className={`text-[10px] md:text-[11px] font-black tabular-nums ${PRECIP_TEXT_CLASS[tone]}`}>
           {d.precipProb !== null ? `${d.precipProb}%` : '--'}
         </span>
       </div>
 
-      {/* Quantitat prevista (només si n'hi ha); l'espai es reserva perquè les columnes quedin alineades */}
-      <span data-testid="precip-amount" className="min-h-[12px] md:min-h-[14px] text-[10px] font-black tabular-nums text-cyan-300/90">
+      {/* Quantitat prevista (només si n'hi ha), amb el color de la seva classe; l'espai es reserva perquè les columnes
+          quedin alineades. A partir de md hi cap també la paraula ("quatre gotes", "feble"...); al mòbil la diu el
+          contorn de la probabilitat i l'etiqueta del dia. */}
+      <span data-testid="precip-amount" className={`min-h-[12px] md:min-h-[14px] text-[10px] font-black tabular-nums ${amount ? PRECIP_AMOUNT_CLASS[amount] : ''}`}>
         {d.precipSum !== null && d.precipSum > 0 ? formatPrecipitation(d.precipSum, d.snowSum, lang) : ''}
+      </span>
+      <span data-testid="precip-word" className="hidden md:block md:min-h-[14px] md:-mt-1.5 text-[10px] font-bold text-slate-400">
+        {rainWord(d) ?? ''}
       </span>
 
       {d.spread.reliability
         ? <ReliabilityDots level={d.spread.reliability} label={mDict.reliability[d.spread.reliability]} />
         : <span className="h-1.5" />}
     </>
-  );
+    );
+  };
 
   // 3. RENDERITZAT SPATIAL UI PORTAL
   const modalContent = (
@@ -421,8 +486,31 @@ const TrendChartModal = memo(function TrendChartModal({
               (~430×600), la llegenda ha de cabre sense desplaçar. */}
           <div aria-hidden="true" className="relative w-full flex-[1_1_260px] md:flex-[1_1_400px] min-h-[150px] md:min-h-[180px] mt-3 mb-3 md:mt-4 md:mb-4">
 
-              {/* FILS DE TENDÈNCIA (Fons): màximes (càlid) i mínimes (fresc) */}
+            {/* ORIGEN DE LES DADES, dins el gràfic: els dies del model regional tenyits, una línia discontínua on canvia de
+                model i el nom de cada tram a dalt, fora de la zona de dibuix. Un salt just en aquesta línia pot ser el
+                canvi de model i no un canvi de temps (ho diu la nota de sota). */}
+            {showSourceStrip && sourceRuns(trendData).map(run => (
+              <div
+                key={`source-${run.start}`}
+                data-testid="source-run"
+                data-regional={run.regional}
+                data-span={run.span}
+                className={`absolute top-0 bottom-0 ${run.regional ? 'bg-cyan-500/[0.06]' : ''} ${run.start > 0 ? 'border-l border-dashed border-cyan-300/40' : ''}`}
+                style={{ left: `${(run.start / N) * 100}%`, width: `${(run.span / N) * 100}%` }}
+              >
+                <span className={`block truncate px-1 text-center text-[9px] md:text-[10px] leading-4 font-black uppercase tracking-widest ${run.regional ? 'text-cyan-300' : 'text-slate-500'}`}>
+                  {run.regional ? (regionalModelLabel || 'HD') : mDict.globalModel}
+                </span>
+              </div>
+            ))}
+
+            {/* ZONA DE DIBUIX (sota els noms dels trams, si n'hi ha) */}
+            <div className={`absolute inset-x-0 bottom-0 ${showSourceStrip ? 'top-4' : 'top-0'}`}>
+
+              {/* BANDES DEL RANG PROBABLE (80 %) i FILS DE TENDÈNCIA: màximes (càlid) i mínimes (fresc) */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path data-testid="range-band-max" d={maxBand} fill={MAX_LINE_COLOR} fillOpacity={0.14} stroke="none" />
+                <path data-testid="range-band-min" d={minBand} fill={MIN_LINE_COLOR} fillOpacity={0.14} stroke="none" />
                 <path
                   data-testid="trend-line-max"
                   d={maxPath}
@@ -444,27 +532,6 @@ const TrendChartModal = memo(function TrendChartModal({
                   className="anim-draw-line opacity-40"
                 />
               </svg>
-
-              {/* BIGOTIS: rang probable (80 %) de la màxima i de la mínima, a la dreta de la càpsula. Abans era el rang entre
-                  models, que només contenia el valor real la meitat de les vegades (vegeu probableRange.ts). */}
-              {completeDays.length > 0 && trendData.map((d, i) => {
-                if (!isComplete(d)) return null;
-                const whiskers = [
-                  { key: 'max', range: d.spread.maxProbable },
-                  { key: 'min', range: d.spread.minProbable }
-                ];
-                return whiskers.map(({ key, range }) =>
-                  hasVisibleRange(range) ? (
-                    <ProbableRangeWhisker
-                      key={`range-${key}-${i}`}
-                      x={getX(i)}
-                      top={getY(range.high)}
-                      height={getY(range.low) - getY(range.high)}
-                      title={`${mDict.probableRange}: ${formatRange(range)}`}
-                    />
-                  ) : null
-                );
-              })}
 
               {/* COLUMNES DE RANG (Candlesticks HTML) */}
               {trendData.map((d, i) => {
@@ -509,29 +576,34 @@ const TrendChartModal = memo(function TrendChartModal({
                   </div>
                 );
               })}
+
+              {/* ZONES DE TOC: tota l'alçada de cada dia (la càpsula sola és massa estreta per al dit). Obren el mateix
+                  detall que la fila de sota, que és el camí per al teclat i els lectors de pantalla (aquí tot és decoratiu). */}
+              {trendData.map((d, i) => {
+                const zoneStyle = { left: `${(i / N) * 100}%`, width: `${100 / N}%` };
+                return onDayClick ? (
+                  <button
+                    key={`hit-${i}`}
+                    type="button"
+                    tabIndex={-1}
+                    data-testid="trend-hit"
+                    title={dayLabel(d)}
+                    onClick={() => onDayClick(d.dayIndex)}
+                    className="absolute top-0 bottom-0 cursor-pointer rounded-xl hover:bg-white/[0.04] transition-colors"
+                    style={zoneStyle}
+                  />
+                ) : (
+                  <div key={`hit-${i}`} data-testid="trend-hit" title={dayLabel(d)} className="absolute top-0 bottom-0" style={zoneStyle} />
+                );
+              })}
+            </div>
           </div>
 
-          {/* ORIGEN DE LES DADES: on la sèrie passa del model regional al global (un salt aquí no és canvi de temps) */}
-          {/* La nota es veu sempre: abans era un `title`, que en una pantalla tàctil no surt mai. */}
+          {/* ORIGEN DE LES DADES: la nota es veu sempre (abans era un `title`, que en una pantalla tàctil no surt mai) */}
           {showSourceStrip && (
-            <>
-              <div aria-hidden="true" className="shrink-0 grid grid-cols-7 gap-px w-full">
-                {sourceRuns(trendData).map((run, k) => (
-                  <div
-                    key={`source-${k}`}
-                    data-testid="source-run"
-                    data-regional={run.regional}
-                    className={`text-center truncate rounded border py-0.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest ${run.regional ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-white/5 border-white/5 text-slate-500'}`}
-                    style={{ gridColumn: `span ${run.span}` }}
-                  >
-                    {run.regional ? (regionalModelLabel || 'HD') : mDict.globalModel}
-                  </div>
-                ))}
-              </div>
-              <p data-testid="source-note" className="shrink-0 mt-0.5 text-center text-[10px] md:text-[11px] font-bold text-slate-500 leading-snug">
-                {mDict.sourceNote}
-              </p>
-            </>
+            <p data-testid="source-note" className="shrink-0 -mt-1 text-center text-[10px] md:text-[11px] font-bold text-slate-500 leading-snug">
+              {mDict.sourceNote}
+            </p>
           )}
 
           {/* BARRA INFERIOR: Dia, Icona, Pluja (probabilitat i quantitat) i fiabilitat.
@@ -568,8 +640,9 @@ const TrendChartModal = memo(function TrendChartModal({
               </span>
               {showRangeLegend && (
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true" className="relative inline-block w-1.5 h-3.5 border-y border-slate-300/60">
-                    <span className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-300/60"></span>
+                  <span aria-hidden="true" className="inline-flex flex-col gap-px">
+                    <span className="block w-4 h-1.5 rounded-sm" style={{ backgroundColor: MAX_LINE_COLOR, opacity: 0.35 }}></span>
+                    <span className="block w-4 h-1.5 rounded-sm" style={{ backgroundColor: MIN_LINE_COLOR, opacity: 0.35 }}></span>
                   </span>
                   {mDict.probableRange}
                 </span>
