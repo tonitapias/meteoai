@@ -110,7 +110,7 @@ export const fr = {
   dewPoint: "Point de Rosée",
   dewPointDesc: "Seuil de touffeur",
   snowLevel: "Limite neige",
-  forecast7days: "Prévisions 7 Jours",
+  forecast7days: "Prévisions à 7 jours",
   today: "Aujourd'hui",
   tomorrow: "Demain",
   detailedForecast: "Prévisions détaillées",

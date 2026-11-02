@@ -226,6 +226,17 @@ describe('TrendChartModal — on la sèrie passa del model regional al global', 
         renderModal(makeDaily(SEPT), chart(['2026-09-21']));
         expect(runs()[0].textContent).toBe('HD');
     });
+
+    it('sota la tira, una nota visible explica el salt (un `title` no surt mai en una pantalla tàctil)', () => {
+        renderModal(makeDaily(SEPT), chart(['2026-09-21', '2026-09-22']), { regionalModelLabel: 'AROME HD' });
+        expect(screen.getByTestId('source-note').textContent).toBe("Un salt d'un tram a l'altre pot ser el canvi de model, no un canvi de temps.");
+        expect(runs()[0].closest('[title]')).toBeNull();
+    });
+
+    it('sense tira, tampoc no hi ha nota', () => {
+        renderModal(makeDaily(SEPT), chart([]), { regionalModelLabel: null });
+        expect(screen.queryByTestId('source-note')).toBeNull();
+    });
 });
 
 describe('TrendChartModal — quantitat de pluja i probabilitats baixes', () => {
@@ -317,6 +328,12 @@ describe('TrendChartModal — cada dia obre el seu detall', () => {
 });
 
 describe('TrendChartModal — accessibilitat', () => {
+    it('el títol del diàleg diu de què és el gràfic, sense calcs ("Gràfic de temperatures", no "Gràfic Temperatures")', () => {
+        renderModal(makeDaily(SEPT));
+        expect(screen.getByRole('dialog', { name: 'Gràfic de temperatures' })).toBeTruthy();
+        expect(screen.getByText('Tendència dels pròxims 7 dies')).toBeTruthy();
+    });
+
     it('cada dia diu en una frase el que el gràfic diu visualment', () => {
         renderModal(makeDaily(SEPT, { precipitation_probability_max: [0, 10, 0, 0, 0, 0, 0, 0] }));
         expect(screen.getAllByTestId('trend-day')[0].getAttribute('aria-label'))
@@ -459,29 +476,40 @@ describe('TrendChartModal — línies de tendència, resum i colors', () => {
     describe('frase resum', () => {
         const summary = () => screen.getByTestId('trend-summary').textContent;
 
-        it('un refredament net es diu com a tal, amb les xifres de la setmana', () => {
+        it('un refredament es diu amb la seva forma i els noms dels dies (no "al llarg de la setmana")', () => {
             renderModal(makeDaily(SEPT, { temperature_2m_max: [25, 35, 32, 28, 28, 29, 28, 25] }));
-            expect(summary()).toBe('Refredament: la màxima baixa de 35° a 25° al llarg de la setmana.');
+            expect(summary()).toBe('Màximes entre 32° i 35° fins a dimarts; a partir de dimecres baixen fins a 25°. No es preveu pluja.');
+            // El rang probable de diumenge (23-29°) no arriba als 32° d'abans: el refredament és clar.
             expect(screen.queryByTestId('trend-uncertain')).toBeNull();
         });
 
-        it('una setmana amb un dip però sense canvi net entre extrems és "variable"', () => {
-            renderModal(makeDaily(SEPT));   // 24 ... 23 amb un pic de 30
-            expect(summary()).toBe('Setmana variable: les màximes oscil·len entre 23° i 30°.');
+        it('una setmana que puja fins a un pic i torna a baixar es diu així, amb el dia del pic', () => {
+            renderModal(makeDaily(SEPT));   // 24 ... 23 amb un pic de 30 dijous
+            expect(summary()).toBe('Les màximes pugen fins a 30° dijous i després baixen fins a 23°. No es preveu pluja.');
         });
 
-        it('si els models discrepen gairebé tant com el canvi, ho avisa', () => {
-            // Refredament de 30° a 26° (4°) amb ECMWF 9° per sobre a l'últim dia: 4 < 2*9
+        it('si el bigoti del dia d\'arribada encara arriba al nivell de sortida, ho avisa amb les seves xifres', () => {
+            // Baixa de 30° a 26°, però amb ECMWF 9° per sobre l'últim dia el rang probable de diumenge arriba a 32°.
             const max = [25, 30, 29, 28, 27, 27, 26, 26];
             const cmp = { ecmwf: model(max.map((v, i) => (i === 7 ? v + 9 : v)), MIN), gfs: model(max, MIN), icon: model(max, MIN) };
             renderModal(makeDaily(SEPT, { temperature_2m_max: max }), [], { dailyComparison: cmp });
-            expect(summary()).toContain('Refredament');
-            expect(screen.getByTestId('trend-uncertain').textContent).toContain('Poc segur');
+            expect(summary()).toContain('Les màximes baixen de mica en mica: de 30° dilluns a 26° diumenge.');
+            expect(screen.getByTestId('trend-uncertain').textContent).toBe(' Encara no és segur: diumenge la màxima pot anar de 23° a 32°.');
+            // I és el mateix rang que dibuixa el bigoti de diumenge.
+            expect(screen.getAllByTestId('probable-range').map(w => w.getAttribute('title'))).toContain('Rang probable (80 %): 23–32°');
+        });
+
+        it('diu quins dies pot ploure i quant', () => {
+            renderModal(makeDaily(SEPT, {
+                precipitation_probability_max: [10, 80, 75, 10, 10, 10, 10, 10],
+                precipitation_sum: [0, 0.3, 1.2, 0, 0, 0, 0, 0],
+            }));
+            expect(screen.getByTestId('trend-precip').textContent).toBe(' Pot ploure dilluns i dimarts (fins a 1 mm en un dia).');
         });
 
         it('el resum surt en l\'idioma de l\'usuari', () => {
             renderModal(makeDaily(SEPT, { temperature_2m_max: [25, 35, 32, 28, 28, 29, 28, 25] }), [], { lang: 'en' });
-            expect(summary()).toBe('Cooling: the high drops from 35° to 25° over the week.');
+            expect(summary()).toBe('Highs between 32° and 35° until Tuesday; from Wednesday they fall to 25°. No rain expected.');
         });
 
         it('amb menys de 3 dies amb màxima no es diu res (i el diàleg no queda descrit per un resum que no hi és)', () => {

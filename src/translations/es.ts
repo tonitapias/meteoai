@@ -109,7 +109,7 @@ export const es = {
   dewPoint: "Punto de Rocío",
   dewPointDesc: "Umbral de bochorno",
   snowLevel: "Cota de nieve",
-  forecast7days: "Previsión 7 Días",
+  forecast7days: "Previsión de 7 días",
   today: "Hoy",
   tomorrow: "Mañana",
   detailedForecast: "Previsión detallada",

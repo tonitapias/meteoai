@@ -10,6 +10,7 @@ import { isLikelyWet } from '../utils/precipSignal';
 import { ReliabilityDots } from './ReliabilityDots';
 import { buildCapsuleGradient } from '../utils/temperatureColors';
 import { summarizeTrend } from '../utils/trendSummary';
+import { describeTrend } from '../utils/trendSummaryText';
 import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
 import { getSafeLocale, formatPrecipitation } from '../utils/formatters';
 import { useDialogFocus } from '../hooks/useDialogFocus';
@@ -100,9 +101,6 @@ const buildLinePath = (points: ReadonlyArray<{ x: number; y: number } | null>): 
   return path;
 };
 
-const fillTemplate = (template: string, vars: Record<string, number>): string =>
-  template.replace(/\{(\w+)\}/g, (_, key: string) => (key in vars ? String(Math.round(vars[key])) : ''));
-
 /** Bigoti vertical (amb topalls) que marca el rang probable (80 %) d'una temperatura, a la dreta de la càpsula. */
 const ProbableRangeWhisker = ({ x, top, height, title }: { x: number; top: number; height: number; title: string }) => (
   <div
@@ -117,60 +115,32 @@ const ProbableRangeWhisker = ({ x, top, height, title }: { x: number; top: numbe
 
 const I18N_MODAL = {
   ca: {
-    title: "Gràfic Temperatures", trend: "Tendència 7 Dies",
+    title: "Gràfic de temperatures", trend: "Tendència dels pròxims 7 dies",
     ...CONFIDENCE_TEXT.ca, reliabilityLegend: "Fiabilitat (acord entre models)",
     maxLine: "Màximes", minLine: "Mínimes",
-    sourceHint: "Les màximes i mínimes dels primers dies vénen del model regional; a partir d'aquí, del model global. Entre tots dos pot haver-hi un salt que no és un canvi de temps.",
-    aria: { max: "màxima", min: "mínima", rain: "pluja", openDay: "veure el detall del dia" },
-    summary: {
-      cooling: "Refredament: la màxima baixa de {from}° a {to}° al llarg de la setmana.",
-      warming: "Escalfament: la màxima puja de {from}° a {to}° al llarg de la setmana.",
-      variable: "Setmana variable: les màximes oscil·len entre {low}° i {high}°.",
-      stable: "Temperatures estables: màximes entre {low}° i {high}°.",
-      uncertain: "Poc segur: els models discrepen gairebé tant com el canvi."
-    }
+    sourceNote: "Un salt d'un tram a l'altre pot ser el canvi de model, no un canvi de temps.",
+    aria: { max: "màxima", min: "mínima", rain: "pluja", openDay: "veure el detall del dia" }
   },
   es: {
-    title: "Gráfico Temperaturas", trend: "Tendencia 7 Días",
+    title: "Gráfico de temperaturas", trend: "Tendencia de los próximos 7 días",
     ...CONFIDENCE_TEXT.es, reliabilityLegend: "Fiabilidad (acuerdo entre modelos)",
     maxLine: "Máximas", minLine: "Mínimas",
-    sourceHint: "Las máximas y mínimas de los primeros días vienen del modelo regional; a partir de ahí, del modelo global. Entre ambos puede haber un salto que no es un cambio de tiempo.",
-    aria: { max: "máxima", min: "mínima", rain: "lluvia", openDay: "ver el detalle del día" },
-    summary: {
-      cooling: "Enfriamiento: la máxima baja de {from}° a {to}° a lo largo de la semana.",
-      warming: "Calentamiento: la máxima sube de {from}° a {to}° a lo largo de la semana.",
-      variable: "Semana variable: las máximas oscilan entre {low}° y {high}°.",
-      stable: "Temperaturas estables: máximas entre {low}° y {high}°.",
-      uncertain: "Poco seguro: los modelos discrepan casi tanto como el cambio."
-    }
+    sourceNote: "Un salto de un tramo a otro puede ser el cambio de modelo, no un cambio de tiempo.",
+    aria: { max: "máxima", min: "mínima", rain: "lluvia", openDay: "ver el detalle del día" }
   },
   fr: {
-    title: "Graphe Températures", trend: "Tendance 7 Jours",
+    title: "Graphique des températures", trend: "Tendance des 7 prochains jours",
     ...CONFIDENCE_TEXT.fr, reliabilityLegend: "Fiabilité (accord entre modèles)",
     maxLine: "Maximales", minLine: "Minimales",
-    sourceHint: "Les maximales et minimales des premiers jours viennent du modèle régional ; ensuite, du modèle global. Entre les deux, un saut peut apparaître sans que le temps ait changé.",
-    aria: { max: "maximale", min: "minimale", rain: "pluie", openDay: "voir le détail du jour" },
-    summary: {
-      cooling: "Refroidissement : la maximale passe de {from}° à {to}° sur la semaine.",
-      warming: "Réchauffement : la maximale passe de {from}° à {to}° sur la semaine.",
-      variable: "Semaine variable : les maximales oscillent entre {low}° et {high}°.",
-      stable: "Températures stables : maximales entre {low}° et {high}°.",
-      uncertain: "Peu sûr : les modèles divergent presque autant que le changement."
-    }
+    sourceNote: "Un saut d'un tronçon à l'autre peut venir du changement de modèle, pas d'un changement de temps.",
+    aria: { max: "maximale", min: "minimale", rain: "pluie", openDay: "voir le détail du jour" }
   },
   en: {
-    title: "Temperature Chart", trend: "7-Day Trend",
+    title: "Temperature chart", trend: "7-day trend",
     ...CONFIDENCE_TEXT.en, reliabilityLegend: "Reliability (model agreement)",
     maxLine: "Highs", minLine: "Lows",
-    sourceHint: "Highs and lows for the first days come from the regional model; after that, from the global model. There can be a jump between the two that is not a change in the weather.",
-    aria: { max: "high", min: "low", rain: "rain", openDay: "open day details" },
-    summary: {
-      cooling: "Cooling: the high drops from {from}° to {to}° over the week.",
-      warming: "Warming: the high rises from {from}° to {to}° over the week.",
-      variable: "Variable week: highs swing between {low}° and {high}°.",
-      stable: "Stable temperatures: highs between {low}° and {high}°.",
-      uncertain: "Uncertain: the models disagree almost as much as the change."
-    }
+    sourceNote: "A jump from one segment to the next may be the model switch, not a change in the weather.",
+    aria: { max: "high", min: "low", rain: "rain", openDay: "open day details" }
   }
 };
 
@@ -315,10 +285,12 @@ const TrendChartModal = memo(function TrendChartModal({
   const showSourceStrip = trendData.some(d => d.regional);
   const formatRange = (r: { low: number; high: number }) => `${Math.round(r.low)}–${Math.round(r.high)}°`;
 
-  const summary = summarizeTrend(trendData.map(d => ({ max: d.max, maxRange: d.spread.maxRange })));
-  const summaryText = summary
-    ? fillTemplate(mDict.summary[summary.kind], { from: summary.from, to: summary.to, low: summary.low, high: summary.high })
-    : null;
+  // Frase resum: la forma de la setmana, amb la incertesa dels mateixos bigotis que es veuen (rang probable calibrat).
+  const summary = summarizeTrend(trendData.map(d => ({
+    max: d.max, min: d.min, maxProbable: d.spread.maxProbable, minProbable: d.spread.minProbable,
+    precipProb: d.precipProb, precipSum: d.precipSum, snowSum: d.snowSum
+  })));
+  const summaryText = summary ? describeTrend(summary, trendData.map(d => d.dayName || d.dayInitial), lang) : null;
 
   // Etiqueta accessible d'un dia: tot el que el gràfic diu visualment, en una frase.
   const dayLabel = (d: TrendDay): string => {
@@ -433,16 +405,21 @@ const TrendChartModal = memo(function TrendChartModal({
 
           {summaryText && (
             <p id="trend-chart-summary" data-testid="trend-summary" className="shrink-0 text-[11px] md:text-sm font-bold text-slate-300 leading-snug">
-              {summaryText}
-              {summary?.uncertain && (
-                <span data-testid="trend-uncertain" className="text-amber-300">{' '}{mDict.summary.uncertain}</span>
+              {summaryText.temperature}
+              {summaryText.uncertain && (
+                <span data-testid="trend-uncertain" className="text-amber-300">{' '}{summaryText.uncertain}</span>
+              )}
+              {summaryText.precip && (
+                <span data-testid="trend-precip" className="text-slate-400">{' '}{summaryText.precip}</span>
               )}
             </p>
           )}
 
           {/* CONTENIDOR DEL GRÀFIC (Dona espai dalt i baix pels textos). Decoratiu per a lectors de pantalla:
               la mateixa informació surt, dia per dia, a l'etiqueta de la fila inferior. */}
-          <div aria-hidden="true" className="relative w-full flex-[1_1_260px] md:flex-[1_1_400px] min-h-[180px] mt-4 mb-4">
+          {/* Al mòbil, una mica menys d'alçada mínima i de marges: el resum pot ocupar 3-4 línies i, en un telèfon petit
+              (~430×600), la llegenda ha de cabre sense desplaçar. */}
+          <div aria-hidden="true" className="relative w-full flex-[1_1_260px] md:flex-[1_1_400px] min-h-[150px] md:min-h-[180px] mt-3 mb-3 md:mt-4 md:mb-4">
 
               {/* FILS DE TENDÈNCIA (Fons): màximes (càlid) i mínimes (fresc) */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -535,25 +512,31 @@ const TrendChartModal = memo(function TrendChartModal({
           </div>
 
           {/* ORIGEN DE LES DADES: on la sèrie passa del model regional al global (un salt aquí no és canvi de temps) */}
+          {/* La nota es veu sempre: abans era un `title`, que en una pantalla tàctil no surt mai. */}
           {showSourceStrip && (
-            <div aria-hidden="true" className="shrink-0 grid grid-cols-7 gap-px w-full" title={mDict.sourceHint}>
-              {sourceRuns(trendData).map((run, k) => (
-                <div
-                  key={`source-${k}`}
-                  data-testid="source-run"
-                  data-regional={run.regional}
-                  className={`text-center truncate rounded border py-0.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest ${run.regional ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-white/5 border-white/5 text-slate-500'}`}
-                  style={{ gridColumn: `span ${run.span}` }}
-                >
-                  {run.regional ? (regionalModelLabel || 'HD') : mDict.globalModel}
-                </div>
-              ))}
-            </div>
+            <>
+              <div aria-hidden="true" className="shrink-0 grid grid-cols-7 gap-px w-full">
+                {sourceRuns(trendData).map((run, k) => (
+                  <div
+                    key={`source-${k}`}
+                    data-testid="source-run"
+                    data-regional={run.regional}
+                    className={`text-center truncate rounded border py-0.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest ${run.regional ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-white/5 border-white/5 text-slate-500'}`}
+                    style={{ gridColumn: `span ${run.span}` }}
+                  >
+                    {run.regional ? (regionalModelLabel || 'HD') : mDict.globalModel}
+                  </div>
+                ))}
+              </div>
+              <p data-testid="source-note" className="shrink-0 mt-0.5 text-center text-[10px] md:text-[11px] font-bold text-slate-500 leading-snug">
+                {mDict.sourceNote}
+              </p>
+            </>
           )}
 
           {/* BARRA INFERIOR: Dia, Icona, Pluja (probabilitat i quantitat) i fiabilitat.
               Amb `onDayClick`, cada dia és un botó que n'obre el detall. */}
-          <div className="shrink-0 grid grid-cols-7 w-full mt-4 md:mt-6 border-t border-white/5 pt-4">
+          <div className="shrink-0 grid grid-cols-7 w-full mt-3 md:mt-6 border-t border-white/5 pt-3 md:pt-4">
             {trendData.map((d, i) => onDayClick ? (
               <button
                 key={`col-${i}`}

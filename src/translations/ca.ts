@@ -109,7 +109,7 @@ export const ca = {
   dewPoint: "Punt de Rosada", 
   dewPointDesc: "Llindar de xafogor", 
   snowLevel: "Cota de neu",
-  forecast7days: "Previsió 7 Dies",
+  forecast7days: "Previsió de 7 dies",
   today: "Avui",
   tomorrow: "Demà",
   detailedForecast: "Previsió detallada",

@@ -173,7 +173,7 @@ const ForecastSection = memo(function ForecastSection({
         <div className="flex items-center justify-between mb-6 z-10 relative px-2">
           <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
             <Calendar className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.8)]"/> 
-            {typeof tRecord.forecast7days === 'string' ? tRecord.forecast7days : "PREVISIÓ 7 DIES"}
+            {typeof tRecord.forecast7days === 'string' ? tRecord.forecast7days : "PREVISIÓ DE 7 DIES"}
           </h3>
           
           <div className="flex items-center gap-2 md:gap-3">
