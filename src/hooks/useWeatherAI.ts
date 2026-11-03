@@ -117,7 +117,7 @@ export function useWeatherAI(
         if (isOfflineSnapshot) return;
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
-        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover, lightning);
+        const gemini = await getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData as AiAirQualityInput | null, effectiveCloudCover, lightning, reliability);
         
         // Només si aquesta consulta encara és la vigent i la que hi ha a la pantalla: la resposta d'una consulta
         // anterior no s'enganxa al text local d'una altra.

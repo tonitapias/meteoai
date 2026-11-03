@@ -71,6 +71,15 @@ describe('useWeatherAI — el codi de temps efectiu arriba a les dues IA', () =>
         expect(getGeminiAnalysis.mock.calls[0][4]).toBe(78);
     });
 
+    // Sense això, Gemini no sabia que la insígnia del costat deia "Pluja incerta" i escrivia "plourà".
+    it("passa a Gemini l'acord entre models de la insígnia (7è paràmetre)", async () => {
+        const reliability = { level: 'low', cause: 'rain', tempMarginC: null } as const;
+        renderHook(() => useWeatherAI(WEATHER, null, 'ca', 'C', reliability, 2));
+        await flush();
+        // getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData, effectiveCloudCover, lightning, reliability)
+        expect(getGeminiAnalysis.mock.calls[0][6]).toBe(reliability);
+    });
+
     it('només recalcula quan canvia la variant "molt ennuvolat", no a cada canvi del % de núvols', async () => {
         const { rerender } = renderHook(
             ({ clouds }: { clouds: number }) => useWeatherAI(WEATHER, null, 'ca', 'C', null, 2, clouds),

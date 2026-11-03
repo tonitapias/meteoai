@@ -10,11 +10,11 @@ vi.mock('./cacheService', () => ({
     },
 }));
 
-import { getGeminiAnalysis, type AiAirQualityInput } from './geminiService';
+import { getGeminiAnalysis, resolveRainCertainty, type AiAirQualityInput } from './geminiService';
 import { cacheService } from './cacheService';
 import { TRANSLATIONS } from '../translations';
 import { getHourlyWeatherCode, type HourlySeries } from '../utils/hourlyWeatherCode';
-import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData, ShortRangeAgreement } from '../types/weatherLogicTypes';
 
 const FOG_DESC = 'Boira o boira baixa';
 
@@ -306,16 +306,21 @@ describe('getGeminiAnalysis — resum calculat de la finestra', () => {
     });
 
     // Cas real d'abans: hores de 14, 17, 20 i 23 mm/h → la IA escrivia "acumulacions de 23 mil·límetres" (n'hi havia ~80).
-    it('amb pluja: total sumat, pic amb hora, i primera/última hora (continua al final de la finestra)', async () => {
+    it("amb pluja: total sumat, pic en paraula i xifra amb hora, i primera/última hora (encara plou a l'última)", async () => {
         const weather = calm({ date: '2026-09-15', temp: 17, day: 1 });
         const h = weather.hourly as unknown as Record<string, number[]>;
         h.precipitation = [0, 0, 1.2, 1.2, 4, 1.2, 1.2, 1.2];
         h.precipitation_probability = [10, 30, 80, 90, 95, 80, 70, 60];
         const { prompt } = await run(weather, 0);
         const s = summaryOf(prompt);
-        // finestra = 6 hores (00:00-05:00): 1.2 + 1.2 + 4 + 1.2 = 7.6
-        expect(s).toContain('Pluja: intensitat màxima 4mm/h (04:00) | acumulat de totes les hores 7.6mm (no és una intensitat) | hores amb pluja: de 02:00 a 05:00 (continua al final de la finestra)');
+        // finestra = 6 hores (00:00-05:00): 1.2 + 1.2 + 4 + 1.2 = 7.6, arrodonit (la IA copiava "4.8 mm" al text)
+        expect(s).toContain("Pluja: intensitat màxima moderada (4mm/h, 04:00; al text, només la paraula) | acumulat de totes les hores uns 8mm (no és una intensitat) | hores amb pluja: de 02:00 a 05:00 (encara plou a l'última hora prevista, 05:00)");
         expect(s).toContain('Probabilitat màxima de pluja: 95%');
+        expect(s).toContain('Certesa de la pluja: MOLT PROBABLE');
+        // La IA copiava "finestra" al text ("continua al final de la finestra"), i "xifres exactes" contradeia la certesa.
+        expect(prompt).not.toContain('finestra');
+        expect(prompt).not.toContain('FINESTRA');
+        expect(prompt).not.toContain('exactes');
     });
 
     it('una pluja intermitent ho indica ("amb pauses") i, si acaba dins la finestra, no diu que continuï', async () => {
@@ -324,6 +329,7 @@ describe('getGeminiAnalysis — resum calculat de la finestra', () => {
         h.precipitation = [1, 0, 1, 0, 0, 0, 0, 0];
         const { prompt } = await run(weather, 0);
         const s = summaryOf(prompt);
+        expect(s).toContain('acumulat de totes les hores uns 2mm');
         expect(s).toContain('hores amb pluja: de 00:00, ara a 02:00 (amb pauses)');
         expect(s).not.toContain('continua');
     });
@@ -333,6 +339,126 @@ describe('getGeminiAnalysis — resum calculat de la finestra', () => {
         (weather.hourly as unknown as Record<string, unknown>).time = [];
         const { prompt } = await run(weather, 0);
         expect(prompt).not.toContain('RESUM CALCULAT');
+    });
+});
+
+describe('resolveRainCertainty — escala de certesa de la pluja', () => {
+    it('amb el model principal plovent, la probabilitat tria la paraula (80 / 60 / 40)', () => {
+        expect(resolveRainCertainty(80, true, null)).toBe('MOLT PROBABLE');
+        expect(resolveRainCertainty(79, true, null)).toBe('PROBABLE');
+        expect(resolveRainCertainty(60, true, null)).toBe('PROBABLE');
+        expect(resolveRainCertainty(59, true, null)).toBe('POSSIBLE');
+        expect(resolveRainCertainty(40, true, null)).toBe('POSSIBLE');
+        expect(resolveRainCertainty(39, true, null)).toBe('POC PROBABLE');
+        // La pluja d'un sol model amb una probabilitat baixa (rainEvidence.ts: plou ~10 % de les vegades) no desapareix.
+        expect(resolveRainCertainty(10, true, null)).toBe('POC PROBABLE');
+    });
+
+    it("sense pluja al model, només s'esmenta a partir del 20 %", () => {
+        expect(resolveRainCertainty(19, false, null)).toBeNull();
+        expect(resolveRainCertainty(20, false, null)).toBe('POC PROBABLE');
+        expect(resolveRainCertainty(65, false, null)).toBe('PROBABLE');
+    });
+
+    // El text no pot donar la pluja per més segura que la insígnia del costat.
+    it('"Pluja dubtosa" (ambre) la deixa com a molt PROBABLE i "Pluja incerta" (vermella) com a molt POSSIBLE', () => {
+        expect(resolveRainCertainty(95, true, { level: 'medium', cause: 'rain', tempMarginC: null })).toBe('PROBABLE');
+        expect(resolveRainCertainty(95, true, { level: 'low', cause: 'rain', tempMarginC: null })).toBe('POSSIBLE');
+        expect(resolveRainCertainty(95, true, { level: 'low', cause: 'both', tempMarginC: 4 })).toBe('POSSIBLE');
+        // Per sota del tope no es toca.
+        expect(resolveRainCertainty(30, true, { level: 'low', cause: 'rain', tempMarginC: null })).toBe('POC PROBABLE');
+    });
+
+    it('amb la pluja dubtosa i el model principal sec, almenys POC PROBABLE (els globals en veuen)', () => {
+        expect(resolveRainCertainty(5, false, { level: 'low', cause: 'rain', tempMarginC: null })).toBe('POC PROBABLE');
+    });
+
+    it("un dubte només de temperatura, o el consens, no toquen la pluja", () => {
+        expect(resolveRainCertainty(95, true, { level: 'low', cause: 'temp', tempMarginC: 5 })).toBe('MOLT PROBABLE');
+        expect(resolveRainCertainty(95, true, { level: 'high', cause: null, tempMarginC: null })).toBe('MOLT PROBABLE');
+        expect(resolveRainCertainty(5, false, { level: 'high', cause: null, tempMarginC: null })).toBeNull();
+    });
+});
+
+describe('getGeminiAnalysis — certesa i fiabilitat al resum', () => {
+    beforeEach(() => { vi.restoreAllMocks(); });
+
+    const summaryWith = async (weather: ExtendedWeatherData, reliability: ShortRangeAgreement | null) => {
+        const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ engine: 'gemini', candidates: [{ content: { parts: [{ text: JSON.stringify({ risk_level: 'GREEN', hazard_type: 'NONE', text: 'x', tips: [] }) }] } }] }) });
+        vi.stubGlobal('fetch', fetchMock);
+        await getGeminiAnalysis(weather, 'ca', 3, null, null, null, reliability);
+        const prompt = (JSON.parse(fetchMock.mock.calls[0][1].body as string) as { prompt: string }).prompt;
+        return prompt.match(/RESUM CALCULAT[^\n]*\n([\s\S]*?)\n\s*MATRIU/)?.[1].replace(/^\s+/gm, '') ?? '';
+    };
+
+    /** El cas que es va veure a l'app: cobert, 11 °C, pluja de 2.4 mm/h de 20:00 a 22:00 amb una probabilitat del 45 %. */
+    const eveningRain = (): ExtendedWeatherData => {
+        const weather = calm({ date: '2026-11-03', temp: 11, wind: 10 });
+        const h = weather.hourly as unknown as Record<string, unknown>;
+        h.time = ['16', '17', '18', '19', '20', '21', '22', '23'].map(hh => `2026-11-03T${hh}:00`);
+        h.precipitation = [0, 0, 0, 0, 2.4, 1.6, 0.8, 0];
+        h.precipitation_probability = [5, 5, 10, 25, 45, 40, 30, 15];
+        (weather.current as unknown as Record<string, unknown>).time = '2026-11-03T17:00';
+        return weather;
+    };
+
+    it('la pluja del cas real arriba com a POSSIBLE i "moderada", no només com a 2.4 mm/h', async () => {
+        const s = await summaryWith(eveningRain(), null);
+        expect(s).toContain('Pluja: intensitat màxima moderada (2.4mm/h, 20:00; al text, només la paraula)');
+        expect(s).toContain('Certesa de la pluja: POSSIBLE');
+    });
+
+    // Amb "cap hora amb pluja" sol, Flash-Lite deia "sense precipitacions" encara que la certesa fos POSSIBLE.
+    it('amb el model principal sec però pluja possible, la línia de pluja ho diu amb la probabilitat i la seva hora', async () => {
+        const weather = eveningRain();
+        (weather.hourly as unknown as Record<string, unknown>).precipitation = Array.from({ length: 8 }, () => 0);
+        (weather.hourly as unknown as Record<string, unknown>).precipitation_probability = [10, 20, 30, 45, 50, 40, 30, 20];
+        const s = await summaryWith(weather, null);
+        expect(s).toContain('Pluja: cap hora amb pluja apreciable (totes < 0.2mm/h), però la probabilitat arriba al 50% (20:00)');
+        expect(s).toContain('Certesa de la pluja: POSSIBLE');
+        // Només la insígnia en veu ("Pluja incerta" amb el model sec i una probabilitat baixa).
+        (weather.hourly as unknown as Record<string, unknown>).precipitation_probability = Array.from({ length: 8 }, () => 5);
+        expect(await summaryWith(weather, { level: 'low', cause: 'rain', tempMarginC: null })).toContain('totes < 0.2mm/h), però altres models en preveuen');
+        // Sense certesa, la línia queda com sempre.
+        expect(await summaryWith(weather, null)).toMatch(/totes < 0\.2mm\/h\)\n/);
+    });
+
+    it('amb la insígnia "Pluja incerta", la mateixa pluja al 95 % arriba com a POSSIBLE', async () => {
+        const weather = eveningRain();
+        (weather.hourly as unknown as Record<string, unknown>).precipitation_probability = [5, 5, 10, 60, 95, 90, 80, 15];
+        expect(await summaryWith(weather, null)).toContain('Certesa de la pluja: MOLT PROBABLE');
+        expect(await summaryWith(weather, { level: 'low', cause: 'rain', tempMarginC: null })).toContain('Certesa de la pluja: POSSIBLE');
+    });
+
+    it("sense pluja ni probabilitat, la certesa diu CAP", async () => {
+        const s = await summaryWith(calm({ date: '2026-09-15', temp: 20, day: 1 }), null);
+        expect(s).toContain("Certesa de la pluja: CAP (no s'espera pluja)");
+    });
+
+    it('la intensitat va en paraula amb l\'escala d\'AEMET (feble <= 2, moderada <= 15, forta <= 30...)', async () => {
+        const at = async (mm: number) => {
+            const weather = calm({ date: '2026-09-15', temp: 17, day: 1 });
+            (weather.hourly as unknown as Record<string, number[]>).precipitation = [0, mm, 0, 0, 0, 0, 0, 0];
+            return summaryWith(weather, null);
+        };
+        expect(await at(2)).toContain('intensitat màxima feble (2mm/h');
+        expect(await at(0.5)).toContain("acumulat de totes les hores menys d'1mm");
+        expect(await at(2.1)).toContain('intensitat màxima moderada (2.1mm/h');
+        expect(await at(20)).toContain('intensitat màxima forta (20mm/h');
+        expect(await at(45)).toContain('intensitat màxima molt forta (45mm/h');
+        expect(await at(70)).toContain('intensitat màxima torrencial (70mm/h');
+    });
+
+    it('la fiabilitat de la temperatura és la de la insígnia: alta amb consens o amb un dubte només de pluja, incerta amb el marge', async () => {
+        const weather = () => calm({ date: '2026-09-15', temp: 20, day: 1 });
+        expect(await summaryWith(weather(), { level: 'high', cause: null, tempMarginC: null })).toContain('Fiabilitat de la temperatura: alta (els models hi coincideixen)');
+        expect(await summaryWith(weather(), { level: 'medium', cause: 'rain', tempMarginC: null })).toContain('Fiabilitat de la temperatura: alta');
+        expect(await summaryWith(weather(), { level: 'medium', cause: 'temp', tempMarginC: 4 })).toContain('Fiabilitat de la temperatura: incerta (els models no hi coincideixen, marge ±4°C)');
+        expect(await summaryWith(weather(), { level: 'low', cause: 'both', tempMarginC: 5 })).toContain('marge ±5°C');
+    });
+
+    it('sense acord calculat (no hi ha prou models) no hi ha línia de fiabilitat: no se n\'inventa cap', async () => {
+        expect(await summaryWith(calm({ date: '2026-09-15', temp: 20, day: 1 }), null)).not.toContain('Fiabilitat');
     });
 });
 
@@ -355,6 +481,28 @@ describe('getGeminiAnalysis — cache de la IA', () => {
         const dust = await keyFor(0, { current: { european_aqi: 30, dust: 300 } });
         const badAir = await keyFor(0, { current: { european_aqi: 90 } });
         expect(new Set([clear, rain, dust, badAir]).size).toBe(4);
+    });
+
+    // La insígnia passa de "Consens" a "Pluja incerta" (el hook torna a cridar): el text en cache deia "plourà".
+    it("la clau de cache canvia amb l'acord entre models i amb la certesa de la pluja", async () => {
+        const keyWith = async (reliability: ShortRangeAgreement | null, prob = 0) => {
+            vi.mocked(cacheService.generateAiKey).mockClear();
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ engine: 'gemini', candidates: [{ content: { parts: [{ text: JSON.stringify({ risk_level: 'GREEN', hazard_type: 'NONE', text: 'x', tips: [] }) }] } }] }) }));
+            const weather = calm({ date: '2026-09-15', temp: 17, day: 1 });
+            (weather.hourly as unknown as Record<string, number[]>).precipitation_probability = Array.from({ length: 8 }, () => prob);
+            await getGeminiAnalysis(weather, 'ca', 0, null, null, null, reliability);
+            return vi.mocked(cacheService.generateAiKey).mock.calls[0][0];
+        };
+        const keys = [
+            await keyWith(null),
+            await keyWith({ level: 'high', cause: null, tempMarginC: null }),
+            await keyWith({ level: 'low', cause: 'rain', tempMarginC: null }),
+            await keyWith({ level: 'medium', cause: 'temp', tempMarginC: 3 }),
+            await keyWith({ level: 'medium', cause: 'temp', tempMarginC: 4 }),
+            await keyWith(null, 50),
+            await keyWith(null, 90)
+        ];
+        expect(new Set(keys).size).toBe(keys.length);
     });
 
     it('la mateixa situació dona la mateixa clau (no es crida la IA de més)', async () => {

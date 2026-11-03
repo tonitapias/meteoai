@@ -1,5 +1,5 @@
 // src/services/geminiService.ts
-import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictCurrentWeather, type ShortRangeAgreement } from '../types/weatherLogicTypes';
 import { prepareContextForAI } from '../utils/aiContext';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, getHourlyDisplayTemp, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
@@ -325,6 +325,54 @@ const shownTempNote = (t: number): string => (Number.isInteger(t) ? '' : ` (a la
 /** Pluja horària mínima per comptar l'hora com "amb pluja": el mateix 0,2 mm que usa l'app per dir que plou (aiContext.calculateIsRaining). */
 const RAIN_HOUR_MIN_MM = 0.2;
 
+/**
+ * Certesa de la pluja de la finestra, ja en la paraula que tria el verb del text ("plourà", "pot ploure"...). Abans la IA
+ * només rebia les hores i la quantitat del model i ho afirmava tot ("comença una pluja de 2.4 mm/h que continuarà fins a
+ * les 22:00") tant amb un 30 % de probabilitat com amb un 90 %. Els models petits no passen bé de percentatges a paraules,
+ * així que la paraula hi arriba feta, amb l'escala habitual dels serveis meteorològics sobre la probabilitat calibrada
+ * de l'app (rainEvidence.ts).
+ */
+export type RainCertainty = 'POC PROBABLE' | 'POSSIBLE' | 'PROBABLE' | 'MOLT PROBABLE';
+const RAIN_CERTAINTY_SCALE: ReadonlyArray<RainCertainty> = ['POC PROBABLE', 'POSSIBLE', 'PROBABLE', 'MOLT PROBABLE'];
+
+/** Probabilitat (%) a partir de la qual s'esmenta la pluja encara que el model principal no en tregui cap hora. */
+const RAIN_MENTION_MIN_PROB = 20;
+
+/**
+ * `maxProb`: probabilitat horària màxima de la finestra (%); `modelRain`: alguna hora amb pluja apreciable al model.
+ * Si la insígnia de l'anàlisi diu que la pluja és dubtosa, el text del costat no la pot donar per més segura: com a molt
+ * PROBABLE ("Pluja dubtosa", ambre) o POSSIBLE ("Pluja incerta", vermella), i com a mínim POC PROBABLE (els models
+ * globals en veuen on el principal no). null = no s'esmenta la pluja.
+ */
+export const resolveRainCertainty = (maxProb: number, modelRain: boolean, agreement: ShortRangeAgreement | null): RainCertainty | null => {
+    let index = modelRain || maxProb >= RAIN_MENTION_MIN_PROB
+        ? (maxProb >= 80 ? 3 : maxProb >= 60 ? 2 : maxProb >= 40 ? 1 : 0)
+        : -1;
+    if (agreement && agreement.level !== 'high' && (agreement.cause === 'rain' || agreement.cause === 'both')) {
+        index = Math.min(Math.max(index, 0), agreement.level === 'low' ? 1 : 2);
+    }
+    return index >= 0 ? RAIN_CERTAINTY_SCALE[index] : null;
+};
+
+/**
+ * Intensitat de la pluja en paraula (escala d'AEMET, mm/h), que és com la diu el text: "2.4 mm/h" no ho entén qui no és
+ * del ram, i el decimal d'un sol model és una precisió que no té (rainEvidence.ts: 0,1 mm i 3 mm previstos donen gairebé
+ * la mateixa freqüència de pluja observada).
+ */
+const rainIntensityWord = (mmPerHour: number): string =>
+    mmPerHour <= 2 ? 'feble' : mmPerHour <= 15 ? 'moderada' : mmPerHour <= 30 ? 'forta' : mmPerHour <= 60 ? 'molt forta' : 'torrencial';
+
+/** La part de temperatura de la insígnia: amb "Temperatura ±N°" al costat, el text no pot donar els graus futurs per exactes. */
+const temperatureReliabilityLine = (agreement: ShortRangeAgreement | null): string | null => {
+    if (!agreement) return null;
+    if (agreement.level !== 'high' && (agreement.cause === 'temp' || agreement.cause === 'both')) {
+        const margin = agreement.tempMarginC !== null ? `, marge ±${agreement.tempMarginC}°C` : '';
+        // L'ordre va a la mateixa línia, com la dels llamps: lluny de les xifres, Flash-Lite la seguia una de cada dues vegades.
+        return `Fiabilitat de la temperatura: incerta (els models no hi coincideixen${margin}): les temperatures que vindran, digues-les en aproximat`;
+    }
+    return 'Fiabilitat de la temperatura: alta (els models hi coincideixen)';
+};
+
 /** Llindars del tallafocs: els mateixos que el prompt del worker. El detall del bàner "Motiu" els cita. */
 const FIREWALL_THRESHOLDS = {
     GUST_AMBER: 50, GUST_RED: 80,       // km/h, >=
@@ -546,7 +594,7 @@ interface WindowRow {
  * "acumulacions de 23 mil·límetres" quan en queien ~80, i amb pluja a partir de les 12:00 deia "intermitent"
  * sense cap hora. Els models petits no sumen ni troben màxims de manera fiable.
  */
-const buildWindowSummary = (rows: WindowRow[]): string => {
+const buildWindowSummary = (rows: WindowRow[], rainCertainty: RainCertainty | null, agreement: ShortRangeAgreement | null): string => {
     if (rows.length === 0) return '';
     const lines: string[] = [];
     const at = (i: number) => (i === 0 ? `${rows[i].hour}, ara` : rows[i].hour);
@@ -567,22 +615,35 @@ const buildWindowSummary = (rows: WindowRow[]): string => {
     }
 
     const wet = rows.map((r, i) => ({ i, v: r.precip })).filter(x => x.v >= RAIN_HOUR_MIN_MM);
+    const likeliest = rows.reduce((best, r, i) => (r.prob > rows[best].prob ? i : best), 0);
     if (wet.length === 0) {
-        lines.push(`Pluja: cap hora amb pluja apreciable (totes < ${RAIN_HOUR_MIN_MM}mm/h)`);
+        // Model principal sec però pluja possible: amb "cap hora amb pluja" sol, Flash-Lite deia "sense precipitacions"
+        // encara que la certesa fos POSSIBLE.
+        const despite = rainCertainty === null ? ''
+            : rows[likeliest].prob >= RAIN_MENTION_MIN_PROB ? `, però la probabilitat arriba al ${rows[likeliest].prob}% (${at(likeliest)})`
+                : ', però altres models en preveuen';
+        lines.push(`Pluja: cap hora amb pluja apreciable (totes < ${RAIN_HOUR_MIN_MM}mm/h)${despite}`);
     } else {
-        const total = round1(wet.reduce((s, x) => s + x.v, 0));
+        // Arrodonit i amb "uns": la IA copiava "un total de 4.8 mm" al text, una precisió que un sol model no té.
+        const totalMm = wet.reduce((s, x) => s + x.v, 0);
+        const total = totalMm < 1 ? "menys d'1mm" : `uns ${Math.round(totalMm)}mm`;
         const peak = wet.reduce((a, b) => (b.v > a.v ? b : a));
         const first = wet[0].i;
         const last = wet[wet.length - 1].i;
         const notes: string[] = [];
         if (wet.length < last - first + 1) notes.push('amb pauses');
-        if (last === rows.length - 1) notes.push('continua al final de la finestra');
+        // Sense el mot "finestra": la IA el copiava al text ("continua al final de la finestra").
+        if (last === rows.length - 1) notes.push(`encara plou a l'última hora prevista, ${rows[last].hour}`);
         // La intensitat (mm/h) va PRIMER i el total etiquetat com a acumulat: amb "26mm en total" davant, Gemini el comparava
         // amb el llindar RED de "> 20 mm/h" i escalava a RED una tempesta de només 8 mm/h.
-        lines.push(`Pluja: intensitat màxima ${round1(peak.v)}mm/h (${at(peak.i)}) | acumulat de totes les hores ${total}mm (no és una intensitat) | hores amb pluja: de ${at(first)} a ${at(last)}${notes.length ? ` (${notes.join('; ')})` : ''}`);
+        // "al text, només la paraula": sense això la IA hi copiava "2.4 mm/h" (la xifra és per als llindars de risc).
+        lines.push(`Pluja: intensitat màxima ${rainIntensityWord(peak.v)} (${round1(peak.v)}mm/h, ${at(peak.i)}; al text, només la paraula) | acumulat de totes les hores ${total} (no és una intensitat) | hores amb pluja: de ${at(first)} a ${at(last)}${notes.length ? ` (${notes.join('; ')})` : ''}`);
     }
 
-    lines.push(`Probabilitat màxima de pluja: ${Math.max(...rows.map(r => r.prob))}%`);
+    lines.push(`Probabilitat màxima de pluja: ${rows[likeliest].prob}%`);
+    lines.push(`Certesa de la pluja: ${rainCertainty ?? "CAP (no s'espera pluja)"}`);
+    const tempReliability = temperatureReliabilityLine(agreement);
+    if (tempReliability) lines.push(tempReliability);
     return lines.join('\n          ');
 };
 
@@ -607,7 +668,9 @@ export const getGeminiAnalysis = async (
     effectiveCode: number | null = null,
     aqiData: AiAirQualityInput | null = null,
     effectiveCloudCover: number | null = null,
-    lightning: LightningNearby | null = null
+    lightning: LightningNearby | null = null,
+    // Acord entre models de les pròximes 6 hores: la insígnia que es mostra al costat del text (shortRangeAgreementRules).
+    reliability: ShortRangeAgreement | null = null
 ): Promise<AICacheData | null> => {
     if (!GEMINI_PROXY_URL || GEMINI_PROXY_URL.includes("EL_TEU_SUBDOMINI")) {
         console.warn("⚠️ IA Desactivada: Manca configuració PROXY_URL"); 
@@ -699,19 +762,6 @@ export const getGeminiAnalysis = async (
         const currentDisplayApparent = currentDisplayApparentRaw !== null ? round1(currentDisplayApparentRaw) : null;
         const currentPrecipStr = typeof currentObj.precipitation === 'number' ? `${currentObj.precipitation}mm` : 'N/D';
 
-        // La resposta en cache s'ha d'haver generat per a la MATEIXA situació, no només per al mateix lloc: sense això, si
-        // a les 10:00 fa sol i a les 10:40 comença a ploure, dins l'hora de cache la IA seguia dient "cel serè" (i GREEN)
-        // mentre la capçalera ja mostrava pluja. Són els mateixos senyals que fan tornar a cridar el hook (useWeatherAI).
-        const situationKey = [
-            effectiveCode ?? currentWmoCode ?? 'x',
-            isMostlyCloudy(effectiveCode ?? currentWmoCode, effectiveCloudCover) ? 'mc' : 'c',
-            dustAdvisory.kind ?? 'n',
-            getAqiBandIndex(currentAqi, aqiScale),
-            lightningBand(lightning)
-        ].join('-');
-        const elevationKey = context.location.elevation.toString();
-        const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}_${situationKey}`, lat, lon, language);
-
         // [FIX PRECISIÓ] Finestra d'avaluació (properes ~6h) calculada ABANS de
         // consultar la cache, perquè el tallafocs determinista pugui revalidar-se
         // també en un cache hit (vegeu més avall) — abans només s'executava en
@@ -760,6 +810,37 @@ export const getGeminiAnalysis = async (
         };
 
         const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow();
+
+        // Certesa de la pluja de la finestra (vegeu resolveRainCertainty), amb les mateixes sèries que la taula.
+        const rainCertainty = (() => {
+            const precipArr = weatherData.hourly?.precipitation as (number | null)[] | undefined;
+            const probArr = weatherData.hourly?.precipitation_probability as (number | null)[] | undefined;
+            let maxProb = 0;
+            let modelRain = false;
+            for (let i = evalStartIndex; i < evalEndIndex; i++) {
+                const p = probArr?.[i];
+                if (typeof p === 'number' && p > maxProb) maxProb = p;
+                const mm = precipArr?.[i];
+                if (typeof mm === 'number' && mm >= RAIN_HOUR_MIN_MM) modelRain = true;
+            }
+            return resolveRainCertainty(maxProb, modelRain, reliability);
+        })();
+
+        // La resposta en cache s'ha d'haver generat per a la MATEIXA situació, no només per al mateix lloc: sense això, si
+        // a les 10:00 fa sol i a les 10:40 comença a ploure, dins l'hora de cache la IA seguia dient "cel serè" (i GREEN)
+        // mentre la capçalera ja mostrava pluja. Són els mateixos senyals que fan tornar a cridar el hook (useWeatherAI),
+        // més la certesa de la pluja: el text no pot seguir dient "plourà" si la insígnia del costat ja diu "Pluja incerta".
+        const situationKey = [
+            effectiveCode ?? currentWmoCode ?? 'x',
+            isMostlyCloudy(effectiveCode ?? currentWmoCode, effectiveCloudCover) ? 'mc' : 'c',
+            dustAdvisory.kind ?? 'n',
+            getAqiBandIndex(currentAqi, aqiScale),
+            reliability ? `${reliability.level}:${reliability.cause ?? '-'}:${reliability.tempMarginC ?? '-'}` : 'none',
+            rainCertainty ?? 'cap',
+            lightningBand(lightning)
+        ].join('-');
+        const elevationKey = context.location.elevation.toString();
+        const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}_${situationKey}`, lat, lon, language);
 
         try {
             const cachedData = await cacheService.get<AICacheData>(cacheKey, AI_CACHE_TTL);
@@ -880,7 +961,7 @@ export const getGeminiAnalysis = async (
                 });
             }
             finestraPrevista = tableRows.join('\n');
-            windowSummary = buildWindowSummary(windowRows);
+            windowSummary = buildWindowSummary(windowRows, rainCertainty, reliability);
         }
 
         // Prompt descarregat d'instruccions: Només telemetria en brut per al Worker
@@ -894,7 +975,7 @@ export const getGeminiAnalysis = async (
           Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}${lightningLine}
           MODEL EN ÚS: ${modelInfo.name}
 ${windowSummary ? `
-          RESUM CALCULAT DE LA FINESTRA (xifres exactes: usa-les tal qual, no sumis ni recalculis):
+          RESUM CALCULAT DE LES PROPERES HORES (xifres ja calculades: no les sumis ni les recalculis):
           ${windowSummary}
 ` : ''}
           MATRIU D'EVOLUCIÓ PREVISTA (6 HORES):
