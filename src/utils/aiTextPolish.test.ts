@@ -23,6 +23,15 @@ describe('polishAiText — errors mecànics del català de la IA', () => {
         expect(ca(ok)).toBe(ok);
     });
 
+    // Gemini, 03-11-2026: "Ara mateix tenim el cel cobert amb plugim feble i fa d'11 °C."
+    it('"fer" no porta "de" davant de la temperatura', () => {
+        expect(ca("el cel cobert amb plugim feble i fa d'11 °C.")).toBe('el cel cobert amb plugim feble i fa 11 °C.');
+        expect(ca('Fa de 5 °C i demà farà de -1 °C.')).toBe('Fa 5 °C i demà farà -1 °C.');
+        // "una temperatura de 5 °C", "fa un dia de 20 °C" i "fa de mal dir" no es toquen.
+        const ok = 'Fa una temperatura de 5 °C, fa un dia de 20 °C i fa de mal dir.';
+        expect(ca(ok)).toBe(ok);
+    });
+
     it("posa l'article davant de l'hora, i la una és singular", () => {
         expect(ca('El cel està completament tapat amb 11 °C a 17:00.')).toBe("El cel està completament tapat amb 11 °C a les 17:00.");
         expect(ca('Plourà de 09:00 fins a 14:00 amb intensitat feble.')).toBe('Plourà de les 09:00 fins a les 14:00 amb intensitat feble.');
