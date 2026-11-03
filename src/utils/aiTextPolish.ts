@@ -20,6 +20,9 @@ const CATALAN_RULES: ReadonlyArray<readonly [RegExp, Replacement]> = [
     [new RegExp(`${NOT_LETTER_BEFORE}([Ll])es (0?1:\\d{2})(?!\\d)`, 'gu'), (_, l: string, h: string) => `${l}a ${h}`],
     // S'apostrofa davant d'1 i d'11 ("u", "onze"): "de 11 °C" -> "d'11 °C". Les hores ja duen article (regles d'abans).
     [new RegExp(`${NOT_LETTER_BEFORE}([Dd])e (1|11)(?![\\d:])`, 'gu'), "$1'$2"],
+    // ...i només davant d'aquests: amb la regla de llengua del prompt ("d'11 °C"), Gemini va passar a escriure "d'5 °C",
+    // "d'19 °C" i "d'13 °C" (03-11-2026). "d'1", "d'11" i "d'1,5" queden igual; "d'110" o "d'-1" tornen a "de".
+    [new RegExp(`${NOT_LETTER_BEFORE}([Dd])'(?!(?:1|11)(?![\\d]))(?=-?\\d)`, 'gu'), '$1e '],
     // L'adjectiu no fa d'adverbi: "plourà moderada" -> "plourà de manera moderada" ("plou fort" sí que és correcte).
     [new RegExp(`${NOT_LETTER_BEFORE}([Pp]lourà|[Pp]loure|[Pp]lou|plovent|plogui|[Nn]evarà|[Nn]evar|[Nn]eva|nevant|nevi) (feble|moderada|forta|intensa|torrencial)${NOT_LETTER_AFTER}`, 'gu'), '$1 de manera $2'],
     [new RegExp(`${NOT_LETTER_BEFORE}amb (feble|moderada|forta) intensitat${NOT_LETTER_AFTER}`, 'gu'), 'amb intensitat $1'],

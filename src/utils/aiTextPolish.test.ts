@@ -14,6 +14,15 @@ describe('polishAiText — errors mecànics del català de la IA', () => {
         expect(ca('una temperatura de 8 °C, de 12 °C, de -1 °C, de 110 mm i de 19 km/h')).toBe('una temperatura de 8 °C, de 12 °C, de -1 °C, de 110 mm i de 19 km/h');
     });
 
+    // Gemini amb la regla de llengua del prompt (03-11-2026): "d'5 °C", "d'19 °C", "d'13 °C".
+    it("desfà l'apostrofació davant de qualsevol altre nombre", () => {
+        expect(ca("baixarà fins a uns 5 °C, amb una mínima d'5 °C i una màxima d'19 °C")).toBe('baixarà fins a uns 5 °C, amb una mínima de 5 °C i una màxima de 19 °C');
+        expect(ca("D'13 °C a 10 °C, d'110 mm i d'-1 °C")).toBe('De 13 °C a 10 °C, de 110 mm i de -1 °C');
+        // Les bones es queden.
+        const ok = "una temperatura d'11 °C, d'1 °C i d'1,5 mm, i l'estat d'alerta";
+        expect(ca(ok)).toBe(ok);
+    });
+
     it("posa l'article davant de l'hora, i la una és singular", () => {
         expect(ca('El cel està completament tapat amb 11 °C a 17:00.')).toBe("El cel està completament tapat amb 11 °C a les 17:00.");
         expect(ca('Plourà de 09:00 fins a 14:00 amb intensitat feble.')).toBe('Plourà de les 09:00 fins a les 14:00 amb intensitat feble.');
