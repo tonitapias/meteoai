@@ -3,13 +3,14 @@ import { ExtendedWeatherData, StrictCurrentWeather, type ShortRangeAgreement } f
 import { prepareContextForAI } from '../utils/aiContext';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, getHourlyDisplayTemp, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
-import { isSleetCode } from '../utils/rules/winterRules';
+import { isSleetCode, isSnowCode } from '../utils/rules/winterRules';
 import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules';
 import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeMonthFromIso } from '../utils/weatherMath';
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService';
 import { compassPhraseCa, lightningBand, lightningMinutesAgo, LIGHTNING_NEAR_KM, type LightningNearby } from './lightningService';
+import { polishAiText } from '../utils/aiTextPolish';
 import { 
     GEMINI_PROXY_URL, 
     AI_CACHE_TTL 
@@ -586,6 +587,8 @@ interface WindowRow {
     gust: number | null;
     precip: number;
     prob: number;
+    /** Què cau, segons el codi de cel de l'hora (el de les icones). */
+    kind: 'pluja' | 'neu' | 'aiguaneu';
 }
 
 /**
@@ -638,6 +641,13 @@ const buildWindowSummary = (rows: WindowRow[], rainCertainty: RainCertainty | nu
         // amb el llindar RED de "> 20 mm/h" i escalava a RED una tempesta de només 8 mm/h.
         // "al text, només la paraula": sense això la IA hi copiava "2.4 mm/h" (la xifra és per als llindars de risc).
         lines.push(`Pluja: intensitat màxima ${rainIntensityWord(peak.v)} (${round1(peak.v)}mm/h, ${at(peak.i)}; al text, només la paraula) | acumulat de totes les hores ${total} (no és una intensitat) | hores amb pluja: de ${at(first)} a ${at(last)}${notes.length ? ` (${notes.join('; ')})` : ''}`);
+        // Amb la línia "Pluja" i el cel dient "Nevada", Groq escrivia "Plourà de 09:00 fins a 14:00" en plena nevada.
+        const kinds = new Set(wet.map(x => rows[x.i].kind));
+        if (kinds.has('neu') || kinds.has('aiguaneu')) {
+            const kind = kinds.size > 1 ? `barrejada (${[...kinds].join(', ')})`
+                : kinds.has('neu') ? 'NEU (digues "nevarà" o "nevada", mai "plourà")' : 'AIGUANEU (pluja i neu barrejades)';
+            lines.push(`Tipus de precipitació: ${kind}`);
+        }
     }
 
     lines.push(`Probabilitat màxima de pluja: ${rows[likeliest].prob}%`);
@@ -957,7 +967,8 @@ export const getGeminiAnalysis = async (
                     temp: tempNum,
                     gust: typeof gustsHour === 'number' ? gustsHour : null,
                     precip: precipStr,
-                    prob: probStr
+                    prob: probStr,
+                    kind: wmoHour !== null && isSnowCode(wmoHour) ? 'neu' : wmoHour !== null && isSleetCode(wmoHour) ? 'aiguaneu' : 'pluja'
                 });
             }
             finestraPrevista = tableRows.join('\n');
@@ -1059,7 +1070,7 @@ ${windowSummary ? `
                         .map(item => {
                             const rawCat = String(item.category ?? 'SKY').toUpperCase() as TacticalTipCategory;
                             const safeCat: TacticalTipCategory = validCategories.includes(rawCat) ? rawCat : 'SKY';
-                            const safeText = typeof item.text === 'string' ? item.text.trim() : '';
+                            const safeText = typeof item.text === 'string' ? polishAiText(item.text.trim(), language) : '';
                             return { category: safeCat, text: safeText };
                         })
                         .filter(tip => tip.text.length > 0)
@@ -1069,7 +1080,8 @@ ${windowSummary ? `
                         risk_level: finalRiskLevel,
                         hazard_type: finalHazardType,
                         tactical_reasoning: typeof parsed.tactical_reasoning === 'string' ? parsed.tactical_reasoning : undefined,
-                        text: parsed.text.trim(),
+                        // Errors mecànics de llengua ("de 11 °C", "a 17:00", "plourà moderada"): vegeu aiTextPolish.ts.
+                        text: polishAiText(parsed.text.trim(), language),
                         tips: safeTips,
                         engine: (engineUsed === 'gemini' || engineUsed === 'groq' || engineUsed === 'emergency')
                             ? engineUsed

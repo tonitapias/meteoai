@@ -457,8 +457,42 @@ describe('getGeminiAnalysis — certesa i fiabilitat al resum', () => {
         expect(await summaryWith(weather(), { level: 'low', cause: 'both', tempMarginC: 5 })).toContain('marge ±5°C');
     });
 
+    // Groq, 03-11-2026: "El cel està cobert de neu i la temperatura és -1°C. Plourà de 09:00 fins a 14:00..."
+    it('si el que cau és neu, el resum ho diu perquè no escrigui "plourà"', async () => {
+        const weather = calm({ date: '2027-01-15', temp: -2, wind: 10, day: 1 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.weather_code = Array.from({ length: 8 }, () => 73);
+        h.precipitation = Array.from({ length: 8 }, () => 1.2);
+        h.freezing_level_height = Array.from({ length: 8 }, () => 0);
+        const s = await summaryWith(weather, null);
+        expect(s).toContain('Tipus de precipitació: NEU (digues "nevarà" o "nevada", mai "plourà")');
+        // Pluja de debò: cap línia de tipus.
+        expect(await summaryWith(eveningRain(), null)).not.toContain('Tipus de precipitació');
+    });
+
     it('sense acord calculat (no hi ha prou models) no hi ha línia de fiabilitat: no se n\'inventa cap', async () => {
         expect(await summaryWith(calm({ date: '2026-09-15', temp: 20, day: 1 }), null)).not.toContain('Fiabilitat');
+    });
+});
+
+describe('getGeminiAnalysis — llengua del text', () => {
+    beforeEach(() => { vi.restoreAllMocks(); });
+
+    const answer = async (lang: string, text: string, tips: string[]) => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ engine: 'groq', candidates: [{ content: { parts: [{ text: JSON.stringify({ risk_level: 'AMBER', hazard_type: 'HEAT', text, tips: tips.map(t => ({ category: 'THERMAL', text: t })) }) }] } }] }) }));
+        return getGeminiAnalysis(calm({ date: '2026-09-15', temp: 17, day: 1 }), lang, 0);
+    };
+
+    // Frases reals de Groq (03-11-2026).
+    it('en català, el text i els consells surten amb els errors mecànics corregits', async () => {
+        const r = await answer('ca', 'El cel està cobert i la temperatura és de 11 °C. A partir de les 20:00 pot ploure moderada fins a 22:00.', ['Calor alta: no surtis a 17:00']);
+        expect(r?.text).toBe("El cel està cobert i la temperatura és d'11 °C. A partir de les 20:00 pot ploure de manera moderada fins a les 22:00.");
+        expect(r?.tips[0].text).toBe('Calor alta: no surtis a les 17:00');
+    });
+
+    it('en els altres idiomes el text arriba tal qual', async () => {
+        const r = await answer('es', 'El cielo está cubierto y la temperatura es de 11 °C a 17:00.', []);
+        expect(r?.text).toBe('El cielo está cubierto y la temperatura es de 11 °C a 17:00.');
     });
 });
 

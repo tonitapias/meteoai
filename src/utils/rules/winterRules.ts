@@ -23,6 +23,9 @@ export const isFreezingPrecipCode = (code: number): boolean =>
 /** Aiguaneu: pluja i neu barrejades (68 feble, 69 moderat o fort). WMO 4677; Open-Meteo no el publica, el deriva l'app. */
 export const isSleetCode = (code: number): boolean => code === 68 || code === 69;
 
+/** Neu: nevada (71-75), neu granulada (77) i ruixats de neu (85-86). */
+export const isSnowCode = (code: number): boolean => (code >= 71 && code <= 77) || code === 85 || code === 86;
+
 /** Determina si la pluja s'ha de convertir en neu (o aiguaneu) per temperatura */
 export const determineSnowCode = (
     code: number,
@@ -59,7 +62,7 @@ export const determineSnowCode = (
         return 71;
     }
     
-    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code;
+    if (isSnowCode(code)) return code;
     
     return code;
 };
