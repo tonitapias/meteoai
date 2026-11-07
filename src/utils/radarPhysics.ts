@@ -295,9 +295,17 @@ export const getBlackMarbleUrl = (): string => {
   return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default//GoogleMapsCompatible_Level8/{z}/{y}/{x}.png';
 };
 
+// Focs actius VIIRS 375 m de NOAA-20 i NOAA-21 (dia i nit). Suomi NPP, el que
+// hi havia abans, va deixar de publicar-ne el 2026-11-02: per a dates
+// posteriors GIBS respon amb un error XML en lloc de la imatge.
+export const NASA_FIRES_LAYERS = [
+  'VIIRS_NOAA20_Thermal_Anomalies_375m_All',
+  'VIIRS_NOAA21_Thermal_Anomalies_375m_All',
+] as const;
+
 export const getNasaFiresWmsUrl = (): string => {
   const dateStr = getNasaFiresDate();
-  return `https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&LAYERS=VIIRS_SNPP_Thermal_Anomalies_375m_Day,VIIRS_SNPP_Thermal_Anomalies_375m_Night&VERSION=1.1.1&FORMAT=image/png&TRANSPARENT=true&WIDTH=512&HEIGHT=512&TIME=${dateStr}&SRS=EPSG:3857&BBOX={bbox-epsg-3857}`;
+  return `https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&LAYERS=${NASA_FIRES_LAYERS.join(',')}&VERSION=1.1.1&FORMAT=image/png&TRANSPARENT=true&WIDTH=512&HEIGHT=512&TIME=${dateStr}&SRS=EPSG:3857&BBOX={bbox-epsg-3857}`;
 };
 
 export const getRadOpacityExp = (baseOp: number): Expression => {

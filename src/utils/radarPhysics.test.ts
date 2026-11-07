@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema } from './radarPhysics';
+import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl } from './radarPhysics';
 
 // Franges de la capa HD: Meteosat amb hores pròpies (MTG cada 10 min, MSG de
 // reserva cada 15) i GOES/Himawari amb les franges de GIBS (cada 10 min).
@@ -136,5 +136,15 @@ describe('LightningLatestSchema', () => {
     expect(LightningLatestSchema.safeParse({ latest: T, cadence: 300, source: 'caps' }).success).toBe(true);
     expect(LightningLatestSchema.safeParse(null).success).toBe(true);
     expect(LightningLatestSchema.safeParse({ layer: 'mtg' }).success).toBe(false);
+  });
+});
+
+describe('getNasaFiresWmsUrl', () => {
+  it('demana els focs de NOAA-20 i NOAA-21 (Suomi NPP no en publica des del 2026-11-02) del dia anterior', () => {
+    const url = new URL(getNasaFiresWmsUrl().replace('{bbox-epsg-3857}', '0,0,1,1'));
+    expect(url.searchParams.get('LAYERS')).toBe('VIIRS_NOAA20_Thermal_Anomalies_375m_All,VIIRS_NOAA21_Thermal_Anomalies_375m_All');
+    expect(url.href).not.toContain('SNPP');
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    expect(url.searchParams.get('TIME')).toBe(yesterday);
   });
 });
