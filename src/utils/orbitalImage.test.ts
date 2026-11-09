@@ -58,6 +58,9 @@ describe('Finestra que es demana a GIBS', () => {
 
     it('el Meteosat, el disc just al quadre i a l\'hora de les capacitats', () => {
         const url = meteosatImageUrl(Date.UTC(2026, 9, 31, 0, 0));
+        // Adreça pròpia de la capa: la general /geoserver/wms tardava 13-16 s (2026-11-09).
+        expect(url.startsWith('https://view.eumetsat.int/geoserver/mtg_fd/rgb_geocolour/ows?')).toBe(true);
+        expect(url).toContain('&layers=rgb_geocolour&');
         expect(url).toContain('crs=AUTO:42003,9001,0,0&bbox=-6378137,-6378137,6378137,6378137');
         expect(url).toContain('time=2026-10-31T00:00:00.000Z');
     });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { eumetsatGetMap } from '../utils/eumetsatWms';
 
 // Test de contracte de la capa "Meteosat HD (Europa)" del radar. El worker
 // meteo-sat-proxy serveix tessel·les transparents sense cap error visible
@@ -101,7 +102,7 @@ describe('EUMETSAT Meteosat (msg_fes:ir108) Contract Check', () => {
         const { defaultTime } = timeDimension(layerBlock(await getCapabilities(), MSG_LAYER) ?? '');
         expect(defaultTime).not.toBeNull();
 
-        const url = `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${MSG_LAYER}&styles=&crs=EPSG:3857&bbox=${tileBbox(TILE)}&width=512&height=512&format=image/vnd.jpeg-png&transparent=true&time=${defaultTime}`;
+        const url = `${eumetsatGetMap(MSG_LAYER)}&styles=&crs=EPSG:3857&bbox=${tileBbox(TILE)}&width=512&height=512&format=image/vnd.jpeg-png&transparent=true&time=${defaultTime}`;
         const response = await fetch(url);
         expect(response.ok, `GetMap anònim de ${MSG_LAYER} ha fallat amb status: ${response.status} (si és 401/403, EUMETSAT torna a exigir el token)`).toBe(true);
 
@@ -141,7 +142,7 @@ function getMtgCapabilities(): Promise<string> {
 }
 
 const mtgGetMap = (time: string, tile: typeof TILE, format: string) =>
-    `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${MTG_LAYER}&styles=&crs=EPSG:3857&bbox=${tileBbox(tile)}&width=512&height=512&format=${format}&transparent=true&time=${time}`;
+    `${eumetsatGetMap(MTG_LAYER)}&styles=&crs=EPSG:3857&bbox=${tileBbox(tile)}&width=512&height=512&format=${format}&transparent=true&time=${time}`;
 
 // Bloc tRNS d'un PNG (alfa de cada entrada de la paleta) amb algun 0.
 function hasTransparentPaletteEntry(png: Uint8Array): boolean {
@@ -243,7 +244,7 @@ const LIGHTNING_LAYER = 'mtg_fd:li_afa';
 const GEOCOLOUR_LAYER = 'mtg_fd:rgb_geocolour';
 const capsOf = (layer: string) => `https://view.eumetsat.int/geoserver/${layer.replace(':', '/')}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
 const getMapOf = (layer: string, time: string, tile: typeof TILE, format: string) =>
-    `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${layer}&styles=&crs=EPSG:3857&bbox=${tileBbox(tile)}&width=512&height=512&format=${format}&transparent=true&time=${time}`;
+    `${eumetsatGetMap(layer)}&styles=&crs=EPSG:3857&bbox=${tileBbox(tile)}&width=512&height=512&format=${format}&transparent=true&time=${time}`;
 // El fallback del worker (PNG transparent d'1x1).
 const FALLBACK_BYTES = 68;
 

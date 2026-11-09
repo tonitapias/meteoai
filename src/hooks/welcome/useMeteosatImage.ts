@@ -3,6 +3,7 @@
 // (GeoColour d'EUMETSAT: color real de dia i infraroig de nit). EUMETSAT la serveix ja projectada com la veu el
 // satèl·lit (ortogràfica centrada a 0°, 0°), anònima i amb CORS, en un JPEG de ~70 KB.
 import { useEffect, useState } from 'react';
+import { eumetsatGetMap } from '../../utils/eumetsatWms';
 import { fetchWithTimeout } from '../../utils/networkUtils';
 import { latestImageTime } from '../../utils/welcome/skyElevator';
 
@@ -17,7 +18,7 @@ export const DISC_FILL = EARTH_RADIUS / HALF_EXTENT;
 const CAPS_TIMEOUT_MS = 8000;
 
 const imageUrl = (time: number | null) =>
-  `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${LAYER}&styles=`
+  `${eumetsatGetMap(LAYER)}&styles=`
   + `&crs=AUTO:42003,9001,0,0&bbox=-${HALF_EXTENT},-${HALF_EXTENT},${HALF_EXTENT},${HALF_EXTENT}`
   + `&width=${IMAGE_PX}&height=${IMAGE_PX}&format=image/jpeg${time === null ? '' : `&time=${new Date(time).toISOString()}`}`;
 

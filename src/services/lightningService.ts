@@ -9,6 +9,7 @@
 // Mesurat 2026-10-19: franja nova cada 5 min, publicada ~12 min després de
 // l'etiqueta (que marca l'inici dels 5 min); WMS anònim amb CORS obert.
 // `image/png8` d'un quadre de 100 × 100 px pesa ~0,4–2 KB.
+import { eumetsatGetMap } from '../utils/eumetsatWms';
 import { fetchWithTimeout } from '../utils/networkUtils';
 import { LIGHTNING_BOUNDS, LIGHTNING_STEP_SEC, LightningLatestSchema, SAT_PROXY_HOST } from '../utils/radarPhysics';
 
@@ -171,7 +172,7 @@ async function decodeImage(blob: Blob): Promise<{ data: Uint8ClampedArray; width
  * timeout, o una altra ServiceException de GeoServer, com les transitòries "Unable to obtain connection").
  */
 async function analyseSlot(lat: number, lon: number, slot: number): Promise<SlotAnalysis | null | undefined> {
-    const url = `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=mtg_fd:li_afa&styles=&crs=EPSG:3857&bbox=${sampleBbox(lat, lon)}&width=${SAMPLE_PX}&height=${SAMPLE_PX}&format=image/png8&transparent=true&time=${toIso(slot)}`;
+    const url = `${eumetsatGetMap('mtg_fd:li_afa')}&styles=&crs=EPSG:3857&bbox=${sampleBbox(lat, lon)}&width=${SAMPLE_PX}&height=${SAMPLE_PX}&format=image/png8&transparent=true&time=${toIso(slot)}`;
     try {
         const response = await fetchWithTimeout(url, SLOT_TIMEOUT_MS);
         if (!response.ok) return undefined;

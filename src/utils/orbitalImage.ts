@@ -7,6 +7,7 @@
 // - GOES-19 i Himawari-9: NASA GIBS, la mateixa font que la capa HD del radar (dades obertes de la NASA, amb CORS,
 //   sense clau). GIBS només les dona en latitud i longitud: es demana la finestra que veu el satèl·lit i aquí es
 //   reprojecta al disc. GOES en GeoColor (si en falta, infraroig); Himawari, en infraroig, com a la capa HD.
+import { eumetsatGetMap } from './eumetsatWms';
 import type { OrbitEye } from './orbitalView';
 
 // --- Meteosat (EUMETSAT) --------------------------------------------------------------------------------
@@ -20,7 +21,7 @@ export const DISC_PX = 720;
 
 /** La imatge del Meteosat amb el disc tocant les vores (quadre de ±1 radi terrestre). */
 export const meteosatImageUrl = (timeMs: number | null): string =>
-  `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${METEOSAT_LAYER}&styles=`
+  `${eumetsatGetMap(METEOSAT_LAYER)}&styles=`
   + `&crs=AUTO:42003,9001,0,0&bbox=-${EARTH_RADIUS_M},-${EARTH_RADIUS_M},${EARTH_RADIUS_M},${EARTH_RADIUS_M}`
   + `&width=${DISC_PX}&height=${DISC_PX}&format=image/jpeg${timeMs === null ? '' : `&time=${new Date(timeMs).toISOString()}`}`;
 

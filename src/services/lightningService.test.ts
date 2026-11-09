@@ -156,6 +156,8 @@ describe('getLightningNearby', () => {
         expect(wms[0]).toContain('time=2026-10-19T22:05:00Z');
         expect(wms[5]).toContain('time=2026-10-19T21:40:00Z');
         expect(wms[0]).toContain('width=100&height=100&format=image/png8');
+        // Adreça pròpia de la capa: la general /geoserver/wms tardava 13-16 s (2026-11-09).
+        expect(wms.every((u) => u.startsWith('https://view.eumetsat.int/geoserver/mtg_fd/li_afa/ows?') && u.includes('&layers=li_afa&'))).toBe(true);
 
         // El tauler i la IA demanen el mateix lloc: no es torna a consultar.
         await getLightningNearby(41.4, 2.17);
