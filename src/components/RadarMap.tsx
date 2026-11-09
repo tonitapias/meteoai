@@ -27,7 +27,7 @@ import { useAstroEngine } from '../hooks/radar/useAstroEngine';
 import { useCameraFlight } from '../hooks/radar/useCameraFlight';
 import { useRadarAnimation } from '../hooks/radar/useRadarAnimation';
 import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
-import { useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
+import { useAmericasLightningTimeline, useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -151,6 +151,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   const { timelineRef: himawariTimelineRef, version: himawariTimelineVersion } = useGibsTimeline('himawari', overlays.hdHimawari);
   const gibsTimelineRefs = useMemo(() => ({ goes: goesTimelineRef, himawari: himawariTimelineRef }), [goesTimelineRef, himawariTimelineRef]);
   const { timelineRef: lightningTimelineRef, version: lightningTimelineVersion } = useLightningTimeline(overlays.lightning);
+  const { timelineRef: americasLightningTimelineRef, version: americasLightningTimelineVersion } = useAmericasLightningTimeline(overlays.lightning);
 
   const {
     isPlaying, pausePlayback, framesCount, currentFrameTimestamp,
@@ -167,7 +168,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     styleReadyRef,
     hdTimelineRef,
     gibsTimelineRefs,
-    lightningTimelineRef
+    lightningTimelineRef,
+    americasLightningTimelineRef
   });
 
   useCameraFlight({
@@ -212,10 +214,10 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     if (hdTimelineVersion + goesTimelineVersion + himawariTimelineVersion > 0) refreshHdTimeline();
   }, [hdTimelineVersion, goesTimelineVersion, himawariTimelineVersion, refreshHdTimeline]);
 
-  // 2c. Franges de llamps noves (/lightning/latest).
+  // 2c. Franges de llamps noves (/lightning/latest i /lightning/americas/latest).
   useEffect(() => {
-    if (lightningTimelineVersion > 0) refreshLightningTimeline();
-  }, [lightningTimelineVersion, refreshLightningTimeline]);
+    if (lightningTimelineVersion + americasLightningTimelineVersion > 0) refreshLightningTimeline();
+  }, [lightningTimelineVersion, americasLightningTimelineVersion, refreshLightningTimeline]);
 
   // 3. Gestió del Cicle de Vida Play/Pause vinculat a `isActive`
   useEffect(() => {
@@ -269,31 +271,42 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               {EUMETSAT_ATTRIBUTION}
             </a>
             {/* GOES i Himawari HD: imatges de NASA GIBS a partir de dades de
-                NOAA (GOES, amb el GeoColor de CIRA) i de JMA (Himawari). */}
+                NOAA (GOES) i de JMA (Himawari); el GeoColor de GOES (algorisme
+                de CIRA), sobretot de NOAA/NESDIS. */}
             <a
               href="https://nasa-gibs.github.io/gibs-api-docs/"
               target="_blank"
               rel="noopener noreferrer"
               className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
-              NASA GIBS · GOES (NOAA/CIRA) · Himawari (JMA)
+              NASA GIBS · NOAA/NESDIS · GOES (CIRA) · Himawari (JMA)
+            </a>
+            {/* Llamps d'Amèrica: densitat de NOAA nowCOAST (xarxes NLDN i GLD360). */}
+            <a
+              href="https://nowcoast.noaa.gov/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+            >
+              NOAA nowCOAST · NLDN/GLD360
             </a>
           </>
         )}
-        {/* Llegenda dels llamps: l'escala d'EUMETSAT (llamps per píxel en 5
-            min, logarítmica d'1 a 20 o més) amb els colors recolorats de la
-            capa (LIGHTNING_PAINT a useRadarAnimation). */}
+        {/* Llegenda dels llamps: de pocs a molts, amb els colors recolorats de
+            la capa (LIGHTNING_PAINT i AMERICAS_LIGHTNING_PAINT a
+            useRadarAnimation). Sense xifres: MTG compta llamps per píxel en
+            5 min (d'1 a 20 o més) i nowCOAST, la densitat en 15 min. */}
         {overlays.lightning && (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-300">
             <Zap className="w-2.5 h-2.5 text-amber-300 shrink-0" aria-hidden="true" />
-            <span>{t('lightningLegend', 'Llamps / 5 min')}</span>
-            <span>1</span>
+            <span>{t('lightningLegend', 'Llamps')}</span>
+            <span>{t('lightningLegendFew', 'pocs')}</span>
             <span
               className="w-14 h-1.5 rounded-full"
               style={{ background: 'linear-gradient(90deg, rgba(255,235,90,0.45), rgba(255,200,60,0.7), rgba(253,120,40,0.95) 53%, rgb(140,0,38))' }}
               aria-hidden="true"
             />
-            <span>20+</span>
+            <span>{t('lightningLegendMany', 'molts')}</span>
           </div>
         )}
         <button

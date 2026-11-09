@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl } from './radarPhysics';
+import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl } from './radarPhysics';
 
 // Franges de la capa HD: Meteosat amb hores pròpies (MTG cada 10 min, MSG de
 // reserva cada 15) i GOES/Himawari amb les franges de GIBS (cada 10 min).
@@ -68,6 +68,29 @@ describe('computeLightningSlots', () => {
     expect(computeLightningSlots(T, null, 0)).toEqual([]);
     const now = T + 30 * 60 + 2 * 60;
     expect(computeLightningSlots(T + 600, undefined, now)).toEqual([T]);
+  });
+});
+
+describe('computeAmericasLightningSlots', () => {
+  // nowCOAST: finestres de 15 min etiquetades amb el final.
+  const latest = { latest: T, cadence: 900, source: 'caps' as const };
+
+  it('la finestra que conté el fotograma, (F − 15 min, F]: amb fotogrames de 10 min, cada una surt un o dos cops', () => {
+    expect(computeAmericasLightningSlots(T - 3600, latest, 0)).toEqual([T - 3600]); // alineat: la que hi acaba
+    expect(computeAmericasLightningSlots(T - 3000, latest, 0)).toEqual([T - 2700]);
+    expect(computeAmericasLightningSlots(T - 2400, latest, 0)).toEqual([T - 1800]);
+    expect(computeAmericasLightningSlots(T - 1800, latest, 0)).toEqual([T - 1800]);
+  });
+
+  it('mai més nova que l\'última publicada', () => {
+    expect(computeAmericasLightningSlots(T + 600, latest, 0)).toEqual([T]);
+    expect(computeAmericasLightningSlots(T + 3600, latest, 0)).toEqual([T]);
+  });
+
+  it('null (nowCOAST aturat): cap finestra; sense /latest: hora calculada (ara − 30 min)', () => {
+    expect(computeAmericasLightningSlots(T, null, 0)).toEqual([]);
+    expect(computeAmericasLightningSlots(T + 1800, undefined, T + 1800 + 30 * 60 + 60)).toEqual([T + 1800]);
+    expect(computeAmericasLightningSlots(T + 3600, undefined, T + 1800 + 30 * 60 + 60)).toEqual([T + 1800]);
   });
 });
 

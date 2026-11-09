@@ -108,6 +108,11 @@ let libreWxr: typeof LIBREWXR;
 // fotograma 9 (els dos més nous comparteixen aquesta).
 const LIGHTNING_LATEST = T0 + 9 * 600 + 300;
 let lightningLatest: unknown;
+// /lightning/americas/latest (nowCOAST, finestres de 15 min etiquetades amb el
+// final): per defecte la que acaba al fotograma 8 (T0 + 300 és múltiple de 900).
+const AMERICAS_LATEST = T0 + 8 * 600;
+let americasLatest: unknown;
+const isMtgLightning = (id: string) => !id.startsWith('ltg-layer-am-');
 // /hd/goes/latest i /hd/himawari/latest: franges de GIBS cada 10 min amb un
 // forat (com els que té GIBS), l'IR fins 2 fotogrames abans del més nou i
 // GeoColor fins a 4 (Himawari, sense color). 'fail' = error de xarxa.
@@ -147,6 +152,7 @@ beforeEach(() => {
   (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps = [];
   hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' };
   lightningLatest = { latest: LIGHTNING_LATEST, cadence: 300, source: 'caps' };
+  americasLatest = { latest: AMERICAS_LATEST, cadence: 900, source: 'caps' };
   gibsLatest = {
     ir: { latest: GIBS_IR_LATEST, cadence: 600, source: 'caps', slots: gibsSlots(GIBS_IR_LATEST) },
     colour: { latest: GIBS_COLOUR_LATEST, cadence: 600, source: 'caps', slots: gibsSlots(GIBS_COLOUR_LATEST) },
@@ -168,6 +174,9 @@ beforeEach(() => {
     }
     if (u.includes('/lightning/latest')) {
       return new Response(JSON.stringify(await lightningLatest), { status: 200 });
+    }
+    if (u.includes('/lightning/americas/latest')) {
+      return new Response(JSON.stringify(await americasLatest), { status: 200 });
     }
     return new Response(JSON.stringify(u.includes('librewxr') ? libreWxr : RAINVIEWER), { status: 200 });
   }));
@@ -441,7 +450,7 @@ describe('RadarMap', () => {
 
   it('llamps: les dues franges de 5 min de cada fotograma, entre el radar i les etiquetes', async () => {
     const map = await mountRadar();
-    const ltg = () => visibleTargets(map, 'ltg-layer-', 0.5);
+    const ltg = () => visibleTargets(map, 'ltg-layer-', 0.5).filter(isMtgLightning);
 
     // Fotograma actual (el més nou): les seves dues franges passen de l'última
     // publicada, així que en queda una sola.
@@ -470,31 +479,73 @@ describe('RadarMap', () => {
       if (frame > LIGHTNING_LATEST) continue;
       expect(shown).toBe(`ltg-layer-${frame - 300}+ltg-layer-${frame}`);
     }
-    // Precàrrega acotada: el fotograma actual i els 2 següents × 2 franges.
-    expect(ids(map, 'ltg-layer-').length).toBeLessThanOrEqual(6);
+    // Precàrrega acotada: el fotograma actual i els 2 següents × (2 franges de MTG + 1 d'Amèrica).
+    expect(ids(map, 'ltg-layer-').length).toBeLessThanOrEqual(9);
+    expect(map.errors).toEqual([]);
+  }, 30000);
+
+  it('llamps d\'Amèrica: la finestra de 15 min que conté cada fotograma, amb la seva ruta, zona i paleta', async () => {
+    const map = await mountRadar();
+    const am = () => visibleTargets(map, 'ltg-layer-am-', 0.5);
+
+    // Fotograma actual (el més nou): passa de la finestra més nova publicada.
+    expect(am()).toEqual([`ltg-layer-am-${AMERICAS_LATEST}`]);
+    expect(map.sources.get(`ltg-src-am-${AMERICAS_LATEST}`)).toMatchObject({
+      tiles: [`https://sat.meteotoniai.com/lightning/americas/v1/${AMERICAS_LATEST}/{z}/{x}/{y}.png`],
+      bounds: [-180, -25, -60, 75],
+      maxzoom: 7
+    });
+    const paint = layer(map, `ltg-layer-am-${AMERICAS_LATEST}`)!.paint;
+    expect(paint['raster-color-mix']).toEqual([-0.93, -0.29, -0.34, 1.5]);
+    expect(paint['raster-resampling']).toBe('nearest');
+    const order = map.layers.map((l) => l.id);
+    expect(order.indexOf(`ltg-layer-am-${AMERICAS_LATEST}`)).toBeGreaterThan(order.indexOf('z-index-lightning'));
+    expect(order.indexOf(`ltg-layer-am-${AMERICAS_LATEST}`)).toBeLessThan(order.indexOf('layer-labels'));
+
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
+    const seen = new Map<number, string>();
+    const start = Date.now();
+    while (seen.size < 5 && Date.now() - start < 20000) {
+      await act(async () => { await sleep(20); });
+      const frame = radarFrame(map);
+      if (frame !== null && !seen.has(frame)) seen.set(frame, am().join('+'));
+    }
+    expect(seen.size).toBeGreaterThan(2);
+    for (const [frame, shown] of seen) {
+      expect(shown).toBe(`ltg-layer-am-${Math.min(Math.ceil(frame / 900) * 900, AMERICAS_LATEST)}`);
+    }
     expect(map.errors).toEqual([]);
   }, 30000);
 
   it('desactivar els llamps treu les capes i la llegenda; tornar-los a activar les recrea', async () => {
     const map = await mountRadar();
     expect(ids(map, 'ltg-layer-').length).toBeGreaterThan(0);
-    expect(screen.getByText('Llamps / 5 min')).toBeTruthy();
+    expect(screen.getByText('molts')).toBeTruthy();
 
-    await click('Llamps (satèl·lit MTG)');
+    await click('Llamps (MTG i NOAA)');
     expect(ids(map, 'ltg-layer-')).toEqual([]);
-    expect(screen.queryByText('Llamps / 5 min')).toBeNull();
+    expect(screen.queryByText('molts')).toBeNull();
 
-    await click('Llamps (satèl·lit MTG)');
+    await click('Llamps (MTG i NOAA)');
     await act(async () => { await sleep(30); });
-    expect(visibleTargets(map, 'ltg-layer-', 0.5)).toEqual([`ltg-layer-${LIGHTNING_LATEST}`]);
+    expect(visibleTargets(map, 'ltg-layer-', 0.5)).toEqual([`ltg-layer-${LIGHTNING_LATEST}`, `ltg-layer-am-${AMERICAS_LATEST}`]);
     expect(map.errors).toEqual([]);
   });
 
-  it('si el Lightning Imager va endarrerit (/lightning/latest null), no es crea cap capa de llamps', async () => {
+  it('si el Lightning Imager va endarrerit (/lightning/latest null), no es crea cap capa de llamps de MTG', async () => {
     lightningLatest = null;
     const map = await mountRadar();
     await act(async () => { await sleep(30); });
-    expect(ids(map, 'ltg-layer-')).toEqual([]);
+    expect(ids(map, 'ltg-layer-').map((l) => l.id).filter(isMtgLightning)).toEqual([]);
+    expect(ids(map, 'ltg-layer-am-').length).toBeGreaterThan(0);
+  });
+
+  it('si nowCOAST va endarrerit (/lightning/americas/latest null), no es crea cap capa de llamps d\'Amèrica', async () => {
+    americasLatest = null;
+    const map = await mountRadar();
+    await act(async () => { await sleep(30); });
+    expect(ids(map, 'ltg-layer-am-')).toEqual([]);
+    expect(visibleTargets(map, 'ltg-layer-', 0.5)).toEqual([`ltg-layer-${LIGHTNING_LATEST}`]);
   });
 
   it('Meteosat HD en color: GeoColour per sobre del filtre de nit, i en tornar a IR es treu', async () => {
@@ -535,7 +586,8 @@ describe('RadarMap', () => {
     await act(async () => { fireEvent.click(screen.getByLabelText('radarData')); await sleep(20); });
     const link = screen.getByText(/^Contains modified EUMETSAT Meteosat data \d{4}$/);
     expect(link.closest('a')?.getAttribute('href')).toBe('https://www.eumetsat.int/');
-    expect(screen.getByText('NASA GIBS · GOES (NOAA/CIRA) · Himawari (JMA)').closest('a')?.getAttribute('href')).toBe('https://nasa-gibs.github.io/gibs-api-docs/');
+    expect(screen.getByText('NASA GIBS · NOAA/NESDIS · GOES (CIRA) · Himawari (JMA)').closest('a')?.getAttribute('href')).toBe('https://nasa-gibs.github.io/gibs-api-docs/');
+    expect(screen.getByText('NOAA nowCOAST · NLDN/GLD360').closest('a')?.getAttribute('href')).toBe('https://nowcoast.noaa.gov/');
   });
 
   const gibsTargets = (m: FakeMapInstance, agency: string) => visibleTargets(m, `hd-${agency}-layer-`, 0.3);

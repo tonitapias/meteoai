@@ -36,6 +36,7 @@ export type GibsTimelineState = SlotTimelineState<GibsTimeline>;
 // menys d'un minut surt de la memòria cau HTTP del navegador.
 const HD_LATEST_URL = `${SAT_PROXY_HOST}/hd/meteosat/latest`;
 const LIGHTNING_LATEST_URL = `${SAT_PROXY_HOST}/lightning/latest`;
+const AMERICAS_LIGHTNING_LATEST_URL = `${SAT_PROXY_HOST}/lightning/americas/latest`;
 const FETCH_TIMEOUT_MS = 3000;
 const REFRESH_MS = 5 * 60 * 1000;
 
@@ -99,4 +100,9 @@ export function useGibsTimeline(agency: GibsAgency, enabled: boolean) {
 
 export function useLightningTimeline(enabled: boolean) {
   return useSlotTimeline<LightningLatest>(enabled, LIGHTNING_LATEST_URL, LightningLatestSchema);
+}
+
+// Llamps d'Amèrica (nowCOAST): mateix format que /lightning/latest.
+export function useAmericasLightningTimeline(enabled: boolean) {
+  return useSlotTimeline<LightningLatest>(enabled, AMERICAS_LIGHTNING_LATEST_URL, LightningLatestSchema);
 }

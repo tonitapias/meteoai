@@ -33,11 +33,13 @@ export const es = {
   layerhdGoes: "GOES HD (América)",
   layerhdMeteosat: "Meteosat HD (Europa)",
   layerhdHimawari: "Himawari HD (Asia)",
-  layerLightning: "Rayos (satélite MTG)",
+  layerLightning: "Rayos (MTG y NOAA)",
   hdModeLabel: "Modo del satélite HD",
   hdModeIr: "IR",
   hdModeColour: "Color",
-  lightningLegend: "Rayos / 5 min",
+  lightningLegend: "Rayos",
+  lightningLegendFew: "pocos",
+  lightningLegendMany: "muchos",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",

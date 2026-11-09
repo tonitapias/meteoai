@@ -255,6 +255,25 @@ export function computeLightningSlots(frameTime: number, latest: LightningLatest
   return [...new Set([base - LIGHTNING_STEP_SEC, base].map((s) => Math.min(s, newest)))];
 }
 
+// --- LLAMPS D'AMÈRICA (NOAA nowCOAST: xarxes de terra NLDN i GLD360) ---
+// Densitat de llamps en finestres de 15 min etiquetades amb el FINAL, a
+// l'oest de 60° O i al nord de 25° S: el worker retalla per aquesta línia les
+// imatges de nowCOAST i les de MTG, que continua a l'est.
+export const AMERICAS_LIGHTNING_STEP_SEC = 900;
+export const AMERICAS_LIGHTNING_ROUTE = 'lightning/americas/v1';
+export const AMERICAS_LIGHTNING_BOUNDS: [number, number, number, number] = [-180, -25, -60, 75];
+
+// Finestra d'Amèrica d'un fotograma de radar: la que conté l'hora del
+// fotograma, (F − 15 min, F], sense passar de la més nova publicada. Amb
+// fotogrames cada 10 min, cada finestra surt en un o dos fotogrames. Buit si
+// nowCOAST no està disponible (`latest` null).
+export function computeAmericasLightningSlots(frameTime: number, latest: LightningLatest | undefined, nowSec: number): number[] {
+  if (latest === null) return [];
+  const step = AMERICAS_LIGHTNING_STEP_SEC;
+  const newest = latest ? floorTo(latest.latest, step) : floorTo(nowSec - HD_COMPUTED_LAG_SEC, step);
+  return [Math.min(Math.ceil(frameTime / step) * step, newest)];
+}
+
 // Sense /hd/{agència}/latest: una hora segura (ara − 40 min), com el worker.
 export const GIBS_COMPUTED_LAG_SEC = 2400;
 

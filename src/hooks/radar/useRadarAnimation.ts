@@ -13,9 +13,12 @@ import {
   SAT_PROXY_HOST,
   LIGHTNING_BOUNDS,
   LIGHTNING_ROUTE,
+  AMERICAS_LIGHTNING_BOUNDS,
+  AMERICAS_LIGHTNING_ROUTE,
   computeMeteosatSlot,
   computeGibsSlot,
   computeLightningSlots,
+  computeAmericasLightningSlots,
   getHdColourOpacityExp,
   hdRoute,
   type GibsAgency,
@@ -36,6 +39,7 @@ interface UseRadarAnimationProps {
   hdTimelineRef: MutableRefObject<HdTimelineState>;
   gibsTimelineRefs: Record<GibsAgency, MutableRefObject<GibsTimelineState>>;
   lightningTimelineRef: MutableRefObject<LightningTimelineState>;
+  americasLightningTimelineRef: MutableRefObject<LightningTimelineState>;
 }
 
 const HD_AGENCIES: HdAgency[] = ['goes', 'meteosat', 'himawari'];
@@ -53,9 +57,12 @@ const hdVariantOfKey = (key: string) => key.split('-')[0] as HdVariant;
 const hdOpacityExp = (key: string, baseOp: number) =>
   HD_VARIANTS[hdVariantOfKey(key)].colour ? getHdColourOpacityExp(baseOp) : getSatOpacityExp(baseOp);
 
-// Llamps: una capa per franja de 5 min; cada fotograma en mostra dues.
-const lightningLayerId = (slot: number) => `ltg-layer-${slot}`;
-const lightningSourceId = (slot: number) => `ltg-src-${slot}`;
+// Llamps: una capa per franja. MTG (clau = la franja de 5 min; cada
+// fotograma en mostra dues) i Amèrica (clau `am-` + la finestra de 15 min;
+// una per fotograma).
+const AMERICAS_KEY_PREFIX = 'am-';
+const lightningLayerId = (key: string) => `ltg-layer-${key}`;
+const lightningSourceId = (key: string) => `ltg-src-${key}`;
 const LIGHTNING_OPACITY = 0.95;
 // La paleta d'EUMETSAT és opaca: en una tempesta gran l'àrea de llamps (cada
 // llamp pinta tota la superfície que il·lumina) tapava el radar de sota a
@@ -78,10 +85,60 @@ const LIGHTNING_PAINT: RasterPaint = {
     1, 'rgba(255,235,90,0.45)'
   ]
 };
-// Precàrrega més curta que la del radar (el fotograma actual i els 2 següents, × 2 franges): són tessel·les petites
-// i ràpides, i així són 6 capes vives en lloc de 8 per als mòbils més modestos.
+// nowCOAST pinta la densitat de llamps (llamps/km²/min × 10³, en 15 min i
+// 8 km: ~llamps per píxel) amb 17 classes de colors d'arc de Sant Martí
+// (groc → vermell → magenta → blau → verd), que cap combinació lineal de
+// R, G i B no ordena. Aquests pesos en canvi en separen cada color dels de les
+// altres classes (com a mínim ~10 de les 256 entrades de la rampa) i el
+// `step` dona a cada classe un color de la rampa de MTG (LIGHTNING_PAINT).
+// Valors (amb el desplaçament de 1,5): ffffcc 0,008 · ffec78 0,142 ·
+// ff00ff 0,230 · ffff00 0,280 · ffd600 0,327 · ffa400 0,384 · ff7800 0,434 ·
+// ff4500 0,492 · ff0000 0,570 · cc0066 0,620 · bc0025 0,765 · 800080 0,863 i
+// els blaus i verds (≥ 100) fins a 1,21. Els píxels sense llamps són
+// transparents (alfa 0) i continuen transparents.
+// Quin color de la rampa: per quantils, perquè les dues fonts es vegin igual
+// a la frontera. 2026-11-09, 6 finestres de 15 min sobre el Brasil (70°–35° O,
+// 25° S–15° N), on totes dues tenen dades: 114 000 píxels de nowCOAST contra
+// 179 000 de MTG (les seves 3 franges de 5 min, la més intensa). MTG hi és
+// sobretot groc pàl·lid (mediana 0,94 de la rampa): el 55 % de nowCOAST que
+// fa menys d'1 hi correspon a ~0,96, 1–2,5 a 0,94, 2,5–5 a 0,92, 5–10 a 0,89,
+// 10–15 a 0,80, 15–25 a 0,72, 25–50 a 0,46 i 50 o més (el 4 %) a 0,16.
+const AMERICAS_LIGHTNING_PAINT: RasterPaint = {
+  'raster-resampling': 'nearest',
+  'raster-color-mix': [-0.93, -0.29, -0.34, 1.5],
+  'raster-color-range': [0, 1.25],
+  'raster-color': [
+    'step', ['raster-value'],
+    'rgba(255,225,81,0.52)', // 0,1–0,5
+    0.186, 'rgba(154,15,38,0.99)', // 50–75 (magenta)
+    0.255, 'rgba(255,225,81,0.52)', // 0,5–1
+    0.355, 'rgba(255,221,78,0.56)', // 1–2,5
+    0.4085, 'rgba(255,215,73,0.6)', // 2,5–5
+    0.4625, 'rgba(255,207,66,0.65)', // 5–10
+    0.53, 'rgba(254,181,55,0.76)', // 10–15
+    0.595, 'rgba(222,87,40,0.96)', // 25–50
+    0.69, 'rgba(254,156,49,0.84)', // 15–25
+    0.81, 'rgba(154,15,38,0.99)' // 75 o més
+  ]
+};
+interface LightningTrack {
+  route: string;
+  bounds: [number, number, number, number];
+  maxzoom: number;
+  paint: RasterPaint;
+}
+const LIGHTNING_TRACKS: Record<'mtg' | 'americas', LightningTrack> = {
+  mtg: { route: LIGHTNING_ROUTE, bounds: LIGHTNING_BOUNDS, maxzoom: 8, paint: LIGHTNING_PAINT },
+  // 8 km per píxel: per sobre del nivell 7 Mapbox amplia la tessel·la.
+  americas: { route: AMERICAS_LIGHTNING_ROUTE, bounds: AMERICAS_LIGHTNING_BOUNDS, maxzoom: 7, paint: AMERICAS_LIGHTNING_PAINT }
+};
+const lightningTrackOfKey = (key: string) => (key.startsWith(AMERICAS_KEY_PREFIX) ? LIGHTNING_TRACKS.americas : LIGHTNING_TRACKS.mtg);
+const lightningSlotOfKey = (key: string) => Number(key.startsWith(AMERICAS_KEY_PREFIX) ? key.slice(AMERICAS_KEY_PREFIX.length) : key);
+// Precàrrega més curta que la del radar (el fotograma actual i els 2
+// següents, × 3 capes: 2 franges de MTG i 1 d'Amèrica): són tessel·les petites
+// i ràpides, i fora del mapa visible una capa no baixa res.
 const LIGHTNING_PREFETCH_FRAMES = 2;
-const MAX_LIVE_LIGHTNING_LAYERS = (LIGHTNING_PREFETCH_FRAMES + 1) * 2;
+const MAX_LIVE_LIGHTNING_LAYERS = (LIGHTNING_PREFETCH_FRAMES + 1) * 3;
 
 // PERF (fluïdesa): les capes HD ("Alta Resolució") no caduquen fins que
 // l'API de RainViewer rota el frame de satèl·lit sencer (minuts). Com que
@@ -143,7 +200,8 @@ export function useRadarAnimation({
   styleReadyRef,
   hdTimelineRef,
   gibsTimelineRefs,
-  lightningTimelineRef
+  lightningTimelineRef,
+  americasLightningTimelineRef
 }: UseRadarAnimationProps) {
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -207,7 +265,7 @@ export function useRadarAnimation({
   // Franges de llamps vives, en ordre d'inserció (FIFO de
   // MAX_LIVE_LIGHTNING_LAYERS), i si la capa estava activa (alliberament en
   // desactivar-la, com les HD).
-  const lightningLoadOrderRef = useRef<number[]>([]);
+  const lightningLoadOrderRef = useRef<string[]>([]);
   const prevLightningEnabledRef = useRef<boolean>(false);
 
   const isMountedRef = useRef<boolean>(true);
@@ -321,29 +379,38 @@ export function useRadarAnimation({
     });
   }, [mapRef, hdTargetFor, safeRemoveLayerAndSource]);
 
-  // Franges de llamps d'un fotograma (buit mentre no se sap la franja més
-  // nova o si el Lightning Imager no està disponible).
-  const lightningSlotsFor = useCallback((frameTime: number | null | undefined): number[] => {
+  // Capes de llamps d'un fotograma: les franges de MTG i la finestra
+  // d'Amèrica (cap de les dues mentre no se sap la més nova o si la font no
+  // està disponible).
+  const lightningKeysFor = useCallback((frameTime: number | null | undefined): string[] => {
     if (frameTime === null || frameTime === undefined) return [];
-    const state = lightningTimelineRef.current;
-    if (state.status === 'idle' || state.status === 'pending') return [];
-    return computeLightningSlots(frameTime, state.status === 'ready' ? state.timeline : undefined, state.nowSec);
-  }, [lightningTimelineRef]);
+    const keys: string[] = [];
+    const mtg = lightningTimelineRef.current;
+    if (mtg.status === 'ready' || mtg.status === 'failed') {
+      computeLightningSlots(frameTime, mtg.status === 'ready' ? mtg.timeline : undefined, mtg.nowSec).forEach((slot) => keys.push(String(slot)));
+    }
+    const americas = americasLightningTimelineRef.current;
+    if (americas.status === 'ready' || americas.status === 'failed') {
+      computeAmericasLightningSlots(frameTime, americas.status === 'ready' ? americas.timeline : undefined, americas.nowSec)
+        .forEach((slot) => keys.push(`${AMERICAS_KEY_PREFIX}${slot}`));
+    }
+    return keys;
+  }, [lightningTimelineRef, americasLightningTimelineRef]);
 
   // Treu les capes de llamps que no necessita cap fotograma (o totes, en
   // desactivar la capa).
   const pruneLightning = useCallback((all: boolean) => {
     const map = mapRef.current;
     if (!map) return;
-    const needed = all ? new Set<number>() : new Set(radarFramesRef.current.flatMap((t) => lightningSlotsFor(t)));
-    lightningLoadOrderRef.current = lightningLoadOrderRef.current.filter((slot) => {
-      if (needed.has(slot)) return true;
-      safeRemoveLayerAndSource(map, lightningLayerId(slot), lightningSourceId(slot));
+    const needed = all ? new Set<string>() : new Set(radarFramesRef.current.flatMap((t) => lightningKeysFor(t)));
+    lightningLoadOrderRef.current = lightningLoadOrderRef.current.filter((key) => {
+      if (needed.has(key)) return true;
+      safeRemoveLayerAndSource(map, lightningLayerId(key), lightningSourceId(key));
       return false;
     });
     const live = new Set(lightningLoadOrderRef.current.map(lightningLayerId));
     lastTargetIdsRef.current.lightning = lastTargetIdsRef.current.lightning.filter((id) => live.has(id));
-  }, [mapRef, lightningSlotsFor, safeRemoveLayerAndSource]);
+  }, [mapRef, lightningKeysFor, safeRemoveLayerAndSource]);
 
   // Només destrueix frames quan la pròpia API ens diu que ja han caducat en el temps
   const cleanupExpiredLayers = useCallback((validLwFrames: RadarFrame[], validRvFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
@@ -627,32 +694,33 @@ export function useRadarAnimation({
       }
     });
 
-    // Llamps: les dues franges de 5 min del fotograma, per sobre del radar
+    // Llamps: les franges del fotograma (MTG i Amèrica), per sobre del radar
     // (just sota les etiquetes; el radar va sota PIS_5B_LIGHTNING).
     const framesAhead = (index - currentFrameIndexRef.current + rFrames.length) % rFrames.length;
     if (overlaysRef.current.lightning && framesAhead <= LIGHTNING_PREFETCH_FRAMES) {
-      const slots = lightningSlotsFor(frameTime);
-      const currentSlots = lightningSlotsFor(rFrames[currentFrameIndexRef.current]);
-      slots.forEach((slot) => {
-        const sourceId = lightningSourceId(slot);
+      const keys = lightningKeysFor(frameTime);
+      const currentKeys = lightningKeysFor(rFrames[currentFrameIndexRef.current]);
+      keys.forEach((key) => {
+        const sourceId = lightningSourceId(key);
         if (map.getSource(sourceId)) return;
+        const track = lightningTrackOfKey(key);
         try {
           map.addSource(sourceId, {
             type: 'raster',
-            tiles: [`${SAT_PROXY_HOST}/${LIGHTNING_ROUTE}/${slot}/{z}/{x}/{y}.png`],
+            tiles: [`${SAT_PROXY_HOST}/${track.route}/${lightningSlotOfKey(key)}/{z}/{x}/{y}.png`],
             tileSize: 512,
-            bounds: LIGHTNING_BOUNDS,
+            bounds: track.bounds,
             minzoom: 2,
-            maxzoom: 8
+            maxzoom: track.maxzoom
           });
           map.addLayer({
-            id: lightningLayerId(slot),
+            id: lightningLayerId(key),
             type: 'raster',
             source: sourceId,
             layout: { visibility: 'visible' },
             paint: {
-              ...LIGHTNING_PAINT,
-              'raster-opacity': currentSlots.includes(slot) ? LIGHTNING_OPACITY : 0.000001,
+              ...track.paint,
+              'raster-opacity': currentKeys.includes(key) ? LIGHTNING_OPACITY : 0.000001,
               'raster-opacity-transition': { duration: 0, delay: 0 },
               'raster-fade-duration': 0
             },
@@ -660,19 +728,19 @@ export function useRadarAnimation({
 
           // FIFO: mai la franja que s'acaba d'afegir ni les del fotograma actual.
           const order = lightningLoadOrderRef.current;
-          order.push(slot);
+          order.push(key);
           while (order.length > MAX_LIVE_LIGHTNING_LAYERS) {
-            const victimIdx = order.findIndex((s) => s !== slot && !currentSlots.includes(s));
+            const victimIdx = order.findIndex((k) => k !== key && !currentKeys.includes(k));
             if (victimIdx < 0) break;
             const [victim] = order.splice(victimIdx, 1);
             safeRemoveLayerAndSource(map, lightningLayerId(victim), lightningSourceId(victim));
           }
         } catch (e) {
-          console.warn(`[Zero Risk] Error afegint llamps ${slot}:`, e);
+          console.warn(`[Zero Risk] Error afegint llamps ${key}:`, e);
         }
       });
     }
-  }, [mapRef, overlaysRef, safeRemoveLayerAndSource, styleReadyRef, hdTargetFor, isHdReady, lightningSlotsFor]);
+  }, [mapRef, overlaysRef, safeRemoveLayerAndSource, styleReadyRef, hdTargetFor, isHdReady, lightningKeysFor]);
 
   // CORRECCIÓ: quan el dispositiu perd el context WebGL, useMapLifecycle
   // destrueix el mapa i en crea un de nou, però aquest hook no es remunta:
@@ -876,7 +944,7 @@ export function useRadarAnimation({
     // precarregades. Sense "reserva" com l'HD: si una franja encara no ha
     // arribat, millor cap llamp que llamps d'una altra hora.
     const lightningIds = lightningEnabled
-      ? lightningSlotsFor(currentFrameTime).map(lightningLayerId).filter((id) => !!map.getLayer(id))
+      ? lightningKeysFor(currentFrameTime).map(lightningLayerId).filter((id) => !!map.getLayer(id))
       : [];
     if (animationTick) {
       lastTargetIdsRef.current.lightning.forEach((id) => {
@@ -887,15 +955,15 @@ export function useRadarAnimation({
         map.setPaintProperty(id, 'raster-opacity', LIGHTNING_OPACITY);
       });
     } else {
-      lightningLoadOrderRef.current.forEach((slot) => {
-        const id = lightningLayerId(slot);
+      lightningLoadOrderRef.current.forEach((key) => {
+        const id = lightningLayerId(key);
         if (!map.getLayer(id)) return;
         map.setLayoutProperty(id, 'visibility', lightningEnabled ? 'visible' : 'none');
         map.setPaintProperty(id, 'raster-opacity', lightningIds.includes(id) ? LIGHTNING_OPACITY : lightningEnabled ? 0.000001 : 0);
       });
     }
     lastTargetIdsRef.current.lightning = lightningIds;
-  }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, pruneUnneededHd, pruneLightning, styleReadyRef, hdTargetFor, isHdReady, pickReadyHdKey, lightningSlotsFor]);
+  }, [ensureFrameLoaded, formatTime, mapRef, overlaysRef, syncAtmosphere, syncLighting, currentFrameTimestampRef, timeDisplayRef, pruneHdAgency, pruneUnneededHd, pruneLightning, styleReadyRef, hdTargetFor, isHdReady, pickReadyHdKey, lightningKeysFor]);
 
   // /hd/meteosat/latest o /hd/{goes|himawari}/latest han canviat (primera
   // resposta, franja nova o una altra capa): fora les capes que ja no toquen i

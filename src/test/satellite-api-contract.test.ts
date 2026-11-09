@@ -16,6 +16,8 @@ import { eumetsatGetMap } from '../utils/eumetsatWms';
 //   les rutes /lightning/* i /hd/mtg/geocolour/v1.
 // - GOES i Himawari HD (NASA GIBS): DescribeDomains, WMS/WMTS i les rutes
 //   /hd/{goes|himawari}/latest i /hd/gibs/v1 (al final del fitxer).
+// - GeoColor de GOES de NOAA/NESDIS i llamps d'Amèrica de NOAA nowCOAST, amb
+//   les rutes /hd/goes/latest, /hd/gibs/v1/goes/colour i /lightning/americas/*.
 
 const CAPABILITIES_URL = 'https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetCapabilities';
 const MSG_LAYER = 'msg_fes:ir108';
@@ -401,5 +403,121 @@ describe('NASA GIBS GOES i Himawari Contract Check', () => {
         expect(isImage(bytes)).toBe(true);
         expect(bytes.byteLength).toBeGreaterThan(MIN_GIBS_TILE_BYTES);
         expect(response.headers.get('cache-control')).toBe('no-store');
+    }, TIMEOUT_MS);
+});
+
+// GeoColor de GOES de NOAA/NESDIS (ImageServer d'ArcGIS, East+West fusionat):
+// el worker en treu les franges (?f=json, timeInfo.timeExtent) i les
+// tessel·les (exportImage, format=jpgpng), amb GIBS de reserva. Si NESDIS
+// canvia res d'això, el color torna a dependre només de GIBS (més endarrerit
+// i que s'encalla) sense cap error visible. El servei es reinicia 30–60 s a
+// cada imatge nova: aquests tests ho reintenten.
+const NESDIS_GEOCOLOR = 'https://satellitemaps.nesdis.noaa.gov/arcgis/rest/services/MERGEDGC_Last_24hr/ImageServer';
+// El worker s'identifica (nowCOAST respon 403 sense User-Agent).
+const NOAA_HEADERS = { 'User-Agent': 'MeteoToniAI/1.0 (+https://meteotoniai.com)' };
+const NESDIS_RESTART_WAIT_MS = 35000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function nesdisNewestSlot(): Promise<number> {
+    let last = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await fetch(`${NESDIS_GEOCOLOR}?f=json`, { headers: NOAA_HEADERS });
+        const body = await res.json() as { timeInfo?: { timeExtent?: number[] }; error?: { message?: string } };
+        const extent = body.timeInfo?.timeExtent;
+        // El final de la més nova és el seu inici + 9 min.
+        if (Array.isArray(extent) && extent.length === 2) return Math.floor(extent[1] / 1000 / 600) * 600;
+        last = body.error?.message ?? `status ${res.status}`;
+        await sleep(NESDIS_RESTART_WAIT_MS);
+    }
+    throw new Error(`NESDIS no dona timeInfo.timeExtent (el worker no en sabrà les franges): ${last}`);
+}
+
+async function nesdisTile(slot: number, tile: typeof TILE): Promise<{ status: number; bytes: Uint8Array; type: string | null }> {
+    for (let attempt = 0; ; attempt++) {
+        const res = await fetch(`${NESDIS_GEOCOLOR}/exportImage?bbox=${tileBbox(tile)}&bboxSR=3857&imageSR=3857&size=256,256&format=jpgpng&time=${slot * 1000},${slot * 1000 + 1}&f=image`, { headers: NOAA_HEADERS });
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (res.status !== 500 || attempt === 2) return { status: res.status, bytes, type: res.headers.get('content-type') };
+        await sleep(NESDIS_RESTART_WAIT_MS);
+    }
+}
+
+describe('NOAA/NESDIS GeoColor de GOES Contract Check', () => {
+    it('la franja més nova té menys de 2 h; exportImage dona JPEG dins el disc i, sense la franja, el PNG buit petit', async () => {
+        const newest = await nesdisNewestSlot();
+        const ageMs = Date.now() - newest * 1000;
+        expect(ageMs, `L'última imatge de NESDIS és de fa ${(ageMs / 3600000).toFixed(1)} h`).toBeLessThan(MAX_AGE_MS);
+
+        const real = await nesdisTile(newest - 3600, GOES_TILE);
+        expect(real.status).toBe(200);
+        expect([real.bytes[0], real.bytes[1], real.bytes[2]], `jpgpng dins el disc ja no dona JPEG (${real.type})`).toEqual([0xff, 0xd8, 0xff]);
+        expect(real.bytes.byteLength).toBeGreaterThan(MIN_GIBS_TILE_BYTES);
+
+        // El worker reconeix una franja que no hi és per la mida (≤ 1 KB) i passa a GIBS.
+        const missing = await nesdisTile(newest + 7200, GOES_TILE);
+        expect(isImage(missing.bytes)).toBe(true);
+        expect(missing.bytes.byteLength, 'Sense la franja, NESDIS ja no dona una imatge buida petita: el worker la serviria com a bona').toBeLessThanOrEqual(1024);
+    }, 150000);
+
+    it('el worker de producció dona el GeoColor de GOES de NESDIS (més nou que el de GIBS)', async () => {
+        const response = await fetch(`${WORKER_URL}/hd/goes/latest`, { headers: WORKER_HEADERS });
+        const latest = await response.json() as { colour: { latest: number; slots: number[] } | null };
+        expect(latest.colour, "Sense franges de GeoColor: el mode color de GOES mostra l'IR").toBeTruthy();
+        expect(Date.now() / 1000 - latest.colour!.latest).toBeLessThan(MAX_LATEST_AGE_S + 1800);
+
+        // Desalineada: no-store, el camí sencer fins a NESDIS.
+        const tile = await fetch(`${WORKER_URL}/hd/gibs/v1/goes/colour/${latest.colour!.latest - 3600 + 7}/${GOES_TILE.z}/${GOES_TILE.x}/${GOES_TILE.y}.png`, { headers: WORKER_HEADERS });
+        const bytes = new Uint8Array(await tile.arrayBuffer());
+        expect(tile.headers.get('x-hd-slot'), 'El worker ha servit el fallback: mira `wrangler tail` ("[Zero Risk] NESDIS ...")').toBeTruthy();
+        expect(isImage(bytes)).toBe(true);
+        // `wms`/`wmts` = NESDIS ha fallat i ha respost GIBS (pot passar 30–60 s cada 10 min).
+        expect(['nesdis', 'wms', 'wmts']).toContain(tile.headers.get('x-hd-service'));
+    }, TIMEOUT_MS);
+});
+
+// Llamps d'Amèrica (NOAA nowCOAST, xarxes NLDN i GLD360): finestres de 15 min
+// etiquetades amb el final, caps d'una sola capa, GetMap retallat amb `clip` i
+// la capçalera `warning` (nearestValue). Rutes /lightning/americas/*.
+const NOWCOAST_LIGHTNING = 'https://nowcoast.noaa.gov/geoserver/lightning_detection/ldn_lightning_strike_density/ows';
+// Amazònia occidental (-67,5°..-56,25°), a la zona de nowCOAST.
+const AMERICAS_TILE = { z: 5, x: 10, y: 15 };
+const nowcoastGetMap = (time: number, clip: string) =>
+    `${NOWCOAST_LIGHTNING}?service=WMS&version=1.3.0&request=GetMap&layers=ldn_lightning_strike_density&styles=&crs=EPSG:3857&bbox=${tileBbox(AMERICAS_TILE)}&width=512&height=512&format=image/png&transparent=true&time=${isoSeconds(time)}${clip}`;
+
+describe("NOAA nowCOAST llamps d'Amèrica Contract Check", () => {
+    it('caps amb nearestValue i finestres de 15 min al dia; GetMap retallat amb transparència i `warning`', async () => {
+        const res = await fetch(`${NOWCOAST_LIGHTNING}?service=WMS&version=1.3.0&request=GetCapabilities`, { headers: NOAA_HEADERS });
+        expect(res.ok, `GetCapabilities de nowCOAST ha fallat amb status: ${res.status}`).toBe(true);
+        const xml = await res.text();
+        expect(timeDimension(xml).attrs).toContain('nearestValue="1"');
+        const times = xml.match(/<Dimension name="time"[^>]*>([^<]*)</)![1].split(',').map((t) => Date.parse(t.trim()) / 1000);
+        const newest = Math.max(...times);
+        expect(newest % 900, "nowCOAST ja no publica cada 15 min (el worker i l'app hi treballen)").toBe(0);
+        expect(Date.now() / 1000 - newest).toBeLessThan(MAX_LATEST_AGE_S);
+
+        const clip = `&clip=${encodeURIComponent('srid=4326;POLYGON((-180 -25,-60 -25,-60 85,-180 85,-180 -25))')}`;
+        const map = await fetch(nowcoastGetMap(newest, clip), { headers: NOAA_HEADERS });
+        const png = new Uint8Array(await map.arrayBuffer());
+        expect([png[0], png[1], png[2], png[3]], `GetMap de nowCOAST no ha tornat PNG (${map.headers.get('content-type')}): ${new TextDecoder().decode(png.slice(0, 200))}`).toEqual([0x89, 0x50, 0x4e, 0x47]);
+        expect(hasTransparentPaletteEntry(png), 'El PNG dels llamps de nowCOAST ja no té cap color transparent').toBe(true);
+        expect(map.headers.get('warning'), 'Sense la capçalera `warning`, el worker no sap quina finestra ha servit').toMatch(/Nearest value used: time=/);
+
+        // Massa enrere: el worker ho reconeix per aquest text i no serveix la imatge.
+        const old = await fetch(nowcoastGetMap(newest - 2 * 86400, ''), { headers: NOAA_HEADERS });
+        await old.arrayBuffer();
+        expect(old.headers.get('warning')).toMatch(/No nearest value found/i);
+    }, TIMEOUT_MS);
+
+    it("el worker de producció dona la finestra de llamps d'Amèrica i en resol una tessel·la real", async () => {
+        const response = await fetch(`${WORKER_URL}/lightning/americas/latest`, { headers: WORKER_HEADERS });
+        expect(response.ok, `/lightning/americas/latest ha respost amb status: ${response.status}`).toBe(true);
+        const latest = await response.json() as { latest: number; cadence: number; source: string } | null;
+        expect(latest, "El worker diu que nowCOAST va endarrerit més d'1 h: capa de llamps d'Amèrica desactivada").not.toBeNull();
+        expect(latest!.source, 'El worker no ha pogut llegir les caps de nowCOAST (403 sense User-Agent?)').toBe('caps');
+        expect(latest!.cadence).toBe(900);
+
+        const tile = await fetch(`${WORKER_URL}/lightning/americas/v1/${latest!.latest - 3600 + 7}/${AMERICAS_TILE.z}/${AMERICAS_TILE.x}/${AMERICAS_TILE.y}.png`, { headers: WORKER_HEADERS });
+        const bytes = new Uint8Array(await tile.arrayBuffer());
+        expect(tile.headers.get('x-hd-slot'), "El worker ha servit el fallback dels llamps d'Amèrica: mira `wrangler tail` (\"[Zero Risk] nowCOAST llamps ...\")").toBeTruthy();
+        expect(bytes.byteLength).toBeGreaterThan(FALLBACK_BYTES);
     }, TIMEOUT_MS);
 });

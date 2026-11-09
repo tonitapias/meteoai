@@ -243,7 +243,7 @@ export function RadarLayerMenu({
                     {overlays.precip ? <Eye className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
                   </button>
 
-                  {/* Overlay: Llamps (MTG Lightning Imager) */}
+                  {/* Overlay: Llamps (MTG Lightning Imager i, a Amèrica, NOAA nowCOAST) */}
                   <button
                     onClick={() => toggleOverlay('lightning')}
                     className={`group relative w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border transition-all duration-300 backdrop-blur-md overflow-hidden ${
@@ -258,7 +258,7 @@ export function RadarLayerMenu({
                         <Zap className="w-4 h-4" />
                       </div>
                       <span className={`text-xs font-bold truncate transition-colors ${overlays.lightning ? 'text-amber-100' : 'text-slate-300 group-hover:text-white'}`}>
-                        {t('layerLightning', 'Llamps (satèl·lit MTG)')}
+                        {t('layerLightning', 'Llamps (MTG i NOAA)')}
                       </span>
                     </div>
                     {overlays.lightning ? <Eye className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] shrink-0 relative" /> : <EyeOff className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />}
