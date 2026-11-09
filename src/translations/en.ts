@@ -306,7 +306,7 @@ export const en = {
     coverageNote: "Each area uses its own: AROME, ICON-D2, UKMO, HRRR, JMA… Outside these areas, the forecast comes from the global models (step 1).",
     step3Title: "Observations and official warnings",
     step3Badge: "7 official sources",
-    step3Text: "Radar, satellite and lightning detected from space (over Europe and Africa) show what is happening right now: if it's raining where the model didn't expect it, when the rain will start or stop, or if there's lightning nearby, the app tells you. You also see the official warnings for the United States, Spain, Catalonia, France, Portugal, Germany and Italy, always with the source cited and translated when needed.",
+    step3Text: "Radar, satellite and lightning (detected from space over Europe and Africa, and by ground networks over the Americas) show what is happening right now: if it's raining where the model didn't expect it, when the rain will start or stop, or if there's lightning nearby, the app tells you. You also see the official warnings for the United States, Spain, Catalonia, France, Portugal, Germany and Italy, always with the source cited and translated when needed.",
     step4Title: "AI summary",
     step4Badge: "Next 6 hours",
     step4Text: "An AI (Google Gemini, with Groq as backup) reads the already-calculated data for the next 6 hours and sums up what matters, with a warning level and a tip or two. It doesn't make up the numbers: they come from the models. Fixed rules check the same hours and, if they see more risk than the AI reports, their level wins, with the reason and the figure shown below. While the answer is on its way, or if the AI doesn't respond, you see a summary built from these rules.",

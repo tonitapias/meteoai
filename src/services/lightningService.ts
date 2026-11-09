@@ -9,9 +9,22 @@
 // Mesurat 2026-10-19: franja nova cada 5 min, publicada ~12 min després de
 // l'etiqueta (que marca l'inici dels 5 min); WMS anònim amb CORS obert.
 // `image/png8` d'un quadre de 100 × 100 px pesa ~0,4–2 KB.
+//
+// A la resta d'Amèrica (on el radar dibuixa nowCOAST, AMERICAS_LIGHTNING_BOUNDS)
+// es llegeix la densitat de llamps de NOAA nowCOAST (xarxes de terra NLDN i
+// GLD360): finestres de 15 min etiquetades amb el final, 8 km per cel·la, WMS
+// amb CORS obert (la capçalera `warning` no és llegible des del navegador:
+// només es demanen finestres que les caps diuen que hi són).
 import { eumetsatGetMap } from '../utils/eumetsatWms';
 import { fetchWithTimeout } from '../utils/networkUtils';
-import { LIGHTNING_BOUNDS, LIGHTNING_STEP_SEC, LightningLatestSchema, SAT_PROXY_HOST } from '../utils/radarPhysics';
+import {
+    AMERICAS_LIGHTNING_BOUNDS,
+    AMERICAS_LIGHTNING_STEP_SEC,
+    LIGHTNING_BOUNDS,
+    LIGHTNING_STEP_SEC,
+    LightningLatestSchema,
+    SAT_PROXY_HOST
+} from '../utils/radarPhysics';
 
 /** Radi mostrejat al voltant de l'usuari. Tot el que s'hi detecti arriba a la IA. */
 export const LIGHTNING_SAMPLE_RADIUS_KM = 50;
@@ -39,6 +52,23 @@ const SAMPLE_PX = LIGHTNING_SAMPLE_RADIUS_KM * 2;
 const INTENSE_GREEN_MAX = 100;
 
 const LATEST_URL = `${SAT_PROXY_HOST}/lightning/latest`;
+const AMERICAS_LATEST_URL = `${SAT_PROXY_HOST}/lightning/americas/latest`;
+const NOWCOAST_LIGHTNING_WMS = 'https://nowcoast.noaa.gov/geoserver/lightning_detection/ldn_lightning_strike_density/ows';
+/** Finestres de 15 min mirades enrere des de la més nova publicada (30 min). */
+const NOWCOAST_LOOKBACK_WINDOWS = 2;
+/**
+ * Paleta de nowCOAST (GetStyles, 2026-11-09), de menys a més densitat (llamps/km²/min × 10³): 0,1 · 0,25 · 0,5 ·
+ * 0,75 · 1 · 2,5 · 5 · 10 · 15 · 25 · 50 · 75 · 100 · 150 · 200 · 250 · 300.
+ */
+const NOWCOAST_CLASSES = ['ffffcc', 'ffec78', 'ffff00', 'ffd600', 'ffa400', 'ff7800', 'ff4500', 'ff0000', 'bc0025', 'cc0066', 'ff00ff', '800080', '4000c0', '0000ff', '00c7ff', '00a264', '00ff00'];
+/**
+ * Un sol llamp en una cel·la de 8 × 8 km en 15 min fa 1/(64 · 15) · 10³ ≈ 1,04: les cel·les d'1 o més tenen llamps.
+ * Però nowCOAST difumina cada llamp sobre unes quantes cel·les (2026-11-09: el 32 % de 1.414 taques aïllades no
+ * arribaven a 1 enlloc): la vora groga d'una taca no és on ha caigut, i mesurar-hi la distància l'avançaria ~8 km.
+ */
+const NOWCOAST_ONE_STRIKE_CLASS = 4;
+/** 25 o més: el mateix quantil (~8 % dels píxels amb llamps) que l'"intens" de MTG sobre el Brasil. */
+const NOWCOAST_INTENSE_CLASS = 9;
 // El worker la serveix de l'edge (60 s) en ~0,1–0,3 s; si l'ha de llegir d'EUMETSAT, fins a uns pocs segons.
 const LATEST_TIMEOUT_MS = 5000;
 const SLOT_TIMEOUT_MS = 6000;
@@ -60,9 +90,13 @@ export interface LightningNearby {
     observedAt: number;
     /** Algun píxel dins el radi amb 10 llamps o més en 5 min. */
     intense: boolean;
-    /** Franges de 5 min (de LOOKBACK_SLOTS) amb llamps dins el radi. */
+    /** Franges (de 5 min, o de 15 a Amèrica) amb llamps dins el radi. */
     activeSlots: number;
+    /** Qui els ha detectat: absent = el satèl·lit Meteosat-12 (MTG); 'nowcoast' = les xarxes de terra de la NOAA. */
+    source?: 'nowcoast';
 }
+
+export type LightningSource = 'mtg' | 'nowcoast';
 
 /** Píxels d'una franja: el més proper dins el cercle i si n'hi ha prou per comptar. */
 export interface SlotAnalysis {
@@ -77,6 +111,16 @@ export const isInsideLightningCoverage = (lat: number, lon: number): boolean => 
     const [west, south, east, north] = LIGHTNING_BOUNDS;
     return lat >= south && lat <= north && lon >= west && lon <= east;
 };
+
+/** On el radar dibuixa nowCOAST (oest de 60° O, nord de 25° S); la línia de 60° O és de MTG. */
+export const isInsideAmericasLightningCoverage = (lat: number, lon: number): boolean => {
+    const [west, south, east, north] = AMERICAS_LIGHTNING_BOUNDS;
+    return lat > south && lat <= north && lon >= west && lon < east;
+};
+
+/** Font de llamps d'una ubicació, la mateixa que dibuixa el radar; null si no en té cap. */
+export const lightningSourceAt = (lat: number, lon: number): LightningSource | null =>
+    isInsideAmericasLightningCoverage(lat, lon) ? 'nowcoast' : isInsideLightningCoverage(lat, lon) ? 'mtg' : null;
 
 /**
  * Llegeix els píxels RGBA d'un quadre centrat a l'usuari (`kmPerPx` km per píxel; la fila 0 és el nord). Null si dins
@@ -110,11 +154,81 @@ export const analyseLightningPixels = (
     return { nearestKm: Math.round(best.d), bearingDeg: Math.round(bearingDeg), intense, pixels };
 };
 
+/** Classe de nowCOAST d'un píxel opac (NOWCOAST_CLASSES); un color desconegut compta com a llamp segur. */
+const nowcoastClassOf = (r: number, g: number, b: number): number => {
+    const hex = ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    const index = NOWCOAST_CLASSES.indexOf(hex);
+    return index >= 0 ? index : NOWCOAST_ONE_STRIKE_CLASS;
+};
+
+/**
+ * Com analyseLightningPixels, per a la densitat de nowCOAST. Cada taca (píxels opacs units) es mesura on hi ha
+ * llamps de veritat: a les cel·les d'1 o més si en té; si no (un llamp aïllat, difuminat), al seu pic. Intens: 25 o
+ * més dins el cercle.
+ */
+export const analyseNowcoastPixels = (
+    data: Uint8ClampedArray,
+    width: number,
+    height: number,
+    kmPerPx: number,
+    radiusKm: number = LIGHTNING_SAMPLE_RADIUS_KM
+): SlotAnalysis | null => {
+    const n = width * height;
+    const cls = new Int8Array(n).fill(-1);
+    for (let i = 0; i < n; i++) {
+        const o = i * 4;
+        if (data[o + 3] !== 0) cls[i] = nowcoastClassOf(data[o], data[o + 1], data[o + 2]);
+    }
+    // Taques (veïnatge de 4) i la classe més alta de cadascuna.
+    const label = new Int32Array(n).fill(-1);
+    const peak: number[] = [];
+    const stack: number[] = [];
+    for (let i = 0; i < n; i++) {
+        if (cls[i] < 0 || label[i] >= 0) continue;
+        const id = peak.length;
+        let max = cls[i];
+        label[i] = id;
+        stack.push(i);
+        while (stack.length) {
+            const j = stack.pop()!;
+            if (cls[j] > max) max = cls[j];
+            const x = j % width;
+            const neighbours = [x > 0 ? j - 1 : -1, x < width - 1 ? j + 1 : -1, j - width, j + width];
+            for (const k of neighbours) {
+                if (k < 0 || k >= n || cls[k] < 0 || label[k] >= 0) continue;
+                label[k] = id;
+                stack.push(k);
+            }
+        }
+        peak.push(max);
+    }
+
+    let best: { d: number; dx: number; dy: number } | null = null;
+    let pixels = 0;
+    let intense = false;
+    for (let i = 0; i < n; i++) {
+        if (cls[i] < 0) continue;
+        const dx = ((i % width) + 0.5 - width / 2) * kmPerPx;
+        const dy = (Math.floor(i / width) + 0.5 - height / 2) * kmPerPx;
+        const d = Math.hypot(dx, dy);
+        if (d > radiusKm) continue;
+        pixels++;
+        if (cls[i] >= NOWCOAST_INTENSE_CLASS) intense = true;
+        const top = peak[label[i]];
+        const strike = top >= NOWCOAST_ONE_STRIKE_CLASS ? cls[i] >= NOWCOAST_ONE_STRIKE_CLASS : cls[i] === top;
+        if (strike && (!best || d < best.d)) best = { d, dx, dy };
+    }
+    if (!best || pixels < MIN_PIXELS) return null;
+    const bearingDeg = (Math.atan2(best.dx, -best.dy) * 180 / Math.PI + 360) % 360;
+    return { nearestKm: Math.round(best.d), bearingDeg: Math.round(bearingDeg), intense, pixels };
+};
+
 /**
  * Combina les franges mirades (de la més nova a la més antiga): distància i hora de la franja més nova amb activitat.
- * `slots[i]`: etiqueta (inici, s) de la franja; `analyses[i]`: la seva lectura (null = sense llamps o sense dades).
+ * `slots[i]`: etiqueta de la franja; `analyses[i]`: la seva lectura (null = sense llamps o sense dades). `source`:
+ * MTG etiqueta l'inici dels 5 min (l'observació acaba 5 min després); nowCOAST, el final dels 15.
  */
-export const summariseLightning = (slots: number[], analyses: (SlotAnalysis | null)[]): LightningNearby | null => {
+export const summariseLightning = (slots: number[], analyses: (SlotAnalysis | null)[], source: LightningSource = 'mtg'): LightningNearby | null => {
     let newest: { slot: number; a: SlotAnalysis } | null = null;
     let activeSlots = 0;
     let intense = false;
@@ -129,9 +243,10 @@ export const summariseLightning = (slots: number[], analyses: (SlotAnalysis | nu
     return {
         nearestKm: a.nearestKm,
         bearingDeg: a.bearingDeg,
-        observedAt: slot + LIGHTNING_STEP_SEC,
+        observedAt: source === 'nowcoast' ? slot : slot + LIGHTNING_STEP_SEC,
         intense,
-        activeSlots
+        activeSlots,
+        ...(source === 'nowcoast' ? { source } : {})
     };
 };
 
@@ -171,18 +286,22 @@ async function decodeImage(blob: Blob): Promise<{ data: Uint8ClampedArray; width
  * Lectura d'una franja: null = sense llamps (o franja encara no publicada); undefined = no s'ha pogut llegir (error,
  * timeout, o una altra ServiceException de GeoServer, com les transitòries "Unable to obtain connection").
  */
-async function analyseSlot(lat: number, lon: number, slot: number): Promise<SlotAnalysis | null | undefined> {
-    const url = `${eumetsatGetMap('mtg_fd:li_afa')}&styles=&crs=EPSG:3857&bbox=${sampleBbox(lat, lon)}&width=${SAMPLE_PX}&height=${SAMPLE_PX}&format=image/png8&transparent=true&time=${toIso(slot)}`;
+async function analyseSlot(lat: number, lon: number, slot: number, source: LightningSource): Promise<SlotAnalysis | null | undefined> {
+    const area = `&styles=&crs=EPSG:3857&bbox=${sampleBbox(lat, lon)}&width=${SAMPLE_PX}&height=${SAMPLE_PX}`;
+    const url = source === 'nowcoast'
+        ? `${NOWCOAST_LIGHTNING_WMS}?service=WMS&version=1.3.0&request=GetMap&layers=ldn_lightning_strike_density${area}&format=image/png&transparent=true&time=${toIso(slot)}`
+        : `${eumetsatGetMap('mtg_fd:li_afa')}${area}&format=image/png8&transparent=true&time=${toIso(slot)}`;
     try {
         const response = await fetchWithTimeout(url, SLOT_TIMEOUT_MS);
         if (!response.ok) return undefined;
         if (!(response.headers.get('Content-Type') ?? '').startsWith('image/')) {
-            // Franja encara no publicada: 200 amb XML InvalidDimensionValue.
+            // Franja d'EUMETSAT encara no publicada: 200 amb XML InvalidDimensionValue.
             return (await response.text()).includes('InvalidDimensionValue') ? null : undefined;
         }
         const image = await decodeImage(await response.blob());
         if (!image) return undefined;
-        return analyseLightningPixels(image.data, image.width, image.height, (LIGHTNING_SAMPLE_RADIUS_KM * 2) / image.width);
+        const analyse = source === 'nowcoast' ? analyseNowcoastPixels : analyseLightningPixels;
+        return analyse(image.data, image.width, image.height, (LIGHTNING_SAMPLE_RADIUS_KM * 2) / image.width);
     } catch {
         return undefined;
     }
@@ -194,9 +313,9 @@ async function analyseSlot(lat: number, lon: number, slot: number): Promise<Slot
  * donaria llamps de fa 30–60 min com si fossin dels "darrers 30 min". Millor no dir res que dir "cap llamp" d'una
  * hora que potser no existeix.
  */
-async function loadLatestSlot(): Promise<number | null | undefined> {
+async function loadLatestSlot(source: LightningSource): Promise<number | null | undefined> {
     try {
-        const response = await fetchWithTimeout(LATEST_URL, LATEST_TIMEOUT_MS);
+        const response = await fetchWithTimeout(source === 'nowcoast' ? AMERICAS_LATEST_URL : LATEST_URL, LATEST_TIMEOUT_MS);
         if (!response.ok) return undefined;
         const parsed = LightningLatestSchema.safeParse(await response.json());
         if (!parsed.success) return undefined;
@@ -214,8 +333,8 @@ const cache = new Map<string, { promise: Promise<LightningCheck>; expiresAt: num
 const failures = new Map<string, { count: number; retryAt: number }>();
 
 /**
- * Llamps dins LIGHTNING_SAMPLE_RADIUS_KM durant els últims 30 min (6 franges): el resultat, null si no n'hi ha o si la
- * ubicació és fora de l'abast del Lightning Imager, o undefined si no s'ha pogut consultar.
+ * Llamps dins LIGHTNING_SAMPLE_RADIUS_KM durant els últims 30 min (6 franges de MTG o, a Amèrica, 2 finestres de
+ * nowCOAST): el resultat, null si no n'hi ha o si la ubicació no té cap font, o undefined si no s'ha pogut consultar.
  * - Una consulta feta es comparteix 4 min per ubicació (dues xifres decimals): el tauler i la IA no dupliquen
  *   peticions. Si alguna franja no s'ha pogut llegir però les altres tenen llamps, només 1 min.
  * - Si alguna franja no s'ha pogut llegir i les altres no tenen llamps, no és "cap llamp" (potser eren a la que ha
@@ -223,7 +342,8 @@ const failures = new Map<string, { count: number; retryAt: number }>();
  * - Les fallades no es desen i, seguides, esperen 1, 2, 4... min (fins a 10) abans de tornar-ho a provar.
  */
 export function getLightningNearby(lat: number, lon: number): Promise<LightningCheck> {
-    if (!isInsideLightningCoverage(lat, lon)) return Promise.resolve(null);
+    const source = lightningSourceAt(lat, lon);
+    if (!source) return Promise.resolve(null);
     // Sense createImageBitmap (navegadors molt antics) no es poden llegir els píxels: cap petició.
     if (typeof createImageBitmap !== 'function') return Promise.resolve(null);
     const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
@@ -242,13 +362,16 @@ export function getLightningNearby(lat: number, lon: number): Promise<LightningC
         return undefined;
     };
     entry.promise = (async () => {
-        const latest = await loadLatestSlot();
+        const latest = await loadLatestSlot(source);
         if (latest === undefined) return failed();
         failures.delete(key);
         if (latest === null) return null;
-        const slots = Array.from({ length: LOOKBACK_SLOTS }, (_, i) => latest - i * LIGHTNING_STEP_SEC);
-        const analyses = await Promise.all(slots.map((slot) => analyseSlot(lat, lon, slot)));
-        const summary = summariseLightning(slots, analyses.map((a) => a ?? null));
+        const [count, step] = source === 'nowcoast'
+            ? [NOWCOAST_LOOKBACK_WINDOWS, AMERICAS_LIGHTNING_STEP_SEC]
+            : [LOOKBACK_SLOTS, LIGHTNING_STEP_SEC];
+        const slots = Array.from({ length: count }, (_, i) => latest - i * step);
+        const analyses = await Promise.all(slots.map((slot) => analyseSlot(lat, lon, slot, source)));
+        const summary = summariseLightning(slots, analyses.map((a) => a ?? null), source);
         if (analyses.some((a) => a === undefined)) {
             if (!summary) return failed();
             entry.expiresAt = Date.now() + PARTIAL_CACHE_TTL_MS;

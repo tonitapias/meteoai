@@ -20,8 +20,10 @@ interface LightningBannerProps {
 interface LocalUIText {
     near: string;
     veryNear: string;
-    /** {km} {dir} {min} */
+    /** {km} {dir} {min}: Meteosat-12 (MTG). */
     desc: string;
+    /** El mateix per a les xarxes de terra de la NOAA (nowCOAST, a Amèrica). */
+    descGround: string;
     intense: string;
     shelter: string;
     cta: string;
@@ -35,6 +37,7 @@ const LOCAL_UI_TEXTS: Record<Language, LocalUIText> = {
         near: 'Llamps a prop',
         veryNear: 'Llamps molt a prop',
         desc: 'El satèl·lit Meteosat-12 ha detectat llamps a uns {km} km {dir}, fa {min} min.',
+        descGround: 'Les xarxes de detecció de la NOAA han detectat llamps a uns {km} km {dir}, fa {min} min.',
         intense: ' Activitat elèctrica intensa.',
         shelter: " Si ets a l'aire lliure, busca refugi en un edifici o un cotxe.",
         cta: 'Veure al radar',
@@ -44,6 +47,7 @@ const LOCAL_UI_TEXTS: Record<Language, LocalUIText> = {
         near: 'Rayos cerca',
         veryNear: 'Rayos muy cerca',
         desc: 'El satélite Meteosat-12 ha detectado rayos a unos {km} km {dir}, hace {min} min.',
+        descGround: 'Las redes de detección de la NOAA han detectado rayos a unos {km} km {dir}, hace {min} min.',
         intense: ' Actividad eléctrica intensa.',
         shelter: ' Si estás al aire libre, busca refugio en un edificio o un coche.',
         cta: 'Ver en el radar',
@@ -53,6 +57,7 @@ const LOCAL_UI_TEXTS: Record<Language, LocalUIText> = {
         near: 'Lightning nearby',
         veryNear: 'Lightning very close',
         desc: 'The Meteosat-12 satellite detected lightning about {km} km {dir}, {min} min ago.',
+        descGround: "NOAA's lightning detection networks detected lightning about {km} km {dir}, {min} min ago.",
         intense: ' Intense electrical activity.',
         shelter: " If you're outdoors, take shelter in a building or a car.",
         cta: 'View on radar',
@@ -62,6 +67,7 @@ const LOCAL_UI_TEXTS: Record<Language, LocalUIText> = {
         near: 'Éclairs à proximité',
         veryNear: 'Éclairs tout près',
         desc: 'Le satellite Meteosat-12 a détecté des éclairs à environ {km} km {dir}, il y a {min} min.',
+        descGround: 'Les réseaux de détection de la NOAA ont détecté des éclairs à environ {km} km {dir}, il y a {min} min.',
         intense: ' Activité électrique intense.',
         shelter: " Si vous êtes à l'extérieur, abritez-vous dans un bâtiment ou une voiture.",
         cta: 'Voir sur le radar',
@@ -74,7 +80,7 @@ export default function LightningBanner({ lightning, lang, now, onShowRadar }: L
     if (!lightning || lightning.nearestKm > LIGHTNING_NEAR_KM) return null;
     const ui = LOCAL_UI_TEXTS[lang] || LOCAL_UI_TEXTS.ca;
     const veryNear = lightning.nearestKm <= LIGHTNING_VERY_NEAR_KM;
-    const desc = ui.desc
+    const desc = (lightning.source === 'nowcoast' ? ui.descGround : ui.desc)
         .replace('{km}', String(lightning.nearestKm))
         .replace('{dir}', ui.dirs[compassIndex(lightning.bearingDeg)])
         .replace('{min}', String(lightningMinutesAgo(lightning, now)))

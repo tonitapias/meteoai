@@ -305,7 +305,7 @@ export const es = {
     coverageNote: "Cada zona usa el suyo: AROME, ICON-D2, UKMO, HRRR, JMA… Fuera de estas zonas, la previsión sale de los modelos globales (paso 1).",
     step3Title: "Observación y avisos oficiales",
     step3Badge: "7 fuentes oficiales",
-    step3Text: "El radar, el satélite y los rayos detectados desde el espacio (en Europa y África) muestran lo que pasa ahora mismo: si llueve donde el modelo no lo preveía, cuándo empezará o dejará de llover o si hay rayos cerca, la app te lo dice. Además, ves los avisos oficiales de Estados Unidos, España, Cataluña, Francia, Portugal, Alemania e Italia, siempre con la fuente citada y traducidos si hace falta.",
+    step3Text: "El radar, el satélite y los rayos (detectados desde el espacio en Europa y África, y por redes en tierra en América) muestran lo que pasa ahora mismo: si llueve donde el modelo no lo preveía, cuándo empezará o dejará de llover o si hay rayos cerca, la app te lo dice. Además, ves los avisos oficiales de Estados Unidos, España, Cataluña, Francia, Portugal, Alemania e Italia, siempre con la fuente citada y traducidos si hace falta.",
     step4Title: "Resumen con IA",
     step4Badge: "Próximas 6 horas",
     step4Text: "Una IA (Google Gemini, con Groq de reserva) lee los datos ya calculados de las próximas 6 horas y te resume lo que importa, con un nivel de aviso y algún consejo. Las cifras no se las inventa: salen de los modelos. Unas reglas fijas revisan las mismas horas y, si ven más riesgo del que dice la IA, manda su nivel, con el motivo y la cifra debajo. Mientras llega la respuesta, o si la IA no responde, ves un resumen hecho con estas reglas.",

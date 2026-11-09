@@ -742,13 +742,14 @@ export const getGeminiAnalysis = async (
           Aerosols: PARTÍCULES EN SUSPENSIÓ — PM10 ${Math.round(dustAdvisory.pm10 ?? 0)} µg/m³. Mesura de qualitat de l'aire (salut), NO de visibilitat ni de boira: no en derivis boira ni visibilitat reduïda.`
                 : '';
 
-        // Llamps observats (Meteosat-12, lightningService): l'únic senyal de la telemetria que no és previsió. Es
-        // diu explícitament perquè la IA no el confongui amb el codi de tempesta del model ni el posi en futur. Sense
-        // l'última frase, Gemini (2 de 2 crides, 2026-10-20) només parlava de la tempesta que el model preveia a les
-        // 04:00 i ignorava la que ja hi havia a 23 km; amb ella, la primera frase la cita (4 de 4, en ca/es/en/fr).
+        // Llamps observats (Meteosat-12 o, a Amèrica, les xarxes de terra de la NOAA; lightningService): l'únic senyal
+        // de la telemetria que no és previsió. Es diu explícitament perquè la IA no el confongui amb el codi de
+        // tempesta del model ni el posi en futur. Sense l'última frase, Gemini (2 de 2 crides, 2026-10-20) només
+        // parlava de la tempesta que el model preveia a les 04:00 i ignorava la que ja hi havia a 23 km; amb ella, la
+        // primera frase la cita (4 de 4, en ca/es/en/fr).
         const lightningLine = lightning
             ? `
-          Llamps observats ARA (satèl·lit Meteosat-12, darrers 30 min): el més proper a uns ${lightning.nearestKm} km ${compassPhraseCa(lightning.bearingDeg)}, fa ${lightningMinutesAgo(lightning, Date.now())} min${lightning.intense ? ', amb activitat elèctrica intensa' : ''}. És una observació real d'ara mateix, no una previsió: ${lightning.nearestKm <= LIGHTNING_NEAR_KM
+          Llamps observats ARA (${lightning.source === 'nowcoast' ? 'xarxes de detecció a terra de la NOAA' : 'satèl·lit Meteosat-12'}, darrers 30 min): el més proper a uns ${lightning.nearestKm} km ${compassPhraseCa(lightning.bearingDeg)}, fa ${lightningMinutesAgo(lightning, Date.now())} min${lightning.intense ? ', amb activitat elèctrica intensa' : ''}. És una observació real d'ara mateix, no una previsió: ${lightning.nearestKm <= LIGHTNING_NEAR_KM
                 ? 'hi ha una tempesta activa a prop. Digues-ho a la primera frase del text, en present, amb la distància i la direcció.'
                 : 'hi ha una tempesta activa a la zona, encara no a sobre. Esmenta-ho al text, en present, amb la distància i la direcció.'}`
             : '';

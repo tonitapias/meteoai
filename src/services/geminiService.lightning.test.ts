@@ -16,7 +16,7 @@ import type { LightningNearby } from './lightningService';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 // Llamps observats a prop (Meteosat-12): una línia de telemetria per a la IA i, a 30 km o menys, el tallafocs
-// AMBER / CONVECTIVE amb el motiu "Llamps detectats per satèl·lit a uns N km".
+// AMBER / CONVECTIVE amb el motiu "Llamps detectats a uns N km".
 
 /** 8 hores d'una nit seca i tranquil·la: cada test hi posa els llamps (i, si cal, un codi de tempesta del model). */
 const buildWeather = (overrides: Record<string, unknown[]> = {}): ExtendedWeatherData => {
@@ -78,6 +78,14 @@ describe('getGeminiAnalysis — llamps observats', () => {
         const { prompt } = await analyse(buildWeather(), at(23));
         expect(prompt).toContain('Llamps observats ARA (satèl·lit Meteosat-12, darrers 30 min): el més proper a uns 23 km al nord-oest, fa 9 min, amb activitat elèctrica intensa.');
         expect(prompt).toContain('hi ha una tempesta activa a prop. Digues-ho a la primera frase del text');
+    });
+
+    it('a Amèrica (nowCOAST): la línia diu que són les xarxes de terra de la NOAA, i el tallafocs és el mateix', async () => {
+        const { prompt, result } = await analyse(buildWeather(), { ...at(23), source: 'nowcoast' });
+        expect(prompt).toContain('Llamps observats ARA (xarxes de detecció a terra de la NOAA, darrers 30 min): el més proper a uns 23 km al nord-oest');
+        expect(prompt).not.toContain('Meteosat-12');
+        expect(result?.risk_level).toBe('AMBER');
+        expect(result?.risk_detail?.event).toBe('lightning');
     });
 
     it('a 23 km, encara que la IA digui GREEN: el tallafocs posa AMBER / CONVECTIVE amb el motiu dels llamps', async () => {

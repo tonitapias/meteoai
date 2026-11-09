@@ -507,6 +507,20 @@ describe("NOAA nowCOAST llamps d'Amèrica Contract Check", () => {
         expect(old.headers.get('warning')).toMatch(/No nearest value found/i);
     }, TIMEOUT_MS);
 
+    // L'avís «Llamps a prop» a Amèrica (lightningService) llegeix nowCOAST des del navegador i en classifica els
+    // colors: sense CORS no hi arriba, i amb una altra paleta mesuraria malament on cauen els llamps.
+    it("l'avís de llamps a prop: CORS obert i la paleta de 17 classes que classifica l'app", async () => {
+        const map = await fetch(nowcoastGetMap(Math.floor(Date.now() / 1000 / 900) * 900 - 1800, ''), { headers: { ...NOAA_HEADERS, Origin: 'https://meteotoniai.com' } });
+        await map.arrayBuffer();
+        expect(map.headers.get('access-control-allow-origin'), 'nowCOAST ja no té CORS obert: l\'avís de llamps a Amèrica no pot llegir les imatges').toBe('*');
+
+        const styles = await (await fetch('https://nowcoast.noaa.gov/geoserver/lightning_detection/wms?service=WMS&version=1.1.1&request=GetStyles&layers=ldn_lightning_strike_density', { headers: NOAA_HEADERS })).text();
+        const colours = [...styles.matchAll(/ColorMapEntry color="#([0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase()).slice(1);
+        expect(colours, 'La paleta de nowCOAST ha canviat: cal revisar NOWCOAST_CLASSES (lightningService) i AMERICAS_LIGHTNING_PAINT (useRadarAnimation)').toEqual(
+            ['ffffcc', 'ffec78', 'ffff00', 'ffd600', 'ffa400', 'ff7800', 'ff4500', 'ff0000', 'bc0025', 'cc0066', 'ff00ff', '800080', '4000c0', '0000ff', '00c7ff', '00a264', '00ff00']
+        );
+    }, TIMEOUT_MS);
+
     it("el worker de producció dona la finestra de llamps d'Amèrica i en resol una tessel·la real", async () => {
         const response = await fetch(`${WORKER_URL}/lightning/americas/latest`, { headers: WORKER_HEADERS });
         expect(response.ok, `/lightning/americas/latest ha respost amb status: ${response.status}`).toBe(true);

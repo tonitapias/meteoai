@@ -32,6 +32,17 @@ describe('LightningBanner', () => {
         expect(container.innerHTML).toBe('');
     });
 
+    it('a Amèrica (nowCOAST): diu que són les xarxes de detecció de la NOAA, no el satèl·lit', () => {
+        const { rerender } = render(<LightningBanner lightning={at(23, { source: 'nowcoast' })} lang="ca" now={NOW} onShowRadar={() => {}} />);
+        expect(screen.getByText('Les xarxes de detecció de la NOAA han detectat llamps a uns 23 km al nord-oest, fa 8 min.')).toBeTruthy();
+        rerender(<LightningBanner lightning={at(23, { source: 'nowcoast' })} lang="es" now={NOW} onShowRadar={() => {}} />);
+        expect(screen.getByText('Las redes de detección de la NOAA han detectado rayos a unos 23 km al noroeste, hace 8 min.')).toBeTruthy();
+        rerender(<LightningBanner lightning={at(23, { source: 'nowcoast' })} lang="en" now={NOW} onShowRadar={() => {}} />);
+        expect(screen.getByText("NOAA's lightning detection networks detected lightning about 23 km to the north-west, 8 min ago.")).toBeTruthy();
+        rerender(<LightningBanner lightning={at(23, { source: 'nowcoast' })} lang="fr" now={NOW} onShowRadar={() => {}} />);
+        expect(screen.getByText('Les réseaux de détection de la NOAA ont détecté des éclairs à environ 23 km au nord-ouest, il y a 8 min.')).toBeTruthy();
+    });
+
     it('en anglès i francès', () => {
         const { rerender } = render(<LightningBanner lightning={at(23)} lang="en" now={NOW} onShowRadar={() => {}} />);
         expect(screen.getByText('The Meteosat-12 satellite detected lightning about 23 km to the north-west, 8 min ago.')).toBeTruthy();

@@ -2,6 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
     analyseLightningPixels,
+    analyseNowcoastPixels,
+    lightningSourceAt,
     summariseLightning,
     isInsideLightningCoverage,
     compassIndex,
@@ -58,6 +60,51 @@ describe('analyseLightningPixels', () => {
     });
 });
 
+describe('analyseNowcoastPixels', () => {
+    // Densitat de nowCOAST: cel·les de 8 km (8 × 8 px a 1 km/px) amb els colors de la seva paleta.
+    const cell = (data: Uint8ClampedArray, cx: number, cy: number, hex: string) => {
+        const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+        for (let y = cy * 8; y < cy * 8 + 8; y++) for (let x = cx * 8; x < cx * 8 + 8; x++) {
+            const o = (y * W + x) * 4;
+            data[o] = r; data[o + 1] = g; data[o + 2] = b; data[o + 3] = 255;
+        }
+    };
+
+    it('tempesta amb vora groga: la distància és a les cel·les d\'1 o més, no a la vora (difuminat)', () => {
+        const data = blank();
+        // A l'est, de més a prop a més lluny: vora groga (0,25), 1–2,5, i un nucli de 10–15.
+        cell(data, 7, 6, 'ffec78'); // x 56–63 → 6–14 km
+        cell(data, 8, 6, 'ffa400'); // x 64–71 → 14–22 km
+        cell(data, 9, 6, 'ff0000');
+        const a = analyseNowcoastPixels(data, W, W, 1);
+        expect(a).toMatchObject({ nearestKm: 15, bearingDeg: 88, intense: false });
+    });
+
+    it('llamp aïllat (taca que no arriba a 1): la distància és al seu pic', () => {
+        const data = blank();
+        cell(data, 4, 6, 'ffffcc'); // 0,1, més a prop (x 32–39)
+        cell(data, 3, 6, 'ffff00'); // 0,5, el pic (x 24–31)
+        cell(data, 2, 6, 'ffffcc');
+        const a = analyseNowcoastPixels(data, W, W, 1);
+        expect(a).toMatchObject({ nearestKm: 19, bearingDeg: 272 });
+    });
+
+    it('25 o més dins el cercle és intens; un color desconegut compta com a llamp', () => {
+        const data = blank();
+        cell(data, 6, 2, 'cc0066');
+        expect(analyseNowcoastPixels(data, W, W, 1)?.intense).toBe(true);
+        const other = blank();
+        cell(other, 6, 6, '123456');
+        expect(analyseNowcoastPixels(other, W, W, 1)).toMatchObject({ nearestKm: 1, intense: false });
+    });
+
+    it('sense res dins el cercle de 50 km: null', () => {
+        const data = blank();
+        cell(data, 0, 0, 'ff0000'); // cantonada, a més de 50 km
+        expect(analyseNowcoastPixels(data, W, W, 1)).toBeNull();
+    });
+});
+
 describe('summariseLightning', () => {
     const slot = 1792447500; // 22:05Z
     const a = (km: number, intense = false): SlotAnalysis => ({ nearestKm: km, bearingDeg: 90, intense, pixels: 10 });
@@ -74,6 +121,12 @@ describe('summariseLightning', () => {
     it('cap franja amb llamps: null', () => {
         expect(summariseLightning([slot, slot - 300], [null, null])).toBeNull();
     });
+
+    it('nowCOAST: l\'etiqueta ja és el final de la finestra de 15 min, i porta la font', () => {
+        const window = 1792447200; // 22:00Z
+        const summary = summariseLightning([window, window - 900], [a(12), null], 'nowcoast');
+        expect(summary).toEqual({ nearestKm: 12, bearingDeg: 90, observedAt: window, intense: false, activeSlots: 1, source: 'nowcoast' });
+    });
 });
 
 describe('utilitats', () => {
@@ -83,6 +136,16 @@ describe('utilitats', () => {
         expect(isInsideLightningCoverage(40.7, -74)).toBe(false);
         expect(isInsideLightningCoverage(35.7, 139.7)).toBe(false);
         expect(isInsideLightningCoverage(78, 15)).toBe(false);
+    });
+
+    it('font de cada ubicació, la mateixa que el radar: nowCOAST a l\'oest de 60° O i al nord de 25° S', () => {
+        expect(lightningSourceAt(41.4, 2.17)).toBe('mtg'); // Barcelona
+        expect(lightningSourceAt(40.7, -74)).toBe('nowcoast'); // Nova York
+        expect(lightningSourceAt(-3.12, -60.02)).toBe('nowcoast'); // Manaus
+        expect(lightningSourceAt(-1.45, -48.5)).toBe('mtg'); // Belém
+        expect(lightningSourceAt(-34.6, -58.4)).toBe('mtg'); // Buenos Aires
+        expect(lightningSourceAt(-33.4, -70.6)).toBeNull(); // Santiago de Xile
+        expect(lightningSourceAt(35.7, 139.7)).toBeNull(); // Tòquio
     });
 
     it('rumb de 8 punts i frase en català', () => {
@@ -117,11 +180,31 @@ describe('getLightningNearby', () => {
     const worker = (slot: (url: string) => Response, latest: unknown = { latest: LATEST, cadence: 300, source: 'caps' }) =>
         vi.fn(async (url: string) => (String(url).includes('/lightning/latest') ? latestResponse(latest) : slot(String(url))));
 
-    it('fora de l\'abast del Lightning Imager: null sense cap petició', async () => {
+    it('sense cap font (ni MTG ni nowCOAST): null sense cap petició', async () => {
         const fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
-        expect(await getLightningNearby(40.7, -74)).toBeNull();
+        expect(await getLightningNearby(35.7, 139.7)).toBeNull();
+        expect(await getLightningNearby(-33.4, -70.6)).toBeNull();
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('a Amèrica: /lightning/americas/latest i les 2 finestres de 15 min de nowCOAST (100 px en png)', async () => {
+        const WINDOW = 1792447200; // 22:00Z
+        const fetchMock = vi.fn(async (url: string) => (String(url).includes('/lightning/americas/latest')
+            ? latestResponse({ latest: WINDOW, cadence: 900, source: 'caps' })
+            : new Response('', { status: 502 })));
+        vi.stubGlobal('fetch', fetchMock);
+
+        expect(await getLightningNearby(40.7, -74)).toBeUndefined();
+        const urls = fetchMock.mock.calls.map(([u]) => String(u));
+        expect(urls[0]).toContain('/lightning/americas/latest');
+        const wms = urls.filter((u) => u.includes('nowcoast.noaa.gov'));
+        expect(wms).toHaveLength(2);
+        expect(wms[0]).toContain('time=2026-10-19T22:00:00Z');
+        expect(wms[1]).toContain('time=2026-10-19T21:45:00Z');
+        expect(wms[0].startsWith('https://nowcoast.noaa.gov/geoserver/lightning_detection/ldn_lightning_strike_density/ows?service=WMS&version=1.3.0&request=GetMap&layers=ldn_lightning_strike_density&')).toBe(true);
+        expect(wms[0]).toContain('width=100&height=100&format=image/png&transparent=true');
+        expect(urls.some((u) => u.includes('li_afa'))).toBe(false);
     });
 
     it('navegador sense createImageBitmap: null sense cap petició', async () => {

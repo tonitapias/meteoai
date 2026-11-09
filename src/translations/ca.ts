@@ -307,7 +307,7 @@ export const ca = {
     coverageNote: "Cada zona fa servir el seu: AROME, ICON-D2, UKMO, HRRR, JMA… Fora d'aquestes zones, la previsió surt dels models globals (pas 1).",
     step3Title: "Observació i avisos oficials",
     step3Badge: "7 fonts oficials",
-    step3Text: "El radar, el satèl·lit i els llamps detectats des de l'espai (a Europa i l'Àfrica) mostren què passa ara mateix: si plou on el model no ho preveia, quan començarà o acabarà de ploure o si hi ha llamps a prop, l'app t'ho diu. A més, hi veus els avisos oficials dels Estats Units, Espanya, Catalunya, França, Portugal, Alemanya i Itàlia, sempre amb la font citada i traduïts si cal.",
+    step3Text: "El radar, el satèl·lit i els llamps (detectats des de l'espai a Europa i l'Àfrica, i per xarxes de terra a Amèrica) mostren què passa ara mateix: si plou on el model no ho preveia, quan començarà o acabarà de ploure o si hi ha llamps a prop, l'app t'ho diu. A més, hi veus els avisos oficials dels Estats Units, Espanya, Catalunya, França, Portugal, Alemanya i Itàlia, sempre amb la font citada i traduïts si cal.",
     step4Title: "Resum amb IA",
     step4Badge: "Pròximes 6 hores",
     step4Text: "Una IA (Google Gemini, amb Groq de reserva) llegeix les dades ja calculades de les pròximes 6 hores i te'n resumeix el que importa, amb un nivell d'avís i algun consell. Les xifres no se les inventa: surten dels models. Unes regles fixes revisen les mateixes hores i, si hi veuen més risc del que diu la IA, mana el seu nivell, amb el motiu i la xifra a sota. Mentre arriba la resposta, o si la IA no respon, veus un resum fet amb aquestes regles.",

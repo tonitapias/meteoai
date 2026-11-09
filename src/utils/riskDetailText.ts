@@ -46,7 +46,7 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             fog: 'Boira prevista {from}',
             dust: 'Pols en suspensió (calima) ara mateix',
             particles: 'Partícules en suspensió ara mateix',
-            lightning: 'Llamps detectats per satèl·lit a uns {value} km (últims 30 min)'
+            lightning: 'Llamps detectats a uns {value} km (últims 30 min)'
         }
     },
     es: {
@@ -74,7 +74,7 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             fog: 'Niebla prevista {from}',
             dust: 'Polvo en suspensión (calima) ahora mismo',
             particles: 'Partículas en suspensión ahora mismo',
-            lightning: 'Rayos detectados por satélite a unos {value} km (últimos 30 min)'
+            lightning: 'Rayos detectados a unos {value} km (últimos 30 min)'
         }
     },
     fr: {
@@ -102,7 +102,7 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             fog: 'Brouillard prévu {from}',
             dust: 'Poussière en suspension en ce moment',
             particles: 'Particules en suspension en ce moment',
-            lightning: 'Éclairs détectés par satellite à environ {value} km (30 dernières min)'
+            lightning: 'Éclairs détectés à environ {value} km (30 dernières min)'
         }
     },
     en: {
@@ -130,7 +130,7 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
             fog: 'Fog expected {from}',
             dust: 'Airborne dust right now',
             particles: 'Airborne particles right now',
-            lightning: 'Lightning detected by satellite about {value} km away (last 30 min)'
+            lightning: 'Lightning detected about {value} km away (last 30 min)'
         }
     }
 };
