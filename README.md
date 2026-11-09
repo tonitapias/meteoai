@@ -94,7 +94,7 @@ El botó **Radar** de la capçalera obre un mapa a pantalla completa —un globu
 | **Llamps (MTG i NOAA)** | Llamps recents: groc translúcid on n'hi ha pocs, granat on n'hi ha molts | Europa, l'Àfrica, l'Atlàntic i l'est de Sud-amèrica: Lightning Imager de Meteosat-12 (EUMETSAT), cada 5 min, uns 12 min de retard. La resta d'Amèrica: xarxes de detecció a terra NLDN i GLD360 (NOAA nowCOAST), cada 15 min, uns 7–16 min de retard | Activa |
 | **Núvols (Satèl·lit IR)** | Núvols de tot el món en infraroig | LibreWXR (satèl·lits geostacionaris, compost de NOAA), cada hora | Activa |
 | **Imatge Satèl·lit (NASA)** | Fotografia en color real del dia | VIIRS (NOAA-20): la data completa més recent dels últims 6 dies | — |
-| **Incendis Actius (NASA)** | Focs detectats el dia anterior | VIIRS (Suomi NPP), anomalies tèrmiques a 375 m | — |
+| **Incendis Actius (NASA)** | Focs detectats el dia anterior | VIIRS (NOAA-20 i NOAA-21), anomalies tèrmiques a 375 m | — |
 | **Relleu 3D i Muntanyes** | El terreny en 3D (exagerat 1,5 vegades); la càmera s'inclina | Mapbox | — |
 | **Nit** | L'ombra de la nit, amb la línia real entre el dia i la nit | Calculada a l'app | Activa |
 | **Etiquetes** | Noms de països, regions i poblacions en l'idioma de l'app | Mapbox Streets | — |
