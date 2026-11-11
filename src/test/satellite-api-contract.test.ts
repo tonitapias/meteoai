@@ -458,6 +458,24 @@ describe('NOAA/NESDIS GeoColor de GOES Contract Check', () => {
         expect(missing.bytes.byteLength, 'Sense la franja, NESDIS ja no dona una imatge buida petita: el worker la serviria com a bona').toBeLessThanOrEqual(1024);
     }, 150000);
 
+    // 2026-11-11: l'arxiu donava el mateix tauler d'escacs per a qualsevol
+    // hora. El worker ho detecta igual (checkNesdisHealth) i passa a GIBS, que
+    // va ~20 min més tard; aquí es veu el dia que passa.
+    it("l'arxiu dona una imatge diferent a cada hora (no un tauler ni cap imatge fixa)", async () => {
+        const newest = await nesdisNewestSlot();
+        // Les franges que falten donen la imatge buida petita: dues de reals.
+        const real: Uint8Array[] = [];
+        for (const age of [3600, 7200, 10800, 14400]) {
+            const tile = await nesdisTile(newest - age, GOES_TILE);
+            if (tile.status === 200 && tile.bytes.byteLength > 1024) real.push(tile.bytes);
+            if (real.length === 2) break;
+        }
+        expect(real.length, 'NESDIS no ha donat dues franges reals de les últimes 4 h').toBe(2);
+        const [a, b] = real;
+        const identical = a.byteLength === b.byteLength && a.every((v, i) => v === b[i]);
+        expect(identical, "NESDIS dona la mateixa imatge a hores diferents (arxiu avariat): el GeoColor de GOES va només amb GIBS").toBe(false);
+    }, 150000);
+
     it('el worker de producció dona el GeoColor de GOES de NESDIS (més nou que el de GIBS)', async () => {
         const response = await fetch(`${WORKER_URL}/hd/goes/latest`, { headers: WORKER_HEADERS });
         const latest = await response.json() as { colour: { latest: number; slots: number[] } | null };
