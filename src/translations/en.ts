@@ -58,8 +58,11 @@ export const en = {
   layersMoreHint: "Tap a layer to see what it shows",
   closeLayerMenu: "Close layer menu",
   lightningLegend: "Lightning",
-  lightningLegendFew: "few",
-  lightningLegendMany: "many",
+  legendTitle: "Legend",
+  legendRain: "Rain",
+  legendSnow: "Snow",
+  legendLess: "less",
+  legendMore: "more",
 
   // --- Controls del reproductor ---
   btnPlay: "Play",

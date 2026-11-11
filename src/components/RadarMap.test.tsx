@@ -3,7 +3,7 @@
 // vida de les capes sense WebGL — pèrdua de context, cost per tick de
 // l'animació i vol de càmera en activar un satèl·lit HD.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within, cleanup } from '@testing-library/react';
 import RadarMap from './RadarMap';
 
 interface FakeLayer { id: string; paint: Record<string, unknown>; layout: Record<string, unknown> }
@@ -580,14 +580,47 @@ describe('RadarMap', () => {
     expect(map.errors).toEqual([]);
   }, 30000);
 
+  it('la llegenda comença plegada; oberta mostra pluja, neu i llamps; sense pluja ni llamps no hi és', async () => {
+    await mountRadar();
+    expect(screen.queryByTestId('radar-legend')).toBeNull();
+    const chip = screen.getByRole('button', { name: 'Llegenda' });
+    expect(chip.getAttribute('aria-expanded')).toBe('false');
+
+    await press('button', 'Llegenda');
+    const legend = screen.getByTestId('radar-legend');
+    expect(['Pluja', 'Neu', 'Llamps'].map((r) => within(legend).queryByText(r) !== null)).toEqual([true, true, true]);
+    expect(within(legend).getByRole('button', { name: 'Llegenda' }).getAttribute('aria-expanded')).toBe('true');
+
+    // Sense la capa de pluja marxen la pluja i la neu.
+    await press('button', 'Pluja');
+    expect(['Pluja', 'Neu', 'Llamps'].map((r) => within(screen.getByTestId('radar-legend')).queryByText(r) !== null)).toEqual([false, false, true]);
+    await press('button', 'Llamps');
+    expect(screen.queryByTestId('radar-legend')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Llegenda' })).toBeNull();
+
+    // Torna amb la pluja (encara oberta) i es plega amb el mateix botó.
+    await press('button', 'Pluja');
+    expect(screen.getByTestId('radar-legend')).toBeTruthy();
+    await press('button', 'Llegenda');
+    expect(screen.queryByTestId('radar-legend')).toBeNull();
+
+    // Deixar-la oberta no es recorda: en tornar a obrir el radar, plegada.
+    await press('button', 'Llegenda');
+    cleanup();
+    await mountRadar();
+    expect(screen.queryByTestId('radar-legend')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Llegenda' }).getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('desactivar els llamps treu les capes i la llegenda; tornar-los a activar les recrea', async () => {
     const map = await mountRadar();
     expect(ids(map, 'ltg-layer-').length).toBeGreaterThan(0);
-    expect(screen.getByText('molts')).toBeTruthy();
+    await press('button', 'Llegenda');
+    expect(within(screen.getByTestId('radar-legend')).getByText('Llamps')).toBeTruthy();
 
     await press('button', 'Llamps');
     expect(ids(map, 'ltg-layer-')).toEqual([]);
-    expect(screen.queryByText('molts')).toBeNull();
+    expect(within(screen.getByTestId('radar-legend')).queryByText('Llamps')).toBeNull();
 
     await press('button', 'Llamps');
     await act(async () => { await sleep(30); });

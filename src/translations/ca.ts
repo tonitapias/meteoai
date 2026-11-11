@@ -56,8 +56,11 @@ export const ca = {
   layersMoreHint: "Toca una capa: aquí veuràs què mostra",
   closeLayerMenu: "Tancar menú de capes",
   lightningLegend: "Llamps",
-  lightningLegendFew: "pocs",
-  lightningLegendMany: "molts",
+  legendTitle: "Llegenda",
+  legendRain: "Pluja",
+  legendSnow: "Neu",
+  legendLess: "menys",
+  legendMore: "més",
 
   // Controls del reproductor
   btnPlay: "Reproduir",

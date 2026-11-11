@@ -58,8 +58,11 @@ export const fr = {
   layersMoreHint: "Touchez une couche pour voir ce qu'elle montre",
   closeLayerMenu: "Fermer le menu des couches",
   lightningLegend: "Éclairs",
-  lightningLegendFew: "peu",
-  lightningLegendMany: "beaucoup",
+  legendTitle: "Légende",
+  legendRain: "Pluie",
+  legendSnow: "Neige",
+  legendLess: "moins",
+  legendMore: "plus",
 
   // --- Controls del reproductor ---
   btnPlay: "Lecture",

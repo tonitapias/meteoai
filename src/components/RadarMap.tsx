@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback, useMemo, Dispatch, SetStateAc
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTranslation } from 'react-i18next';
-import { Info, Zap } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 // 1. DOMINI FÍSIC EXTRET
 import {
@@ -26,6 +26,7 @@ import { useRadarData } from '../hooks/useRadarData';
 import { RadarOverlays } from './radar/RadarOverlays';
 import { RadarPlaybackControls } from './radar/RadarPlaybackControls';
 import { RadarLayerMenu } from './radar/RadarLayerMenu';
+import { RadarLegend } from './radar/RadarLegend';
 
 // 4. ELS NOUS HOOKS (CLEAN ARCHITECTURE)
 import { useAstroEngine } from '../hooks/radar/useAstroEngine';
@@ -298,23 +299,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
             </a>
           </>
         )}
-        {/* Llegenda dels llamps: de pocs a molts, amb els colors recolorats de
-            la capa (LIGHTNING_PAINT i AMERICAS_LIGHTNING_PAINT a
-            useRadarAnimation). Sense xifres: MTG compta llamps per píxel en
-            5 min (d'1 a 20 o més) i nowCOAST, la densitat en 15 min. */}
-        {overlays.lightning && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-300">
-            <Zap className="w-2.5 h-2.5 text-amber-300 shrink-0" aria-hidden="true" />
-            <span>{t('lightningLegend', 'Llamps')}</span>
-            <span>{t('lightningLegendFew', 'pocs')}</span>
-            <span
-              className="w-14 h-1.5 rounded-full"
-              style={{ background: 'linear-gradient(90deg, rgba(255,235,90,0.45), rgba(255,200,60,0.7), rgba(253,120,40,0.95) 53%, rgb(140,0,38))' }}
-              aria-hidden="true"
-            />
-            <span>{t('lightningLegendMany', 'molts')}</span>
-          </div>
-        )}
+        {/* Llegenda plegable: pluja i neu (amb la capa de precipitació) i llamps. */}
+        <RadarLegend showPrecip={overlays.precip} showLightning={overlays.lightning} />
         <button
           onClick={() => setShowAttribution(v => !v)}
           aria-label={t('radarData')}
