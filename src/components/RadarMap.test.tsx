@@ -145,7 +145,14 @@ async function mountRadar() {
   await act(async () => { map.emit('load'); await sleep(30); });
   return map;
 }
-const click = async (text: string) => { await act(async () => { fireEvent.click(screen.getByText(text)); await sleep(20); }); };
+const press = async (role: 'radio' | 'button', name: string | RegExp) => { await act(async () => { fireEvent.click(screen.getByRole(role, { name })); await sleep(20); }); };
+// Núvols del menú de capes: "HD" tria l'últim satèl·lit HD o, si no n'hi ha, el de
+// la ubicació (Meteosat a Barcelona); després, el xip del satèl·lit demanat.
+const hd = async (sat: 'Meteosat' | 'GOES' | 'Himawari') => {
+  if (!screen.queryByRole('radiogroup', { name: 'Satèl·lit HD' })) await press('radio', 'HD');
+  const name = new RegExp(`^${sat}`);
+  if (screen.getByRole('radio', { name }).getAttribute('aria-checked') !== 'true') await press('radio', name);
+};
 const layer = (m: FakeMapInstance, id: string) => m.layers.find((l) => l.id === id);
 
 beforeEach(() => {
@@ -222,7 +229,7 @@ describe('RadarMap', () => {
 
   it('després de perdre el context WebGL, el mapa nou recupera radar, IR global i HD', async () => {
     const map1 = await mountRadar();
-    await act(async () => { fireEvent.click(screen.getByText('Meteosat HD (Europa)')); await sleep(20); });
+    await hd('Meteosat');
 
     await act(async () => { map1.emit('webglcontextlost', { originalEvent: { preventDefault() {} } }); await sleep(20); });
     expect(maps()).toHaveLength(2);
@@ -243,24 +250,24 @@ describe('RadarMap', () => {
     map.flights.length = 0;
 
     map.zoom = 7;
-    await act(async () => { fireEvent.click(screen.getByText('Meteosat HD (Europa)')); await sleep(20); });
+    await hd('Meteosat');
     expect(map.flights).toEqual([{ zoom: 5, pitch: 0, speed: 1.4, essential: true }]);
 
-    await act(async () => { fireEvent.click(screen.getByText('Meteosat HD (Europa)')); await sleep(20); });
+    await press('radio', 'Cap');
     map.zoom = 4;
     map.flights.length = 0;
-    await act(async () => { fireEvent.click(screen.getByText('Meteosat HD (Europa)')); await sleep(20); });
+    await hd('Meteosat');
     expect(map.flights).toEqual([]);
 
-    await act(async () => { fireEvent.click(screen.getByText('GOES HD (Amèrica)')); await sleep(20); });
+    await hd('GOES');
     expect(map.flights).toEqual([{ center: [-95, 38], zoom: 3, pitch: 0, speed: 1.4, essential: true }]);
   });
 
   it("els canvis fets al menú abans que el mapa carregui s'apliquen en carregar", async () => {
     const map = renderRadar();
-    await click('Fosc');
-    await click('Etiquetes i Ciutats');
-    await click('Relleu 3D i Muntanyes');
+    await press('radio', 'Fosc');
+    await press('button', 'Noms');
+    await press('button', 'Relleu 3D');
     await act(async () => { map.emit('load'); await sleep(30); });
 
     expect(layer(map, 'base-layer-dark')?.layout.visibility).toBe('visible');
@@ -271,13 +278,13 @@ describe('RadarMap', () => {
 
   it('si el context es perd abans que el primer mapa carregui, el mapa nou se sincronitza i mou la càmera', async () => {
     const map1 = renderRadar();
-    await click('Relleu 3D i Muntanyes');
-    await click('GOES HD (Amèrica)');
+    await press('button', 'Relleu 3D');
+    await hd('GOES');
     await act(async () => { map1.emit('webglcontextlost', { originalEvent: { preventDefault() {} } }); await sleep(20); });
     const map2 = maps()[1];
     // Una altra acció de càmera abans del 'load' del mapa nou.
-    await click('GOES HD (Amèrica)');
-    await click('GOES HD (Amèrica)');
+    await press('radio', 'Cap');
+    await hd('GOES');
     await act(async () => { map2.emit('load'); await sleep(50); });
 
     expect(map2.lastTerrain).toEqual({ source: 'mapbox-dem', exaggeration: 1.5 });
@@ -286,7 +293,7 @@ describe('RadarMap', () => {
 
   it("amb un satèl·lit HD actiu, les capes d'IR global creades durant l'animació neixen visibles (precàrrega)", async () => {
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
     const before = new Set(ids(map, 'sat-layer-').map((l) => l.id));
     const hidden = new Set<string>();
@@ -329,7 +336,7 @@ describe('RadarMap', () => {
 
   it('Meteosat HD és MTG amb una franja de 10 min per fotograma, alineada amb /hd/meteosat/latest', async () => {
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
 
     // El fotograma actual (el més nou) és posterior a l'última imatge: la fa servir.
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
@@ -356,7 +363,7 @@ describe('RadarMap', () => {
   // es fixen a la mateixa crida), així que no fallen amb la màquina carregada.
   it("reproduint, si la imatge HD nova encara no ha arribat es manté l'anterior (mai buida)", async () => {
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     // La franja del fotograma 1 triga a arribar (tessel·la freda d'EUMETSAT).
     map.loading.add(`mtg-${T0 + 600}`);
     await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
@@ -375,7 +382,7 @@ describe('RadarMap', () => {
 
   it('si la imatge que es veia tampoc no és a punt (mapa mogut), es mostra la carregada més propera', async () => {
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${T0}`]);
     // Com després de moure el mapa: la que es veu i la del fotograma 1 encara
@@ -388,7 +395,7 @@ describe('RadarMap', () => {
 
   it("si la imatge nova no arriba, la substituta no és mai a més d'1 h del fotograma", async () => {
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     for (let i = 1; i <= 11; i++) map.loading.add(`mtg-${T0 + i * 600}`);
     await act(async () => { fireEvent.click(screen.getByLabelText('btnPlay')); await sleep(20); });
 
@@ -407,7 +414,7 @@ describe('RadarMap', () => {
   it('sense /hd/meteosat/latest, Meteosat HD fa servir MTG amb una hora calculada', async () => {
     hdLatest = 'fail';
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     // Fotogrames de fa més de 30 min: la seva pròpia franja.
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${T0 + 11 * 600}`]);
     expect(hdSource(map, `mtg-${T0 + 11 * 600}`)?.tiles[0]).toContain('/hd/mtg/v1/');
@@ -417,7 +424,7 @@ describe('RadarMap', () => {
     const msgLatest = T0 + 4800; // múltiple de 15 min
     hdLatest = { layer: 'msg', latest: msgLatest, cadence: 900, source: 'caps' };
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
 
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-msg-${msgLatest}`]);
     expect(hdSource(map, `msg-${msgLatest}`)?.tiles).toEqual([`https://sat.meteotoniai.com/hd/meteosat/${msgLatest}/{z}/{x}/{y}.png`]);
@@ -431,7 +438,7 @@ describe('RadarMap', () => {
     const map = await mountRadar();
     // useRadarData desa les dades 5 min a nivell de mòdul: refresc forçat.
     await act(async () => { fireEvent.click(screen.getByLabelText('btnRefresh')); await sleep(30); });
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     expect(ids(map, 'sat-layer-')).toEqual([]);
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
   });
@@ -440,7 +447,7 @@ describe('RadarMap', () => {
     let respond: (v: unknown) => void = () => {};
     hdLatest = new Promise((r) => { respond = r; });
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     expect(ids(map, 'hd-meteosat-layer-')).toEqual([]);
 
     await act(async () => { respond({ layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' }); await sleep(30); });
@@ -522,11 +529,11 @@ describe('RadarMap', () => {
     expect(ids(map, 'ltg-layer-').length).toBeGreaterThan(0);
     expect(screen.getByText('molts')).toBeTruthy();
 
-    await click('Llamps (MTG i NOAA)');
+    await press('button', 'Llamps');
     expect(ids(map, 'ltg-layer-')).toEqual([]);
     expect(screen.queryByText('molts')).toBeNull();
 
-    await click('Llamps (MTG i NOAA)');
+    await press('button', 'Llamps');
     await act(async () => { await sleep(30); });
     expect(visibleTargets(map, 'ltg-layer-', 0.5)).toEqual([`ltg-layer-${LIGHTNING_LATEST}`, `ltg-layer-am-${AMERICAS_LATEST}`]);
     expect(map.errors).toEqual([]);
@@ -552,10 +559,10 @@ describe('RadarMap', () => {
     const colourLatest = T0 + 7 * 600;
     hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps', colour: { latest: colourLatest, cadence: 600, source: 'caps' } };
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
+    await hd('Meteosat');
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
 
-    await click('Color');
+    await press('radio', 'Color');
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtgColour-${colourLatest}`]);
     expect(ids(map, 'hd-meteosat-layer-mtg-')).toEqual([]);
     expect(hdSource(map, `mtgColour-${colourLatest}`)?.tiles).toEqual([`https://sat.meteotoniai.com/hd/mtg/geocolour/v1/${colourLatest}/{z}/{x}/{y}.png`]);
@@ -566,7 +573,7 @@ describe('RadarMap', () => {
     // Fotografia: opacitat plena a zoom baix (l'IR hi deixa veure el mapa base).
     expect(opacityAtZoom3(layer(map, `hd-meteosat-layer-mtgColour-${colourLatest}`)!)).toBe(1);
 
-    await click('IR');
+    await press('radio', 'Infraroig');
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
     expect(ids(map, 'hd-meteosat-layer-mtgColour-')).toEqual([]);
     expect(map.errors).toEqual([]);
@@ -575,8 +582,8 @@ describe('RadarMap', () => {
   it('si GeoColour no està disponible (colour null), el mode color mostra l\'IR', async () => {
     hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps', colour: null };
     const map = await mountRadar();
-    await click('Meteosat HD (Europa)');
-    await click('Color');
+    await hd('Meteosat');
+    await press('radio', 'Color');
     expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
   });
 
@@ -597,7 +604,7 @@ describe('RadarMap', () => {
   it('GOES HD: una franja de GIBS per fotograma (cada 10 min) segons /hd/goes/latest, en tessel·les de 256 px', async () => {
     const map = await mountRadar();
     expect(gibsCalls).toEqual([]);
-    await click('GOES HD (Amèrica)');
+    await hd('GOES');
     expect(gibsCalls).toEqual(['https://sat.meteotoniai.com/hd/goes/latest']);
 
     // El fotograma actual (el més nou) és posterior a l'última franja: la fa servir.
@@ -627,8 +634,8 @@ describe('RadarMap', () => {
 
   it('GOES en color: GeoColor per sobre del filtre de nit fins al nivell 7; Himawari no té selector i va en IR', async () => {
     const map = await mountRadar();
-    await click('GOES HD (Amèrica)');
-    await click('Color');
+    await hd('GOES');
+    await press('radio', 'Color');
     const key = `gibsColour-${GIBS_COLOUR_LATEST}`;
     expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-${key}`]);
     expect(ids(map, 'hd-goes-layer-gibs-')).toEqual([]);
@@ -639,8 +646,8 @@ describe('RadarMap', () => {
     expect(order.indexOf(`hd-goes-layer-${key}`)).toBeGreaterThan(order.indexOf('layer-night'));
     expect(opacityAtZoom3(layer(map, `hd-goes-layer-${key}`)!)).toBe(1);
 
-    await click('Himawari HD (Àsia)');
-    expect(screen.queryByRole('radiogroup')).toBeNull();
+    await hd('Himawari');
+    expect(screen.queryByRole('radiogroup', { name: 'Mode del satèl·lit HD' })).toBeNull();
     expect(ids(map, 'hd-goes-layer-')).toEqual([]);
     expect(gibsTargets(map, 'himawari')).toEqual([`hd-himawari-layer-gibs-${GIBS_IR_LATEST}`]);
     expect(gibsSource(map, 'himawari', `gibs-${GIBS_IR_LATEST}`)?.tiles[0]).toContain('/hd/gibs/v1/himawari/ir/');
@@ -651,8 +658,8 @@ describe('RadarMap', () => {
   it('sense /hd/goes/latest, GOES fa servir l\'IR a la desena del fotograma', async () => {
     gibsLatest = 'fail';
     const map = await mountRadar();
-    await click('GOES HD (Amèrica)');
-    await click('Color');
+    await hd('GOES');
+    await press('radio', 'Color');
     // Els fotogrames de la prova són de fa dies: "ara − 40 min" no hi limita.
     expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-gibs-${T0 + 11 * 600}`]);
   });

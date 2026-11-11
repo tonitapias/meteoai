@@ -13,7 +13,7 @@ import {
 } from '../../utils/radarPhysics';
 
 // Franges pròpies d'una capa del worker: el worker diu quina és l'última
-// imatge publicada (/hd/meteosat/latest per a "Meteosat HD (Europa)",
+// imatge publicada (/hd/meteosat/latest per a Meteosat (Núvols · HD),
 // /hd/goes/latest i /hd/himawari/latest per a GOES i Himawari,
 // /lightning/latest per als llamps; desat 60 s a l'edge). useRadarAnimation
 // hi alinea cada fotograma de radar (computeMeteosatSlot, computeGibsSlot,

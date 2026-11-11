@@ -125,6 +125,48 @@ export const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
   himawari: [80, -60, 180, GIBS_NORTH]
 };
 
+// --- NÚVOLS: UNA SOLA FONT ---
+// L'IR global (LibreWXR) i els tres satèl·lits HD són excloents: el menú de
+// capes els presenta com un sol selector (Cap · Global · HD) i RadarMap els
+// escriu tots alhora (setCloudSource) als booleans d'Overlays, que és el que
+// llegeixen els hooks.
+export type CloudSource = 'none' | 'global' | HdAgency;
+// La resta de capes s'encenen i s'apaguen soles.
+export type OverlayToggleKey = Exclude<keyof Overlays, 'satIR' | 'hdGoes' | 'hdMeteosat' | 'hdHimawari'>;
+
+export const getCloudSource = (o: Overlays): CloudSource =>
+  o.hdMeteosat ? 'meteosat'
+    : o.hdGoes ? 'goes'
+      : o.hdHimawari ? 'himawari'
+        : o.satIR ? 'global'
+          : 'none';
+
+// Longitud dels satèl·lits geostacionaris de cada font HD (GOES: East i West).
+const HD_SUBPOINT_LONS: Record<HdAgency, number[]> = {
+  meteosat: [0],
+  goes: [-75.2, -137.2],
+  himawari: [140.7]
+};
+
+const lonDistance = (a: number, b: number): number => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+};
+
+// Satèl·lit HD per a un punt: d'entre els que el cobreixen (HD_BOUNDS), el que
+// el veu més de cara (longitud més propera); fora de tots (l'Àrtic, l'Índia),
+// el més proper. És el que el menú de capes tria en passar a HD.
+export const hdAgencyForPoint = (lat: number, lon: number): HdAgency => {
+  const agencies = Object.keys(HD_BOUNDS) as HdAgency[];
+  const covers = (a: HdAgency) => {
+    const [west, south, east, north] = HD_BOUNDS[a];
+    return lon >= west && lon <= east && lat >= south && lat <= north;
+  };
+  const distance = (a: HdAgency) => Math.min(...HD_SUBPOINT_LONS[a].map((l) => lonDistance(lon, l)));
+  const pool = agencies.filter(covers);
+  return (pool.length ? pool : agencies).reduce((best, a) => (distance(a) < distance(best) ? a : best));
+};
+
 // Variant de la font HD: MTG (Meteosat-12, imatge cada 10 min), MTG en color
 // (GeoColour), MSG (el Meteosat actual, reserva fins al 2027) o GIBS
 // (GOES/Himawari via NASA, cada 10 min), en IR o en color (GeoColor, només

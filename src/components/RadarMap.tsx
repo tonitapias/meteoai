@@ -10,7 +10,11 @@ import {
   BaseLayerType,
   BaseLayerConfig,
   Overlays,
+  CloudSource,
+  OverlayToggleKey,
   getBlackMarbleUrl,
+  getCloudSource,
+  hdAgencyForPoint,
 } from '../utils/radarPhysics';
 import type { Language } from '../translations';
 
@@ -102,22 +106,32 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
 
-  const toggleOverlay = useCallback((key: keyof Overlays) => {
+  // Capes independents (pluja, llamps, nit...). Els núvols van per setCloudSource.
+  const toggleOverlay = useCallback((key: OverlayToggleKey) => {
     setOverlays(prev => {
       const next = { ...prev, [key]: !prev[key] };
-      if (key === 'hdGoes' && next.hdGoes) {
-        next.satIR = false; next.hdMeteosat = false; next.hdHimawari = false;
-      } else if (key === 'hdMeteosat' && next.hdMeteosat) {
-        next.satIR = false; next.hdGoes = false; next.hdHimawari = false;
-      } else if (key === 'hdHimawari' && next.hdHimawari) {
-        next.satIR = false; next.hdGoes = false; next.hdMeteosat = false;
-      } else if (key === 'satIR' && next.satIR) {
-        next.hdGoes = false; next.hdMeteosat = false; next.hdHimawari = false;
-      }
       overlaysRef.current = next;
       return next;
     });
   }, []);
+
+  // Núvols: l'IR global i els satèl·lits HD són excloents (CloudSource).
+  const setCloudSource = useCallback((source: CloudSource) => {
+    setOverlays(prev => {
+      const next = {
+        ...prev,
+        satIR: source === 'global',
+        hdMeteosat: source === 'meteosat',
+        hdGoes: source === 'goes',
+        hdHimawari: source === 'himawari'
+      };
+      overlaysRef.current = next;
+      return next;
+    });
+  }, []);
+
+  // Satèl·lit HD de la ubicació consultada: el que el menú tria en passar a HD.
+  const homeHdAgency = useMemo(() => hdAgencyForPoint(lat, lon), [lat, lon]);
 
   // --- ARRANQUEN ELS NOUS HOOKS (CLEAN ARCHITECTURE) ---
 
@@ -332,6 +346,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
         setActiveBaseLayer={setActiveBaseLayer}
         overlays={overlays}
         toggleOverlay={toggleOverlay}
+        cloudSource={getCloudSource(overlays)}
+        setCloudSource={setCloudSource}
+        homeHdAgency={homeHdAgency}
         baseLayers={BASE_LAYERS}
       />
 

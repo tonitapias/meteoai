@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl } from './radarPhysics';
+import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl, hdAgencyForPoint, getCloudSource } from './radarPhysics';
 
 // Franges de la capa HD: Meteosat amb hores pròpies (MTG cada 10 min, MSG de
 // reserva cada 15) i GOES/Himawari amb les franges de GIBS (cada 10 min).
@@ -169,5 +169,33 @@ describe('getNasaFiresWmsUrl', () => {
     expect(url.href).not.toContain('SNPP');
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
     expect(url.searchParams.get('TIME')).toBe(yesterday);
+  });
+});
+
+describe('hdAgencyForPoint', () => {
+  it('tria el satèl·lit que cobreix el lloc i el veu més de cara', () => {
+    expect(hdAgencyForPoint(41.39, 2.17)).toBe('meteosat');   // Barcelona
+    expect(hdAgencyForPoint(70.66, 23.68)).toBe('meteosat');  // Hammerfest (MTG fins a 72°N)
+    expect(hdAgencyForPoint(-8.05, -34.9)).toBe('meteosat');  // Recife: dins de tots dos, Meteosat més a prop
+    expect(hdAgencyForPoint(40.71, -74.01)).toBe('goes');     // Nova York
+    expect(hdAgencyForPoint(21.31, -157.86)).toBe('goes');    // Honolulu (GOES-West)
+    expect(hdAgencyForPoint(35.68, 139.69)).toBe('himawari'); // Tòquio
+    expect(hdAgencyForPoint(-33.87, 151.21)).toBe('himawari'); // Sydney
+  });
+
+  it('fora de totes les zones, el satèl·lit de longitud més propera', () => {
+    expect(hdAgencyForPoint(19.08, 72.88)).toBe('himawari'); // Bombai (entre 60°E i 80°E)
+    expect(hdAgencyForPoint(78.22, 15.65)).toBe('meteosat'); // Svalbard (al nord de 72°N)
+  });
+});
+
+describe('getCloudSource', () => {
+  const base = { precip: true, satIR: false, hdGoes: false, hdMeteosat: false, hdHimawari: false, night: true, labels: false, nasaReal: false, nasaFires: false, terrain3D: false, lightning: true, hdColour: false };
+  it('llegeix la font de núvols dels booleans', () => {
+    expect(getCloudSource(base)).toBe('none');
+    expect(getCloudSource({ ...base, satIR: true })).toBe('global');
+    expect(getCloudSource({ ...base, hdGoes: true })).toBe('goes');
+    expect(getCloudSource({ ...base, hdMeteosat: true })).toBe('meteosat');
+    expect(getCloudSource({ ...base, hdHimawari: true })).toBe('himawari');
   });
 });
