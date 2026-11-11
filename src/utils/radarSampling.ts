@@ -6,9 +6,10 @@
 // real que el model no preveu (useRadarRealityCheck.ts).
 
 // Taula oficial dBZ -> RGBA de l'esquema "NEXRAD Level III" (id 6 a l'API de
-// RainViewer/LibreWXR, el que fem servir sempre a useRadarAnimation.ts:156).
+// RainViewer/LibreWXR, el que fan servir el mapa i aquest mostreig).
 // Extreta literalment de rainviewer.com/files/rainviewer_api_colors_table.csv
 // (columna "NEXRAD Level III"). Per sota de 0 dBZ tot és transparent (a=0).
+// Només val per a tessel·les SENSE l'opció de neu (RADAR_TILE_OPTIONS).
 const NEXRAD_LEVEL3_PALETTE: ReadonlyArray<readonly [dbz: number, r: number, g: number, b: number, a: number]> = [
   [-32,0,0,0,0],[-31,0,0,0,0],[-30,0,0,0,0],[-29,0,0,0,0],[-28,0,0,0,0],[-27,0,0,0,0],[-26,0,0,0,0],[-25,0,0,0,0],
   [-24,0,0,0,0],[-23,0,0,0,0],[-22,0,0,0,0],[-21,0,0,0,0],[-20,0,0,0,0],[-19,0,0,0,0],[-18,0,0,0,0],[-17,0,0,0,0],
@@ -54,9 +55,21 @@ export function sampleZoomForHost(host: string): number {
   return /rainviewer\.com/i.test(host) ? 7 : 8;
 }
 
+/**
+ * Opcions de les tessel·les de radar ({smooth}_{snow}) del mapa i del mostreig:
+ * suavitzat sí, neu NO. Amb snow=1 la neu surt amb uns blaus propis (la taula
+ * oficial diu, malament, que en l'esquema 6 són els de la pluja): la neu
+ * moderada té el mateix blau que la pluja feble (es confonien al mapa) i el
+ * mostreig, que descodifica amb la taula de la pluja, llegia la neu feble
+ * (~0,2 mm/h) com ~74 dBZ (~1.500 mm/h) i la moderada com si no hi hagués res
+ * (mesurat l'11-11 sobre 186.394 píxels de neu reals). Sense neu, el color
+ * només diu la intensitat, com als radars del Meteocat i de l'AEMET.
+ */
+export const RADAR_TILE_OPTIONS = '1_0';
+
 /** URL de la tessel·la de 512 px amb l'esquema de colors NEXRAD Level III (6), el que descodifica rgbaToClosestDbz. */
 export function radarTileUrl(host: string, path: string, tile: { z: number; x: number; y: number }): string {
-  return `${host}${path}/512/${tile.z}/${tile.x}/${tile.y}/6/1_1.png`;
+  return `${host}${path}/512/${tile.z}/${tile.x}/${tile.y}/6/${RADAR_TILE_OPTIONS}.png`;
 }
 
 /**

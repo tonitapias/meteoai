@@ -39,7 +39,8 @@ describe('sampleZoomForHost', () => {
     it('RainViewer, zoom 7 (al 8 dona una imatge d\'error); LibreWXR, 8', () => {
         expect(sampleZoomForHost(RV.host)).toBe(7);
         expect(sampleZoomForHost(LW.host)).toBe(8);
-        expect(radarTileUrl(RV.host, '/v2/radar/rv1', { z: 7, x: 64, y: 47 })).toBe('https://tilecache.rainviewer.com/v2/radar/rv1/512/7/64/47/6/1_1.png');
+        // Sense l'opció de neu (snow=0): els colors de la neu no són els de la taula de la pluja.
+        expect(radarTileUrl(RV.host, '/v2/radar/rv1', { z: 7, x: 64, y: 47 })).toBe('https://tilecache.rainviewer.com/v2/radar/rv1/512/7/64/47/6/1_0.png');
     });
 });
 
