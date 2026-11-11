@@ -58,8 +58,7 @@ export const es = {
   closeLayerMenu: "Cerrar menú de capas",
   lightningLegend: "Rayos",
   legendTitle: "Leyenda",
-  legendRain: "Lluvia",
-  legendSnow: "Nieve",
+  legendRain: "Lluvia o nieve",
   legendLess: "menos",
   legendMore: "más",
 

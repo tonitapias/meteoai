@@ -26,6 +26,7 @@ import {
   type HdVariant
 } from '../../utils/radarPhysics';
 import type { GibsTimelineState, HdTimelineState, LightningTimelineState } from './useHdTimeline';
+import { RADAR_TILE_OPTIONS } from '../../utils/radarSampling';
 
 interface UseRadarAnimationProps {
   mapRef: MutableRefObject<Map | null>;
@@ -487,7 +488,7 @@ export function useRadarAnimation({
         try {
           map.addSource(radSourceId, {
             type: 'raster',
-            tiles: [`${hostRef.current}${lwFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
+            tiles: [`${hostRef.current}${lwFrame.path}/512/{z}/{x}/{y}/6/${RADAR_TILE_OPTIONS}.png`],
             tileSize: 512,
             maxzoom: 8,
           });
@@ -536,7 +537,7 @@ export function useRadarAnimation({
         try {
           map.addSource(radRvSourceId, {
             type: 'raster',
-            tiles: [`${rvHostRef.current}${rvFrame.path}/512/{z}/{x}/{y}/6/1_1.png`],
+            tiles: [`${rvHostRef.current}${rvFrame.path}/512/{z}/{x}/{y}/6/${RADAR_TILE_OPTIONS}.png`],
             tileSize: 512,
             // El servidor de RainViewer no suporta zoom 8: hi retorna una
             // imatge d'error "Zoom Level Not Supported" en lloc d'una

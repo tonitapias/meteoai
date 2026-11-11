@@ -580,7 +580,14 @@ describe('RadarMap', () => {
     expect(map.errors).toEqual([]);
   }, 30000);
 
-  it('la llegenda comença plegada; oberta mostra pluja, neu i llamps; sense pluja ni llamps no hi és', async () => {
+  it("les tessel·les de radar del mapa van sense l'opció de neu (els colors només diuen la intensitat)", async () => {
+    const map = await mountRadar();
+    const radar = [...map.sources.entries()].filter(([id]) => id.startsWith('rad-src-') || id.startsWith('rad-rv-src-'));
+    expect(radar.length).toBeGreaterThan(0);
+    radar.forEach(([, src]) => expect((src as { tiles: string[] }).tiles[0]).toMatch(/\/6\/1_0\.png$/));
+  });
+
+  it('la llegenda comença plegada; oberta mostra la precipitació i els llamps; sense pluja ni llamps no hi és', async () => {
     await mountRadar();
     expect(screen.queryByTestId('radar-legend')).toBeNull();
     const chip = screen.getByRole('button', { name: 'Llegenda' });
@@ -588,12 +595,12 @@ describe('RadarMap', () => {
 
     await press('button', 'Llegenda');
     const legend = screen.getByTestId('radar-legend');
-    expect(['Pluja', 'Neu', 'Llamps'].map((r) => within(legend).queryByText(r) !== null)).toEqual([true, true, true]);
+    expect(['Pluja o neu', 'Llamps'].map((r) => within(legend).queryByText(r) !== null)).toEqual([true, true]);
     expect(within(legend).getByRole('button', { name: 'Llegenda' }).getAttribute('aria-expanded')).toBe('true');
 
-    // Sense la capa de pluja marxen la pluja i la neu.
+    // Sense la capa de pluja marxa la fila de la precipitació.
     await press('button', 'Pluja');
-    expect(['Pluja', 'Neu', 'Llamps'].map((r) => within(screen.getByTestId('radar-legend')).queryByText(r) !== null)).toEqual([false, false, true]);
+    expect(['Pluja o neu', 'Llamps'].map((r) => within(screen.getByTestId('radar-legend')).queryByText(r) !== null)).toEqual([false, true]);
     await press('button', 'Llamps');
     expect(screen.queryByTestId('radar-legend')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Llegenda' })).toBeNull();

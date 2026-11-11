@@ -59,8 +59,7 @@ export const en = {
   closeLayerMenu: "Close layer menu",
   lightningLegend: "Lightning",
   legendTitle: "Legend",
-  legendRain: "Rain",
-  legendSnow: "Snow",
+  legendRain: "Rain or snow",
   legendLess: "less",
   legendMore: "more",
 

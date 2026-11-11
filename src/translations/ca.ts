@@ -57,8 +57,7 @@ export const ca = {
   closeLayerMenu: "Tancar menú de capes",
   lightningLegend: "Llamps",
   legendTitle: "Llegenda",
-  legendRain: "Pluja",
-  legendSnow: "Neu",
+  legendRain: "Pluja o neu",
   legendLess: "menys",
   legendMore: "més",
 

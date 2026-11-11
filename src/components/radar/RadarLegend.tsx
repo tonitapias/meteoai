@@ -1,25 +1,21 @@
 import { useId, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, CloudRain, Snowflake, Zap } from 'lucide-react';
+import { ChevronDown, ChevronUp, CloudRain, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-// Llegenda del radar en un sol botó plegable (a baix a l'esquerra): pluja,
-// neu i llamps a la mateixa escala de "menys" a "més". Plegada ocupa menys que
-// l'antiga llegenda fixa dels llamps. Comença sempre plegada, també a
-// l'ordinador (decisió de l'usuari, 11-11): no es desa si es deixa oberta.
+// Llegenda del radar en un sol botó plegable (a baix a l'esquerra): la
+// precipitació (pluja o neu) i els llamps a la mateixa escala de "menys" a
+// "més". Plegada ocupa menys que l'antiga llegenda fixa dels llamps. Comença
+// sempre plegada, també a l'ordinador (decisió de l'usuari, 11-11): no es
+// desa si es deixa oberta.
 
-// Pluja: escala 6 de RainViewer/LibreWXR (NEXRAD Level III), un color cada
-// 5 dBZ de 5 a 65 (taula oficial rainviewer_api_colors_table.csv).
+// Precipitació: escala 6 de RainViewer/LibreWXR (NEXRAD Level III), un color
+// cada 5 dBZ de 5 a 65 (taula oficial rainviewer_api_colors_table.csv). Les
+// tessel·les van sense l'opció de neu (RADAR_TILE_OPTIONS): la neu surt amb
+// els mateixos colors segons la intensitat, i per això la fila diu "Pluja o
+// neu". Amb la neu activada, la neu moderada tenia el blau de la pluja feble.
 const RAIN_LEGEND_COLORS = [
   '#00efe7', '#009cf7', '#0000f7', '#00ff00', '#03b703', '#087305', '#ffff00',
   '#ecce00', '#fe9300', '#ff0000', '#bd0000', '#d70065', '#fe00fe'
-];
-// Neu (opció snow=1 de les tessel·les): blaus propis, mesurats l'11-11 sobre
-// tessel·les reals amb la neu activada i desactivada (la taula oficial diu,
-// malament, que són els de la pluja). Alineats amb la pluja per dBZ: de 10 a
-// 40; més amunt la neu pràcticament no hi arriba.
-const SNOW_LEGEND_COLORS: (string | null)[] = [
-  null, '#a3f3ff', '#51cffd', '#0d99fc', '#0f75fb', '#1053fb', '#103ffb', '#0b32cf',
-  null, null, null, null, null
 ];
 // Llamps: els mateixos colors recolorats de la capa (LIGHTNING_PAINT i
 // AMERICAS_LIGHTNING_PAINT a useRadarAnimation). Sense xifres: MTG compta
@@ -28,11 +24,11 @@ const LIGHTNING_GRADIENT = 'linear-gradient(90deg, rgba(255,235,90,0.45), rgba(2
 
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80';
 
-function Steps({ colors, className }: { colors: (string | null)[]; className: string }) {
+function Steps({ colors, className }: { colors: string[]; className: string }) {
   return (
     <span aria-hidden="true" className={`flex h-1.5 rounded-sm overflow-hidden ${className}`}>
       {colors.map((c, i) => (
-        <span key={i} className="flex-1" style={{ background: c ?? 'transparent' }} />
+        <span key={i} className="flex-1" style={{ background: c }} />
       ))}
     </span>
   );
@@ -96,14 +92,9 @@ export function RadarLegend({ showPrecip, showLightning }: RadarLegendProps) {
       </button>
       <div className="grid grid-cols-[auto_auto] items-center gap-x-2 gap-y-1.5">
         {showPrecip && (
-          <>
-            <Row icon={<CloudRain className="w-3 h-3 text-cyan-300 shrink-0" aria-hidden="true" />} label={t('legendRain', 'Pluja')}>
-              <Steps colors={RAIN_LEGEND_COLORS} className="w-[130px]" />
-            </Row>
-            <Row icon={<Snowflake className="w-3 h-3 text-sky-200 shrink-0" aria-hidden="true" />} label={t('legendSnow', 'Neu')}>
-              <Steps colors={SNOW_LEGEND_COLORS} className="w-[130px]" />
-            </Row>
-          </>
+          <Row icon={<CloudRain className="w-3 h-3 text-cyan-300 shrink-0" aria-hidden="true" />} label={t('legendRain', 'Pluja o neu')}>
+            <Steps colors={RAIN_LEGEND_COLORS} className="w-[130px]" />
+          </Row>
         )}
         {showLightning && (
           <Row icon={<Zap className="w-3 h-3 text-amber-300 shrink-0" aria-hidden="true" />} label={t('lightningLegend', 'Llamps')}>

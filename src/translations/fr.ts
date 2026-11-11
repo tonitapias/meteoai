@@ -59,8 +59,7 @@ export const fr = {
   closeLayerMenu: "Fermer le menu des couches",
   lightningLegend: "Éclairs",
   legendTitle: "Légende",
-  legendRain: "Pluie",
-  legendSnow: "Neige",
+  legendRain: "Pluie ou neige",
   legendLess: "moins",
   legendMore: "plus",
 
