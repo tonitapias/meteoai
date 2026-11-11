@@ -11,6 +11,7 @@ import {
   SAT_PROXY_HOST,
   getNasaFiresWmsUrl,
   getNasaFiresOpacityExp,
+  NASA_REAL_FULL_OPACITY_ZOOM,
   Z_LAYERS
 } from '../../utils/radarPhysics';
 import {
@@ -419,10 +420,14 @@ export function useMapLifecycle({
 
       if (map.getLayer('layer-nasa-real')) {
         map.setLayoutProperty('layer-nasa-real', 'visibility', currentOverlays.nasaReal ? 'visible' : 'none');
+        // Sencera fins a z8 (el detall màxim que serveix el proxy) i
+        // s'esvaeix fins a z10, on el mapa de fons ja té més detall. Abans
+        // s'esvaïa entre z5,5 i z8 i la càmera s'havia d'allunyar fins a z3,2
+        // per veure-la; ara es veu al zoom amb què s'obre el radar (z7).
         map.setPaintProperty('layer-nasa-real', 'raster-opacity', currentOverlays.nasaReal ? [
           'interpolate', ['linear'], ['zoom'],
-          5.5, 1,
-          8.0, 0
+          NASA_REAL_FULL_OPACITY_ZOOM, 1,
+          NASA_REAL_FULL_OPACITY_ZOOM + 2, 0
         ] : 0);
       }
 

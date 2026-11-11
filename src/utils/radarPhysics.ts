@@ -426,6 +426,11 @@ export const getBlackMarbleOpacityExp = (baseOp: number): Expression => {
   ];
 };
 
+// Foto NASA en color real (layer-nasa-real): sencera fins a aquest zoom, el
+// detall màxim que en serveix el proxy (maxzoom 8), i esvaïda del tot dos
+// nivells més amunt.
+export const NASA_REAL_FULL_OPACITY_ZOOM = 8;
+
 export const getNasaFiresOpacityExp = (baseOp: number): Expression => {
   return [
     'interpolate', ['linear'], ['zoom'],

@@ -157,6 +157,8 @@ const layer = (m: FakeMapInstance, id: string) => m.layers.find((l) => l.id === 
 
 beforeEach(() => {
   (globalThis as unknown as { __radarTestMaps: FakeMapInstance[] }).__radarTestMaps = [];
+  // Les capes triades es desen (radarLayerPrefs): cada prova comença de zero.
+  window.localStorage.clear();
   hdLatest = { layer: 'mtg', latest: MTG_LATEST, cadence: 600, source: 'caps' };
   lightningLatest = { latest: LIGHTNING_LATEST, cadence: 300, source: 'caps' };
   americasLatest = { latest: AMERICAS_LATEST, cadence: 900, source: 'caps' };
@@ -261,6 +263,60 @@ describe('RadarMap', () => {
 
     await hd('GOES');
     expect(map.flights).toEqual([{ center: [-95, 38], zoom: 3, pitch: 0, speed: 1.4, essential: true }]);
+  });
+
+  it('la càmera només es mou quan cal: els focs mai, la foto NASA només més enllà de z8, el relleu 3D sense saltar a z11,5', async () => {
+    const map = await mountRadar();
+    map.flights.length = 0;
+
+    map.zoom = 7;
+    await press('button', 'Focs');
+    await press('button', 'Foto NASA');
+    expect(map.flights).toEqual([]);
+    // Sencera fins a z8 i esvaïda a z10 (abans, de z5,5 a z8).
+    expect(layer(map, 'layer-nasa-real')?.paint['raster-opacity']).toEqual(['interpolate', ['linear'], ['zoom'], 8, 1, 10, 0]);
+
+    await press('button', 'Foto NASA');
+    map.zoom = 10;
+    await press('button', 'Foto NASA');
+    expect(map.flights).toEqual([{ zoom: 8, speed: 1.3, curve: 1.42, essential: true }]);
+
+    map.flights.length = 0;
+    map.zoom = 7;
+    await press('button', 'Relleu 3D');
+    expect(map.flights).toEqual([{ zoom: 8, pitch: 60, speed: 1.2, curve: 1.42, essential: true }]);
+    await press('button', 'Relleu 3D');
+    map.zoom = 12;
+    map.flights.length = 0;
+    await press('button', 'Relleu 3D');
+    expect(map.flights).toEqual([{ zoom: 12, pitch: 60, speed: 1.2, curve: 1.42, essential: true }]);
+  });
+
+  it('en obrir recupera les capes desades: HD amb el satèl·lit del lloc, sense moure la càmera, i el número al botó', async () => {
+    window.localStorage.setItem('meteoai_radar_layers', JSON.stringify({
+      base: 'dark', clouds: 'hd', hdColour: false, precip: true, lightning: false, night: true, labels: true, nasaFires: false, nasaReal: false
+    }));
+    const map = await mountRadar();
+    await act(async () => { await sleep(30); });
+
+    expect(layer(map, 'base-layer-dark')?.layout.visibility).toBe('visible');
+    expect(layer(map, 'base-layer-sat_optic')?.layout.visibility).toBe('none');
+    expect(layer(map, 'layer-labels')?.layout.visibility).toBe('visible');
+    expect(screen.getByRole('radio', { name: /^Meteosat/ }).getAttribute('aria-checked')).toBe('true');
+    expect(hdTargets(map)).toEqual([`hd-meteosat-layer-mtg-${MTG_LATEST}`]);
+    expect(ids(map, 'ltg-layer-')).toEqual([]);
+    expect(map.flights.filter((f) => 'zoom' in f || 'pitch' in f)).toEqual([]);
+    // Pluja, núvols, nit i noms.
+    expect(screen.getByTestId('layers-active-count').textContent).toBe('4');
+  });
+
+  it('els canvis del menú es desen per a la propera vegada', async () => {
+    await mountRadar();
+    await press('radio', 'Relleu');
+    await press('button', 'Llamps');
+    await hd('GOES');
+    expect(JSON.parse(window.localStorage.getItem('meteoai_radar_layers')!)).toMatchObject({ base: 'relief', lightning: false, clouds: 'hd' });
+    expect(screen.getByTestId('layers-active-count').textContent).toBe('3');
   });
 
   it("els canvis fets al menú abans que el mapa carregui s'apliquen en carregar", async () => {

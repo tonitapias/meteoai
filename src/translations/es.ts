@@ -16,6 +16,8 @@ export const es = {
 
   // --- Menú de capes ---
   layerControl: "Capas del mapa",
+  layersActiveCount_one: "{{count}} capa activa",
+  layersActiveCount_other: "{{count}} capas activas",
   layersTitle: "Capas",
   layersBaseTitle: "Mapa de fondo",
   baseDark: "Oscuro",

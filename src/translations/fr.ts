@@ -17,6 +17,8 @@ export const fr = {
 
   // --- Menú de capes ---
   layerControl: "Couches de la carte",
+  layersActiveCount_one: "{{count}} couche active",
+  layersActiveCount_other: "{{count}} couches actives",
   layersTitle: "Couches",
   layersBaseTitle: "Fond de carte",
   baseDark: "Sombre",

@@ -17,6 +17,8 @@ export const en = {
 
   // --- Menú de capes ---
   layerControl: "Map layers",
+  layersActiveCount_one: "{{count}} active layer",
+  layersActiveCount_other: "{{count}} active layers",
   layersTitle: "Layers",
   layersBaseTitle: "Base map",
   baseDark: "Dark",

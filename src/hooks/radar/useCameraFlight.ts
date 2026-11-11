@@ -1,6 +1,16 @@
 import { useEffect, useRef, MutableRefObject, useCallback } from 'react';
 import type { Map } from 'mapbox-gl';
-import { BaseLayerType, Overlays, HD_BOUNDS, type HdAgency } from '../../utils/radarPhysics';
+import { BaseLayerType, Overlays, HD_BOUNDS, NASA_REAL_FULL_OPACITY_ZOOM, type HdAgency } from '../../utils/radarPhysics';
+
+// La càmera només es mou quan la capa no es veuria bé on mira l'usuari
+// (abans, la foto NASA i els focs l'allunyaven fins a mig continent i el
+// relleu 3D l'acostava fins a z11,5).
+// Foto NASA: sencera fins a NASA_REAL_FULL_OPACITY_ZOOM (useMapLifecycle);
+// només si l'usuari mira més a prop s'allunya fins aquí.
+// Relleu 3D: per sota d'aquest zoom el relleu exagerat 1,5 vegades gairebé no
+// es nota, encara que el mapa s'inclini.
+export const TERRAIN_MIN_ZOOM = 8;
+export const TERRAIN_PITCH = 60;
 
 interface UseCameraFlightProps {
   mapRef: MutableRefObject<Map | null>;
@@ -39,7 +49,6 @@ export function useCameraFlight({
     himawari: overlays.hdHimawari
   });
   const prevNasaRealRef = useRef(overlays.nasaReal);
-  const prevNasaFiresRef = useRef(overlays.nasaFires);
   const prevTerrain3DRef = useRef(overlays.terrain3D);
   const prevBlackMarbleRef = useRef(activeBaseLayer === 'black_marble');
 
@@ -136,27 +145,14 @@ export function useCameraFlight({
       safeCameraExecute(() => {
         const map = mapRef.current;
         if (!map) return;
-        const currentZoom = map.getZoom();
-        if (currentZoom > 4.5) map.flyTo({ zoom: 3.2, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
+        if (map.getZoom() > NASA_REAL_FULL_OPACITY_ZOOM) {
+          map.flyTo({ zoom: NASA_REAL_FULL_OPACITY_ZOOM, speed: 1.3, curve: 1.42, essential: true });
+        }
       });
     }
   }, [overlays.nasaReal, mapRef, safeCameraExecute]);
 
-  // 4. NASA Fires
-  useEffect(() => {
-    const isFiresNow = overlays.nasaFires;
-    const wasFiresBefore = prevNasaFiresRef.current;
-    prevNasaFiresRef.current = isFiresNow;
-
-    if (isFiresNow && !wasFiresBefore) {
-      safeCameraExecute(() => {
-        const map = mapRef.current;
-        if (!map) return;
-        const currentZoom = map.getZoom();
-        if (currentZoom > 4.5) map.flyTo({ zoom: 3.5, pitch: 0, bearing: 0, speed: 1.3, curve: 1.42, essential: true });
-      });
-    }
-  }, [overlays.nasaFires, mapRef, safeCameraExecute]);
+  // 4. Focs (NASA): la capa WMS es veu a qualsevol zoom; la càmera no es mou.
 
   // 5. Terrain 3D
   useEffect(() => {
@@ -168,8 +164,7 @@ export function useCameraFlight({
       safeCameraExecute(() => {
         const map = mapRef.current;
         if (!map) return;
-        const currentZoom = map.getZoom();
-        map.flyTo({ zoom: Math.max(currentZoom, 11.5), pitch: 65, speed: 1.2, curve: 1.42, essential: true });
+        map.flyTo({ zoom: Math.max(map.getZoom(), TERRAIN_MIN_ZOOM), pitch: TERRAIN_PITCH, speed: 1.2, curve: 1.42, essential: true });
       });
     } else if (!isTerrainNow && wasTerrainBefore) {
       safeCameraExecute(() => {

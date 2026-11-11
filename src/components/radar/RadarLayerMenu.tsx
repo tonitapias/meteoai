@@ -20,6 +20,7 @@ import {
   HdAgency,
   OverlayToggleKey
 } from '../../utils/radarPhysics';
+import { countActiveLayers } from '../../utils/radarLayerPrefs';
 
 // Menú de capes del radar, en quatre blocs que caben sense scroll: mapa de
 // fons, temps ara (pluja i llamps), núvols (un sol selector, perquè l'IR
@@ -253,6 +254,14 @@ export function RadarLayerMenu({
 
   const hdModeAvailable = cloudSource === 'meteosat' || cloudSource === 'goes';
 
+  // Número al botó: quantes capes hi ha enceses (els núvols, una).
+  const activeCount = countActiveLayers(overlays);
+  const activeLabel = t('layersActiveCount', {
+    count: activeCount,
+    defaultValue_one: '{{count}} capa activa',
+    defaultValue_other: '{{count}} capes actives'
+  });
+
   return (
     // Mòbil: aquest contenidor no es posiciona; el botó i el full es col·loquen
     // respecte del mapa. A partir de `sm`: a dalt a la dreta, el panell a
@@ -263,17 +272,26 @@ export function RadarLayerMenu({
       <button
         ref={buttonRef}
         onClick={() => setShowLayerMenu(!showLayerMenu)}
-        className={`absolute top-[max(env(safe-area-inset-top,16px),16px)] right-[max(env(safe-area-inset-right,16px),16px)] z-[1010] sm:static sm:z-auto shrink-0 pointer-events-auto p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border transition-colors duration-200 shadow-[0_8px_32px_rgba(0,0,0,0.8)] active:scale-95 ${FOCUS} ${
+        className={`absolute top-[max(env(safe-area-inset-top,16px),16px)] right-[max(env(safe-area-inset-right,16px),16px)] z-[1010] sm:relative sm:z-auto shrink-0 pointer-events-auto p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border transition-colors duration-200 shadow-[0_8px_32px_rgba(0,0,0,0.8)] active:scale-95 ${FOCUS} ${
           showLayerMenu
             ? 'bg-cyan-950/80 border-cyan-400 text-cyan-300'
             : 'bg-black/65 border-white/15 text-slate-200 hover:bg-black/80 hover:text-white hover:border-white/30'
         }`}
         title={t('layerControl')}
-        aria-label={t('layerControl')}
+        aria-label={`${t('layerControl')} · ${activeLabel}`}
         aria-expanded={showLayerMenu}
         aria-controls={showLayerMenu ? ids.panel : undefined}
       >
         <Layers className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
+        {activeCount > 0 && (
+          <span
+            aria-hidden="true"
+            data-testid="layers-active-count"
+            className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-cyan-400 text-slate-950 text-[11px] font-black leading-5 text-center shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+          >
+            {activeCount}
+          </span>
+        )}
       </button>
 
       {showLayerMenu && (

@@ -16,6 +16,7 @@ import {
   getCloudSource,
   hdAgencyForPoint,
 } from '../utils/radarPhysics';
+import { loadRadarLayers, saveRadarLayers } from '../utils/radarLayerPrefs';
 import type { Language } from '../translations';
 
 // 2. DOMINI D'ESTAT EXTRET
@@ -75,25 +76,16 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   }), [t]);
 
   // Estats UI Locals
-  const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>('sat_optic');
+  // Les capes s'obren com l'usuari les va deixar (radarLayerPrefs); el
+  // satèl·lit HD, el que cobreix aquest lloc.
+  const [initialLayers] = useState(() => loadRadarLayers(lat, lon));
+  const [activeBaseLayer, setActiveBaseLayer] = useState<BaseLayerType>(initialLayers.base);
   const [showAttribution, setShowAttribution] = useState(false);
-  // CORRECCIÓ (Fase 3): tipat explícitament amb la interfície Overlays
-  // (font única de veritat a radarPhysics.ts) en lloc de deixar que
-  // TypeScript l'infereixi de l'objecte literal.
-  const [overlays, setOverlays] = useState<Overlays>({
-    precip: true,
-    satIR: true,
-    hdGoes: false,
-    hdMeteosat: false,
-    hdHimawari: false,
-    night: true,
-    labels: false,
-    nasaReal: false,
-    nasaFires: false,
-    terrain3D: false,
-    lightning: true,
-    hdColour: false
-  });
+  const [overlays, setOverlays] = useState<Overlays>(initialLayers.overlays);
+
+  useEffect(() => {
+    saveRadarLayers(activeBaseLayer, overlays);
+  }, [activeBaseLayer, overlays]);
 
   // Referències essencials per als Hooks
   const mapContainerRef = useRef<HTMLDivElement>(null);
