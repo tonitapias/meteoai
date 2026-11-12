@@ -8,9 +8,10 @@ import { latestImageTime } from '../utils/welcome/skyElevator';
 import { SAT_PROXY_HOST } from '../utils/radarPhysics';
 import { eyeInfo, type OrbitEye } from '../utils/orbitalView';
 import {
-  DISC_PX, GIBS_LAYERS, IR_MAX_DARK_SHARE, METEOSAT_CAPS_URL, SOURCE_PX,
-  darkShare, gibsWmsUrl, meteosatImageUrl, parseGibsSlots, pickGibsSlots, reprojectToDisc, sourceParts,
-  type GibsEye, type GibsProduct,
+  DISC_PX, GIBS_PRODUCTS, MAX_MISSING_SHARE, METEOSAT_CAPS_URL, TILE_PX,
+  discMosaic, discTileUrl, gibsAttempts, hasDarkEastEdge, meteosatImageUrl, missingShare, parseGibsSlots,
+  reprojectMercatorToDisc,
+  type DiscAttempt, type GibsEye, type GibsProduct,
 } from '../utils/orbitalImage';
 
 export type OrbitalImage =
@@ -21,8 +22,16 @@ export type OrbitalImage =
 type ReadyImage = Extract<OrbitalImage, { status: 'ready' }>;
 
 const CACHE_MS = 10 * 60 * 1000;
-const META_TIMEOUT_MS = 8000;
-const IMAGE_TIMEOUT_MS = 20000;
+const METEOSAT_META_TIMEOUT_MS = 8000;
+const METEOSAT_IMAGE_TIMEOUT_MS = 20000;
+// GOES i Himawari: tot plegat, com a molt 20 s (abans, fins a 3 intents de 20 s). La llista de franges, 4 s (el
+// radar n'espera 3). Un producte que en té un altre al darrere (el GeoColor del GOES, amb l'infraroig) té 10 s;
+// si no arriba a temps, no prova cap altra franja seva (el servei va lent) i es passa al següent. L'últim té tot
+// el temps que queda. Una franja amb forats (els taulers han arribat, però incomplets) dona pas a l'anterior.
+const GIBS_TOTAL_BUDGET_MS = 20000;
+const GIBS_META_TIMEOUT_MS = 4000;
+const GIBS_FIRST_PRODUCT_MS = 10000;
+const GIBS_MIN_ATTEMPT_MS = 1500;
 
 const cache = new Map<OrbitEye, { at: number; image: ReadyImage }>();
 const inFlight = new Map<OrbitEye, Promise<ReadyImage>>();
@@ -32,16 +41,18 @@ const freshCached = (eye: OrbitEye): ReadyImage | null => {
   return hit && Date.now() - hit.at < CACHE_MS ? hit.image : null;
 };
 
+class ImageTimeout extends Error {}
+
 /** Una imatge carregada i descodificada; amb CORS si se n'han de llegir els píxels. */
-function loadImage(src: string, crossOrigin: boolean): Promise<HTMLImageElement> {
+function loadImage(src: string, crossOrigin: boolean, timeoutMs: number): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const timer = setTimeout(() => {
       img.onload = null;
       img.onerror = null;
       img.src = '';
-      reject(new Error('timeout'));
-    }, IMAGE_TIMEOUT_MS);
+      reject(new ImageTimeout('timeout'));
+    }, timeoutMs);
     if (crossOrigin) img.crossOrigin = 'anonymous';
     img.decoding = 'async';
     img.onload = () => { clearTimeout(timer); resolve(img); };
@@ -53,33 +64,46 @@ function loadImage(src: string, crossOrigin: boolean): Promise<HTMLImageElement>
 async function loadMeteosat(): Promise<ReadyImage> {
   let timeMs: number | null = null;
   try {
-    const response = await fetchWithTimeout(METEOSAT_CAPS_URL, META_TIMEOUT_MS);
+    const response = await fetchWithTimeout(METEOSAT_CAPS_URL, METEOSAT_META_TIMEOUT_MS);
     if (response.ok) timeMs = latestImageTime(await response.text());
   } catch { /* sense l'hora: es demana la imatge per defecte, que també és la més nova */ }
   const src = meteosatImageUrl(timeMs);
-  await loadImage(src, false);
+  await loadImage(src, false, METEOSAT_IMAGE_TIMEOUT_MS);
   return { status: 'ready', src, timeMs, product: 'colour' };
 }
 
-/** Reprojecta una franja de GIBS al disc i en fa un JPEG; null si la franja surt buida. */
-async function gibsDisc(eye: GibsEye, layer: string, slotSec: number, product: GibsProduct): Promise<string | null> {
-  const parts = sourceParts(eyeInfo(eye).subLon);
-  const images = await Promise.all(parts.map((part) => loadImage(gibsWmsUrl(layer, slotSec, part), true)));
+/** 'slow': algun tauler no ha arribat a temps; 'holes': han arribat, però el disc té forats. */
+type DiscResult = { src: string } | 'slow' | 'holes';
+
+/** Fa el disc d'una franja amb els taulers del worker: mosaic, reprojecció i JPEG. */
+async function gibsDisc(eye: GibsEye, attempt: DiscAttempt, timeoutMs: number): Promise<DiscResult> {
+  const { subLon } = eyeInfo(eye);
+  const mosaic = discMosaic(subLon);
+  let slow = false;
+  const images = await Promise.all(mosaic.tiles.map((tile) =>
+    loadImage(discTileUrl(SAT_PROXY_HOST, eye, attempt, tile), true, timeoutMs).catch((error: unknown) => {
+      if (error instanceof ImageTimeout) slow = true;
+      return null;
+    })));
 
   const source = document.createElement('canvas');
-  source.width = SOURCE_PX;
-  source.height = SOURCE_PX;
+  source.width = mosaic.width;
+  source.height = mosaic.height;
   const sourceCtx = source.getContext('2d', { willReadFrequently: true });
   if (!sourceCtx) throw new Error('no canvas');
-  // GIBS deixa fosca l'última columna d'una imatge que acaba just a 180°: la peça següent la tapa (1 px, 0,16°).
   images.forEach((img, i) => {
-    const overlap = i > 0 ? 1 : 0;
-    sourceCtx.drawImage(img, parts[i].x - overlap, 0, parts[i].width + overlap, SOURCE_PX);
+    if (!img) return;
+    const { left, top } = mosaic.tiles[i];
+    sourceCtx.drawImage(img, left, top);
+    if (hasDarkEastEdge(mosaic.tiles[i])) sourceCtx.drawImage(img, TILE_PX - 2, 0, 1, TILE_PX, left + TILE_PX - 1, top, 1, TILE_PX);
   });
-  const pixels = new Uint32Array(sourceCtx.getImageData(0, 0, SOURCE_PX, SOURCE_PX).data.buffer);
+  const pixels = new Uint32Array(sourceCtx.getImageData(0, 0, mosaic.width, mosaic.height).data.buffer);
+  // El mosaic fa ~10 MB: fora tan aviat com es pugui (mòbils modestos).
+  source.width = 0;
+  source.height = 0;
 
-  const disc = reprojectToDisc(pixels, SOURCE_PX, SOURCE_PX, DISC_PX);
-  if (product === 'ir' && darkShare(disc, DISC_PX) > IR_MAX_DARK_SHARE) return null;
+  const disc = reprojectMercatorToDisc(pixels, mosaic, subLon, DISC_PX);
+  if (missingShare(disc, DISC_PX, attempt.product === 'ir') > MAX_MISSING_SHARE) return slow ? 'slow' : 'holes';
 
   const out = document.createElement('canvas');
   out.width = DISC_PX;
@@ -90,25 +114,32 @@ async function gibsDisc(eye: GibsEye, layer: string, slotSec: number, product: G
   imageData.data.set(new Uint8ClampedArray(disc.buffer));
   outCtx.putImageData(imageData, 0, 0);
   const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/jpeg', 0.88));
-  return blob ? URL.createObjectURL(blob) : null;
+  if (!blob) throw new Error('no blob');
+  return { src: URL.createObjectURL(blob) };
 }
 
 async function loadGibs(eye: GibsEye): Promise<ReadyImage> {
+  const deadline = Date.now() + GIBS_TOTAL_BUDGET_MS;
   let slots = null;
   try {
-    const response = await fetchWithTimeout(`${SAT_PROXY_HOST}/hd/${eye}/latest`, META_TIMEOUT_MS);
+    const response = await fetchWithTimeout(`${SAT_PROXY_HOST}/hd/${eye}/latest`, GIBS_META_TIMEOUT_MS);
     if (response.ok) slots = parseGibsSlots(await response.json());
   } catch { /* sense la llista: hores calculades */ }
-  const { product, candidates } = pickGibsSlots(slots, Math.floor(Date.now() / 1000), !!GIBS_LAYERS[eye].colour);
-  const layer = GIBS_LAYERS[eye][product];
-  if (!layer) throw new Error('no layer');
-  for (const slotSec of candidates) {
+
+  const attempts = gibsAttempts(slots, Math.floor(Date.now() / 1000), GIBS_PRODUCTS[eye]);
+  const slowProducts = new Set<GibsProduct>();
+  for (const [index, attempt] of attempts.entries()) {
+    if (slowProducts.has(attempt.product)) continue;
+    const left = deadline - Date.now();
+    if (left < GIBS_MIN_ATTEMPT_MS) break;
+    const hasFallback = attempts.slice(index + 1).some((a) => a.product !== attempt.product);
     try {
-      const src = await gibsDisc(eye, layer, slotSec, product);
-      if (src) return { status: 'ready', src, timeMs: slotSec * 1000, product };
-    } catch { /* la franja anterior */ }
+      const result = await gibsDisc(eye, attempt, hasFallback ? Math.min(GIBS_FIRST_PRODUCT_MS, left) : left);
+      if (typeof result === 'object') return { status: 'ready', src: result.src, timeMs: attempt.slot * 1000, product: attempt.product };
+      if (result === 'slow') slowProducts.add(attempt.product);
+    } catch { /* la franja següent */ }
   }
-  throw new Error('no GIBS image');
+  throw new Error('no GOES/Himawari image');
 }
 
 function loadEye(eye: OrbitEye): Promise<ReadyImage> {
