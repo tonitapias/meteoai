@@ -553,3 +553,53 @@ describe("NOAA nowCOAST llamps d'Amèrica Contract Check", () => {
         expect(bytes.byteLength).toBeGreaterThan(FALLBACK_BYTES);
     }, TIMEOUT_MS);
 });
+
+// Himawari en GeoColor de CIRA SLIDER per al disc del visor orbital (només el disc; la capa del radar és de GIBS).
+// És una web de recerca: si canvia d'adreça, de format o de mida, el worker deixa de servir-la i el visor mostra
+// l'infraroig. Aquest test és l'avís (i l'interruptor és HIMAWARI_DISC_SOURCE al worker).
+const CIRA_LATEST = 'https://slider.cira.colostate.edu/data/json/himawari/full_disk/geocolor/latest_times.json';
+const ciraStampToSec = (stamp: number) => {
+    const s = String(stamp);
+    return Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8), +s.slice(8, 10), +s.slice(10, 12)) / 1000;
+};
+const pngSize = (bytes: Uint8Array) => {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return [view.getUint32(16), view.getUint32(20)];
+};
+
+describe("CIRA SLIDER GeoColor de l'Himawari (disc del visor orbital) Contract Check", () => {
+    it("latest_times.json cada 10 min, la més nova de fa menys de 2 h, i el disc de 688 px a l'adreça que espera el worker", async () => {
+        const res = await fetch(CIRA_LATEST);
+        expect(res.ok, `latest_times.json de CIRA ha respost amb status: ${res.status}`).toBe(true);
+        const json = await res.json() as { timestamps_int?: number[] };
+        expect(Array.isArray(json.timestamps_int), 'latest_times.json ja no porta timestamps_int: el worker no en sabrà les franges').toBe(true);
+        const newest = Math.max(...json.timestamps_int!.map(ciraStampToSec));
+        expect(newest % 600).toBe(0);
+        expect(Date.now() - newest * 1000, "L'Himawari en GeoColor de CIRA s'ha aturat: el visor mostra l'infraroig").toBeLessThan(MAX_AGE_MS);
+
+        const d = new Date(newest * 1000);
+        const p = (n: number) => String(n).padStart(2, '0');
+        const stamp = d.toISOString().replace(/[-:T]/g, '').slice(0, 14);
+        const image = await fetch(`https://slider.cira.colostate.edu/data/imagery/${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())}/himawari---full_disk/geocolor/${stamp}/00/000_000.png`);
+        const bytes = new Uint8Array(await image.arrayBuffer());
+        expect(image.ok, `El disc de CIRA ha respost amb status: ${image.status}`).toBe(true);
+        expect([bytes[0], bytes[1], bytes[2], bytes[3]], 'El disc de CIRA ja no és PNG').toEqual([0x89, 0x50, 0x4e, 0x47]);
+        expect(pngSize(bytes), 'El disc de CIRA ja no fa 688 × 688: cal revisar la geometria (utils/orbitalImage.ts) i el worker').toEqual([688, 688]);
+        expect(bytes.byteLength).toBeGreaterThan(50000);
+    }, TIMEOUT_MS);
+
+    it('el worker de producció dona les franges i serveix el disc validat', async () => {
+        const latest = await fetch(`${WORKER_URL}/hd/himawari/disc/latest`, { headers: WORKER_HEADERS });
+        expect(latest.ok, `/hd/himawari/disc/latest ha respost amb status: ${latest.status}`).toBe(true);
+        const body = await latest.json() as { slots: number[]; off?: boolean };
+        expect(body.off, "L'interruptor HIMAWARI_DISC_SOURCE del worker és a \"off\"").toBeUndefined();
+        expect(body.slots.length, 'El worker no té cap franja de CIRA de menys de 90 min: mira `wrangler tail` ("[Zero Risk] CIRA ...")').toBeGreaterThan(0);
+
+        const disc = await fetch(`${WORKER_URL}/hd/himawari/disc/${body.slots[0]}.png`, { headers: WORKER_HEADERS });
+        const bytes = new Uint8Array(await disc.arrayBuffer());
+        expect(disc.status, `El worker no ha servit el disc (${disc.headers.get('x-hd-rejected')}): mira \`wrangler tail\``).toBe(200);
+        expect(disc.headers.get('x-hd-service')).toBe('cira');
+        expect(disc.headers.get('access-control-allow-origin')).toBe('*');
+        expect(pngSize(bytes)).toEqual([688, 688]);
+    }, TIMEOUT_MS);
+});

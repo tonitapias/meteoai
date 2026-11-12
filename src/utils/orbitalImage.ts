@@ -11,6 +11,8 @@
 //   aquell servei tardava de 8 s a 3 min (fins i tot amb peces petites): el GOES arribava tard i l'Himawari, que
 //   en necessitava dues, mai. Els taulers arriben en 1,5–3,5 s (0,1 s si ja són a l'edge) i, a l'edge de
 //   Cloudflare, es comparteixen amb tothom i amb el radar.
+// - Himawari-9, primer en GeoColor de CIRA SLIDER (pel worker, una sola imatge en la vista del satèl·lit que aquí
+//   es passa al disc; vegeu més avall) i, si no arriba, l'infraroig dels taulers HD com abans.
 import { eumetsatGetMap } from './eumetsatWms';
 import type { OrbitEye } from './orbitalView';
 
@@ -243,3 +245,81 @@ export function missingShare(disc: Uint32Array, size: number, countBlack: boolea
 // Un marge per a la compressió JPEG. Un tauler que falta prop del centre en fa molt més; un de la vora, potser
 // menys, però allà ja és limbe fosc i no es nota.
 export const MAX_MISSING_SHARE = 0.02;
+
+// --- Himawari en GeoColor (CIRA SLIDER, pel worker) ------------------------------------------------------
+// Cap servei oficial dona l'Himawari en GeoColor; CIRA (Colorado State University, institut cooperatiu de la NOAA)
+// sí, amb el mateix algorisme que el GeoColor de GOES: dia en color real, nit amb llums i núvols per infraroig.
+// És una web de recerca, així que el worker la valida i, si falla, el disc torna a l'infraroig de GIBS. Es
+// demana pel worker (/hd/himawari/disc/...): CIRA no té CORS, i així es baixa un cop per franja per a tothom.
+
+/**
+ * La imatge de CIRA és la vista del satèl·lit (projecció geoestacionària), no l'ortogràfica dels altres discs: la
+ * graella de 2 km de l'Himawari (5.500 px, CFAC 20.466.275, 2^16/CFAC graus d'escombrat per píxel) reduïda a 688 px.
+ * Mesurat el 2026-11-12: el disc va dels píxels 4 a 683 a l'equador (680 px, el que dona el radi equatorial vist des
+ * de 42.164 km) i del 5 al 682 de pol a pol; centre a 344.
+ */
+export const CIRA_DISC_PX = 688;
+const CIRA_CENTER_PX = 344;
+const CIRA_DEG_PER_PX = (65536 / 20466275) * (5500 / CIRA_DISC_PX);
+const GEO_RADIUS_KM = 42164;
+const WGS84_A_KM = 6378.137;
+const WGS84_B_KM = 6356.7523;
+const WGS84_E2 = 1 - (WGS84_B_KM * WGS84_B_KM) / (WGS84_A_KM * WGS84_A_KM);
+// El satèl·lit veu fins a ~81,3° (l'horitzó des de 42.164 km); més enllà, i a tocar del limbe, negre.
+const CIRA_VIEW_MAX_DEG = 81;
+const COS_CIRA_VIEW_MAX = Math.cos(CIRA_VIEW_MAX_DEG * DEG);
+
+export const ciraDiscUrl = (host: string, slot: number): string => `${host}/hd/himawari/disc/${slot}.png`;
+
+/** Les franges de /hd/himawari/disc/latest (de la més nova a la més vella); null si la resposta no és la que toca. */
+export function parseCiraSlots(json: unknown): number[] | null {
+  const slots = (json as { slots?: unknown } | null)?.slots;
+  return Array.isArray(slots) ? slots.filter(isSlot).sort((a, b) => b - a) : null;
+}
+
+/**
+ * On cau un lloc a la imatge de CIRA (en vores de píxel: el disc va de 4 a 684), amb la fórmula de la projecció
+ * geoestacionària de la CGMS (latitud geodèsica → geocèntrica, el·lipsoide WGS84). x creix cap a l'est i y cap al sud.
+ */
+export function geosImagePoint(latDeg: number, lonDeg: number, subLon: number): { u: number; v: number } {
+  const cLat = Math.atan((1 - WGS84_E2) * Math.tan(latDeg * DEG));
+  const cosC = Math.cos(cLat);
+  const rl = WGS84_B_KM / Math.sqrt(1 - WGS84_E2 * cosC * cosC);
+  const dLon = (lonDeg - subLon) * DEG;
+  const r1 = GEO_RADIUS_KM - rl * cosC * Math.cos(dLon);
+  const r2 = -rl * cosC * Math.sin(dLon);
+  const r3 = rl * Math.sin(cLat);
+  const rn = Math.sqrt(r1 * r1 + r2 * r2 + r3 * r3);
+  const x = Math.atan(-r2 / r1) / DEG;
+  const y = Math.asin(-r3 / rn) / DEG;
+  return { u: CIRA_CENTER_PX + x / CIRA_DEG_PER_PX, v: CIRA_CENTER_PX + y / CIRA_DEG_PER_PX };
+}
+
+/**
+ * Passa el disc de CIRA a l'ortogràfic dels altres dos ulls (els marcadors fan servir la mateixa fórmula per a tots
+ * tres): per a cada píxel del disc de sortida, la latitud i la longitud, i d'aquí el píxel de la vista del satèl·lit.
+ * Fora del disc, transparent; més enllà de l'horitzó del satèl·lit, negre.
+ */
+export function reprojectGeosToDisc(src: Uint32Array, srcSize: number, subLon: number, size: number): Uint32Array {
+  const out = new Uint32Array(size * size);
+  for (let j = 0; j < size; j++) {
+    const y = 1 - (2 * j + 1) / size;
+    const latDeg = Math.asin(y) / DEG;
+    const rowStart = j * size;
+    for (let i = 0; i < size; i++) {
+      const x = (2 * i + 1) / size - 1;
+      const r2 = x * x + y * y;
+      if (r2 > 1) continue;
+      const depth = Math.sqrt(1 - r2);
+      if (depth < COS_CIRA_VIEW_MAX) {
+        out[rowStart + i] = OPAQUE_BLACK;
+        continue;
+      }
+      const { u, v } = geosImagePoint(latDeg, subLon + Math.atan2(x, depth) / DEG, subLon);
+      const col = Math.max(0, Math.min(srcSize - 1, Math.floor(u)));
+      const row = Math.max(0, Math.min(srcSize - 1, Math.floor(v)));
+      out[rowStart + i] = src[row * srcSize + col];
+    }
+  }
+  return out;
+}
