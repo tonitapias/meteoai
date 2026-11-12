@@ -105,8 +105,8 @@ El botó **Radar** de la capçalera obre un mapa a pantalla completa —un globu
 **Núvols HD (satèl·lits d'alta resolució):** l'opció HD de **Núvols** tria directament el satèl·lit que cobreix el lloc consultat (marcat amb una agulla): Meteosat a Europa i l'Àfrica, GOES a Amèrica i Himawari a l'Àsia i el Pacífic. Se'n pot canviar amb un toc, però només n'hi ha un d'actiu alhora i substitueix els núvols IR globals; si el que tries no cobreix el que mires, la càmera hi va.
 
 <div align="center">
-  <img src="./public/screenshot-radar-satellite.jpg" alt="Radar amb els núvols de GOES en color sobre Hawaii" width="800" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
-  <p><em>Núvols HD en color: el GeoColor de GOES sobre Hawaii a mitja tarda, amb els cúmuls dels alisis un a un (píxels d'1 km) sobre el mapa de satèl·lit. És una imatge real, d'uns 30 minuts abans, i s'anima amb el radar.</em></p>
+  <img src="./public/screenshot-radar-satellite.jpg" alt="Radar amb els núvols de Meteosat en color sobre Catalunya" width="800" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(56,189,248,0.2);">
+  <p><em>Núvols HD en color: el GeoColour de Meteosat-12 sobre Catalunya un matí de novembre, amb núvols del Pirineu a la Catalunya central, l'Empordà i la Plana de Lleida clars i bancs de núvols escampats sobre el mar. És una imatge real, de pocs minuts abans, i s'anima amb el radar.</em></p>
 </div>
 
 * **Meteosat HD (Europa i Àfrica), una imatge cada 10 minuts:** fa servir el Meteosat de tercera generació (MTG, Meteosat-12), amb el doble de nitidesa (píxels d'uns 2 km sobre Catalunya, abans uns 4,6 × 3,4 km) i fins al Cap Nord (72°N). Cada fotograma de radar porta la imatge de satèl·lit de la mateixa desena de minuts: en un bucle de 2 hores hi ha unes 10 imatges diferents en lloc de 2, i la més nova té una mediana de 27 minuts en lloc de 72. Les hores les dona el proxy propi a partir d'EUMETSAT. Si MTG s'endarrereix més d'una hora, la sessió passa sencera al Meteosat anterior (MSG) mentre aquest funcioni, sense barrejar tessel·les dels dos.
