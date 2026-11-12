@@ -8,15 +8,23 @@ import { latestImageTime } from '../utils/welcome/skyElevator';
 import { SAT_PROXY_HOST } from '../utils/radarPhysics';
 import { eyeInfo, type OrbitEye } from '../utils/orbitalView';
 import {
-  DISC_PX, GIBS_PRODUCTS, MAX_MISSING_SHARE, METEOSAT_CAPS_URL, TILE_PX,
-  discMosaic, discTileUrl, gibsAttempts, hasDarkEastEdge, meteosatImageUrl, missingShare, parseGibsSlots,
-  reprojectMercatorToDisc,
+  CIRA_DISC_PX, DISC_PX, GIBS_PRODUCTS, MAX_MISSING_SHARE, METEOSAT_CAPS_URL, TILE_PX,
+  ciraDiscUrl, discMosaic, discTileUrl, gibsAttempts, hasDarkEastEdge, meteosatImageUrl, missingShare, parseCiraSlots,
+  parseGibsSlots, reprojectGeosToDisc, reprojectMercatorToDisc,
   type DiscAttempt, type GibsEye, type GibsProduct,
 } from '../utils/orbitalImage';
 
 export type OrbitalImage =
   | { status: 'loading' }
-  | { status: 'ready'; src: string; /** Hora de la imatge (ms), si se sap. */ timeMs: number | null; product: GibsProduct }
+  | {
+    status: 'ready';
+    src: string;
+    /** Hora de la imatge (ms), si se sap. */
+    timeMs: number | null;
+    product: GibsProduct;
+    /** L'Himawari en GeoColor de CIRA (canvia el crèdit). */
+    source?: 'cira';
+  }
   | { status: 'failed' };
 
 type ReadyImage = Extract<OrbitalImage, { status: 'ready' }>;
@@ -32,6 +40,10 @@ const GIBS_TOTAL_BUDGET_MS = 20000;
 const GIBS_META_TIMEOUT_MS = 4000;
 const GIBS_FIRST_PRODUCT_MS = 10000;
 const GIBS_MIN_ATTEMPT_MS = 1500;
+// L'Himawari en GeoColor de CIRA, dins el mateix pressupost: com el GeoColor del GOES, 10 s i, si no, l'infraroig
+// amb el temps que queda. Se'n proven les dues franges més noves (la més nova pot no ser encara al worker).
+const CIRA_BUDGET_MS = 10000;
+const CIRA_SLOTS = 2;
 
 const cache = new Map<OrbitEye, { at: number; image: ReadyImage }>();
 const inFlight = new Map<OrbitEye, Promise<ReadyImage>>();
@@ -104,7 +116,11 @@ async function gibsDisc(eye: GibsEye, attempt: DiscAttempt, timeoutMs: number): 
 
   const disc = reprojectMercatorToDisc(pixels, mosaic, subLon, DISC_PX);
   if (missingShare(disc, DISC_PX, attempt.product === 'ir') > MAX_MISSING_SHARE) return slow ? 'slow' : 'holes';
+  return { src: await discToJpeg(disc) };
+}
 
+/** El disc reprojectat (DISC_PX × DISC_PX, RGBA) en un JPEG per a l'<img>. */
+async function discToJpeg(disc: Uint32Array): Promise<string> {
   const out = document.createElement('canvas');
   out.width = DISC_PX;
   out.height = DISC_PX;
@@ -115,14 +131,50 @@ async function gibsDisc(eye: GibsEye, attempt: DiscAttempt, timeoutMs: number): 
   outCtx.putImageData(imageData, 0, 0);
   const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/jpeg', 0.88));
   if (!blob) throw new Error('no blob');
-  return { src: URL.createObjectURL(blob) };
+  return URL.createObjectURL(blob);
 }
 
-async function loadGibs(eye: GibsEye): Promise<ReadyImage> {
+/** L'Himawari en GeoColor de CIRA: la franja més nova que el worker serveixi, passada al disc; null si cap. */
+async function loadCira(deadline: number): Promise<ReadyImage | null> {
+  let slots: number[] | null = null;
+  try {
+    const response = await fetchWithTimeout(`${SAT_PROXY_HOST}/hd/himawari/disc/latest`, Math.min(GIBS_META_TIMEOUT_MS, deadline - Date.now()));
+    if (response.ok) slots = parseCiraSlots(await response.json());
+  } catch { /* sense la llista: l'infraroig */ }
+
+  for (const slot of (slots ?? []).slice(0, CIRA_SLOTS)) {
+    const left = deadline - Date.now();
+    if (left < GIBS_MIN_ATTEMPT_MS) break;
+    try {
+      const img = await loadImage(ciraDiscUrl(SAT_PROXY_HOST, slot), true, left);
+      const source = document.createElement('canvas');
+      source.width = CIRA_DISC_PX;
+      source.height = CIRA_DISC_PX;
+      const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+      if (!sourceCtx) throw new Error('no canvas');
+      sourceCtx.drawImage(img, 0, 0, CIRA_DISC_PX, CIRA_DISC_PX);
+      const pixels = new Uint32Array(sourceCtx.getImageData(0, 0, CIRA_DISC_PX, CIRA_DISC_PX).data.buffer);
+      const disc = reprojectGeosToDisc(pixels, CIRA_DISC_PX, eyeInfo('himawari').subLon, DISC_PX);
+      return { status: 'ready', src: await discToJpeg(disc), timeMs: slot * 1000, product: 'colour', source: 'cira' };
+    } catch (error) {
+      // Lenta: l'anterior tampoc arribaria a temps.
+      if (error instanceof ImageTimeout) break;
+    }
+  }
+  return null;
+}
+
+/** Himawari: GeoColor de CIRA i, si no arriba, l'infraroig dels taulers HD amb el temps que queda. */
+async function loadHimawari(): Promise<ReadyImage> {
   const deadline = Date.now() + GIBS_TOTAL_BUDGET_MS;
+  const colour = await loadCira(Math.min(deadline, Date.now() + CIRA_BUDGET_MS)).catch(() => null);
+  return colour ?? loadGibs('himawari', deadline);
+}
+
+async function loadGibs(eye: GibsEye, deadline: number = Date.now() + GIBS_TOTAL_BUDGET_MS): Promise<ReadyImage> {
   let slots = null;
   try {
-    const response = await fetchWithTimeout(`${SAT_PROXY_HOST}/hd/${eye}/latest`, GIBS_META_TIMEOUT_MS);
+    const response = await fetchWithTimeout(`${SAT_PROXY_HOST}/hd/${eye}/latest`, Math.min(GIBS_META_TIMEOUT_MS, deadline - Date.now()));
     if (response.ok) slots = parseGibsSlots(await response.json());
   } catch { /* sense la llista: hores calculades */ }
 
@@ -145,7 +197,7 @@ async function loadGibs(eye: GibsEye): Promise<ReadyImage> {
 function loadEye(eye: OrbitEye): Promise<ReadyImage> {
   const pending = inFlight.get(eye);
   if (pending) return pending;
-  const promise = (eye === 'meteosat' ? loadMeteosat() : loadGibs(eye))
+  const promise = (eye === 'meteosat' ? loadMeteosat() : eye === 'himawari' ? loadHimawari() : loadGibs(eye))
     .then((image) => {
       const previous = cache.get(eye)?.image.src;
       if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);

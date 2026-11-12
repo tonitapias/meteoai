@@ -42,6 +42,8 @@ interface OrbitalViewerProps {
 
 const EYE_NAMES: Record<OrbitEye, string> = { meteosat: 'Meteosat', goes: 'GOES', himawari: 'Himawari' };
 const IMAGE_CREDITS: Record<OrbitEye, string> = { meteosat: 'EUMETSAT', goes: 'NOAA · NASA GIBS', himawari: 'JMA · NASA GIBS' };
+// L'Himawari en GeoColor surt de CIRA (amb dades de la JMA); l'infraroig de reserva, de GIBS.
+const CIRA_CREDIT = 'JMA · CIRA/RAMMB';
 // El disc ocupa el 90 % del quadre: la resta és per a l'halo de l'atmosfera i per a les etiquetes de la vora.
 const DISC_INSET = 0.05;
 
@@ -224,7 +226,7 @@ export default function OrbitalViewer({ data, summaries, eye, onEyeChange, s, la
                         </div>
                     )}
 
-                    <p className="px-1 font-mono text-[10px] uppercase tracking-[0.06em] text-slate-400">{s.imageCredit}: {IMAGE_CREDITS[eye]}</p>
+                    <p className="px-1 font-mono text-[10px] uppercase tracking-[0.06em] text-slate-400">{s.imageCredit}: {image.status === 'ready' && image.source === 'cira' ? CIRA_CREDIT : IMAGE_CREDITS[eye]}</p>
                 </div>
             </div>
         </div>

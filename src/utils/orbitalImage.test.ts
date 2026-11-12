@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     GIBS_PRODUCTS, GIBS_SAFE_AGE_SEC, MAX_MISSING_SHARE, TILE_PX, VIEW_MAX_DEG,
+    CIRA_DISC_PX, ciraDiscUrl, geosImagePoint, parseCiraSlots, reprojectGeosToDisc,
     discMosaic, discTileUrl, gibsAttempts, hasDarkEastEdge, meteosatImageUrl, missingShare, parseGibsSlots, reprojectMercatorToDisc,
 } from './orbitalImage';
 
@@ -172,5 +173,57 @@ describe('Reprojecció al disc', () => {
         const night = disc.map((px, k) => ((k % SIZE) > SIZE * 0.7 ? 0xff010101 : px));
         expect(missingShare(night, SIZE, false)).toBe(0);
         expect(missingShare(night, SIZE, true)).toBeGreaterThan(MAX_MISSING_SHARE);
+    });
+});
+
+describe("L'Himawari en GeoColor de CIRA", () => {
+    const SUB = 140.7;
+
+    it('les franges de /hd/himawari/disc/latest, de la més nova a la més vella; i la imatge, pel worker', () => {
+        expect(parseCiraSlots({ slots: [NOW - 600, NOW, 'x'] })).toEqual([NOW, NOW - 600]);
+        expect(parseCiraSlots({ slots: [], off: true })).toEqual([]);
+        expect(parseCiraSlots(null)).toBeNull();
+        expect(ciraDiscUrl('https://sat.example', NOW)).toBe(`https://sat.example/hd/himawari/disc/${NOW}.png`);
+    });
+
+    it('la vista del satèl·lit: el punt de sota al centre (344), est a la dreta i nord a dalt', () => {
+        const centre = geosImagePoint(0, SUB, SUB);
+        expect(centre.u).toBeCloseTo(344, 6);
+        expect(centre.v).toBeCloseTo(344, 6);
+        expect(geosImagePoint(0, SUB + 10, SUB).u).toBeGreaterThan(344);
+        expect(geosImagePoint(10, SUB, SUB).v).toBeLessThan(344);
+    });
+
+    it("a 45° a l'est sobre l'equador, l'angle que es veu des de 42.164 km (no el sin 45° de l'ortogràfica)", () => {
+        // A l'equador, la latitud geocèntrica és la geodèsica i el radi, l'equatorial.
+        const a = 6378.137;
+        const scanDeg = Math.atan((a * Math.sin(45 * DEG)) / (42164 - a * Math.cos(45 * DEG))) / DEG;
+        const degPerPx = (65536 / 20466275) * (5500 / CIRA_DISC_PX);
+        expect(geosImagePoint(0, SUB + 45, SUB).u).toBeCloseTo(344 + scanDeg / degPerPx, 3);
+        // Uns 267 px del centre: 27 més que l'ortogràfica amb el mateix radi (340 · sin 45° = 240).
+        expect(geosImagePoint(0, SUB + 45, SUB).u - 344).toBeGreaterThan(265);
+    });
+
+    it("l'horitzó cau a les vores mesurades del disc de CIRA (4–684 a l'equador, 5–683 de pol a pol)", () => {
+        // Des de 42.164 km, l'horitzó de l'equador és a acos(a / 42164) = 81,3°.
+        const limb = Math.acos(6378.137 / 42164) / DEG;
+        expect(Math.abs(geosImagePoint(0, SUB + limb, SUB).u - 684)).toBeLessThan(1);
+        expect(Math.abs(geosImagePoint(0, SUB - limb, SUB).u - 4)).toBeLessThan(1);
+        expect(Math.abs(geosImagePoint(81.2, SUB, SUB).v - 5)).toBeLessThan(1.5);
+    });
+
+    it('al disc ortogràfic: centre del centre, est a la dreta, fora transparent i més enllà de l\'horitzó negre', () => {
+        // Cada píxel de la imatge de CIRA diu la seva columna i fila.
+        const src = new Uint32Array(CIRA_DISC_PX * CIRA_DISC_PX).map((_, k) => (0xff000000 | ((k % CIRA_DISC_PX) << 12) | Math.floor(k / CIRA_DISC_PX)) >>> 0);
+        const SIZE = 101;
+        const disc = reprojectGeosToDisc(src, CIRA_DISC_PX, SUB, SIZE);
+        const at = (i: number, j: number) => ({ col: (disc[j * SIZE + i] >>> 12) & 0xfff, row: disc[j * SIZE + i] & 0xfff, alpha: disc[j * SIZE + i] >>> 24 });
+        expect(at(50, 50)).toEqual({ col: 344, row: 344, alpha: 255 });
+        expect(at(80, 50).col).toBeGreaterThan(344);
+        expect(at(50, 20).row).toBeLessThan(344);
+        expect(at(0, 0).alpha).toBe(0);
+        // A 0,995 radis: 84°, darrere l'horitzó del satèl·lit.
+        const big = 401;
+        expect(reprojectGeosToDisc(src, CIRA_DISC_PX, SUB, big)[200 * big + 399]).toBe(0xff000000);
     });
 });
