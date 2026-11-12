@@ -20,7 +20,7 @@ import { loadRadarLayers, saveRadarLayers } from '../utils/radarLayerPrefs';
 import type { Language } from '../translations';
 
 // 2. DOMINI D'ESTAT EXTRET
-import { useRadarData } from '../hooks/useRadarData';
+import { useRadarSources } from '../hooks/useRadarData';
 
 // 3. COMPONENTS DE UI EXTRETS
 import { RadarOverlays } from './radar/RadarOverlays';
@@ -66,7 +66,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   // l'app, així que aquí i18n.language és fiable.
   const lang: Language = (['ca', 'es', 'en', 'fr'] as const).find(l => i18n.language?.startsWith(l)) ?? 'ca';
 
-  const { loading, error, radarData, rainviewerData, fetchRadarData } = useRadarData();
+  // Una sola font de radar: LibreWXR, o RainViewer si LibreWXR no respon o hi és encallat (useRadarSources).
+  const { loading, error, mapData: radarData, fetchRadarData } = useRadarSources(lat, lon);
+  const radarPalette = radarData && /rainviewer\.com/i.test(radarData.host) ? 'rainviewer' : 'nexrad';
 
   const BASE_LAYERS: Record<BaseLayerType, BaseLayerConfig> = useMemo(() => ({
     dark: { name: t('baseDark', 'Fosc'), url: `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, attribution: '&copy; Mapbox' },
@@ -200,9 +202,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   // 1. Dades Noves (Injecció)
   useEffect(() => {
     if (radarData && mapRef.current) {
-      injectLayersIntoMap(radarData, rainviewerData);
+      injectLayersIntoMap(radarData);
     }
-  }, [radarData, rainviewerData, injectLayersIntoMap, mapRef]);
+  }, [radarData, injectLayersIntoMap, mapRef]);
 
   // 2. Sincronització global quan canvien els overlays, la baseLayer o el
   // mapa (webglKey). syncLayersState és estable: no s'executa a cada render.
@@ -300,7 +302,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
           </>
         )}
         {/* Llegenda plegable: pluja i neu (amb la capa de precipitació) i llamps. */}
-        <RadarLegend showPrecip={overlays.precip} showLightning={overlays.lightning} />
+        <RadarLegend showPrecip={overlays.precip} showLightning={overlays.lightning} palette={radarPalette} />
         <button
           onClick={() => setShowAttribution(v => !v)}
           aria-label={t('radarData')}

@@ -87,6 +87,15 @@ vi.mock('mapbox-gl', () => {
   return { default: mapboxgl };
 });
 
+// LibreWXR "encallat" (useRadarSources): sense tessel·les reals a jsdom, el
+// canvi entre la primera i l'última imatge el dona la prova. Per defecte, no
+// es pot mesurar (null): LibreWXR.
+const frameChange = vi.hoisted(() => ({ byHost: {} as Record<string, { wet: number; changed: number } | null> }));
+vi.mock('../utils/radarSampling', async (orig) => ({
+  ...(await orig<typeof import('../utils/radarSampling')>()),
+  measureFrameChange: vi.fn(async (source: { host: string }) => frameChange.byHost[source.host] ?? null)
+}));
+
 // Dades sintètiques amb la forma de weather-maps.json: radar cada 10 min i
 // satèl·lit IR cada 20 min (LibreWXR); RainViewer sense satèl·lit.
 const T0 = 1791144600;
@@ -103,7 +112,8 @@ const RAINVIEWER = { host: 'https://tilecache.rainviewer.com', radar: { past: ra
 // que encara no ha arribat.
 const MTG_LATEST = T0 + 8 * 600;
 let hdLatest: unknown;
-let libreWxr: typeof LIBREWXR;
+// 'fail' = LibreWXR no respon (HTTP 503).
+let libreWxr: typeof LIBREWXR | 'fail';
 // /lightning/latest: per defecte, l'última franja de llamps 5 min després del
 // fotograma 9 (els dos més nous comparteixen aquesta).
 const LIGHTNING_LATEST = T0 + 9 * 600 + 300;
@@ -168,6 +178,7 @@ beforeEach(() => {
   };
   gibsCalls = [];
   libreWxr = LIBREWXR;
+  frameChange.byHost = {};
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const u = String(url);
     if (u.includes('/hd/meteosat/latest')) {
@@ -187,6 +198,7 @@ beforeEach(() => {
     if (u.includes('/lightning/americas/latest')) {
       return new Response(JSON.stringify(await americasLatest), { status: 200 });
     }
+    if (u.includes('librewxr') && libreWxr === 'fail') return new Response('', { status: 503 });
     return new Response(JSON.stringify(u.includes('librewxr') ? libreWxr : RAINVIEWER), { status: 200 });
   }));
 });
@@ -239,7 +251,6 @@ describe('RadarMap', () => {
     await act(async () => { map2.emit('load'); await sleep(50); });
 
     expect(ids(map2, 'rad-layer-').length).toBeGreaterThan(0);
-    expect(ids(map2, 'rad-rv-layer-').length).toBeGreaterThan(0);
     expect(ids(map2, 'sat-layer-').length).toBeGreaterThan(0);
     expect(visibleTargets(map2, 'rad-layer-', 0.5)).toHaveLength(1);
     expect(visibleTargets(map2, 'sat-layer-', 0.3)).toHaveLength(1);
@@ -582,9 +593,63 @@ describe('RadarMap', () => {
 
   it("les tessel·les de radar del mapa van sense l'opció de neu (els colors només diuen la intensitat)", async () => {
     const map = await mountRadar();
-    const radar = [...map.sources.entries()].filter(([id]) => id.startsWith('rad-src-') || id.startsWith('rad-rv-src-'));
+    const radar = [...map.sources.entries()].filter(([id]) => id.startsWith('rad-src-'));
     expect(radar.length).toBeGreaterThan(0);
     radar.forEach(([, src]) => expect((src as { tiles: string[] }).tiles[0]).toMatch(/\/6\/1_0\.png$/));
+  });
+
+  // 2026-11-12, "l'animació es veu sobreposada": RainViewer anava per sobre de
+  // LibreWXR amb una altra paleta (ja no fa cas de l'esquema de colors) i unes
+  // altres zones de pluja. Ara el mapa en dibuixa una sola font.
+  it('el radar és una sola font: LibreWXR; RainViewer sol si LibreWXR cau, i sense restes en tornar', async () => {
+    const map = await mountRadar();
+    const tiles = () => [...map.sources.entries()]
+      .filter(([id]) => id.startsWith('rad-'))
+      .map(([, src]) => src as { tiles: string[]; maxzoom: number });
+    const refresh = async () => { await act(async () => { fireEvent.click(screen.getByLabelText('btnRefresh')); await sleep(30); }); };
+
+    expect(tiles().length).toBeGreaterThan(0);
+    expect(tiles().every((s) => s.tiles[0].startsWith('https://api.librewxr.net/') && s.maxzoom === 8)).toBe(true);
+    expect(visibleTargets(map, 'rad-', 0.5)).toHaveLength(1);
+
+    libreWxr = 'fail';
+    await refresh();
+    expect(tiles().length).toBeGreaterThan(0);
+    // Mateixes hores que LibreWXR: sense netejar en canviar de proveïdor, es quedarien les capes de LibreWXR.
+    expect(tiles().every((s) => s.tiles[0].startsWith('https://tilecache.rainviewer.com/v2/radar/rv') && s.maxzoom === 7)).toBe(true);
+    expect(visibleTargets(map, 'rad-', 0.5)).toHaveLength(1);
+    expect(ids(map, 'sat-layer-')).toEqual([]);
+
+    libreWxr = LIBREWXR;
+    await refresh();
+    expect(tiles().every((s) => s.tiles[0].startsWith('https://api.librewxr.net/'))).toBe(true);
+    expect(visibleTargets(map, 'rad-', 0.5)).toHaveLength(1);
+    expect(map.errors).toEqual([]);
+  });
+
+  it('LibreWXR encallat al lloc: el radar és RainViewer sol i la llegenda en porta els colors', async () => {
+    // Mesurat a Barcelona el 12-11: LibreWXR canvia el 26 % en 2 h i RainViewer el 97 %.
+    frameChange.byHost = {
+      'https://api.librewxr.net': { changed: 24624, wet: 96036 },
+      'https://tilecache.rainviewer.com': { changed: 132545, wet: 136315 }
+    };
+    // Una línia temporal que cap altra prova ha fet servir: la comprovació es desa per lloc i hores.
+    libreWxr = { ...LIBREWXR, radar: { past: LIBREWXR.radar.past.slice(1), nowcast: [] } };
+    const map = renderRadar();
+    await act(async () => { map.emit('load'); await sleep(30); });
+    await act(async () => { fireEvent.click(screen.getByLabelText('btnRefresh')); await sleep(30); });
+
+    const radar = [...map.sources.entries()].filter(([id]) => id.startsWith('rad-')).map(([, s]) => (s as { tiles: string[] }).tiles[0]);
+    expect(radar.length).toBeGreaterThan(0);
+    expect(radar.every((u) => u.startsWith('https://tilecache.rainviewer.com/'))).toBe(true);
+    expect(visibleTargets(map, 'rad-', 0.5)).toHaveLength(1);
+
+    await press('button', 'Llegenda');
+    const steps = [...within(screen.getByTestId('radar-legend')).getAllByText('', { selector: 'span[style]' })]
+      .map((s) => (s as HTMLElement).style.background);
+    expect(steps).toContain('rgb(206, 192, 135)'); // la plugim beix de RainViewer
+    expect(steps).not.toContain('rgb(0, 255, 0)'); // el verd de la paleta NEXRAD
+    expect(map.errors).toEqual([]);
   });
 
   it('la llegenda comença plegada; oberta mostra la precipitació i els llamps; sense pluja ni llamps no hi és', async () => {

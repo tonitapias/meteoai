@@ -26,7 +26,7 @@ import {
   type HdVariant
 } from '../../utils/radarPhysics';
 import type { GibsTimelineState, HdTimelineState, LightningTimelineState } from './useHdTimeline';
-import { RADAR_TILE_OPTIONS } from '../../utils/radarSampling';
+import { RADAR_TILE_OPTIONS, sampleZoomForHost } from '../../utils/radarSampling';
 
 interface UseRadarAnimationProps {
   mapRef: MutableRefObject<Map | null>;
@@ -165,30 +165,14 @@ const MAX_LIVE_HD_FRAMES_PER_AGENCY = 4;
 // del fotograma.
 const MAX_HD_FALLBACK_SEC = 3600;
 
-// PERF/VRAM: el radar abans només tenia LibreWXR (~12-13 frames com a màxim,
-// mida fixa de l'API). Ara cada frame pot tenir DUES fonts vives (LibreWXR +
-// RainViewer com a capa prioritària), i la unió de línies temporals dels dos
-// proveïdors pot ser més llarga que la de qualsevol dels dos sols. Sense
-// límit, un cicle complet de reproducció acaba mantenint totes les fonts
-// vives alhora (mateix problema que a l'HD, més amunt). Apliquem el mateix
-// patró FIFO, un per pista, per no doblar la pressió de VRAM.
+// PERF/VRAM: sense límit, un cicle complet de reproducció acaba mantenint
+// vives les fonts de tots els fotogrames de radar alhora (mateix problema que
+// a l'HD, més amunt). Mateix patró FIFO.
+//
+// Una sola font de radar per fotograma: la de `radarData` (LibreWXR, o
+// RainViewer si LibreWXR no ha donat dades). RainViewer ja no anava per sobre
+// de LibreWXR: vegeu useRadarData ("l'animació es veu sobreposada").
 const MAX_LIVE_RADAR_FRAMES = 6;
-
-// Cerca el frame amb el timestamp més proper a `targetTime`. S'usa perquè la
-// línia temporal "mestra" (unió de LibreWXR + RainViewer) pot tenir instants
-// on només un dels dos proveïdors té frame exacte — mai deixem la capa de
-// LibreWXR (cobertura global) sense base, o es veuria un buit transparent
-// real allà on RainViewer no té cobertura de radar terrestre.
-const findClosestFrame = (frames: RadarFrame[], targetTime: number): RadarFrame | undefined => {
-  let closest: RadarFrame | undefined;
-  let minDiff = Infinity;
-  frames.forEach((f) => {
-    if (!f || f.time === null) return;
-    const diff = Math.abs(f.time - targetTime);
-    if (diff < minDiff) { minDiff = diff; closest = f; }
-  });
-  return closest;
-};
 
 export function useRadarAnimation({
   mapRef,
@@ -211,34 +195,20 @@ export function useRadarAnimation({
 
   const isPlayingRef = useRef<boolean>(false);
   const hostRef = useRef<string>('');
-  // Línia temporal "mestra" del reproductor: unió ordenada dels timestamps
-  // que té CADASCUN dels dos proveïdors (no només LibreWXR). Així el frame
-  // "ara" reflecteix el més recent disponible entre tots dos. Els detalls
-  // de cada frame (host+path) es busquen per timestamp a
-  // lwFramesByTimeRef/rvFramesByTimeRef, amb fallback al frame de LibreWXR
-  // més proper quan no hi ha coincidència exacta (vegeu findClosestFrame).
+  // Línia temporal del reproductor: els timestamps dels fotogrames de radar,
+  // en ordre. El camí de cada un (path) es busca a framesByTimeRef.
   const radarFramesRef = useRef<number[]>([]);
+  const framesByTimeRef = useRef<Record<number, RadarFrame>>({});
   const satFramesRef = useRef<RadarFrame[]>([]);
   const currentFrameIndexRef = useRef<number>(0);
 
-  // Capa de LibreWXR (cobertura global) i capa "prioritària" de RainViewer
-  // (cobertura real de radar, allà on n'hi ha). La de RainViewer es
-  // renderitza PER SOBRE: com que els seus PNG són transparents fora de
-  // cobertura, es veu LibreWXR per sota sense lògica addicional.
-  const lwFramesRef = useRef<RadarFrame[]>([]);
-  const lwFramesByTimeRef = useRef<Record<number, RadarFrame>>({});
-  const rvHostRef = useRef<string>('');
-  const rvFramesByTimeRef = useRef<Record<number, RadarFrame>>({});
-
   const loadedRadarIdsRef = useRef<Record<number, string>>({});
-  const loadedRvRadarIdsRef = useRef<Record<number, string>>({});
   const loadedSatIdsRef = useRef<Record<number, string>>({});
   const animationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Ordre d'inserció dels timestamps de radar carregats, un per pista (FIFO
-  // per al límit MAX_LIVE_RADAR_FRAMES, vegeu ensureFrameLoaded).
+  // Ordre d'inserció dels timestamps de radar carregats (FIFO per al límit
+  // MAX_LIVE_RADAR_FRAMES, vegeu ensureFrameLoaded).
   const radarLoadOrderRef = useRef<number[]>([]);
-  const rvRadarLoadOrderRef = useRef<number[]>([]);
 
   // Ordre d'inserció de les capes HD vives per agència (claus de HdTarget):
   // FIFO per al límit MAX_LIVE_HD_FRAMES_PER_AGENCY i registre de les capes
@@ -277,10 +247,8 @@ export function useRadarAnimation({
       isMountedRef.current = false;
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
       loadedRadarIdsRef.current = {};
-      loadedRvRadarIdsRef.current = {};
       loadedSatIdsRef.current = {};
       radarLoadOrderRef.current = [];
-      rvRadarLoadOrderRef.current = [];
     };
   }, []);
 
@@ -302,9 +270,8 @@ export function useRadarAnimation({
   // que realment canvien. Els canvis provocats per un toggle d'overlay (que
   // sí afecten TOTES les capes d'un tipus, p.ex. mostrar/amagar precip)
   // continuen fent el recorregut complet — vegeu el paràmetre `animationTick`.
-  const lastTargetIdsRef = useRef<{ radar: string | null; rvRadar: string | null; sat: string | null; hd: Record<HdAgency, string | null>; lightning: string[] }>({
+  const lastTargetIdsRef = useRef<{ radar: string | null; sat: string | null; hd: Record<HdAgency, string | null>; lightning: string[] }>({
     radar: null,
-    rvRadar: null,
     sat: null,
     hd: { goes: null, meteosat: null, himawari: null },
     lightning: []
@@ -414,33 +381,21 @@ export function useRadarAnimation({
   }, [mapRef, lightningKeysFor, safeRemoveLayerAndSource]);
 
   // Només destrueix frames quan la pròpia API ens diu que ja han caducat en el temps
-  const cleanupExpiredLayers = useCallback((validLwFrames: RadarFrame[], validRvFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
+  const cleanupExpiredLayers = useCallback((validRadarFrames: RadarFrame[], validSatFrames: RadarFrame[]) => {
     const map = mapRef.current;
     if (!map || !styleReadyRef.current) return;
 
-    const activeLwTimes = new Set(validLwFrames.map(f => f.time));
-    const activeRvTimes = new Set(validRvFrames.map(f => f.time));
+    const activeRadarTimes = new Set(validRadarFrames.map(f => f.time));
     const activeSatTimes = new Set(validSatFrames.map(f => f.time));
 
     Object.keys(loadedRadarIdsRef.current).forEach((key) => {
       const timestampKey = Number(key);
-      if (!activeLwTimes.has(timestampKey)) {
+      if (!activeRadarTimes.has(timestampKey)) {
         const layerId = loadedRadarIdsRef.current[timestampKey];
         const radSourceId = `rad-src-${timestampKey}`;
         safeRemoveLayerAndSource(map, layerId, radSourceId);
         delete loadedRadarIdsRef.current[timestampKey];
         radarLoadOrderRef.current = radarLoadOrderRef.current.filter(t => t !== timestampKey);
-      }
-    });
-
-    Object.keys(loadedRvRadarIdsRef.current).forEach((key) => {
-      const timestampKey = Number(key);
-      if (!activeRvTimes.has(timestampKey)) {
-        const layerId = loadedRvRadarIdsRef.current[timestampKey];
-        const radRvSourceId = `rad-rv-src-${timestampKey}`;
-        safeRemoveLayerAndSource(map, layerId, radRvSourceId);
-        delete loadedRvRadarIdsRef.current[timestampKey];
-        rvRadarLoadOrderRef.current = rvRadarLoadOrderRef.current.filter(t => t !== timestampKey);
       }
     });
 
@@ -471,26 +426,23 @@ export function useRadarAnimation({
     // HACK VRAM: 0.000001 força la pre-càrrega a GPU sense ser visible. Evita parpellejos.
     const initialRadOpacity = (isTarget && overlaysRef.current.precip) ? 0.88 : 0.000001;
 
-    // Capa de LibreWXR (cobertura global): mai l'ometem, ni que aquest
-    // instant de la línia temporal mestra només tingui frame exacte a
-    // RainViewer — agafem el frame de LibreWXR més proper en el temps
-    // perquè sempre hi hagi una base de color sota RainViewer (mai un buit
-    // transparent real).
-    const lwFrame = hostRef.current
-      ? (lwFramesByTimeRef.current[frameTime] ?? findClosestFrame(lwFramesRef.current, frameTime))
-      : undefined;
+    const radarFrame = hostRef.current ? framesByTimeRef.current[frameTime] : undefined;
 
-    if (lwFrame && lwFrame.time !== null) {
-      const radSourceId = `rad-src-${lwFrame.time}`;
-      const radLayerId = `rad-layer-${lwFrame.time}`;
+    if (radarFrame) {
+      const radSourceId = `rad-src-${frameTime}`;
+      const radLayerId = `rad-layer-${frameTime}`;
 
-      if (!loadedRadarIdsRef.current[lwFrame.time] && !map.getSource(radSourceId)) {
+      if (!loadedRadarIdsRef.current[frameTime] && !map.getSource(radSourceId)) {
         try {
           map.addSource(radSourceId, {
             type: 'raster',
-            tiles: [`${hostRef.current}${lwFrame.path}/512/{z}/{x}/{y}/6/${RADAR_TILE_OPTIONS}.png`],
+            tiles: [`${hostRef.current}${radarFrame.path}/512/{z}/{x}/{y}/6/${RADAR_TILE_OPTIONS}.png`],
             tileSize: 512,
-            maxzoom: 8,
+            // El servidor de RainViewer (si LibreWXR no ha donat dades) no
+            // suporta el zoom 8: hi retorna una imatge d'error "Zoom Level
+            // Not Supported" en lloc d'una tessel·la transparent. Amb
+            // maxzoom 7 Mapbox amplia la del 7 en lloc de demanar-la.
+            maxzoom: sampleZoomForHost(hostRef.current),
           });
           map.addLayer({
             id: radLayerId,
@@ -504,73 +456,21 @@ export function useRadarAnimation({
               'raster-resampling': 'linear'
             },
           }, Z_LAYERS.PIS_5B_LIGHTNING);
-          loadedRadarIdsRef.current[lwFrame.time] = radLayerId;
+          loadedRadarIdsRef.current[frameTime] = radLayerId;
 
           // PERF/VRAM: mateix FIFO que a les agències HD — expulsa el frame
-          // més antic d'aquesta pista si superem el límit (mai el que
-          // acabem d'afegir).
+          // més antic si superem el límit (mai el que acabem d'afegir).
           const order = radarLoadOrderRef.current;
-          order.push(lwFrame.time);
+          order.push(frameTime);
           while (order.length > MAX_LIVE_RADAR_FRAMES) {
             const oldestTs = order[0];
-            if (oldestTs === lwFrame.time) break;
+            if (oldestTs === frameTime) break;
             order.shift();
             safeRemoveLayerAndSource(map, `rad-layer-${oldestTs}`, `rad-src-${oldestTs}`);
             delete loadedRadarIdsRef.current[oldestTs];
           }
         } catch (e) {
           console.warn(`[Zero Risk] Error afegint radar ${radLayerId}:`, e);
-        }
-      }
-    }
-
-    // Capa prioritària de RainViewer per a aquest mateix instant (si en té
-    // dades): es renderitza PER SOBRE de LibreWXR — com que els seus PNG
-    // són transparents fora de cobertura real, es veu LibreWXR per sota
-    // sense cap lògica addicional.
-    const rvFrame = rvFramesByTimeRef.current[frameTime];
-    if (rvFrame && rvFrame.time !== null && rvHostRef.current && !loadedRvRadarIdsRef.current[frameTime]) {
-      const radRvSourceId = `rad-rv-src-${frameTime}`;
-      const radRvLayerId = `rad-rv-layer-${frameTime}`;
-
-      if (!map.getSource(radRvSourceId)) {
-        try {
-          map.addSource(radRvSourceId, {
-            type: 'raster',
-            tiles: [`${rvHostRef.current}${rvFrame.path}/512/{z}/{x}/{y}/6/${RADAR_TILE_OPTIONS}.png`],
-            tileSize: 512,
-            // El servidor de RainViewer no suporta zoom 8: hi retorna una
-            // imatge d'error "Zoom Level Not Supported" en lloc d'una
-            // tessel·la transparent, que taparia tot el mapa perquè aquesta
-            // capa va per sobre. maxzoom:7 fa que Mapbox ampliï el tile de
-            // z=7 en lloc de demanar-ne un que no existeix.
-            maxzoom: 7,
-          });
-          map.addLayer({
-            id: radRvLayerId,
-            type: 'raster',
-            source: radRvSourceId,
-            layout: { visibility: overlaysRef.current.precip ? 'visible' : 'none' },
-            paint: {
-              'raster-opacity': getRadOpacityExp(initialRadOpacity),
-              'raster-opacity-transition': { duration: 0, delay: 0 },
-              'raster-fade-duration': 0,
-              'raster-resampling': 'linear'
-            },
-          }, Z_LAYERS.PIS_5B_LIGHTNING);
-          loadedRvRadarIdsRef.current[frameTime] = radRvLayerId;
-
-          const rvOrder = rvRadarLoadOrderRef.current;
-          rvOrder.push(frameTime);
-          while (rvOrder.length > MAX_LIVE_RADAR_FRAMES) {
-            const oldestTs = rvOrder[0];
-            if (oldestTs === frameTime) break;
-            rvOrder.shift();
-            safeRemoveLayerAndSource(map, `rad-rv-layer-${oldestTs}`, `rad-rv-src-${oldestTs}`);
-            delete loadedRvRadarIdsRef.current[oldestTs];
-          }
-        } catch (e) {
-          console.warn(`[Zero Risk] Error afegint radar RainViewer ${radRvLayerId}:`, e);
         }
       }
     }
@@ -751,15 +651,13 @@ export function useRadarAnimation({
   // les línies temporals (frames) continuen sent vàlides.
   const resetLayerBookkeeping = useCallback(() => {
     loadedRadarIdsRef.current = {};
-    loadedRvRadarIdsRef.current = {};
     loadedSatIdsRef.current = {};
     radarLoadOrderRef.current = [];
-    rvRadarLoadOrderRef.current = [];
     hdLoadOrderRef.current = { goes: [], meteosat: [], himawari: [] };
     prevHdEnabledRef.current = { goes: false, meteosat: false, himawari: false };
     lightningLoadOrderRef.current = [];
     prevLightningEnabledRef.current = false;
-    lastTargetIdsRef.current = { radar: null, rvRadar: null, sat: null, hd: { goes: null, meteosat: null, himawari: null }, lightning: [] };
+    lastTargetIdsRef.current = { radar: null, sat: null, hd: { goes: null, meteosat: null, himawari: null }, lightning: [] };
   }, []);
 
   const applyFrameVisibility = useCallback((index: number, animationTick: boolean = false) => {
@@ -805,12 +703,8 @@ export function useRadarAnimation({
     prevLightningEnabledRef.current = lightningEnabled;
 
     const currentFrameTime = radarFramesRef.current[safeIndex];
-    const lwTargetFrame = currentFrameTime !== null && currentFrameTime !== undefined
-      ? (lwFramesByTimeRef.current[currentFrameTime] ?? findClosestFrame(lwFramesRef.current, currentFrameTime))
-      : undefined;
-    const targetRadarId = lwTargetFrame?.time ? loadedRadarIdsRef.current[lwTargetFrame.time] : undefined;
-    const targetRvRadarId = currentFrameTime !== null && currentFrameTime !== undefined
-      ? loadedRvRadarIdsRef.current[currentFrameTime]
+    const targetRadarId = currentFrameTime !== null && currentFrameTime !== undefined
+      ? loadedRadarIdsRef.current[currentFrameTime]
       : undefined;
 
     if (currentFrameTime !== null && currentFrameTime !== undefined) {
@@ -841,15 +735,6 @@ export function useRadarAnimation({
         map.setLayoutProperty(targetRadarId, 'visibility', showPrecip ? 'visible' : 'none');
         map.setPaintProperty(targetRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.88) : 0);
       }
-
-      const prevRvRadarId = lastTargetIdsRef.current.rvRadar;
-      if (prevRvRadarId && prevRvRadarId !== targetRvRadarId && map.getLayer(prevRvRadarId)) {
-        map.setPaintProperty(prevRvRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.000001) : 0);
-      }
-      if (targetRvRadarId && map.getLayer(targetRvRadarId)) {
-        map.setLayoutProperty(targetRvRadarId, 'visibility', showPrecip ? 'visible' : 'none');
-        map.setPaintProperty(targetRvRadarId, 'raster-opacity', showPrecip ? getRadOpacityExp(0.88) : 0);
-      }
     } else {
       Object.values(loadedRadarIdsRef.current).forEach((id) => {
         if (id && map.getLayer(id)) {
@@ -860,18 +745,8 @@ export function useRadarAnimation({
           map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
         }
       });
-      Object.values(loadedRvRadarIdsRef.current).forEach((id) => {
-        if (id && map.getLayer(id)) {
-          const isTarget = id === targetRvRadarId;
-          const targetOpacity = isTarget ? 0.88 : 0.000001;
-
-          map.setLayoutProperty(id, 'visibility', showPrecip ? 'visible' : 'none');
-          map.setPaintProperty(id, 'raster-opacity', showPrecip ? getRadOpacityExp(targetOpacity) : 0);
-        }
-      });
     }
     lastTargetIdsRef.current.radar = targetRadarId ?? null;
-    lastTargetIdsRef.current.rvRadar = targetRvRadarId ?? null;
 
     if (satFramesRef.current.length > 0 && currentFrameTime !== null && currentFrameTime !== undefined) {
       let closestSatIdx = 0;
@@ -980,51 +855,39 @@ export function useRadarAnimation({
     applyFrameVisibility(currentFrameIndexRef.current);
   }, [pruneLightning, applyFrameVisibility]);
 
-  const injectLayersIntoMap = useCallback((
-    parsedData: z.infer<typeof RainViewerResponseSchema>,
-    rvParsedData?: z.infer<typeof RainViewerResponseSchema> | null
-  ) => {
+  const injectLayersIntoMap = useCallback((parsedData: z.infer<typeof RainViewerResponseSchema>) => {
     const map = mapRef.current;
     if (!map) return;
 
     const { host, radar, satellite } = parsedData;
+    // Si canvia el proveïdor (LibreWXR ⇄ RainViewer), fora totes les capes de
+    // l'anterior: les claus són només el timestamp i, amb la mateixa hora, el
+    // fotograma de l'altre quedaria amb l'altra paleta enmig de l'animació.
+    const hostChanged = hostRef.current !== '' && hostRef.current !== host;
     hostRef.current = host;
 
-    const lwFrames = (radar?.past || []).filter(f => f && f.time !== null);
-    lwFramesRef.current = lwFrames;
-    lwFramesByTimeRef.current = {};
-    lwFrames.forEach((f) => { lwFramesByTimeRef.current[f.time!] = f; });
-
-    rvHostRef.current = rvParsedData?.host || '';
-    const rvFrames = (rvParsedData?.radar?.past || []).filter(f => f && f.time !== null);
-    rvFramesByTimeRef.current = {};
-    rvFrames.forEach((f) => { rvFramesByTimeRef.current[f.time!] = f; });
+    const frames = (radar?.past || []).filter(f => f && f.time !== null);
+    framesByTimeRef.current = {};
+    frames.forEach((f) => { framesByTimeRef.current[f.time!] = f; });
+    const times = Object.keys(framesByTimeRef.current).map(Number).sort((a, b) => a - b);
 
     const sFrames = (satellite?.infrared || []).filter(f => f && f.time !== null);
 
-    // Unió ordenada dels timestamps dels dos proveïdors: el frame "ara" i el
-    // rang del reproductor reflecteixen el més recent disponible entre tots
-    // dos, no només LibreWXR (que sol anar més endarrerit).
-    const timeSet = new Set<number>();
-    lwFrames.forEach(f => timeSet.add(f.time!));
-    rvFrames.forEach(f => timeSet.add(f.time!));
-    const unionTimes = Array.from(timeSet).sort((a, b) => a - b);
-
-    radarFramesRef.current = unionTimes;
+    radarFramesRef.current = times;
     satFramesRef.current = sFrames;
-    setFramesCount(unionTimes.length);
+    setFramesCount(times.length);
 
-    cleanupExpiredLayers(lwFrames, rvFrames, sFrames);
+    cleanupExpiredLayers(hostChanged ? [] : frames, sFrames);
     pruneUnneededHd();
     pruneLightning(false);
 
-    if (unionTimes.length === 0) return;
+    if (times.length === 0) return;
 
-    const initialIdx = Math.max(0, unionTimes.length - 1);
+    const initialIdx = Math.max(0, times.length - 1);
     currentFrameIndexRef.current = initialIdx;
 
     ensureFrameLoaded(initialIdx);
-    if (unionTimes.length > 1) {
+    if (times.length > 1) {
       setTimeout(() => {
         if (isMountedRef.current) ensureFrameLoaded(0);
       }, 100);

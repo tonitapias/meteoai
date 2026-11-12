@@ -8,9 +8,11 @@ import { radarTileUrl, sampleZoomForHost } from '../utils/radarSampling';
 const LW = { host: 'https://api.librewxr.net', radar: { past: [{ path: '/v2/radar/100', time: 100 }], nowcast: [{ path: '/v2/radar/n1', time: 4102444800 }, { path: '/v2/radar/n2', time: 4102445400 }] } };
 const RV = { host: 'https://tilecache.rainviewer.com', radar: { past: [{ path: '/v2/radar/rv1', time: 100 }], nowcast: [] } };
 
-const radar = vi.hoisted(() => ({ data: { radarData: null as unknown, rainviewerData: null as unknown } }));
+// radarData = la font que dibuixa el mapa (LibreWXR, o RainViewer si LibreWXR no respon); librewxrData = la que es pot mostrejar.
+const radar = vi.hoisted(() => ({ data: { radarData: null as unknown, librewxrData: null as unknown } }));
+// La tria de font (LibreWXR encallat, etc.) es prova a useRadarData.test.ts: aquí, la que reben els avisos.
 vi.mock('./useRadarData', () => ({
-    useRadarData: () => ({ ...radar.data, fetchRadarData: vi.fn() })
+    useRadarSources: () => ({ samplingData: radar.data.librewxrData, mapData: radar.data.radarData, fetchRadarData: vi.fn() })
 }));
 
 // Píxels: groc NEXRAD (35 dBZ, pluja clara) o transparent (sense eco); null = tessel·la il·legible.
@@ -32,7 +34,7 @@ import { useRadarNowcastTiming } from './useRadarNowcastTiming';
 beforeEach(() => {
     pixels.byUrl.clear();
     pixels.calls.length = 0;
-    radar.data = { radarData: LW, rainviewerData: RV };
+    radar.data = { radarData: LW, librewxrData: LW };
 });
 
 describe('sampleZoomForHost', () => {
@@ -44,20 +46,33 @@ describe('sampleZoomForHost', () => {
     });
 });
 
+// RainViewer ja no fa cas de l'esquema de colors (11-2026): la seva plugim beix surt com a 70-73 dBZ amb la taula NEXRAD.
 describe('useRadarRealityCheck', () => {
-    it('si la tessel·la de LibreWXR no es pot llegir, llegeix la de RainViewer (al zoom 7)', async () => {
+    it('llegeix el píxel de LibreWXR al zoom 8', async () => {
+        pixels.byUrl.set('/v2/radar/100/', WET);
+        const { result } = renderHook(() => useRadarRealityCheck(41.98, 2.82, 0));
+        await waitFor(() => expect(result.current.hasDiscrepancy).toBe(true));
+        expect(pixels.calls).toHaveLength(1);
+        expect(pixels.calls[0]).toContain('librewxr.net/v2/radar/100/512/8/');
+    });
+
+    it('si la tessel·la de LibreWXR no es pot llegir, no avisa i no llegeix la de RainViewer', async () => {
         pixels.byUrl.set('/v2/radar/100/', null);
         pixels.byUrl.set('/v2/radar/rv1/', WET);
         const { result } = renderHook(() => useRadarRealityCheck(41.98, 2.82, 0));
-        await waitFor(() => expect(result.current.hasDiscrepancy).toBe(true));
-        expect(pixels.calls.some(u => u.includes('rainviewer.com/v2/radar/rv1/512/7/'))).toBe(true);
+        await waitFor(() => expect(pixels.calls.length).toBeGreaterThan(0));
+        await new Promise(r => setTimeout(r, 20));
+        expect(result.current.hasDiscrepancy).toBe(false);
+        expect(pixels.calls.some(u => u.includes('rainviewer.com'))).toBe(false);
     });
 
-    it('amb RainViewer com a font principal (LibreWXR caigut), mostreja al zoom 7, mai al 8', async () => {
-        radar.data = { radarData: RV, rainviewerData: RV };
-        renderHook(() => useRadarRealityCheck(41.98, 2.82, 0));
-        await waitFor(() => expect(pixels.calls.length).toBeGreaterThan(0));
-        expect(pixels.calls.every(u => u.includes('/512/7/'))).toBe(true);
+    it('amb LibreWXR caigut (el mapa dibuixa RainViewer), no mostreja res', async () => {
+        radar.data = { radarData: RV, librewxrData: null };
+        pixels.byUrl.set('/v2/radar/rv1/', WET);
+        const { result } = renderHook(() => useRadarRealityCheck(41.98, 2.82, 0));
+        await new Promise(r => setTimeout(r, 20));
+        expect(pixels.calls).toEqual([]);
+        expect(result.current.hasDiscrepancy).toBe(false);
     });
 });
 
@@ -78,5 +93,13 @@ describe('useRadarNowcastTiming', () => {
         pixels.byUrl.set('/v2/radar/n2/', DRY);
         const { result } = renderHook(() => useRadarNowcastTiming(41.98, 2.82));
         await waitFor(() => expect(result.current.transition?.type).toBe('end'));
+    });
+
+    it('amb LibreWXR caigut (el mapa dibuixa RainViewer), no mostreja res', async () => {
+        radar.data = { radarData: RV, librewxrData: null };
+        const { result } = renderHook(() => useRadarNowcastTiming(41.98, 2.82));
+        await new Promise(r => setTimeout(r, 20));
+        expect(pixels.calls).toEqual([]);
+        expect(result.current.transition).toBeNull();
     });
 });

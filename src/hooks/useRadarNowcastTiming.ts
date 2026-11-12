@@ -12,7 +12,7 @@
 // més enllà no hi ha informació. Només es reporta la PRIMERA transició
 // trobada, no cicles humit-sec-humit dins la mateixa hora.
 import { useEffect, useState } from 'react';
-import { useRadarData } from './useRadarData';
+import { useRadarSources } from './useRadarData';
 import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel, radarTileUrl, sampleZoomForHost } from '../utils/radarSampling';
 
 const REFRESH_MS = 5 * 60 * 1000; // Igual que useRadarData.ts CACHE_TTL.
@@ -36,7 +36,8 @@ export function useRadarNowcastTiming(
   lat: number | undefined,
   lon: number | undefined
 ): { transition: NowcastTransition | null } {
-  const { radarData, fetchRadarData } = useRadarData();
+  // Només LibreWXR i mai encallat (RainViewer no té nowcast i la seva paleta no es pot llegir, vegeu useRadarSources).
+  const { samplingData: radarData, fetchRadarData } = useRadarSources(lat, lon);
   const [transition, setTransition] = useState<NowcastTransition | null>(null);
 
   useEffect(() => {

@@ -168,3 +168,100 @@ export function fetchTilePixel(tileUrl: string, px: number, py: number): Promise
     img.src = tileUrl;
   });
 }
+
+// --- LibreWXR "encallat" ---
+// 2026-11-12: LibreWXR publicava una hora nova cada 10 min, però la imatge
+// d'Europa no canviava (en 2 h, el 0 % dels píxels amb eco a Alemanya, el
+// nord de França i el Regne Unit; el 21 % a Catalunya), mentre que als EUA
+// canviava el 99,5 % i a RainViewer el 97-99 % arreu. El mapa animava una
+// imatge quieta amb hores falses i els avisos llegien pluja antiga. Es
+// compara la primera i l'última imatge de la línia temporal (~2 h) a la
+// tessel·la del lloc.
+
+/** Zoom de la tessel·la que es compara: ~1.000 km de costat a latituds mitjanes. */
+export const STUCK_CHECK_ZOOM = 5;
+const STUCK_TILE_TIMEOUT_MS = 4000;
+// Per sota d'aquests píxels amb eco (de 262.144) no hi ha prou pluja per jutjar.
+const STUCK_MIN_WET = 300;
+
+/**
+ * Tots els píxels RGBA d'una tessel·la. Mateixes garanties que
+ * fetchTilePixel: mai llença ni queda penjada; null si no es pot llegir.
+ */
+export function fetchTileRgba(tileUrl: string, timeoutMs = STUCK_TILE_TIMEOUT_MS): Promise<Uint8ClampedArray | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value: Uint8ClampedArray | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve(value);
+    };
+    const timeoutId = setTimeout(() => settle(null), timeoutMs);
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onerror = () => settle(null);
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx || !canvas.width || !canvas.height) return settle(null);
+        ctx.drawImage(img, 0, 0);
+        settle(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+      } catch {
+        settle(null);
+      }
+    };
+    img.src = tileUrl;
+  });
+}
+
+export interface FrameChange {
+  /** Píxels amb eco en alguna de les dues imatges. */
+  wet: number;
+  /** D'aquests, quants tenen un color diferent a cada imatge. */
+  changed: number;
+}
+
+export function compareFrames(a: Uint8ClampedArray, b: Uint8ClampedArray): FrameChange {
+  if (a.length !== b.length) return { wet: 0, changed: 0 };
+  let wet = 0;
+  let changed = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    if (a[i + 3] === 0 && b[i + 3] === 0) continue;
+    wet++;
+    if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2] || a[i + 3] !== b[i + 3]) changed++;
+  }
+  return { wet, changed };
+}
+
+/**
+ * LibreWXR és encallat si, amb prou pluja a la zona, la seva imatge gairebé
+ * no ha canviat en ~2 h (< 5 %), o si ha canviat menys de la meitat mentre
+ * la de RainViewer, a la mateixa zona, ha canviat almenys el 80 %. Sense
+ * prou dades per jutjar, no ho és.
+ */
+export function isLibreWxrStuck(lw: FrameChange | null, rv: FrameChange | null): boolean {
+  if (!lw || lw.wet < STUCK_MIN_WET) return false;
+  const lwRatio = lw.changed / lw.wet;
+  if (lwRatio < 0.05) return true;
+  if (!rv || rv.wet < STUCK_MIN_WET) return false;
+  return rv.changed / rv.wet >= 0.8 && lwRatio < 0.5;
+}
+
+type TimedSource = { host: string; radar?: { past?: Array<{ path: string; time: number | null }> } };
+
+/** Canvi entre la primera i l'última imatge de la font a la tessel·la del lloc; null si no es pot mesurar. */
+export async function measureFrameChange(source: TimedSource, lat: number, lon: number): Promise<FrameChange | null> {
+  const frames = (source.radar?.past ?? []).filter((f) => f.time !== null);
+  if (frames.length < 2) return null;
+  const tile = lonLatToTile(lon, lat, STUCK_CHECK_ZOOM);
+  const [first, last] = await Promise.all([
+    fetchTileRgba(radarTileUrl(source.host, frames[0].path, tile)),
+    fetchTileRgba(radarTileUrl(source.host, frames[frames.length - 1].path, tile))
+  ]);
+  return first && last ? compareFrames(first, last) : null;
+}

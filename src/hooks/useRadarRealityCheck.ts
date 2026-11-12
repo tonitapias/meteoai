@@ -2,11 +2,12 @@
 //
 // Compara la precipitació que el model preveu ARA MATEIX amb el que el radar
 // Doppler detecta realment a la mateixa ubicació. Reaprofita useRadarData()
-// (cache de 5 min i fallback librewxr->rainviewer ja existents) i mostreja
-// un únic píxel de la darrera tessel·la de radar via radarSampling.ts —
-// no cal muntar cap mapa.
+// (cache de 5 min) i mostreja un únic píxel de la darrera tessel·la de
+// LibreWXR via radarSampling.ts — no cal muntar cap mapa. Mai RainViewer: la
+// seva paleta fixa no és la que descodifica rgbaToClosestDbz; ni LibreWXR
+// quan hi és encallat (vegeu useRadarSources).
 import { useEffect, useState } from 'react';
-import { useRadarData } from './useRadarData';
+import { useRadarSources } from './useRadarData';
 import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel, radarTileUrl, sampleZoomForHost } from '../utils/radarSampling';
 
 type RadarSource = { host: string; radar?: { past: Array<{ path: string }> } };
@@ -46,7 +47,7 @@ export function useRadarRealityCheck(
   lon: number | undefined,
   modelMmPerHourNow: number
 ): RadarRealityStatus {
-  const { radarData, rainviewerData, fetchRadarData } = useRadarData();
+  const { samplingData: radarData, fetchRadarData } = useRadarSources(lat, lon);
   const [sample, setSample] = useState<RadarSample>(IDLE_SAMPLE);
 
   // Refresc periòdic: useRadarData ja no torna a demanar dades si la cache
@@ -71,11 +72,11 @@ export function useRadarRealityCheck(
     }
 
     let cancelled = false;
-    // Si la tessel·la de LibreWXR no es pot llegir (el 26-10-2026 en van fallar per CORS), la de RainViewer.
-    const fallback = rainviewerData && rainviewerData !== radarData && rainviewerData.radar?.past?.length ? rainviewerData : null;
-
-    sampleLatest(radarData, lat, lon).then(async (first) => {
-      const pixel = first ?? (fallback && !cancelled ? await sampleLatest(fallback, lat, lon) : null);
+    // Si la tessel·la de LibreWXR no es pot llegir (el 26-10-2026 en van
+    // fallar per CORS), no hi ha avís: abans es llegia la de RainViewer, però
+    // la seva plugim surt com a 70-73 dBZ amb la taula NEXRAD (vegeu
+    // useRadarData) i donava avisos de pluja forta falsos.
+    sampleLatest(radarData, lat, lon).then((pixel) => {
       if (cancelled) return;
       if (!pixel) {
         setSample(IDLE_SAMPLE);
@@ -88,7 +89,7 @@ export function useRadarRealityCheck(
     });
 
     return () => { cancelled = true; };
-  }, [radarData, rainviewerData, lat, lon]);
+  }, [radarData, lat, lon]);
 
   const effectiveSample = hasValidInputs ? sample : IDLE_SAMPLE;
   const hasDiscrepancy = effectiveSample.radarMmPerHour >= RADAR_MM_H_THRESHOLD && modelMmPerHourNow < MODEL_MM_H_THRESHOLD;
