@@ -38,9 +38,9 @@ interface CurrentWeatherProps {
   activeRegionalModel?: RegionalModel | null;
   shiftedNow?: Date;
   /**
-   * Interfície per pestanyes: al mòbil (< 768 px) la icona va al costat de la temperatura, no a sota, perquè la
-   * targeta càpiga a la pantalla. Si la xifra és massa ampla (p. ex. "-12°" a 320 px), la icona baixa a sota.
-   * A partir de 768 px, la targeta de sempre.
+   * Interfície per pestanyes: al mòbil (< 768 px) la icona va al costat de la temperatura, no a sota, i el vent, la
+   * humitat i la sensació van en una sola fila (vegeu WeatherStatsGrid), perquè la targeta càpiga a la pantalla. Si la
+   * xifra és massa ampla (p. ex. "-12°" a 320 px), la icona baixa a sota. A partir de 768 px, la targeta de sempre.
    */
   compact?: boolean;
   /** Interfície per pestanyes: el Radar és a la barra de pestanyes, no es repeteix a la targeta. */
@@ -229,6 +229,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             humidity={parseMetric(weather.stats.humidity)}
             apparentTemp={parseMetric(weather.temps.apparent)}
             lang={props.lang}
+            compact={iconBesideTemp}
           />
 
           <div className="mt-2 md:mt-0">

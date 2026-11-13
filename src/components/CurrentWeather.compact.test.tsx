@@ -41,6 +41,8 @@ describe('CurrentWeather → targeta compacta', () => {
         expect(screen.getAllByTestId('weather-icon')).toHaveLength(1);
         expect(iconBesideTemperature()).toBe(false);
         expect(screen.getByTestId('weather-icon').getAttribute('data-size')).toContain('w-40');
+        // El vent a tota l'amplada, amb el nom llarg.
+        expect(screen.getByText('Dinàmica de Vent')).toBeTruthy();
     });
 
     it('compacta al mòbil: una sola icona, més petita, a la fila de la temperatura', () => {
@@ -48,8 +50,11 @@ describe('CurrentWeather → targeta compacta', () => {
         expect(screen.getAllByTestId('weather-icon')).toHaveLength(1);
         expect(iconBesideTemperature()).toBe(true);
         expect(screen.getByTestId('weather-icon').getAttribute('data-size')).toContain('w-24');
-        // La resta de la targeta hi és igual: el vent, la humitat, la sensació i els botons.
-        expect(screen.getByText('Dinàmica de Vent')).toBeTruthy();
+        // El vent, la humitat i la sensació, en una sola fila (els noms curts); els botons, igual.
+        expect(screen.queryByText('Dinàmica de Vent')).toBeNull();
+        expect(screen.getByText('Vent')).toBeTruthy();
+        expect(screen.getByText('Humitat')).toBeTruthy();
+        expect(screen.getByText('Sensació')).toBeTruthy();
         expect(screen.getByRole('button', { name: /radar/i })).toBeTruthy();
     });
 

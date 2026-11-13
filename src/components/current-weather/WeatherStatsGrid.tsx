@@ -11,11 +11,18 @@ interface WeatherStatsGridProps {
   humidity: number | null;
   apparentTemp: number | null;
   lang?: Language;
+  /**
+   * Targeta principal compacta (al mòbil): vent, humitat i sensació en una sola fila de tres targetes petites, en lloc
+   * del vent a tota l'amplada i les altres dues a sota. Les mateixes dades, colors i icones.
+   */
+  compact?: boolean;
 }
 
 // TIPATGE ESTRICTE: Definim l'estructura del diccionari tàctic
 interface GridTranslation {
   windDynamics: string;
+  /** Nom curt per a la fila compacta (hi ha 98 px per targeta a 375 px). */
+  wind: string;
   gusts: string;
   humidity: string;
   feelsLike: string;
@@ -27,6 +34,7 @@ interface GridTranslation {
 const gridTranslations: Record<string, GridTranslation> = {
   ca: {
     windDynamics: "Dinàmica de Vent",
+    wind: "Vent",
     gusts: "RATXES",
     humidity: "Humitat",
     feelsLike: "Sensació",
@@ -35,6 +43,7 @@ const gridTranslations: Record<string, GridTranslation> = {
   },
   es: {
     windDynamics: "Dinámica de Viento",
+    wind: "Viento",
     gusts: "RACHAS",
     humidity: "Humedad",
     feelsLike: "Sensación",
@@ -43,6 +52,7 @@ const gridTranslations: Record<string, GridTranslation> = {
   },
   en: {
     windDynamics: "Wind Dynamics",
+    wind: "Wind",
     gusts: "GUSTS",
     humidity: "Humidity",
     feelsLike: "Feels Like",
@@ -51,6 +61,7 @@ const gridTranslations: Record<string, GridTranslation> = {
   },
   fr: {
     windDynamics: "Dynamique du Vent",
+    wind: "Vent",
     gusts: "RAFALES",
     humidity: "Humidité",
     feelsLike: "Ressenti",
@@ -59,7 +70,7 @@ const gridTranslations: Record<string, GridTranslation> = {
   }
 };
 
-export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity, apparentTemp, lang = 'ca' }: WeatherStatsGridProps) => {
+export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity, apparentTemp, lang = 'ca', compact = false }: WeatherStatsGridProps) => {
   // Garantim un fallback segur si s'introdueix un idioma no mapejat
   const safeLang = gridTranslations[lang] ? lang : 'ca';
   const t = gridTranslations[safeLang];
@@ -82,6 +93,84 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
 
   // SPATIAL UI BASE (Bateria optimitzada per a mòbil)
   const BASE_CARD = "relative overflow-hidden bg-gradient-to-br border shadow-[0_8px_32px_rgba(0,0,0,0.5)] transform-gpu transition-colors duration-500";
+
+  // FILA COMPACTA: la icona a dalt i el nom a sota (perquè hi càpiga fins a 320 px), i el valor a baix de tot amb una
+  // línia a sota (les ratxes al vent; buida a les altres dues): així els tres valors queden a la mateixa alçada encara
+  // que algun nom ocupi dues línies.
+  if (compact) {
+    const tone = (valid: boolean) => valid ? 'from-[#0B0D14]/95 to-black/90 border-white/10' : 'from-[#1a1d27]/90 to-black/80 border-slate-700/60';
+    const MINI = `${BASE_CARD} p-2.5 sm:p-3 rounded-2xl flex flex-col min-w-0`;
+    const LABEL = 'mt-1.5 text-[10px] font-black uppercase tracking-wider leading-tight break-words z-10 relative';
+    const VALUE = 'text-2xl font-mono font-bold tabular-nums tracking-tight leading-none';
+    const SUB = 'mt-1 h-3.5 text-[10px] font-mono uppercase leading-none truncate';
+    const ICON = 'w-4 h-4 shrink-0';
+
+    return (
+      <div className="grid grid-cols-3 gap-2 relative z-10 w-full">
+        {/* VENT: velocitat, direcció (fletxa i punt cardinal) i ratxes */}
+        <div className={`${MINI} ${tone(isValidWind)}`}>
+          <div className={MATRIX_BG}></div>
+          <div className="flex items-center justify-between gap-1 z-10 relative">
+            {isValidWind
+              ? <Wind className={`${ICON} text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]`} aria-hidden="true" />
+              : <CloudOff className={`${ICON} text-slate-400`} aria-hidden="true" />}
+            <span className={`flex items-center gap-0.5 text-[10px] font-black tracking-wider ${isValidDir ? 'text-slate-200' : 'text-slate-500'}`}>
+              {isValidDir && windDirection !== null && windDirection !== undefined && (
+                <Navigation className="w-3 h-3 text-emerald-400" style={{ transform: `rotate(${windDirection}deg)` }} aria-hidden="true" />
+              )}
+              {getCardinal(windDirection)}
+            </span>
+          </div>
+          <span className={`${LABEL} ${isValidWind ? 'text-slate-200' : 'text-slate-400'}`}>{t.wind}</span>
+          <div className="mt-auto pt-1.5 z-10 relative">
+            <div className="flex items-baseline gap-1">
+              <span className={`${VALUE} ${isValidWind ? 'text-white' : 'text-slate-500'}`}>{safeVal(windSpeed)}</span>
+              <span className={`text-[10px] font-bold uppercase ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>km/h</span>
+            </div>
+            <div className={`${SUB} text-slate-400`}>
+              {t.gusts} <span className={`font-black tabular-nums ${isValidGusts ? 'text-indigo-300' : 'text-slate-500'}`}>{safeVal(windGusts)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* HUMITAT */}
+        <div className={`${MINI} ${tone(isValidHum)}`}>
+          <div className={MATRIX_BG}></div>
+          <div className="z-10 relative">
+            {isValidHum
+              ? <Droplets className={`${ICON} text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]`} aria-hidden="true" />
+              : <CloudOff className={`${ICON} text-slate-400`} aria-hidden="true" />}
+          </div>
+          <span className={`${LABEL} ${isValidHum ? 'text-slate-200' : 'text-slate-400'}`}>{t.humidity}</span>
+          <div className="mt-auto pt-1.5 z-10 relative">
+            <div className="flex items-baseline gap-0.5">
+              <span className={`${VALUE} ${isValidHum ? 'text-white' : 'text-slate-500'}`}>{safeVal(humidity)}</span>
+              <span className={`text-xs font-bold ${isValidHum ? 'text-slate-400' : 'text-slate-500'}`}>%</span>
+            </div>
+            <div className={SUB} aria-hidden="true"></div>
+          </div>
+        </div>
+
+        {/* SENSACIÓ TÈRMICA */}
+        <div className={`${MINI} ${tone(isValidTemp)}`}>
+          <div className={MATRIX_BG}></div>
+          <div className="z-10 relative">
+            {isValidTemp
+              ? <Activity className={`${ICON} text-rose-400 drop-shadow-[0_0_5px_rgba(251,113,133,0.5)]`} aria-hidden="true" />
+              : <CloudOff className={`${ICON} text-slate-400`} aria-hidden="true" />}
+          </div>
+          <span className={`${LABEL} ${isValidTemp ? 'text-slate-200' : 'text-slate-400'}`}>{t.feelsLike}</span>
+          <div className="mt-auto pt-1.5 z-10 relative">
+            <div className="flex items-baseline gap-0.5">
+              <span className={`${VALUE} ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>{safeVal(apparentTemp)}</span>
+              <span className={`text-xs font-bold ${isValidTemp ? 'text-slate-400' : 'text-slate-500'}`}>°</span>
+            </div>
+            <div className={SUB} aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 md:gap-4 relative z-10 w-full">
