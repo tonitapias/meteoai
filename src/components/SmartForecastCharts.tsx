@@ -524,9 +524,16 @@ interface SmartForecastChartsProps {
     nowIndex?: number | null;
     /** `current.time` de les dades ("2026-09-21T14:05"): diu de quina hora és la previsió. */
     updatedAt?: string | null;
+    /**
+     * Format: 'responsive' (per defecte) = pestanyes al mòbil i les quatre mètriques una sota l'altra a partir de
+     * 768 px; 'tabs' = sempre amb pestanyes, una mètrica cada vegada, també a PC. El fa servir la pestanya Previsió
+     * a pantalla gran, on els gràfics van al costat dels 7 dies (columna estreta). Només canvia la presentació.
+     */
+    layout?: 'responsive' | 'tabs';
 }
 
-const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', regionalModelLabel = null, nowIndex = null, updatedAt = null }: SmartForecastChartsProps) => {
+const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', regionalModelLabel = null, nowIndex = null, updatedAt = null, layout = 'responsive' }: SmartForecastChartsProps) => {
+  const tabsOnly = layout === 'tabs';
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<ChartTab>('temp');
   const [hiddenByUser, setHiddenByUser] = useState<ChartModelKey[]>([]);
@@ -784,7 +791,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
   return (
     <div className="w-full flex flex-col gap-4">
       {/* SPATIAL UI: Segmented Control Tàctic (Coherent amb el Header i Radar) */}
-      <div className="flex md:hidden bg-[#050608]/90 p-1.5 rounded-xl border border-white/5 overflow-x-auto no-scrollbar shadow-[inset_0_4px_10px_rgba(0,0,0,0.8)] relative z-10">
+      <div className={`${tabsOnly ? 'flex' : 'flex md:hidden'} bg-[#050608]/90 p-1.5 rounded-xl border border-white/5 overflow-x-auto no-scrollbar shadow-[inset_0_4px_10px_rgba(0,0,0,0.8)] relative z-10`}>
           {tabs.map((tab) => (
               <button
                   key={tab.id}
@@ -814,8 +821,8 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
       />
 
       <div className="relative w-full bg-transparent rounded-2xl p-0 md:p-4 overflow-hidden" onMouseLeave={() => setHoveredIndex(null)}>
-          {/* Pantalles petites: una mètrica per pestanya, gràfics a tota l'amplada (sense desplaçament lateral) */}
-          <div className="md:hidden w-full">
+          {/* Pantalles petites (o format 'tabs'): una mètrica per pestanya, gràfics a tota l'amplada (sense desplaçament lateral) */}
+          <div className={tabsOnly ? 'w-full' : 'md:hidden w-full'}>
              {'agreement' in activeSection && <AgreementRow level={activeSection.agreement ?? null} text={text.agreement} />}
              {activeSection.figures && <KeyFigures items={activeSection.figures} />}
              {readoutEl}
@@ -824,6 +831,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
           </div>
 
           {/* Pantalles Grans: un bloc per mètrica (temperatura, pluja, vent, cota de neu) */}
+          {!tabsOnly && (
           <div className="hidden md:flex flex-col gap-8 w-full">
              {(Object.keys(sections) as ChartTab[]).map(tab => (
                  <div key={tab} className="w-full">
@@ -834,6 +842,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
                  </div>
              ))}
           </div>
+          )}
       </div>
     </div>
   );

@@ -218,6 +218,16 @@ export const en = {
     teaserAir: "Air quality: {v}",
     teaserVisibility: "Visibility {v} km"
   },
+  tabs: {
+    label: "Weather sections",
+    now: "Now",
+    forecast: "Forecast",
+    detail: "Details",
+    sky: "Sky",
+    radar: "Radar",
+    radarAria: "Open the radar",
+    highlights: "Highlights"
+  },
   directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
   preciseRain: "Minute-by-Minute Forecast (1h)",
   modelsLegend: "Model Comparison",

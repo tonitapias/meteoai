@@ -9,6 +9,7 @@ import { buildDetailTeaser } from '../../utils/detailTeaser';
 import { isRegionalModelActive } from '../../constants/regionalModels';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 import { CompleteViewHeading, MoreDetailPrompt, type TakeFocusRequest } from './ViewModeSections';
+import { SectionSkeleton } from './SectionSkeleton';
 
 // Components estàtics
 import CurrentWeather from '../CurrentWeather';
@@ -34,11 +35,9 @@ const ExpertWidgets = lazy(() => import('../ExpertWidgets'));
 const SmartForecastCharts = lazy(() => import('../SmartForecastCharts'));
 // També només en Mode Expert: l'última secció, «Més enllà del teu cel».
 const PlanetExtremesCard = lazy(() => import('../planet/PlanetExtremesCard'));
+// Interfície per pestanyes (?ui=tabs): en un fragment a part perquè qui no la fa servir no la descarregui.
+const TabbedDashboard = lazy(() => import('./TabbedDashboard').then((m) => ({ default: m.TabbedDashboard })));
 
-// SPATIAL UI: Skeleton amb estètica Dark Dashboard (baix contrast, sense colors estridents)
-const SectionSkeleton = () => (
-    <div className="w-full h-48 bg-[#0B0C15]/50 animate-pulse rounded-[2rem] border border-white/5 my-4 shadow-inner" />
-);
 
 export const DashboardContent = () => {
     // OBTENIM TOT DIRECTAMENT DEL CONTEXT
@@ -77,10 +76,11 @@ export const DashboardContent = () => {
     const nowMs = state.now.getTime();
     const currentConditions = weatherData?.current;
     // El protagonista del dia a «Extrems del planeta» (un cicló de categoria 4 o 5, calor humida de perill...):
-    // només a l'essencial i quan la previsió ja hi és.
-    const planetHeadline = usePlanetHeadline(!isExpert && !!currentConditions, flags.lang);
+    // només a l'essencial i quan la previsió ja hi és. Amb les pestanyes (?ui=tabs) ho fa Ara (TabbedDashboard).
+    const isTabs = flags.uiVariant === 'tabs';
+    const planetHeadline = usePlanetHeadline(!isExpert && !isTabs && !!currentConditions, flags.lang);
     const detailTeaser = useMemo(() => {
-        if (isExpert || !currentConditions) return [];
+        if (isExpert || isTabs || !currentConditions) return [];
         return buildDetailTeaser({
             current: currentConditions,
             aqiCurrent: (state.aqiData as Record<string, unknown> | null)?.current,
@@ -90,13 +90,22 @@ export const DashboardContent = () => {
             templates: t.viewModes,
             planet: planetHeadline,
         });
-    }, [isExpert, currentConditions, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.viewModes, planetHeadline]);
+    }, [isExpert, isTabs, currentConditions, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.viewModes, planetHeadline]);
 
     // Gestió d'estats de càrrega i error
     if (state.error) return <ErrorBanner message={state.error} />;
     // openingLink: el primer render d'un enllaç, abans que l'efecte que el carrega hagi posat `loading`.
     if ((state.loading || state.openingLink) && !weatherData) return <LoadingSkeleton />;
     if (!weatherData) return null;
+
+    // Interfície per pestanyes (de moment amb ?ui=tabs, vegeu utils/uiFlag.ts): la mateixa càrrega i els mateixos errors.
+    if (flags.uiVariant === 'tabs') {
+        return (
+            <Suspense fallback={<LoadingSkeleton />}>
+                <TabbedDashboard />
+            </Suspense>
+        );
+    }
 
     // Forcem el tipatge de location per corregir la pèrdua d'inferència (Risc Zero)
     const loc = weatherData.location as LocationMeta | undefined;

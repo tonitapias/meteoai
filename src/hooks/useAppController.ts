@@ -1,6 +1,7 @@
 // src/hooks/useAppController.ts
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { usePreferences } from './usePreferences';
+import { readUiVariant } from '../utils/uiFlag';
 import { TRANSLATIONS } from '../translations';
 import { useAppActions } from './useAppActions';
 import { useI18nLanguageSync } from './useI18nLanguageSync';
@@ -22,6 +23,9 @@ export function useAppController() {
   } = usePreferences();
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
+
+  // Interfície per pestanyes (temporal, ?ui=tabs): es llegeix un sol cop en arrencar (vegeu utils/uiFlag.ts).
+  const [uiVariant] = useState(() => readUiVariant(typeof window !== 'undefined' ? window.location.search : ''));
 
   // i18next (radar, avís d'actualització) en l'idioma triat des de la primera pantalla, no només dins del tauler.
   useI18nLanguageSync(lang);
@@ -154,7 +158,8 @@ export function useAppController() {
           isFavorite: (place: PlaceRef) => isFavorite(place),
           unit,
           lang,
-          viewMode
+          viewMode,
+          uiVariant
       },
       modals: ui.modals, // Pas directe
       t
@@ -170,7 +175,7 @@ export function useAppController() {
       ui.actions.setShowAqiModal, ui.actions.setShowUvModal, ui.actions.setShowPressureModal,
       ui.actions.setShowComfortModal, ui.actions.setShowVisibilityModal, ui.actions.setShowCloudLayersModal,
       ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal, ui.actions.setPlanetModal,
-      data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang, viewMode,
+      data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang, viewMode, uiVariant,
       ui.modals, t
   ]);
 }

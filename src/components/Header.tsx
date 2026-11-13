@@ -449,13 +449,16 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
       </div>
 
       {/* SELECTOR DE VISTA: al mòbil al costat de la marca; a PC a la dreta del cercador i amb la seva alçada.
-          z-30: amb `order` el cercador (z-20) es pinta després, i el menú obert quedava per sota seu al mòbil. */}
-      <ViewModeChip
-        viewMode={viewMode}
-        onSelect={handleViewModeSelect}
-        strings={contextT.viewModes}
-        className="order-1 md:order-2 md:self-stretch z-30"
-      />
+          z-30: amb `order` el cercador (z-20) es pinta després, i el menú obert quedava per sota seu al mòbil.
+          Amb la interfície per pestanyes (?ui=tabs) no hi és: les pestanyes la substitueixen. */}
+      {flags.uiVariant !== 'tabs' && (
+        <ViewModeChip
+          viewMode={viewMode}
+          onSelect={handleViewModeSelect}
+          strings={contextT.viewModes}
+          className="order-1 md:order-2 md:self-stretch z-30"
+        />
+      )}
     </header>
   );
 }

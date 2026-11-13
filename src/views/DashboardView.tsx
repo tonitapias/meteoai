@@ -29,7 +29,10 @@ export default function DashboardView() {
     <DashboardLayout
       // PROTECCIÓ: Fallback segur per a valors crítics de la UI
       weatherCode={calculations.effectiveWeatherCode ?? 0}
-      
+
+      // Interfície per pestanyes (?ui=tabs): també amb l'esquelet de càrrega, perquè l'amplada no salti en arribar les dades.
+      tabbed={flags?.uiVariant === 'tabs'}
+
       // Header Net
       header={<Header />}
       

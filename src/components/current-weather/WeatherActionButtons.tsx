@@ -8,6 +8,8 @@ interface WeatherActionButtonsProps {
   onToggleFavorite: () => void;
   /** Etiquetes de l'estrella en l'idioma de la interfície (abans, sempre en català). */
   favoriteLabels?: { add: string; remove: string };
+  /** Amb la interfície per pestanyes el Radar és a la barra: aquí no es repeteix. */
+  showRadar?: boolean;
 }
 
 export const WeatherActionButtons = ({
@@ -17,25 +19,30 @@ export const WeatherActionButtons = ({
   isFavorite,
   onToggleFavorite,
   favoriteLabels = { add: 'Afegir als favorits', remove: 'Eliminar favorit' },
+  showRadar = true,
 }: WeatherActionButtonsProps) => {
   const showRegionalModelBtn = Boolean(regionalModelLabel);
+  // Sense Radar ni model HD només queda l'estrella: a la dreta, com una acció secundària.
+  const onlyFavorite = !showRadar && !showRegionalModelBtn;
   
   // SPATIAL UI: Classes base per crear l'efecte de botó físic de panell de control
   const BUTTON_BASE = "relative overflow-hidden flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] group";
   const MATRIX_BG = "absolute inset-0 z-0 opacity-[0.05] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:8px_8px]";
 
   return (
-    <div className="flex gap-2 pt-2 relative z-10 w-full">
-      
+    <div className={`flex gap-2 pt-2 relative z-10 w-full ${onlyFavorite ? 'justify-end' : ''}`}>
+
       {/* BOTÓ RADAR */}
-      <button
-        onClick={onShowRadar}
-        className={`${BUTTON_BASE} bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 hover:text-indigo-100 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]`}
-      >
-        <div className={MATRIX_BG}></div>
-        <Map className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_5px_rgba(99,102,241,0.5)]" /> 
-        <span className="relative z-10">RADAR</span>
-      </button>
+      {showRadar && (
+        <button
+          onClick={onShowRadar}
+          className={`${BUTTON_BASE} bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 hover:text-indigo-100 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]`}
+        >
+          <div className={MATRIX_BG}></div>
+          <Map className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_5px_rgba(99,102,241,0.5)]" />
+          <span className="relative z-10">RADAR</span>
+        </button>
+      )}
 
       {/* BOTÓ MODEL REGIONAL HD (AROME / ICON-D2 / HRRR / HRDPS) */}
       {showRegionalModelBtn && (

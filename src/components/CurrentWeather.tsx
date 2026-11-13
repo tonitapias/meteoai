@@ -17,6 +17,7 @@ import { MainTemperatureDisplay } from './current-weather/MainTemperatureDisplay
 import { WeatherStatsGrid } from './current-weather/WeatherStatsGrid';
 import { WeatherActionButtons } from './current-weather/WeatherActionButtons';
 import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from './widgets/widgetStyles';
+import { useMinWidth } from './solar/useMinWidth';
 
 interface CurrentWeatherProps {
   data: ExtendedWeatherData;
@@ -36,6 +37,14 @@ interface CurrentWeatherProps {
   aqiData: AirQualityData | null;
   activeRegionalModel?: RegionalModel | null;
   shiftedNow?: Date;
+  /**
+   * Interfície per pestanyes: al mòbil (< 768 px) la icona va al costat de la temperatura, no a sota, perquè la
+   * targeta càpiga a la pantalla. Si la xifra és massa ampla (p. ex. "-12°" a 320 px), la icona baixa a sota.
+   * A partir de 768 px, la targeta de sempre.
+   */
+  compact?: boolean;
+  /** Interfície per pestanyes: el Radar és a la barra de pestanyes, no es repeteix a la targeta. */
+  hideRadarButton?: boolean;
 }
 
 // DOCTRINA RISC ZERO: Purificador de telemetria estricte.
@@ -65,6 +74,8 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
     effectiveCode: props.effectiveCode,
     effectiveCloudCover: props.effectiveCloudCover,
   });
+  const isWide = useMinWidth('(min-width: 768px)');
+  const iconBesideTemp = !!props.compact && !isWide;
 
   if (!weather) return null;
 
@@ -117,6 +128,42 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
       ? `PM10 ${Math.round(dustAdvisory.pm10 ?? 0)} µg/m³`
       : undefined;
 
+  const temperatureDisplay = (
+    <MainTemperatureDisplay
+      temp={parseMetric(weather.temps.main)}
+      max={parseMetric(weather.temps.max)}
+      min={parseMetric(weather.temps.min)}
+      weatherLabel={weather.visuals.weatherLabel as string}
+      statusColor={weather.visuals.statusColor as string}
+      advisoryLabel={advisoryLabel}
+      advisoryValue={advisoryValue}
+      advisoryTitle={advisoryText}
+    />
+  );
+
+  // La icona del temps (i, a sobre, l'avís de pols). Compacta: més petita, per anar al costat de la temperatura.
+  const renderWeatherIcon = (compact: boolean) => (
+    <div className="drop-shadow-[0_0_30px_rgba(99,102,241,0.4)] md:drop-shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-transform duration-700 hover:scale-105 relative z-20">
+      {getWeatherIcon(
+        props.effectiveCode,
+        compact ? 'w-24 h-24 sm:w-28 sm:h-28' : 'w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56',
+        Boolean(weather.meta.isDay),
+        0, // probabilitat de pluja (visualment 0 aquí ja que la principal mana sobre el precipAmt)
+        currentWindSpeed,
+        currentTemp,
+        currentPrecip, // Passem el volum real de pluja per a la sincronització de telemetria
+        props.effectiveCloudCover
+      )}
+      {dustAdvisory.kind && (
+        <span role="img" aria-label={advisoryLabel ? `${advisoryLabel} · ${advisoryValue}` : undefined} title={advisoryText} className={compact
+          ? 'absolute -bottom-1 -right-1 z-30 flex items-center justify-center w-8 h-8 rounded-full bg-black/60 border border-amber-400/40 shadow-[0_0_14px_rgba(251,191,36,0.35)]'
+          : 'absolute bottom-1 right-1 md:bottom-2 md:right-2 z-30 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-amber-400/40 shadow-[0_0_14px_rgba(251,191,36,0.35)]'}>
+          <Haze className={compact ? 'w-5 h-5 text-amber-300' : 'w-6 h-6 md:w-7 md:h-7 text-amber-300'} aria-hidden="true" />
+        </span>
+      )}
+    </div>
+  );
+
   // SPATIAL UI BASE AMB MATRIU DE FONS (Optimitzat per baix consum)
 
   return (
@@ -155,42 +202,25 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
           />
 
           <div className="mt-4 md:mt-0">
-            <MainTemperatureDisplay
-              temp={parseMetric(weather.temps.main)}
-              max={parseMetric(weather.temps.max)}
-              min={parseMetric(weather.temps.min)}
-              weatherLabel={weather.visuals.weatherLabel as string}
-              statusColor={weather.visuals.statusColor as string}
-              advisoryLabel={advisoryLabel}
-              advisoryValue={advisoryValue}
-              advisoryTitle={advisoryText}
-            />
+            {iconBesideTemp ? (
+              // Targeta compacta (mòbil): la icona a la dreta de la xifra, a la seva alçada. Si no hi cap, baixa a sota.
+              <div className="flex flex-wrap items-start justify-between gap-x-3">
+                {temperatureDisplay}
+                <div className="ml-auto mt-8 shrink-0">{renderWeatherIcon(true)}</div>
+              </div>
+            ) : temperatureDisplay}
           </div>
         </div>
 
         {/* RIGHT COLUMN: Icon, Grid & Actions */}
         <div className="w-full md:w-[320px] flex flex-col gap-4 z-10 shrink-0 mt-0 relative md:[transform:translateZ(20px)]">
           
-          {/* Weather Icon Block (Amb Telemetria Connectada) */}
-          <div className="flex-1 flex items-center justify-center min-h-[160px] sm:min-h-[180px] md:min-h-[220px] relative -mt-4 md:mt-0">
-            <div className="drop-shadow-[0_0_30px_rgba(99,102,241,0.4)] md:drop-shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-transform duration-700 hover:scale-105 relative z-20">
-              {getWeatherIcon(
-                props.effectiveCode,
-                'w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56',
-                Boolean(weather.meta.isDay),
-                0, // probabilitat de pluja (visualment 0 aquí ja que la principal mana sobre el precipAmt)
-                currentWindSpeed,
-                currentTemp,
-                currentPrecip, // Passem el volum real de pluja per a la sincronització de telemetria
-                props.effectiveCloudCover
-              )}
-              {dustAdvisory.kind && (
-                <span role="img" aria-label={advisoryLabel ? `${advisoryLabel} · ${advisoryValue}` : undefined} title={advisoryText} className="absolute bottom-1 right-1 md:bottom-2 md:right-2 z-30 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-amber-400/40 shadow-[0_0_14px_rgba(251,191,36,0.35)]">
-                  <Haze className="w-6 h-6 md:w-7 md:h-7 text-amber-300" aria-hidden="true" />
-                </span>
-              )}
+          {/* Weather Icon Block (Amb Telemetria Connectada). A la targeta compacta, al costat de la temperatura. */}
+          {!iconBesideTemp && (
+            <div className="flex-1 flex items-center justify-center min-h-[160px] sm:min-h-[180px] md:min-h-[220px] relative -mt-4 md:mt-0">
+              {renderWeatherIcon(false)}
             </div>
-          </div>
+          )}
 
           <WeatherStatsGrid
             windSpeed={parseMetric(weather.stats.windSpeed)}
@@ -209,6 +239,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
               isFavorite={props.isFavorite}
               onToggleFavorite={props.onToggleFavorite}
               favoriteLabels={{ add: uiText.addFavorite, remove: uiText.removeFavorite }}
+              showRadar={!props.hideRadarButton}
             />
           </div>
         </div>

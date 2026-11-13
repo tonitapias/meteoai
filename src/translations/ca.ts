@@ -217,6 +217,17 @@ export const ca = {
     teaserAir: "Qualitat de l'aire {v}",
     teaserVisibility: "Visibilitat {v} km"
   },
+  // Interfície per pestanyes (de moment amb ?ui=tabs): noms curts, d'una paraula, perquè hi càpiguen a 320 px.
+  tabs: {
+    label: "Seccions del temps",
+    now: "Ara",
+    forecast: "Previsió",
+    detail: "Detall",
+    sky: "Cel",
+    radar: "Radar",
+    radarAria: "Obre el radar",
+    highlights: "Destacats"
+  },
   directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
   preciseRain: "Previsió Immediata (1h)",
   modelsLegend: "Comparativa Models",
