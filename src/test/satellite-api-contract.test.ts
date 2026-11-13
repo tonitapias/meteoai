@@ -579,7 +579,10 @@ describe("CIRA SLIDER GeoColor de l'Himawari (disc del visor orbital) Contract C
 
         const d = new Date(newest * 1000);
         const p = (n: number) => String(n).padStart(2, '0');
-        const stamp = d.toISOString().replace(/[-:T]/g, '').slice(0, 14);
+        // Només els dígits ("20261113180742"). Abans s'hi treien el guió, els dos punts i la T amb una classe de caràcters
+        // entre claudàtors, i Tailwind (que llegeix tots els fitxers de src, comentaris inclosos) la prenia per una classe
+        // de CSS i generava una regla invàlida (avís "css-syntax-error" al build). No hi tornis a posar aquella forma.
+        const stamp = d.toISOString().replace(/\D/g, '').slice(0, 14);
         const image = await fetch(`https://slider.cira.colostate.edu/data/imagery/${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())}/himawari---full_disk/geocolor/${stamp}/00/000_000.png`);
         const bytes = new Uint8Array(await image.arrayBuffer());
         expect(image.ok, `El disc de CIRA ha respost amb status: ${image.status}`).toBe(true);
