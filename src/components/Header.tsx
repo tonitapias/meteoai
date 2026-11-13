@@ -1,9 +1,7 @@
 // src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, House } from 'lucide-react';
-import { usePreferences, LocationData, ViewMode } from '../hooks/usePreferences';
-import ViewModeChip from './ViewModeChip';
-import { scrollToCompleteView } from './dashboard/completeViewAnchor';
+import { usePreferences, LocationData } from '../hooks/usePreferences';
 import { reverseGeocode, GeoSearchResult } from '../services/geocodingService';
 import { useCitySearch } from '../hooks/useCitySearch';
 import { useAppContext } from '../context/AppContext';
@@ -98,15 +96,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const onSearch = actions.fetchWeatherByCoords;
   const { getCoordinates } = useGeoLocation();
   const loading = state.loading;
-  const viewMode = flags.viewMode;
-  const setViewMode = actions.setViewMode;
   const onDebugToggle = actions.toggleDebug;
-
-  // Des del xip, el contingut nou de la vista completa queda unes pantalles més avall: s'hi baixa.
-  const handleViewModeSelect = (mode: ViewMode) => {
-    setViewMode(mode);
-    if (mode === 'expert') scrollToCompleteView();
-  };
 
   // Risc Zero: Prioritzem l'idioma i traduccions del context. Ignorem props exteriors desactualitzades.
   const activeLang: Language = (flags.lang as Language) || propLang || 'ca';
@@ -447,18 +437,6 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           )}
       </div>
       </div>
-
-      {/* SELECTOR DE VISTA: al mòbil al costat de la marca; a PC a la dreta del cercador i amb la seva alçada.
-          z-30: amb `order` el cercador (z-20) es pinta després, i el menú obert quedava per sota seu al mòbil.
-          Amb la interfície per pestanyes (?ui=tabs) no hi és: les pestanyes la substitueixen. */}
-      {flags.uiVariant !== 'tabs' && (
-        <ViewModeChip
-          viewMode={viewMode}
-          onSelect={handleViewModeSelect}
-          strings={contextT.viewModes}
-          className="order-1 md:order-2 md:self-stretch z-30"
-        />
-      )}
     </header>
   );
 }

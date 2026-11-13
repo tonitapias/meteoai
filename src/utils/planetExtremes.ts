@@ -160,7 +160,7 @@ export const summarizeCyclone = (cyclone: ActiveCyclone): CycloneSummary => {
 };
 
 // --- El fenomen gros del dia (xip de la Vista essencial) ---------------------------------------------
-// Només un cicló de categoria 4 o 5 justifica avisar a qui no ha obert la Vista completa. La dada ha de
+// Només un cicló de categoria 4 o 5 justifica avisar a qui no ha obert la pestanya Cel. La dada ha de
 // ser recent: el JTWC i l'NHC la renoven cada 6 h, i amb més de 12 h el cicló pot haver-se afeblit.
 export const BIG_CYCLONE_CATEGORY = 4;
 // Una dada de cicló més vella que això (hores) es diu allà on surt.

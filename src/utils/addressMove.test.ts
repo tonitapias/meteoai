@@ -29,7 +29,8 @@ describe("buildMoveLink (a l'adreça antiga)", () => {
 
         const link = buildMoveLink();
         expect(link.startsWith(`${NEW_ADDRESS}${MOVE_FRAGMENT}`)).toBe(true);
-        expect(payloadOf(link)).toEqual({ v: 1, fav: [GIRONA, VIC], lang: 'es', unit: 'F', view: 'expert', secrets: ['earth'] });
+        // La vista antiga (Essencial/Completa) ja no hi viatja: les pestanyes la substitueixen.
+        expect(payloadOf(link)).toEqual({ v: 1, fav: [GIRONA, VIC], lang: 'es', unit: 'F', secrets: ['earth'] });
     });
 
     it('sense res desat, un enllaç que només diu la versió', () => {
@@ -38,14 +39,14 @@ describe("buildMoveLink (a l'adreça antiga)", () => {
 });
 
 describe("applyMovePayload (a l'adreça nova)", () => {
-    it('desa els favorits i les preferències que porta', () => {
+    it('desa els favorits i les preferències que porta; la vista antiga d\'un enllaç vell, no', () => {
         applyMovePayload({ v: 1, fav: [GIRONA], lang: 'fr', unit: 'F', view: 'expert', hint: 'compact', menu: '1', secrets: ['sky'] });
         expect(favoritesHere()).toEqual([GIRONA]);
         expect(localStorage.getItem('meteoai_lang')).toBe('fr');
         expect(localStorage.getItem('meteoai_unit')).toBe('F');
-        expect(localStorage.getItem('meteoai_view_mode')).toBe('expert');
-        expect(localStorage.getItem('meteoai_detail_hint')).toBe('compact');
-        expect(localStorage.getItem('meteoai_view_menu_seen')).toBe('1');
+        expect(localStorage.getItem('meteoai_view_mode')).toBeNull();
+        expect(localStorage.getItem('meteoai_detail_hint')).toBeNull();
+        expect(localStorage.getItem('meteoai_view_menu_seen')).toBeNull();
         expect(JSON.parse(localStorage.getItem('meteoai_secrets_found')!)).toEqual(['sky']);
     });
 

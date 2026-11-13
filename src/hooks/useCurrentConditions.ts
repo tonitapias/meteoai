@@ -131,7 +131,7 @@ export function useCurrentConditions(
   );
   
   // La fase lunar ja no es calcula aquí: amb `shiftedNow` (hora local desplaçada) anava desfasada
-  // tantes hores com el fus horari, i ningú no la llegia. La del giny surt d'ExpertWidgets (hora real).
+  // tantes hores com el fus horari, i ningú no la llegia. La del giny surt de DetailWidgetsGrid (hora real).
   const barometricTrend = useMemo(() => ({ trend: 'steady', val: 0 }), []); 
 
   return {

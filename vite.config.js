@@ -80,7 +80,7 @@ export default defineConfig({
             sizes: '600x1298', //[cite: 3]
             type: 'image/png', //[cite: 3]
             form_factor: 'narrow', //[cite: 3]
-            label: 'Previsió al detall' //[cite: 3]
+            label: "El temps d'ara" //[cite: 3]
           },
           {
             src: 'screenshot-desktop.png', //[cite: 3]

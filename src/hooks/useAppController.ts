@@ -1,7 +1,6 @@
 // src/hooks/useAppController.ts
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { usePreferences } from './usePreferences';
-import { readUiVariant } from '../utils/uiFlag';
 import { TRANSLATIONS } from '../translations';
 import { useAppActions } from './useAppActions';
 import { useI18nLanguageSync } from './useI18nLanguageSync';
@@ -18,14 +17,11 @@ export function useAppController() {
   // 1. CAPA DE PREFERÈNCIES (Settings)
   // Aquestes són les úniques dades que necessitem abans d'arrencar res més
   const { 
-    lang, setLang, unit, viewMode, setViewMode, 
-    favorites, addFavorite, removeFavorite, isFavorite 
+    lang, setLang, unit,
+    favorites, addFavorite, removeFavorite, isFavorite
   } = usePreferences();
-  
-  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // Interfície per pestanyes (temporal, ?ui=tabs): es llegeix un sol cop en arrencar (vegeu utils/uiFlag.ts).
-  const [uiVariant] = useState(() => readUiVariant(typeof window !== 'undefined' ? window.location.search : ''));
+  const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
   // i18next (radar, avís d'actualització) en l'idioma triat des de la primera pantalla, no només dins del tauler.
   useI18nLanguageSync(lang);
@@ -80,7 +76,7 @@ export function useAppController() {
   const openingLink = openedFromLink && !data.state.weatherData && !data.state.error;
 
   // 4c. BOTÓ INICI del tauler: torna a la benvinguda sense previsió, sense refrescos pendents i amb la URL neta. Els
-  // favorits, l'idioma i la vista són preferències i no es toquen.
+  // favorits i l'idioma són preferències i no es toquen.
   const { clearWeather } = data.actions;
   const goHome = useCallback(() => {
     clearWeather();
@@ -129,7 +125,6 @@ export function useAppController() {
           copyCoordinates: appActions.copyCoordinates,
           setShowShareSheet,
           setLang,
-          setViewMode,
 
           // Accions d'UI
           toggleDebug: ui.actions.toggleDebug,
@@ -157,9 +152,7 @@ export function useAppController() {
           showDebug: ui.state.showDebug,
           isFavorite: (place: PlaceRef) => isFavorite(place),
           unit,
-          lang,
-          viewMode,
-          uiVariant
+          lang
       },
       modals: ui.modals, // Pas directe
       t
@@ -169,13 +162,13 @@ export function useAppController() {
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation, goHome,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
       appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,
-      setLang, setViewMode, ui.actions.toggleDebug, ui.actions.setNotification, ui.actions.dismissNotification,
+      setLang, ui.actions.toggleDebug, ui.actions.setNotification, ui.actions.dismissNotification,
       ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,
       ui.actions.setShowAqiModal, ui.actions.setShowUvModal, ui.actions.setShowPressureModal,
       ui.actions.setShowComfortModal, ui.actions.setShowVisibilityModal, ui.actions.setShowCloudLayersModal,
       ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal, ui.actions.setPlanetModal,
-      data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang, viewMode, uiVariant,
+      data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang,
       ui.modals, t
   ]);
 }

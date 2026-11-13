@@ -19,7 +19,7 @@ vi.mock('./components/UpdatePrompt', () => ({ default: () => null }));
 const appContext = {
     state: { weatherData: null, error: null, loading: false, openingLink: true, now: new Date(), aqiData: null, calculations: {} },
     actions: { setViewMode: vi.fn() },
-    flags: { viewMode: 'basic', lang: 'ca' },
+    flags: { lang: 'ca' },
     t: TRANSLATIONS.ca
 };
 vi.mock('./context/AppContext', () => ({

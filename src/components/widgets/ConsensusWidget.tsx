@@ -134,7 +134,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     setActiveModal(type);
   }, [activeModal]);
 
-  // Targetes que obren el detall: també amb el teclat i el lector de pantalla (mateix patró que WidgetCard d'ExpertWidgets).
+  // Targetes que obren el detall: també amb el teclat i el lector de pantalla (mateix patró que WidgetCard de DetailWidgetsGrid).
   const cardButtonProps = (type: ModalType) => ({
     onClick: () => openModal(type),
     role: 'button' as const,

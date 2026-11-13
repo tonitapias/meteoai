@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
-import { readStorage, writeStorage } from '../utils/safeStorage';
+import { readStorage, removeStorage, writeStorage } from '../utils/safeStorage';
 import { isSamePlace, type PlaceRef } from '../utils/geoDistance';
 
 export interface LocationData {
@@ -12,20 +12,13 @@ export interface LocationData {
   admin1?: string;
 }
 
-// A la interfície: 'basic' = Vista essencial, 'expert' = Vista completa (noms des de la v3.41.0).
-// Els valors interns no canvien perquè són els que hi ha desats al navegador de cada usuari.
-export type ViewMode = 'basic' | 'expert';
-
-const isViewMode = (value: string): value is ViewMode => value === 'basic' || value === 'expert';
+// Claus que ja no fa servir ningú i que es treuen del navegador en obrir l'app: la vista Essencial/Completa i la
+// targeta «Vols més detall?» (fins a la v3.57, substituïdes per les pestanyes), i l'interruptor de prova ?ui=tabs.
+export const LEGACY_STORAGE_KEYS = ['meteoai_view_mode', 'meteoai_view_menu_seen', 'meteoai_detail_hint', 'meteoai_ui_variant'] as const;
 
 // Helpers per carregar de forma segura i neta
 const loadString = <T extends string>(key: string, fallback: T): T => {
   return (readStorage(key) as T) || fallback;
-};
-
-const loadViewMode = (): ViewMode => {
-  const stored = readStorage('meteoai_view_mode');
-  return stored && isViewMode(stored) ? stored : 'basic';
 };
 
 const loadJSON = <T>(key: string, fallback: T): T => {
@@ -42,8 +35,10 @@ export function usePreferences() {
   // 1. ESTATS AMB CÀRREGA OPTIMITZADA (Sense useEffect inicial)
   const [lang, setLang] = useState<Language>(() => loadString('meteoai_lang', 'ca'));
   const [unit, setUnit] = useState<WeatherUnit>(() => loadString('meteoai_unit', 'C'));
-  const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode);
   const [favorites, setFavorites] = useState<LocationData[]>(() => loadJSON('meteoai_favorites', []));
+
+  // Neteja d'una sola vegada (després, les claus ja no hi són i no fa res).
+  useEffect(() => { LEGACY_STORAGE_KEYS.forEach(removeStorage); }, []);
 
   // 2. EFECTES NOMÉS PER GUARDAR (Quan l'usuari canvia alguna cosa)
   useEffect(() => { writeStorage('meteoai_lang', lang); }, [lang]);
@@ -57,7 +52,6 @@ export function usePreferences() {
   // aquest atribut, no pel que mostra la interfície.
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   useEffect(() => { writeStorage('meteoai_unit', unit); }, [unit]);
-  useEffect(() => { writeStorage('meteoai_view_mode', viewMode); }, [viewMode]);
   useEffect(() => { writeStorage('meteoai_favorites', JSON.stringify(favorites)); }, [favorites]);
 
   // [FIX PRECISIÓ] Memoitzades amb useCallback (com ja feia la versió antiga de
@@ -84,7 +78,6 @@ export function usePreferences() {
   return {
     lang, setLang,
     unit, setUnit,
-    viewMode, setViewMode,
     favorites, addFavorite, removeFavorite, isFavorite
   };
 }

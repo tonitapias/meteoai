@@ -1,5 +1,5 @@
 // src/components/tabs/TabBar.tsx
-// La barra de pestanyes del tauler (interfície per pestanyes, de moment amb ?ui=tabs).
+// La barra de pestanyes del tauler.
 // - 'bottom' (mòbil i tauleta): fixa a baix, on arriba el polze. Es pinta a <body> (portal): així cap context
 //   d'apilament del tauler (el peu és z-20) no la tapa, i els modals (z-50/z-100) sí que la cobreixen.
 // - 'top' (escriptori, a partir de 1024 px): sota la capçalera i enganxada a dalt en fer scroll; a baix, en una

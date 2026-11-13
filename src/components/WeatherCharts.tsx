@@ -1,5 +1,5 @@
 // src/components/WeatherCharts.tsx
-// SmartForecastCharts/SingleHourlyChart (Mode Expert) van ser extrets a
+// SmartForecastCharts/SingleHourlyChart (pestanya Previsió) van ser extrets a
 // SmartForecastCharts.tsx per poder-los carregar com a chunk lazy independent —
 // vegeu el comentari a l'inici d'aquell fitxer per l'explicació.
 import { CloudRain } from 'lucide-react';

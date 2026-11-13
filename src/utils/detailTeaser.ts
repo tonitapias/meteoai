@@ -1,5 +1,5 @@
 // src/utils/detailTeaser.ts
-// Valors d'ara de la vista completa que la vista essencial no ensenya, per a la targeta "Vols més detall?".
+// Valors d'ara per als destacats de la pestanya Ara (xips que porten a Detall o a Cel; vegeu HighlightsRow).
 // Cada valor surt de la mateixa font i amb el mateix format que el seu giny: si la targeta diu 1019 hPa,
 // el giny de pressió també ha de dir 1019. Els dies amb un protagonista a «Extrems del planeta» (un cicló de
 // categoria 4 o 5, calor humida de perill, una alerta vermella...), aquest va el primer i n'obre la fitxa (el text
@@ -14,7 +14,7 @@ export type DetailTeaserKey = 'planet' | 'pressure' | 'air' | 'moon' | 'visibili
 export interface DetailTeaserItem {
   key: DetailTeaserKey;
   text: string;
-  /** Per a la línia curta de qui ja coneix la vista completa (només el fenomen del planeta en té). */
+  /** Text curt del fenomen del planeta (de l'antiga línia «Vols més detall?»; ara no es mostra). */
   compactText?: string;
   /** El fenomen del planeta: la fitxa que obre i la icona del seu tipus. */
   entry?: PlanetEntry;

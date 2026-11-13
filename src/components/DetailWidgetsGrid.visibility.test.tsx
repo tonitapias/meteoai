@@ -1,17 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-
-// Sense xarxa: el hook del model global (consens) no fa cap petició real.
-vi.mock('../hooks/useGlobalModel', () => ({
-    useGlobalModel: () => ({
-        globalData: null,
-        loadingGlobalModel: false,
-        fetchGlobalModelByCoords: vi.fn(),
-        clearGlobalModel: vi.fn(),
-    }),
-}));
-
-import ExpertWidgets from './ExpertWidgets';
+import DetailWidgetsGrid from './DetailWidgetsGrid';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 const noop = () => {};
@@ -39,7 +28,7 @@ const buildWeather = (): ExtendedWeatherData => {
 };
 
 const renderExpert = (effectiveCode: number | null) => render(
-    <ExpertWidgets
+    <DetailWidgetsGrid
         weatherData={buildWeather()} aqiData={null} lang="ca" unit="C" freezingLevel={null}
         onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
         onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
@@ -48,7 +37,7 @@ const renderExpert = (effectiveCode: number | null) => render(
     />
 );
 
-describe('ExpertWidgets → giny de Visibilitat (cablejat del codi efectiu)', () => {
+describe('DetailWidgetsGrid → giny de Visibilitat (cablejat del codi efectiu)', () => {
     it('amb el codi efectiu de la capçalera SENSE boira (3), el giny mostra "≥2" i "Calitja"', () => {
         const { container } = renderExpert(3);
         const text = container.textContent ?? '';

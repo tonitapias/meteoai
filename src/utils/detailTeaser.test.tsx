@@ -17,7 +17,7 @@ const BASE = {
     effectiveCode: 0,
     nowMs: NOW,
     lang: 'ca',
-    templates: ca.viewModes,
+    templates: ca.tabs,
 };
 
 describe('buildDetailTeaser', () => {
@@ -67,7 +67,7 @@ describe('buildDetailTeaser', () => {
     });
 
     it("fa servir les plantilles de l'idioma actiu", () => {
-        const items = buildDetailTeaser({ ...BASE, lang: 'en', templates: en.viewModes });
+        const items = buildDetailTeaser({ ...BASE, lang: 'en', templates: en.tabs });
         expect(items[0].text).toBe('Pressure 1019 hPa');
         expect(items[1].text).toBe('Air quality: fair');
         expect(items[3].text).toBe('Visibility 42.3 km');

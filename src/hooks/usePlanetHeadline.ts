@@ -2,7 +2,7 @@
 // El xip del fenomen gros del dia a la Vista essencial (vegeu planetHeadline.ts). Fora del camí crític: la
 // petició surt uns segons després que la previsió ja és a la pantalla, i el codi i els textos es baixen
 // en aquell moment. És una sola petició al worker (bucket «aux», 45 per minut i IP) que comparteix la
-// memòria de 15 min de fetchPlanetExtremes amb la Vista completa.
+// memòria de 15 min de fetchPlanetExtremes amb la pestanya Cel.
 import { useEffect, useRef, useState } from 'react';
 import type { Language } from '../translations';
 import type { PlanetHeadline } from '../components/planet/planetHeadline';

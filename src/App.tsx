@@ -23,8 +23,8 @@ export default function MeteoIA() {
       ) : (
          <DashboardView />
       )}
-      {/* Amb la interfície per pestanyes i el tauler a pantalla hi ha la barra fixa a baix: l'avís hi va per sobre. */}
-      <UpdatePrompt aboveTabBar={controller.flags?.uiVariant === 'tabs' && !!state.weatherData && !state.error} />
+      {/* Amb el tauler a pantalla hi ha la barra de pestanyes fixa a baix (fins a 1024 px): l'avís hi va per sobre. */}
+      <UpdatePrompt aboveTabBar={!!state.weatherData && !state.error} />
     </AppProvider>
   );
 }

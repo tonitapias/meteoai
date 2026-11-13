@@ -13,7 +13,7 @@ vi.mock('../context/AppContext', () => ({
     useAppContext: () => ({
         actions: { fetchWeatherByCoords, goHome, setViewMode: vi.fn(), toggleDebug: vi.fn() },
         state: { loading: false, favorites: [] },
-        flags: { viewMode: 'basic', lang },
+        flags: { lang },
         t: TRANSLATIONS[lang]
     })
 }));

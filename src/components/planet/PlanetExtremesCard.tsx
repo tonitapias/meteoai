@@ -1,5 +1,5 @@
 // src/components/planet/PlanetExtremesCard.tsx
-// Secció «Més enllà del teu cel», al final de la Vista completa: els rècords d'ara mateix de les estacions de tot
+// Secció «Més enllà del teu cel», a la pestanya Cel: els rècords d'ara mateix de les estacions de tot
 // el món i el recompte dels fenòmens actius. Cap dada fa de protagonista fixa: només quan passa alguna cosa
 // excepcional (planetProtagonist) va a dalt, en gran, amb una línia que diu per què es destaca. Cada rajola i cada
 // xip obre la seva fitxa al detall (PlanetExtremesModal).

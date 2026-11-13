@@ -6,7 +6,7 @@ import { getTrans } from './widgetHelpers';
 import { Language } from '../../translations';
 import { buildSnowLevelWindow } from '../../utils/snowLevelWindow';
 
-// Giny panoràmic: ocupa tota l'última fila de la graella (vegeu `fullRow` a ExpertWidgets), així que
+// Giny panoràmic: ocupa tota l'última fila de la graella (vegeu `fullRow` a DetailWidgetsGrid), així que
 // a l'esquerra hi ha la xifra d'ara i la mínima de 48 h, i a la dreta un perfil altitud × temps on la
 // muntanya queda nevada per sobre de la cota. Sense blur ni animacions infinites (mòbils modestos).
 

@@ -198,25 +198,6 @@ export const es = {
     olive: "Olivo",
     ragweed: "Ambrosía"
   },
-  viewModes: {
-    label: "Vista",
-    menuTitle: "¿Qué quieres ver?",
-    essential: "Esencial",
-    complete: "Completa",
-    essentialHint: "El tiempo de ahora, las próximas horas y la semana.",
-    completeHint: "Añade viento, presión, nubes, aire, sol y luna, y gráficos por modelos.",
-    cardTitle: "¿Quieres más detalle?",
-    cardText: "La vista completa añade más paneles y gráficos por modelos.",
-    cardShow: "Mostrar la vista completa",
-    cardDismiss: "Ahora no",
-    compactRow: "presión, nubes, luna…",
-    sectionTitle: "Vista completa",
-    sectionHint: "Paneles de detalle y gráficos por modelos",
-    backToEssential: "Volver a la esencial",
-    teaserPressure: "Presión {v} hPa",
-    teaserAir: "Calidad del aire {v}",
-    teaserVisibility: "Visibilidad {v} km"
-  },
   tabs: {
     label: "Secciones del tiempo",
     now: "Ahora",
@@ -225,7 +206,10 @@ export const es = {
     sky: "Cielo",
     radar: "Radar",
     radarAria: "Abre el radar",
-    highlights: "Destacados"
+    highlights: "Destacados",
+    teaserPressure: "Presión {v} hPa",
+    teaserAir: "Calidad del aire {v}",
+    teaserVisibility: "Visibilidad {v} km"
   },
   directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
   preciseRain: "Previsión Inmediata (1h)",
@@ -320,7 +304,7 @@ export const es = {
     intro: "Ningún modelo meteorológico acierta siempre, y el relieve, la costa o un valle pueden hacer que el tiempo cambie mucho en pocos kilómetros. Por eso la app nunca se fía de una sola fuente:",
     step1Title: "Modelos globales",
     step1Badge: "5 fuentes mundiales",
-    step1Text: "Simulan la atmósfera de todo el planeta y hacen la previsión de los próximos 7 días en cualquier lugar del mundo. La app los compara: cuando coinciden, la previsión es más fiable; cuando discrepan, te lo dice con el nivel de acuerdo entre modelos y el rango probable de la temperatura. De los días 4 al 7, la temperatura se combina con AIFS, el modelo de inteligencia artificial del ECMWF. Si quieres ver qué dice cada modelo por separado, en la vista completa tienes sus gráficos hora a hora.",
+    step1Text: "Simulan la atmósfera de todo el planeta y hacen la previsión de los próximos 7 días en cualquier lugar del mundo. La app los compara: cuando coinciden, la previsión es más fiable; cuando discrepan, te lo dice con el nivel de acuerdo entre modelos y el rango probable de la temperatura. De los días 4 al 7, la temperatura se combina con AIFS, el modelo de inteligencia artificial del ECMWF. Si quieres ver qué dice cada modelo por separado, en la pestaña Previsión tienes sus gráficos hora a hora.",
     modelEcmwf: "ECMWF (europeo)",
     modelAifs: "AIFS (IA del ECMWF)",
     modelGfs: "GFS (EE. UU.)",

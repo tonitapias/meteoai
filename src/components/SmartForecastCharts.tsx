@@ -1,8 +1,8 @@
 // src/components/SmartForecastCharts.tsx
-// Extret de WeatherCharts.tsx: usat només en Mode Expert, carregat com a chunk propi
-// (lazy) des de DashboardContent.tsx. Havia d'anar en un fitxer separat perquè Rollup
+// Extret de WeatherCharts.tsx: usat només a la pestanya Previsió, carregat com a chunk propi
+// (lazy) des de TabbedDashboard.tsx. Havia d'anar en un fitxer separat perquè Rollup
 // pugui aïllar-lo de debò — quan compartia fitxer amb MinutelyPreciseChart (importat de
-// manera estàtica des del mateix DashboardContent.tsx), la importació dinàmica no tenia
+// manera estàtica des del mateix tauler), la importació dinàmica no tenia
 // cap efecte: Rollup manté tot el mòdul al chunk principal si hi ha qualsevol camí
 // d'importació estàtica cap a ell, encara que sigui cap a un altre export del fitxer.
 import { useState, useMemo, useRef, useEffect, memo, type ReactNode } from 'react';
