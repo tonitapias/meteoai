@@ -12,10 +12,8 @@ vi.mock('../hooks/useGlobalModel', () => ({
     }),
 }));
 
-import ExpertWidgets from './ExpertWidgets';
+import ConsensusSection from './ConsensusSection';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
-
-const noop = () => {};
 
 // Girona (zona d'AROME HD: hi ha comparació amb el global).
 const buildWeather = (offline: boolean): ExtendedWeatherData => ({
@@ -28,15 +26,10 @@ const buildWeather = (offline: boolean): ExtendedWeatherData => ({
 } as unknown as ExtendedWeatherData);
 
 const expert = (offline: boolean) => (
-    <ExpertWidgets
-        weatherData={buildWeather(offline)} aqiData={null} lang="ca" unit="C" freezingLevel={null}
-        onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
-        onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
-        onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop}
-    />
+    <ConsensusSection weatherData={buildWeather(offline)} lang="ca" />
 );
 
-describe('ExpertWidgets → comparació amb el model global i previsió desada', () => {
+describe('ConsensusSection → comparació amb el model global i previsió desada', () => {
     beforeEach(() => { fetchGlobalModelByCoords.mockClear(); });
 
     it('amb la previsió desada (sense connexió) no es demana el model global', () => {

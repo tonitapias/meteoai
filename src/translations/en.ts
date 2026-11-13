@@ -199,25 +199,6 @@ export const en = {
     olive: "Olive",
     ragweed: "Ragweed"
   },
-  viewModes: {
-    label: "View",
-    menuTitle: "What do you want to see?",
-    essential: "Essential",
-    complete: "Full",
-    essentialHint: "The weather now, the next few hours and the week.",
-    completeHint: "Adds wind, pressure, clouds, air, sun and moon, and charts by model.",
-    cardTitle: "Want more detail?",
-    cardText: "The full view adds more panels and charts by model.",
-    cardShow: "Show the full view",
-    cardDismiss: "Not now",
-    compactRow: "pressure, clouds, moon…",
-    sectionTitle: "Full view",
-    sectionHint: "Detail panels and charts by model",
-    backToEssential: "Back to essential",
-    teaserPressure: "Pressure {v} hPa",
-    teaserAir: "Air quality: {v}",
-    teaserVisibility: "Visibility {v} km"
-  },
   tabs: {
     label: "Weather sections",
     now: "Now",
@@ -226,7 +207,10 @@ export const en = {
     sky: "Sky",
     radar: "Radar",
     radarAria: "Open the radar",
-    highlights: "Highlights"
+    highlights: "Highlights",
+    teaserPressure: "Pressure {v} hPa",
+    teaserAir: "Air quality: {v}",
+    teaserVisibility: "Visibility {v} km"
   },
   directions: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
   preciseRain: "Minute-by-Minute Forecast (1h)",
@@ -321,7 +305,7 @@ export const en = {
     intro: "No weather model is always right, and terrain, coastlines or a valley can make the weather change a lot within a few kilometres. That's why the app never relies on a single source:",
     step1Title: "Global models",
     step1Badge: "5 worldwide sources",
-    step1Text: "They simulate the atmosphere of the whole planet and forecast the next 7 days anywhere in the world. The app compares them: when they agree, the forecast is more reliable; when they don't, it tells you through the model agreement level and the likely temperature range. From day 4 to day 7, the temperature is blended with AIFS, ECMWF's artificial intelligence model. To see what each model says on its own, the full view has their hour-by-hour charts.",
+    step1Text: "They simulate the atmosphere of the whole planet and forecast the next 7 days anywhere in the world. The app compares them: when they agree, the forecast is more reliable; when they don't, it tells you through the model agreement level and the likely temperature range. From day 4 to day 7, the temperature is blended with AIFS, ECMWF's artificial intelligence model. To see what each model says on its own, the Forecast tab has their hour-by-hour charts.",
     modelEcmwf: "ECMWF (European)",
     modelAifs: "AIFS (ECMWF's AI)",
     modelGfs: "GFS (US)",

@@ -1,5 +1,5 @@
 // src/components/tabs/dashboardTabs.ts
-// Les pestanyes del tauler (interfície per pestanyes, de moment amb ?ui=tabs) i què hi va de la graella de ginys.
+// Les pestanyes del tauler i què hi va de la graella de ginys.
 import type { DetailWidgetId } from '../detailWidgetIds';
 
 export type DashboardTab = 'now' | 'forecast' | 'detail' | 'sky';
@@ -10,7 +10,7 @@ export const DASHBOARD_TABS: readonly DashboardTab[] = ['now', 'forecast', 'deta
 /**
  * Detall: les condicions d'ara, per importància. L'aire (que és doble a partir de 768 px) va quart perquè a tres
  * columnes les files quedin plenes sense reordenar res: vent, UV, visibilitat / aire, núvols / pressió, rosada, CAPE.
- * La cota de neu, quan surt, l'última i a tota l'amplada (com a la vista completa).
+ * La cota de neu, quan surt, l'última i a tota l'amplada (com sempre).
  */
 export const DETAIL_TAB_WIDGETS: readonly DetailWidgetId[] = [
   'wind', 'uv', 'visibility', 'aqi', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'snowLevel'

@@ -79,9 +79,9 @@ export interface DetailWidgetsGridProps {
   effectiveCode?: number | null;
   // Rellotge de l'app (ms, useViewState, cada minut): instant real per a la fase i l'edat lunars.
   now?: number;
-  /** Quins ginys i en quin ordre. Per defecte, tots en l'ordre de la vista completa. */
+  /** Quins ginys i en quin ordre. Per defecte, tots en l'ordre de sempre. */
   ids?: readonly DetailWidgetId[];
-  /** Classe de la graella. Per defecte, la de la vista completa. */
+  /** Classe de la graella. Per defecte, la de 4 columnes de sempre. */
   className?: string;
 }
 

@@ -61,7 +61,7 @@ const makeController = (place: { latitude: number; longitude: number }, offline 
         setSelectedDayIndex: vi.fn(),
         refreshLoadedLocation: vi.fn(),
     },
-    flags: { unit: 'C', lang: 'ca', isFavorite: () => false, activeRegionalModel: null, uiVariant: 'tabs' },
+    flags: { unit: 'C', lang: 'ca', isFavorite: () => false, activeRegionalModel: null},
     modals: { selectedDayIndex: null, showRadar: false, planetModal: null } as Record<string, unknown>,
     t: TRANSLATIONS.ca,
 });

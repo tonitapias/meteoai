@@ -18,10 +18,6 @@ vi.mock('./WeatherIcons', () => ({
   LivingIcon: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
-vi.mock('./ExpertWidgets', () => ({
-  default: () => <div>EXPERT_WIDGETS</div>
-}));
-
 vi.mock('../hooks/usePreferences', () => ({
   usePreferences: vi.fn()
 }));
@@ -34,8 +30,6 @@ const createMockPrefs = (unit: WeatherUnit, lang: Language): ReturnType<typeof u
   setLang: vi.fn(),
   unit,
   setUnit: vi.fn(),
-  viewMode: 'basic',
-  setViewMode: vi.fn(),
   favorites: [],
   addFavorite: vi.fn(),
   removeFavorite: vi.fn(),

@@ -1,6 +1,6 @@
 // src/components/planet/planetI18n.ts
 // Textos de la secció «Extrems del planeta» (targeta i detall), en un fitxer propi perquè només es
-// carreguin amb la Vista completa. {x} es substitueix amb fill().
+// carreguin amb la pestanya Cel. {x} es substitueix amb fill().
 import type { Language } from '../../translations';
 import type { CycloneBasin, CycloneKind, CycloneOcean, RecordKey } from '../../utils/planetExtremes';
 import type { GdacsAlert } from '../../services/planetExtremesApi';

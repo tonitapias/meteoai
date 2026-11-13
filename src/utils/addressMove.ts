@@ -22,13 +22,12 @@ const FAVORITES_KEY = 'meteoai_favorites';
 const SECRETS_KEY = 'meteoai_secrets_found';
 const MAX_FAVORITES = 50;
 
-// Preferències d'un sol valor: clau del navegador, camp de l'enllaç i valors acceptats.
+// Preferències d'un sol valor: clau del navegador, camp de l'enllaç i valors acceptats. La vista Essencial/Completa
+// (camps view, hint i menu) ja no viatja des de la v3.58: les pestanyes la substitueixen, i si un enllaç antic la porta,
+// s'ignora.
 const SETTINGS = [
   { key: 'meteoai_lang', field: 'lang', allowed: ['ca', 'es', 'en', 'fr'] },
-  { key: 'meteoai_unit', field: 'unit', allowed: ['C', 'F'] },
-  { key: 'meteoai_view_mode', field: 'view', allowed: ['basic', 'expert'] },
-  { key: 'meteoai_detail_hint', field: 'hint', allowed: ['compact'] },
-  { key: 'meteoai_view_menu_seen', field: 'menu', allowed: ['1'] }
+  { key: 'meteoai_unit', field: 'unit', allowed: ['C', 'F'] }
 ] as const;
 
 type Payload = Record<string, unknown>;

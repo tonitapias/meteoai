@@ -34,7 +34,7 @@ const LEVEL_TEXT: Record<CloudCoverLevel | 'unknown', string> = {
 };
 
 // Xifra al costat del perfil només quan la targeta fa >= 340 px; més estreta, apilats (si no, "MITJANS" no hi cabia).
-// Amplada de la targeta a la graella d'ExpertWidgets segons la pantalla: < 372 px → 288-339 (apilat) · 372-639 →
+// Amplada de la targeta a la graella de ginys (DetailWidgetsGrid) segons la pantalla: < 372 px → 288-339 (apilat) · 372-639 →
 // 340-607 (costat) · sm → 292-348 (apilat) · md → 348-483 (costat) · lg, 4 columnes → ~226 (apilat).
 const BODY_LAYOUT = 'flex-col gap-3 min-[372px]:flex-row min-[372px]:gap-4 sm:flex-col sm:gap-3 md:flex-row md:gap-4 lg:flex-col lg:gap-3';
 const HERO_BOX = 'w-auto gap-1 min-[372px]:w-[6.5rem] min-[372px]:gap-1.5 sm:w-auto sm:gap-1 md:w-[6.5rem] md:gap-1.5 lg:w-auto lg:gap-1';

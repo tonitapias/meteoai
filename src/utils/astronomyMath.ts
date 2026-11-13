@@ -141,7 +141,7 @@ export function getMoonRiseSetForDate(
 }
 
 // --- Fase / il·luminació lunar (font única: getMoonPhase, no SunCalc.getMoonIllumination) ---
-// El giny compacte (ExpertWidgets.tsx) fa servir la mateixa funció i la mateixa edat
+// El giny compacte (DetailWidgetsGrid.tsx) fa servir la mateixa funció i la mateixa edat
 // (getMoonAgeDays de lunarPhases.ts): giny i modal no poden mostrar dues fases diferents.
 
 export function getMoonIlluminationPercent(phase: number): number {

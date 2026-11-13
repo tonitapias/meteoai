@@ -198,26 +198,8 @@ export const ca = {
     olive: "Olivera",
     ragweed: "Ambròsia"
   },
-  viewModes: {
-    label: "Vista",
-    menuTitle: "Què vols veure?",
-    essential: "Essencial",
-    complete: "Completa",
-    essentialHint: "El temps d'ara, les pròximes hores i la setmana.",
-    completeHint: "Hi afegeix vent, pressió, núvols, aire, sol i lluna, i gràfics per models.",
-    cardTitle: "Vols més detall?",
-    cardText: "La vista completa hi afegeix més panells i gràfics per models.",
-    cardShow: "Mostra la vista completa",
-    cardDismiss: "Ara no",
-    compactRow: "pressió, núvols, lluna…",
-    sectionTitle: "Vista completa",
-    sectionHint: "Panells de detall i gràfics per models",
-    backToEssential: "Torna a l'essencial",
-    teaserPressure: "Pressió {v} hPa",
-    teaserAir: "Qualitat de l'aire {v}",
-    teaserVisibility: "Visibilitat {v} km"
-  },
-  // Interfície per pestanyes (de moment amb ?ui=tabs): noms curts, d'una paraula, perquè hi càpiguen a 320 px.
+  // Les pestanyes del tauler: noms curts, d'una paraula, perquè hi càpiguen a 320 px. Els teaser* són els xips dels
+  // destacats d'Ara (vegeu utils/detailTeaser.ts).
   tabs: {
     label: "Seccions del temps",
     now: "Ara",
@@ -226,7 +208,10 @@ export const ca = {
     sky: "Cel",
     radar: "Radar",
     radarAria: "Obre el radar",
-    highlights: "Destacats"
+    highlights: "Destacats",
+    teaserPressure: "Pressió {v} hPa",
+    teaserAir: "Qualitat de l'aire {v}",
+    teaserVisibility: "Visibilitat {v} km"
   },
   directions: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
   preciseRain: "Previsió Immediata (1h)",
@@ -323,7 +308,7 @@ export const ca = {
     intro: "Cap model meteorològic no l'encerta sempre, i el relleu, la costa o una vall poden fer que el temps canviï molt en pocs quilòmetres. Per això l'app no es fia mai d'una sola font:",
     step1Title: "Models globals",
     step1Badge: "5 fonts mundials",
-    step1Text: "Simulen l'atmosfera de tot el planeta i fan la previsió dels pròxims 7 dies a qualsevol lloc del món. L'app els compara: quan coincideixen, la previsió és més fiable; quan discrepen, t'ho diu amb el nivell d'acord entre models i el rang probable de la temperatura. Dels dies 4 al 7, la temperatura es combina amb AIFS, el model d'intel·ligència artificial de l'ECMWF. Si vols veure què diu cada model per separat, a la vista completa en tens els gràfics hora a hora.",
+    step1Text: "Simulen l'atmosfera de tot el planeta i fan la previsió dels pròxims 7 dies a qualsevol lloc del món. L'app els compara: quan coincideixen, la previsió és més fiable; quan discrepen, t'ho diu amb el nivell d'acord entre models i el rang probable de la temperatura. Dels dies 4 al 7, la temperatura es combina amb AIFS, el model d'intel·ligència artificial de l'ECMWF. Si vols veure què diu cada model per separat, a la pestanya Previsió en tens els gràfics hora a hora.",
     modelEcmwf: "ECMWF (europeu)",
     modelAifs: "AIFS (IA de l'ECMWF)",
     modelGfs: "GFS (EUA)",

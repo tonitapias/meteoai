@@ -1,6 +1,6 @@
 // src/utils/aqiLevel.ts
-// Valor i nivell de qualitat de l'aire tal com els mostra el giny (AqiWidget). Viu aquí perquè la
-// targeta "Vols més detall?" de la vista essencial digui exactament el mateix nivell que el giny.
+// Valor i nivell de qualitat de l'aire tal com els mostra el giny (AqiWidget). Viu aquí perquè els
+// destacats de la pestanya Ara diguin exactament el mateix nivell que el giny.
 
 export type AqiResult = {
     value: number;

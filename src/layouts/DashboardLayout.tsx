@@ -16,16 +16,15 @@ interface DashboardLayoutProps {
   
   /** Codi del temps per a l'efecte de fons (partícules) */
   weatherCode?: number;
-
-  /**
-   * Interfície per pestanyes (?ui=tabs): contenidor de 1280 px (l'escriptori hi posa 2-3 columnes), lloc a baix per a
-   * la barra fixa (fins a 1024 px, que a partir d'aquí va a dalt) i `overflow-x: clip` en lloc de `hidden`: un
-   * `overflow` hidden converteix el contenidor en el marc de desplaçament i la barra de dalt no s'enganxaria. Els
-   * navegadors sense `clip` es queden amb `hidden` (la barra hi és igual, però no s'enganxa).
-   */
-  tabbed?: boolean;
 }
 
+// El tauler va per pestanyes (vegeu TabbedDashboard):
+// - `overflow-x: clip` en lloc de `hidden`: un overflow hidden converteix el contenidor en el marc de desplaçament i la
+//   barra de pestanyes de dalt (escriptori) no s'enganxaria. Els navegadors sense `clip` es queden amb `hidden` (la barra
+//   hi és igual, però no s'enganxa).
+// - Contenidor de 1280 px: a escriptori, 2-3 columnes.
+// - Marge inferior per a la barra fixa de baix (fins a 1024 px): la seva alçada (56 px + vores) i la zona segura de
+//   l'iPhone. A escriptori la barra va a dalt i el marge torna a ser el de sempre.
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   header,
   children,
@@ -33,11 +32,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   modals,
   toast,
   debugPanel,
-  weatherCode = 0,
-  tabbed = false
+  weatherCode = 0
 }) => {
   return (
-    <div className={`min-h-screen bg-[#05060A] text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden ${tabbed ? 'supports-[overflow:clip]:overflow-x-clip' : ''} selection:bg-indigo-500/30 flex flex-col relative`}>
+    <div className="min-h-screen bg-[#05060A] text-slate-50 font-sans transition-all duration-1000 overflow-x-hidden supports-[overflow:clip]:overflow-x-clip selection:bg-indigo-500/30 flex flex-col relative">
       
       {/* 1. Capa d'Efectes Globals */}
       <WeatherParticles code={weatherCode} />
@@ -61,9 +59,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {toast}
 
       {/* 6. Grid Principal (Contingut) */}
-      {/* Amb la barra de pestanyes a baix (fins a 1024 px), el marge inferior és la seva alçada (56 px + vores) i la
-          zona segura de l'iPhone; a escriptori la barra va a dalt i el marge torna a ser el de sempre. */}
-      <div className={`w-full ${tabbed ? 'max-w-7xl' : 'max-w-5xl'} mx-auto px-4 py-4 md:px-6 md:py-8 flex-1 flex flex-col relative z-10 ${tabbed ? 'pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8' : ''}`}>
+      <div className="w-full max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-8 flex-1 flex flex-col relative z-10 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8">
         
         {/* Slot: Capçalera */}
         {header}

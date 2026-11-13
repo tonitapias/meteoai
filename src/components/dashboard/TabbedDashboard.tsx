@@ -1,11 +1,11 @@
 // src/components/dashboard/TabbedDashboard.tsx
-// El tauler per pestanyes (de moment amb ?ui=tabs; la vista d'avui és DashboardContent): Ara · Previsió · Detall · Cel,
-// i el Radar a la barra. Només composició: els ginys, els seus props i els modals són els de sempre.
+// El tauler per pestanyes (des de la v3.58, en lloc de les vistes Essencial/Completa): Ara · Previsió · Detall · Cel, i
+// el Radar a la barra. Només composició: els ginys, els seus props i els modals són els de sempre.
 //
-// Muntatge (vegeu la proposta): Ara es munta d'entrada i ja no es desmunta (els avisos d'alerta oficial i de radar
-// fan les seves pròpies peticions en muntar-se); la resta es munta la primera vegada que s'obre i després es queda
-// muntada però amagada (el consens no té memòria cau: tornar-lo a muntar tornaria a demanar el model global). Mai
-// hi ha més coses muntades que a la vista completa d'avui.
+// Muntatge: Ara es munta d'entrada i ja no es desmunta (els avisos d'alerta oficial i de radar fan les seves pròpies
+// peticions en muntar-se); la resta es munta la primera vegada que s'obre i després es queda muntada però amagada (el
+// consens no té memòria cau: tornar-lo a muntar tornaria a demanar el model global). Mai hi ha més coses muntades que a
+// l'antiga vista completa.
 //
 // Historial (vegeu tabs/tabHistory.ts): la pestanya va a la URL (?tab=…) i sortir d'Ara n'afegeix una sola entrada,
 // de manera que l'enrere des de Previsió, Detall o Cel torna a Ara i, des d'Ara, surt com sempre. Els modals no hi
@@ -55,10 +55,10 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
     const { state, actions, flags, t } = useAppContext();
     const { weatherData, calculations } = state;
     const current = weatherData?.current;
-    // El fenomen gros del dia a «Extrems del planeta» (si n'hi ha): la mateixa petició diferida de la vista essencial.
+    // El fenomen gros del dia a «Extrems del planeta» (si n'hi ha): una petició diferida, uns segons després de pintar la previsió.
     const planetHeadline = usePlanetHeadline(!!current, flags.lang);
     const nowMs = state.now.getTime();
-    // Els destacats: els mateixos valors que «Vols més detall?» (vegeu DashboardContent i utils/detailTeaser.ts).
+    // Els destacats: pressió, aire, lluna, visibilitat i, si n'hi ha, el fenomen del planeta (vegeu utils/detailTeaser.ts).
     const highlights = useMemo(() => {
         if (!current) return [];
         return buildDetailTeaser({
@@ -67,10 +67,10 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
             effectiveCode: calculations.effectiveWeatherCode,
             nowMs,
             lang: flags.lang,
-            templates: t.viewModes,
+            templates: t.tabs,
             planet: planetHeadline,
         });
-    }, [current, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.viewModes, planetHeadline]);
+    }, [current, state.aqiData, calculations.effectiveWeatherCode, nowMs, flags.lang, t.tabs, planetHeadline]);
 
     if (!weatherData) return null;
     const loc = weatherData.location as LocationMeta | undefined;
@@ -124,7 +124,7 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                         currentPrecip={calculations.chartData24h?.[0]?.precip || 0}
                     />
 
-                    {/* Els avisos, en el mateix ordre que a la vista d'avui: llamps, nowcast, realitat del radar, alerta oficial */}
+                    {/* Els avisos, per urgència: llamps, nowcast, realitat del radar, alerta oficial */}
                     <Suspense fallback={null}>
                         <LightningBanner lightning={state.lightning} lang={flags.lang} now={state.now.getTime()} onShowRadar={() => actions.setShowRadar(true)} />
                     </Suspense>

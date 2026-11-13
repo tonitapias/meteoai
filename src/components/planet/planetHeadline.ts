@@ -16,7 +16,7 @@ export type { PlanetHeadlineIcon };
 export interface PlanetHeadline {
   /** El text del xip, amb majúscula inicial. */
   text: string;
-  /** El mateix en minúscula, per a la línia curta ("Vista completa · tifó de categoria 4 al Pacífic…"). */
+  /** El mateix en minúscula, per a la línia curta ("tifó de categoria 4 al Pacífic…"). */
   compactText: string;
   /** La fitxa que obre el xip. */
   entry: PlanetEntry;

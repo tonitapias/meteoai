@@ -20,3 +20,12 @@ export const writeStorage = (key: string, value: string): void => {
     // Sense emmagatzematge la preferència només dura fins que es tanca l'app.
   }
 };
+
+export const removeStorage = (key: string): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Si no s'hi pot accedir, tampoc no hi ha res a esborrar que es pugui llegir.
+  }
+};

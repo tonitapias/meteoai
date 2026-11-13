@@ -1,55 +1,34 @@
-// src/hooks/viewPreferences.test.ts
-// La vista triada i l'"Ara no" de la targeta es recorden; i si el navegador bloqueja l'emmagatzematge,
-// l'app s'obre igualment amb els valors per defecte.
+// src/hooks/usePreferences.test.ts
+// Les preferències (idioma, unitats, favorits) es recorden; si el navegador bloqueja l'emmagatzematge, l'app s'obre
+// igualment amb els valors per defecte; i les claus de l'antiga vista Essencial/Completa es netegen.
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { usePreferences } from './usePreferences';
-import { useDetailHint } from './useDetailHint';
+import { usePreferences, LEGACY_STORAGE_KEYS } from './usePreferences';
 
-describe('preferències de vista', () => {
+describe('preferències', () => {
     afterEach(() => {
         vi.restoreAllMocks();
         localStorage.clear();
     });
 
-    it('recorda la vista triada', () => {
-        localStorage.setItem('meteoai_view_mode', 'expert');
+    it("les claus de l'antiga vista (Essencial/Completa, «Vols més detall?», ?ui=tabs) es treuen en obrir l'app", () => {
+        LEGACY_STORAGE_KEYS.forEach((key) => localStorage.setItem(key, 'x'));
+        localStorage.setItem('meteoai_lang', 'es');
         const { result } = renderHook(() => usePreferences());
-        expect(result.current.viewMode).toBe('expert');
-
-        act(() => result.current.setViewMode('basic'));
-        expect(localStorage.getItem('meteoai_view_mode')).toBe('basic');
-    });
-
-    it('un valor desat desconegut torna a la vista essencial', () => {
-        localStorage.setItem('meteoai_view_mode', 'complete');
-        const { result } = renderHook(() => usePreferences());
-        expect(result.current.viewMode).toBe('basic');
+        LEGACY_STORAGE_KEYS.forEach((key) => expect(localStorage.getItem(key)).toBeNull());
+        expect(result.current.lang).toBe('es');
     });
 
     it("amb l'emmagatzematge bloquejat no peta: valors per defecte", () => {
         vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('denied', 'SecurityError'); });
         vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('denied', 'SecurityError'); });
+        vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new DOMException('denied', 'SecurityError'); });
 
         const prefs = renderHook(() => usePreferences());
-        expect(prefs.result.current.viewMode).toBe('basic');
         expect(prefs.result.current.lang).toBe('ca');
-        act(() => prefs.result.current.setViewMode('expert'));
-        expect(prefs.result.current.viewMode).toBe('expert');
-
-        const hint = renderHook(() => useDetailHint());
-        expect(hint.result.current.compact).toBe(false);
-        act(() => hint.result.current.markCompact());
-        expect(hint.result.current.compact).toBe(true);
-    });
-
-    it('"Ara no" o haver entrat a la vista completa es recorda per sempre', () => {
-        const first = renderHook(() => useDetailHint());
-        expect(first.result.current.compact).toBe(false);
-        act(() => first.result.current.markCompact());
-
-        const later = renderHook(() => useDetailHint());
-        expect(later.result.current.compact).toBe(true);
+        expect(prefs.result.current.unit).toBe('C');
+        act(() => prefs.result.current.setLang('fr'));
+        expect(prefs.result.current.lang).toBe('fr');
     });
 });
 

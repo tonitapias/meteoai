@@ -1,12 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
-// El hook del model global (consens) fa la seva pròpia petició: aquí no interessa.
-vi.mock('../hooks/useGlobalModel', () => ({
-    useGlobalModel: () => ({ globalData: null, loadingGlobalModel: false, fetchGlobalModelByCoords: vi.fn(), clearGlobalModel: vi.fn() }),
-}));
-
-import ExpertWidgets from './ExpertWidgets';
+import DetailWidgetsGrid from './DetailWidgetsGrid';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
 const noop = () => {};
@@ -22,7 +16,7 @@ const weather = (currentTime: string): ExtendedWeatherData => ({
 } as unknown as ExtendedWeatherData);
 
 const renderAt = (now: number, currentTime: string) => render(
-    <ExpertWidgets
+    <DetailWidgetsGrid
         weatherData={weather(currentTime)} aqiData={null} lang="ca" unit="C" freezingLevel={null} now={now}
         onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
         onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
@@ -30,7 +24,7 @@ const renderAt = (now: number, currentTime: string) => render(
     />
 );
 
-describe('ExpertWidgets → giny Fase lunar a l\'hora real', () => {
+describe('DetailWidgetsGrid → giny Fase lunar a l\'hora real', () => {
     it('al quart creixent real (18-10-2026 16:12 UTC, USNO) marca el 50 %', () => {
         // Amb la fórmula antiga i current.time (18:15 local) llegit com a UTC: 52 %.
         renderAt(Date.UTC(2026, 9, 18, 16, 12), '2026-10-18T18:15');

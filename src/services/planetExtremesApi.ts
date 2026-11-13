@@ -1,5 +1,5 @@
 // src/services/planetExtremesApi.ts
-// Dades de la secció «Més enllà del teu cel» de la Vista completa: els rècords d'ara mateix de les
+// Dades de la secció «Més enllà del teu cel» (pestanya Cel): els rècords d'ara mateix de les
 // estacions de tot el món i els fenòmens extrems actius. Les agrega el worker (/planet-extremes) a
 // partir dels METAR de la NOAA, de GDACS i de NASA EONET (vegeu src/planetExtremes.ts al repositori
 // meteoai-proxy), que ja hi fa el control de qualitat. Aquí només es valida la forma de la resposta.
@@ -97,7 +97,7 @@ export interface PlanetExtremes {
 const PLANET_EXTREMES_URL = `${GEMINI_PROXY_URL}/planet-extremes`;
 // El worker respon com a molt en ~4,5 s (si una font va lenta, serveix la còpia que té).
 const TIMEOUT_MS = 8000;
-// El worker refresca cada 30 min: no cal tornar-ho a demanar cada cop que es torna a la Vista completa.
+// El worker refresca cada 30 min: no cal tornar-ho a demanar cada cop que es torna a la pestanya Cel.
 const CACHE_MS = 15 * 60 * 1000;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
