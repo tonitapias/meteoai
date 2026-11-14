@@ -281,7 +281,7 @@ Una mirada ràpida a l'auditoria de producció:
 | Capa | Tecnologia | Detalls d'Implementació Clau |
 | :--- | :--- | :--- |
 | **Frontend Core** | React 19 + TypeScript | Tipat estricte (sense `any`), Hooks personalitzats i protecció de nuls. |
-| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA i compilació ultraràpida; en desplegar una versió nova, l'app avisa amb un banner en lloc de penjar-se amb codi obsolet. |
+| **Build Tool** | Vite 6 | Configuració optimitzada per a PWA i compilació ultraràpida; les versions noves es posen soles, sense avís, quan la recàrrega no molesta (en sortir de l'app, o en obrir-la abans de tocar res; mai amb un modal obert), i sense penjar-se amb codi obsolet. |
 | **Allotjament** | Cloudflare (Workers amb fitxers estàtics) | [meteotoniai.com](https://meteotoniai.com), publicat des de GitHub Actions només si passen el type-check, el lint i els tests. Capçaleres pròpies: memòria cau immutable per als fitxers amb hash i seguretat bàsica. Mentre duri la mudança, la mateixa app es publica també a l'adreça antiga de GitHub Pages, amb l'avís que porta a la nova. |
 | **Estils** | Tailwind CSS | Sistema utilitari (*Glassmorphism*, animacions CSS natives, mobile-first). |
 | **Protecció API** | Zod + Sentry | Interceptors tipats (Mur de Contenció) per evitar caigudes de UI per dades corruptes. El que s'envia a Sentry (errors, traces i repeticions) no porta la posició exacta de l'usuari: l'adreça de l'app hi va sense el lloc i les coordenades, arrodonides a ~1 km. |

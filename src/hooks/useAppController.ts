@@ -23,7 +23,7 @@ export function useAppController() {
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
 
-  // i18next (radar, avís d'actualització) en l'idioma triat des de la primera pantalla, no només dins del tauler.
+  // i18next (radar, mapa del vent) en l'idioma triat des de la primera pantalla, no només dins del tauler.
   useI18nLanguageSync(lang);
 
   // 2. CAPA VISUAL (UI)

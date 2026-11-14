@@ -301,7 +301,7 @@ const anyModalOpen = (modals: Record<string, unknown>): boolean =>
 
 export const TabbedDashboard = () => {
     const { state, actions, modals, t } = useAppContext();
-    // La pestanya ve de la URL (?tab=…): un refresc o l'avís d'actualització (que recarrega) hi tornen. L'app instal·lada
+    // La pestanya ve de la URL (?tab=…): un refresc o una versió nova (que recarrega) hi tornen. L'app instal·lada
     // i els enllaços compartits no en porten, així que s'obren a Ara.
     const [active, setActive] = useState<DashboardTab>(() => readTabFromSearch(window.location.search));
     // Ara sempre muntada, i la pestanya d'entrada si és una altra.

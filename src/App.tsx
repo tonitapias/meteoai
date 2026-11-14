@@ -5,7 +5,7 @@ import { AppProvider } from './context/AppContext'; // Importem el nou Provider
 // Vistes
 import WelcomeView from './views/WelcomeView';
 import DashboardView from './views/DashboardView';
-import UpdatePrompt from './components/UpdatePrompt';
+import AutoUpdate from './components/AutoUpdate';
 import AddressMoveNotice from './components/AddressMoveNotice';
 
 export default function MeteoIA() {
@@ -23,8 +23,8 @@ export default function MeteoIA() {
       ) : (
          <DashboardView />
       )}
-      {/* Amb el tauler a pantalla hi ha la barra de pestanyes fixa a baix (fins a 1024 px): l'avís hi va per sobre. */}
-      <UpdatePrompt aboveTabBar={!!state.weatherData && !state.error} />
+      {/* Les versions noves es posen soles, sense avís (vegeu AutoUpdate). */}
+      <AutoUpdate />
     </AppProvider>
   );
 }

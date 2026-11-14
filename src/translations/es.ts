@@ -2,10 +2,6 @@ export const es = {
    // --- Modals & Headers ---
   liveBadge: "EN DIRECTO",
 
-  // Aviso de actualización (PWA)
-  updateAvailable: "Hay una versión nueva disponible",
-  updateAction: "Actualizar",
-
   // Mudanza a meteotoniai.com
   movedTitle: "MeteoToni AI se ha mudado",
   movedText: "Ahora está en meteotoniai.com. Llévate tus favoritos y preferencias con un toque.",
