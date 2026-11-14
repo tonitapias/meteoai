@@ -8,11 +8,11 @@ import type { Language } from '../translations';
 describe('useI18nLanguageSync', () => {
     afterEach(async () => { await i18n.changeLanguage('ca'); });
 
-    it("i18next (avís d'actualització, radar) pren l'idioma triat a l'app, i el segueix quan canvia", async () => {
+    it("i18next (radar, mapa de vent) pren l'idioma triat a l'app, i el segueix quan canvia", async () => {
         await i18n.changeLanguage('en'); // p. ex. el que ha detectat del navegador
         const { rerender } = renderHook(({ lang }: { lang: Language }) => useI18nLanguageSync(lang), { initialProps: { lang: 'ca' as Language } });
         await waitFor(() => expect(i18n.language).toBe('ca'));
-        expect(i18n.t('updateAction')).toBe(i18n.getResource('ca', 'translation', 'updateAction'));
+        expect(i18n.t('movedAction')).toBe(i18n.getResource('ca', 'translation', 'movedAction'));
 
         rerender({ lang: 'fr' });
         await waitFor(() => expect(i18n.language).toBe('fr'));

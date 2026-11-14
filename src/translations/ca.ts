@@ -1,10 +1,6 @@
 export const ca = {
   liveBadge: "EN DIRECTE",
 
-  // Avís d'actualització (PWA)
-  updateAvailable: "Hi ha una versió nova disponible",
-  updateAction: "Actualitza",
-
   // Mudança a meteotoniai.com (avís a l'adreça antiga i confirmació a la nova)
   movedTitle: "MeteoToni AI s'ha mudat",
   movedText: "Ara és a meteotoniai.com. Porta-hi els teus favorits i preferències amb un toc.",

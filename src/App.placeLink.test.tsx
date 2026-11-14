@@ -14,7 +14,7 @@ vi.mock('./hooks/useAppController', () => ({
 }));
 vi.mock('./views/WelcomeView', () => ({ default: () => <div>BENVINGUDA</div> }));
 vi.mock('./views/DashboardView', () => ({ default: () => <div>TAULER</div> }));
-vi.mock('./components/UpdatePrompt', () => ({ default: () => null }));
+vi.mock('./components/AutoUpdate', () => ({ default: () => null }));
 
 const appContext = {
     state: { weatherData: null, error: null, loading: false, openingLink: true, now: new Date(), aqiData: null, calculations: {} },

@@ -1,5 +1,5 @@
 // src/hooks/useI18nLanguageSync.ts
-// i18next (radar, mapa del vent i avís d'actualització) segueix l'idioma triat a l'app: usePreferences().lang és la font de
+// i18next (radar i mapa del vent) segueix l'idioma triat a l'app: usePreferences().lang és la font de
 // veritat, i18next només en fa de mirall. Abans s'hi posava en muntar-se els modals del tauler: a la benvinguda, l'avís
 // d'actualització sortia en l'idioma del navegador encara que l'usuari n'hagués triat un altre.
 import { useEffect } from 'react';

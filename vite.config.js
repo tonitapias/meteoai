@@ -30,7 +30,8 @@ export default defineConfig({
     VitePWA({
       // 'prompt' (no 'autoUpdate') + workbox.skipWaiting/clientsClaim a false:
       // un SW nou NO pren el control sol — es queda "waiting" fins que
-      // UpdatePrompt.tsx crida updateServiceWorker(). Sense els dos flags de
+      // AutoUpdate.tsx crida updateServiceWorker() en un moment en què la
+      // recàrrega no molesta (utils/autoUpdatePolicy.ts). Sense els dos flags de
       // workbox, la GENERATED SW crida self.skipWaiting() igualment encara
       // que registerType sigui 'prompt' (registerType només controla el
       // client, no el SW generat), i el nou SW pren el control mentre la

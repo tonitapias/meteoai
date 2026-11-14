@@ -16,7 +16,8 @@ export const TAB_PARAM = 'tab';
 // a sortir d'Ara, es reaprofita en lloc d'afegir-ne una altra.
 const TAB_ENTRY_KEY = 'meteoaiTabs';
 
-const isTabEntry = (state: unknown): boolean =>
+/** L'entrada d'historial és la de les pestanyes (no la d'un modal). */
+export const isTabEntry = (state: unknown): boolean =>
   typeof state === 'object' && state !== null && (state as Record<string, unknown>)[TAB_ENTRY_KEY] === true;
 
 /** La pestanya que diu la URL; qualsevol altra cosa (o res) és Ara. */
