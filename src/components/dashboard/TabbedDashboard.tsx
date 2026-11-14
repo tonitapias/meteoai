@@ -88,13 +88,16 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                 />
             )}
 
-            {/* A partir de 1280 px: la targeta principal (2/3) i, al costat (1/3), els avisos i l'anàlisi i, a baix de tot,
-                els destacats; a sota, les 24 hores a tota l'amplada. Les dues columnes fan la mateixa alçada: la fila 1fr
-                s'estira i l'anàlisi (ja preparada per omplir l'alçada) l'omple; si la columna de la dreta és la més alta
-                (amb avisos), és la targeta principal la que s'estira. Més estret, una sola columna en l'ordre de sempre:
-                targeta, avisos, anàlisi, 24 hores, destacats. */}
-            <div className={`${STACK} xl:grid xl:grid-cols-3 xl:grid-rows-[1fr_auto_auto]`}>
-                <div className="xl:col-span-2 xl:row-span-2 xl:[&>*]:h-full xl:[&>*>*]:h-full">
+            {/* A partir de 1280 px: si n'hi ha, la pluja de la pròxima hora i els avisos en una fila a dalt de tot, a tota
+                l'amplada (fins a tres per fila, que s'estiren a parts iguals); a sota, la targeta principal (2/3) i, al
+                costat (1/3), l'anàlisi i, a baix de tot, els destacats; i a sota, les 24 hores a tota l'amplada. Les dues
+                columnes fan la mateixa alçada i l'anàlisi (ja preparada per omplir l'alçada) l'omple. Abans els avisos
+                anaven a la columna de la dreta: amb tres o quatre, la targeta principal s'estirava fins al doble de la
+                seva alçada i quedava buida al mig.
+                Més estret, una sola columna en l'ordre de sempre: targeta, pluja, avisos, anàlisi, 24 hores, destacats
+                (la columna de la dreta hi és `contents`, i els destacats hi passen al final amb `order`). */}
+            <div className={`${STACK} xl:grid xl:grid-cols-3`}>
+                <div className="xl:col-span-2 xl:[&>*]:h-full xl:[&>*>*]:h-full">
                     <CurrentWeather
                         data={weatherData}
                         effectiveCode={calculations.effectiveWeatherCode}
@@ -115,7 +118,9 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                     />
                 </div>
 
-                <div className={`${STACK} xl:[&>*:last-child]:flex-1`}>
+                {/* Sense pluja ni avisos, cap d'ells pinta res i el contenidor queda buit: `empty:hidden` (si no, la pila hi
+                    afegiria l'espai entre seccions, i a escriptori, una fila buida). */}
+                <div className={`${STACK} empty:hidden xl:order-first xl:col-span-3 xl:flex-row xl:flex-wrap xl:[&>*]:flex-[1_1_20rem]`}>
                     {/* Pluja la pròxima hora (porta la seva targeta: sense pluja no pinta res) */}
                     <MinutelyPreciseChart
                         data={calculations.minutelyPreciseData}
@@ -142,24 +147,26 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                     <Suspense fallback={null}>
                         <OfficialAlertBanner lat={loc?.latitude} lon={loc?.longitude} lang={flags.lang} />
                     </Suspense>
+                </div>
 
+                <div className="contents xl:flex xl:flex-col xl:gap-8 xl:[&>*:first-child]:flex-1">
                     <Suspense fallback={<SectionSkeleton />}>
                         <AIInsights analysis={state.aiAnalysis} lang={flags.lang} />
                     </Suspense>
+
+                    {/* Sense valors no hi ha element (al mòbil, un buit a la pila hi afegiria l'espai entre seccions). */}
+                    {highlights.length > 0 && (
+                        <div className="max-xl:order-last">
+                            <HighlightsRow items={highlights} strings={t.tabs} onGoTo={onGoTo} onOpenPlanet={actions.setPlanetModal} />
+                        </div>
+                    )}
                 </div>
 
-                <div className="xl:col-span-3 xl:row-start-3">
+                <div className="xl:col-span-3">
                     <Suspense fallback={<SectionSkeleton />}>
                         <Forecast24h data={weatherData} lang={flags.lang} unit={flags.unit} />
                     </Suspense>
                 </div>
-
-                {/* Sense valors no hi ha element (al mòbil, un buit a la pila hi afegiria l'espai entre seccions). */}
-                {highlights.length > 0 && (
-                    <div className="xl:col-start-3 xl:row-start-2 xl:self-end">
-                        <HighlightsRow items={highlights} strings={t.tabs} onGoTo={onGoTo} onOpenPlanet={actions.setPlanetModal} />
-                    </div>
-                )}
             </div>
         </>
     );
