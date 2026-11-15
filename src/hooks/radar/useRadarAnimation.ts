@@ -19,13 +19,16 @@ import {
   computeGibsSlot,
   computeLightningSlots,
   computeAmericasLightningSlots,
+  computeAirmassSlot,
+  getAirmassOpacityExp,
   getHdColourOpacityExp,
   hdRoute,
+  type AirmassSource,
   type GibsAgency,
   type HdAgency,
   type HdVariant
 } from '../../utils/radarPhysics';
-import type { GibsTimelineState, HdTimelineState, LightningTimelineState } from './useHdTimeline';
+import type { AirmassTimelineState, GibsTimelineState, HdTimelineState, LightningTimelineState } from './useHdTimeline';
 import { RADAR_TILE_OPTIONS, sampleZoomForHost } from '../../utils/radarSampling';
 
 interface UseRadarAnimationProps {
@@ -41,22 +44,36 @@ interface UseRadarAnimationProps {
   gibsTimelineRefs: Record<GibsAgency, MutableRefObject<GibsTimelineState>>;
   lightningTimelineRef: MutableRefObject<LightningTimelineState>;
   americasLightningTimelineRef: MutableRefObject<LightningTimelineState>;
+  airmassTimelineRef: MutableRefObject<AirmassTimelineState>;
+  // Font d'Airmass del lloc consultat (airmassSourceForPoint).
+  airmassSourceRef: MutableRefObject<AirmassSource>;
 }
 
-const HD_AGENCIES: HdAgency[] = ['goes', 'meteosat', 'himawari'];
+// Pistes d'imatge de satèl·lit amb franges pròpies: els tres satèl·lits HD i
+// l'Airmass (aire fred en alçada), que comparteix tota la maquinària (una capa
+// per franja, precàrrega, FIFO i imatge de reserva mentre la nova no arriba).
+type HdTrack = HdAgency | 'airmass';
+const HD_TRACKS: HdTrack[] = ['goes', 'meteosat', 'himawari', 'airmass'];
+const perTrack = <T,>(make: () => T): Record<HdTrack, T> => ({ goes: make(), meteosat: make(), himawari: make(), airmass: make() });
 
-const isHdEnabled = (o: Overlays, agency: HdAgency): boolean =>
-  agency === 'goes' ? o.hdGoes : agency === 'meteosat' ? o.hdMeteosat : o.hdHimawari;
+// L'Airmass és opac i ocupa el lloc dels núvols: amb ell actiu, els satèl·lits
+// HD no es creen ni es mostren.
+const isHdEnabled = (o: Overlays, track: HdTrack): boolean =>
+  track === 'airmass' ? o.airmass
+    : !o.airmass && (track === 'goes' ? o.hdGoes : track === 'meteosat' ? o.hdMeteosat : o.hdHimawari);
 
 // Capa HD d'un fotograma: la clau porta la variant perquè una franja MSG de
 // :00/:30 no xoqui amb la mateixa hora de MTG (ni l'IR amb el color).
 interface HdTarget { key: string; variant: HdVariant; slot: number }
-const hdLayerId = (agency: HdAgency, key: string) => `hd-${agency}-layer-${key}`;
-const hdSourceId = (agency: HdAgency, key: string) => `hd-${agency}-src-${key}`;
+const hdLayerId = (agency: HdTrack, key: string) => `hd-${agency}-layer-${key}`;
+const hdSourceId = (agency: HdTrack, key: string) => `hd-${agency}-src-${key}`;
 const hdVariantOfKey = (key: string) => key.split('-')[0] as HdVariant;
 // GeoColour és una fotografia opaca: opacitat pròpia (vegeu radarPhysics).
-const hdOpacityExp = (key: string, baseOp: number) =>
-  HD_VARIANTS[hdVariantOfKey(key)].colour ? getHdColourOpacityExp(baseOp) : getSatOpacityExp(baseOp);
+const hdOpacityExp = (key: string, baseOp: number) => {
+  const variant = hdVariantOfKey(key);
+  if (variant === 'airmassMsg' || variant === 'airmassRing') return getAirmassOpacityExp(baseOp);
+  return HD_VARIANTS[variant].colour ? getHdColourOpacityExp(baseOp) : getSatOpacityExp(baseOp);
+};
 
 // Llamps: una capa per franja. MTG (clau = la franja de 5 min; cada
 // fotograma en mostra dues) i Amèrica (clau `am-` + la finestra de 15 min;
@@ -186,7 +203,9 @@ export function useRadarAnimation({
   hdTimelineRef,
   gibsTimelineRefs,
   lightningTimelineRef,
-  americasLightningTimelineRef
+  americasLightningTimelineRef,
+  airmassTimelineRef,
+  airmassSourceRef
 }: UseRadarAnimationProps) {
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -213,11 +232,7 @@ export function useRadarAnimation({
   // Ordre d'inserció de les capes HD vives per agència (claus de HdTarget):
   // FIFO per al límit MAX_LIVE_HD_FRAMES_PER_AGENCY i registre de les capes
   // que existeixen (vegeu ensureFrameLoaded).
-  const hdLoadOrderRef = useRef<Record<HdAgency, string[]>>({
-    goes: [],
-    meteosat: [],
-    himawari: []
-  });
+  const hdLoadOrderRef = useRef<Record<HdTrack, string[]>>(perTrack<string[]>(() => []));
 
   // CORRECCIÓ (Fase 3): abans les capes HD només es retiraven quan la
   // pròpia API de RainViewer feia caducar el timestamp (cicle de ~5 min).
@@ -225,11 +240,7 @@ export function useRadarAnimation({
   // fonts noves que no es reciclaven fins al següent refresc de dades,
   // acumulant pressió real sobre la VRAM. Ara detectem la transició
   // ON->OFF i alliberem la capa/font immediatament per a l'agència afectada.
-  const prevHdEnabledRef = useRef<Record<HdAgency, boolean>>({
-    goes: false,
-    meteosat: false,
-    himawari: false
-  });
+  const prevHdEnabledRef = useRef<Record<HdTrack, boolean>>(perTrack(() => false));
   // Canvi IR ⇄ color del satèl·lit HD: fora les capes de l'altra variant.
   const prevHdColourRef = useRef<boolean>(false);
 
@@ -270,14 +281,14 @@ export function useRadarAnimation({
   // que realment canvien. Els canvis provocats per un toggle d'overlay (que
   // sí afecten TOTES les capes d'un tipus, p.ex. mostrar/amagar precip)
   // continuen fent el recorregut complet — vegeu el paràmetre `animationTick`.
-  const lastTargetIdsRef = useRef<{ radar: string | null; sat: string | null; hd: Record<HdAgency, string | null>; lightning: string[] }>({
+  const lastTargetIdsRef = useRef<{ radar: string | null; sat: string | null; hd: Record<HdTrack, string | null>; lightning: string[] }>({
     radar: null,
     sat: null,
-    hd: { goes: null, meteosat: null, himawari: null },
+    hd: perTrack<string | null>(() => null),
     lightning: []
   });
 
-  const isHdReady = useCallback((map: Map, agency: HdAgency, key: string): boolean => {
+  const isHdReady = useCallback((map: Map, agency: HdTrack, key: string): boolean => {
     const sourceId = hdSourceId(agency, key);
     return !!map.getSource(sourceId) && map.isSourceLoaded(sourceId);
   }, []);
@@ -285,7 +296,7 @@ export function useRadarAnimation({
   // Imatge HD ja carregada més propera en el temps a la del fotograma (a
   // igualtat, l'anterior), de la mateixa variant i a MAX_HD_FALLBACK_SEC com
   // a molt; null si no n'hi ha cap.
-  const pickReadyHdKey = useCallback((map: Map, agency: HdAgency, target: HdTarget): string | null => {
+  const pickReadyHdKey = useCallback((map: Map, agency: HdTrack, target: HdTarget): string | null => {
     let bestKey: string | null = null;
     let bestDistance = Infinity;
     for (const key of hdLoadOrderRef.current[agency]) {
@@ -302,7 +313,7 @@ export function useRadarAnimation({
 
   // Allibera totes les capes/fonts HD d'una agència. Es crida quan l'usuari
   // desactiva l'overlay HD corresponent.
-  const pruneHdAgency = useCallback((agency: HdAgency) => {
+  const pruneHdAgency = useCallback((agency: HdTrack) => {
     const map = mapRef.current;
     if (!map) return;
     hdLoadOrderRef.current[agency].forEach((key) => {
@@ -316,8 +327,16 @@ export function useRadarAnimation({
   // pròpies cada 10 min: Meteosat alineades amb /hd/meteosat/latest (MTG o
   // MSG), GOES i Himawari amb les franges de GIBS de /hd/{agència}/latest.
   // Mentre no se saben, no se'n crea cap capa.
-  const hdTargetFor = useCallback((agency: HdAgency, frameTime: number | null | undefined): HdTarget | null => {
+  // L'Airmass, amb /airmass/latest: MSG a la seva zona i el mosaic a la resta
+  // (o si MSG va endarrerit); null si no hi ha cap font disponible.
+  const hdTargetFor = useCallback((agency: HdTrack, frameTime: number | null | undefined): HdTarget | null => {
     if (frameTime === null || frameTime === undefined) return null;
+    if (agency === 'airmass') {
+      const state = airmassTimelineRef.current;
+      if (state.status === 'idle' || state.status === 'pending') return null;
+      const target = computeAirmassSlot(frameTime, state.timeline, state.nowSec, airmassSourceRef.current);
+      return target && { key: `${target.variant}-${target.slot}`, variant: target.variant, slot: target.slot };
+    }
     const colour = overlaysRef.current.hdColour;
     if (agency === 'meteosat') {
       const state = hdTimelineRef.current;
@@ -329,14 +348,14 @@ export function useRadarAnimation({
     if (state.status === 'idle' || state.status === 'pending') return null;
     const { variant, slot } = computeGibsSlot(frameTime, state.timeline, state.nowSec, colour);
     return { key: `${variant}-${slot}`, variant, slot };
-  }, [hdTimelineRef, gibsTimelineRefs, overlaysRef]);
+  }, [hdTimelineRef, gibsTimelineRefs, overlaysRef, airmassTimelineRef, airmassSourceRef]);
 
   // Treu les capes HD que ja no necessita cap fotograma de la línia temporal
   // actual (dades de radar noves, o una altra franja/variant).
   const pruneUnneededHd = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-    HD_AGENCIES.forEach((agency) => {
+    HD_TRACKS.forEach((agency) => {
       const needed = new Set(radarFramesRef.current.map((t) => hdTargetFor(agency, t)?.key));
       hdLoadOrderRef.current[agency] = hdLoadOrderRef.current[agency].filter((key) => {
         if (needed.has(key)) return true;
@@ -508,7 +527,7 @@ export function useRadarAnimation({
             // l'animació no la mostraria fins al tick en què és l'objectiu,
             // sense haver precarregat les tessel·les.
             const o = overlaysRef.current;
-            const showSat = o.satIR || o.hdGoes || o.hdMeteosat || o.hdHimawari;
+            const showSat = !o.airmass && (o.satIR || o.hdGoes || o.hdMeteosat || o.hdHimawari);
             const targetSatOpacity = (isTarget && showSat) ? 0.85 : 0.000001;
 
             map.addLayer({
@@ -536,7 +555,7 @@ export function useRadarAnimation({
 
     // Capes HD: independents de la llista de satèl·lit de LibreWXR (cada
     // satèl·lit té hores pròpies; si LibreWXR cau, la capa HD continua).
-    HD_AGENCIES.forEach((agency) => {
+    HD_TRACKS.forEach((agency) => {
       if (!isHdEnabled(overlaysRef.current, agency)) return;
       const target = hdTargetFor(agency, frameTime);
       if (!target) return;
@@ -554,7 +573,7 @@ export function useRadarAnimation({
           type: 'raster',
           tiles: [`${SAT_PROXY_HOST}/${hdRoute(target.variant, agency)}/${target.slot}/{z}/{x}/{y}.png`],
           tileSize: cfg.tileSize ?? 512,
-          bounds: cfg.bounds ?? HD_BOUNDS[agency],
+          bounds: cfg.bounds ?? (agency === 'airmass' ? undefined : HD_BOUNDS[agency]),
           minzoom: cfg.minzoom ?? 2,
           maxzoom: cfg.maxzoom ?? 8
         });
@@ -653,11 +672,11 @@ export function useRadarAnimation({
     loadedRadarIdsRef.current = {};
     loadedSatIdsRef.current = {};
     radarLoadOrderRef.current = [];
-    hdLoadOrderRef.current = { goes: [], meteosat: [], himawari: [] };
-    prevHdEnabledRef.current = { goes: false, meteosat: false, himawari: false };
+    hdLoadOrderRef.current = perTrack<string[]>(() => []);
+    prevHdEnabledRef.current = perTrack(() => false);
     lightningLoadOrderRef.current = [];
     prevLightningEnabledRef.current = false;
-    lastTargetIdsRef.current = { radar: null, sat: null, hd: { goes: null, meteosat: null, himawari: null }, lightning: [] };
+    lastTargetIdsRef.current = { radar: null, sat: null, hd: perTrack<string | null>(() => null), lightning: [] };
   }, []);
 
   const applyFrameVisibility = useCallback((index: number, animationTick: boolean = false) => {
@@ -681,7 +700,7 @@ export function useRadarAnimation({
 
     // CORRECCIÓ (Fase 3): detecció de transició ON->OFF per agència HD i
     // alliberament immediat de VRAM (veure pruneHdAgency més amunt).
-    HD_AGENCIES.forEach((agency) => {
+    HD_TRACKS.forEach((agency) => {
       const isEnabledNow = isHdEnabled(overlaysRef.current, agency);
       const wasEnabled = prevHdEnabledRef.current[agency];
 
@@ -722,7 +741,8 @@ export function useRadarAnimation({
 
     const showPrecip = overlaysRef.current.precip;
     const hasAnyHdEnabled = overlaysRef.current.hdGoes || overlaysRef.current.hdMeteosat || overlaysRef.current.hdHimawari;
-    const showSat = overlaysRef.current.satIR || hasAnyHdEnabled; // HD i IR van de la mà asíncrona
+    // HD i IR van de la mà asíncrona; sota l'Airmass (opac), cap dels dos.
+    const showSat = !overlaysRef.current.airmass && (overlaysRef.current.satIR || hasAnyHdEnabled);
 
     // Aplicació d'Opacitats GPU sense desmuntar capes
     if (animationTick) {
@@ -785,7 +805,7 @@ export function useRadarAnimation({
     // encara no ha arribat, es mostra la imatge ja carregada més propera en
     // el temps (vegeu MAX_HD_FALLBACK_SEC); si no n'hi ha cap, la del
     // fotograma. En pausa, sempre la del fotograma exacte.
-    HD_AGENCIES.forEach((agency) => {
+    HD_TRACKS.forEach((agency) => {
       const enabled = isHdEnabled(overlaysRef.current, agency);
       const target = enabled ? hdTargetFor(agency, currentFrameTime) : null;
       const newHdId = target ? hdLayerId(agency, target.key) : null;

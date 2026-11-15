@@ -15,6 +15,8 @@ import {
   getBlackMarbleUrl,
   getCloudSource,
   hdAgencyForPoint,
+  airmassSourceForPoint,
+  computeAirmassSlot,
 } from '../utils/radarPhysics';
 import { loadRadarLayers, saveRadarLayers } from '../utils/radarLayerPrefs';
 import type { Language } from '../translations';
@@ -33,7 +35,7 @@ import { useAstroEngine } from '../hooks/radar/useAstroEngine';
 import { useCameraFlight } from '../hooks/radar/useCameraFlight';
 import { useRadarAnimation } from '../hooks/radar/useRadarAnimation';
 import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
-import { useAmericasLightningTimeline, useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
+import { useAirmassTimeline, useAmericasLightningTimeline, useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -110,7 +112,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     });
   }, []);
 
-  // Núvols: l'IR global i els satèl·lits HD són excloents (CloudSource).
+  // Núvols: l'IR global, els satèl·lits HD i l'Airmass són excloents (CloudSource).
   const setCloudSource = useCallback((source: CloudSource) => {
     setOverlays(prev => {
       const next = {
@@ -118,7 +120,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
         satIR: source === 'global',
         hdMeteosat: source === 'meteosat',
         hdGoes: source === 'goes',
-        hdHimawari: source === 'himawari'
+        hdHimawari: source === 'himawari',
+        airmass: source === 'airmass'
       };
       overlaysRef.current = next;
       return next;
@@ -127,6 +130,12 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
 
   // Satèl·lit HD de la ubicació consultada: el que el menú tria en passar a HD.
   const homeHdAgency = useMemo(() => hdAgencyForPoint(lat, lon), [lat, lon]);
+  // Font d'Airmass del lloc consultat: MSG a la seva zona, el mosaic a la resta.
+  const homeAirmassSource = useMemo(() => airmassSourceForPoint(lat, lon), [lat, lon]);
+  const airmassSourceRef = useRef(homeAirmassSource);
+  useEffect(() => {
+    airmassSourceRef.current = homeAirmassSource;
+  }, [homeAirmassSource]);
 
   // --- ARRANQUEN ELS NOUS HOOKS (CLEAN ARCHITECTURE) ---
 
@@ -161,6 +170,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   const gibsTimelineRefs = useMemo(() => ({ goes: goesTimelineRef, himawari: himawariTimelineRef }), [goesTimelineRef, himawariTimelineRef]);
   const { timelineRef: lightningTimelineRef, version: lightningTimelineVersion } = useLightningTimeline(overlays.lightning);
   const { timelineRef: americasLightningTimelineRef, version: americasLightningTimelineVersion } = useAmericasLightningTimeline(overlays.lightning);
+  const { timelineRef: airmassTimelineRef, version: airmassTimelineVersion } = useAirmassTimeline(overlays.airmass);
 
   const {
     isPlaying, pausePlayback, framesCount, currentFrameTimestamp,
@@ -178,7 +188,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     hdTimelineRef,
     gibsTimelineRefs,
     lightningTimelineRef,
-    americasLightningTimelineRef
+    americasLightningTimelineRef,
+    airmassTimelineRef,
+    airmassSourceRef
   });
 
   useCameraFlight({
@@ -189,6 +201,16 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     overlays,
     styleReadyRef
   });
+
+  // Hora de la imatge d'Airmass del fotograma que es veu, per a la llegenda: el
+  // mosaic global surt cada 3 h i pot tenir unes quantes hores.
+  const [airmassTime, setAirmassTime] = useState<string | null>(null);
+  useEffect(() => {
+    const state = airmassTimelineRef.current;
+    const known = overlays.airmass && currentFrameTimestamp !== null && (state.status === 'ready' || state.status === 'failed');
+    const target = known ? computeAirmassSlot(currentFrameTimestamp, state.timeline, state.nowSec, homeAirmassSource) : null;
+    setAirmassTime(target ? formatTime(target.slot) : null);
+  }, [overlays.airmass, currentFrameTimestamp, airmassTimelineVersion, homeAirmassSource, airmassTimelineRef, formatTime]);
 
   // --- CONNECTORS FILLS (PONT ENTRE HOOKS) ---
 
@@ -218,10 +240,11 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     );
   }, [activeBaseLayer, overlays, webglKey, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
 
-  // 2b. Franges HD noves (/hd/meteosat/latest, /hd/goes/latest, /hd/himawari/latest).
+  // 2b. Franges HD noves (/hd/meteosat/latest, /hd/goes/latest,
+  // /hd/himawari/latest) i d'Airmass (/airmass/latest).
   useEffect(() => {
-    if (hdTimelineVersion + goesTimelineVersion + himawariTimelineVersion > 0) refreshHdTimeline();
-  }, [hdTimelineVersion, goesTimelineVersion, himawariTimelineVersion, refreshHdTimeline]);
+    if (hdTimelineVersion + goesTimelineVersion + himawariTimelineVersion + airmassTimelineVersion > 0) refreshHdTimeline();
+  }, [hdTimelineVersion, goesTimelineVersion, himawariTimelineVersion, airmassTimelineVersion, refreshHdTimeline]);
 
   // 2c. Franges de llamps noves (/lightning/latest i /lightning/americas/latest).
   useEffect(() => {
@@ -290,6 +313,16 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
             >
               NASA GIBS · NOAA/NESDIS · GOES (CIRA) · Himawari (JMA)
             </a>
+            {/* Aire fred (Airmass): RGB d'EUMETSAT; el mosaic global hi suma
+                les dades de GOES (NOAA) i Himawari (JMA). */}
+            <a
+              href="https://view.eumetsat.int/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+            >
+              Airmass RGB: EUMETSAT · GOES (NOAA) · Himawari (JMA)
+            </a>
             {/* Llamps d'Amèrica: densitat de NOAA nowCOAST (xarxes NLDN i GLD360). */}
             <a
               href="https://nowcoast.noaa.gov/"
@@ -301,8 +334,14 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
             </a>
           </>
         )}
-        {/* Llegenda plegable: pluja i neu (amb la capa de precipitació) i llamps. */}
-        <RadarLegend showPrecip={overlays.precip} showLightning={overlays.lightning} palette={radarPalette} />
+        {/* Llegenda plegable: pluja i neu (amb la capa de precipitació), llamps i Airmass. */}
+        <RadarLegend
+          showPrecip={overlays.precip}
+          showLightning={overlays.lightning}
+          palette={radarPalette}
+          showAirmass={overlays.airmass}
+          airmassTime={airmassTime}
+        />
         <button
           onClick={() => setShowAttribution(v => !v)}
           aria-label={t('radarData')}
@@ -329,6 +368,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
         cloudSource={getCloudSource(overlays)}
         setCloudSource={setCloudSource}
         homeHdAgency={homeHdAgency}
+        homeAirmassSource={homeAirmassSource}
         baseLayers={BASE_LAYERS}
       />
 

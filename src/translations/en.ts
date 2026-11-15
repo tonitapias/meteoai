@@ -31,6 +31,9 @@ export const en = {
   cloudsNoneDesc: "No satellite image",
   cloudsGlobalDesc: "The whole world in infrared, one image per hour",
   cloudsHdDesc: "Sharper, one image every 10 minutes",
+  cloudsAirmass: "Air masses",
+  cloudsAirmassDesc: "Cold, dry or warm air aloft (Airmass), one image every 15 minutes",
+  cloudsAirmassDescGlobal: "Cold, dry or warm air aloft (Airmass), one image every 3 hours",
   hdSatelliteLabel: "HD satellite",
   hdRegionMeteosat: "Europe and Africa",
   hdRegionGoes: "Americas",
@@ -58,6 +61,12 @@ export const en = {
   legendRain: "Rain or snow",
   legendLess: "less",
   legendMore: "more",
+  legendAirmass: "Air masses",
+  legendAirmassTime: "image from {{time}}",
+  legendAirmassCold: "Cold air",
+  legendAirmassDry: "Dry air aloft",
+  legendAirmassWarm: "Warm air",
+  legendAirmassHint: "Red marks the jet stream and the core of cut-off lows",
 
   // --- Controls del reproductor ---
   btnPlay: "Play",

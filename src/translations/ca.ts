@@ -29,6 +29,9 @@ export const ca = {
   cloudsNoneDesc: "Sense imatge de satèl·lit",
   cloudsGlobalDesc: "Tot el món en infraroig, una imatge cada hora",
   cloudsHdDesc: "Més nitidesa, una imatge cada 10 minuts",
+  cloudsAirmass: "Masses d'aire",
+  cloudsAirmassDesc: "Aire fred, sec o càlid en alçada (Airmass), una imatge cada 15 minuts",
+  cloudsAirmassDescGlobal: "Aire fred, sec o càlid en alçada (Airmass), una imatge cada 3 hores",
   hdSatelliteLabel: "Satèl·lit HD",
   hdRegionMeteosat: "Europa i Àfrica",
   hdRegionGoes: "Amèrica",
@@ -56,6 +59,12 @@ export const ca = {
   legendRain: "Pluja o neu",
   legendLess: "menys",
   legendMore: "més",
+  legendAirmass: "Masses d'aire",
+  legendAirmassTime: "imatge de les {{time}}",
+  legendAirmassCold: "Aire fred",
+  legendAirmassDry: "Aire sec d'alçada",
+  legendAirmassWarm: "Aire càlid",
+  legendAirmassHint: "El vermell marca el corrent en jet i el nucli de les DANA",
 
   // Controls del reproductor
   btnPlay: "Reproduir",

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { z } from 'zod';
 import { fetchWithTimeout } from '../../utils/networkUtils';
 import {
+  AirmassLatestSchema,
+  type AirmassLatest,
   GibsTimelineSchema,
   HdTimelineSchema,
   LightningLatestSchema,
@@ -31,12 +33,14 @@ export interface SlotTimelineState<T> {
 export type HdTimelineState = SlotTimelineState<HdTimeline>;
 export type LightningTimelineState = SlotTimelineState<LightningLatest>;
 export type GibsTimelineState = SlotTimelineState<GibsTimeline>;
+export type AirmassTimelineState = SlotTimelineState<AirmassLatest>;
 
 // La resposta porta `Cache-Control: max-age=60`: obrir i tancar el radar en
 // menys d'un minut surt de la memòria cau HTTP del navegador.
 const HD_LATEST_URL = `${SAT_PROXY_HOST}/hd/meteosat/latest`;
 const LIGHTNING_LATEST_URL = `${SAT_PROXY_HOST}/lightning/latest`;
 const AMERICAS_LIGHTNING_LATEST_URL = `${SAT_PROXY_HOST}/lightning/americas/latest`;
+const AIRMASS_LATEST_URL = `${SAT_PROXY_HOST}/airmass/latest`;
 const FETCH_TIMEOUT_MS = 3000;
 const REFRESH_MS = 5 * 60 * 1000;
 
@@ -100,6 +104,11 @@ export function useGibsTimeline(agency: GibsAgency, enabled: boolean) {
 
 export function useLightningTimeline(enabled: boolean) {
   return useSlotTimeline<LightningLatest>(enabled, LIGHTNING_LATEST_URL, LightningLatestSchema);
+}
+
+// Aire fred en alçada (Airmass): franja més nova de MSG i del mosaic global.
+export function useAirmassTimeline(enabled: boolean) {
+  return useSlotTimeline<AirmassLatest>(enabled, AIRMASS_LATEST_URL, AirmassLatestSchema);
 }
 
 // Llamps d'Amèrica (nowCOAST): mateix format que /lightning/latest.

@@ -31,6 +31,9 @@ export const fr = {
   cloudsNoneDesc: "Sans image satellite",
   cloudsGlobalDesc: "Le monde entier en infrarouge, une image par heure",
   cloudsHdDesc: "Plus net, une image toutes les 10 minutes",
+  cloudsAirmass: "Masses d'air",
+  cloudsAirmassDesc: "Air froid, sec ou chaud en altitude (Airmass), une image toutes les 15 minutes",
+  cloudsAirmassDescGlobal: "Air froid, sec ou chaud en altitude (Airmass), une image toutes les 3 heures",
   hdSatelliteLabel: "Satellite HD",
   hdRegionMeteosat: "Europe et Afrique",
   hdRegionGoes: "Amériques",
@@ -58,6 +61,12 @@ export const fr = {
   legendRain: "Pluie ou neige",
   legendLess: "moins",
   legendMore: "plus",
+  legendAirmass: "Masses d'air",
+  legendAirmassTime: "image de {{time}}",
+  legendAirmassCold: "Air froid",
+  legendAirmassDry: "Air sec d'altitude",
+  legendAirmassWarm: "Air chaud",
+  legendAirmassHint: "Le rouge marque le courant-jet et le cœur des gouttes froides",
 
   // --- Controls del reproductor ---
   btnPlay: "Lecture",

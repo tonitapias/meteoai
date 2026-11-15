@@ -17,6 +17,7 @@ import {
   BaseLayerConfig,
   Overlays,
   CloudSource,
+  type AirmassSource,
   HdAgency,
   OverlayToggleKey
 } from '../../utils/radarPhysics';
@@ -40,6 +41,8 @@ interface RadarLayerMenuProps {
   setCloudSource: (source: CloudSource) => void;
   // Satèl·lit HD que cobreix la ubicació consultada (hdAgencyForPoint).
   homeHdAgency: HdAgency;
+  // Font d'Airmass de la ubicació consultada (airmassSourceForPoint).
+  homeAirmassSource: AirmassSource;
   baseLayers: Record<BaseLayerType, BaseLayerConfig>;
 }
 
@@ -114,6 +117,7 @@ export function RadarLayerMenu({
   cloudSource,
   setCloudSource,
   homeHdAgency,
+  homeAirmassSource,
   baseLayers
 }: RadarLayerMenuProps) {
   const { t } = useTranslation();
@@ -132,9 +136,9 @@ export function RadarLayerMenu({
 
   // Últim satèl·lit HD triat: "HD" hi torna; si no n'hi ha, el de la ubicació.
   const lastHdRef = useRef<HdAgency | null>(null);
-  const isHd = cloudSource !== 'none' && cloudSource !== 'global';
+  const isHd = cloudSource !== 'none' && cloudSource !== 'global' && cloudSource !== 'airmass';
   useEffect(() => {
-    if (cloudSource !== 'none' && cloudSource !== 'global') lastHdRef.current = cloudSource;
+    if (cloudSource !== 'none' && cloudSource !== 'global' && cloudSource !== 'airmass') lastHdRef.current = cloudSource;
   }, [cloudSource]);
 
   // Explicació d'una línia de l'última capa de "Més capes" tocada.
@@ -221,16 +225,21 @@ export function RadarLayerMenu({
 
   const baseKeys = (Object.keys(baseLayers) as BaseLayerType[]).filter((key) => key !== 'black_marble'); // l'easter egg no surt al menú
 
-  const cloudOptions: { value: 'none' | 'global' | 'hd'; label: string }[] = [
+  const cloudOptions: { value: 'none' | 'global' | 'hd' | 'airmass'; label: string }[] = [
     { value: 'none', label: t('cloudsNone', 'Cap') },
     { value: 'global', label: t('cloudsGlobal', 'Global') },
-    { value: 'hd', label: t('cloudsHd', 'HD') }
+    { value: 'hd', label: t('cloudsHd', 'HD') },
+    { value: 'airmass', label: t('cloudsAirmass', "Masses d'aire") }
   ];
   const cloudOption = isHd ? 'hd' : cloudSource;
   const cloudDesc = {
     none: t('cloudsNoneDesc', 'Sense imatge de satèl·lit'),
     global: t('cloudsGlobalDesc', 'Tot el món en infraroig, una imatge cada hora'),
-    hd: t('cloudsHdDesc', 'Més nitidesa, una imatge cada 10 minuts')
+    hd: t('cloudsHdDesc', 'Més nitidesa, una imatge cada 10 minuts'),
+    // MSG (Europa i Àfrica) cada 15 min; el mosaic de la resta del món, cada 3 h.
+    airmass: homeAirmassSource === 'msg'
+      ? t('cloudsAirmassDesc', 'Aire fred, sec o càlid en alçada (Airmass), una imatge cada 15 minuts')
+      : t('cloudsAirmassDescGlobal', 'Aire fred, sec o càlid en alçada (Airmass), una imatge cada 3 hores')
   }[cloudOption];
   const hdRegions: Record<HdAgency, string> = {
     meteosat: t('hdRegionMeteosat', 'Europa i Àfrica'),
@@ -367,9 +376,9 @@ export function RadarLayerMenu({
               </div>
             </Section>
 
-            {/* 3. Núvols: Cap · Global · HD */}
+            {/* 3. Núvols: Cap · Global · HD · Masses d'aire */}
             <Section id={ids.clouds} title={t('layersCloudsTitle', 'Núvols')}>
-              <div role="radiogroup" aria-labelledby={ids.clouds} className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+              <div role="radiogroup" aria-labelledby={ids.clouds} className="grid grid-cols-[1fr_1fr_1fr_1.35fr] gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">
                 {cloudOptions.map(({ value, label }) => {
                   const selected = cloudOption === value;
                   return (

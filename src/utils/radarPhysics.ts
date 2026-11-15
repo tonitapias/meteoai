@@ -49,6 +49,10 @@ export interface Overlays {
   // Satèl·lit HD en color (GeoColour de Meteosat, GeoColor de GOES) en lloc
   // d'infraroig. Himawari no en té i continua en IR.
   hdColour: boolean;
+  // Aire fred en alçada (Airmass RGB d'EUMETSAT). És una imatge opaca: mentre
+  // és activa ocupa el lloc dels núvols (IR global o satèl·lit HD), que no es
+  // dibuixen.
+  airmass: boolean;
 }
 
 // CORRECCIÓ (revisió Fase 3): es va intentar definir GeoFeatureCollection
@@ -129,13 +133,15 @@ export const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
 // L'IR global (LibreWXR) i els tres satèl·lits HD són excloents: el menú de
 // capes els presenta com un sol selector (Cap · Global · HD) i RadarMap els
 // escriu tots alhora (setCloudSource) als booleans d'Overlays, que és el que
-// llegeixen els hooks.
-export type CloudSource = 'none' | 'global' | HdAgency;
+// llegeixen els hooks. L'Airmass (aire fred en alçada) és una quarta opció del
+// mateix selector: una imatge opaca que ocupa el lloc dels núvols.
+export type CloudSource = 'none' | 'global' | HdAgency | 'airmass';
 // La resta de capes s'encenen i s'apaguen soles.
-export type OverlayToggleKey = Exclude<keyof Overlays, 'satIR' | 'hdGoes' | 'hdMeteosat' | 'hdHimawari'>;
+export type OverlayToggleKey = Exclude<keyof Overlays, 'satIR' | 'hdGoes' | 'hdMeteosat' | 'hdHimawari' | 'airmass'>;
 
 export const getCloudSource = (o: Overlays): CloudSource =>
-  o.hdMeteosat ? 'meteosat'
+  o.airmass ? 'airmass'
+    : o.hdMeteosat ? 'meteosat'
     : o.hdGoes ? 'goes'
       : o.hdHimawari ? 'himawari'
         : o.satIR ? 'global'
@@ -171,7 +177,9 @@ export const hdAgencyForPoint = (lat: number, lon: number): HdAgency => {
 // (GeoColour), MSG (el Meteosat actual, reserva fins al 2027) o GIBS
 // (GOES/Himawari via NASA, cada 10 min), en IR o en color (GeoColor, només
 // GOES).
-export type HdVariant = 'mtg' | 'mtgColour' | 'msg' | 'gibs' | 'gibsColour';
+// Les dues d'Airmass (vegeu AIRMASS_SOURCES): MSG cada 15 min i el mosaic
+// global cada 3 h.
+export type HdVariant = 'mtg' | 'mtgColour' | 'msg' | 'gibs' | 'gibsColour' | 'airmassMsg' | 'airmassRing';
 
 interface HdVariantConfig {
   cadenceSec: number;
@@ -209,11 +217,22 @@ export const HD_VARIANTS: Record<HdVariant, HdVariantConfig> = {
   mtgColour: { cadenceSec: 600, route: 'hd/mtg/geocolour/v1', bounds: MTG_BOUNDS, saturation: 0, contrast: 0, brightnessMin: 0, colour: true },
   msg: { cadenceSec: 900, route: 'hd/meteosat', bounds: MSG_BOUNDS, saturation: -1, contrast: 0.3, brightnessMin: 0 },
   gibs: { cadenceSec: 600, route: 'hd/gibs/v1', gibsProduct: 'ir', tileSize: 256, minzoom: 3, maxzoom: 6, saturation: 0, contrast: 0.3, brightnessMin: 0 },
-  gibsColour: { cadenceSec: 600, route: 'hd/gibs/v1', gibsProduct: 'colour', tileSize: 256, minzoom: 3, maxzoom: 7, saturation: 0, contrast: 0, brightnessMin: 0, colour: true }
+  gibsColour: { cadenceSec: 600, route: 'hd/gibs/v1', gibsProduct: 'colour', tileSize: 256, minzoom: 3, maxzoom: 7, saturation: 0, contrast: 0, brightnessMin: 0, colour: true },
+  // Airmass de MSG, de 45° O a 45° E: Mapbox demana tessel·les SENCERES que
+  // toquin els límits i ±45° és frontera de tessel·la a partir de z3 (per això
+  // minzoom 3), de manera que la vora és neta a tots els zooms. Més enllà el
+  // satèl·lit mira de biaix i l'aire sembla més fred (blavós) del que és, i
+  // les tessel·les de la vora del disc arriben en PNG de ~0,5 MB. 66,4° queda
+  // just sota la frontera de tessel·la de 66,51°, com a les altres capes HD.
+  // 3 km de resolució real: per sobre de z5 (tessel·les de 512 px, ~1 km per
+  // píxel a 40° N) Mapbox amplia sense demanar res més a EUMETSAT.
+  airmassMsg: { cadenceSec: 900, route: 'airmass/v1/msg', bounds: [-44.9, -66.4, 44.9, 66.4], minzoom: 3, maxzoom: 5, saturation: 0, contrast: 0, brightnessMin: 0, colour: true },
+  airmassRing: { cadenceSec: 10800, route: 'airmass/v1/ring', bounds: [-180, -66.4, 180, 66.4], minzoom: 2, maxzoom: 5, saturation: 0, contrast: 0, brightnessMin: 0, colour: true }
 };
 
 // Ruta de les tessel·les d'una variant HD per a una agència.
-export function hdRoute(variant: HdVariant, agency: HdAgency): string {
+// (Les d'Airmass no depenen de l'agència.)
+export function hdRoute(variant: HdVariant, agency: HdAgency | 'airmass'): string {
   const cfg = HD_VARIANTS[variant];
   return cfg.gibsProduct ? `${cfg.route}/${agency}/${cfg.gibsProduct}` : cfg.route;
 }
@@ -343,6 +362,66 @@ export function computeGibsSlot(
   return { variant, slot: slot ?? product.slots[0] ?? product.latest };
 }
 
+// --- AIRE FRED EN ALÇADA (AIRMASS RGB D'EUMETSAT) ---
+// Dues fonts del worker (vegeu AIRMASS_SOURCES a meteo-sat-proxy): `msg`, el
+// Meteosat de 0° cada 15 min, i `ring`, el mosaic de tots els geostacionaris
+// cada 3 h, que cobreix la resta del món i fa de reserva de MSG. No es
+// barregen dins una mateixa imatge: una font per sessió, segons el lloc.
+export type AirmassSource = 'msg' | 'ring';
+
+interface AirmassSourceConfig {
+  // Ruta, cadència, límits i zooms: a HD_VARIANTS, com les capes HD.
+  variant: 'airmassMsg' | 'airmassRing';
+  // Sense /airmass/latest: marge des d'ara per a l'hora calculada.
+  computedLagSec: number;
+}
+
+export const AIRMASS_SOURCES: Record<AirmassSource, AirmassSourceConfig> = {
+  msg: { variant: 'airmassMsg', computedLagSec: HD_COMPUTED_LAG_SEC },
+  ring: { variant: 'airmassRing', computedLagSec: 5400 }
+};
+
+// Resposta de /airmass/latest: la franja més nova de cada font. `msg` null si
+// MSG va 90 min o més endarrerit (es mostra el mosaic); `ring` null si el
+// mosaic fa 12 h que no surt.
+export const AirmassLatestSchema = z.object({
+  msg: SlotLatestSchema.nullable(),
+  ring: SlotLatestSchema.nullable(),
+});
+export type AirmassLatest = z.infer<typeof AirmassLatestSchema>;
+
+// Font d'Airmass per a un punt: MSG si cau dins la seva zona, el mosaic a la
+// resta del món.
+export const airmassSourceForPoint = (lat: number, lon: number): AirmassSource => {
+  const [west, south, east, north] = HD_VARIANTS.airmassMsg.bounds!;
+  return lon >= west && lon <= east && lat >= south && lat <= north ? 'msg' : 'ring';
+};
+
+// Font i franja d'Airmass d'un fotograma de radar. La font preferida (la del
+// lloc) si el worker en dona franja; si MSG no en té, el mosaic. La franja és
+// la del fotograma (quinzena de MSG, o les 3 h del mosaic) sense passar de la
+// més nova publicada: amb el mosaic, tot el bucle sol compartir una imatge o
+// dues. Sense /airmass/latest (`timeline` null), una hora calculada. null si
+// no hi ha cap font disponible (la capa no es mostra).
+export function computeAirmassSlot(
+  frameTime: number,
+  timeline: AirmassLatest | null,
+  nowSec: number,
+  preferred: AirmassSource
+): { source: AirmassSource; variant: 'airmassMsg' | 'airmassRing'; slot: number } | null {
+  const source: AirmassSource | null = timeline === null
+    ? preferred
+    : preferred === 'msg' && timeline.msg ? 'msg'
+      : timeline.ring ? 'ring'
+        : null;
+  if (source === null) return null;
+  const cfg = AIRMASS_SOURCES[source];
+  const published = timeline?.[source];
+  const cadence = published?.cadence ?? HD_VARIANTS[cfg.variant].cadenceSec;
+  const latest = published ? floorTo(published.latest, cadence) : floorTo(nowSec - cfg.computedLagSec, cadence);
+  return { source, variant: cfg.variant, slot: Math.min(floorTo(frameTime, cadence), latest) };
+}
+
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---
 
 export const getNasaFiresDate = (): string => {
@@ -403,6 +482,19 @@ export const getHdColourOpacityExp = (baseOp: number): Expression => {
     8, baseOp * 0.6,
     10, baseOp * 0.2,
     12, 0
+  ];
+};
+
+// Airmass: imatge opaca de gran escala (3 km). Plena fins a z7, que és on es
+// llegeixen les masses d'aire; més a prop s'esvaeix a poc a poc cap al mapa
+// base sense desaparèixer, perquè de prop encara diu quin aire hi ha a sobre.
+export const getAirmassOpacityExp = (baseOp: number): Expression => {
+  return [
+    'interpolate', ['linear'], ['zoom'],
+    2, baseOp * 0.92,
+    7, baseOp * 0.88,
+    10, baseOp * 0.6,
+    13, baseOp * 0.35
   ];
 };
 

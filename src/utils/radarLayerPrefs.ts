@@ -27,11 +27,12 @@ export const DEFAULT_OVERLAYS: Overlays = {
   nasaFires: false,
   terrain3D: false,
   lightning: true,
-  hdColour: false
+  hdColour: false,
+  airmass: false
 };
 
 type SavedBase = Exclude<BaseLayerType, 'black_marble'>;
-type CloudChoice = 'none' | 'global' | 'hd';
+type CloudChoice = 'none' | 'global' | 'hd' | 'airmass';
 
 interface SavedRadarLayers {
   base: SavedBase;
@@ -46,7 +47,7 @@ interface SavedRadarLayers {
 }
 
 const SAVED_BASES: readonly SavedBase[] = ['dark', 'light', 'relief', 'sat_optic'];
-const CLOUD_CHOICES: readonly CloudChoice[] = ['none', 'global', 'hd'];
+const CLOUD_CHOICES: readonly CloudChoice[] = ['none', 'global', 'hd', 'airmass'];
 const FLAGS = ['hdColour', 'precip', 'lightning', 'night', 'labels', 'nasaFires', 'nasaReal'] as const;
 
 const readSaved = (): Partial<SavedRadarLayers> => {
@@ -78,6 +79,7 @@ export function loadRadarLayers(lat: number, lon: number): { base: BaseLayerType
   });
   if (saved.clouds) {
     overlays.satIR = saved.clouds === 'global';
+    overlays.airmass = saved.clouds === 'airmass';
     if (saved.clouds === 'hd') {
       const agency = hdAgencyForPoint(lat, lon);
       overlays.hdMeteosat = agency === 'meteosat';
@@ -93,7 +95,7 @@ export function saveRadarLayers(base: BaseLayerType, overlays: Overlays): void {
   const saved: SavedRadarLayers = {
     // Amb la Terra de Nit activa es manté el mapa de fons que ja hi havia.
     base: base === 'black_marble' ? (readSaved().base ?? 'sat_optic') : base,
-    clouds: source === 'none' || source === 'global' ? source : 'hd',
+    clouds: source === 'none' || source === 'global' || source === 'airmass' ? source : 'hd',
     hdColour: overlays.hdColour,
     precip: overlays.precip,
     lightning: overlays.lightning,

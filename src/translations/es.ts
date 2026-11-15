@@ -30,6 +30,9 @@ export const es = {
   cloudsNoneDesc: "Sin imagen de satélite",
   cloudsGlobalDesc: "Todo el mundo en infrarrojo, una imagen cada hora",
   cloudsHdDesc: "Más nitidez, una imagen cada 10 minutos",
+  cloudsAirmass: "Masas de aire",
+  cloudsAirmassDesc: "Aire frío, seco o cálido en altura (Airmass), una imagen cada 15 minutos",
+  cloudsAirmassDescGlobal: "Aire frío, seco o cálido en altura (Airmass), una imagen cada 3 horas",
   hdSatelliteLabel: "Satélite HD",
   hdRegionMeteosat: "Europa y África",
   hdRegionGoes: "América",
@@ -57,6 +60,12 @@ export const es = {
   legendRain: "Lluvia o nieve",
   legendLess: "menos",
   legendMore: "más",
+  legendAirmass: "Masas de aire",
+  legendAirmassTime: "imagen de las {{time}}",
+  legendAirmassCold: "Aire frío",
+  legendAirmassDry: "Aire seco de altura",
+  legendAirmassWarm: "Aire cálido",
+  legendAirmassHint: "El rojo marca la corriente en chorro y el núcleo de las DANA",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",
