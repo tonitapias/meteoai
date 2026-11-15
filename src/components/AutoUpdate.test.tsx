@@ -32,6 +32,15 @@ const setVisibility = (next: DocumentVisibilityState) => {
   document.dispatchEvent(new Event('visibilitychange'));
 };
 
+/** En amagar-se, el canvi no es demana a l'instant (vegeu HIDDEN_APPLY_DELAY_MS a AutoUpdate.tsx). */
+const HIDDEN_DELAY_MS = 1_000;
+
+/** Se surt de l'app (s'amaga) i s'hi continua fora prou estona. */
+const goAway = () => {
+  setVisibility('hidden');
+  vi.advanceTimersByTime(HIDDEN_DELAY_MS);
+};
+
 /** Arriba una versió nova (el SW nou queda en espera). */
 const updateArrives = (rerender: (ui: ReactElement) => void) => {
   pwa.needRefresh = true;
@@ -55,6 +64,37 @@ afterEach(() => {
 });
 
 describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  });
+
+  // Recarregar o navegar amaguen la pàgina just abans de descarregar-la. Demanar el canvi llavors feia que la versió
+  // nova prengués el control a mitja càrrega de la pàgina següent (vist en local el 16-11-2026: codi antic amb el
+  // SW nou, o la càrrega aturada 31 s).
+  it("en recarregar o navegar (s'amaga i es descarrega de seguida), no ho demana", () => {
+    const { rerender, unmount } = render(<AutoUpdate />);
+    fireEvent.pointerDown(window);
+    updateArrives(rerender);
+
+    setVisibility('hidden');
+    expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
+    unmount();
+    vi.advanceTimersByTime(10 * HIDDEN_DELAY_MS);
+    expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
+  });
+
+  it("si s'hi torna de seguida amb un modal obert, tampoc (l'espera s'anul·la)", () => {
+    const { rerender } = render(<AutoUpdate />);
+    fireEvent.pointerDown(window);
+    updateArrives(rerender);
+    window.history.pushState({ modalOpen: true }, '', '/');
+
+    setVisibility('hidden');
+    setVisibility('visible');
+    vi.advanceTimersByTime(10 * HIDDEN_DELAY_MS);
+    expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
+  });
+
   it("no pinta res (ja no hi ha l'avís per acceptar-la)", () => {
     pwa.needRefresh = true;
     const { container } = render(<AutoUpdate />);
@@ -74,7 +114,7 @@ describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
     updateArrives(rerender);
     expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
 
-    setVisibility('hidden');
+    goAway();
     expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
   });
 
@@ -84,7 +124,7 @@ describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
     updateArrives(rerender);
     expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
 
-    setVisibility('hidden');
+    goAway();
     expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
   });
 
@@ -94,7 +134,7 @@ describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
     updateArrives(rerender);
     window.history.pushState({ modalOpen: true }, '', '/');
 
-    setVisibility('hidden');
+    goAway();
     expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
 
     // Torna amb el modal encara obert: tampoc.
@@ -104,7 +144,7 @@ describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
 
     // El tanca i se'n va: ara sí.
     window.history.replaceState(null, '', '/');
-    setVisibility('hidden');
+    goAway();
     expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
   });
 
@@ -113,7 +153,7 @@ describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
     fireEvent.pointerDown(window);
     window.history.pushState({ modalId: 'radarLive' }, '', '/');
     updateArrives(rerender);
-    setVisibility('hidden');
+    goAway();
     expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
 
     // Mentre era fora, el radar s'ha tancat (p. ex. l'enrere del sistema).
@@ -127,9 +167,64 @@ describe('AutoUpdate → la versió nova es posa sola, sense avís', () => {
     const { rerender } = render(<AutoUpdate />);
     fireEvent.pointerDown(window);
     updateArrives(rerender);
-    setVisibility('hidden');
+    goAway();
     setVisibility('visible');
-    setVisibility('hidden');
+    goAway();
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
+  });
+});
+
+// El navegador no activa la versió en espera mentre l'antiga encara atén peticions (en obrir l'app, sempre): la
+// primera petició queda ajornada ~30 s. Vist a producció el 15-11-2026 (v3.60.0 → v3.61.0).
+describe('AutoUpdate → si la versió nova continua en espera, ho torna a demanar', () => {
+  const RETRY_MS = 3_000;
+  const waitingRegistration = () => {
+    const registration = { installing: null, waiting: {} as object | null, update: vi.fn(() => Promise.resolve()) };
+    pwa.onRegisteredSW?.('/sw.js', registration as unknown as ServiceWorkerRegistration);
+    return registration;
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  });
+
+  it("la versió ja esperava en obrir l'app: ho demana, i ho repeteix fins que s'activa", () => {
+    const { rerender } = render(<AutoUpdate />);
+    const registration = waitingRegistration();
+    updateArrives(rerender);
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
+
+    nowMs += RETRY_MS;
+    vi.advanceTimersByTime(RETRY_MS);
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(2);
+
+    // Ja s'ha activat (la recàrrega és en camí): no cal insistir més.
+    registration.waiting = null;
+    nowMs += RETRY_MS;
+    vi.advanceTimersByTime(RETRY_MS);
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(2);
+  });
+
+  it("si entretant s'ha tocat l'app, no insisteix fins que se'n surt", () => {
+    const { rerender } = render(<AutoUpdate />);
+    waitingRegistration();
+    updateArrives(rerender);
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerDown(window);
+    vi.advanceTimersByTime(RETRY_MS);
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
+
+    goAway();
+    expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(2);
+  });
+
+  it('passada la finestra de calma, deixa d\'insistir', () => {
+    const { rerender } = render(<AutoUpdate />);
+    waitingRegistration();
+    updateArrives(rerender);
+    nowMs = QUIET_WINDOW_MS + 1_000;
+    vi.advanceTimersByTime(10 * RETRY_MS);
     expect(pwa.updateServiceWorker).toHaveBeenCalledTimes(1);
   });
 });
@@ -151,17 +246,17 @@ describe('AutoUpdate → mira si hi ha versió nova amb l\'app viva', () => {
     const registration = fakeRegistration();
 
     vi.setSystemTime(new Date('2026-11-14T10:30:00Z'));
-    setVisibility('hidden');
+    goAway();
     setVisibility('visible');
     expect(registration.update).not.toHaveBeenCalled();
 
     vi.setSystemTime(new Date('2026-11-14T11:05:00Z'));
-    setVisibility('hidden');
+    goAway();
     setVisibility('visible');
     expect(registration.update).toHaveBeenCalledTimes(1);
 
     // I no hi torna fins d'aquí a una altra hora.
-    setVisibility('hidden');
+    goAway();
     setVisibility('visible');
     expect(registration.update).toHaveBeenCalledTimes(1);
   });
