@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl, hdAgencyForPoint, getCloudSource } from './radarPhysics';
+import { computeAirmassSlot, airmassSourceForPoint, AirmassLatestSchema, AIRMASS_SOURCES, computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl, hdAgencyForPoint, getCloudSource } from './radarPhysics';
 
 // Franges de la capa HD: Meteosat amb hores pròpies (MTG cada 10 min, MSG de
 // reserva cada 15) i GOES/Himawari amb les franges de GIBS (cada 10 min).
@@ -197,5 +197,78 @@ describe('getCloudSource', () => {
     expect(getCloudSource({ ...base, hdGoes: true })).toBe('goes');
     expect(getCloudSource({ ...base, hdMeteosat: true })).toBe('meteosat');
     expect(getCloudSource({ ...base, hdHimawari: true })).toBe('himawari');
+  });
+});
+
+// Aire fred en alçada (Airmass): MSG cada 15 min a la seva zona i el mosaic
+// global cada 3 h a la resta i de reserva.
+describe('airmassSourceForPoint', () => {
+  it('MSG dins la seva zona (Europa, Àfrica); el mosaic a la resta', () => {
+    expect(airmassSourceForPoint(41.4, 2.2)).toBe('msg'); // Barcelona
+    expect(airmassSourceForPoint(-26.2, 28)).toBe('msg'); // Johannesburg
+    expect(airmassSourceForPoint(40.7, -74)).toBe('ring'); // Nova York
+    expect(airmassSourceForPoint(35.7, 139.7)).toBe('ring'); // Tòquio
+    expect(airmassSourceForPoint(25.3, 51.5)).toBe('ring'); // Doha, a l'est de 45° E
+    expect(airmassSourceForPoint(69.7, 19)).toBe('ring'); // Tromsø, al nord de 66,4°
+  });
+
+  it('els límits de MSG cauen sobre fronteres de tessel·la de z3 (±45°) i sota 66,51°', () => {
+    const [west, south, east, north] = AIRMASS_SOURCES.msg.bounds;
+    expect(AIRMASS_SOURCES.msg.minzoom).toBe(3);
+    expect(west).toBeGreaterThan(-45);
+    expect(east).toBeLessThan(45);
+    expect(Math.floor((west + 180) / 45)).toBe(3);
+    expect(Math.floor((east + 180) / 45)).toBe(4);
+    expect(north).toBeLessThan(66.51);
+    expect(south).toBeGreaterThan(-66.51);
+  });
+});
+
+describe('computeAirmassSlot', () => {
+  const R = Date.UTC(2026, 10, 15, 18, 0, 0) / 1000; // franja del mosaic (múltiple de 3 h)
+  const M = R + 90 * 60; // 19:30, franja de MSG
+  const latest = (t: number, cadence: number) => ({ latest: t, cadence, source: 'caps' as const });
+  const timeline = { msg: latest(M, 900), ring: latest(R, 10800) };
+
+  it('MSG: la quinzena del fotograma, sense passar de la més nova', () => {
+    expect(computeAirmassSlot(M - 3600 + 14 * 60, timeline, 0, 'msg')).toEqual({ source: 'msg', slot: M - 3600 });
+    expect(computeAirmassSlot(M + 20 * 60, timeline, 0, 'msg')).toEqual({ source: 'msg', slot: M });
+  });
+
+  it('mosaic: les 3 h del fotograma; el bucle comparteix una imatge o dues', () => {
+    expect(computeAirmassSlot(R + 80 * 60, timeline, 0, 'ring')).toEqual({ source: 'ring', slot: R });
+    expect(computeAirmassSlot(R - 10 * 60, timeline, 0, 'ring')).toEqual({ source: 'ring', slot: R - 10800 });
+    // Un fotograma de després de les 21:00 amb el mosaic de les 21:00 encara per sortir.
+    expect(computeAirmassSlot(R + 10800 + 600, timeline, 0, 'ring')).toEqual({ source: 'ring', slot: R });
+  });
+
+  it('MSG endarrerit (null): el mosaic, també a la zona de MSG', () => {
+    expect(computeAirmassSlot(M, { ...timeline, msg: null }, 0, 'msg')).toEqual({ source: 'ring', slot: R });
+  });
+
+  it('fora de la zona de MSG no es fa servir MSG encara que el mosaic falti', () => {
+    expect(computeAirmassSlot(M, { ...timeline, ring: null }, 0, 'ring')).toBeNull();
+    expect(computeAirmassSlot(M, { msg: null, ring: null }, 0, 'msg')).toBeNull();
+  });
+
+  it('sense /airmass/latest: hora calculada (MSG ara − 30 min, mosaic ara − 90 min)', () => {
+    const now = M + 14 * 60; // 19:44
+    expect(computeAirmassSlot(now, null, now, 'msg')).toEqual({ source: 'msg', slot: M - 1800 }); // 19:14 → 19:00
+    expect(computeAirmassSlot(now, null, now, 'ring')).toEqual({ source: 'ring', slot: R }); // 18:14 → 18:00
+    expect(computeAirmassSlot(M - 3600, null, now, 'msg')).toEqual({ source: 'msg', slot: M - 3600 });
+  });
+});
+
+describe('AirmassLatestSchema', () => {
+  const slot = { latest: 1794771000, cadence: 900, source: 'caps' };
+
+  it('accepta les dues fonts, o qualsevol de les dues a null', () => {
+    expect(AirmassLatestSchema.safeParse({ msg: slot, ring: { ...slot, cadence: 10800 } }).success).toBe(true);
+    expect(AirmassLatestSchema.safeParse({ msg: null, ring: null }).success).toBe(true);
+  });
+
+  it('rebutja una resposta sense alguna font o amb un altre format', () => {
+    expect(AirmassLatestSchema.safeParse({ msg: slot }).success).toBe(false);
+    expect(AirmassLatestSchema.safeParse({ msg: slot, ring: { latest: 'ara' } }).success).toBe(false);
   });
 });

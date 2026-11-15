@@ -343,6 +343,77 @@ export function computeGibsSlot(
   return { variant, slot: slot ?? product.slots[0] ?? product.latest };
 }
 
+// --- AIRE FRED EN ALÇADA (AIRMASS RGB D'EUMETSAT) ---
+// Dues fonts del worker (vegeu AIRMASS_SOURCES a meteo-sat-proxy): `msg`, el
+// Meteosat de 0° cada 15 min, i `ring`, el mosaic de tots els geostacionaris
+// cada 3 h, que cobreix la resta del món i fa de reserva de MSG. No es
+// barregen dins una mateixa imatge: una font per sessió, segons el lloc.
+export type AirmassSource = 'msg' | 'ring';
+export const AIRMASS_ROUTE = 'airmass/v1';
+
+interface AirmassSourceConfig {
+  cadenceSec: number;
+  // Sense /airmass/latest: marge des d'ara per a l'hora calculada.
+  computedLagSec: number;
+  bounds: [number, number, number, number];
+  minzoom: number;
+  // 3 km de resolució real: per sobre de z5 (tessel·les de 512 px, ~1 km per
+  // píxel a 40° N) Mapbox amplia sense demanar res més a EUMETSAT.
+  maxzoom: number;
+}
+
+// MSG de 45° O a 45° E: Mapbox demana tessel·les SENCERES que toquin els
+// límits i ±45° és frontera de tessel·la a partir de z3 (per això minzoom 3),
+// de manera que la vora és neta a tots els zooms. Més enllà el satèl·lit mira
+// de biaix i l'aire sembla més fred (blavós) del que és, i les tessel·les de
+// la vora del disc arriben en PNG de ~0,5 MB. 66,4° queda just sota la
+// frontera de tessel·la de 66,51°, com a les capes HD.
+export const AIRMASS_SOURCES: Record<AirmassSource, AirmassSourceConfig> = {
+  msg: { cadenceSec: 900, computedLagSec: HD_COMPUTED_LAG_SEC, bounds: [-44.9, -66.4, 44.9, 66.4], minzoom: 3, maxzoom: 5 },
+  ring: { cadenceSec: 10800, computedLagSec: 5400, bounds: [-180, -66.4, 180, 66.4], minzoom: 2, maxzoom: 5 }
+};
+
+// Resposta de /airmass/latest: la franja més nova de cada font. `msg` null si
+// MSG va 90 min o més endarrerit (es mostra el mosaic); `ring` null si el
+// mosaic fa 12 h que no surt.
+export const AirmassLatestSchema = z.object({
+  msg: SlotLatestSchema.nullable(),
+  ring: SlotLatestSchema.nullable(),
+});
+export type AirmassLatest = z.infer<typeof AirmassLatestSchema>;
+
+// Font d'Airmass per a un punt: MSG si cau dins la seva zona, el mosaic a la
+// resta del món.
+export const airmassSourceForPoint = (lat: number, lon: number): AirmassSource => {
+  const [west, south, east, north] = AIRMASS_SOURCES.msg.bounds;
+  return lon >= west && lon <= east && lat >= south && lat <= north ? 'msg' : 'ring';
+};
+
+// Font i franja d'Airmass d'un fotograma de radar. La font preferida (la del
+// lloc) si el worker en dona franja; si MSG no en té, el mosaic. La franja és
+// la del fotograma (quinzena de MSG, o les 3 h del mosaic) sense passar de la
+// més nova publicada: amb el mosaic, tot el bucle sol compartir una imatge o
+// dues. Sense /airmass/latest (`timeline` null), una hora calculada. null si
+// no hi ha cap font disponible (la capa no es mostra).
+export function computeAirmassSlot(
+  frameTime: number,
+  timeline: AirmassLatest | null,
+  nowSec: number,
+  preferred: AirmassSource
+): { source: AirmassSource; slot: number } | null {
+  const source: AirmassSource | null = timeline === null
+    ? preferred
+    : preferred === 'msg' && timeline.msg ? 'msg'
+      : timeline.ring ? 'ring'
+        : null;
+  if (source === null) return null;
+  const cfg = AIRMASS_SOURCES[source];
+  const published = timeline?.[source];
+  const cadence = published?.cadence ?? cfg.cadenceSec;
+  const latest = published ? floorTo(published.latest, cadence) : floorTo(nowSec - cfg.computedLagSec, cadence);
+  return { source, slot: Math.min(floorTo(frameTime, cadence), latest) };
+}
+
 // --- FÍSICA VISUAL I MATEMÀTIQUES ---
 
 export const getNasaFiresDate = (): string => {
