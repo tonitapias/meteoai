@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAirmassSlot, airmassSourceForPoint, AirmassLatestSchema, AIRMASS_SOURCES, computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl, hdAgencyForPoint, getCloudSource } from './radarPhysics';
+import { computeAirmassSlot, airmassSourceForPoint, AirmassLatestSchema, HD_VARIANTS, computeMeteosatSlot, computeGibsSlot, computeLightningSlots, computeAmericasLightningSlots, GibsTimelineSchema, HdTimelineSchema, HD_BOUNDS, LightningLatestSchema, getNasaFiresWmsUrl, hdAgencyForPoint, getCloudSource } from './radarPhysics';
 
 // Franges de la capa HD: Meteosat amb hores pròpies (MTG cada 10 min, MSG de
 // reserva cada 15) i GOES/Himawari amb les franges de GIBS (cada 10 min).
@@ -190,7 +190,7 @@ describe('hdAgencyForPoint', () => {
 });
 
 describe('getCloudSource', () => {
-  const base = { precip: true, satIR: false, hdGoes: false, hdMeteosat: false, hdHimawari: false, night: true, labels: false, nasaReal: false, nasaFires: false, terrain3D: false, lightning: true, hdColour: false };
+  const base = { precip: true, satIR: false, hdGoes: false, hdMeteosat: false, hdHimawari: false, night: true, labels: false, nasaReal: false, nasaFires: false, terrain3D: false, lightning: true, hdColour: false, airmass: false };
   it('llegeix la font de núvols dels booleans', () => {
     expect(getCloudSource(base)).toBe('none');
     expect(getCloudSource({ ...base, satIR: true })).toBe('global');
@@ -213,8 +213,8 @@ describe('airmassSourceForPoint', () => {
   });
 
   it('els límits de MSG cauen sobre fronteres de tessel·la de z3 (±45°) i sota 66,51°', () => {
-    const [west, south, east, north] = AIRMASS_SOURCES.msg.bounds;
-    expect(AIRMASS_SOURCES.msg.minzoom).toBe(3);
+    const [west, south, east, north] = HD_VARIANTS.airmassMsg.bounds!;
+    expect(HD_VARIANTS.airmassMsg.minzoom).toBe(3);
     expect(west).toBeGreaterThan(-45);
     expect(east).toBeLessThan(45);
     expect(Math.floor((west + 180) / 45)).toBe(3);
@@ -231,19 +231,19 @@ describe('computeAirmassSlot', () => {
   const timeline = { msg: latest(M, 900), ring: latest(R, 10800) };
 
   it('MSG: la quinzena del fotograma, sense passar de la més nova', () => {
-    expect(computeAirmassSlot(M - 3600 + 14 * 60, timeline, 0, 'msg')).toEqual({ source: 'msg', slot: M - 3600 });
-    expect(computeAirmassSlot(M + 20 * 60, timeline, 0, 'msg')).toEqual({ source: 'msg', slot: M });
+    expect(computeAirmassSlot(M - 3600 + 14 * 60, timeline, 0, 'msg')).toEqual({ source: 'msg', variant: 'airmassMsg', slot: M - 3600 });
+    expect(computeAirmassSlot(M + 20 * 60, timeline, 0, 'msg')).toEqual({ source: 'msg', variant: 'airmassMsg', slot: M });
   });
 
   it('mosaic: les 3 h del fotograma; el bucle comparteix una imatge o dues', () => {
-    expect(computeAirmassSlot(R + 80 * 60, timeline, 0, 'ring')).toEqual({ source: 'ring', slot: R });
-    expect(computeAirmassSlot(R - 10 * 60, timeline, 0, 'ring')).toEqual({ source: 'ring', slot: R - 10800 });
+    expect(computeAirmassSlot(R + 80 * 60, timeline, 0, 'ring')).toEqual({ source: 'ring', variant: 'airmassRing', slot: R });
+    expect(computeAirmassSlot(R - 10 * 60, timeline, 0, 'ring')).toEqual({ source: 'ring', variant: 'airmassRing', slot: R - 10800 });
     // Un fotograma de després de les 21:00 amb el mosaic de les 21:00 encara per sortir.
-    expect(computeAirmassSlot(R + 10800 + 600, timeline, 0, 'ring')).toEqual({ source: 'ring', slot: R });
+    expect(computeAirmassSlot(R + 10800 + 600, timeline, 0, 'ring')).toEqual({ source: 'ring', variant: 'airmassRing', slot: R });
   });
 
   it('MSG endarrerit (null): el mosaic, també a la zona de MSG', () => {
-    expect(computeAirmassSlot(M, { ...timeline, msg: null }, 0, 'msg')).toEqual({ source: 'ring', slot: R });
+    expect(computeAirmassSlot(M, { ...timeline, msg: null }, 0, 'msg')).toEqual({ source: 'ring', variant: 'airmassRing', slot: R });
   });
 
   it('fora de la zona de MSG no es fa servir MSG encara que el mosaic falti', () => {
@@ -253,9 +253,9 @@ describe('computeAirmassSlot', () => {
 
   it('sense /airmass/latest: hora calculada (MSG ara − 30 min, mosaic ara − 90 min)', () => {
     const now = M + 14 * 60; // 19:44
-    expect(computeAirmassSlot(now, null, now, 'msg')).toEqual({ source: 'msg', slot: M - 1800 }); // 19:14 → 19:00
-    expect(computeAirmassSlot(now, null, now, 'ring')).toEqual({ source: 'ring', slot: R }); // 18:14 → 18:00
-    expect(computeAirmassSlot(M - 3600, null, now, 'msg')).toEqual({ source: 'msg', slot: M - 3600 });
+    expect(computeAirmassSlot(now, null, now, 'msg')).toEqual({ source: 'msg', variant: 'airmassMsg', slot: M - 1800 }); // 19:14 → 19:00
+    expect(computeAirmassSlot(now, null, now, 'ring')).toEqual({ source: 'ring', variant: 'airmassRing', slot: R }); // 18:14 → 18:00
+    expect(computeAirmassSlot(M - 3600, null, now, 'msg')).toEqual({ source: 'msg', variant: 'airmassMsg', slot: M - 3600 });
   });
 });
 

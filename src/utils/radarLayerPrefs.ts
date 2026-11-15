@@ -27,7 +27,8 @@ export const DEFAULT_OVERLAYS: Overlays = {
   nasaFires: false,
   terrain3D: false,
   lightning: true,
-  hdColour: false
+  hdColour: false,
+  airmass: false
 };
 
 type SavedBase = Exclude<BaseLayerType, 'black_marble'>;

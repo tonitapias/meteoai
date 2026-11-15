@@ -15,6 +15,7 @@ import {
   getBlackMarbleUrl,
   getCloudSource,
   hdAgencyForPoint,
+  airmassSourceForPoint,
 } from '../utils/radarPhysics';
 import { loadRadarLayers, saveRadarLayers } from '../utils/radarLayerPrefs';
 import type { Language } from '../translations';
@@ -33,7 +34,7 @@ import { useAstroEngine } from '../hooks/radar/useAstroEngine';
 import { useCameraFlight } from '../hooks/radar/useCameraFlight';
 import { useRadarAnimation } from '../hooks/radar/useRadarAnimation';
 import { useMapLifecycle } from '../hooks/radar/useMapLifecycle';
-import { useAmericasLightningTimeline, useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
+import { useAirmassTimeline, useAmericasLightningTimeline, useGibsTimeline, useHdTimeline, useLightningTimeline } from '../hooks/radar/useHdTimeline';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -127,6 +128,12 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
 
   // Satèl·lit HD de la ubicació consultada: el que el menú tria en passar a HD.
   const homeHdAgency = useMemo(() => hdAgencyForPoint(lat, lon), [lat, lon]);
+  // Font d'Airmass del lloc consultat: MSG a la seva zona, el mosaic a la resta.
+  const homeAirmassSource = useMemo(() => airmassSourceForPoint(lat, lon), [lat, lon]);
+  const airmassSourceRef = useRef(homeAirmassSource);
+  useEffect(() => {
+    airmassSourceRef.current = homeAirmassSource;
+  }, [homeAirmassSource]);
 
   // --- ARRANQUEN ELS NOUS HOOKS (CLEAN ARCHITECTURE) ---
 
@@ -161,6 +168,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   const gibsTimelineRefs = useMemo(() => ({ goes: goesTimelineRef, himawari: himawariTimelineRef }), [goesTimelineRef, himawariTimelineRef]);
   const { timelineRef: lightningTimelineRef, version: lightningTimelineVersion } = useLightningTimeline(overlays.lightning);
   const { timelineRef: americasLightningTimelineRef, version: americasLightningTimelineVersion } = useAmericasLightningTimeline(overlays.lightning);
+  const { timelineRef: airmassTimelineRef, version: airmassTimelineVersion } = useAirmassTimeline(overlays.airmass);
 
   const {
     isPlaying, pausePlayback, framesCount, currentFrameTimestamp,
@@ -178,7 +186,9 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     hdTimelineRef,
     gibsTimelineRefs,
     lightningTimelineRef,
-    americasLightningTimelineRef
+    americasLightningTimelineRef,
+    airmassTimelineRef,
+    airmassSourceRef
   });
 
   useCameraFlight({
@@ -218,10 +228,11 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     );
   }, [activeBaseLayer, overlays, webglKey, syncLayersState, applyFrameVisibility, currentFrameIndexRef, radarFramesRef]);
 
-  // 2b. Franges HD noves (/hd/meteosat/latest, /hd/goes/latest, /hd/himawari/latest).
+  // 2b. Franges HD noves (/hd/meteosat/latest, /hd/goes/latest,
+  // /hd/himawari/latest) i d'Airmass (/airmass/latest).
   useEffect(() => {
-    if (hdTimelineVersion + goesTimelineVersion + himawariTimelineVersion > 0) refreshHdTimeline();
-  }, [hdTimelineVersion, goesTimelineVersion, himawariTimelineVersion, refreshHdTimeline]);
+    if (hdTimelineVersion + goesTimelineVersion + himawariTimelineVersion + airmassTimelineVersion > 0) refreshHdTimeline();
+  }, [hdTimelineVersion, goesTimelineVersion, himawariTimelineVersion, airmassTimelineVersion, refreshHdTimeline]);
 
   // 2c. Franges de llamps noves (/lightning/latest i /lightning/americas/latest).
   useEffect(() => {
