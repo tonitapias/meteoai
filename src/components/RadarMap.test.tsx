@@ -848,7 +848,7 @@ describe('RadarMap — Aire fred en alçada (Airmass)', () => {
     await hd('Meteosat');
     expect(hdTargets(map)).toHaveLength(1);
 
-    await press('radio', 'Aire fred');
+    await press('radio', "Masses d'aire");
     const key = `airmassMsg-${AIRMASS_MSG_LATEST}`;
     expect(airmassTargets(map)).toEqual([`hd-airmass-layer-${key}`]);
     expect(airmassSource(map, key)).toMatchObject({
@@ -860,16 +860,16 @@ describe('RadarMap — Aire fred en alçada (Airmass)', () => {
     // Ni satèl·lit HD ni IR global a sota.
     expect(ids(map, 'hd-meteosat-layer-')).toEqual([]);
     expect(visibleTargets(map, 'sat-layer-', 0.3)).toEqual([]);
-    expect(screen.getByRole('radio', { name: 'Aire fred' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('radio', { name: "Masses d'aire" }).getAttribute('aria-checked')).toBe('true');
     expect(screen.queryByRole('radiogroup', { name: 'Satèl·lit HD' })).toBeNull();
-    expect(screen.getByText('Aire fred en alçada (Airmass), una imatge cada 15 minuts')).toBeTruthy();
+    expect(screen.getByText('Aire fred, sec o càlid en alçada (Airmass), una imatge cada 15 minuts')).toBeTruthy();
     expect(map.errors).toEqual([]);
   });
 
   it('si MSG va endarrerit (msg null), el mosaic global de les 3 h', async () => {
     airmassLatest = { msg: null, ring: { latest: AIRMASS_RING_LATEST, cadence: 10800, source: 'caps' } };
     const map = await mountRadar();
-    await press('radio', 'Aire fred');
+    await press('radio', "Masses d'aire");
     const key = `airmassRing-${AIRMASS_RING_LATEST}`;
     expect(airmassTargets(map)).toEqual([`hd-airmass-layer-${key}`]);
     expect(airmassSource(map, key)?.tiles).toEqual([`https://sat.meteotoniai.com/airmass/v1/ring/${AIRMASS_RING_LATEST}/{z}/{x}/{y}.png`]);
@@ -879,14 +879,14 @@ describe('RadarMap — Aire fred en alçada (Airmass)', () => {
   it('sense cap font disponible no es crea cap capa', async () => {
     airmassLatest = { msg: null, ring: null };
     const map = await mountRadar();
-    await press('radio', 'Aire fred');
+    await press('radio', "Masses d'aire");
     expect(ids(map, 'hd-airmass-layer-')).toEqual([]);
     expect(map.errors).toEqual([]);
   });
 
   it("en tornar a Global s'alliberen les capes d'Airmass", async () => {
     const map = await mountRadar();
-    await press('radio', 'Aire fred');
+    await press('radio', "Masses d'aire");
     expect(airmassTargets(map)).toHaveLength(1);
     await press('radio', 'Global');
     expect(ids(map, 'hd-airmass-layer-')).toEqual([]);
@@ -894,15 +894,28 @@ describe('RadarMap — Aire fred en alçada (Airmass)', () => {
     expect(JSON.parse(window.localStorage.getItem('meteoai_radar_layers')!)).toMatchObject({ clouds: 'global' });
   });
 
+  it('la llegenda explica els colors i diu de quina hora és la imatge', async () => {
+    await mountRadar();
+    expect(screen.queryByTestId('airmass-legend')).toBeNull();
+    await press('radio', "Masses d'aire");
+    await press('button', 'Llegenda');
+    const legend = within(screen.getByTestId('airmass-legend'));
+    expect(legend.getByText('Aire fred')).toBeTruthy();
+    expect(legend.getByText('Aire sec (jet, DANA)')).toBeTruthy();
+    expect(legend.getByText('Aire càlid')).toBeTruthy();
+    // (Sense i18n inicialitzat a les proves, el text surt sense interpolar.)
+    expect(legend.getByText(/imatge de les/)).toBeTruthy();
+  });
+
   it('es desa com a font de núvols i es recupera en obrir', async () => {
     await mountRadar();
-    await press('radio', 'Aire fred');
+    await press('radio', "Masses d'aire");
     expect(JSON.parse(window.localStorage.getItem('meteoai_radar_layers')!)).toMatchObject({ clouds: 'airmass' });
     cleanup();
 
     const map = await mountRadar();
     await act(async () => { await sleep(30); });
-    expect(screen.getByRole('radio', { name: 'Aire fred' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('radio', { name: "Masses d'aire" }).getAttribute('aria-checked')).toBe('true');
     expect(airmassTargets(map)).toEqual([`hd-airmass-layer-airmassMsg-${AIRMASS_MSG_LATEST}`]);
   });
 });

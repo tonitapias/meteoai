@@ -229,7 +229,7 @@ export function RadarLayerMenu({
     { value: 'none', label: t('cloudsNone', 'Cap') },
     { value: 'global', label: t('cloudsGlobal', 'Global') },
     { value: 'hd', label: t('cloudsHd', 'HD') },
-    { value: 'airmass', label: t('cloudsAirmass', 'Aire fred') }
+    { value: 'airmass', label: t('cloudsAirmass', "Masses d'aire") }
   ];
   const cloudOption = isHd ? 'hd' : cloudSource;
   const cloudDesc = {
@@ -238,8 +238,8 @@ export function RadarLayerMenu({
     hd: t('cloudsHdDesc', 'Més nitidesa, una imatge cada 10 minuts'),
     // MSG (Europa i Àfrica) cada 15 min; el mosaic de la resta del món, cada 3 h.
     airmass: homeAirmassSource === 'msg'
-      ? t('cloudsAirmassDesc', 'Aire fred en alçada (Airmass), una imatge cada 15 minuts')
-      : t('cloudsAirmassDescGlobal', 'Aire fred en alçada (Airmass), una imatge cada 3 hores')
+      ? t('cloudsAirmassDesc', 'Aire fred, sec o càlid en alçada (Airmass), una imatge cada 15 minuts')
+      : t('cloudsAirmassDescGlobal', 'Aire fred, sec o càlid en alçada (Airmass), una imatge cada 3 hores')
   }[cloudOption];
   const hdRegions: Record<HdAgency, string> = {
     meteosat: t('hdRegionMeteosat', 'Europa i Àfrica'),
@@ -376,7 +376,7 @@ export function RadarLayerMenu({
               </div>
             </Section>
 
-            {/* 3. Núvols: Cap · Global · HD · Aire fred */}
+            {/* 3. Núvols: Cap · Global · HD · Masses d'aire */}
             <Section id={ids.clouds} title={t('layersCloudsTitle', 'Núvols')}>
               <div role="radiogroup" aria-labelledby={ids.clouds} className="grid grid-cols-[1fr_1fr_1fr_1.35fr] gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">
                 {cloudOptions.map(({ value, label }) => {

@@ -16,6 +16,7 @@ import {
   getCloudSource,
   hdAgencyForPoint,
   airmassSourceForPoint,
+  computeAirmassSlot,
 } from '../utils/radarPhysics';
 import { loadRadarLayers, saveRadarLayers } from '../utils/radarLayerPrefs';
 import type { Language } from '../translations';
@@ -201,6 +202,16 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     styleReadyRef
   });
 
+  // Hora de la imatge d'Airmass del fotograma que es veu, per a la llegenda: el
+  // mosaic global surt cada 3 h i pot tenir unes quantes hores.
+  const [airmassTime, setAirmassTime] = useState<string | null>(null);
+  useEffect(() => {
+    const state = airmassTimelineRef.current;
+    const known = overlays.airmass && currentFrameTimestamp !== null && (state.status === 'ready' || state.status === 'failed');
+    const target = known ? computeAirmassSlot(currentFrameTimestamp, state.timeline, state.nowSec, homeAirmassSource) : null;
+    setAirmassTime(target ? formatTime(target.slot) : null);
+  }, [overlays.airmass, currentFrameTimestamp, airmassTimelineVersion, homeAirmassSource, airmassTimelineRef, formatTime]);
+
   // --- CONNECTORS FILLS (PONT ENTRE HOOKS) ---
 
   // 0. Mapa nou (pèrdua de context WebGL): les capes del mapa destruït ja no
@@ -302,6 +313,16 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
             >
               NASA GIBS · NOAA/NESDIS · GOES (CIRA) · Himawari (JMA)
             </a>
+            {/* Aire fred (Airmass): RGB d'EUMETSAT; el mosaic global hi suma
+                les dades de GOES (NOAA) i Himawari (JMA). */}
+            <a
+              href="https://view.eumetsat.int/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+            >
+              Airmass RGB: EUMETSAT · GOES (NOAA) · Himawari (JMA)
+            </a>
             {/* Llamps d'Amèrica: densitat de NOAA nowCOAST (xarxes NLDN i GLD360). */}
             <a
               href="https://nowcoast.noaa.gov/"
@@ -313,8 +334,14 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
             </a>
           </>
         )}
-        {/* Llegenda plegable: pluja i neu (amb la capa de precipitació) i llamps. */}
-        <RadarLegend showPrecip={overlays.precip} showLightning={overlays.lightning} palette={radarPalette} />
+        {/* Llegenda plegable: pluja i neu (amb la capa de precipitació), llamps i Airmass. */}
+        <RadarLegend
+          showPrecip={overlays.precip}
+          showLightning={overlays.lightning}
+          palette={radarPalette}
+          showAirmass={overlays.airmass}
+          airmassTime={airmassTime}
+        />
         <button
           onClick={() => setShowAttribution(v => !v)}
           aria-label={t('radarData')}
