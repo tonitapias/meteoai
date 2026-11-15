@@ -34,6 +34,8 @@ const LIGHTNING_GRADIENT = 'linear-gradient(90deg, rgba(255,235,90,0.45), rgba(2
 // famílies de color. Mostres preses de les imatges reals (2026-11-15): aire
 // fred polar blau/morat, aire sec que baixa de l'estratosfera (jet, DANA)
 // vermell/taronja i aire càlid tropical verd. Els núvols alts hi surten blancs.
+// El vermell és el que es busca per trobar una entrada d'aire fred en alçada:
+// per això la línia de sota diu què marca.
 const AIRMASS_LEGEND: { key: 'cold' | 'dry' | 'warm'; gradient: string }[] = [
   { key: 'cold', gradient: 'linear-gradient(90deg, #2f3f9f, #7b3fa3)' },
   { key: 'dry', gradient: 'linear-gradient(90deg, #a5322b, #c9772e)' },
@@ -148,11 +150,16 @@ export function RadarLegend({ showPrecip, showLightning, palette = 'nexrad', sho
               <li key={key} className="flex items-center gap-1.5 whitespace-nowrap">
                 <span aria-hidden="true" className="w-6 h-1.5 rounded-sm shrink-0" style={{ background: gradient }} />
                 {key === 'cold' ? t('legendAirmassCold', 'Aire fred')
-                  : key === 'dry' ? t('legendAirmassDry', 'Aire sec (jet, DANA)')
+                  : key === 'dry' ? t('legendAirmassDry', "Aire sec d'alçada")
                     : t('legendAirmassWarm', 'Aire càlid')}
               </li>
             ))}
           </ul>
+          {/* Per a què serveix el vermell: l'aire sec que baixa de l'estratosfera
+              ressegueix el jet i omple el centre de les DANA. */}
+          <p className="mt-1.5 max-w-[14rem] whitespace-normal leading-snug text-slate-400">
+            {t('legendAirmassHint', 'El vermell marca el corrent en jet i el nucli de les DANA')}
+          </p>
         </div>
       )}
     </div>

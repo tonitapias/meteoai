@@ -901,7 +901,8 @@ describe('RadarMap — Aire fred en alçada (Airmass)', () => {
     await press('button', 'Llegenda');
     const legend = within(screen.getByTestId('airmass-legend'));
     expect(legend.getByText('Aire fred')).toBeTruthy();
-    expect(legend.getByText('Aire sec (jet, DANA)')).toBeTruthy();
+    expect(legend.getByText("Aire sec d'alçada")).toBeTruthy();
+    expect(legend.getByText('El vermell marca el corrent en jet i el nucli de les DANA')).toBeTruthy();
     expect(legend.getByText('Aire càlid')).toBeTruthy();
     // (Sense i18n inicialitzat a les proves, el text surt sense interpolar.)
     expect(legend.getByText(/imatge de les/)).toBeTruthy();

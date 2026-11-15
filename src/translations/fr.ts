@@ -64,8 +64,9 @@ export const fr = {
   legendAirmass: "Masses d'air",
   legendAirmassTime: "image de {{time}}",
   legendAirmassCold: "Air froid",
-  legendAirmassDry: "Air sec (jet, goutte froide)",
+  legendAirmassDry: "Air sec d'altitude",
   legendAirmassWarm: "Air chaud",
+  legendAirmassHint: "Le rouge marque le courant-jet et le cœur des gouttes froides",
 
   // --- Controls del reproductor ---
   btnPlay: "Lecture",

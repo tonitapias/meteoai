@@ -62,8 +62,9 @@ export const ca = {
   legendAirmass: "Masses d'aire",
   legendAirmassTime: "imatge de les {{time}}",
   legendAirmassCold: "Aire fred",
-  legendAirmassDry: "Aire sec (jet, DANA)",
+  legendAirmassDry: "Aire sec d'alçada",
   legendAirmassWarm: "Aire càlid",
+  legendAirmassHint: "El vermell marca el corrent en jet i el nucli de les DANA",
 
   // Controls del reproductor
   btnPlay: "Reproduir",

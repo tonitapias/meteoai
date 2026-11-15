@@ -63,8 +63,9 @@ export const es = {
   legendAirmass: "Masas de aire",
   legendAirmassTime: "imagen de las {{time}}",
   legendAirmassCold: "Aire frío",
-  legendAirmassDry: "Aire seco (jet, DANA)",
+  legendAirmassDry: "Aire seco de altura",
   legendAirmassWarm: "Aire cálido",
+  legendAirmassHint: "El rojo marca la corriente en chorro y el núcleo de las DANA",
 
   // --- Controls del reproductor ---
   btnPlay: "Reproducir",

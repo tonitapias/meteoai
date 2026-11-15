@@ -64,8 +64,9 @@ export const en = {
   legendAirmass: "Air masses",
   legendAirmassTime: "image from {{time}}",
   legendAirmassCold: "Cold air",
-  legendAirmassDry: "Dry air (jet, cut-off low)",
+  legendAirmassDry: "Dry air aloft",
   legendAirmassWarm: "Warm air",
+  legendAirmassHint: "Red marks the jet stream and the core of cut-off lows",
 
   // --- Controls del reproductor ---
   btnPlay: "Play",
