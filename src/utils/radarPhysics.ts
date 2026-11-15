@@ -133,13 +133,15 @@ export const HD_BOUNDS: Record<HdAgency, [number, number, number, number]> = {
 // L'IR global (LibreWXR) i els tres satèl·lits HD són excloents: el menú de
 // capes els presenta com un sol selector (Cap · Global · HD) i RadarMap els
 // escriu tots alhora (setCloudSource) als booleans d'Overlays, que és el que
-// llegeixen els hooks.
-export type CloudSource = 'none' | 'global' | HdAgency;
+// llegeixen els hooks. L'Airmass (aire fred en alçada) és una quarta opció del
+// mateix selector: una imatge opaca que ocupa el lloc dels núvols.
+export type CloudSource = 'none' | 'global' | HdAgency | 'airmass';
 // La resta de capes s'encenen i s'apaguen soles.
-export type OverlayToggleKey = Exclude<keyof Overlays, 'satIR' | 'hdGoes' | 'hdMeteosat' | 'hdHimawari'>;
+export type OverlayToggleKey = Exclude<keyof Overlays, 'satIR' | 'hdGoes' | 'hdMeteosat' | 'hdHimawari' | 'airmass'>;
 
 export const getCloudSource = (o: Overlays): CloudSource =>
-  o.hdMeteosat ? 'meteosat'
+  o.airmass ? 'airmass'
+    : o.hdMeteosat ? 'meteosat'
     : o.hdGoes ? 'goes'
       : o.hdHimawari ? 'himawari'
         : o.satIR ? 'global'

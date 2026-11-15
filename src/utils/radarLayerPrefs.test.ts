@@ -36,6 +36,13 @@ describe('radarLayerPrefs', () => {
     expect([nyc.satIR, nyc.hdMeteosat, nyc.hdGoes, nyc.hdHimawari]).toEqual([false, false, true, false]);
   });
 
+  it("l'Aire fred (Airmass) es recorda com a font de núvols", () => {
+    saveRadarLayers('sat_optic', { ...DEFAULT_OVERLAYS, satIR: false, airmass: true });
+    expect(JSON.parse(window.localStorage.getItem(RADAR_LAYERS_KEY)!).clouds).toBe('airmass');
+    const o = loadRadarLayers(...BCN).overlays;
+    expect([o.airmass, o.satIR, o.hdMeteosat]).toEqual([true, false, false]);
+  });
+
   it('sense núvols es recorda com a "Cap"', () => {
     saveRadarLayers('sat_optic', { ...DEFAULT_OVERLAYS, satIR: false });
     const o = loadRadarLayers(...BCN).overlays;

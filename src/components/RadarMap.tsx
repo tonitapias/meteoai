@@ -111,7 +111,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
     });
   }, []);
 
-  // Núvols: l'IR global i els satèl·lits HD són excloents (CloudSource).
+  // Núvols: l'IR global, els satèl·lits HD i l'Airmass són excloents (CloudSource).
   const setCloudSource = useCallback((source: CloudSource) => {
     setOverlays(prev => {
       const next = {
@@ -119,7 +119,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
         satIR: source === 'global',
         hdMeteosat: source === 'meteosat',
         hdGoes: source === 'goes',
-        hdHimawari: source === 'himawari'
+        hdHimawari: source === 'himawari',
+        airmass: source === 'airmass'
       };
       overlaysRef.current = next;
       return next;
@@ -340,6 +341,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
         cloudSource={getCloudSource(overlays)}
         setCloudSource={setCloudSource}
         homeHdAgency={homeHdAgency}
+        homeAirmassSource={homeAirmassSource}
         baseLayers={BASE_LAYERS}
       />
 

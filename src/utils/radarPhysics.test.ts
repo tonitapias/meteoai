@@ -197,6 +197,7 @@ describe('getCloudSource', () => {
     expect(getCloudSource({ ...base, hdGoes: true })).toBe('goes');
     expect(getCloudSource({ ...base, hdMeteosat: true })).toBe('meteosat');
     expect(getCloudSource({ ...base, hdHimawari: true })).toBe('himawari');
+    expect(getCloudSource({ ...base, airmass: true })).toBe('airmass');
   });
 });
 

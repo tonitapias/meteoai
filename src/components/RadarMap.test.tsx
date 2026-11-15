@@ -112,6 +112,10 @@ const RAINVIEWER = { host: 'https://tilecache.rainviewer.com', radar: { past: ra
 // que encara no ha arribat.
 const MTG_LATEST = T0 + 8 * 600;
 let hdLatest: unknown;
+// /airmass/latest: MSG (cada 15 min) i el mosaic global (cada 3 h).
+const AIRMASS_MSG_LATEST = Math.floor((T0 + 90 * 60) / 900) * 900;
+const AIRMASS_RING_LATEST = Math.floor(T0 / 10800) * 10800;
+let airmassLatest: unknown;
 // 'fail' = LibreWXR no respon (HTTP 503).
 let libreWxr: typeof LIBREWXR | 'fail';
 // /lightning/latest: per defecte, l'última franja de llamps 5 min després del
@@ -176,6 +180,10 @@ beforeEach(() => {
     ir: { latest: GIBS_IR_LATEST, cadence: 600, source: 'caps', slots: gibsSlots(GIBS_IR_LATEST) },
     colour: { latest: GIBS_COLOUR_LATEST, cadence: 600, source: 'caps', slots: gibsSlots(GIBS_COLOUR_LATEST) },
   };
+  airmassLatest = {
+    msg: { latest: AIRMASS_MSG_LATEST, cadence: 900, source: 'caps' },
+    ring: { latest: AIRMASS_RING_LATEST, cadence: 10800, source: 'caps' },
+  };
   gibsCalls = [];
   libreWxr = LIBREWXR;
   frameChange.byHost = {};
@@ -191,6 +199,9 @@ beforeEach(() => {
       const body = await gibsLatest;
       if (body === 'fail') throw new TypeError('Failed to fetch');
       return new Response(JSON.stringify(u.includes('himawari') ? { ...(body as object), colour: null } : body), { status: 200 });
+    }
+    if (u.includes('/airmass/latest')) {
+      return new Response(JSON.stringify(airmassLatest), { status: 200 });
     }
     if (u.includes('/lightning/latest')) {
       return new Response(JSON.stringify(await lightningLatest), { status: 200 });
@@ -823,5 +834,75 @@ describe('RadarMap', () => {
     await press('radio', 'Color');
     // Els fotogrames de la prova són de fa dies: "ara − 40 min" no hi limita.
     expect(gibsTargets(map, 'goes')).toEqual([`hd-goes-layer-gibs-${T0 + 11 * 600}`]);
+  });
+});
+
+// Aire fred en alçada (Airmass): quarta opció del selector de núvols.
+describe('RadarMap — Aire fred en alçada (Airmass)', () => {
+  const airmassTargets = (m: FakeMapInstance) => visibleTargets(m, 'hd-airmass-layer-', 0.3);
+  const airmassSource = (m: FakeMapInstance, key: string) =>
+    m.sources.get(`hd-airmass-src-${key}`) as { tiles: string[]; bounds: number[]; minzoom: number; maxzoom: number } | undefined;
+
+  it("a Europa és l'Airmass de MSG, amb la quinzena de /airmass/latest, i ocupa el lloc dels núvols", async () => {
+    const map = await mountRadar();
+    await hd('Meteosat');
+    expect(hdTargets(map)).toHaveLength(1);
+
+    await press('radio', 'Aire fred');
+    const key = `airmassMsg-${AIRMASS_MSG_LATEST}`;
+    expect(airmassTargets(map)).toEqual([`hd-airmass-layer-${key}`]);
+    expect(airmassSource(map, key)).toMatchObject({
+      tiles: [`https://sat.meteotoniai.com/airmass/v1/msg/${AIRMASS_MSG_LATEST}/{z}/{x}/{y}.png`],
+      bounds: [-44.9, -66.4, 44.9, 66.4],
+      minzoom: 3,
+      maxzoom: 5,
+    });
+    // Ni satèl·lit HD ni IR global a sota.
+    expect(ids(map, 'hd-meteosat-layer-')).toEqual([]);
+    expect(visibleTargets(map, 'sat-layer-', 0.3)).toEqual([]);
+    expect(screen.getByRole('radio', { name: 'Aire fred' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.queryByRole('radiogroup', { name: 'Satèl·lit HD' })).toBeNull();
+    expect(screen.getByText('Aire fred en alçada (Airmass), una imatge cada 15 minuts')).toBeTruthy();
+    expect(map.errors).toEqual([]);
+  });
+
+  it('si MSG va endarrerit (msg null), el mosaic global de les 3 h', async () => {
+    airmassLatest = { msg: null, ring: { latest: AIRMASS_RING_LATEST, cadence: 10800, source: 'caps' } };
+    const map = await mountRadar();
+    await press('radio', 'Aire fred');
+    const key = `airmassRing-${AIRMASS_RING_LATEST}`;
+    expect(airmassTargets(map)).toEqual([`hd-airmass-layer-${key}`]);
+    expect(airmassSource(map, key)?.tiles).toEqual([`https://sat.meteotoniai.com/airmass/v1/ring/${AIRMASS_RING_LATEST}/{z}/{x}/{y}.png`]);
+    expect(airmassSource(map, key)?.bounds).toEqual([-180, -66.4, 180, 66.4]);
+  });
+
+  it('sense cap font disponible no es crea cap capa', async () => {
+    airmassLatest = { msg: null, ring: null };
+    const map = await mountRadar();
+    await press('radio', 'Aire fred');
+    expect(ids(map, 'hd-airmass-layer-')).toEqual([]);
+    expect(map.errors).toEqual([]);
+  });
+
+  it("en tornar a Global s'alliberen les capes d'Airmass", async () => {
+    const map = await mountRadar();
+    await press('radio', 'Aire fred');
+    expect(airmassTargets(map)).toHaveLength(1);
+    await press('radio', 'Global');
+    expect(ids(map, 'hd-airmass-layer-')).toEqual([]);
+    expect(screen.getByRole('radio', { name: 'Global' }).getAttribute('aria-checked')).toBe('true');
+    expect(JSON.parse(window.localStorage.getItem('meteoai_radar_layers')!)).toMatchObject({ clouds: 'global' });
+  });
+
+  it('es desa com a font de núvols i es recupera en obrir', async () => {
+    await mountRadar();
+    await press('radio', 'Aire fred');
+    expect(JSON.parse(window.localStorage.getItem('meteoai_radar_layers')!)).toMatchObject({ clouds: 'airmass' });
+    cleanup();
+
+    const map = await mountRadar();
+    await act(async () => { await sleep(30); });
+    expect(screen.getByRole('radio', { name: 'Aire fred' }).getAttribute('aria-checked')).toBe('true');
+    expect(airmassTargets(map)).toEqual([`hd-airmass-layer-airmassMsg-${AIRMASS_MSG_LATEST}`]);
   });
 });
