@@ -75,6 +75,8 @@ export interface GeoFeatureCollection {
 }
 
 // --- CONSTANTS NOVES (3D Terrain & Z-Layers) ---
+// Polígons de països de Mapbox: el seu contorn és la costa i les fronteres.
+export const MAPBOX_COUNTRIES_URL = 'mapbox://mapbox.country-boundaries-v1';
 export const MAPBOX_DEM_URL = 'mapbox://mapbox.mapbox-terrain-dem-v1';
 
 export const Z_LAYERS = {
@@ -82,6 +84,11 @@ export const Z_LAYERS = {
   PIS_2_SURFACE: 'z-index-nasa-fires',
   PIS_3_LOW_ATMOS: 'z-index-clouds',
   PIS_4_FILTER: 'layer-night',
+  // Línies de costa i de fronteres que acompanyen les Masses d'aire (imatge
+  // opaca: sense elles no se sap on cau cada cosa). Les capes d'Airmass
+  // s'insereixen just sota aquesta, de manera que les línies sempre queden per
+  // sobre de la imatge i per sota del radar.
+  PIS_4B_OUTLINES: 'layer-outlines',
   PIS_5_HIGH_ATMOS: 'z-index-radar',
   // Àncora entre el radar (per sota) i els llamps (per sobre): cada capa de
   // radar nova s'insereix just sota aquesta, i les de llamps just sota les

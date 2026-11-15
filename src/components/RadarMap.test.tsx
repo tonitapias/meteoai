@@ -894,6 +894,26 @@ describe('RadarMap — Aire fred en alçada (Airmass)', () => {
     expect(JSON.parse(window.localStorage.getItem('meteoai_radar_layers')!)).toMatchObject({ clouds: 'global' });
   });
 
+  it('les línies de costa i fronteres només surten amb les Masses d’aire, sobre la imatge i sota el radar', async () => {
+    const map = await mountRadar();
+    expect(layer(map, 'layer-outlines')?.layout.visibility).toBe('none');
+    expect((map.sources.get('outline-src') as { url: string }).url).toBe('mapbox://mapbox.country-boundaries-v1');
+
+    await press('radio', "Masses d'aire");
+    expect(layer(map, 'layer-outlines')?.layout.visibility).toBe('visible');
+    const order = map.layers.map((l) => l.id);
+    const at = (id: string) => order.indexOf(id);
+    const airmass = order.find((id) => id.startsWith('hd-airmass-layer-'))!;
+    const radar = order.find((id) => id.startsWith('rad-layer-'))!;
+    expect(at(airmass)).toBeGreaterThan(-1);
+    expect(at(airmass)).toBeLessThan(at('layer-outlines'));
+    expect(at('layer-outlines')).toBeLessThan(at(radar));
+
+    await press('radio', 'Global');
+    expect(layer(map, 'layer-outlines')?.layout.visibility).toBe('none');
+    expect(map.errors).toEqual([]);
+  });
+
   it('la llegenda explica els colors i diu de quina hora és la imatge', async () => {
     await mountRadar();
     expect(screen.queryByTestId('airmass-legend')).toBeNull();

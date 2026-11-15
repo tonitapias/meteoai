@@ -12,7 +12,8 @@ import {
   getNasaFiresWmsUrl,
   getNasaFiresOpacityExp,
   NASA_REAL_FULL_OPACITY_ZOOM,
-  Z_LAYERS
+  Z_LAYERS,
+  MAPBOX_COUNTRIES_URL
 } from '../../utils/radarPhysics';
 import {
   MAPBOX_GLYPHS_URL,
@@ -297,6 +298,29 @@ export function useMapLifecycle({
           }
         });
 
+        // Costa i fronteres de països, fines i translúcides: només amb les
+        // Masses d'aire, que són una imatge opaca. Són el contorn dels
+        // polígons de països de Mapbox (country-boundaries): dona la costa i
+        // les fronteres en una sola capa. El contorn dels polígons d'aigua de
+        // Streets hi afegia tots els rius i llacs de l'interior. Amagada no
+        // baixa cap tessel·la.
+        map.addSource('outline-src', { type: 'vector', url: MAPBOX_COUNTRIES_URL });
+        map.addLayer({
+          id: Z_LAYERS.PIS_4B_OUTLINES,
+          type: 'line',
+          source: 'outline-src',
+          'source-layer': 'country_boundaries',
+          filter: ['all',
+            ['==', ['get', 'disputed'], 'false'],
+            ['match', ['get', 'worldview'], ['all', 'US'], true, false]
+          ],
+          layout: { visibility: overlaysRef.current.airmass ? 'visible' : 'none', 'line-join': 'round' },
+          paint: {
+            'line-color': 'rgba(255,255,255,0.55)',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.5, 6, 0.9, 10, 1.2]
+          }
+        });
+
         map.addLayer({ id: Z_LAYERS.PIS_5_HIGH_ATMOS, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
         map.addLayer({ id: Z_LAYERS.PIS_5B_LIGHTNING, type: 'background', paint: { 'background-color': 'transparent', 'background-opacity': 0 } });
 
@@ -463,6 +487,10 @@ export function useMapLifecycle({
         map.setLayoutProperty(Z_LAYERS.PIS_4_FILTER, 'visibility', currentOverlays.night ? 'visible' : 'none');
         map.setPaintProperty(Z_LAYERS.PIS_4_FILTER, 'fill-color', (currentActiveBase === 'dark' || currentActiveBase === 'black_marble') ? '#000000' : '#040714');
         map.setPaintProperty(Z_LAYERS.PIS_4_FILTER, 'fill-opacity', getNightOpacityExp(currentActiveBase === 'dark' || currentActiveBase === 'black_marble'));
+      }
+
+      if (map.getLayer(Z_LAYERS.PIS_4B_OUTLINES)) {
+        map.setLayoutProperty(Z_LAYERS.PIS_4B_OUTLINES, 'visibility', currentOverlays.airmass ? 'visible' : 'none');
       }
 
       if (map.getLayer(Z_LAYERS.PIS_6_UI)) {

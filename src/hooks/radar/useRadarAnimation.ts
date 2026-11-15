@@ -591,7 +591,10 @@ export function useRadarAnimation({
             'raster-brightness-min': cfg.brightnessMin,
             'raster-fade-duration': 0
           },
-        }, cfg.colour ? Z_LAYERS.PIS_5_HIGH_ATMOS : Z_LAYERS.PIS_4_FILTER);
+        }, agency === 'airmass' && map.getLayer(Z_LAYERS.PIS_4B_OUTLINES)
+          // Sota les línies de costa i fronteres que l'acompanyen.
+          ? Z_LAYERS.PIS_4B_OUTLINES
+          : cfg.colour ? Z_LAYERS.PIS_5_HIGH_ATMOS : Z_LAYERS.PIS_4_FILTER);
 
         // PERF: finestra FIFO — expulsa la capa HD més antiga d'aquesta
         // agència si ja n'hi ha MAX_LIVE_HD_FRAMES_PER_AGENCY vives, mai la
