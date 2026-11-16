@@ -10,7 +10,7 @@ import type { SolarDaily } from '../utils/solar/solarForecast';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
-import { Language } from '../translations';
+import { Language, TRANSLATIONS } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
 import { UVIndexWidget } from './widgets/UVIndexWidget';
@@ -108,6 +108,8 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
   const currentCloudLow = typeof current?.cloud_cover_low === 'number' ? current.cloud_cover_low : undefined;
   const currentCloudMid = typeof current?.cloud_cover_mid === 'number' ? current.cloud_cover_mid : undefined;
   const currentCloudHigh = typeof current?.cloud_cover_high === 'number' ? current.cloud_cover_high : undefined;
+  // Títols del vent i la pressió del diccionari de l'idioma (abans "Wind" i "Pressure" en anglès per a es i fr).
+  const trLabels = TRANSLATIONS[lang] ?? TRANSLATIONS.ca;
   const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : undefined;
   const currentHumidity = typeof current?.relative_humidity_2m === 'number' ? current.relative_humidity_2m : undefined;
 
@@ -164,7 +166,7 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
                 degrees={currentWindDir}
                 speed={currentWindSpeed}
                 gusts={currentWindGusts}
-                label={lang === 'ca' ? "Vent" : "Wind"}
+                label={trLabels.wind}
                 lang={lang}
               />
           </WidgetCard>
@@ -192,7 +194,7 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
           <WidgetCard key={id} onClick={onShowPressureModal}>
               <CircularGauge
                   icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>}
-                  label={lang === 'ca' ? "Pressió" : "Pressure"}
+                  label={trLabels.pressure}
                   value={currentPressure}
                   max={1050}
                   subText="hPa"

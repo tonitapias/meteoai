@@ -14,7 +14,7 @@ import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
-import { getWindDirectionText } from './widgets/widgetHelpers';
+import { getWindDirectionText, westLetter } from './widgets/widgetHelpers';
 
 const { WIND } = WEATHER_THRESHOLDS;
 
@@ -149,7 +149,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
 
   const severity = getWindSeverity(currentGusts ?? currentSpeed);
   const beaufort = currentSpeed !== null ? getBeaufort(currentSpeed, safeLang) : null;
-  const directionText = currentDir !== null ? getWindDirectionText(currentDir) : null;
+  const directionText = currentDir !== null ? getWindDirectionText(currentDir, lang) : null;
 
   const maxGustWindow = useMemo(() => {
     let best: { idx: number; value: number } | null = null;
@@ -171,13 +171,13 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
     const counts: Record<string, number> = {};
     windowEntries.forEach(e => {
       if (e.dir === null) return;
-      const key = getWindDirectionText(e.dir);
+      const key = getWindDirectionText(e.dir, lang);
       counts[key] = (counts[key] ?? 0) + 1;
     });
     const entries = Object.entries(counts);
     if (entries.length === 0) return null;
     return entries.reduce((a, b) => (b[1] > a[1] ? b : a))[0];
-  }, [windowEntries]);
+  }, [windowEntries, lang]);
 
   // --- Pròxima ratxa forta: primer tram contigu amb ratxa >= WIND.STRONG ---
   const nextGustWindow = useMemo(() => {
@@ -371,7 +371,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
 
                 <span className="absolute top-6 left-1/2 -translate-x-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] px-1 rounded">N</span>
                 <span className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] px-1 rounded">S</span>
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] py-1 rounded">W</span>
+                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] py-1 rounded">{westLetter(lang)}</span>
                 <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] py-1 rounded">E</span>
 
                 <div className="absolute flex flex-col items-center justify-center z-30 w-36 h-36 rounded-full">

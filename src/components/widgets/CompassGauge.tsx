@@ -1,7 +1,7 @@
 import { Wind, Zap, Navigation2, AlertTriangle, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
-import { getTrans, getWindDirectionText } from './widgetHelpers';
+import { getTrans, getWindDirectionText, westLetter } from './widgetHelpers';
 
 // Funció helper matemàticament segura per dibuixar arcs SVG (Risc Zero: Protecció contra NaN i Infinity)
 const describeArc = (x: number, y: number, radius: number, startAngle: number, endAngle: number) => {
@@ -44,7 +44,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
   const safeDeg = isValidDeg ? degrees : 0;
   const safeGusts = isValidGusts ? gusts : 0;
 
-  const directionText = isValidDeg ? getWindDirectionText(safeDeg) : '--';
+  const directionText = isValidDeg ? getWindDirectionText(safeDeg, lang) : '--';
   const displayDeg = isValidDeg ? Math.round(safeDeg) : '--';
   const displaySpeed = isValidSpeed ? Math.round(safeSpeed) : '--';
   const displayGusts = isValidGusts ? Math.round(safeGusts) : '--';
@@ -175,7 +175,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
              {/* Punts Cardinals Textuals (Estilitzats) */}
              <span className={`absolute top-5 left-1/2 -translate-x-1/2 text-[11px] font-black px-1 rounded transition-colors duration-500 ${isValidDeg ? 'text-slate-400 bg-[#0c0e15]' : 'text-slate-700 bg-transparent'}`}>N</span>
              <span className={`absolute bottom-5 left-1/2 -translate-x-1/2 text-[11px] font-black px-1 rounded transition-colors duration-500 ${isValidDeg ? 'text-slate-400 bg-[#0c0e15]' : 'text-slate-700 bg-transparent'}`}>S</span>
-             <span className={`absolute left-5 top-1/2 -translate-y-1/2 text-[11px] font-black py-1 rounded transition-colors duration-500 ${isValidDeg ? 'text-slate-400 bg-[#0c0e15]' : 'text-slate-700 bg-transparent'}`}>W</span>
+             <span className={`absolute left-5 top-1/2 -translate-y-1/2 text-[11px] font-black py-1 rounded transition-colors duration-500 ${isValidDeg ? 'text-slate-400 bg-[#0c0e15]' : 'text-slate-700 bg-transparent'}`}>{westLetter(lang)}</span>
              <span className={`absolute right-5 top-1/2 -translate-y-1/2 text-[11px] font-black py-1 rounded transition-colors duration-500 ${isValidDeg ? 'text-slate-400 bg-[#0c0e15]' : 'text-slate-700 bg-transparent'}`}>E</span>
 
              {/* Nucli de dades: Alta llegibilitat */}

@@ -1,7 +1,7 @@
 // src/hooks/useCurrentWeatherLogic.ts
 import { useMemo } from 'react';
 import type { ExtendedWeatherData, StrictCurrentWeather, LocationMeta } from '../types/weatherLogicTypes';
-import { formatTemp, WeatherUnit, getWeatherLabel } from '../utils/formatters';
+import { formatTemp, WeatherUnit, getWeatherLabel, getSafeLocale } from '../utils/formatters';
 import type { Language } from '../translations';
 // 1. NOU IMPORT: La nostra lògica segura
 import { getCurrentDisplayTemp, getInversionCorrectedApparent } from '../utils/rules/temperatureCorrections';
@@ -68,7 +68,8 @@ export const useCurrentWeatherLogic = ({
         const displayDate = shiftedNow || new Date();
         const displayTimeStr = `${String(displayDate.getHours()).padStart(2, '0')}:${String(displayDate.getMinutes()).padStart(2, '0')}`;
         
-        const dateStr = displayDate.toLocaleDateString(lang === 'ca' ? 'ca-ES' : 'en-US', { 
+        // Data en el format de cada idioma (abans es i fr la veien en anglès: "MON, NOV 16").
+        const dateStr = displayDate.toLocaleDateString(getSafeLocale(lang), { 
             weekday: 'short', day: 'numeric', month: 'short' 
         }).toUpperCase().replace('.', '');
 
