@@ -69,6 +69,8 @@ describe('useWeatherAI — el codi de temps efectiu arriba a les dues IA', () =>
         await flush();
         // getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData, effectiveCloudCover)
         expect(getGeminiAnalysis.mock.calls[0][4]).toBe(78);
+        // I a la predicció local (11è argument): ja no fa servir la cobertura total bruta del model.
+        expect(generateAIPrediction.mock.calls[0][10]).toBe(78);
     });
 
     // Sense això, Gemini no sabia que la insígnia del costat deia "Pluja incerta" i escrivia "plourà".

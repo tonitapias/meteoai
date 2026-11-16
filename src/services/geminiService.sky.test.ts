@@ -18,7 +18,8 @@ import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 // capçalera ("Molt ennuvolat"). Ara la descripció segueix el mateix criteri que la capçalera i les icones.
 
 const SERE = 'Cel ras / Completament serè';
-const MAJORITARIAMENT_SERE = 'Majoritàriament serè (pocs núvols)';
+// Sense "(pocs núvols)": amb un vel de núvols alts el 43 % efectiu no són pocs núvols (auditoria del 16/11/2026).
+const MAJORITARIAMENT_SERE = 'Majoritàriament serè';
 const PARCIAL = 'Parcialment ennuvolat (cel variable)';
 const MOLT_ENNUVOLAT = 'Molt ennuvolat (cel majoritàriament tapat, amb clarianes)';
 const COBERT = 'Cobert (cel completament tapat)';
@@ -65,7 +66,9 @@ const promptFor = async (weather: ExtendedWeatherData, effectiveCode: number | n
     return (JSON.parse(fetchMock.mock.calls[0][1].body as string) as { prompt: string }).prompt;
 };
 
-const currentSky = (prompt: string) => prompt.match(/Estat del Cel: (.*)/)?.[1] ?? '';
+// Només la descripció: amb cobertura, la línia continua amb " · cobertura efectiva …" (vegeu el bloc de més avall).
+const currentSky = (prompt: string) => prompt.match(/Estat del Cel: (.*?)(?: · cobertura efectiva|$)/m)?.[1] ?? '';
+const skyLine = (prompt: string) => prompt.match(/Estat del Cel: (.*)/)?.[1] ?? '';
 const hourSky = (prompt: string, hh: string) => prompt.match(new RegExp(`\\| ${hh} \\| ([^|]*) \\|`))?.[1] ?? '';
 
 describe('getGeminiAnalysis — estat del cel (codis 0/1/2/3)', () => {
@@ -107,6 +110,27 @@ describe('getGeminiAnalysis — estat del cel (codis 0/1/2/3)', () => {
         expect(hourSky(prompt, '14:00')).toBe(PARCIAL);
         expect(hourSky(prompt, '15:00')).toBe(MOLT_ENNUVOLAT);
         expect(hourSky(prompt, '16:00')).toBe(COBERT);
+    });
+
+    it('la línia d\'ara porta el % efectiu i les capes de la capçalera, i demana descriure el cel amb aquestes paraules', async () => {
+        // Cas de l'auditoria (Barcelona, 16/11/2026): vel de núvols alts al 100 %, 43 % efectiu, "Majorment serè" a dalt.
+        const w = buildWeather([0]);
+        (w.current as Record<string, unknown>).cloud_cover_low = 0;
+        (w.current as Record<string, unknown>).cloud_cover_mid = 22;
+        (w.current as Record<string, unknown>).cloud_cover_high = 100;
+        const line = skyLine(await promptFor(w, 1, 43.2));
+        expect(currentSky(`Estat del Cel: ${line}`)).toBe(MAJORITARIAMENT_SERE);
+        expect(line).toContain('cobertura efectiva 43 % (núvols baixos 0 %, mitjans 22 %, alts 100 %)');
+        expect(line).toContain("descriu el cel d'ara amb aquestes paraules");
+        expect(line).toContain('els núvols alts són prims i no tapen el cel');
+    });
+
+    it('sense capes al bloc current, fa servir les de l\'hora actual; sense % efectiu, no n\'inventa cap', async () => {
+        const w = buildWeather([30]);
+        const line = skyLine(await promptFor(w, 1, 30));
+        expect(line).toContain('cobertura efectiva 30 % (núvols baixos 30 %, mitjans 0 %, alts 0 %)');
+        expect(line).not.toContain('núvols alts són prims');
+        expect(skyLine(await promptFor(w, 1, null))).toBe(MAJORITARIAMENT_SERE);
     });
 
     it('cap descripció de cel torna a ser el text genèric "De poc núvol a cobert"', async () => {

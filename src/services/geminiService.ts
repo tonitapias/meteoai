@@ -196,7 +196,8 @@ const getTacticalWeatherDescription = (code: number | null | undefined, temp: nu
 
     switch (code) {
         case 0: return "Cel ras / Completament serè";
-        case 1: return "Majoritàriament serè (pocs núvols)";
+        // Sense "(pocs núvols)": un 43 % efectiu pot ser un vel de núvols alts al 100 %, i la IA hi deia "cel tapat".
+        case 1: return "Majoritàriament serè";
         // Mateix criteri que la capçalera i les icones: dins del 2, per sobre de CLOUDS.MOSTLY_CLOUDY és "molt ennuvolat".
         case 2: return isMostlyCloudy(code, cloudCover) ? "Molt ennuvolat (cel majoritàriament tapat, amb clarianes)" : "Parcialment ennuvolat (cel variable)";
         case 3: return "Cobert (cel completament tapat)";
@@ -976,12 +977,33 @@ export const getGeminiAnalysis = async (
             windowSummary = buildWindowSummary(windowRows, rainCertainty, reliability);
         }
 
+        // Estat del cel d'"ara": el mateix codi i el mateix % efectiu que la capçalera, i les tres capes (les del bloc current
+        // o, si no hi són, les de l'hora actual, com useCurrentConditions). Abans només rebia "Majoritàriament serè (pocs
+        // núvols)" amb un 43 % que era un vel de núvols alts al 100 %, i escrivia "cel tapat" al costat de "Majorment serè".
+        // La instrucció va a la mateixa línia de la dada: Flash-Lite la segueix millor que una regla del prompt de sistema.
+        const skyLine = (() => {
+            const desc = getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover);
+            if (effectiveCloudCover === null) return desc;
+            const layerNow = (key: string): number | null => {
+                const own = currentObj[key];
+                if (typeof own === 'number' && !isNaN(own)) return own;
+                const arr = hourlyObj[key];
+                const v = Array.isArray(arr) ? arr[evalStartIndex] : undefined;
+                return typeof v === 'number' && !isNaN(v) ? v : null;
+            };
+            const pct = (v: number | null) => (v === null ? '--' : `${Math.round(v)} %`);
+            const high = layerNow('cloud_cover_high');
+            const thinHigh = high !== null && high >= 50 ? '; els núvols alts són prims i no tapen el cel' : '';
+            return `${desc} · cobertura efectiva ${Math.round(effectiveCloudCover)} % (núvols baixos ${pct(layerNow('cloud_cover_low'))}, `
+                + `mitjans ${pct(layerNow('cloud_cover_mid'))}, alts ${pct(high)}) — és el que mostra l'app: descriu el cel d'ara amb aquestes paraules${thinHigh}`;
+        })();
+
         // Prompt descarregat d'instruccions: Només telemetria en brut per al Worker
         const prompt = `
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
           
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
-          Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
+          Estat del Cel: ${skyLine}
           Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C${shownTempNote(currentDisplayTemp)}` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentDisplayTemp, currentDisplayApparent, currentHumidity)}
           Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}${lightningLine}

@@ -43,6 +43,23 @@ describe('generateAIPrediction — codi de temps de la política de boira', () =
     });
 });
 
+// "No s'esperen precipitacions" surt amb poc núvol: ara amb la cobertura EFECTIVA de la capçalera, no amb la total bruta
+// del model (current.cloud_cover, aquí un 10 % que contradiria un 80 % efectiu). Sense % efectiu, no es diu.
+describe('generateAIPrediction — cobertura de núvols del resum provisional', () => {
+    const says = (effective: number | null) =>
+        generateAIPrediction(current, daily, hourly, 0, 'ca', 1, null, 'C', null, false, effective).text
+            .includes((tr.aiRainNone as string).trim());
+
+    it('fa servir la cobertura efectiva, no la bruta', () => {
+        expect(says(10)).toBe(true);
+        expect(says(80)).toBe(false);
+    });
+
+    it('sense cobertura efectiva no ho afirma', () => {
+        expect(says(null)).toBe(false);
+    });
+});
+
 describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
     const msgs = (dustKind: 'dust' | 'particles' | null, aqi = 0) =>
         generateAIPrediction(current, daily, hourly, aqi, 'ca', 3, null, 'C', dustKind).alerts.map(a => a.msg);

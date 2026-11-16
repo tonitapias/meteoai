@@ -111,7 +111,8 @@ export function useWeatherAI(
         const local = generateAIPrediction(
           current, weatherData.daily, weatherData.hourly,
           aqiVal, lang, effectiveCode, reliability, unit, dustKind,
-          !!lightning && lightning.nearestKm <= LIGHTNING_NEAR_KM
+          !!lightning && lightning.nearestKm <= LIGHTNING_NEAR_KM,
+          effectiveCloudCover
         );
         setAiAnalysis(local);
         if (isOfflineSnapshot) return;

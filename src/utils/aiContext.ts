@@ -55,7 +55,7 @@ const analyzePrecipitation = (isRaining: boolean, precipInstantanea: number, cod
     return parts.filter(Boolean);
 };
 
-const analyzeSky = (code: number, isDay: number, currentHour: number, visibility: number, rainProb: number, cloudCover: number, tr: TranslationMap, alerts: Alert[]) => {
+const analyzeSky = (code: number, isDay: number, currentHour: number, visibility: number, rainProb: number, cloudCover: number | null, tr: TranslationMap, alerts: Alert[]) => {
     const parts: string[] = []; 
     if (isDay) parts.push(currentHour < 12 ? tr.aiIntroMorning : tr.aiIntroAfternoon);
     else parts.push(tr.aiIntroNight);
@@ -71,7 +71,7 @@ const analyzeSky = (code: number, isDay: number, currentHour: number, visibility
     else if (code > 48) parts.push(tr.aiSummaryCloudy);
     
     if (rainProb > 40) parts.push(tr.aiRainChance);
-    else if (cloudCover < 30 && code <= 2) parts.push(tr.aiRainNone);
+    else if (cloudCover !== null && cloudCover < 30 && code <= 2) parts.push(tr.aiRainNone);
     return parts.filter(Boolean);
 };
 
@@ -224,7 +224,9 @@ export const generateAIPrediction = (
     dustKind: DustKind = null,
     // Llamps observats a prop ara mateix (lightningService, a LIGHTNING_NEAR_KM o menys): avís de tempesta encara
     // que el model no en prevegi. Sense això, amb la IA caiguda, l'anàlisi local no deia res d'una tempesta a 5 km.
-    lightningNear: boolean = false
+    lightningNear: boolean = false,
+    // % efectiu de núvols d'"ara" (useCurrentConditions): el mateix que decideix l'estat del cel de la capçalera.
+    effectiveCloudCover: number | null = null
 ): AIPredictionResult => {
     const tr = (TRANSLATIONS[language] || TRANSLATIONS['ca']) as TranslationMap;
     // Sense dades no hi ha acord entre models que valgui: sense insígnia, mai una "Incertesa alta" que, en arribar
@@ -265,7 +267,9 @@ export const generateAIPrediction = (
         const windSpeed = safeNum(current.wind_speed_10m);
         const windGusts = safeNum(current.wind_gusts_10m);
         const visibility = safeNum(current.visibility, 10000);
-        const cloudCover = safeNum(current.cloud_cover, 0);
+        // Cobertura efectiva, no la total bruta del model (current.cloud_cover): un vel de núvols alts al 100 % hi
+        // comptava com a cel tapat. Sense dada, null: analyzeSky no diu "no s'esperen precipitacions" a partir d'un 0 fals.
+        const cloudCover = effectiveCloudCover;
         const isDay = safeNum(current.is_day, 1);
 
         let summaryParts: string[] = [];

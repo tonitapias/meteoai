@@ -27,13 +27,14 @@ describe('CloudLayersModal — l\'heroi segueix l\'hora explorada al gràfic', (
 
     expect(heroValue(container)).toBe('100');
     expect(heroCaption(container)).toBe('Cobertura Efectiva · ARA');
-    expect([...container.querySelectorAll('span')].some(s => s.textContent === 'Cobert')).toBe(true);
+    expect([...container.querySelectorAll('span')].some(s => s.textContent === 'Cel cobert')).toBe(true);
 
     // Última hora (End): abans l'heroi es quedava a "100 · Cobert" mentre les capes deien 100 / 0 / 0 %.
+    // 30 % efectiu (només núvols alts): "Majorment serè", com la capçalera.
     fireEvent.keyDown(slider, { key: 'End' });
     expect(heroValue(container)).toBe('30');
     expect(heroCaption(container)).toBe('Cobertura Efectiva · 20:00');
-    expect([...container.querySelectorAll('span')].some(s => s.textContent === 'Parcialment Ennuvolat')).toBe(true);
+    expect([...container.querySelectorAll('span')].some(s => s.textContent === 'Majorment serè')).toBe(true);
     expect(slider.getAttribute('aria-valuetext')).toBe('20:00 · Cobertura Efectiva 30% · Alts 100% · Mitjans 0% · Baixos 0%');
 
     fireEvent.keyDown(slider, { key: 'Home' });

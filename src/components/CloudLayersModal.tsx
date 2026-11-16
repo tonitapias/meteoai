@@ -69,9 +69,10 @@ interface Severity { label: string; color: string; stroke: string; borderColor: 
 function getCloudSeverity(effectiveCover: number | null, t: Record<string, string>): Severity {
   if (effectiveCover === null) return { label: t.unknown, color: 'text-slate-500', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
   const level = cloudCoverLevel(effectiveCover);
+  // Colors per franges de cobertura (com el giny): 15-45 % blau cel; 45-85 % indi, parcialment i molt ennuvolat.
   if (level === 'clear') return { label: t.clear, color: 'text-emerald-400', stroke: '#34d399', borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' };
-  if (level === 'partial') return { label: t.partial, color: 'text-sky-400', stroke: '#38bdf8', borderColor: 'border-sky-500/20', bgGlow: 'from-sky-950/20 to-black/90' };
-  if (level === 'veryCloudy') return { label: t.veryCloudy, color: 'text-indigo-400', stroke: '#818cf8', borderColor: 'border-indigo-500/20', bgGlow: 'from-indigo-950/25 to-black/90' };
+  if (level === 'mostlyClear') return { label: t.mostlyClear, color: 'text-sky-400', stroke: '#38bdf8', borderColor: 'border-sky-500/20', bgGlow: 'from-sky-950/20 to-black/90' };
+  if (level === 'partial' || level === 'veryCloudy') return { label: level === 'partial' ? t.partial : t.veryCloudy, color: 'text-indigo-400', stroke: '#818cf8', borderColor: 'border-indigo-500/20', bgGlow: 'from-indigo-950/25 to-black/90' };
   return { label: t.overcast, color: 'text-slate-300', stroke: '#cbd5e1', borderColor: 'border-slate-400/20', bgGlow: 'from-slate-800/30 to-black/90' };
 }
 
@@ -138,9 +139,10 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
     return avgs[best] < 0 ? null : best;
   }, [windowEntries, N]);
 
+  // Hores que l'etiqueta diria "Cel cobert" (mateix tall que la capçalera: per sobre de CLOUDS.OVERCAST).
   const hoursOvercast = useMemo(() => windowEntries.filter(e => {
     if (e.low === null && e.mid === null && e.high === null) return false;
-    return calculateEffectiveCloudCover(e.low ?? 0, e.mid ?? 0, e.high ?? 0) >= CLOUDS.OVERCAST;
+    return cloudCoverLevel(calculateEffectiveCloudCover(e.low ?? 0, e.mid ?? 0, e.high ?? 0)) === 'overcast';
   }).length, [windowEntries]);
 
   // --- Scrub horitzontal (mateix patró RAF que la resta de modals experts) ---
@@ -336,6 +338,8 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                 >
                   <line x1="0" y1={valToY(CLOUDS.FEW)} x2={CHART_W} y2={valToY(CLOUDS.FEW)} stroke="#34d399" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={valToY(CLOUDS.SCATTERED)} x2={CHART_W} y2={valToY(CLOUDS.SCATTERED)} stroke="#38bdf8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                  {/* De parcialment a molt ennuvolat (CLOUDS.MOSTLY_CLOUDY): els cinc estats de la capçalera tenen quatre talls. */}
+                  <line x1="0" y1={valToY(CLOUDS.MOSTLY_CLOUDY)} x2={CHART_W} y2={valToY(CLOUDS.MOSTLY_CLOUDY)} stroke="#818cf8" strokeOpacity="0.15" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={valToY(CLOUDS.OVERCAST)} x2={CHART_W} y2={valToY(CLOUDS.OVERCAST)} stroke="#818cf8" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
 
                   {dayMarkers.map(m => (
