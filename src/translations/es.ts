@@ -475,6 +475,7 @@ export const es = {
   tipUmbrella: "Coge paraguas",
   tipSunscreen: "Protector solar",
   tipCalm: "Disfruta",
+  tipCalmNight: "Noche tranquila",
   tipCoat: "Abrigo grueso",
   tipLayers: "Viste por capas",
 

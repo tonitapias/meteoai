@@ -476,6 +476,7 @@ export const en = {
   tipUmbrella: "Take umbrella",
   tipSunscreen: "Sunscreen",
   tipCalm: "Enjoy",
+  tipCalmNight: "Calm night",
   tipCoat: "Heavy coat",
   tipLayers: "Wear layers",
 

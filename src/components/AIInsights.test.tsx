@@ -39,6 +39,28 @@ describe('AIInsights — insígnia de confiança', () => {
     });
 });
 
+// Auditoria d'UX del 16/11/2026 (A3): sense nivell ni avisos, la insígnia posava AMBER ("Avís precaució") per defecte.
+describe('AIInsights — semàfor de risc sense nivell', () => {
+    it('sense nivell i sense avisos, "Temps tranquil"', () => {
+        render(<AIInsights lang="ca" analysis={analysis({})} />);
+        expect(screen.getByText('TEMPS TRANQUIL')).toBeTruthy();
+        expect(screen.queryByText('AVÍS PRECAUCIÓ')).toBeNull();
+    });
+
+    it('sense nivell, els avisos locals el decideixen: precaució amb un avís, alerta amb un de greu', () => {
+        const { unmount } = render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Vent', msg: 'Ràfegues fortes.', level: 'warning' }] })} />);
+        expect(screen.getByText('AVÍS PRECAUCIÓ')).toBeTruthy();
+        unmount();
+        render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Tempesta', msg: 'Tempestes.', level: 'high' }] })} />);
+        expect(screen.getByText('ALERTA METEO')).toBeTruthy();
+    });
+
+    it('amb el nivell de les regles (GREEN), "Temps tranquil"', () => {
+        render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'GREEN', hazard_type: 'NONE' })} />);
+        expect(screen.getByText('TEMPS TRANQUIL')).toBeTruthy();
+    });
+});
+
 describe('AIInsights — detall del motiu', () => {
     const WIND_DETAIL = { level: 'AMBER', hazard: 'WIND', hour: '17:00', value: 62, threshold: 50, event: null } as const;
 

@@ -64,6 +64,7 @@ export interface TranslationMap {
   tipLayers: string;
   tipUmbrella: string;
   tipCalm: string;
+  tipCalmNight: string;
   aiWindStrong: string;
   aiWindMod: string;
   aiConfidence: string;

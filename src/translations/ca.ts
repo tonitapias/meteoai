@@ -480,6 +480,7 @@ export const ca = {
   tipUmbrella: "Agafa paraigua",
   tipSunscreen: "Crema solar",
   tipCalm: "Gaudeix del dia",
+  tipCalmNight: "Nit tranquil·la",
   tipCoat: "Abric gruixut",
   tipLayers: "Vesteix per capes",
   

@@ -10,7 +10,8 @@ vi.mock('./cacheService', () => ({
     },
 }));
 
-import { getGeminiAnalysis, type AICacheData, type AiAirQualityInput, type RiskDetail } from './geminiService';
+import { getGeminiAnalysis, evaluateRulesRisk, type AICacheData, type AiAirQualityInput, type RiskDetail } from './geminiService';
+import type { LightningNearby } from './lightningService';
 import { cacheService } from './cacheService';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
@@ -194,5 +195,47 @@ describe('getGeminiAnalysis — detall del motiu (risk_detail)', () => {
             expect(result?.risk_level).toBe('AMBER');
             expect(result?.risk_detail).toMatchObject({ hazard: 'WIND', hour: '02:00', value: 62 });
         });
+    });
+});
+
+// L'anàlisi provisional (useWeatherAI) porta el nivell de les regles. Abans no en portava cap i la insígnia posava AMBER
+// per defecte: "Avís precaució" sense cap motiu fins que arribava la IA (auditoria d'UX del 16/11/2026, A3).
+describe('evaluateRulesRisk — l\'avís provisional surt de les regles', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        vi.mocked(cacheService.get).mockResolvedValue(null);
+    });
+
+    it('sense cap perill a les 6 hores, verd i sense motiu', () => {
+        expect(evaluateRulesRisk(buildWeather())).toEqual({ risk_level: 'GREEN', hazard_type: 'NONE' });
+    });
+
+    it('amb ràfegues de 62 km/h dins la finestra, AMBER per vent amb el mateix detall que la resposta final', async () => {
+        const rules = evaluateRulesRisk(buildWeather(WINDY));
+        expect(rules.risk_level).toBe('AMBER');
+        expect(rules.hazard_type).toBe('WIND');
+        expect(rules.risk_detail).toMatchObject({ hazard: 'WIND', hour: '02:00', value: 62, threshold: 50 });
+        // La IA diu GREEN: el tallafocs la puja al mateix nivell, perill i detall que l'avís provisional.
+        const final = await analyse(buildWeather(WINDY), 'GREEN', 'NONE');
+        expect(final?.risk_level).toBe(rules.risk_level);
+        expect(final?.hazard_type).toBe(rules.hazard_type);
+        expect(final?.risk_detail).toEqual(rules.risk_detail);
+    });
+
+    it('l\'avís provisional mai és més alt que el final: la IA només el pot mantenir o pujar', async () => {
+        const rules = evaluateRulesRisk(buildWeather(WINDY));
+        const final = await analyse(buildWeather(WINDY), 'RED', 'WIND');
+        expect(rules.risk_level).toBe('AMBER');
+        expect(final?.risk_level).toBe('RED');
+    });
+
+    it('les ràfegues fora de les 6 hores no hi compten (mateixa finestra que la IA)', () => {
+        expect(evaluateRulesRisk(buildWeather({ wind_gusts_10m: [10, 10, 10, 10, 10, 10, 70, 70] })).risk_level).toBe('GREEN');
+    });
+
+    it('la pols (avís d\'aerosols) i els llamps a prop també hi compten', () => {
+        expect(evaluateRulesRisk(buildWeather(), 'dust')).toMatchObject({ risk_level: 'AMBER', hazard_type: 'AIR_QUALITY' });
+        const lightning: LightningNearby = { nearestKm: 8, bearingDeg: 90, observedAt: 1_790_000_000, intense: false, activeSlots: 1 };
+        expect(evaluateRulesRisk(buildWeather(), null, lightning)).toMatchObject({ risk_level: 'AMBER', hazard_type: 'CONVECTIVE' });
     });
 });

@@ -166,8 +166,10 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
 const TacticalRiskBadge = ({ analysis, ui }: { analysis: TacticalAnalysisResult; ui: LocalUIText }) => {
     if (!analysis) return null;
     
-    let risk: TacticalRiskLevel = analysis.risk_level || 'AMBER';
-    
+    // Sense nivell (no hauria de passar: l'anàlisi provisional ja porta el de les regles, vegeu evaluateRulesRisk), el
+    // diuen els avisos locals; sense cap avís, verd. Abans era AMBER per defecte: "Avís precaució" sense cap motiu.
+    let risk: TacticalRiskLevel = analysis.risk_level || 'GREEN';
+
     if (!analysis.risk_level && Array.isArray(analysis.alerts) && analysis.alerts.length > 0) {
         if (analysis.alerts.some(a => a.level === 'high')) {
             risk = 'RED';

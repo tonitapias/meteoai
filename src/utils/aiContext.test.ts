@@ -60,6 +60,28 @@ describe('generateAIPrediction — cobertura de núvols del resum provisional', 
     });
 });
 
+// Auditoria d'UX del 16/11/2026 (A3): "Gaudeix del dia" a les 20:18. Sense res a dir, el consell depèn de si és de dia.
+describe('generateAIPrediction — consell tranquil de dia o de nit', () => {
+    const calm = { ...current, temperature_2m: 18, apparent_temperature: 18, relative_humidity_2m: 60, visibility: 20000 };
+    const tipsAt = (isDay: number) =>
+        generateAIPrediction({ ...calm, is_day: isDay } as StrictCurrentWeather, daily, hourly, 0, 'ca', 0, null, 'C').tips;
+
+    it('de dia, "Gaudeix del dia"', () => {
+        expect(tipsAt(1)).toEqual([tr.tipCalm]);
+    });
+
+    it('de nit, "Nit tranquil·la"', () => {
+        expect(tipsAt(0)).toEqual([tr.tipCalmNight]);
+        expect(tr.tipCalmNight).toBe('Nit tranquil·la');
+    });
+
+    it('té traducció en els quatre idiomes', () => {
+        for (const lang of ['ca', 'es', 'en', 'fr'] as const) {
+            expect((TRANSLATIONS[lang] as Record<string, unknown>).tipCalmNight).toBeTruthy();
+        }
+    });
+});
+
 describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
     const msgs = (dustKind: 'dust' | 'particles' | null, aqi = 0) =>
         generateAIPrediction(current, daily, hourly, aqi, 'ca', 3, null, 'C', dustKind).alerts.map(a => a.msg);

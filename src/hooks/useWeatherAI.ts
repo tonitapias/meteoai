@@ -9,9 +9,10 @@ import {
 import { generateAIPrediction } from '../utils/aiContext';
 import { resolveDustAdvisory } from '../utils/rules/aerosolRules';
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
-import { 
-    getGeminiAnalysis, 
-    TacticalTip, 
+import {
+    getGeminiAnalysis,
+    evaluateRulesRisk,
+    TacticalTip,
     TacticalRiskLevel, 
     TacticalHazardType,
     type AiAirQualityInput,
@@ -114,7 +115,10 @@ export function useWeatherAI(
           !!lightning && lightning.nearestKm <= LIGHTNING_NEAR_KM,
           effectiveCloudCover
         );
-        setAiAnalysis(local);
+        // El nivell de risc provisional és el de les regles (el tallafocs de les mateixes 6 hores), no un AMBER per
+        // defecte: abans sortia "Avís precaució" sense cap motiu mentre la IA responia, quan no responia i amb la
+        // previsió desada. La resposta de la IA només el pot mantenir o pujar (vegeu evaluateRulesRisk).
+        setAiAnalysis({ ...local, ...evaluateRulesRisk(weatherData, dustKind, lightning) });
         if (isOfflineSnapshot) return;
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)

@@ -394,6 +394,53 @@ interface DeterministicRisk {
     details: Partial<Record<TacticalHazardType, RiskDetail>>;
 }
 
+/**
+ * Finestra de 6 hores que avaluen la IA i el tallafocs: de l'hora actual (current.time dins hourly.time; si no hi és,
+ * la primera hora que no ha passat fa més de 30 min) a 6 hores més enllà. Abans era una funció interna de
+ * getGeminiAnalysis; és aquí perquè l'anàlisi provisional (evaluateRulesRisk) miri exactament les mateixes hores.
+ */
+const computeEvalWindow = (weatherData: ExtendedWeatherData): { start: number; end: number } => {
+    if (!weatherData.hourly || !Array.isArray(weatherData.hourly.time) || weatherData.hourly.time.length === 0) {
+        return { start: 0, end: 0 };
+    }
+    const times = weatherData.hourly.time;
+    const currentTimeRaw = (weatherData.current as Record<string, unknown> | undefined)?.time;
+    const utcOffset = (weatherData as unknown as LocatableData).utc_offset_seconds;
+    let startIndex = -1;
+
+    if (currentTimeRaw !== undefined && currentTimeRaw !== null) {
+        startIndex = times.findIndex(t => t === currentTimeRaw);
+        if (startIndex === -1 && typeof currentTimeRaw === 'string') {
+            startIndex = times.findIndex(t => String(t).localeCompare(String(currentTimeRaw)) >= 0);
+        }
+    }
+
+    if (startIndex === -1) {
+        const nowMs = Date.now();
+        const utcOffsetMs = (utcOffset || 0) * 1000;
+
+        startIndex = times.findIndex(t => {
+            if (typeof t === 'number') {
+                return (t * 1000) >= nowMs - (30 * 60 * 1000);
+            } else {
+                const str = String(t);
+                const hasTz = str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str);
+                if (hasTz) {
+                    return new Date(str).getTime() >= nowMs - (30 * 60 * 1000);
+                } else {
+                    const fakeUtcMs = new Date(`${str}Z`).getTime();
+                    const trueUtcMs = fakeUtcMs - utcOffsetMs;
+                    return !isNaN(trueUtcMs) && trueUtcMs >= nowMs - (30 * 60 * 1000);
+                }
+            }
+        });
+    }
+
+    if (startIndex === -1) startIndex = 0;
+    const endIndex = Math.min(startIndex + 6, times.length);
+    return { start: startIndex, end: endIndex };
+};
+
 /** El detall del tallafocs només explica la resposta final si n'ha vist el mateix perill al mateix nivell. */
 const matchingRiskDetail = (evaluation: DeterministicRisk, level: TacticalRiskLevel, hazard: TacticalHazardType): RiskDetail | undefined => {
     const detail = evaluation.details[hazard];
@@ -520,6 +567,29 @@ const evaluateDeterministicRisk = (
     }
 
     return { risk: maxRisk, hazard: detectedHazard, details };
+};
+
+/**
+ * El nivell de risc de les regles (el tallafocs) per a les mateixes 6 hores que llegeix la IA: el perill i el detall
+ * del bàner "Motiu" inclosos. És el de l'anàlisi provisional (useWeatherAI), la que es veu mentre la IA respon, quan
+ * no respon i amb la previsió desada. Abans l'anàlisi provisional no portava cap nivell i la insígnia posava AMBER
+ * ("Avís precaució") per defecte: a Barcelona, de nit i sense res, sortia l'avís i uns segons després "Temps tranquil"
+ * (auditoria d'UX del 16/11/2026, A3). Com que la resposta final és sempre el màxim entre la IA i aquestes regles,
+ * l'avís provisional ja no pot ser més alt que el final.
+ */
+export const evaluateRulesRisk = (
+    weatherData: ExtendedWeatherData,
+    dustKind: DustKind = null,
+    lightning: LightningNearby | null = null
+): { risk_level: TacticalRiskLevel; hazard_type: TacticalHazardType; risk_detail?: RiskDetail } => {
+    const { start, end } = computeEvalWindow(weatherData);
+    const evaluation = evaluateDeterministicRisk(weatherData, start, end, dustKind, lightning);
+    if (evaluation.hazard === null) return { risk_level: evaluation.risk, hazard_type: 'NONE' };
+    return {
+        risk_level: evaluation.risk,
+        hazard_type: evaluation.hazard,
+        risk_detail: matchingRiskDetail(evaluation, evaluation.risk, evaluation.hazard)
+    };
 };
 
 /**
@@ -781,47 +851,7 @@ export const getGeminiAnalysis = async (
         // que les dades meteo es refresquen cada 15 min: sense això, un perill
         // que apareix als últims ~45 min d'una finestra de cache no activava mai
         // el tallafocs fins que la pròpia cache expirava.
-        const computeEvalWindow = (): { start: number; end: number } => {
-            if (!weatherData.hourly || !Array.isArray(weatherData.hourly.time) || weatherData.hourly.time.length === 0) {
-                return { start: 0, end: 0 };
-            }
-            const times = weatherData.hourly.time;
-            let startIndex = -1;
-
-            if (currentTimeRaw !== undefined && currentTimeRaw !== null) {
-                startIndex = times.findIndex(t => t === currentTimeRaw);
-                if (startIndex === -1 && typeof currentTimeRaw === 'string') {
-                    startIndex = times.findIndex(t => String(t).localeCompare(String(currentTimeRaw)) >= 0);
-                }
-            }
-
-            if (startIndex === -1) {
-                const nowMs = Date.now();
-                const utcOffsetMs = (utcOffset || 0) * 1000;
-
-                startIndex = times.findIndex(t => {
-                    if (typeof t === 'number') {
-                        return (t * 1000) >= nowMs - (30 * 60 * 1000);
-                    } else {
-                        const str = String(t);
-                        const hasTz = str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str);
-                        if (hasTz) {
-                            return new Date(str).getTime() >= nowMs - (30 * 60 * 1000);
-                        } else {
-                            const fakeUtcMs = new Date(`${str}Z`).getTime();
-                            const trueUtcMs = fakeUtcMs - utcOffsetMs;
-                            return !isNaN(trueUtcMs) && trueUtcMs >= nowMs - (30 * 60 * 1000);
-                        }
-                    }
-                });
-            }
-
-            if (startIndex === -1) startIndex = 0;
-            const endIndex = Math.min(startIndex + 6, times.length);
-            return { start: startIndex, end: endIndex };
-        };
-
-        const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow();
+        const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow(weatherData);
 
         // Certesa de la pluja de la finestra (vegeu resolveRainCertainty), amb les mateixes sèries que la taula.
         const rainCertainty = (() => {

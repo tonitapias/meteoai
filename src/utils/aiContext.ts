@@ -154,7 +154,8 @@ const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
     else if (temp >= TEMP.COLD && temp < 16) { tips.push(tr.tipLayers); }
 
     if (rainProb > 40 || isRaining) tips.push(tr.tipUmbrella);
-    if (tips.length === 0) tips.push(tr.tipCalm);
+    // Sense res a dir: "Gaudeix del dia" de dia i "Nit tranquil·la" de nit (abans sortia "Gaudeix del dia" a les 20:18).
+    if (tips.length === 0) tips.push(isDay ? tr.tipCalm : tr.tipCalmNight);
 
     return { alerts, tips: [...new Set(tips)].slice(0, 4) };
 };
