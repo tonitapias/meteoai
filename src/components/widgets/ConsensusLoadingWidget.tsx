@@ -7,11 +7,12 @@ interface ConsensusLoadingWidgetProps {
   lang?: Language | string;
 }
 
+// Mateix nom que la targeta carregada (ConsensusWidget): el model regional contra el global, no un "motor de consens".
 const translations = {
-  ca: { label: 'Sincronitzant Motor de Consens...' },
-  es: { label: 'Sincronizando Motor de Consenso...' },
-  en: { label: 'Synchronizing Consensus Engine...' },
-  fr: { label: 'Synchronisation du Moteur de Consensus...' }
+  ca: { label: 'Comparant amb el model global...' },
+  es: { label: 'Comparando con el modelo global...' },
+  en: { label: 'Comparing with the global model...' },
+  fr: { label: 'Comparaison avec le modèle global...' }
 };
 
 // [NETEJA] Abans, mentre la petició del model global (best_match) encara

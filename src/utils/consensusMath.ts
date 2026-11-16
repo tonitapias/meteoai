@@ -127,8 +127,6 @@ export interface ConsensusMetrics {
   tempDiff: number | null;
   precipDiff: number | null;
   windDiff: number | null;
-  modelsAgree: boolean;
-  score: number;
   futureDivergence: boolean;
   globalTemp: number | null;
   globalPrecip: number | null;
@@ -162,8 +160,8 @@ export function calculateModelConsensus(
   if (!globalData || typeof localTemp !== 'number') {
     return {
       isConsensusActive: false,
-      tempDiff: null, precipDiff: null, windDiff: null, 
-      modelsAgree: true, score: 0, futureDivergence: false,
+      tempDiff: null, precipDiff: null, windDiff: null,
+      futureDivergence: false,
       globalTemp: null, globalPrecip: null, globalWind: null,
       tempTrend: 'flat', precipTrend: 'flat', windTrend: 'flat'
     };
@@ -210,7 +208,7 @@ export function calculateModelConsensus(
 
     // DOCTRINA RISC ZERO: mai forcem un '0' quan falta la dada de vent o de pluja.
     // Si falta a qualsevol dels dos costats, ho tractem com a comparació NO vàlida (null)
-    // en lloc de simular "0 km/h"/coincidència, que falsejaria l'acord entre models i inflaria el score.
+    // en lloc de simular "0 km/h"/coincidència, que falsejaria la diferència entre els dos models.
     const rawGlobalWind = safeHourly.wind_speed_10m?.[currentHourIndex];
     const globalWindValid = typeof rawGlobalWind === 'number' && !Number.isNaN(rawGlobalWind);
     const localWindValid = typeof localWind === 'number' && !Number.isNaN(localWind);
@@ -230,31 +228,12 @@ export function calculateModelConsensus(
         ? Number(Math.abs((safeLocalWind as number) - (globalWind as number)).toFixed(1))
         : null;
 
-    // 4. MOTOR DE PUNTUACIÓ (CONTÍNUU I SENSE ZONES MORTES)
-    let scorePenalty = 0;
-
-    // Penalització Base (Cada dècima compta perquè el 100% sigui gairebé impossible)
-    scorePenalty += tempDiff * 3.5;  // Ex: 3.0°C de diff = 10.5 punts menys
-    if (precipDiff !== null) scorePenalty += precipDiff * 10; // Ex: 0.5mm de diff = 5 punts menys
-    if (windDiff !== null) scorePenalty += windDiff * 0.8;  // Ex: 5km/h de diff = 4 punts menys
-
-    // Penalització Exponencial per divergència greu (Orografia o Microclimes)
-    if (tempDiff > 2.5) {
-        scorePenalty += (tempDiff - 2.5) * 5; 
-    }
-    if (precipDiff !== null && precipDiff > 1.0) {
-        scorePenalty += (precipDiff - 1.0) * 10;
-    }
-    if (windDiff !== null) {
-        const maxWind = Math.max(safeLocalWind as number, globalWind as number);
-        if (maxWind > 15 && windDiff > 5) {
-            scorePenalty += (windDiff - 5) * 1.5;
-        }
-    }
-
-    const rawScore = 100 - scorePenalty;
-    const score = Math.round(Math.max(0, Math.min(100, rawScore)));
-    const modelsAgree = score >= 75;
+    // 4. Abans hi havia aquí una puntuació de 0 a 100 ("Precisió NN %") amb penalitzacions fixes, sense calibrar
+    // (3,5 punts per °C, 10 per mm, 0,8 per km/h), feta només amb l'hora actual del regional contra best_match, i
+    // un semàfor "Alineat / Discrepància / Divergència". A la mateixa pantalla, el xip "Acord alt/mitjà/baix"
+    // dels gràfics (24 h entre ECMWF, GFS, ICON i AIFS, calibrat) podia dir el contrari: a Puigcerdà, "Acord baix"
+    // just a sobre de "Alineat · Precisió 94 %" (auditoria d'UX del 16/11/2026). L'acord entre models el diuen els
+    // gràfics; aquí només hi queden les diferències d'ara entre els dos models.
 
     // 5. CÀLCUL DE TENDÈNCIA (MOMENTUM)
     let tempTrend: 'up' | 'down' | 'flat' = 'flat';
@@ -328,7 +307,7 @@ export function calculateModelConsensus(
     return {
       isConsensusActive: true,
       tempDiff, precipDiff, windDiff,
-      modelsAgree, score, futureDivergence,
+      futureDivergence,
       globalTemp, globalPrecip, globalWind,
       tempTrend, precipTrend, windTrend
     };
@@ -337,8 +316,8 @@ export function calculateModelConsensus(
     console.warn("Consens inactiu:", err);
     return {
       isConsensusActive: false,
-      tempDiff: null, precipDiff: null, windDiff: null, 
-      modelsAgree: true, score: 0, futureDivergence: false,
+      tempDiff: null, precipDiff: null, windDiff: null,
+      futureDivergence: false,
       globalTemp: null, globalPrecip: null, globalWind: null,
       tempTrend: 'flat', precipTrend: 'flat', windTrend: 'flat'
     };

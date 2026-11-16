@@ -7,9 +7,6 @@ import { ConsensusModal } from './ConsensusModal';
 import { ConsensusChartsModal } from './ConsensusChartsModal';
 import { formatDecimal } from '../../utils/formatters';
 import {
-  CheckCircle2,
-  Activity,
-  GitBranch,
   Thermometer,
   CloudRain,
   CloudSnow,
@@ -45,39 +42,49 @@ interface ConsensusWidgetProps {
 // [FIX PRECISIÓ] La comparació és amb Open-Meteo "best_match" (el mateix motor de selecció
 // automàtica de model que ja fem servir a weatherApi.ts). Fem servir "GLO"/"GLOBAL" — la
 // mateixa etiqueta que ja feia servir ConsensusModal.tsx per a aquesta mateixa dada.
+//
+// Sense veredicte d'acord: abans hi havia "Precisió NN %" i "Alineat / Discrepància / Divergència", una puntuació
+// sense calibrar feta amb l'hora actual del regional contra best_match, que contradeia a la mateixa pantalla el xip
+// "Acord alt/mitjà/baix" dels gràfics (24 h, quatre models globals, calibrat). L'acord el diuen els gràfics; aquí
+// només hi ha la diferència d'ara entre els dos models (auditoria d'UX del 16/11/2026, A2). `{model}` = AROME HD, etc.
 const translations = {
   ca: {
-    title: 'Motor de Consens',
-    affinity: 'Precisió',
+    title: '{model} contra el global',
+    subtitle: 'Diferència ara mateix',
     temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Compara els models',
-    status: { sync: 'Alineat', discrepancy: 'Discrepància', alert: 'Divergència' },
     futureDivergence: 'Possible canvi brusc en 3h (pluja forta o vent fort)'
   },
   es: {
-    title: 'Motor de Consenso',
-    affinity: 'Precisión',
+    title: '{model} frente al global',
+    subtitle: 'Diferencia ahora mismo',
     temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Compara los modelos',
-    status: { sync: 'Alineado', discrepancy: 'Discrepancia', alert: 'Divergencia' },
     futureDivergence: 'Posible cambio brusco en 3h (lluvia o viento fuerte)'
   },
   en: {
-    title: 'Consensus Engine',
-    affinity: 'Accuracy',
+    title: '{model} vs global',
+    subtitle: 'Difference right now',
     temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Compare models',
-    status: { sync: 'Aligned', discrepancy: 'Variance', alert: 'Divergence' },
     futureDivergence: 'Possible sudden shift in 3h (heavy rain or strong wind)'
   },
   fr: {
-    title: 'Moteur de Consensus',
-    affinity: 'Précision',
+    title: '{model} face au global',
+    subtitle: 'Écart en ce moment',
     temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
     chartsBtn: 'Comparer les modèles',
-    status: { sync: 'Aligné', discrepancy: 'Écart', alert: 'Divergence' },
     futureDivergence: 'Changement brusque possible en 3h (pluie ou vent fort)'
   }
+};
+
+// Un sol to, neutre: sense semàfor, perquè la targeta ja no jutja si els models coincideixen.
+const THEME = {
+  accent: 'text-indigo-300',
+  border: 'border-indigo-500/20',
+  bg: 'bg-indigo-500/10',
+  glow: 'from-indigo-900/20',
+  shadow: 'shadow-[0_15px_40px_rgba(99,102,241,0.12)]',
 };
 
 export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
@@ -99,18 +106,8 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const safeGlobalTemp = isValidNum(metrics.globalTemp) ? metrics.globalTemp : null;
   const isSnowRisk = (safeLocalTemp !== undefined && safeLocalTemp <= 2) || (safeGlobalTemp !== null && safeGlobalTemp <= 2);
 
-  const safeScore = Math.max(0, Math.min(100, isValidNum(metrics.score) ? metrics.score : 0));
-
-  const getTheme = (score: number) => {
-    if (score >= 75) return { accent: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10', glow: 'from-emerald-900/30', shadow: 'shadow-[0_15px_40px_rgba(16,185,129,0.2)]', status: t.status.sync, icon: <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 drop-shadow-md" /> };
-    if (score >= 55) return { accent: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10', glow: 'from-amber-900/30', shadow: 'shadow-[0_15px_40px_rgba(245,158,11,0.2)]', status: t.status.discrepancy, icon: <Activity className="w-5 h-5 md:w-6 md:h-6 drop-shadow-md" /> };
-    return { accent: 'text-rose-500', border: 'border-rose-500/40', bg: 'bg-rose-500/10', glow: 'from-rose-900/40', shadow: 'shadow-[0_15px_40px_rgba(244,63,94,0.2)]', status: t.status.alert, icon: <GitBranch className="w-5 h-5 md:w-6 md:h-6 drop-shadow-md" /> };
-  };
-
-  const theme = getTheme(safeScore);
-  const radius = 42; 
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (safeScore / 100) * circumference;
+  const theme = THEME;
+  const title = t.title.replace('{model}', regionalModelLabel);
 
   const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
     if (!isValidNum(local) || !isValidNum(global) || local === global) return <MoveRight className="w-4 h-4 text-slate-500" />;
@@ -199,31 +196,8 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                        <div className={`absolute inset-0 opacity-20 md:animate-pulse ${theme.bg}`}></div>
                     </div>
                     <div>
-                       <h2 className="text-xs md:text-sm font-black text-white uppercase tracking-[0.2em] drop-shadow-md">{t.title}</h2>
-                       <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1">
-                          <span className="relative flex h-2.5 w-2.5">
-                            <span className={`md:animate-ping absolute inline-flex h-full w-full rounded-full opacity-50 bg-current ${theme.accent}`}></span>
-                            <span className={`relative inline-flex rounded-full h-full w-full bg-current shadow-[0_0_6px_currentColor] ${theme.accent}`}></span>
-                          </span>
-                          <span className={`text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-widest ${theme.accent} drop-shadow-sm`}>{theme.status}</span>
-                       </div>
-                    </div>
-                 </div>
-
-                 <div className="flex items-center gap-3 md:gap-4 bg-black/50 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl border border-white/10 shadow-[inset_0_0_15px_rgba(0,0,0,0.5)] self-end sm:self-auto">
-                    <div className="flex flex-col items-end">
-                       <span className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-widest">{t.affinity}</span>
-                       <span className="text-2xl sm:text-3xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{safeScore}<span className={`text-sm md:text-base ml-0.5 md:ml-1 ${theme.accent}`}>%</span></span>
-                    </div>
-                    <div className="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16">
-                       <div className={`absolute inset-[-4px] md:inset-[-6px] border ${theme.border} rounded-full border-dashed md:animate-[spin_15s_linear_infinite]`}></div>
-                       <svg className="absolute inset-0 w-full h-full transform -rotate-90 drop-shadow-[0_0_10px_currentColor]" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r={radius} className="stroke-black/50" strokeWidth="8" fill="transparent" />
-                          <circle cx="50" cy="50" r={radius} className={`${theme.accent} transition-all duration-1000 ease-out`} strokeWidth="8" fill="transparent" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ filter: 'drop-shadow(0 0 8px currentColor)' }} />
-                       </svg>
-                       <div className={`z-10 bg-[#0a0f1c] rounded-full p-1.5 md:p-2 shadow-[inset_0_0_15px_rgba(0,0,0,1)] border ${theme.border}`}>
-                          {theme.icon}
-                       </div>
+                       <h2 className="text-xs md:text-sm font-black text-white uppercase tracking-[0.2em] drop-shadow-md">{title}</h2>
+                       <span className={`block mt-0.5 md:mt-1 text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-widest ${theme.accent} drop-shadow-sm`}>{t.subtitle}</span>
                     </div>
                  </div>
               </div>

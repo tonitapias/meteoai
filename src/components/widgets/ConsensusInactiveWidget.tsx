@@ -36,7 +36,7 @@ interface ConsensusInactiveWidgetProps {
 // el cas real restant: la petició ha fallat de debò ('unavailable').
 const translations = {
   ca: {
-    title: 'Motor de Consens Suspès',
+    title: 'Model regional contra el global',
     badge: { 'no-coverage': 'Cobertura Global', unavailable: 'Comparació No Disponible' },
     description: {
       'no-coverage': "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base.",
@@ -45,7 +45,7 @@ const translations = {
     action: { 'no-coverage': 'Mode global en ús', unavailable: 'Sense comparació' }
   },
   es: {
-    title: 'Motor de Consenso Suspendido',
+    title: 'Modelo regional frente al global',
     badge: { 'no-coverage': 'Cobertura Global', unavailable: 'Comparación No Disponible' },
     description: {
       'no-coverage': "Ubicación fuera de la malla de alta resolución. El análisis de divergencias se ha suspendido temporalmente para evitar redundancia matemática con modelos globales base.",
@@ -54,7 +54,7 @@ const translations = {
     action: { 'no-coverage': 'Modo global en uso', unavailable: 'Sin comparación' }
   },
   en: {
-    title: 'Consensus Engine Suspended',
+    title: 'Regional model vs global',
     badge: { 'no-coverage': 'Global Coverage', unavailable: 'Comparison Unavailable' },
     description: {
       'no-coverage': "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models.",
@@ -63,7 +63,7 @@ const translations = {
     action: { 'no-coverage': 'Global mode in use', unavailable: 'No comparison' }
   },
   fr: {
-    title: 'Moteur de Consensus Suspendu',
+    title: 'Modèle régional face au global',
     badge: { 'no-coverage': 'Couverture Globale', unavailable: 'Comparaison Indisponible' },
     description: {
       'no-coverage': "Emplacement hors de la maille haute résolution. L'analyse des divergences est temporairement suspendue pour éviter une redondance mathématique avec les modèles globaux de base.",
