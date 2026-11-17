@@ -54,10 +54,16 @@ Sentry.init({
 // primers instants de vida de la pàgina (abans que aquest callback s'executi).
 // beforeAddRecordingEvent: les navegacions i les peticions que la gravació desa pel seu compte (els elements de pàgina
 // amb coordenades als atributs porten data-sentry-block: el mapa de Windy i la posició compartida).
+// El codi de la gravació es baixa en aquest moment, en un fragment a part (vegeu utils/sentryReplay.ts): abans anava
+// dins el fragment d'entrada. Si no es pot baixar (sense xarxa), l'app continua igual, només sense gravació.
 const startReplay = () => {
-  Sentry.addIntegration(Sentry.replayIntegration({
-    beforeAddRecordingEvent: sentryPrivacy.beforeAddRecordingEvent,
-  }));
+  import('./utils/sentryReplay')
+    .then(({ replayIntegration }) => {
+      Sentry.addIntegration(replayIntegration({
+        beforeAddRecordingEvent: sentryPrivacy.beforeAddRecordingEvent,
+      }));
+    })
+    .catch(() => { /* sense gravació: la resta de Sentry continua */ });
 };
 if (typeof window !== 'undefined') {
   if ('requestIdleCallback' in window) {
