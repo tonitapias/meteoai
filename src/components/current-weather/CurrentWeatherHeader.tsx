@@ -113,10 +113,11 @@ export const CurrentWeatherHeader = ({
           <p className="text-[11px] font-medium leading-snug text-slate-400 max-w-prose">{globalModelHint}</p>
         )}
 
-        {/* Títol / Nom de la ubicació */}
-        <h2 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[0.9] drop-shadow-xl break-words mt-1 transition-colors duration-700 ${safeLocation !== 'UBICACIÓ DESCONEGUDA' ? 'text-white' : 'text-slate-500'}`}>
+        {/* Títol / Nom de la ubicació: el títol principal de la pàgina (h1). Abans ho era la temperatura i la ciutat era
+            un h2 (auditoria d'UX del 16/11/2026, B12). */}
+        <h1 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[0.9] drop-shadow-xl break-words mt-1 transition-colors duration-700 ${safeLocation !== 'UBICACIÓ DESCONEGUDA' ? 'text-white' : 'text-slate-500'}`}>
           {safeLocation}
-        </h2>
+        </h1>
 
         {/* Dades Temporals i Telemetria */}
         <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3">

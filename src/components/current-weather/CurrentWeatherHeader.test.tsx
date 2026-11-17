@@ -97,3 +97,11 @@ describe('CurrentWeatherHeader: model global', () => {
         expect(screen.queryByText(tr.globalModelHint)).toBeNull();
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (B12): el títol h1 era la temperatura ("19°") i la ciutat un h2.
+describe('CurrentWeatherHeader: títol principal', () => {
+    it('la ciutat és el h1', () => {
+        render(<CurrentWeatherHeader locationName="Barcelona" modelLabel="AROME HD" />);
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Barcelona');
+    });
+});

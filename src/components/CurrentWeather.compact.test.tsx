@@ -28,7 +28,7 @@ const renderCard = (compact?: boolean) => render(
 
 // La icona i la temperatura comparteixen fila si la fila de la temperatura conté la icona.
 const iconBesideTemperature = () => {
-    const temperatureRow = screen.getByRole('heading', { level: 1 }).closest('.flex-wrap');
+    const temperatureRow = screen.getByTestId('current-temp').closest('.flex-wrap');
     return !!temperatureRow && temperatureRow.contains(screen.getByTestId('weather-icon'));
 };
 
