@@ -18,6 +18,7 @@ import { WeatherStatsGrid } from './current-weather/WeatherStatsGrid';
 import { WeatherActionButtons } from './current-weather/WeatherActionButtons';
 import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from './widgets/widgetStyles';
 import { useMinWidth } from './solar/useMinWidth';
+import { localizeCountryName } from '../utils/countryName';
 
 interface CurrentWeatherProps {
   data: ExtendedWeatherData;
@@ -109,6 +110,8 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
   // AVÍS D'AEROSOLS (pols/partícules del CAMS): només informa de la càrrega d'aerosols, no de la visibilitat.
   const tr = (TRANSLATIONS[props.lang] || TRANSLATIONS['ca']) as unknown as TranslationMap;
   const uiText = TRANSLATIONS[props.lang] || TRANSLATIONS.ca;
+  // El país, en l'idioma de l'app: el nom desat és el de l'idioma en què es va buscar el lloc (vegeu utils/countryName.ts).
+  const localizedCountry = localizeCountryName(weather.meta.country as string | undefined, props.lang);
   // Posició rebuda (enllaç origen=gps): coordenades del punt i com arribar-hi amb Google Maps.
   const shared = props.sharedPlace?.origin === 'sharedPosition' ? props.sharedPlace : null;
   const sharedPosition: SharedPositionInfo | null = shared ? {
@@ -191,7 +194,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         <div className="flex-1 flex flex-col justify-between z-10 relative md:[transform:translateZ(10px)]">
           <CurrentWeatherHeader
             locationName={weather.meta.locationName as string | undefined}
-            country={weather.meta.country as string | undefined}
+            country={localizedCountry}
             time={weather.meta.time as string}
             date={weather.meta.date as string}
             modelLabel={weather.meta.regionalModelLabel as string | null}

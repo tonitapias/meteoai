@@ -25,6 +25,7 @@ import {
   getPlaceLabelColors
 } from '../../utils/mapLabels';
 import type { Language } from '../../translations';
+import { mapboxUiStrings } from '../../utils/mapboxLocale';
 
 // --- CIRURGIA: FORAT NEGRE PER A CANCEL·LACIÓ DE XARXA ---
 const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -131,6 +132,8 @@ export function useMapLifecycle({
       center: [lon, lat],
       zoom: 7,
       attributionControl: false,
+      // Botons de zoom i d'ubicació, nom del mapa i logo en l'idioma de l'app: sense, en anglès (vegeu mapboxLocale.ts).
+      locale: mapboxUiStrings(lang),
       maxZoom: 18,
       minZoom: 2,
       fadeDuration: 0,
