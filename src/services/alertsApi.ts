@@ -85,7 +85,18 @@ export interface OfficialAlert {
     // sempre 'de', Protezione Civile sempre 'it'. Cap font cobreix els 4
     // idiomes de l'app — es tradueix el que calgui a getAllOfficialAlerts.
     textLang: 'es' | 'en' | 'fr' | 'ca' | 'pt' | 'de' | 'it';
+    // Només Meteocat, de moment (el proxy els treu de les franges de 6 h de la comarca del punt):
+    /** Inici del tram que afecta el lloc (ISO). Sense, la franja només diu fins quan és vàlid. */
+    onset?: string | null;
+    /** Comarca de l'avís ("Gironès"). */
+    areaName?: string | null;
+    /** Grau de perill de la font (Meteocat 1-6). */
+    dangerLevel?: number | null;
+    /** Llindar oficial tal qual ("Ratxa màxima > 72 km/h (20 m/s)"). */
+    threshold?: string | null;
 }
+
+const optionalString = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null);
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = {
     Extreme: 0, Severe: 1, Moderate: 2, Minor: 3, Unknown: 4
@@ -178,7 +189,16 @@ const parseProxyAlertResponse = (data: unknown): OfficialAlert[] => {
                 ? item.severity as AlertSeverity
                 : 'Unknown';
 
-            return { ...(item as unknown as OfficialAlert), severity };
+            // Els camps opcionals, validats igual: una data que no es pot llegir no ha de pintar "Invalid Date".
+            const onset = optionalString(item.onset);
+            return {
+                ...(item as unknown as OfficialAlert),
+                severity,
+                onset: onset !== null && Number.isFinite(Date.parse(onset)) ? onset : null,
+                areaName: optionalString(item.areaName),
+                dangerLevel: typeof item.dangerLevel === 'number' && Number.isFinite(item.dangerLevel) ? item.dangerLevel : null,
+                threshold: optionalString(item.threshold),
+            };
         });
 };
 

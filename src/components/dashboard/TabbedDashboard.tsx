@@ -145,7 +145,13 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                         />
                     </Suspense>
                     <Suspense fallback={null}>
-                        <OfficialAlertBanner lat={loc?.latitude} lon={loc?.longitude} lang={flags.lang} />
+                        <OfficialAlertBanner
+                            lat={loc?.latitude}
+                            lon={loc?.longitude}
+                            lang={flags.lang}
+                            timeZone={typeof weatherData.timezone === 'string' ? weatherData.timezone : undefined}
+                            nowMs={nowMs}
+                        />
                     </Suspense>
                 </div>
 
