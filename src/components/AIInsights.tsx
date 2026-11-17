@@ -13,7 +13,7 @@ import {
     Wind, 
     Zap 
 } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { TypewriterText } from './TypewriterText';
 import { TRANSLATIONS, Language } from '../translations';
 import { AICacheData, TacticalTip, TacticalRiskLevel, TacticalHazardType } from '../services/geminiService';
@@ -220,6 +220,30 @@ const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => 
     // i en mòbil no es podia llegir (auditoria d'UX del 16/11/2026, B16).
     const [open, setOpen] = useState(false);
     const hintId = useId();
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const noteRef = useRef<HTMLSpanElement>(null);
+
+    // Es tanca amb Escape (el focus torna a la insígnia) o tocant fora.
+    useEffect(() => {
+        if (!open) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            setOpen(false);
+            buttonRef.current?.focus();
+        };
+        const onPointerDown = (e: PointerEvent) => {
+            const target = e.target as Node | null;
+            if (target && (buttonRef.current?.contains(target) || noteRef.current?.contains(target))) return;
+            setOpen(false);
+        };
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+            document.removeEventListener('pointerdown', onPointerDown);
+        };
+    }, [open]);
+
     if (!analysis || !analysis.confidence || !analysis.confidenceLevel) return null;
     const hint = analysis.confidenceHint || '';
 
@@ -244,9 +268,14 @@ const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => 
         return <span data-testid="ai-confidence" data-color={color} className={badgeClass}>{label}</span>;
     }
 
+    // La bombolla penja de la capçalera (la primera capa posicionada) i no de la insígnia: a 390 px la insígnia salta a
+    // l'esquerra de la fila i, ancorada al seu costat dret amb 256 px d'amplada, la bombolla començava a x = -94 px
+    // (auditoria d'UX, segona volta, B16). En mòbil fa l'amplada de la capçalera menys el marge interior; a partir de
+    // 640 px, 288 px alineats a la dreta, on hi ha les insígnies.
     return (
-        <span className="relative shrink-0">
+        <span className="shrink-0">
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setOpen(o => !o)}
                 aria-expanded={open}
@@ -259,7 +288,7 @@ const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => 
                 {label}
             </button>
             {open && (
-                <span id={hintId} role="note" className="absolute right-0 top-full mt-2 z-20 w-64 max-w-[80vw] rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs font-sans font-medium normal-case tracking-normal leading-snug text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.6)]">
+                <span ref={noteRef} id={hintId} role="note" data-testid="ai-confidence-hint" className="absolute left-4 right-4 sm:left-auto sm:right-5 md:right-6 sm:w-72 top-full mt-1 z-20 rounded-xl border border-white/10 bg-slate-950 p-3 text-xs font-sans font-medium normal-case tracking-normal leading-snug text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.6)]">
                     {hint}
                 </span>
             )}
@@ -510,8 +539,9 @@ export default function AIInsights({ analysis, lang, isLoading = false, hasError
                 ></div>
             )}
 
-            {/* CAPÇALERA ENTENEDORA I MULTILINGÜE */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 p-4 sm:p-5 md:p-6 pb-2.5 sm:pb-3 shrink-0 z-10 border-b border-white/5 relative">
+            {/* CAPÇALERA ENTENEDORA I MULTILINGÜE. z-20, per sobre del contingut (z-10): l'explicació de la insígnia de
+                confiança hi penja a sota i, amb el mateix z, el text de la IA (que va després) s'hi pintava a sobre. */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-4 sm:p-5 md:p-6 pb-2.5 sm:pb-3 shrink-0 z-20 border-b border-white/5 relative">
                 <div className={`flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest transition-colors duration-500 ${isGemini ? 'text-indigo-300' : 'text-slate-400'}`}>
                     {isGemini ? (
                         <>
