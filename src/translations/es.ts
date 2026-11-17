@@ -72,6 +72,7 @@ export const es = {
   btnPause: "Pausar",
   animPlaying: "ANIMACIÓN EN CURSO",
   animCurrent: "CAPTURA ACTUAL",
+  animFrameAge: "IMAGEN DE HACE {{n}} MIN",
   btnRefresh: "Actualizar datos",
   btnForceSync: "Reintentar Conexión",
 

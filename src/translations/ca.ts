@@ -71,6 +71,7 @@ export const ca = {
   btnPause: "Pausar",
   animPlaying: "ANIMACIÓ EN CURS",
   animCurrent: "CAPTURA ACTUAL",
+  animFrameAge: "IMATGE DE FA {{n}} MIN",
   btnRefresh: "Actualitzar dades",
   btnForceSync: "Reintentar Connexió",
 

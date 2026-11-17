@@ -73,6 +73,7 @@ export const en = {
   btnPause: "Pause",
   animPlaying: "ANIMATION PLAYING",
   animCurrent: "CURRENT FRAME",
+  animFrameAge: "FRAME FROM {{n}} MIN AGO",
   btnRefresh: "Refresh data",
   btnForceSync: "Retry Connection",
 
