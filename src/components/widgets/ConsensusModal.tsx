@@ -17,12 +17,15 @@ interface ConsensusModalProps {
   hourlyGlobalTimes: string[];
   hourlyLocal: HourlySeriesBundle;
   hourlyGlobal: HourlySeriesBundle;
+  /** Nom del model regional ("AROME HD"): la columna de l'esquerra. Abans deia "LOC". */
+  localLabel?: string;
 }
 
+// "Global" i el nom del model en lloc de "GLO" i "LOC" (auditoria d'UX, segona volta, N4); `local`, només si no arriba el nom.
 const translations = {
   ca: {
     modalTitle: 'Hora a hora',
-    local: 'LOC', global: 'GLO', now: 'ARA',
+    local: 'Regional', global: 'Global', now: 'ARA',
     sync: 'Carregant els models...',
     tempLabel: 'TEMPERATURA',
     rainLabel: 'PLUJA / NEU',
@@ -30,7 +33,7 @@ const translations = {
   },
   es: {
     modalTitle: 'Hora a hora',
-    local: 'LOC', global: 'GLO', now: 'AHORA',
+    local: 'Regional', global: 'Global', now: 'AHORA',
     sync: 'Cargando los modelos...',
     tempLabel: 'TEMPERATURA',
     rainLabel: 'LLUVIA / NIEVE',
@@ -38,7 +41,7 @@ const translations = {
   },
   en: {
     modalTitle: 'Hour by hour',
-    local: 'LOC', global: 'GLO', now: 'NOW',
+    local: 'Regional', global: 'Global', now: 'NOW',
     sync: 'Loading models...',
     tempLabel: 'TEMPERATURE',
     rainLabel: 'RAIN / SNOW',
@@ -46,7 +49,7 @@ const translations = {
   },
   fr: {
     modalTitle: 'Heure par heure',
-    local: 'LOC', global: 'GLO', now: 'ACTUEL',
+    local: 'Régional', global: 'Global', now: 'ACTUEL',
     sync: 'Chargement des modèles...',
     tempLabel: 'TEMPÉRATURE',
     rainLabel: 'PLUIE / NEIGE',
@@ -56,10 +59,11 @@ const translations = {
 
 export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   activeModal, closeModal, lang, utcOffset, nowTimestamp,
-  hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal
+  hourlyTimes, hourlyGlobalTimes, hourlyLocal, hourlyGlobal, localLabel
 }) => {
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
+  const localName = localLabel && localLabel !== 'LOC' ? localLabel : t.local;
   // Focus dins el diàleg i Tab que hi dona la volta, com «Com funciona» (auditoria d'UX del 16/11/2026, M7).
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(activeModal !== 'charts', dialogRef);
@@ -91,7 +95,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
     if (hourlyTimes.length === 0) return <div className="text-slate-400 text-center py-12 font-mono text-[10px] sm:text-xs tracking-widest uppercase animate-pulse">{t.sync}</div>;
     const { displayTimes, series } = getMappedConsensusSeries(
       hourlyTimes,
-      [{ id: 'loc', label: t.local, data: hourlyLocal }],
+      [{ id: 'loc', label: localName, data: hourlyLocal }],
       [{ id: 'glo', label: t.global, times: hourlyGlobalTimes, data: hourlyGlobal }],
       utcOffset,
       nowTimestamp
@@ -162,7 +166,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
               
               <div className="relative z-10 flex-1 grid grid-cols-2 gap-3 sm:flex sm:grid-cols-none sm:items-center sm:justify-center sm:gap-8 w-full">
                 <div className="flex flex-col items-start sm:items-end bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
-                  <span className="text-[10px] text-slate-400 font-black tracking-widest mb-1 sm:mb-0.5">{t.local}</span>
+                  <span className="text-[10px] text-slate-400 font-black tracking-widest mb-1 sm:mb-0.5">{localName}</span>
                   <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none tracking-tighter drop-shadow-md">
                     {formatVal(locVal)}<span className="text-[10px] text-slate-400 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>

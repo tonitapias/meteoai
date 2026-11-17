@@ -40,8 +40,9 @@ interface ConsensusWidgetProps {
 }
 
 // [FIX PRECISIÓ] La comparació és amb Open-Meteo "best_match" (el mateix motor de selecció
-// automàtica de model que ja fem servir a weatherApi.ts). Fem servir "GLO"/"GLOBAL" — la
-// mateixa etiqueta que ja feia servir ConsensusModal.tsx per a aquesta mateixa dada.
+// automàtica de model que ja fem servir a weatherApi.ts): "Global", com a ConsensusModal.tsx.
+// Paraules senceres i no "GLO" ni "Δ", que no s'entenien (auditoria d'UX, segona volta, N4). En mòbil, a la casella de
+// la diferència l'etiqueta va a sobre de la xifra: en tres columnes de 390 px no hi cabien una al costat de l'altra.
 //
 // Sense veredicte d'acord: abans hi havia "Precisió NN %" i "Alineat / Discrepància / Divergència", una puntuació
 // sense calibrar feta amb l'hora actual del regional contra best_match, que contradeia a la mateixa pantalla el xip
@@ -51,28 +52,28 @@ const translations = {
   ca: {
     title: '{model} contra el global',
     subtitle: 'Diferència ara mateix',
-    temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
+    temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Diferència', secondary: 'Global',
     chartsBtn: 'Compara els models',
     futureDivergence: 'Possible canvi brusc en 3h (pluja forta o vent fort)'
   },
   es: {
     title: '{model} frente al global',
     subtitle: 'Diferencia ahora mismo',
-    temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Δ', secondary: 'GLO',
+    temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Diferencia', secondary: 'Global',
     chartsBtn: 'Compara los modelos',
     futureDivergence: 'Posible cambio brusco en 3h (lluvia o viento fuerte)'
   },
   en: {
     title: '{model} vs global',
     subtitle: 'Difference right now',
-    temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Δ', secondary: 'GLO',
+    temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Difference', secondary: 'Global',
     chartsBtn: 'Compare models',
     futureDivergence: 'Possible sudden shift in 3h (heavy rain or strong wind)'
   },
   fr: {
     title: '{model} face au global',
     subtitle: 'Écart en ce moment',
-    temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Δ', secondary: 'GLO',
+    temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Écart', secondary: 'Global',
     chartsBtn: 'Comparer les modèles',
     futureDivergence: 'Changement brusque possible en 3h (pluie ou vent fort)'
   }
@@ -218,9 +219,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
                         <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{formatVal(localTemp)}<span className="text-xs sm:text-sm text-slate-400 font-bold ml-0.5">°</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
+                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
                     </div>
-                    <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
+                    <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(localTemp, metrics.globalTemp, 'temp')}</div>
                     </div>
@@ -234,9 +235,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
                         <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localPrecip)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">mm</span></span></div>
+                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">mm</span></span></div>
                     </div>
-                    <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
+                    <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(localPrecip, metrics.globalPrecip, 'rain')}</div>
                     </div>
@@ -249,9 +250,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
                         <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">km/h</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
+                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
                     </div>
-                    <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
+                    <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
                         <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(localWind, metrics.globalWind, 'wind')}</div>
                     </div>
@@ -287,10 +288,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
           hourlyGlobalTimes={hourlyGlobalTimes}
           hourlyLocal={hourlyLocal}
           hourlyGlobal={hourlyGlobal}
+          localLabel={regionalModelLabel}
         />,
         document.body
       )}
-      
+
       {activeModal === 'charts' && createPortal(
         <ConsensusChartsModal
           closeModal={closeModal}
