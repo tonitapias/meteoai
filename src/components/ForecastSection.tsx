@@ -73,6 +73,15 @@ const I18N_ARIA_TODAY_BTN = {
   en: "Open today's detail"
 };
 
+// Nom accessible de cada dia en una frase: abans era el text enganxat de la fila, «17dimarts3%16°22°CAP» (auditoria
+// d'UX del 16/11/2026, B10).
+const I18N_DAY_ARIA = {
+  ca: (day: string, min: string, max: string, prob: string) => `${day}: de ${min} a ${max}, ${prob} de probabilitat de pluja`,
+  es: (day: string, min: string, max: string, prob: string) => `${day}: de ${min} a ${max}, ${prob} de probabilidad de lluvia`,
+  fr: (day: string, min: string, max: string, prob: string) => `${day} : de ${min} à ${max}, ${prob} de probabilité de pluie`,
+  en: (day: string, min: string, max: string, prob: string) => `${day}: ${min} to ${max}, ${prob} chance of rain`
+};
+
 const ForecastSection = memo(function ForecastSection({
   chartData, dailyData, dayHourCodes, dailyComparison, regionalModelLabel, weeklyExtremes, lang, onDayClick, latitude
 }: ForecastSectionProps) {
@@ -218,6 +227,8 @@ const ForecastSection = memo(function ForecastSection({
               <button
                 key={`daily-row-${day.rawDate}`}
                 onClick={() => onDayClick(day.i)}
+                aria-label={(I18N_DAY_ARIA[lang as keyof typeof I18N_DAY_ARIA] ?? I18N_DAY_ARIA.ca)(
+                  `${day.dayName} ${day.dateNum}`, day.minTempLabel, day.maxTempLabel, typeof day.precipProb === 'number' ? `${Math.round(day.precipProb)} %` : '--')}
                 className="group flex items-center justify-between p-3 md:p-4 rounded-[1.25rem] bg-black/40 border border-white/5 hover:bg-white/[0.04] hover:border-indigo-500/40 hover:shadow-[0_4px_20px_rgba(99,102,241,0.15)] transition-all duration-300 w-full"
               >
                 <div className="flex items-center gap-3 w-auto min-w-[100px] md:w-[180px]">

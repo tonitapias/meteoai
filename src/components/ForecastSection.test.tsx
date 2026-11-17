@@ -126,3 +126,13 @@ describe("ForecastSection — accés al detall d'avui", () => {
         }
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (B10): el nom accessible de cada dia era el text enganxat ("17dimarts3%16°22°CAP").
+describe('ForecastSection — nom accessible dels dies', () => {
+    it('cada dia es llegeix com una frase amb el rang i la probabilitat de pluja', () => {
+        renderWeek();
+        const labels = screen.getAllByRole('button').map(b => b.getAttribute('aria-label') ?? '').filter(l => l.includes('probabilitat de pluja'));
+        expect(labels.length).toBeGreaterThanOrEqual(6);
+        expect(labels[0]).toMatch(/^\S+ \d+: de -?\d+° a -?\d+°, 40 % de probabilitat de pluja$/);
+    });
+});
