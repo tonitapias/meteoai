@@ -90,7 +90,7 @@ export default function WindMap({ lat, lon }: WindMapProps) {
              </div>
              <p className="text-emerald-400/90 text-[10px] md:text-xs font-mono font-bold tracking-widest uppercase animate-pulse flex items-center gap-2 z-10 drop-shadow-md">
                 <Activity className="w-3 h-3" />
-                {t('syncingWind', 'Connectant Matriu ECMWF...')}
+                {t('syncingWind', 'Carregant el mapa de vent...')}
              </p>
          </div>
       )}
@@ -98,7 +98,7 @@ export default function WindMap({ lat, lon }: WindMapProps) {
       {!hasError && (
         <iframe
             key={`windy-iframe-${retryCount}`}
-            title="Mapa de Vent Tàctic"
+            title={t('btnWind', 'Vent')}
             src={windyUrl}
             // L'adreça porta les coordenades del lloc: Sentry Replay no la grava (vegeu utils/telemetryPrivacy.ts).
             data-sentry-block
