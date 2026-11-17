@@ -242,7 +242,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                             {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">
-                            {t.grid.replace('{km}', formatDecimal(model.resolutionKm, lang, 1, true))} <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
+                            {t.grid.replace('{km}', formatDecimal(model.resolutionKm, lang, 1, true)).replace(/^Malla de (1[\d,]*) km$/, "Malla d'$1 km")} <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
                         </span>
                     </div>
                 </div>
