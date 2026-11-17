@@ -168,13 +168,20 @@ export const useDayDetailData = (
      return `${min} - ${max}m`;
   }, [snowLevels]);
 
+  // Distància màxima de la cota per sobre del lloc perquè es mostri (si no neva aquell dia).
+  const SNOW_LEVEL_NEAR_M = 1500;
+
   // La cota de neu només diu alguna cosa quan hi pot haver neu: el dia en porta, o la cota baixa per sota
   // del límit que l'app ja fa servir per mostrar-la. Un "> 3500m" a l'estiu és soroll que ocupa una targeta.
   const snowLevelRelevant = useMemo(() => {
     if (!weatherData || selectedDayIndex === null) return false;
     const snowfall = extractValidArrayNum(weatherData.daily.snowfall_sum, selectedDayIndex);
     if (snowfall !== null && snowfall > 0) return true;
-    return snowLevels.length > 0 && Math.min(...snowLevels) <= WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
+    // I la cota ha de quedar a prop del lloc: a menys de SNOW_LEVEL_NEAR_M per sobre. Abans només es mirava el sostre de
+    // 3.500 m, i a Barcelona (12 m) sortia una cota de 3.200 m (auditoria d'UX del 16/11/2026, B4).
+    const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+    const limit = Math.min(WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL, elevation + SNOW_LEVEL_NEAR_M);
+    return snowLevels.length > 0 && Math.min(...snowLevels) <= limit;
   }, [weatherData, selectedDayIndex, snowLevels]);
 
   // Segons de llum del dia (sortida → posta), o null si falta alguna de les dues hores.
