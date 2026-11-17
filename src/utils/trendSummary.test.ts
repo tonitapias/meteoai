@@ -161,6 +161,18 @@ describe('summarizeTrend — pluja', () => {
         expect(precip([10, 40, 10], [0, 0, 0])).toMatchObject({ rainDays: [1], maxRain: null, dry: false });
     });
 
+    // Auditoria d'UX del 16/11/2026 (M5), Barcelona: el resum deia "Pot ploure dijous i diumenge" amb un dijous de sol
+    // (25 %, 0 mm) i deixava fora el dimecres (plugim, 0,1 mm) i el dissabte (0,3 mm). Amb la icona del dia, el mateix
+    // criteri que la llista: icona de precipitació o mm a les hores.
+    it('amb la icona del dia, compten la icona de precipitació i els mm, no la probabilitat sola', () => {
+        const barcelona = [
+            { p: 3, mm: 0, code: 3 }, { p: 18, mm: 0.1, code: 51 }, { p: 25, mm: 0, code: 1 }, { p: 0, mm: 0, code: 1 },
+            { p: 13, mm: 0.3, code: 2 }, { p: 23, mm: 0.3, code: 2 }, { p: 9, mm: 0, code: 2 },
+        ];
+        const out = summarizeTrend(barcelona.map(d => ({ max: 20, min: 12, precipProb: d.p, precipSum: d.mm, snowSum: 0, code: d.code })))?.precip;
+        expect(out).toMatchObject({ rainDays: [1, 4, 5], maxRain: 0.3, dry: false });
+    });
+
     it('"no es preveu pluja" només si cada dia té probabilitat baixa i 0 mm', () => {
         expect(precip([10, 15, 5, 0], [0, 0, 0, 0])?.dry).toBe(true);
         expect(precip([10, 12, 5, 0], [0, 0.6, 0, 0])?.dry).toBe(false);    // 0,6 mm amb un 12 %: el gràfic els mostra

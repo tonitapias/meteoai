@@ -25,6 +25,8 @@ export interface TrendSummaryDay {
     precipProb?: number | null;
     precipSum?: number | null;
     snowSum?: number | null;
+    /** Codi de la icona del dia (la de la llista i del gràfic). Si hi és, decideix quins dies "poden ploure". */
+    code?: number | null;
 }
 
 /** Una temperatura i el dia on és (índex dins la llista de dies del resum). */
@@ -216,13 +218,27 @@ const arrivalUncertainty = (shape: ChangeShape, days: ReadonlyArray<TrendSummary
     return reachesStart ? { temp, day: arrival.day, low: range.low, high: range.high } : null;
 };
 
+/** Codis de precipitació (plugim, pluja, aiguaneu, neu, ruixats i tempesta). */
+const isPrecipCode = (code: number): boolean => (code >= 51 && code <= 77) || (code >= 80 && code <= 86) || code >= 95;
+
+/**
+ * Un dia "pot ploure" amb el mateix criteri que la llista i el gràfic: la icona del dia és de precipitació o les seves
+ * hores sumen alguna quantitat (els mm que es veuen). Abans era la probabilitat (>= 20 %) i el resum de Barcelona deia
+ * "Pot ploure dijous i diumenge" amb un dijous de sol i 0 mm, i deixava fora el dimecres i el dissabte, que tenien mm
+ * (auditoria d'UX del 16/11/2026, M5). Sense codi (dades antigues), es manté el criteri de la probabilitat.
+ */
+const isWetDay = (d: TrendSummaryDay): boolean => {
+    if (d.code === undefined || d.code === null) return isLikelyWet(d.precipProb ?? null);
+    return isPrecipCode(d.code) || (d.precipSum ?? 0) > 0 || (d.snowSum ?? 0) >= SNOW_SHOWN_CM;
+};
+
 const summarizePrecip = (days: ReadonlyArray<TrendSummaryDay>): PrecipSummary => {
     const rainDays: number[] = [];
     const snowDays: number[] = [];
     let maxRain: number | null = null;
     let maxSnow: number | null = null;
     days.forEach((d, day) => {
-        if (!isLikelyWet(d.precipProb ?? null)) return;
+        if (!isWetDay(d)) return;
         const snow = d.snowSum ?? 0;
         if (snow >= SNOW_SHOWN_CM) {
             snowDays.push(day);
