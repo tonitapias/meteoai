@@ -1,6 +1,6 @@
 // src/components/AIInsights.test.tsx
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import AIInsights, { type TacticalAnalysisResult } from './AIInsights';
 
 const analysis = (badge: Partial<TacticalAnalysisResult>): TacticalAnalysisResult => ({
@@ -107,5 +107,19 @@ describe('AIInsights — consells d\'un avís que arriba sense cap', () => {
     it('amb el temps tranquil (GREEN) no hi ha consells', () => {
         render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'GREEN', hazard_type: 'NONE', tips: [] })} />);
         expect(screen.queryByText('Punts clau per a les properes hores:')).toBeNull();
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (B16): l'explicació de "Temperatura ±3°" només sortia passant-hi el ratolí per sobre.
+describe('AIInsights — la insígnia de confiança es pot tocar per llegir-ne l\'explicació', () => {
+    it('és un botó i en tocar-lo mostra la frase', () => {
+        const hint = 'Els models discrepen en la temperatura de les pròximes 6 hores.';
+        render(<AIInsights lang="ca" analysis={analysis({ confidence: 'Temperatura ±3°', confidenceLevel: 'medium', confidenceColor: 'amber', confidenceHint: hint })} />);
+        const badge = screen.getByRole('button', { name: 'Temperatura ±3°' });
+        expect(badge.getAttribute('aria-expanded')).toBe('false');
+        expect(screen.queryByText(hint)).toBeNull();
+        fireEvent.click(badge);
+        expect(badge.getAttribute('aria-expanded')).toBe('true');
+        expect(screen.getByRole('note').textContent).toBe(hint);
     });
 });

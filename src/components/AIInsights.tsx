@@ -13,6 +13,7 @@ import {
     Wind, 
     Zap 
 } from 'lucide-react';
+import { useId, useState } from 'react';
 import { TypewriterText } from './TypewriterText';
 import { TRANSLATIONS, Language } from '../translations';
 import { AICacheData, TacticalTip, TacticalRiskLevel, TacticalHazardType } from '../services/geminiService';
@@ -215,7 +216,12 @@ const TacticalRiskBadge = ({ analysis, ui }: { analysis: TacticalAnalysisResult;
  * DISTINTIU DE CONFIANÇA (Consens / Divergència de Models)
  */
 const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => {
+    // La frase que explica la insígnia es pot obrir tocant-la: abans només sortia en passar-hi el ratolí per sobre (title)
+    // i en mòbil no es podia llegir (auditoria d'UX del 16/11/2026, B16).
+    const [open, setOpen] = useState(false);
+    const hintId = useId();
     if (!analysis || !analysis.confidence || !analysis.confidenceLevel) return null;
+    const hint = analysis.confidenceHint || '';
 
     const styles: Record<'green' | 'amber' | 'red', string> = {
         green: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/80',
@@ -226,16 +232,37 @@ const ConfidenceBadge = ({ analysis }: { analysis: TacticalAnalysisResult }) => 
 
     const currentStyle = styles[analysis.confidenceColor ?? levelColor[analysis.confidenceLevel]] || styles.amber;
 
+    const color = analysis.confidenceColor ?? levelColor[analysis.confidenceLevel];
+    const badgeClass = `text-[10px] sm:text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${currentStyle} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`;
+    const label = (
+        <span className="truncate max-w-[130px] sm:max-w-none font-sans font-extrabold tracking-wider">
+            {analysis.confidence}
+        </span>
+    );
+
+    if (!hint) {
+        return <span data-testid="ai-confidence" data-color={color} className={badgeClass}>{label}</span>;
+    }
+
     return (
-        <span
-            data-testid="ai-confidence"
-            data-color={analysis.confidenceColor ?? levelColor[analysis.confidenceLevel]}
-            title={analysis.confidenceHint || undefined}
-            className={`text-[10px] sm:text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${currentStyle} flex items-center gap-2 shrink-0 uppercase tracking-widest transition-all duration-300`}
-        >
-            <span className="truncate max-w-[130px] sm:max-w-none font-sans font-extrabold tracking-wider">
-                {analysis.confidence}
-            </span>
+        <span className="relative shrink-0">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                aria-describedby={open ? hintId : undefined}
+                data-testid="ai-confidence"
+                data-color={color}
+                title={hint}
+                className={`${badgeClass} cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400`}
+            >
+                {label}
+            </button>
+            {open && (
+                <span id={hintId} role="note" className="absolute right-0 top-full mt-2 z-20 w-64 max-w-[80vw] rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs font-sans font-medium normal-case tracking-normal leading-snug text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.6)]">
+                    {hint}
+                </span>
+            )}
         </span>
     );
 };
