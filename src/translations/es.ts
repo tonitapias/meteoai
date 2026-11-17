@@ -541,6 +541,15 @@ export const es = {
     button: "Inicio",
     aria: "Volver al inicio"
   },
+  settings: {
+    open: "Configuración",
+    title: "Configuración",
+    language: "Idioma",
+    howItWorksHint: "Los modelos, la IA y de dónde salen los datos",
+    clearCache: "Vaciar la caché",
+    clearCacheHint: "Borra las previsiones guardadas. Los favoritos y las preferencias se quedan.",
+    resetConfirm: "¿Quieres vaciar la caché y volver a cargar la app?\n\nSe borrarán las previsiones y los análisis guardados. Los favoritos y las preferencias se mantienen."
+  },
 
     // --- NUEVAS CLAVES: WIDGETS, RADAR Y 7 DÍAS ---
   
@@ -588,9 +597,8 @@ export const es = {
   footer: {
     online: "En línea",
     offline: "Sin conexión",
-    statusTitle: "Estado de la conexión. Clic para vaciar la caché",
-    statusAria: "Estado de la conexión: {state}. Haz clic para vaciar la caché.",
-    resetConfirm: "¿Quieres vaciar la caché y volver a cargar la app?\n\nSe borrarán las previsiones y los análisis guardados. Los favoritos y las preferencias se mantienen.",
+    statusTitle: "Estado de la conexión",
+    statusAria: "Estado de la conexión: {state}",
     secureProxy: "Datos cifrados",
     secureProxyTitle: "Las claves de las API se quedan en el servidor intermediario",
     data: "Datos: Open-Meteo",

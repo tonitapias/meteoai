@@ -124,6 +124,7 @@ export function useAppController() {
           shareWeatherOnly: appActions.shareWeatherOnly,
           copyCoordinates: appActions.copyCoordinates,
           setShowShareSheet,
+          setShowSettings: ui.actions.setShowSettings,
           setLang,
 
           // Accions d'UI
@@ -162,7 +163,7 @@ export function useAppController() {
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation, goHome,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
       appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,
-      setLang, ui.actions.toggleDebug, ui.actions.setNotification, ui.actions.dismissNotification,
+      ui.actions.setShowSettings, setLang, ui.actions.toggleDebug, ui.actions.setNotification, ui.actions.dismissNotification,
       ui.actions.setSelectedDayIndex, ui.actions.setShowRadar, ui.actions.setShowRegionalModel,
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,
       ui.actions.setShowAqiModal, ui.actions.setShowUvModal, ui.actions.setShowPressureModal,

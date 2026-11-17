@@ -1,6 +1,6 @@
 // src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, House } from 'lucide-react';
+import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, House, Settings } from 'lucide-react';
 import { usePreferences, LocationData } from '../hooks/usePreferences';
 import { reverseGeocode, GeoSearchResult } from '../services/geocodingService';
 import { useCitySearch } from '../hooks/useCitySearch';
@@ -253,7 +253,8 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
 
 
   return (
-    // Mòbil: marca i xip de vista a la primera fila, cercador a la segona. PC: marca, cercador i xip en una fila.
+    // Mòbil: marca i engranatge a la primera fila, Inici i cercador a la segona. PC: marca, Inici i cercador, i
+    // l'engranatge, en una fila.
     <header className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-x-3 md:gap-x-4 gap-y-3 z-50 relative py-2 sm:py-0">
 
       {/* CSS INTERN PEL GLASSMORPHISM AVANÇAT */}
@@ -294,7 +295,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
 
       {/* BOTÓ INICI + BARRA DE CERCA. Inici a l'esquerra del cercador: a 375 px no cap a la primera fila (marca i xip).
           Màxim = el del cercador (max-w-2xl) + el botó i l'espai (3.25rem). */}
-      <div className="basis-full md:basis-auto md:flex-1 w-full md:max-w-[45.25rem] flex items-stretch gap-2 order-2 md:order-1">
+      <div className="basis-full md:basis-auto md:flex-1 w-full md:max-w-[45.25rem] md:ml-auto flex items-stretch gap-2 order-2 md:order-1">
       <button
         type="button"
         onClick={actions.goHome}
@@ -432,6 +433,19 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           )}
       </div>
       </div>
+
+      {/* CONFIGURACIÓ (auditoria d'UX del 16/11/2026, B11): idioma, «Com funciona» i buidar la memòria cau. Mateix botó
+          que Inici; al mòbil, a la primera fila al costat de la marca, i al PC, després del cercador. */}
+      <button
+        type="button"
+        onClick={() => actions.setShowSettings(true)}
+        className="header-glass shrink-0 order-1 md:order-2 md:self-stretch min-w-[44px] min-h-[44px] px-3 md:px-5 flex items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-slate-300 shadow-lg transition-colors hover:border-sky-400/40 hover:bg-black/50 hover:text-sky-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+        title={contextT.settings.open}
+        aria-label={contextT.settings.open}
+        aria-haspopup="dialog"
+      >
+          <Settings aria-hidden="true" className="w-4 h-4 sm:w-5 sm:h-5" />
+      </button>
     </header>
   );
 }

@@ -1,5 +1,5 @@
 // src/components/Header.home.test.tsx
-// Botó Inici del tauler: torna a la benvinguda (vegeu goHome a useAppController).
+// Botó Inici del tauler: torna a la benvinguda (vegeu goHome a useAppController). I l'engranatge de «Configuració».
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Header from './Header';
@@ -7,11 +7,12 @@ import { TRANSLATIONS, type Language } from '../translations';
 
 const fetchWeatherByCoords = vi.fn();
 const goHome = vi.fn();
+const setShowSettings = vi.fn();
 let lang: Language = 'ca';
 
 vi.mock('../context/AppContext', () => ({
     useAppContext: () => ({
-        actions: { fetchWeatherByCoords, goHome, setViewMode: vi.fn(), toggleDebug: vi.fn() },
+        actions: { fetchWeatherByCoords, goHome, setShowSettings, setViewMode: vi.fn(), toggleDebug: vi.fn() },
         state: { loading: false, favorites: [] },
         flags: { lang },
         t: TRANSLATIONS[lang]
@@ -38,6 +39,7 @@ describe('Header: botó Inici', () => {
         lang = 'ca';
         fetchWeatherByCoords.mockClear();
         goHome.mockClear();
+        setShowSettings.mockClear();
     });
 
     it.each([
@@ -74,5 +76,31 @@ describe('Header: botó Inici', () => {
         await act(async () => { resolveCoords({ lat: 41.98, lon: 2.82 }); });
 
         expect(fetchWeatherByCoords).not.toHaveBeenCalled();
+    });
+});
+
+describe("Header: engranatge de Configuració", () => {
+    beforeEach(() => {
+        lang = 'ca';
+        setShowSettings.mockClear();
+    });
+
+    it.each([
+        ['ca', 'Configuració'],
+        ['es', 'Configuración'],
+        ['en', 'Settings'],
+        ['fr', 'Réglages']
+    ] as const)("%s: té nom, mida tàctil de 44 px i obre el full", (code, name) => {
+        lang = code;
+        render(<Header />);
+        const button = screen.getByRole('button', { name });
+
+        expect(button).toHaveAttribute('type', 'button');
+        expect(button).toHaveAttribute('aria-haspopup', 'dialog');
+        expect(button.className).toContain('min-w-[44px]');
+        expect(button.className).toContain('min-h-[44px]');
+
+        fireEvent.click(button);
+        expect(setShowSettings).toHaveBeenCalledWith(true);
     });
 });

@@ -38,14 +38,17 @@ describe('Footer', () => {
         expect(screen.getByText('En línia')).toBeInTheDocument();
     });
 
-    it('el diàleg avisa que els favorits es mantenen i, si es cancel·la, no esborra res', () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    // Buidar la memòria cau s'hi amagava: ara és al full «Configuració» (auditoria d'UX del 16/11/2026, B11).
+    it("l'estat de la connexió només informa: no és cap botó i un clic no esborra res", () => {
+        const confirm = vi.spyOn(window, 'confirm');
         const clear = vi.spyOn(cacheService, 'clearCachedData');
         render(<Footer lang="ca" />);
 
-        fireEvent.click(screen.getByRole('button', { name: /Estat de la connexió: En línia/ }));
+        const status = screen.getByRole('status', { name: 'Estat de la connexió: En línia' });
+        expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
-        expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Els favorits i les preferències es mantenen'));
+        fireEvent.click(status);
+        expect(confirm).not.toHaveBeenCalled();
         expect(clear).not.toHaveBeenCalled();
     });
 });

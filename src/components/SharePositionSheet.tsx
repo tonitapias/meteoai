@@ -2,11 +2,12 @@
 // "Què vols compartir?": amb la posició del GPS a pantalla, el botó Compartir pregunta abans si s'envia on és l'usuari
 // exactament (coordenades i Google Maps) o només el temps d'aquí (~1 km); és l'únic cas en què l'enllaç diria on és.
 // Mateix llenguatge que "Com funciona": full opac, sense desenfocaments, filtres ni animacions en bucle (mòbils modestos).
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { X, MapPinned, CloudSun, Copy } from 'lucide-react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import type { TranslationType } from '../translations';
 import type { ShareResult } from '../utils/shareLink';
+import Option from './SheetOption';
 
 interface SharePositionSheetProps {
   /** "41.98315, 2.82493" */
@@ -19,32 +20,6 @@ interface SharePositionSheetProps {
   onCopyCoords: () => Promise<boolean>;
   onClose: () => void;
 }
-
-interface OptionProps {
-  icon: ReactNode;
-  title: string;
-  hint: string;
-  primary?: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}
-
-const Option = ({ icon, title, hint, primary = false, disabled, onClick }: OptionProps) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    className={`w-full min-h-[56px] flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors active:scale-[0.99] disabled:opacity-60 ${primary
-      ? 'border-cyan-400/40 bg-cyan-500/15 hover:bg-cyan-500/25'
-      : 'border-slate-200/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
-  >
-    <span aria-hidden="true" className={`shrink-0 ${primary ? 'text-cyan-300' : 'text-slate-300'}`}>{icon}</span>
-    <span className="min-w-0 flex flex-col">
-      <span className={`text-[15px] font-semibold leading-snug ${primary ? 'text-cyan-50' : 'text-slate-100'}`}>{title}</span>
-      <span className="text-[13px] leading-snug text-slate-400">{hint}</span>
-    </span>
-  </button>
-);
 
 export default function SharePositionSheet({
   coords, placeName, texts, closeLabel, onSharePosition, onShareWeatherOnly, onCopyCoords, onClose

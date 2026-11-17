@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { APP_VERSION } from '../utils/appVersion';
 import { Globe, Cpu, ShieldCheck, Lock } from 'lucide-react';
-import { cacheService } from '../services/cacheService';
 import { TRANSLATIONS, type Language } from '../translations';
 
 interface FooterProps {
@@ -35,51 +34,36 @@ export default function Footer({ simple = false, transparent = false, className 
   const online = useOnlineStatus();
   const stateLabel = online ? t.online : t.offline;
 
-  // --- BUIDAR LA MEMÒRIA CAU ---
-  // Esborra només les previsions i les anàlisis desades (vegeu cacheService.clearCachedData): els favorits i les
-  // preferències es mantenen, tal com diu el diàleg.
-  const handleCacheReset = async () => {
-    if (window.confirm(t.resetConfirm)) {
-        try {
-            await cacheService.clearCachedData();
-        } catch (e) {
-            console.error("Error esborrant cache:", e);
-        } finally {
-            window.location.reload();
-        }
-    }
-  };
-
   // SPATIAL UI BASE
   const footerBaseStyle = `w-full py-6 px-6 z-30 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-mono text-slate-400 uppercase tracking-widest relative transition-colors duration-500 ${className}`;
   const footerBgStyle = transparent
     ? 'bg-transparent border-none'
     : 'mt-12 border-t border-white/5 bg-[#0B0C15]/80 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]';
 
-  const statusButtonStyle = online
-    ? 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/10 hover:border-emerald-500/30 shadow-[inset_0_1px_4px_rgba(16,185,129,0.1)] focus:border-emerald-500/50'
-    : 'bg-amber-500/5 hover:bg-amber-500/10 border-amber-500/20 hover:border-amber-500/40 shadow-[inset_0_1px_4px_rgba(245,158,11,0.1)] focus:border-amber-500/50';
+  const statusStyle = online
+    ? 'bg-emerald-500/5 border-emerald-500/10 shadow-[inset_0_1px_4px_rgba(16,185,129,0.1)]'
+    : 'bg-amber-500/5 border-amber-500/20 shadow-[inset_0_1px_4px_rgba(245,158,11,0.1)]';
 
   return (
     <footer className={`${footerBaseStyle} ${footerBgStyle}`}>
 
-        {/* ESQUERRA: ESTAT DE LA CONNEXIÓ (clic: buidar la memòria cau) */}
+        {/* ESQUERRA: ESTAT DE LA CONNEXIÓ. Només informa: buidar la memòria cau, que s'hi amagava, ara és al full
+            «Configuració» de la capçalera (auditoria d'UX del 16/11/2026, B11). role="status": el canvi s'anuncia. */}
         <div className="flex items-center gap-4 md:gap-6">
-            <button
-                type="button"
-                onClick={handleCacheReset}
-                className={`flex items-center gap-2 cursor-pointer px-2.5 py-1.5 rounded-lg uppercase transition-all duration-300 border active:scale-95 group outline-none ${statusButtonStyle}`}
+            <div
+                role="status"
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg uppercase border select-none ${statusStyle}`}
                 title={t.statusTitle}
                 aria-label={t.statusAria.replace('{state}', stateLabel)}
             >
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
                   {online && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 duration-1000"></span>}
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${online ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-400 shadow-[0_0_8px_#f59e0b]'}`}></span>
                 </span>
-                <span className={`font-bold transition-colors ${online ? 'text-emerald-500/90 group-hover:text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.4)]' : 'text-amber-400/90 group-hover:text-amber-300'}`}>
+                <span className={`font-bold ${online ? 'text-emerald-500/90 drop-shadow-[0_0_5px_rgba(16,185,129,0.4)]' : 'text-amber-400/90'}`}>
                     {stateLabel}
                 </span>
-            </button>
+            </div>
 
             {!simple && (
                 <div className="hidden lg:flex items-center gap-2 text-indigo-500/40 select-none" title={t.secureProxyTitle}>
