@@ -31,14 +31,18 @@ Sentry.init({
   environment: import.meta.env.MODE,
   release: `meteoai@${APP_VERSION}`,
   integrations: [
-    Sentry.browserTracingIntegration(),
+    // Sense una transacció per cada canvi de pestanya o de modal: totes fan pushState, i a l'auditoria d'UX del
+    // 16/11/2026 (M10) cada canvi enviava 2 sobres (23 en 4 minuts) i Sentry va respondre 429 als 41 s.
+    Sentry.browserTracingIntegration({ instrumentNavigation: false }),
     // Errors, traces i repeticions hi passen abans d'enviar-se (l'adreça de la pàgina, les dades extra, les traces).
     sentryPrivacy.integration,
   ],
   // Les molles de pa (navegacions, peticions, consola) es netegen en crear-se: Replay ja rep la versió neta.
   beforeBreadcrumb: sentryPrivacy.beforeBreadcrumb,
-  tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
-  replaysSessionSampleRate: 0.1,
+  // Traces: un 5 % de les càrregues en producció (abans un 20 %). Repeticions: només de les sessions amb un error (abans
+  // també un 10 % de totes, que pujaven trossos de gravació tota l'estona i esgotaven el límit d'enviaments).
+  tracesSampleRate: import.meta.env.PROD ? 0.05 : 1.0,
+  replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
 });
 
