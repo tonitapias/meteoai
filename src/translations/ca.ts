@@ -551,6 +551,16 @@ export const ca = {
     button: "Inici",
     aria: "Torna a l'inici"
   },
+  // Full «Configuració» (engranatge de la capçalera del tauler, auditoria d'UX del 16/11/2026, B11).
+  settings: {
+    open: "Configuració",
+    title: "Configuració",
+    language: "Idioma",
+    howItWorksHint: "Els models, la IA i d'on surten les dades",
+    clearCache: "Buida la memòria cau",
+    clearCacheHint: "Esborra les previsions desades. Els favorits i les preferències es queden.",
+    resetConfirm: "Vols buidar la memòria cau i tornar a carregar l'app?\n\nS'esborraran les previsions i les anàlisis desades. Els favorits i les preferències es mantenen."
+  },
 
     // 1. DIES DE LA SETMANA (Per forçar traducció si falla l'automàtic)
   weekdays: {
@@ -601,9 +611,8 @@ export const ca = {
   footer: {
     online: "En línia",
     offline: "Sense connexió",
-    statusTitle: "Estat de la connexió. Clic per buidar la memòria cau",
-    statusAria: "Estat de la connexió: {state}. Fes clic per buidar la memòria cau.",
-    resetConfirm: "Vols buidar la memòria cau i tornar a carregar l'app?\n\nS'esborraran les previsions i les anàlisis desades. Els favorits i les preferències es mantenen.",
+    statusTitle: "Estat de la connexió",
+    statusAria: "Estat de la connexió: {state}",
     secureProxy: "Dades xifrades",
     secureProxyTitle: "Les claus de les APIs es queden al servidor intermediari",
     data: "Dades: Open-Meteo",

@@ -542,6 +542,15 @@ export const en = {
     button: "Home",
     aria: "Back to home"
   },
+  settings: {
+    open: "Settings",
+    title: "Settings",
+    language: "Language",
+    howItWorksHint: "The models, the AI and where the data comes from",
+    clearCache: "Clear the cache",
+    clearCacheHint: "Deletes saved forecasts. Your favourites and preferences stay.",
+    resetConfirm: "Clear the cache and reload the app?\n\nSaved forecasts and analyses will be deleted. Your favourites and preferences are kept."
+  },
 
     // --- NEW KEYS: WIDGETS, RADAR & 7 DAYS ---
   
@@ -589,9 +598,8 @@ export const en = {
   footer: {
     online: "Online",
     offline: "Offline",
-    statusTitle: "Connection status. Click to clear the cache",
-    statusAria: "Connection status: {state}. Click to clear the cache.",
-    resetConfirm: "Clear the cache and reload the app?\n\nSaved forecasts and analyses will be deleted. Your favourites and preferences are kept.",
+    statusTitle: "Connection status",
+    statusAria: "Connection status: {state}",
     secureProxy: "Encrypted data",
     secureProxyTitle: "API keys stay on the intermediate server",
     data: "Data: Open-Meteo",

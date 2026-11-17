@@ -1,5 +1,5 @@
 // src/components/HowItWorksModal.tsx
-// "Com funciona", obert des de la benvinguda: d'on surt la previsió (models globals, model d'alta resolució,
+// "Com funciona", obert des de la benvinguda i des del full «Configuració» del tauler: d'on surt la previsió (models globals, model d'alta resolució,
 // observació i avisos oficials, resum amb IA). Mateix llenguatge que la benvinguda: superfície opaca, un sol
 // accent i sense desenfocaments, filtres ni animacions en bucle (mòbils modestos). Les xifres del text (5 fonts,
 // 14 models, 1-5 km, 7 fonts oficials) s'han de revisar si canvien API_MODELS_LIST, REGIONAL_MODELS o alertsApi.

@@ -26,6 +26,7 @@ const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
 const SnowLevelModal = lazy(() => import('../SnowLevelModal'));
 const WindModal = lazy(() => import('../WindModal'));
 const SharePositionSheet = lazy(() => import('../SharePositionSheet'));
+const SettingsSheet = lazy(() => import('../SettingsSheet'));
 const PlanetExtremesModal = lazy(() => import('../planet/PlanetExtremesModal'));
 
 // JA NO NECESSITEM INTERFACE PROPS NI TIPUS COMPLEXOS
@@ -37,8 +38,19 @@ export const DashboardModals = () => {
 
     // L'idioma d'i18next (radar) ja el sincronitza useAppController des de l'arrencada (useI18nLanguageSync).
 
+    // «Configuració» no depèn de cap previsió: s'obre també mentre se'n carrega una.
+    const settingsSheet = modals.showSettings && (
+        <SettingsSheet
+            t={t}
+            lang={flags.lang}
+            onLangChange={actions.setLang}
+            langDisabled={state.loading}
+            onClose={() => actions.setShowSettings(false)}
+        />
+    );
+
     // Protecció: Si no hi ha dades, no podem mostrar modals de detall
-    if (!weatherData) return null;
+    if (!weatherData) return settingsSheet ? <Suspense fallback={null}>{settingsSheet}</Suspense> : null;
 
     // Forcem el tipatge de location per corregir la pèrdua d'inferència del compilador
     const loc = weatherData.location as LocationMeta | undefined;
@@ -181,6 +193,7 @@ export const DashboardModals = () => {
                     onClose={() => actions.setShowShareSheet(false)}
                 />
             )}
+            {settingsSheet}
         </Suspense>
     );
 };

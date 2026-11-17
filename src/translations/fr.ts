@@ -542,6 +542,15 @@ export const fr = {
     button: "Accueil",
     aria: "Retour à l'accueil"
   },
+  settings: {
+    open: "Réglages",
+    title: "Réglages",
+    language: "Langue",
+    howItWorksHint: "Les modèles, l'IA et d'où viennent les données",
+    clearCache: "Vider le cache",
+    clearCacheHint: "Supprime les prévisions enregistrées. Vos favoris et préférences restent.",
+    resetConfirm: "Vider le cache et recharger l'application ?\n\nLes prévisions et analyses enregistrées seront supprimées. Vos favoris et préférences sont conservés."
+  },
 
     // --- NOUVELLES CLÉS : WIDGETS, RADAR ET 7 JOURS ---
   
@@ -589,9 +598,8 @@ export const fr = {
   footer: {
     online: "En ligne",
     offline: "Hors ligne",
-    statusTitle: "État de la connexion. Cliquez pour vider le cache",
-    statusAria: "État de la connexion : {state}. Cliquez pour vider le cache.",
-    resetConfirm: "Vider le cache et recharger l'application ?\n\nLes prévisions et analyses enregistrées seront supprimées. Vos favoris et préférences sont conservés.",
+    statusTitle: "État de la connexion",
+    statusAria: "État de la connexion : {state}",
     secureProxy: "Données chiffrées",
     secureProxyTitle: "Les clés des API restent sur le serveur intermédiaire",
     data: "Données : Open-Meteo",

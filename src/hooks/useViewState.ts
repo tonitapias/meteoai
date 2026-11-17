@@ -37,6 +37,8 @@ export function useViewState() {
     const [planetModal, setPlanetModal] = useState<PlanetEntry | null>(null);
     // Finestra "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace).
     const [showShareSheet, setShowShareSheet] = useState(false);
+    // Full «Configuració» (engranatge de la capçalera del tauler): idioma, «Com funciona» i buidar la memòria cau.
+    const [showSettings, setShowSettings] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
     useEffect(() => { 
@@ -67,6 +69,7 @@ export function useViewState() {
     useModalHistory(showWindModal, useCallback(() => setShowWindModal(false), []));
     useModalHistory(planetModal !== null, useCallback(() => setPlanetModal(null), []));
     useModalHistory(showShareSheet, useCallback(() => setShowShareSheet(false), []));
+    useModalHistory(showSettings, useCallback(() => setShowSettings(false), []));
 
     // --- 5. Helpers d'Acció UI ---
     const toggleDebug = useCallback(() => {
@@ -100,7 +103,8 @@ export function useViewState() {
                 showSnowLevelModal,
                 showWindModal,
                 planetModal,
-                showShareSheet
+                showShareSheet,
+                showSettings
             }
         },
         actions: {
@@ -125,7 +129,8 @@ export function useViewState() {
             setShowSnowLevelModal,
             setShowWindModal,
             setPlanetModal,
-            setShowShareSheet
+            setShowShareSheet,
+            setShowSettings
         }
     };
 }
