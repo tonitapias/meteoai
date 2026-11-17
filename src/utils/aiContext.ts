@@ -160,10 +160,23 @@ const generateAlertsAndTips = (params: AlertParams, tr: TranslationMap) => {
     return { alerts, tips: [...new Set(tips)].slice(0, 4) };
 };
 
-const getFutureRainProbability = (hourly: StrictHourlyWeather, daily: StrictDailyWeather, currentHour: number): number => {
+/**
+ * Índex de l'hora actual dins hourly.time (la mateixa hora que current.time). Abans es feia servir l'hora local (0-23)
+ * com a índex, que només quadra si la sèrie comença a les 00:00 d'avui: no els dies de canvi d'hora, ni amb una sèrie
+ * que comenci un altre dia (auditoria del 16/11/2026, X4). Si no es troba, l'hora local, com abans.
+ */
+const resolveNowIndex = (hourly: StrictHourlyWeather, currentTime: unknown, fallback: number): number => {
+    const times = (hourly as unknown as { time?: unknown[] }).time;
+    if (!Array.isArray(times) || typeof currentTime !== 'string') return fallback;
+    const key = currentTime.slice(0, 13);
+    const i = times.findIndex(t => typeof t === 'string' && t.slice(0, 13) === key);
+    return i >= 0 ? i : fallback;
+};
+
+const getFutureRainProbability = (hourly: StrictHourlyWeather, daily: StrictDailyWeather, nowIndex: number): number => {
     if (hourly && hourly.precipitation_probability) {
         const safeProbs = (hourly.precipitation_probability || [])
-            .slice(currentHour, currentHour + 12)
+            .slice(nowIndex, nowIndex + 12)
             .map((v) => safeNum(v));
         return Math.max(...safeProbs, 0);
     }
@@ -239,6 +252,7 @@ export const generateAIPrediction = (
     try {
         // CORRECCIÓ: Usem l'hora de la ubicació, no la del sistema
         const currentHour = getLocationHour(current.time);
+        const nowIndex = resolveNowIndex(hourly, current.time, currentHour);
 
         // DOCTRINA RISC ZERO: codi de temps i temperatura no són inputs neutres
         // per a aquest text — decideixen si diem "cel serè" o "fred intens".
@@ -263,7 +277,7 @@ export const generateAIPrediction = (
         // CORRECCIÓ: Usem la funció centralitzada (amb llindar 0.2mm)
         const isRaining = calculateIsRaining(code, precipInstantanea);
 
-        const futureRainProb = getFutureRainProbability(hourly, daily, currentHour);
+        const futureRainProb = getFutureRainProbability(hourly, daily, nowIndex);
         
         const windSpeed = safeNum(current.wind_speed_10m);
         const windGusts = safeNum(current.wind_gusts_10m);
@@ -282,8 +296,8 @@ export const generateAIPrediction = (
             summaryParts = analyzeSky(code, isDay, currentHour, visibility, futureRainProb, cloudCover, tr, alertsList);
         }
 
-        const currentRainVol = hourly.precipitation ? safeNum(hourly.precipitation[currentHour]) : 0;
-        const nextHourRainVol = hourly.precipitation ? safeNum(hourly.precipitation[currentHour + 1]) : 0;
+        const currentRainVol = hourly.precipitation ? safeNum(hourly.precipitation[nowIndex]) : 0;
+        const nextHourRainVol = hourly.precipitation ? safeNum(hourly.precipitation[nowIndex + 1]) : 0;
         
         // Mateixes frases (traduïdes) que ja usa analyzePrecipitation: abans eren text en català fix, també per a es/en/fr.
         // Si analyzePrecipitation ja l'ha afegida, no es repeteix.
@@ -310,7 +324,7 @@ export const generateAIPrediction = (
         );
         summaryParts = [...summaryParts, ...tempParts];
 
-        const currentCape = hourly.cape ? safeNum(hourly.cape[currentHour]) : 0;
+        const currentCape = hourly.cape ? safeNum(hourly.cape[nowIndex]) : 0;
         const precipSum = daily.precipitation_sum ? safeNum(daily.precipitation_sum[0]) : 0;
         const uvMax = daily.uv_index_max ? safeNum(daily.uv_index_max[0]) : 0;
 

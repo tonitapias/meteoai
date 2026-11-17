@@ -173,7 +173,9 @@ describe("generateAIPrediction — insígnia d'acord entre models", () => {
 describe('generateAIPrediction — frases de reserva traduïdes (no català fix)', () => {
     const CATALAN_FIXED = [/s'intensificarà notablement aviat/, /remetent properament/, /Ràfegues de vent fortes/];
     // El "ara" és la 01:00 (índex 1): precipitació d'ara i de la següent hora.
-    const withRain = (now: number, next: number) => ({ ...hourly, precipitation: [0, now, next] }) as unknown as StrictHourlyWeather;
+    // Tres hores (00, 01 i 02 h) perquè l'hora actual (01:00) sigui l'índex 1 de la sèrie (abans el test depenia de fer
+    // servir l'hora local com a índex; vegeu X4).
+    const withRain = (now: number, next: number) => ({ ...hourly, time: ['2026-09-19T00:00', '2026-09-19T01:00', '2026-09-19T02:00'], precipitation: [0, now, next] }) as unknown as StrictHourlyWeather;
 
     (['ca', 'es', 'en', 'fr'] as const).forEach(lang => {
         const t = TRANSLATIONS[lang] as unknown as Record<string, string>;
@@ -207,5 +209,21 @@ describe('generateAIPrediction — llamps observats a prop', () => {
         expect(calm.alerts.some(a => a.msg === tr.alertStorm)).toBe(false);
         const near = generateAIPrediction(current, daily, hourly, 0, 'ca', 3, null, 'C', null, true);
         expect(near.alerts.some(a => a.msg === tr.alertStorm && a.level === 'high')).toBe(true);
+    });
+});
+
+// Auditoria del 16/11/2026 (X4): les hores es llegien amb l'hora local (0-23) com a índex. Amb una sèrie que comença el
+// dia abans, a la 01:00 llegia la pluja de la 01:00 d'ahir.
+describe('generateAIPrediction — índex de l\'hora actual', () => {
+    it('llegeix la probabilitat de pluja de les hores que venen, encara que la sèrie no comenci a les 00:00 d\'avui', () => {
+        const times = Array.from({ length: 30 }, (_, i) => {
+            const d = new Date(Date.UTC(2026, 8, 18, i));
+            return d.toISOString().slice(0, 16);
+        });
+        // Ara = 19/09 01:00 → índex 25. Només hi ha probabilitat alta a partir de l'índex 25.
+        const probs = times.map((_, i) => (i >= 25 ? 80 : 0));
+        const h = { time: times, precipitation: times.map(() => 0), precipitation_probability: probs, cape: times.map(() => 0) } as unknown as StrictHourlyWeather;
+        const out = generateAIPrediction({ ...current, time: '2026-09-19T01:00', is_day: 0 } as StrictCurrentWeather, daily, h, 0, 'ca', 3, null, 'C');
+        expect(out.tips).toContain(tr.tipUmbrella);
     });
 });
