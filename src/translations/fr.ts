@@ -258,7 +258,7 @@ export const fr = {
   
   welcome: {
     headline: "La météo là où vous êtes, vue de plus près.",
-    subtitle: "Nous comparons cinq modèles mondiaux et, là où il existe, le modèle national le plus détaillé (jusqu'à 1 km). Une IA vous en résume l'essentiel.",
+    subtitle: "Nous comparons cinq modèles mondiaux et, là où il existe, le modèle national le plus détaillé (de 1 à 5 km selon le modèle). Une IA vous en résume l'essentiel.",
     locate: "Utiliser ma position",
     locating: "Recherche de votre position…",
     locatingSlow: "Cela prend du temps… Vous pouvez aussi rechercher un lieu.",

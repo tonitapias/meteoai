@@ -257,7 +257,7 @@ export const es = {
   
   welcome: {
     headline: "El tiempo donde estás, visto más de cerca.",
-    subtitle: "Comparamos cinco modelos mundiales y, donde lo hay, el modelo nacional de más detalle (hasta 1 km). Una IA te resume lo importante.",
+    subtitle: "Comparamos cinco modelos mundiales y, donde lo hay, el modelo nacional de más detalle (de 1 a 5 km, según el modelo). Una IA te resume lo importante.",
     locate: "Usar mi ubicación",
     locating: "Buscando tu ubicación…",
     locatingSlow: "Está tardando… También puedes buscar el lugar.",

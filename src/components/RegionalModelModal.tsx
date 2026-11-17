@@ -29,7 +29,8 @@ interface RegionalModelModalProps {
 // DOCTRINA RISC ZERO: Diccionari tàctic intern segur
 const modalTranslations: Record<string, Record<string, string>> = {
   ca: {
-    highRes: "Alta Resolució",
+    highRes: "Alta resolució",
+    grid: "Malla de {km} km",
     elev: "ELEV",
     decoding: "Descodificant Model...",
     signalLost: "Senyal Perduda",
@@ -46,7 +47,8 @@ const modalTranslations: Record<string, Record<string, string>> = {
     isoShort: "Iso"
   },
   es: {
-    highRes: "Alta Resolución",
+    highRes: "Alta resolución",
+    grid: "Malla de {km} km",
     elev: "ELEV",
     decoding: "Decodificando Modelo...",
     signalLost: "Señal Perdida",
@@ -63,7 +65,8 @@ const modalTranslations: Record<string, Record<string, string>> = {
     isoShort: "Iso"
   },
   en: {
-    highRes: "High Resolution",
+    highRes: "High resolution",
+    grid: "{km} km grid",
     elev: "ELEV",
     decoding: "Decoding Model...",
     signalLost: "Signal Lost",
@@ -80,7 +83,8 @@ const modalTranslations: Record<string, Record<string, string>> = {
     isoShort: "Frz"
   },
   fr: {
-    highRes: "Haute Résolution",
+    highRes: "Haute résolution",
+    grid: "Maille de {km} km",
     elev: "ELEV",
     decoding: "Décodage Modèle...",
     signalLost: "Signal Perdu",
@@ -238,7 +242,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                             {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">
-                            {model.resolutionKm}KM GRID <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
+                            {t.grid.replace('{km}', formatDecimal(model.resolutionKm, lang, 1, true))} <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
                         </span>
                     </div>
                 </div>

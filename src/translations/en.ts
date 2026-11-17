@@ -258,7 +258,7 @@ export const en = {
   
   welcome: {
     headline: "The weather where you are, up close.",
-    subtitle: "We compare five global models and, where available, the most detailed national model (down to 1 km). An AI sums up what matters.",
+    subtitle: "We compare five global models and, where available, the most detailed national model (1 to 5 km, depending on the model). An AI sums up what matters.",
     locate: "Use my location",
     locating: "Finding your location…",
     locatingSlow: "This is taking a while… You can also search for a place.",

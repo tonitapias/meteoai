@@ -259,7 +259,7 @@ export const ca = {
   
   welcome: {
     headline: "El temps on ets, vist de més a prop.",
-    subtitle: "Comparem cinc models mundials i, on n'hi ha, el model nacional de més detall (fins a 1 km). Una IA te'n resumeix el que importa.",
+    subtitle: "Comparem cinc models mundials i, on n'hi ha, el model nacional de més detall (d'1 a 5 km, segons el model). Una IA te'n resumeix el que importa.",
     locate: "Utilitza la meva ubicació",
     locating: "Buscant la teva ubicació…",
     locatingSlow: "Està trigant… També pots cercar el lloc.",
