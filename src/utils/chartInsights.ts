@@ -208,6 +208,8 @@ export const buildChartInsights = (primary: HourlyChartPoint[], comparison: Comp
             .filter((i): i is number => i !== null)
         : [];
 
+    const primaryTotal = completeTotal(primary);
+
     return {
         temp: {
             high: peak(primary, 'temp', 'max'),
@@ -220,8 +222,10 @@ export const buildChartInsights = (primary: HourlyChartPoint[], comparison: Comp
             modelTotals,
             firstRain: firstRainIndex(primary),
             modelFirstRain: firstRains.length > 0 ? { first: Math.min(...firstRains), last: Math.max(...firstRains) } : null,
-            modelsWithRain: totals.filter(t => t >= MODEL_HAS_RAIN_MM).length,
-            modelsCompared: totals.length,
+            // Amb la sèrie principal: el gràfic en dibuixa 5 (principal + 4 models) i abans deia "0 de 4" (auditoria d'UX del
+            // 16/11/2026, B13). El rang i l'acord continuen sent entre els models de comparació.
+            modelsWithRain: [...totals, ...(primaryTotal !== null ? [primaryTotal] : [])].filter(t => t >= MODEL_HAS_RAIN_MM).length,
+            modelsCompared: totals.length + (primaryTotal !== null ? 1 : 0),
             agreement: totals.length >= 2 && modelTotals
                 ? levelOf(modelTotals.max - modelTotals.min, AGREEMENT_THRESHOLDS.rainTotal)
                 : null
