@@ -227,3 +227,56 @@ describe('generateAIPrediction — índex de l\'hora actual', () => {
         expect(out.tips).toContain(tr.tipUmbrella);
     });
 });
+
+// Auditoria d'UX, segona volta (N2): a Girona, amb 20 °C i 17 °C de sensació, deia «Ambient fresc. Jaqueta lleugera
+// recomanada». I a la tarda, amb la mínima d'avui (la de la matinada) per sota de 10, deia «Fa força fred» en present.
+describe('generateAIPrediction — frase de temperatura del resum provisional', () => {
+    const at = (hour: string, temp: number, feels: number, mins: (number | null)[]) => generateAIPrediction(
+        { ...current, time: `2026-11-17T${hour}`, temperature_2m: temp, apparent_temperature: feels, relative_humidity_2m: 60 } as StrictCurrentWeather,
+        { ...daily, time: ['2026-11-17', '2026-11-18'], temperature_2m_min: mins } as unknown as StrictDailyWeather,
+        { ...hourly, time: [`2026-11-17T${hour}`] } as unknown as StrictHourlyWeather,
+        0, 'ca', 1, null, 'C', null, false, 10
+    ).text;
+    const say = (key: string) => (tr[key] as string).trim();
+
+    it('amb 17 °C de sensació, suau i no «fresc»', () => {
+        const text = at('12:00', 20, 17, [8, 9]);
+        expect(text).toContain(say('aiTempMild'));
+        expect(text).not.toContain(say('aiTempCool'));
+    });
+
+    it('«Temperatures suaus», no «Temperaturas»', () => {
+        expect(say('aiTempMild')).toBe('Temperatures suaus i agradables.');
+    });
+
+    it('per sota de 15 °C de sensació, fresc', () => {
+        expect(at('11:00', 15, 13, [8, 9])).toContain(say('aiTempCool'));
+    });
+
+    it('a la tarda, si la nit que ve baixa de 10 °C, ho diu en futur', () => {
+        expect(at('18:00', 14, 13, [12, 7])).toContain(say('aiTempCoolEvening'));
+    });
+
+    it('la mínima d\'avui (la de la matinada) no compta: si la nit que ve no baixa de 10, fresc', () => {
+        const text = at('18:00', 14, 13, [5, 11]);
+        expect(text).toContain(say('aiTempCool'));
+        expect(text).not.toContain(say('aiTempCold'));
+    });
+
+    it('amb sensació suau no parla de fred encara que la nit sigui freda', () => {
+        const text = at('18:00', 20, 17, [5, 4]);
+        expect(text).toContain(say('aiTempMild'));
+        expect(text).not.toContain(say('aiTempCold'));
+        expect(text).not.toContain(say('aiTempCoolEvening'));
+    });
+
+    it('sense la mínima de demà, fresc (no s\'inventa la nit)', () => {
+        expect(at('18:00', 14, 13, [5])).toContain(say('aiTempCool'));
+    });
+
+    it('té traducció en els quatre idiomes', () => {
+        for (const lang of ['ca', 'es', 'en', 'fr'] as const) {
+            expect((TRANSLATIONS[lang] as Record<string, unknown>).aiTempCoolEvening).toEqual(expect.any(String));
+        }
+    });
+});

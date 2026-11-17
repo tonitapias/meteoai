@@ -415,8 +415,9 @@ export const ca = {
   
   aiTempFreezing: "Ambient gèlid. Abrigueu-vos molt bé. ",
   aiTempCold: "Fa força fred. Caldrà roba d'abric. ",
-  aiTempCool: "Ambient fresc. Jaqueta lleugera recomanada. ", 
-  aiTempMild: "Temperaturas suaus i agradables. ",
+  aiTempCool: "Ambient fresc. Jaqueta lleugera recomanada. ",
+  aiTempCoolEvening: "Ambient fresc; al vespre farà fred i caldrà roba d'abric. ",
+  aiTempMild: "Temperatures suaus i agradables. ",
   aiTempWarm: "Ambient càlid, pugen les temperatures. ",
   aiTempHot: "Calor intensa. Eviteu esforços al sol. ",
   

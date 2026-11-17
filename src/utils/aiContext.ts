@@ -75,13 +75,17 @@ const analyzeSky = (code: number, isDay: number, currentHour: number, visibility
     return parts.filter(Boolean);
 };
 
-const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, dailyMin: number, currentHour: number, unit: string, tr: TranslationMap) => {
-    const parts: string[] = []; 
+// La franja la decideix la sensació tèrmica: fred < 10, fresc 10-15, suau 15-25, càlid 25-30, calor >= 30 °C.
+// `nightMin`: la mínima de la nit que ve (la de demà, que és a la matinada); null si no se sap.
+const analyzeTemperature = (feelsLike: number, temp: number, humidity: number, nightMin: number | null, currentHour: number, unit: string, tr: TranslationMap) => {
+    const parts: string[] = [];
     if (feelsLike <= TEMP.FREEZING) parts.push(tr.aiTempFreezing);
     else if (feelsLike > TEMP.FREEZING && feelsLike < TEMP.COLD) parts.push(tr.aiTempCold);
     else if (feelsLike >= TEMP.COLD && feelsLike < TEMP.MILD) {
-        if (currentHour >= 15 && dailyMin < TEMP.COLD) parts.push(tr.aiTempCold); 
-        else parts.push(tr.aiTempCool); 
+        // A la tarda, si la nit que ve baixa de 10 °C, es diu en futur. Abans deia "Fa força fred" (present) amb la
+        // mínima d'avui, que és la de la matinada passada, i podia sortir amb 17 °C de sensació.
+        if (currentHour >= 15 && nightMin !== null && nightMin < TEMP.COLD) parts.push(tr.aiTempCoolEvening);
+        else parts.push(tr.aiTempCool);
     }
     else if (feelsLike >= TEMP.MILD && feelsLike < TEMP.WARM) parts.push(tr.aiTempMild);
     else if (feelsLike >= TEMP.WARM && feelsLike < TEMP.HOT) parts.push(tr.aiTempWarm);
@@ -319,7 +323,7 @@ export const generateAIPrediction = (
             extractValidNum(current.apparent_temperature) ?? validTemp,
             validTemp,
             safeNum(current.relative_humidity_2m),
-            safeNum(daily.temperature_2m_min?.[0]),
+            extractValidNum(daily.temperature_2m_min?.[1]),
             currentHour, unit, tr
         );
         summaryParts = [...summaryParts, ...tempParts];
