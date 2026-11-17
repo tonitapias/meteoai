@@ -78,6 +78,26 @@ describe('ConsensusWidget — sense veredicte d\'acord propi', () => {
     });
 });
 
+// Auditoria d'UX del 16/11/2026 (M7): «Compara els models» no tenia role="dialog" i el focus es quedava al botó de darrere.
+describe('ConsensusWidget — els modals són diàlegs amb el focus a dins', () => {
+    afterEach(() => { cleanup(); document.body.style.overflow = ''; });
+
+    it('«Compara els models» és un diàleg amb nom i rep el focus', () => {
+        renderInTransformedDashboard();
+        fireEvent.click(screen.getByText('Compara els models'));
+        const dialog = screen.getByRole('dialog', { name: 'Comparació de models' });
+        expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    it('el detall de la temperatura també', () => {
+        renderInTransformedDashboard();
+        fireEvent.click(screen.getByText('TEMP'));
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.getAttribute('aria-modal')).toBe('true');
+        expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+});
+
 describe('ConsensusWidget — targetes accessibles amb el teclat', () => {
     afterEach(() => { cleanup(); document.body.style.overflow = ''; });
 

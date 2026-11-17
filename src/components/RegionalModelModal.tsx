@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useRegionalModel } from '../hooks/useRegionalModel';
 import { X, Wind, Droplets, Snowflake, Activity, Zap, AlertOctagon, ShieldCheck, Mountain, ArrowUp } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
@@ -107,6 +108,9 @@ const localeMap: Record<string, string> = {
 export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'ca', weatherData }: RegionalModelModalProps) {
   const { regionalData, loading, error, fetchRegionalModel, clearRegionalModel } = useRegionalModel();
   const listRef = useRef<HTMLDivElement>(null);
+  // Focus dins el diàleg i Tab que hi dona la volta, com «Com funciona» (auditoria d'UX del 16/11/2026, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, dialogRef);
 
   // [FIX PRECISIÓ] "Avui"/"Demà" i el tall d'hores passades han de calcular-se
   // amb l'hora local de la ubicació consultada, no la del dispositiu de qui mira
@@ -191,6 +195,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
 
   return (
     <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="regional-model-modal-title"

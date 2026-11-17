@@ -1,5 +1,6 @@
 // src/components/widgets/ConsensusModal.tsx
-import React from 'react';
+import React, { useRef } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Language } from '../../translations';
 import { Thermometer, CloudRain, Wind, X, ArrowUpRight, ArrowDownRight, MoveRight } from 'lucide-react';
 import { ModalType } from './ConsensusWidget';
@@ -59,6 +60,9 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
 }) => {
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
+  // Focus dins el diàleg i Tab que hi dona la volta, com «Com funciona» (auditoria d'UX del 16/11/2026, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(activeModal !== 'charts', dialogRef);
 
   // Decimals en el format de l'idioma ("18,3", no "18.3"), com la resta de l'app.
   const formatVal = (val: number | null | undefined) => typeof val === 'number' && !isNaN(val) ? formatDecimal(val, safeLang, 1, true) : '--';
@@ -195,7 +199,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   if (activeModal === 'charts') return null; 
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-2xl backdrop-saturate-150 animate-in fade-in duration-300">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="consensus-modal-title" className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-2xl backdrop-saturate-150 animate-in fade-in duration-300">
       <div className="bg-[#080b14] border border-white/10 rounded-[28px] md:rounded-[32px] w-[96%] sm:max-w-md md:max-w-3xl lg:max-w-4xl shadow-[0_0_80px_rgba(0,0,0,1)] overflow-hidden flex flex-col transform animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         <div className="flex justify-between items-center p-4 sm:p-5 md:p-6 border-b border-white/5 bg-[#0a0f1c]/90 backdrop-blur-md relative z-10">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent pointer-events-none"></div>
@@ -206,7 +210,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                 {activeModal === 'wind' && <Wind className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-amber-400 drop-shadow-[0_0_8px_currentColor]" />}
             </div>
             <div>
-              <h3 className="text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
+              <h3 id="consensus-modal-title" className="text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
               <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5">
                 {activeModal === 'temp' ? t.tempLabel : activeModal === 'rain' ? t.rainLabel : t.windLabel}
               </p>
