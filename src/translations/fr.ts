@@ -411,7 +411,8 @@ export const fr = {
   
   aiTempFreezing: "Ambiance glaciale. Couvrez-vous bien. ",
   aiTempCold: "Il fait froid. Vêtements chauds nécessaires. ",
-  aiTempCool: "Ambiance fraîche. Une veste légère suffira. ", 
+  aiTempCool: "Ambiance fraîche. Une veste légère suffira. ",
+  aiTempCoolEvening: "Ambiance fraîche ; il fera froid ce soir, prévoyez des vêtements chauds. ",
   aiTempMild: "Températures douces et agréables. ",
   aiTempWarm: "Atmosphère chaude, les températures montent. ",
   aiTempHot: "Chaleur intense. Évitez les efforts. ",

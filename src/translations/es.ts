@@ -410,7 +410,8 @@ export const es = {
   
   aiTempFreezing: "Ambiente gélido. Abrígate muy bien. ",
   aiTempCold: "Hace frío. Necesitarás ropa de abrigo. ",
-  aiTempCool: "Ambiente fresco. Una chaqueta ligera será suficiente. ", 
+  aiTempCool: "Ambiente fresco. Una chaqueta ligera será suficiente. ",
+  aiTempCoolEvening: "Ambiente fresco; por la noche hará frío y conviene llevar ropa de abrigo. ",
   aiTempMild: "Temperaturas suaves y agradables. ",
   aiTempWarm: "Ambiente cálido, suben las temperaturas. ",
   aiTempHot: "Calor intenso. Evita esfuerzos al sol. ",

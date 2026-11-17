@@ -27,6 +27,7 @@ export interface TranslationMap {
   aiTempFreezing: string;
   aiTempCold: string;
   aiTempCool: string;
+  aiTempCoolEvening: string;
   aiTempMild: string;
   aiTempWarm: string;
   aiTempHot: string;

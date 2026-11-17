@@ -411,7 +411,8 @@ export const en = {
   
   aiTempFreezing: "Freezing. Bundle up well. ",
   aiTempCold: "It's cold. You'll need warm clothing. ",
-  aiTempCool: "Cool. A light jacket will be enough. ", 
+  aiTempCool: "Cool. A light jacket will be enough. ",
+  aiTempCoolEvening: "Cool now; it will be cold this evening, so bring warm clothing. ",
   aiTempMild: "Mild and pleasant temperatures. ",
   aiTempWarm: "Warm atmosphere, temperatures are rising. ",
   aiTempHot: "Intense heat. Avoid strenuous activity. ",

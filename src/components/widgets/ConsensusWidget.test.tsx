@@ -123,3 +123,28 @@ describe('ConsensusWidget — targetes accessibles amb el teclat', () => {
         expect(screen.queryByText('kmh')).not.toBeInTheDocument();
     });
 });
+
+// Auditoria d'UX, segona volta (N4): "GLO", "Δ" i "LOC" no s'entenien.
+describe('ConsensusWidget — paraules senceres, sense abreviatures', () => {
+    afterEach(() => { cleanup(); document.body.style.overflow = ''; });
+
+    it.each([
+        ['ca', 'Diferència'], ['es', 'Diferencia'], ['en', 'Difference'], ['fr', 'Écart'],
+    ] as const)('en %s: «Global» i «%s», mai «GLO» ni «Δ»', (lang, diff) => {
+        const { container } = render(<ConsensusWidget metrics={METRICS} localTemp={23} localPrecip={0} localWind={12} lang={lang} regionalModelLabel="AROME HD" />);
+        expect(screen.getAllByText('Global')).toHaveLength(3);
+        expect(screen.getAllByText(diff)).toHaveLength(3);
+        expect(container.textContent).not.toMatch(/\bGLO\b|Δ/);
+    });
+
+    it('el detall hora a hora diu el nom del model i «Global», no «LOC» i «GLO»', () => {
+        render(<ConsensusWidget metrics={METRICS} localTemp={23} localPrecip={0} localWind={12} lang="ca"
+            regionalModelLabel="AROME HD" hourlyTimes={['2026-11-17T21:00']} hourlyGlobalTimes={['2026-11-17T21:00']}
+            hourlyLocal={{ temp: [19] }} hourlyGlobal={{ temp: [18.6] }} utcOffset={3600} />);
+        fireEvent.click(screen.getByText('TEMP'));
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.textContent).toContain('AROME HD');
+        expect(dialog.textContent).toContain('Global');
+        expect(dialog.textContent).not.toMatch(/\bLOC\b|\bGLO\b/);
+    });
+});

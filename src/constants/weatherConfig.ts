@@ -133,7 +133,9 @@ export const WEATHER_THRESHOLDS = {
   TEMP: {
     FREEZING: 0,     // Gelada
     COLD: 10,        // Fred
-    MILD: 18,        // Suau
+    // Suau a partir de 15 °C de sensació tèrmica; per sota, «fresc». Abans 18: amb 20 °C i 17 °C de sensació, el resum
+    // provisional deia «Ambient fresc. Jaqueta lleugera recomanada» (auditoria d'UX, segona volta, N2).
+    MILD: 15,
     WARM: 25,        // Càlid
     HOT: 30,         // Calor
     EXTREME_HEAT: 35 // Calor extrema

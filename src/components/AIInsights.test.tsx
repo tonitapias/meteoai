@@ -123,3 +123,59 @@ describe('AIInsights — la insígnia de confiança es pot tocar per llegir-ne l
         expect(screen.getByRole('note').textContent).toBe(hint);
     });
 });
+
+// Auditoria d'UX, segona volta (B16): a 390 px la bombolla començava a x = -94 px (ancorada a la dreta de la insígnia,
+// que salta a l'esquerra de la fila) i el text de la IA s'hi pintava a sobre (capçalera i contingut, tots dos z-10).
+describe('AIInsights — on surt l\'explicació de la insígnia i com es tanca', () => {
+    const hint = 'Els models discrepen en la temperatura de les pròximes 6 hores.';
+    const open = () => {
+        render(<AIInsights lang="ca" analysis={analysis({ text: 'Cel serè i fa 20 °C.', confidence: 'Temperatura ±3°', confidenceLevel: 'medium', confidenceColor: 'amber', confidenceHint: hint })} />);
+        const badge = screen.getByRole('button', { name: 'Temperatura ±3°' });
+        fireEvent.click(badge);
+        return badge;
+    };
+
+    it('penja de la capçalera (no de la insígnia), amb marge a tots dos costats en mòbil', () => {
+        open();
+        const note = screen.getByTestId('ai-confidence-hint');
+        // La primera capa posicionada per sobre de la bombolla és la capçalera, no un embolcall de la insígnia.
+        let anchor = note.parentElement;
+        while (anchor && !/(^|\s)relative(\s|$)/.test(anchor.className)) anchor = anchor.parentElement;
+        expect(anchor?.className).toMatch(/border-b/);
+        expect(note.className).toMatch(/(^|\s)left-4(\s|$)/);
+        expect(note.className).toMatch(/(^|\s)right-4(\s|$)/);
+        expect(note.className).not.toMatch(/max-w-\[80vw\]/);
+    });
+
+    it('la capçalera va per sobre del text de la IA', () => {
+        open();
+        const header = screen.getByTestId('ai-confidence-hint').closest('.border-b') as HTMLElement;
+        // El contenidor del text (el text s'escriu de mica en mica i al principi no hi és).
+        const content = header.parentElement?.querySelector('.overflow-y-auto') as HTMLElement;
+        const z = (el: HTMLElement) => Number(/(?:^|\s)z-(\d+)(?:\s|$)/.exec(el.className)?.[1]);
+        expect(z(header)).toBeGreaterThan(z(content));
+    });
+
+    it('Escape la tanca i el focus torna a la insígnia', () => {
+        const badge = open();
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(screen.queryByRole('note')).toBeNull();
+        expect(badge.getAttribute('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(badge);
+    });
+
+    it('tocar fora la tanca; tocar la bombolla, no', () => {
+        open();
+        fireEvent.pointerDown(screen.getByRole('note'));
+        expect(screen.getByRole('note')).toBeTruthy();
+        fireEvent.pointerDown(document.body);
+        expect(screen.queryByRole('note')).toBeNull();
+    });
+
+    it('tornar a tocar la insígnia també la tanca', () => {
+        const badge = open();
+        fireEvent.pointerDown(badge);
+        fireEvent.click(badge);
+        expect(screen.queryByRole('note')).toBeNull();
+    });
+});
