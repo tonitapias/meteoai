@@ -34,6 +34,9 @@ Sentry.init({
     // Sense una transacció per cada canvi de pestanya o de modal: totes fan pushState, i a l'auditoria d'UX del
     // 16/11/2026 (M10) cada canvi enviava 2 sobres (23 en 4 minuts) i Sentry va respondre 429 als 41 s.
     Sentry.browserTracingIntegration({ instrumentNavigation: false }),
+    // Una sessió per càrrega de pàgina. Per defecte (cicle "route") n'obre una de nova a cada canvi d'adreça: tanca i
+    // envia la vella i envia la nova, 2 sobres per pestanya (?tab=) i 18 en 49 s (auditoria d'UX, segona volta, M10).
+    Sentry.browserSessionIntegration({ lifecycle: 'page' }),
     // Errors, traces i repeticions hi passen abans d'enviar-se (l'adreça de la pàgina, les dades extra, les traces).
     sentryPrivacy.integration,
   ],
