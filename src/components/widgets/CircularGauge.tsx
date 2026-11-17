@@ -2,6 +2,8 @@ import React from 'react';
 import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import { MATRIX_BG, CARD_VEIL } from './widgetStyles';
 import { formatDecimal } from '../../utils/formatters';
+import { classifyPressureTrend, PRESSURE_TREND_LABEL } from '../../utils/pressureTrend';
+import type { Language } from '../../translations';
 
 interface CircularGaugeProps {
     icon: React.ReactNode;
@@ -16,10 +18,10 @@ interface CircularGaugeProps {
 
 // Diccionari Tàctic i18n
 const widgetTranslations: Record<string, Record<string, string>> = {
-    ca: { rapid_drop: "Caiguda brusca", drop: "En descens", stable: "Estable / Pujant", no_data: "--", error: "SENSE DADES" },
-    es: { rapid_drop: "Caída brusca", drop: "En descenso", stable: "Estable / Subiendo", no_data: "--", error: "SIN DATOS" },
-    en: { rapid_drop: "Rapid drop", drop: "Falling", stable: "Stable / Rising", no_data: "--", error: "NO DATA" },
-    fr: { rapid_drop: "Baisse brutale", drop: "En baisse", stable: "Stable / Hausse", no_data: "--", error: "PAS DE DONNÉES" }
+    ca: { no_data: "--", error: "SENSE DADES" },
+    es: { no_data: "--", error: "SIN DATOS" },
+    en: { no_data: "--", error: "NO DATA" },
+    fr: { no_data: "--", error: "PAS DE DONNÉES" }
 };
 
 export const CircularGauge = ({ 
@@ -66,24 +68,28 @@ export const CircularGauge = ({
         showTrend = true;
         safeTrendValue = `${trendValue > 0 ? '+' : ''}${formatDecimal(trendValue, lang)}`;
 
-        if (trendValue <= -2.0) {
-            // Caiguda brusca (Roig Tàctic)
+        // Mateixos llindars i etiquetes que el modal de Pressió (utils/pressureTrend.ts): abans aquí hi havia una escala
+        // pròpia i "Estable / pujant" amb −0,1 hPa (auditoria d'UX del 16/11/2026, B2).
+        const trendKey = classifyPressureTrend(trendValue);
+        const trendLabels = PRESSURE_TREND_LABEL[lang as Language] ?? PRESSURE_TREND_LABEL.ca;
+        if (trendKey === 'fallingRapid' || trendKey === 'fallingVeryRapid') {
+            // Caiguda ràpida (Roig Tàctic)
             trendColor = "text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]";
             trendBg = "bg-red-950/40 border-red-500/30";
             trendIcon = <ArrowDown className="w-3 h-3" />;
-            trendText = t.rapid_drop;
-        } else if (trendValue < -0.5) {
-            // Caiguda lleu (Ambre Tàctic)
+            trendText = trendLabels[trendKey];
+        } else if (trendKey === 'falling' || trendKey === 'fallingSlow') {
+            // Baixant (Ambre Tàctic)
             trendColor = "text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.6)]";
             trendBg = "bg-amber-950/40 border-amber-500/30";
             trendIcon = <ArrowDownRight className="w-3 h-3" />;
-            trendText = t.drop;
+            trendText = trendLabels[trendKey];
         } else {
-            // Estabilitat o pujada (Cian Tàctic)
+            // Estable o pujant (Cian Tàctic)
             trendColor = "text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]";
             trendBg = "bg-cyan-950/30 border-cyan-500/20";
-            trendIcon = trendValue > 0.5 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowRight className="w-3 h-3" />;
-            trendText = t.stable;
+            trendIcon = trendKey === 'stable' ? <ArrowRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />;
+            trendText = trendLabels[trendKey];
         }
     }
 

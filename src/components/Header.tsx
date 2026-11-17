@@ -251,10 +251,6 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
       }
   };
 
-  // DOCTRINA RISC ZERO: Càlcul segur de visualització de coordenades
-  const formatCoord = (val: unknown): string => {
-      return (typeof val === 'number' && !isNaN(val)) ? val.toFixed(2) : '0.00';
-  };
 
   return (
     // Mòbil: marca i xip de vista a la primera fila, cercador a la segona. PC: marca, cercador i xip en una fila.
@@ -341,6 +337,8 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
               onFocus={() => setIsFocused(true)}
               onKeyDown={handleKeyDown}
               placeholder={dict.searchPlaceholder}
+              // Nom accessible: abans només tenia el placeholder (auditoria d'UX del 16/11/2026, B8).
+              aria-label={dict.searchPlaceholder.replace(/[.…]+$/, '')}
               className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm font-mono font-bold text-white placeholder:text-slate-500 h-9 px-2 uppercase tracking-wider w-full min-w-0 text-ellipsis"
               disabled={loading}
               autoComplete="off"
@@ -424,9 +422,6 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className={`text-[10px] sm:text-xs font-mono font-bold px-2 py-1 rounded bg-black/50 border border-white/5 ${selectedIndex === idx ? 'text-sky-300 border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.15)]' : 'text-slate-500'}`}>
-                                        {formatCoord(geo.latitude)}, {formatCoord(geo.longitude)}
-                                    </span>
                                     {selectedIndex === idx && <CornerDownLeft className="w-4 h-4 text-sky-400 animate-in fade-in slide-in-from-right-2 hidden sm:block" />}
                                 </div>
                             </button>

@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { StrictCurrentWeather } from '../types/weatherLogicTypes';
@@ -9,7 +8,6 @@ import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { getCurrentDisplayTemp, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeLatitude, getSafeArrayNum as getSafeNum, extractValidArrayNum } from '../utils/weatherMath';
-import { isRegionalModelActive } from '../constants/regionalModels';
 
 export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData, lang: Language, unit?: WeatherUnit }) {
     const { hourly, current, utc_offset_seconds, hourlyComparison } = data;
@@ -19,8 +17,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
     const safeLatitude = getSafeLatitude(data.location);
 
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
-    const isRegionalModel = isRegionalModelActive(current?.source);
-    const sourceLabel = isRegionalModel ? (current?.source as string) : 'MODEL GLOBAL';
 
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time) || hourly.time.length === 0) return [];
@@ -139,27 +135,6 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
 
     return (
         <div className="relative w-full z-20 group transform-gpu select-none" style={{ transform: 'translateZ(0)' }}>
-            
-            {/* ETiqueta Tàctica de Model (Spatial UI) */}
-            <div className={`
-                absolute -top-3.5 right-4 md:right-6 z-30 flex items-center gap-1.5 px-3 py-1 rounded-md 
-                shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] transition-colors duration-500
-                ${isRegionalModel
-                    ? 'bg-emerald-950/90 border border-emerald-500/30'
-                    : 'bg-indigo-950/90 border border-indigo-500/30'}
-            `}>
-                {isRegionalModel ? (
-                    <>
-                        <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20 animate-pulse drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
-                        <span className="text-[10px] font-mono font-black text-emerald-400 tracking-widest drop-shadow-md">{sourceLabel}</span>
-                    </>
-                ) : (
-                    <>
-                        <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)]" />
-                        <span className="text-[10px] font-mono font-black text-indigo-400 tracking-widest drop-shadow-md">{sourceLabel}</span>
-                    </>
-                )}
-            </div>
             
             <HourlyForecastWidget data={hourlyChartData} lang={lang} />
             

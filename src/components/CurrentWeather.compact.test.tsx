@@ -28,7 +28,7 @@ const renderCard = (compact?: boolean) => render(
 
 // La icona i la temperatura comparteixen fila si la fila de la temperatura conté la icona.
 const iconBesideTemperature = () => {
-    const temperatureRow = screen.getByRole('heading', { level: 1 }).closest('.flex-wrap');
+    const temperatureRow = screen.getByTestId('current-temp').closest('.flex-wrap');
     return !!temperatureRow && temperatureRow.contains(screen.getByTestId('weather-icon'));
 };
 
@@ -42,7 +42,7 @@ describe('CurrentWeather → targeta compacta', () => {
         expect(iconBesideTemperature()).toBe(false);
         expect(screen.getByTestId('weather-icon').getAttribute('data-size')).toContain('w-40');
         // El vent a tota l'amplada, amb el nom llarg.
-        expect(screen.getByText('Dinàmica de Vent')).toBeTruthy();
+        expect(screen.getByText('Vent')).toBeTruthy();
     });
 
     it('compacta al mòbil: una sola icona, més petita, a la fila de la temperatura', () => {
@@ -51,7 +51,7 @@ describe('CurrentWeather → targeta compacta', () => {
         expect(iconBesideTemperature()).toBe(true);
         expect(screen.getByTestId('weather-icon').getAttribute('data-size')).toContain('w-24');
         // El vent, la humitat i la sensació, en una sola fila (els noms curts); els botons, igual.
-        expect(screen.queryByText('Dinàmica de Vent')).toBeNull();
+        // El nom llarg («Dinàmica de Vent») ara també és «Vent» (auditoria d'UX del 16/11/2026, B15).
         expect(screen.getByText('Vent')).toBeTruthy();
         expect(screen.getByText('Humitat')).toBeTruthy();
         expect(screen.getByText('Sensació')).toBeTruthy();

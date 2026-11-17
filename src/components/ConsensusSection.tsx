@@ -1,5 +1,7 @@
 // src/components/ConsensusSection.tsx
-// El «Motor de consens»: el model regional d'alta resolució contra el global (best_match) de les pròximes 24 hores.
+// El model regional d'alta resolució contra el global (best_match): les diferències d'ara, l'avís de canvi brusc en 3 h i
+// la comparació de models. Fins al 16/11/2026 es deia «Motor de consens» i donava un veredicte d'acord propi ("Precisió
+// NN %", "Alineat") que contradeia el xip d'acord dels gràfics: vegeu ConsensusWidget.
 // Abans vivia dins ExpertWidgets; ara és una peça a part perquè es pugui posar en un lloc diferent de la graella de
 // ginys (vegeu DetailWidgetsGrid). El càlcul, la petició i els textos són els mateixos: només ha canviat de fitxer.
 import { useMemo, useEffect } from 'react';

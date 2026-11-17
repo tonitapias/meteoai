@@ -284,9 +284,12 @@ export default function DayDetailModal({
           // "YYYY-MM-DD" no es llegeixi com a mitjanit UTC i mostri el dia anterior
           // en fusos horaris darrere d'UTC. Mateix fix que ForecastSection.tsx.
           const datePart = isoString.includes('T') ? isoString.split('T')[0] : isoString;
-          return new Date(datePart + 'T12:00:00').toLocaleDateString(getSafeLocale(lang), {
+          const text = new Date(datePart + 'T12:00:00').toLocaleDateString(getSafeLocale(lang), {
               weekday: 'long', day: 'numeric', month: 'long'
           });
+          // Majúscula només a la primera lletra: la classe CSS capitalize la posava a cada paraula («Dimarts, 17 De
+          // Novembre», auditoria d'UX del 16/11/2026, B1).
+          return text.charAt(0).toLocaleUpperCase(getSafeLocale(lang)) + text.slice(1);
       } catch { return isoString; }
   };
 
@@ -396,11 +399,13 @@ export default function DayDetailModal({
                       <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || TACTICAL_I18N.detailHeader}
                   </div>
                   
-                  <div className="flex items-center justify-center gap-2 md:gap-4 w-full">
+                  {/* Graella fixa (fletxa · títol · fletxa): les fletxes no es mouen segons la llargada del dia (B14). */}
+                  <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 md:gap-4 w-full">
                       {onSelectDay && (
                           <button
                               type="button"
                               data-testid="day-prev"
+                              style={{ gridColumn: 1, justifySelf: 'center' }}
                               onClick={() => goToDay(prevDay)}
                               disabled={prevDay === null}
                               aria-label={labelPrevDay}
@@ -409,13 +414,14 @@ export default function DayDetailModal({
                               <ChevronLeft className="w-5 h-5" />
                           </button>
                       )}
-                      <h2 id="day-detail-modal-title" className="text-3xl md:text-5xl font-black text-white capitalize tracking-tight mb-2 drop-shadow-lg min-w-0">
+                      <h2 id="day-detail-modal-title" className="col-start-2 text-center text-3xl md:text-5xl font-black text-white tracking-tight mb-2 drop-shadow-lg min-w-0">
                           {formatDate(dayData.date)}
                       </h2>
                       {onSelectDay && (
                           <button
                               type="button"
                               data-testid="day-next"
+                              style={{ gridColumn: 3, justifySelf: 'center' }}
                               onClick={() => goToDay(nextDay)}
                               disabled={nextDay === null}
                               aria-label={labelNextDay}

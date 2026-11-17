@@ -38,7 +38,7 @@ describe('ConsensusSection → amb i sense model d\'alta resolució', () => {
         render(<ConsensusSection weatherData={at(-34.6, -58.4)} lang="ca" />);
         expect(hook.fetchGlobalModelByCoords).not.toHaveBeenCalled();
         expect(hook.clearGlobalModel).toHaveBeenCalledTimes(1);
-        expect(screen.getByText('Motor de Consens Suspès')).toBeTruthy();
+        expect(screen.getByText('Model regional contra el global')).toBeTruthy();
         expect(screen.getByText('Cobertura Global')).toBeTruthy();
     });
 
@@ -46,7 +46,7 @@ describe('ConsensusSection → amb i sense model d\'alta resolució', () => {
         hook.loading = true;
         render(<ConsensusSection weatherData={at(41.98, 2.82)} lang="ca" />);
         expect(hook.fetchGlobalModelByCoords).toHaveBeenCalledWith(41.98, 2.82);
-        expect(screen.getByText('Sincronitzant Motor de Consens...')).toBeTruthy();
+        expect(screen.getByText('Comparant amb el model global...')).toBeTruthy();
     });
 
     it('amb AROME però sense resposta del global: comparació no disponible', () => {

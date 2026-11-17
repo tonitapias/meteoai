@@ -25,9 +25,9 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
         
         {/* TEMPERATURA PRINCIPAL */}
         <div className="relative leading-none">
-            <h1 className={`text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
+            <p data-testid="current-temp" className={`text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
                 {safeVal(temp)}°
-            </h1>
+            </p>
             
             {/* SPATIAL UI: Aura atmosfèrica de la temperatura (S'apaga si perdem senyal) */}
             <div className={`absolute inset-0 text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium blur-[40px] opacity-20 select-none pointer-events-none tracking-tighter tabular-nums transition-colors duration-1000 ${isValidTemp ? 'text-indigo-400' : 'text-transparent'}`}>

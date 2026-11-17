@@ -102,7 +102,7 @@ describe('CurrentWeather Component', () => {
     
     // CORRECCIÓ 1: Busquem específicament el Heading principal (h1)
     // Això evita conflictes amb l'hora (ex: 20:27) o el text decoratiu de fons.
-    const tempHeading = screen.getByRole('heading', { level: 1 });
+    const tempHeading = screen.getByTestId('current-temp');
     expect(tempHeading).toHaveTextContent(/20/);
     
     // CORRECCIÓ 2: Usem getAllByText per si la sensació tèrmica apareix més d'un cop (o per seguretat)

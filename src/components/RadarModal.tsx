@@ -1,5 +1,6 @@
 // RadarModal.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { X, CloudRain, Wind, Radio } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import RadarMap from './RadarMap';
@@ -18,6 +19,9 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
   
   const [activeView, setActiveView] = useState<MapView>('radar');
   const onCloseRef = useRef(onClose);
+  // Focus dins el diàleg i Tab que hi dona la volta, com «Com funciona» (auditoria d'UX del 16/11/2026, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, dialogRef);
 
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const layerMenuHistoryPushedRef = useRef(false);
@@ -109,7 +113,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
   const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.04] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:16px_16px]`;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col sm:p-4 md:p-6 lg:p-8 bg-[#020308]/95 sm:bg-[#020308]/85 backdrop-blur-2xl animate-in fade-in duration-300 select-none [transform:translateZ(0)]">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="radar-modal-title" className="fixed inset-0 z-[100] flex flex-col sm:p-4 md:p-6 lg:p-8 bg-[#020308]/95 sm:bg-[#020308]/85 backdrop-blur-2xl animate-in fade-in duration-300 select-none [transform:translateZ(0)]">
       
       {/* h-full (100 % de l'overlay) i no 100dvh: als motors sense dvh el full es col·lapsava a la
           capçalera i el mapa quedava a 0 px d'alçada. */}
@@ -130,7 +134,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
               
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
-                  <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight uppercase drop-shadow-lg truncate">
+                  <h3 id="radar-modal-title" className="text-lg sm:text-2xl font-black text-white tracking-tight uppercase drop-shadow-lg truncate">
                     {isRadar ? t('radarTitle') : t('windTitle')}
                   </h3>
                   <span className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-widest border transition-colors duration-500 shadow-sm ${isRadar ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'}`}>

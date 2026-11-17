@@ -26,7 +26,8 @@ describe('CloudLayersWidget — perfil vertical del cel', () => {
     const { container } = render(<CloudLayersWidget low={20} mid={10} high={30} lang="ca" />);
     const text = container.textContent ?? '';
     expect(cardHero(container)).toBe('35');
-    expect(text).toContain('Parcialment Ennuvolat');
+    // 35 % efectiu: el mateix estat que la capçalera (abans aquí deia "Parcialment Ennuvolat" i a dalt "Majorment serè").
+    expect(text).toContain('Majorment serè');
     expect(text).toContain('CAPES DE NÚVOLS');
     // Alts a dalt, baixos a baix (com al cel), i les fronteres d'Open-Meteo entre capes.
     expect(text.indexOf('Alts')).toBeLessThan(text.indexOf('Mitjans'));
@@ -54,7 +55,7 @@ describe('CloudLayersWidget — perfil vertical del cel', () => {
     const { container } = render(<CloudLayersWidget low={46} mid={100} high={100} lang="fr" />);
     expect(container.textContent).toContain('ÉTAGES NUAGEUX');
     expect(container.textContent).toContain('Couverture effective');
-    expect(container.textContent).toContain('Couvert');
+    expect(container.textContent).toContain('Ciel couvert');
   });
 
   it.each([
@@ -67,8 +68,8 @@ describe('CloudLayersWidget — perfil vertical del cel', () => {
     const modal = render(<CloudLayersModal weatherData={buildWeather(low, mid, high)} onClose={() => {}} lang="ca" />).container;
     expect(cardHero(card)).toBe(modalHero(modal));
     const cardLevel = card.querySelector('span.text-\\[11px\\]')?.textContent;
-    expect(['Serè', 'Parcialment Ennuvolat', 'Molt Ennuvolat', 'Cobert']).toContain(cardLevel);
-    // Coincidència exacta: "Cobert" no ha de quadrar amb "Cobertura Efectiva" ni "Hores amb Cel Cobert".
+    expect(['Cel serè', 'Majorment serè', 'Parcialment ennuvolat', 'Molt ennuvolat', 'Cel cobert']).toContain(cardLevel);
+    // Coincidència exacta: "Cel cobert" no ha de quadrar amb "Cobertura Efectiva" ni "Hores amb Cel Cobert".
     expect([...modal.querySelectorAll('span')].some(s => s.textContent === cardLevel)).toBe(true);
   });
 });

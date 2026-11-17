@@ -1,5 +1,6 @@
 // src/components/widgets/ConsensusChartsModal.tsx
-import React, { useId, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Language } from '../../translations';
 import { X, LineChart } from 'lucide-react';
 import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
@@ -387,6 +388,9 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
 }) => {
   const safeLang = lang in translations ? (lang as keyof typeof translations) : 'en';
   const t = translations[safeLang];
+  // Focus dins el diàleg i Tab que hi dona la volta, com «Com funciona» (auditoria d'UX del 16/11/2026, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, dialogRef);
 
   const { displayTimes, series } = getMappedConsensusSeries(
     hourlyTimes,
@@ -406,7 +410,7 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
     series.map(s => ({ id: s.id, label: s.label, data: s[field], colorHex: colors[s.id] ?? SERIES_COLORS.glo }));
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="consensus-charts-modal-title" className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
       
       <div className="bg-[#05070e] border border-white/10 rounded-[28px] md:rounded-[32px] w-full max-w-6xl h-full max-h-[95vh] md:max-h-[85vh] shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden flex flex-col transform animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         
@@ -418,7 +422,7 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
                 <LineChart className="w-5 h-5 md:w-7 md:h-7 text-cyan-400 drop-shadow-[0_0_8px_currentColor]" />
             </div>
             <div>
-              <h3 className="text-white font-black uppercase tracking-[0.2em] text-[11px] sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
+              <h3 id="consensus-charts-modal-title" className="text-white font-black uppercase tracking-[0.2em] text-[11px] sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
               <p className="text-[9px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5 md:mt-1">{t.subtitle}</p>
             </div>
           </div>

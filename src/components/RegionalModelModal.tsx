@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useRegionalModel } from '../hooks/useRegionalModel';
 import { X, Wind, Droplets, Snowflake, Activity, Zap, AlertOctagon, ShieldCheck, Mountain, ArrowUp } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
@@ -28,7 +29,8 @@ interface RegionalModelModalProps {
 // DOCTRINA RISC ZERO: Diccionari tàctic intern segur
 const modalTranslations: Record<string, Record<string, string>> = {
   ca: {
-    highRes: "Alta Resolució",
+    highRes: "Alta resolució",
+    grid: "Malla de {km} km",
     elev: "ELEV",
     decoding: "Descodificant Model...",
     signalLost: "Senyal Perduda",
@@ -45,7 +47,8 @@ const modalTranslations: Record<string, Record<string, string>> = {
     isoShort: "Iso"
   },
   es: {
-    highRes: "Alta Resolución",
+    highRes: "Alta resolución",
+    grid: "Malla de {km} km",
     elev: "ELEV",
     decoding: "Decodificando Modelo...",
     signalLost: "Señal Perdida",
@@ -62,7 +65,8 @@ const modalTranslations: Record<string, Record<string, string>> = {
     isoShort: "Iso"
   },
   en: {
-    highRes: "High Resolution",
+    highRes: "High resolution",
+    grid: "{km} km grid",
     elev: "ELEV",
     decoding: "Decoding Model...",
     signalLost: "Signal Lost",
@@ -79,7 +83,8 @@ const modalTranslations: Record<string, Record<string, string>> = {
     isoShort: "Frz"
   },
   fr: {
-    highRes: "Haute Résolution",
+    highRes: "Haute résolution",
+    grid: "Maille de {km} km",
     elev: "ELEV",
     decoding: "Décodage Modèle...",
     signalLost: "Signal Perdu",
@@ -107,6 +112,9 @@ const localeMap: Record<string, string> = {
 export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'ca', weatherData }: RegionalModelModalProps) {
   const { regionalData, loading, error, fetchRegionalModel, clearRegionalModel } = useRegionalModel();
   const listRef = useRef<HTMLDivElement>(null);
+  // Focus dins el diàleg i Tab que hi dona la volta, com «Com funciona» (auditoria d'UX del 16/11/2026, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, dialogRef);
 
   // [FIX PRECISIÓ] "Avui"/"Demà" i el tall d'hores passades han de calcular-se
   // amb l'hora local de la ubicació consultada, no la del dispositiu de qui mira
@@ -191,6 +199,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
 
   return (
     <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="regional-model-modal-title"
@@ -233,7 +242,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                             {t.highRes}
                         </h2>
                         <span className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mt-0.5">
-                            {model.resolutionKm}KM GRID <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
+                            {t.grid.replace('{km}', formatDecimal(model.resolutionKm, lang, 1, true)).replace(/^Malla de (1[\d,]*) km$/, "Malla d'$1 km")} <span className="text-cyan-500/50 mx-1">•</span> {t.elev}: {Math.round(regionalData?.elevation || 0)}m
                         </span>
                     </div>
                 </div>

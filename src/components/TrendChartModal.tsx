@@ -342,7 +342,7 @@ const TrendChartModal = memo(function TrendChartModal({
   // Frase resum: la forma de la setmana, amb la incertesa de les mateixes bandes que es veuen (rang probable calibrat).
   const summary = summarizeTrend(trendData.map(d => ({
     max: d.max, min: d.min, maxProbable: d.spread.maxProbable, minProbable: d.spread.minProbable,
-    precipProb: d.precipProb, precipSum: d.precipSum, snowSum: d.snowSum
+    precipProb: d.precipProb, precipSum: d.precipSum, snowSum: d.snowSum, code: d.code
   })));
   const summaryText = summary ? describeTrend(summary, trendData.map(d => d.dayName || d.dayInitial), lang) : null;
 

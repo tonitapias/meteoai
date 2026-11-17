@@ -24,10 +24,12 @@ const LAYERS: { key: LayerKey; color: string; base: string | null }[] = [
   { key: 'low', color: '#4f46e5', base: null },
 ];
 
-// Mateixos colors que el número i l'etiqueta del modal (getCloudSeverity).
+// Mateixos colors que el número i l'etiqueta del modal (getCloudSeverity). Per franges de cobertura: fins al 15 %
+// verd, del 15 al 45 % blau cel, del 45 al 85 % indi (parcialment i molt ennuvolat) i a partir d'aquí gris.
 const LEVEL_TEXT: Record<CloudCoverLevel | 'unknown', string> = {
   clear: 'text-emerald-400',
-  partial: 'text-sky-400',
+  mostlyClear: 'text-sky-400',
+  partial: 'text-indigo-400',
   veryCloudy: 'text-indigo-400',
   overcast: 'text-slate-300',
   unknown: 'text-slate-500',

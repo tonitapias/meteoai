@@ -36,37 +36,37 @@ interface ConsensusInactiveWidgetProps {
 // el cas real restant: la petició ha fallat de debò ('unavailable').
 const translations = {
   ca: {
-    title: 'Motor de Consens Suspès',
+    title: 'Model regional contra el global',
     badge: { 'no-coverage': 'Cobertura Global', unavailable: 'Comparació No Disponible' },
     description: {
-      'no-coverage': "Ubicació fora de la malla d'alta resolució. L'anàlisi de divergències s'ha suspès temporalment per evitar redundància matemàtica amb models globals base.",
+      'no-coverage': "Aquí no arriba cap model d'alta resolució: la previsió ja surt dels models globals i no hi ha cap model regional per comparar-hi. L'acord entre els globals és als gràfics de dalt.",
       unavailable: "No s'ha pogut obtenir la comparació amb el model global en aquest moment. Torna-ho a provar més tard."
     },
     action: { 'no-coverage': 'Mode global en ús', unavailable: 'Sense comparació' }
   },
   es: {
-    title: 'Motor de Consenso Suspendido',
+    title: 'Modelo regional frente al global',
     badge: { 'no-coverage': 'Cobertura Global', unavailable: 'Comparación No Disponible' },
     description: {
-      'no-coverage': "Ubicación fuera de la malla de alta resolución. El análisis de divergencias se ha suspendido temporalmente para evitar redundancia matemática con modelos globales base.",
+      'no-coverage': "Aquí no llega ningún modelo de alta resolución: la previsión ya sale de los modelos globales y no hay ningún modelo regional con el que compararla. El acuerdo entre los globales está en los gráficos de arriba.",
       unavailable: "No se ha podido obtener la comparación con el modelo global en este momento. Vuelve a intentarlo más tarde."
     },
     action: { 'no-coverage': 'Modo global en uso', unavailable: 'Sin comparación' }
   },
   en: {
-    title: 'Consensus Engine Suspended',
+    title: 'Regional model vs global',
     badge: { 'no-coverage': 'Global Coverage', unavailable: 'Comparison Unavailable' },
     description: {
-      'no-coverage': "Location outside high-resolution mesh. Divergence analysis is temporarily suspended to prevent mathematical redundancy with base global models.",
+      'no-coverage': "No high-resolution model covers this place: the forecast already comes from the global models, so there is no regional model to compare. The agreement between the global models is shown in the charts above.",
       unavailable: "Could not retrieve the global model comparison right now. Please try again later."
     },
     action: { 'no-coverage': 'Global mode in use', unavailable: 'No comparison' }
   },
   fr: {
-    title: 'Moteur de Consensus Suspendu',
+    title: 'Modèle régional face au global',
     badge: { 'no-coverage': 'Couverture Globale', unavailable: 'Comparaison Indisponible' },
     description: {
-      'no-coverage': "Emplacement hors de la maille haute résolution. L'analyse des divergences est temporairement suspendue pour éviter une redondance mathématique avec les modèles globaux de base.",
+      'no-coverage': "Aucun modèle haute résolution ne couvre ce lieu : la prévision vient déjà des modèles globaux et il n'y a pas de modèle régional à comparer. L'accord entre les modèles globaux est dans les graphiques ci-dessus.",
       unavailable: "Impossible d'obtenir la comparaison avec le modèle global pour le moment. Réessayez plus tard."
     },
     action: { 'no-coverage': 'Mode global en cours', unavailable: 'Aucune comparaison' }

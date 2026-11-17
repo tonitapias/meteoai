@@ -7,7 +7,7 @@ import type { ConsensusMetrics } from '../../utils/consensusMath';
 const METRICS: ConsensusMetrics = {
     isConsensusActive: true,
     tempDiff: 0.4, precipDiff: 0, windDiff: 2,
-    modelsAgree: true, score: 92, futureDivergence: false,
+    futureDivergence: false,
     globalTemp: 22.6, globalPrecip: 0, globalWind: 10,
     tempTrend: 'flat', precipTrend: 'flat', windTrend: 'flat',
 };
@@ -50,6 +50,51 @@ describe('ConsensusWidget — modals fora del tauler', () => {
         expect(document.body.children.length).toBe(before + 1);
         expect(screen.getByTestId('tauler').querySelector('.fixed.inset-0')).toBeNull();
         expect(document.body.style.overflow).toBe('hidden');
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (A2): a Puigcerdà, "Acord baix" (gràfics) just a sobre de "Alineat · Precisió 94 %"
+// (aquesta targeta). L'acord entre models el diuen els gràfics; aquí només hi ha les diferències d'ara.
+describe('ConsensusWidget — sense veredicte d\'acord propi', () => {
+    afterEach(() => { cleanup(); document.body.style.overflow = ''; });
+
+    it('no mostra cap puntuació ni cap estat d\'acord, i el títol diu quins models compara', () => {
+        const { container } = renderInTransformedDashboard();
+        // El text visible, sense el <style> de l'animació (els seus fotogrames porten "0%, 100%").
+        container.querySelectorAll('style').forEach(s => s.remove());
+        const text = container.textContent ?? '';
+        expect(text).not.toMatch(/Precisi[óo]|Accuracy|Alineat|Discrepància|Divergència|Motor de Consens/i);
+        expect(text).not.toMatch(/\d\s*%/);
+        expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('AROME HD contra el global');
+        expect(text).toContain('Diferència ara mateix');
+    });
+
+    it('el títol porta el model regional en cada idioma', () => {
+        for (const [lang, expected] of [['es', 'HRRR frente al global'], ['en', 'HRRR vs global'], ['fr', 'HRRR face au global']] as const) {
+            const { unmount } = render(<ConsensusWidget metrics={METRICS} localTemp={23} localPrecip={0} localWind={12} lang={lang} regionalModelLabel="HRRR" />);
+            expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(expected);
+            unmount();
+        }
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (M7): «Compara els models» no tenia role="dialog" i el focus es quedava al botó de darrere.
+describe('ConsensusWidget — els modals són diàlegs amb el focus a dins', () => {
+    afterEach(() => { cleanup(); document.body.style.overflow = ''; });
+
+    it('«Compara els models» és un diàleg amb nom i rep el focus', () => {
+        renderInTransformedDashboard();
+        fireEvent.click(screen.getByText('Compara els models'));
+        const dialog = screen.getByRole('dialog', { name: 'Comparació de models' });
+        expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    it('el detall de la temperatura també', () => {
+        renderInTransformedDashboard();
+        fireEvent.click(screen.getByText('TEMP'));
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.getAttribute('aria-modal')).toBe('true');
+        expect(dialog.contains(document.activeElement)).toBe(true);
     });
 });
 

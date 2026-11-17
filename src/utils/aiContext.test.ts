@@ -43,6 +43,45 @@ describe('generateAIPrediction — codi de temps de la política de boira', () =
     });
 });
 
+// "No s'esperen precipitacions" surt amb poc núvol: ara amb la cobertura EFECTIVA de la capçalera, no amb la total bruta
+// del model (current.cloud_cover, aquí un 10 % que contradiria un 80 % efectiu). Sense % efectiu, no es diu.
+describe('generateAIPrediction — cobertura de núvols del resum provisional', () => {
+    const says = (effective: number | null) =>
+        generateAIPrediction(current, daily, hourly, 0, 'ca', 1, null, 'C', null, false, effective).text
+            .includes((tr.aiRainNone as string).trim());
+
+    it('fa servir la cobertura efectiva, no la bruta', () => {
+        expect(says(10)).toBe(true);
+        expect(says(80)).toBe(false);
+    });
+
+    it('sense cobertura efectiva no ho afirma', () => {
+        expect(says(null)).toBe(false);
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (A3): "Gaudeix del dia" a les 20:18. Sense res a dir, el consell depèn de si és de dia.
+describe('generateAIPrediction — consell tranquil de dia o de nit', () => {
+    const calm = { ...current, temperature_2m: 18, apparent_temperature: 18, relative_humidity_2m: 60, visibility: 20000 };
+    const tipsAt = (isDay: number) =>
+        generateAIPrediction({ ...calm, is_day: isDay } as StrictCurrentWeather, daily, hourly, 0, 'ca', 0, null, 'C').tips;
+
+    it('de dia, "Gaudeix del dia"', () => {
+        expect(tipsAt(1)).toEqual([tr.tipCalm]);
+    });
+
+    it('de nit, "Nit tranquil·la"', () => {
+        expect(tipsAt(0)).toEqual([tr.tipCalmNight]);
+        expect(tr.tipCalmNight).toBe('Nit tranquil·la');
+    });
+
+    it('té traducció en els quatre idiomes', () => {
+        for (const lang of ['ca', 'es', 'en', 'fr'] as const) {
+            expect((TRANSLATIONS[lang] as Record<string, unknown>).tipCalmNight).toBeTruthy();
+        }
+    });
+});
+
 describe("generateAIPrediction — avís d'aerosols (pols/partícules)", () => {
     const msgs = (dustKind: 'dust' | 'particles' | null, aqi = 0) =>
         generateAIPrediction(current, daily, hourly, aqi, 'ca', 3, null, 'C', dustKind).alerts.map(a => a.msg);
@@ -134,7 +173,9 @@ describe("generateAIPrediction — insígnia d'acord entre models", () => {
 describe('generateAIPrediction — frases de reserva traduïdes (no català fix)', () => {
     const CATALAN_FIXED = [/s'intensificarà notablement aviat/, /remetent properament/, /Ràfegues de vent fortes/];
     // El "ara" és la 01:00 (índex 1): precipitació d'ara i de la següent hora.
-    const withRain = (now: number, next: number) => ({ ...hourly, precipitation: [0, now, next] }) as unknown as StrictHourlyWeather;
+    // Tres hores (00, 01 i 02 h) perquè l'hora actual (01:00) sigui l'índex 1 de la sèrie (abans el test depenia de fer
+    // servir l'hora local com a índex; vegeu X4).
+    const withRain = (now: number, next: number) => ({ ...hourly, time: ['2026-09-19T00:00', '2026-09-19T01:00', '2026-09-19T02:00'], precipitation: [0, now, next] }) as unknown as StrictHourlyWeather;
 
     (['ca', 'es', 'en', 'fr'] as const).forEach(lang => {
         const t = TRANSLATIONS[lang] as unknown as Record<string, string>;
@@ -168,5 +209,21 @@ describe('generateAIPrediction — llamps observats a prop', () => {
         expect(calm.alerts.some(a => a.msg === tr.alertStorm)).toBe(false);
         const near = generateAIPrediction(current, daily, hourly, 0, 'ca', 3, null, 'C', null, true);
         expect(near.alerts.some(a => a.msg === tr.alertStorm && a.level === 'high')).toBe(true);
+    });
+});
+
+// Auditoria del 16/11/2026 (X4): les hores es llegien amb l'hora local (0-23) com a índex. Amb una sèrie que comença el
+// dia abans, a la 01:00 llegia la pluja de la 01:00 d'ahir.
+describe('generateAIPrediction — índex de l\'hora actual', () => {
+    it('llegeix la probabilitat de pluja de les hores que venen, encara que la sèrie no comenci a les 00:00 d\'avui', () => {
+        const times = Array.from({ length: 30 }, (_, i) => {
+            const d = new Date(Date.UTC(2026, 8, 18, i));
+            return d.toISOString().slice(0, 16);
+        });
+        // Ara = 19/09 01:00 → índex 25. Només hi ha probabilitat alta a partir de l'índex 25.
+        const probs = times.map((_, i) => (i >= 25 ? 80 : 0));
+        const h = { time: times, precipitation: times.map(() => 0), precipitation_probability: probs, cape: times.map(() => 0) } as unknown as StrictHourlyWeather;
+        const out = generateAIPrediction({ ...current, time: '2026-09-19T01:00', is_day: 0 } as StrictCurrentWeather, daily, h, 0, 'ca', 3, null, 'C');
+        expect(out.tips).toContain(tr.tipUmbrella);
     });
 });

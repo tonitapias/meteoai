@@ -81,3 +81,40 @@ describe('CurrentWeatherHeader: botó Compartir', () => {
         expect(screen.queryByRole('button')).toBeNull();
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (M4): a Buenos Aires, "MODEL GLOBAL" sense cap explicació (només al tooltip del peu).
+describe('CurrentWeatherHeader: model global', () => {
+    it('sense model regional, el distintiu en l\'idioma i una frase que diu per què', () => {
+        const tr = TRANSLATIONS.es;
+        render(<CurrentWeatherHeader locationName="Buenos Aires" modelLabel={null} globalModelLabel={tr.globalModelBadge} globalModelHint={tr.globalModelHint} />);
+        expect(screen.getByText(tr.globalModelBadge)).toBeInTheDocument();
+        expect(screen.getByText(tr.globalModelHint)).toBeInTheDocument();
+    });
+
+    it('amb model regional, cap frase del global', () => {
+        const tr = TRANSLATIONS.ca;
+        render(<CurrentWeatherHeader locationName="Girona" modelLabel="AROME HD" globalModelLabel={tr.globalModelBadge} globalModelHint={tr.globalModelHint} />);
+        expect(screen.queryByText(tr.globalModelHint)).toBeNull();
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (B12): el títol h1 era la temperatura ("19°") i la ciutat un h2.
+describe('CurrentWeatherHeader: títol principal', () => {
+    it('la ciutat és el h1', () => {
+        render(<CurrentWeatherHeader locationName="Barcelona" modelLabel="AROME HD" />);
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Barcelona');
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (B7): "AROME HD" sortia a la capçalera, al botó del model i a la franja de 24 h.
+describe('CurrentWeatherHeader: un sol distintiu del model', () => {
+    it('si la targeta ja té el botó del model regional, la capçalera no el repeteix', () => {
+        render(<CurrentWeatherHeader locationName="Barcelona" modelLabel="AROME HD" regionalBadgeElsewhere />);
+        expect(screen.queryByText('AROME HD')).toBeNull();
+    });
+
+    it('sense el botó, el distintiu hi és', () => {
+        render(<CurrentWeatherHeader locationName="Barcelona" modelLabel="AROME HD" />);
+        expect(screen.getByText('AROME HD')).toBeInTheDocument();
+    });
+});

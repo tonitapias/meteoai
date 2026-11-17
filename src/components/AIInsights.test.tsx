@@ -1,6 +1,6 @@
 // src/components/AIInsights.test.tsx
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import AIInsights, { type TacticalAnalysisResult } from './AIInsights';
 
 const analysis = (badge: Partial<TacticalAnalysisResult>): TacticalAnalysisResult => ({
@@ -36,6 +36,28 @@ describe('AIInsights — insígnia de confiança', () => {
     it('sense nivell no hi ha insígnia', () => {
         render(<AIInsights lang="ca" analysis={analysis({ confidence: '', confidenceLevel: null, confidenceColor: null })} />);
         expect(screen.queryByTestId('ai-confidence')).toBeNull();
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (A3): sense nivell ni avisos, la insígnia posava AMBER ("Avís precaució") per defecte.
+describe('AIInsights — semàfor de risc sense nivell', () => {
+    it('sense nivell i sense avisos, "Temps tranquil"', () => {
+        render(<AIInsights lang="ca" analysis={analysis({})} />);
+        expect(screen.getByText('TEMPS TRANQUIL')).toBeTruthy();
+        expect(screen.queryByText('AVÍS PRECAUCIÓ')).toBeNull();
+    });
+
+    it('sense nivell, els avisos locals el decideixen: precaució amb un avís, alerta amb un de greu', () => {
+        const { unmount } = render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Vent', msg: 'Ràfegues fortes.', level: 'warning' }] })} />);
+        expect(screen.getByText('AVÍS PRECAUCIÓ')).toBeTruthy();
+        unmount();
+        render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Tempesta', msg: 'Tempestes.', level: 'high' }] })} />);
+        expect(screen.getByText('ALERTA METEO')).toBeTruthy();
+    });
+
+    it('amb el nivell de les regles (GREEN), "Temps tranquil"', () => {
+        render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'GREEN', hazard_type: 'NONE' })} />);
+        expect(screen.getByText('TEMPS TRANQUIL')).toBeTruthy();
     });
 });
 
@@ -85,5 +107,19 @@ describe('AIInsights — consells d\'un avís que arriba sense cap', () => {
     it('amb el temps tranquil (GREEN) no hi ha consells', () => {
         render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'GREEN', hazard_type: 'NONE', tips: [] })} />);
         expect(screen.queryByText('Punts clau per a les properes hores:')).toBeNull();
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (B16): l'explicació de "Temperatura ±3°" només sortia passant-hi el ratolí per sobre.
+describe('AIInsights — la insígnia de confiança es pot tocar per llegir-ne l\'explicació', () => {
+    it('és un botó i en tocar-lo mostra la frase', () => {
+        const hint = 'Els models discrepen en la temperatura de les pròximes 6 hores.';
+        render(<AIInsights lang="ca" analysis={analysis({ confidence: 'Temperatura ±3°', confidenceLevel: 'medium', confidenceColor: 'amber', confidenceHint: hint })} />);
+        const badge = screen.getByRole('button', { name: 'Temperatura ±3°' });
+        expect(badge.getAttribute('aria-expanded')).toBe('false');
+        expect(screen.queryByText(hint)).toBeNull();
+        fireEvent.click(badge);
+        expect(badge.getAttribute('aria-expanded')).toBe('true');
+        expect(screen.getByRole('note').textContent).toBe(hint);
     });
 });

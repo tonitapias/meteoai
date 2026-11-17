@@ -4,12 +4,14 @@ import { renderHook, act } from '@testing-library/react';
 
 const generateAIPrediction = vi.fn();
 const getGeminiAnalysis = vi.fn();
+const evaluateRulesRisk = vi.fn((..._args: unknown[]) => ({ risk_level: 'GREEN', hazard_type: 'NONE' }) as Record<string, unknown>);
 
 vi.mock('../utils/aiContext', () => ({
     generateAIPrediction: (...args: unknown[]) => generateAIPrediction(...args),
 }));
 vi.mock('../services/geminiService', () => ({
     getGeminiAnalysis: (...args: unknown[]) => getGeminiAnalysis(...args),
+    evaluateRulesRisk: (...args: unknown[]) => evaluateRulesRisk(...args),
 }));
 
 import { useWeatherAI } from './useWeatherAI';
@@ -69,6 +71,8 @@ describe('useWeatherAI — el codi de temps efectiu arriba a les dues IA', () =>
         await flush();
         // getGeminiAnalysis(weatherData, lang, effectiveCode, aqiData, effectiveCloudCover)
         expect(getGeminiAnalysis.mock.calls[0][4]).toBe(78);
+        // I a la predicció local (11è argument): ja no fa servir la cobertura total bruta del model.
+        expect(generateAIPrediction.mock.calls[0][10]).toBe(78);
     });
 
     // Sense això, Gemini no sabia que la insígnia del costat deia "Pluja incerta" i escrivia "plourà".
@@ -231,6 +235,49 @@ describe('useWeatherAI — previsió desada (sense connexió o API caiguda)', ()
 
         expect(getGeminiAnalysis).toHaveBeenCalledTimes(1);
         expect(result.current.aiAnalysis?.text).toBe('remota');
+    });
+
+    it('amb la previsió desada, l\'avís és el de les regles (no un AMBER per defecte)', async () => {
+        evaluateRulesRisk.mockReturnValueOnce({ risk_level: 'GREEN', hazard_type: 'NONE' });
+        const { result } = renderHook(() => useWeatherAI(SNAPSHOT, null, 'ca', 'C', null, 3));
+        await flush();
+        expect(result.current.aiAnalysis?.risk_level).toBe('GREEN');
+        expect(result.current.aiAnalysis?.hazard_type).toBe('NONE');
+    });
+});
+
+// Auditoria d'UX del 16/11/2026 (A3): l'anàlisi provisional no portava cap nivell i la insígnia posava "Avís precaució"
+// per defecte mentre la IA responia. Ara porta el de les regles, i la resposta de la IA el pot mantenir o pujar.
+describe("useWeatherAI — l'avís provisional surt de les regles", () => {
+    const DETAIL = { level: 'AMBER', hazard: 'WIND', hour: '17:00', value: 62, threshold: 50, event: null };
+    const LIGHTNING = { nearestKm: 12, bearingDeg: 45, observedAt: 1, intense: false, activeSlots: 1 };
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        generateAIPrediction.mockReset().mockReturnValue({ text: 'local', tips: [], alerts: [], confidence: 'x', confidenceLevel: 'high' });
+        evaluateRulesRisk.mockClear();
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    const flush = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(600); }); };
+
+    it('mentre la IA no respon, es veu el nivell, el perill i el detall de les regles', async () => {
+        evaluateRulesRisk.mockReturnValue({ risk_level: 'AMBER', hazard_type: 'WIND', risk_detail: DETAIL });
+        getGeminiAnalysis.mockReset().mockReturnValue(new Promise(() => {}));
+        const { result } = renderHook(() => useWeatherAI(WEATHER, null, 'ca', 'C', null, 3, null, LIGHTNING as never));
+        await flush();
+
+        expect(result.current.aiAnalysis).toMatchObject({ text: 'local', risk_level: 'AMBER', hazard_type: 'WIND', risk_detail: DETAIL });
+        // Les mateixes dades, avís de pols i llamps que rep el tallafocs de la IA.
+        expect(evaluateRulesRisk).toHaveBeenCalledWith(WEATHER, null, LIGHTNING);
+        evaluateRulesRisk.mockReturnValue({ risk_level: 'GREEN', hazard_type: 'NONE' });
+    });
+
+    it('sense res a les regles, verd; si la IA no respon, es queda verd', async () => {
+        getGeminiAnalysis.mockReset().mockResolvedValue(null);
+        const { result } = renderHook(() => useWeatherAI(WEATHER, null, 'ca', 'C', null, 3));
+        await flush();
+        expect(result.current.aiAnalysis?.risk_level).toBe('GREEN');
     });
 });
 

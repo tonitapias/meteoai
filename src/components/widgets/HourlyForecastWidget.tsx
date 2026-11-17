@@ -3,7 +3,18 @@ import { HourlyWidgetProps } from './widgetTypes';
 import { getTrans } from './widgetHelpers';
 import { MATRIX_BG } from './widgetStyles';
 
+// Sota cada hora surt la probabilitat de pluja ("96 %") o, si n'hi ha, la quantitat ("4 mm"): sense llegenda no es
+// distingien (auditoria d'UX del 16/11/2026, B6). I "SENSE DADES" en cada idioma (abans en anglès per a es i fr).
+const STRIP_TEXT = {
+  ca: { legend: '% probabilitat · mm quantitat', noData: 'SENSE DADES' },
+  es: { legend: '% probabilidad · mm cantidad', noData: 'SIN DATOS' },
+  en: { legend: '% chance · mm amount', noData: 'NO DATA' },
+  fr: { legend: '% probabilité · mm quantité', noData: 'PAS DE DONNÉES' },
+} as const;
+
 export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
+  const stripText = STRIP_TEXT[lang as keyof typeof STRIP_TEXT] ?? STRIP_TEXT.ca;
+  const showLegend = Array.isArray(data) && data.some(h => typeof h.precipText === 'string' && h.precipText !== '');
   // DOCTRINA RISC ZERO: Forcem el tipatge global de les traduccions sense usar 'any'
   const t = getTrans(lang) as Record<string, unknown>;
   
@@ -37,6 +48,9 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
                 {widgetTitle}
             </span>
          </div>
+         {hasValidData && showLegend && (
+            <span className="text-[10px] font-medium text-slate-400 tracking-wide">{stripText.legend}</span>
+         )}
       </div>
       
       {/* Contenidor de Dades: Actua com a barrera si falla la telemetria */}
@@ -44,7 +58,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
           <div className="flex-1 flex flex-col items-center justify-center min-h-[180px] z-10">
               <CloudOff className="w-8 h-8 text-slate-600 mb-2 opacity-50" />
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  {lang === 'ca' ? 'SENSE DADES' : 'NO DATA'}
+                  {stripText.noData}
               </span>
           </div>
       ) : (

@@ -2,7 +2,7 @@
 // Geometria de la Lluna "com és" de la targeta Fase lunar: la part il·luminada per a una fase, els mars
 // (cara visible, nord a dalt, vista des de l'hemisferi nord) i l'anell del cicle. Pur, sense React.
 
-/** Fases sense terminador visible: com MoonPhaseIcon, la mateixa finestra que els noms "Lluna nova/plena". */
+/** Fases sense terminador visible: la mateixa finestra que els noms "Lluna nova/plena". */
 const NEW_EDGE = 0.02;
 const FULL_LO = 0.48;
 const FULL_HI = 0.52;
@@ -12,7 +12,7 @@ const f1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 /**
  * Camí de la part il·luminada d'un disc de radi `r` centrat a (0, 0), vist des de l'hemisferi nord (creixent a
  * la dreta). Lluna nova: '' (no hi ha res il·luminat); plena: el disc sencer. El terminador és la semiel·lipse
- * d'amplada r·|cos 2πφ|, com MoonPhaseIcon.
+ * d'amplada r·|cos 2πφ|.
  */
 export function moonLitPath(phase: number, r: number): string {
   const p = Number.isFinite(phase) ? Math.min(1, Math.max(0, phase)) : 0;

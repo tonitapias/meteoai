@@ -136,8 +136,9 @@ describe('buildChartInsights: pluja', () => {
         expect(r.modelTotals?.min).toBeCloseTo(0, 10);
         expect(r.modelTotals?.max).toBeCloseTo(7.2, 10);
         expect(r.modelFirstRain).toEqual({ first: 7, last: 9 });
-        expect(r.modelsCompared).toBe(4);
-        expect(r.modelsWithRain).toBe(2);
+        // Amb la principal (0,5 mm): el gràfic en dibuixa 5, i n'hi ha 3 amb pluja (auditoria d'UX del 16/11/2026, B13).
+        expect(r.modelsCompared).toBe(5);
+        expect(r.modelsWithRain).toBe(3);
         // Rang de 7,2 mm → per sobre de 3 mm i per sota de 10 mm: mitjà (mateix criteri que reliabilityRules).
         expect(r.agreement).toBe('medium');
     });

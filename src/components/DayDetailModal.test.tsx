@@ -455,3 +455,16 @@ describe('DayDetailModal — canvi de dia', () => {
         expect(onSelectDay).not.toHaveBeenCalled();
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (B1, B14): "Dimarts, 17 De Novembre" amb majúscula a cada paraula, i les fletxes que es
+// movien segons la llargada del títol.
+describe('DayDetailModal — títol del dia', () => {
+    it('majúscula només a la primera lletra', () => {
+        renderDetail(build());
+        const title = document.getElementById('day-detail-modal-title')!;
+        expect(title.className).not.toContain('capitalize');
+        const text = title.textContent ?? '';
+        expect(text.charAt(0)).toBe(text.charAt(0).toUpperCase());
+        expect(text).toMatch(/ de [a-z]/);
+    });
+});

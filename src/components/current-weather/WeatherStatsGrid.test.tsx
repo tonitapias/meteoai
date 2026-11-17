@@ -11,7 +11,7 @@ const renderGrid = (props: Partial<Parameters<typeof WeatherStatsGrid>[0]> = {})
 describe('WeatherStatsGrid → fila compacta', () => {
     it('sense `compact`, la de sempre: el vent a tota l\'amplada amb el nom llarg', () => {
         const { container } = renderGrid();
-        expect(screen.getByText('Dinàmica de Vent')).toBeTruthy();
+        expect(screen.getByText('Vent')).toBeTruthy();
         expect(container.querySelector('.grid-cols-3')).toBeNull();
     });
 

@@ -22,8 +22,12 @@ export const secondsToTime = (totalSeconds: number) => {
     return `${hours}:${minutes}`;
 };
 
-export const getWindDirectionText = (degrees: number) => {
-    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+// Punts cardinals en l'idioma: l'oest és "O" en català, castellà i francès (abans "W" a tot arreu, també en català).
+export const westLetter = (lang?: string): string => (lang === 'en' ? 'W' : 'O');
+
+export const getWindDirectionText = (degrees: number, lang?: string) => {
+    const w = westLetter(lang);
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'S' + w, w, 'N' + w];
     const index = Math.round(degrees / 45) % 8;
     return directions[index];
 };

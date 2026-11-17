@@ -302,3 +302,18 @@ describe('useDayDetailData: peces del detall ampliat', () => {
         expect(none.result.current.snowLevelRelevant).toBe(false);
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (B4): a Barcelona (12 m) el detall del dia mostrava una cota de 3.200 m.
+describe('useDayDetailData — cota de neu a prop del lloc', () => {
+    it('una cota a més de 1.500 m per sobre del lloc no és rellevant; a prop, sí', () => {
+        const base = buildSeptember();
+        const withFreezing = (level: number, elevation: number) => ({
+            ...base,
+            elevation,
+            hourly: { ...base.hourly, freezing_level_height: (base.hourly.time as string[]).map(() => level) },
+        }) as typeof base;
+        // Isoterma 3.500 m → cota ~3.200 m: lluny de Barcelona (12 m), a prop d'un lloc a 2.000 m.
+        expect(renderHook(() => useDayDetailData(withFreezing(3500, 12), 1)).result.current.snowLevelRelevant).toBe(false);
+        expect(renderHook(() => useDayDetailData(withFreezing(3500, 2000), 1)).result.current.snowLevelRelevant).toBe(true);
+    });
+});

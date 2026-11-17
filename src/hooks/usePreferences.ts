@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Language } from '../translations';
+import { Language, TRANSLATIONS } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 import { readStorage, removeStorage, writeStorage } from '../utils/safeStorage';
 import { isSamePlace, type PlaceRef } from '../utils/geoDistance';
@@ -51,6 +51,11 @@ export function usePreferences() {
   // lectors de pantalla i la traducció automàtica del navegador, que es guien per
   // aquest atribut, no pel que mostra la interfície.
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  // El títol de la pestanya en l'idioma actiu (index.html el porta en català i abans no canviava mai).
+  useEffect(() => {
+    const headline = (TRANSLATIONS[lang] ?? TRANSLATIONS.ca).welcome.headline.replace(/[.]$/, '');
+    document.title = `MeteoToni AI | ${headline}`;
+  }, [lang]);
   useEffect(() => { writeStorage('meteoai_unit', unit); }, [unit]);
   useEffect(() => { writeStorage('meteoai_favorites', JSON.stringify(favorites)); }, [favorites]);
 

@@ -196,7 +196,8 @@ const getTacticalWeatherDescription = (code: number | null | undefined, temp: nu
 
     switch (code) {
         case 0: return "Cel ras / Completament serè";
-        case 1: return "Majoritàriament serè (pocs núvols)";
+        // Sense "(pocs núvols)": un 43 % efectiu pot ser un vel de núvols alts al 100 %, i la IA hi deia "cel tapat".
+        case 1: return "Majoritàriament serè";
         // Mateix criteri que la capçalera i les icones: dins del 2, per sobre de CLOUDS.MOSTLY_CLOUDY és "molt ennuvolat".
         case 2: return isMostlyCloudy(code, cloudCover) ? "Molt ennuvolat (cel majoritàriament tapat, amb clarianes)" : "Parcialment ennuvolat (cel variable)";
         case 3: return "Cobert (cel completament tapat)";
@@ -393,6 +394,116 @@ interface DeterministicRisk {
     details: Partial<Record<TacticalHazardType, RiskDetail>>;
 }
 
+/**
+ * Finestra de 6 hores que avaluen la IA i el tallafocs: de l'hora actual (current.time dins hourly.time; si no hi és,
+ * la primera hora que no ha passat fa més de 30 min) a 6 hores més enllà. Abans era una funció interna de
+ * getGeminiAnalysis; és aquí perquè l'anàlisi provisional (evaluateRulesRisk) miri exactament les mateixes hores.
+ */
+const computeEvalWindow = (weatherData: ExtendedWeatherData): { start: number; end: number } => {
+    if (!weatherData.hourly || !Array.isArray(weatherData.hourly.time) || weatherData.hourly.time.length === 0) {
+        return { start: 0, end: 0 };
+    }
+    const times = weatherData.hourly.time;
+    const currentTimeRaw = (weatherData.current as Record<string, unknown> | undefined)?.time;
+    const utcOffset = (weatherData as unknown as LocatableData).utc_offset_seconds;
+    let startIndex = -1;
+
+    if (currentTimeRaw !== undefined && currentTimeRaw !== null) {
+        startIndex = times.findIndex(t => t === currentTimeRaw);
+        if (startIndex === -1 && typeof currentTimeRaw === 'string') {
+            startIndex = times.findIndex(t => String(t).localeCompare(String(currentTimeRaw)) >= 0);
+        }
+    }
+
+    if (startIndex === -1) {
+        const nowMs = Date.now();
+        const utcOffsetMs = (utcOffset || 0) * 1000;
+
+        startIndex = times.findIndex(t => {
+            if (typeof t === 'number') {
+                return (t * 1000) >= nowMs - (30 * 60 * 1000);
+            } else {
+                const str = String(t);
+                const hasTz = str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str);
+                if (hasTz) {
+                    return new Date(str).getTime() >= nowMs - (30 * 60 * 1000);
+                } else {
+                    const fakeUtcMs = new Date(`${str}Z`).getTime();
+                    const trueUtcMs = fakeUtcMs - utcOffsetMs;
+                    return !isNaN(trueUtcMs) && trueUtcMs >= nowMs - (30 * 60 * 1000);
+                }
+            }
+        });
+    }
+
+    if (startIndex === -1) startIndex = 0;
+    const endIndex = Math.min(startIndex + 6, times.length);
+    return { start: startIndex, end: endIndex };
+};
+
+/**
+ * Moment del dia d'una hora local (0-23), amb els noms que fa servir el text: abans la IA només rebia "DIA" o "NIT" i a
+ * Puigcerdà, a les 20:27, escrivia "Cap al vespre, el cel es cobrirà" quan ja era vespre (auditoria d'UX del
+ * 16/11/2026, M1).
+ */
+export const dayPartCa = (hour: number): string =>
+    hour < 6 ? 'matinada' : hour < 12 ? 'matí' : hour < 15 ? 'migdia' : hour < 20 ? 'tarda' : hour < 23 ? 'vespre' : 'nit';
+
+const WEEKDAYS_CA = ['diumenge', 'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte'];
+
+/**
+ * Fenòmens importants de MÉS ENLLÀ de la finestra de 6 hores, fins a 48 hores: tempesta, neu, pluja forta (>= 5 mm/h) o
+ * ràfegues fortes (>= 50 km/h), amb el dia i l'hora de la primera hora de cadascun. Abans la IA només veia 6 hores: a
+ * Buenos Aires, amb una tempesta i 24 mm l'endemà, el text deia "temps tranquil" i no n'esmentava res (M1). No toca el
+ * nivell de risc, que continua sent el de les 6 hores. null si no n'hi ha cap (o les hores no tenen data).
+ */
+export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: number, end: number): string | null => {
+    const hourly = weatherData.hourly as unknown as HourlySeries | undefined;
+    const times = (weatherData.hourly as { time?: unknown[] } | undefined)?.time;
+    if (!hourly || !Array.isArray(times)) return null;
+    const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+    const precipArr = hourly.precipitation as (number | null)[] | undefined;
+    const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
+    const today = typeof times[start] === 'string' ? (times[start] as string).slice(0, 10) : null;
+    if (!today) return null;
+
+    type Kind = 'tempesta' | 'neu' | 'pluja forta' | 'ràfegues fortes';
+    const found = new Map<Kind, { index: number; peak: number | null }>();
+    const note = (kind: Kind, i: number, value: number | null) => {
+        const prev = found.get(kind);
+        if (!prev) found.set(kind, { index: i, peak: value });
+        else if (value !== null && (prev.peak === null || value > prev.peak)) prev.peak = value;
+    };
+    const last = Math.min(start + 48, times.length);
+    for (let i = end; i < last; i++) {
+        const code = getHourlyWeatherCode(hourly, i, elevation, weatherData.hourlyComparison);
+        if (code !== null && code >= 95) note('tempesta', i, null);
+        else if (code !== null && isSnowCode(code)) note('neu', i, null);
+        const mm = precipArr?.[i];
+        if (typeof mm === 'number' && mm >= FIREWALL_THRESHOLDS.RAIN_AMBER) note('pluja forta', i, mm);
+        const gust = gustsArr?.[i];
+        if (typeof gust === 'number' && gust >= FIREWALL_THRESHOLDS.GUST_AMBER) note('ràfegues fortes', i, gust);
+    }
+    if (found.size === 0) return null;
+
+    const dayWord = (iso: string): string => {
+        const date = iso.slice(0, 10);
+        const [y, m, d] = date.split('-').map(Number);
+        const [ty, tm, td] = today.split('-').map(Number);
+        const diffDays = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86400000);
+        return diffDays === 0 ? 'avui' : diffDays === 1 ? 'demà' : WEEKDAYS_CA[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    };
+    const parts = [...found.entries()]
+        .sort((a, b) => a[1].index - b[1].index)
+        .slice(0, 3)
+        .map(([kind, { index, peak }]) => {
+            const iso = String(times[index]);
+            const unit = kind === 'pluja forta' ? ' mm/h' : kind === 'ràfegues fortes' ? ' km/h' : '';
+            return `${kind} ${dayWord(iso)} cap a les ${iso.slice(11, 13)}:00${peak !== null ? ` (fins a ${Math.round(peak)}${unit})` : ''}`;
+        });
+    return parts.join('; ');
+};
+
 /** El detall del tallafocs només explica la resposta final si n'ha vist el mateix perill al mateix nivell. */
 const matchingRiskDetail = (evaluation: DeterministicRisk, level: TacticalRiskLevel, hazard: TacticalHazardType): RiskDetail | undefined => {
     const detail = evaluation.details[hazard];
@@ -519,6 +630,29 @@ const evaluateDeterministicRisk = (
     }
 
     return { risk: maxRisk, hazard: detectedHazard, details };
+};
+
+/**
+ * El nivell de risc de les regles (el tallafocs) per a les mateixes 6 hores que llegeix la IA: el perill i el detall
+ * del bàner "Motiu" inclosos. És el de l'anàlisi provisional (useWeatherAI), la que es veu mentre la IA respon, quan
+ * no respon i amb la previsió desada. Abans l'anàlisi provisional no portava cap nivell i la insígnia posava AMBER
+ * ("Avís precaució") per defecte: a Barcelona, de nit i sense res, sortia l'avís i uns segons després "Temps tranquil"
+ * (auditoria d'UX del 16/11/2026, A3). Com que la resposta final és sempre el màxim entre la IA i aquestes regles,
+ * l'avís provisional ja no pot ser més alt que el final.
+ */
+export const evaluateRulesRisk = (
+    weatherData: ExtendedWeatherData,
+    dustKind: DustKind = null,
+    lightning: LightningNearby | null = null
+): { risk_level: TacticalRiskLevel; hazard_type: TacticalHazardType; risk_detail?: RiskDetail } => {
+    const { start, end } = computeEvalWindow(weatherData);
+    const evaluation = evaluateDeterministicRisk(weatherData, start, end, dustKind, lightning);
+    if (evaluation.hazard === null) return { risk_level: evaluation.risk, hazard_type: 'NONE' };
+    return {
+        risk_level: evaluation.risk,
+        hazard_type: evaluation.hazard,
+        risk_detail: matchingRiskDetail(evaluation, evaluation.risk, evaluation.hazard)
+    };
 };
 
 /**
@@ -780,47 +914,7 @@ export const getGeminiAnalysis = async (
         // que les dades meteo es refresquen cada 15 min: sense això, un perill
         // que apareix als últims ~45 min d'una finestra de cache no activava mai
         // el tallafocs fins que la pròpia cache expirava.
-        const computeEvalWindow = (): { start: number; end: number } => {
-            if (!weatherData.hourly || !Array.isArray(weatherData.hourly.time) || weatherData.hourly.time.length === 0) {
-                return { start: 0, end: 0 };
-            }
-            const times = weatherData.hourly.time;
-            let startIndex = -1;
-
-            if (currentTimeRaw !== undefined && currentTimeRaw !== null) {
-                startIndex = times.findIndex(t => t === currentTimeRaw);
-                if (startIndex === -1 && typeof currentTimeRaw === 'string') {
-                    startIndex = times.findIndex(t => String(t).localeCompare(String(currentTimeRaw)) >= 0);
-                }
-            }
-
-            if (startIndex === -1) {
-                const nowMs = Date.now();
-                const utcOffsetMs = (utcOffset || 0) * 1000;
-
-                startIndex = times.findIndex(t => {
-                    if (typeof t === 'number') {
-                        return (t * 1000) >= nowMs - (30 * 60 * 1000);
-                    } else {
-                        const str = String(t);
-                        const hasTz = str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str);
-                        if (hasTz) {
-                            return new Date(str).getTime() >= nowMs - (30 * 60 * 1000);
-                        } else {
-                            const fakeUtcMs = new Date(`${str}Z`).getTime();
-                            const trueUtcMs = fakeUtcMs - utcOffsetMs;
-                            return !isNaN(trueUtcMs) && trueUtcMs >= nowMs - (30 * 60 * 1000);
-                        }
-                    }
-                });
-            }
-
-            if (startIndex === -1) startIndex = 0;
-            const endIndex = Math.min(startIndex + 6, times.length);
-            return { start: startIndex, end: endIndex };
-        };
-
-        const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow();
+        const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow(weatherData);
 
         // Certesa de la pluja de la finestra (vegeu resolveRainCertainty), amb les mateixes sèries que la taula.
         const rainCertainty = (() => {
@@ -976,16 +1070,50 @@ export const getGeminiAnalysis = async (
             windowSummary = buildWindowSummary(windowRows, rainCertainty, reliability);
         }
 
+        // Estat del cel d'"ara": el mateix codi i el mateix % efectiu que la capçalera, i les tres capes (les del bloc current
+        // o, si no hi són, les de l'hora actual, com useCurrentConditions). Abans només rebia "Majoritàriament serè (pocs
+        // núvols)" amb un 43 % que era un vel de núvols alts al 100 %, i escrivia "cel tapat" al costat de "Majorment serè".
+        // La instrucció va a la mateixa línia de la dada: Flash-Lite la segueix millor que una regla del prompt de sistema.
+        const skyLine = (() => {
+            const desc = getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover);
+            if (effectiveCloudCover === null) return desc;
+            const layerNow = (key: string): number | null => {
+                const own = currentObj[key];
+                if (typeof own === 'number' && !isNaN(own)) return own;
+                const arr = hourlyObj[key];
+                const v = Array.isArray(arr) ? arr[evalStartIndex] : undefined;
+                return typeof v === 'number' && !isNaN(v) ? v : null;
+            };
+            const pct = (v: number | null) => (v === null ? '--' : `${Math.round(v)} %`);
+            const high = layerNow('cloud_cover_high');
+            const thinHigh = high !== null && high >= 50 ? '; els núvols alts són prims i no tapen el cel' : '';
+            return `${desc} · cobertura efectiva ${Math.round(effectiveCloudCover)} % (núvols baixos ${pct(layerNow('cloud_cover_low'))}, `
+                + `mitjans ${pct(layerNow('cloud_cover_mid'))}, alts ${pct(high)}) — és el que mostra l'app: descriu el cel d'ara amb aquestes paraules${thinHigh}`;
+        })();
+
+        // Moment del dia d'ara i les franges, perquè les referències ("cap al vespre", "aquesta nit") quadrin amb l'hora
+        // local; i el que passa més enllà de les 6 hores (fins a 48 h), perquè no digui "temps tranquil" sense esmentar
+        // una tempesta l'endemà (auditoria d'UX del 16/11/2026, M1). Les instruccions van a la línia de la dada.
+        const currentHourNum = Number.parseInt(currentHourStr.slice(0, 2), 10);
+        const dayPartLine = Number.isFinite(currentHourNum)
+            ? `; ara és ${dayPartCa(currentHourNum)} (franges locals: matinada 0-6 h, matí 6-12, migdia 12-15, tarda 15-20, vespre 20-23, nit 23-24; no diguis "cap al ${dayPartCa(currentHourNum)}" si ja ho és)`
+            : '';
+        const beyond = describeBeyondWindow(weatherData, evalStartIndex, evalEndIndex);
+        const beyondLine = beyond
+            ? `
+          MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d'ara): ${beyond}. Esmenta-ho en una frase curta al final del text, sense alarmar.`
+            : '';
+
         // Prompt descarregat d'instruccions: Només telemetria en brut per al Worker
         const prompt = `
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
-          
-          HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole})
-          Estat del Cel: ${getTacticalWeatherDescription(effectiveCode ?? currentWmoCode, currentTempNum, effectiveCloudCover)}
+
+          HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole}${dayPartLine})
+          Estat del Cel: ${skyLine}
           Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C${shownTempNote(currentDisplayTemp)}` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}
           Confort Tèrmic: ${getTacticalComfortDescription(currentDisplayTemp, currentDisplayApparent, currentHumidity)}
           Pluja actual: ${currentPrecipStr} | Índex UV: ${currentUv !== null ? currentUv : 'N/D'} | Qualitat Aire: ${getTacticalAqiDescription(currentAqi, aqiScale)}${aerosolLine}${lightningLine}
-          MODEL EN ÚS: ${modelInfo.name}
+          MODEL EN ÚS: ${modelInfo.name}${beyondLine}
 ${windowSummary ? `
           RESUM CALCULAT DE LES PROPERES HORES (xifres ja calculades: no les sumis ni les recalculis):
           ${windowSummary}

@@ -33,7 +33,7 @@ interface GridTranslation {
 // DOCTRINA RISC ZERO: Diccionari intern blindat
 const gridTranslations: Record<string, GridTranslation> = {
   ca: {
-    windDynamics: "Dinàmica de Vent",
+    windDynamics: "Vent",
     wind: "Vent",
     gusts: "RATXES",
     humidity: "Humitat",
@@ -42,7 +42,7 @@ const gridTranslations: Record<string, GridTranslation> = {
     noData: "SENSE DADES"
   },
   es: {
-    windDynamics: "Dinámica de Viento",
+    windDynamics: "Viento",
     wind: "Viento",
     gusts: "RACHAS",
     humidity: "Humedad",
@@ -51,7 +51,7 @@ const gridTranslations: Record<string, GridTranslation> = {
     noData: "SIN DATOS"
   },
   en: {
-    windDynamics: "Wind Dynamics",
+    windDynamics: "Wind",
     wind: "Wind",
     gusts: "GUSTS",
     humidity: "Humidity",
@@ -60,7 +60,7 @@ const gridTranslations: Record<string, GridTranslation> = {
     noData: "NO DATA"
   },
   fr: {
-    windDynamics: "Dynamique du Vent",
+    windDynamics: "Vent",
     wind: "Vent",
     gusts: "RAFALES",
     humidity: "Humidité",

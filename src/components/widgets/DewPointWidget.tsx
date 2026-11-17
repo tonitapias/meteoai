@@ -4,6 +4,14 @@ import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 
+// Etiquetes curtes de les dues xifres en cada idioma (abans es i fr veien "Dew Pt." i "RH" en anglès).
+const SHORT_LABELS = {
+  ca: { dew: 'Rosada', hum: 'Humitat' },
+  es: { dew: 'Rocío', hum: 'Humedad' },
+  en: { dew: 'Dew point', hum: 'Humidity' },
+  fr: { dew: 'Rosée', hum: 'Humidité' },
+} as const;
+
 export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
     // DOCTRINA RISC ZERO: Extracció tipada
     const t = getTrans(lang) as Record<string, unknown>;
@@ -90,7 +98,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
                   <div className="flex items-center gap-1 mt-1 sm:mt-1.5 w-full min-w-0">
                       {hasValue && safeValue < 0 && <AlertTriangle className="w-2.5 h-2.5 text-cyan-400 shrink-0" />}
                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate w-full">
-                          {lang === 'ca' ? 'Rosada' : 'Dew Pt.'}
+                          {SHORT_LABELS[lang as keyof typeof SHORT_LABELS]?.dew ?? SHORT_LABELS.ca.dew}
                       </span>
                   </div>
               </div>
@@ -105,7 +113,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
                       {displayHum}{hasHumidity ? '%' : ''}
                   </span>
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1 sm:mt-1.5 text-right truncate w-full">
-                      {lang === 'ca' ? 'Humitat' : 'RH'}
+                      {SHORT_LABELS[lang as keyof typeof SHORT_LABELS]?.hum ?? SHORT_LABELS.ca.hum}
                   </span>
               </div>
           </div>

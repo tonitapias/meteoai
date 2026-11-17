@@ -172,7 +172,7 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
     );
 };
 
-// --- Previsió: els 7 dies, els gràfics horaris i el motor de consens -------------------------------------------------
+// --- Previsió: els 7 dies, els gràfics horaris i el model regional contra el global -------------------------------------------------
 const ForecastPanel = () => {
     const { state, actions, flags } = useAppContext();
     const { weatherData, calculations } = state;
