@@ -12,10 +12,29 @@ interface RadarSources {
 }
 
 // Memòria global per evitar fetches duplicats si el component es desmunta/munta ràpid
-let globalRadarCache: { data: RadarSources; timestamp: number } | null = null;
+let globalRadarCache: { data: RadarSources; freshUntil: number } | null = null;
 let globalRadarFetchPromise: Promise<RadarSources> | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minuts
 const FETCH_TIMEOUT_MS = 12000; // 12 segons de màxim d'espera (Timeout de Muntanya)
+// Un fotograma nou cada 10 minuts. Una font endarrerida no fa demanar el manifest més d'un cop per minut.
+const FRAME_INTERVAL_MS = 10 * 60 * 1000;
+const MIN_CACHE_MS = 60 * 1000;
+
+/**
+ * Fins quan es pot fer servir un manifest desat: 5 minuts, però no més enllà de l'hora del fotograma següent
+ * (l'últim + 10 min). Quan LibreWXR publica un fotograma, esborra el més antic en el mateix moment: el 17/11/2026,
+ * el de les 09:40 va sortir de la llista a les 11:41:21 i les seves tessel·les ja donaven 404. Amb un manifest
+ * d'abans, el radar demanava aquest fotograma (10-11 tessel·les 404 i el primer pas de l'animació sense pluja,
+ * auditoria d'UX del 16/11/2026, B9) i ensenyava com a últim un fotograma que ja no ho era.
+ */
+export function manifestFreshUntil(data: RadarSources, fetchedAt: number): number {
+  let until = fetchedAt + CACHE_TTL;
+  for (const source of [data.librewxr, data.rainviewer]) {
+    const newest = (source?.radar?.past ?? []).reduce((max, f) => (f.time != null && f.time > max ? f.time : max), 0);
+    if (newest > 0) until = Math.min(until, newest * 1000 + FRAME_INTERVAL_MS);
+  }
+  return Math.max(until, fetchedAt + MIN_CACHE_MS);
+}
 
 // Es consulten els dos proveïdors en paral·lel (si LibreWXR no respon, no cal
 // esperar el seu temps d'espera per demanar RainViewer), però el mapa en
@@ -79,8 +98,8 @@ export function useRadarData() {
     try {
       const now = Date.now();
 
-      // Retornem memòria cau si és vàlida i no s'ha forçat l'actualització
-      if (!forceFetch && globalRadarCache && (now - globalRadarCache.timestamp < CACHE_TTL)) {
+      // Retornem memòria cau si és vàlida (vegeu manifestFreshUntil) i no s'ha forçat l'actualització
+      if (!forceFetch && globalRadarCache && now < globalRadarCache.freshUntil) {
         const { librewxr, rainviewer } = globalRadarCache.data;
         if (isMountedRef.current) {
           setRadarData(librewxr ?? rainviewer);
@@ -104,7 +123,7 @@ export function useRadarData() {
       }
 
       const data = await globalRadarFetchPromise;
-      globalRadarCache = { data, timestamp: now };
+      globalRadarCache = { data, freshUntil: manifestFreshUntil(data, now) };
 
       if (isMountedRef.current) {
         setRadarData(data.librewxr ?? data.rainviewer);

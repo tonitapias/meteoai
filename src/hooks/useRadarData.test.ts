@@ -15,7 +15,7 @@ vi.mock('../utils/radarSampling', async (orig) => ({
     })
 }));
 
-import { useRadarSources } from './useRadarData';
+import { manifestFreshUntil, useRadarData, useRadarSources } from './useRadarData';
 
 const LW_HOST = 'https://api.librewxr.net';
 const RV_HOST = 'https://tilecache.rainviewer.com';
@@ -75,6 +75,45 @@ describe('compareFrames', () => {
         const a = new Uint8ClampedArray([0, 0, 0, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 0, 0, 0]);
         const b = new Uint8ClampedArray([0, 0, 0, 0, 0, 255, 0, 255, 255, 255, 0, 255, 0, 0, 247, 255]);
         expect(compareFrames(a, b)).toEqual({ wet: 3, changed: 2 });
+    });
+});
+
+// Auditoria d'UX del 16/11/2026, B9: un manifest d'abans d'un fotograma nou feia demanar el més antic, ja esborrat.
+describe('memòria cau del manifest', () => {
+    const NEWEST_MS = (1794435600 + 11 * 600) * 1000; // l'últim fotograma de `frames`
+    const MIN = 60 * 1000;
+    const BOTH = { librewxr: LW, rainviewer: RV };
+
+    it('val 5 minuts, però no més enllà del fotograma següent (l\'últim + 10 min)', () => {
+        expect(manifestFreshUntil(BOTH, NEWEST_MS + 1 * MIN)).toBe(NEWEST_MS + 6 * MIN);
+        expect(manifestFreshUntil(BOTH, NEWEST_MS + 7 * MIN)).toBe(NEWEST_MS + 10 * MIN);
+    });
+
+    it('sense fotogrames, 5 minuts; amb una font endarrerida, com a mínim 1 minut', () => {
+        expect(manifestFreshUntil({ librewxr: null, rainviewer: null }, 1000)).toBe(1000 + 5 * MIN);
+        expect(manifestFreshUntil(BOTH, NEWEST_MS + 30 * MIN)).toBe(NEWEST_MS + 31 * MIN);
+    });
+
+    it('passada l\'hora del fotograma següent, el radar demana un manifest nou encara que no hagin passat 5 minuts', async () => {
+        const now = vi.spyOn(Date, 'now');
+        const fetchMock = vi.mocked(fetch);
+        const { result } = renderHook(() => useRadarData());
+
+        now.mockReturnValue(NEWEST_MS + 7 * MIN);
+        await act(async () => { await result.current.fetchRadarData(true); });
+        const afterFirst = fetchMock.mock.calls.length;
+
+        // 2 minuts després: encara no toca cap fotograma nou, es fa servir el desat.
+        now.mockReturnValue(NEWEST_MS + 9 * MIN);
+        await act(async () => { await result.current.fetchRadarData(); });
+        expect(fetchMock.mock.calls.length).toBe(afterFirst);
+
+        // 3,5 minuts després de demanar-lo: ja toca el fotograma següent.
+        now.mockReturnValue(NEWEST_MS + 10.5 * MIN);
+        await act(async () => { await result.current.fetchRadarData(); });
+        expect(fetchMock.mock.calls.length).toBe(afterFirst + 2);
+
+        now.mockRestore();
     });
 });
 
