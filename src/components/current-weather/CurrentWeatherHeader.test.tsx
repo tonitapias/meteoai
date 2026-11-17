@@ -81,3 +81,19 @@ describe('CurrentWeatherHeader: botó Compartir', () => {
         expect(screen.queryByRole('button')).toBeNull();
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (M4): a Buenos Aires, "MODEL GLOBAL" sense cap explicació (només al tooltip del peu).
+describe('CurrentWeatherHeader: model global', () => {
+    it('sense model regional, el distintiu en l\'idioma i una frase que diu per què', () => {
+        const tr = TRANSLATIONS.es;
+        render(<CurrentWeatherHeader locationName="Buenos Aires" modelLabel={null} globalModelLabel={tr.globalModelBadge} globalModelHint={tr.globalModelHint} />);
+        expect(screen.getByText(tr.globalModelBadge)).toBeInTheDocument();
+        expect(screen.getByText(tr.globalModelHint)).toBeInTheDocument();
+    });
+
+    it('amb model regional, cap frase del global', () => {
+        const tr = TRANSLATIONS.ca;
+        render(<CurrentWeatherHeader locationName="Girona" modelLabel="AROME HD" globalModelLabel={tr.globalModelBadge} globalModelHint={tr.globalModelHint} />);
+        expect(screen.queryByText(tr.globalModelHint)).toBeNull();
+    });
+});

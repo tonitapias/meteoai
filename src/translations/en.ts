@@ -476,6 +476,8 @@ export const en = {
   tipUmbrella: "Take umbrella",
   tipSunscreen: "Sunscreen",
   tipCalm: "Enjoy",
+  globalModelBadge: "Global model",
+  globalModelHint: "No high-resolution model covers this place: the forecast comes from the global models.",
   tipCalmNight: "Calm night",
   tipCoat: "Heavy coat",
   tipLayers: "Wear layers",

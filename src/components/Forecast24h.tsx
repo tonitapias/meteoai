@@ -3,7 +3,7 @@ import { ShieldCheck, Zap } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { StrictCurrentWeather } from '../types/weatherLogicTypes';
-import { Language } from '../translations';
+import { Language, TRANSLATIONS } from '../translations';
 import { HourlyForecastWidget, ChartDataPoint } from './widgets';
 import { WeatherUnit, formatPrecipitation } from '../utils/formatters';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
@@ -20,7 +20,8 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
 
     // DOCTRINA RISC ZERO: Validacions estrictes de dades
     const isRegionalModel = isRegionalModelActive(current?.source);
-    const sourceLabel = isRegionalModel ? (current?.source as string) : 'MODEL GLOBAL';
+    // "Model global" en l'idioma de l'app (abans "MODEL GLOBAL" fix, també en anglès i francès).
+    const sourceLabel = isRegionalModel ? (current?.source as string) : (TRANSLATIONS[lang] ?? TRANSLATIONS.ca).globalModelBadge;
 
     const hourlyChartData: ChartDataPoint[] = useMemo(() => {
         if (!hourly || !hourly.time || !Array.isArray(hourly.time) || hourly.time.length === 0) return [];
@@ -156,7 +157,7 @@ export default function Forecast24h({ data, lang }: { data: ExtendedWeatherData,
                 ) : (
                     <>
                         <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)]" />
-                        <span className="text-[10px] font-mono font-black text-indigo-400 tracking-widest drop-shadow-md">{sourceLabel}</span>
+                        <span className="text-[10px] font-mono font-black text-indigo-400 tracking-widest uppercase drop-shadow-md">{sourceLabel}</span>
                     </>
                 )}
             </div>

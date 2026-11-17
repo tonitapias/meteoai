@@ -23,6 +23,9 @@ interface CurrentWeatherHeaderProps {
   /** Compartir el lloc (vegeu useAppActions.handleSharePlace): botó a dalt a la dreta. Sense, no hi és. */
   onShare?: () => void;
   shareLabel?: string;
+  /** Distintiu i explicació del model global (sense model regional). Abans només posava "MODEL GLOBAL", sense dir per què. */
+  globalModelLabel?: string;
+  globalModelHint?: string;
 }
 
 // Botons de Google Maps: enllaços a una pestanya nova; 44 px d'alt (mida tàctil). Un al costat de l'altre si cada un té
@@ -39,6 +42,8 @@ export const CurrentWeatherHeader = ({
   sharedPosition = null,
   onShare,
   shareLabel = 'Compartir aquest lloc',
+  globalModelLabel = 'Model global',
+  globalModelHint,
 }: CurrentWeatherHeaderProps) => {
   
   // DOCTRINA RISC ZERO: Validació estricta i fallbacks absoluts
@@ -85,7 +90,7 @@ export const CurrentWeatherHeader = ({
             </span>
           ) : (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/30 shadow-[inset_0_1px_4px_rgba(99,102,241,0.2)] text-[9px] font-mono font-black text-indigo-400 tracking-widest uppercase transition-all duration-300">
-              <ShieldCheck className="w-3 h-3 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]" /> MODEL GLOBAL
+              <ShieldCheck className="w-3 h-3 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]" /> {globalModelLabel}
             </span>
           )}
           </div>
@@ -102,6 +107,11 @@ export const CurrentWeatherHeader = ({
             </button>
           )}
         </div>
+
+        {/* Sense model regional, una frase diu per què la previsió surt dels globals (auditoria d'UX del 16/11/2026, M4). */}
+        {!modelLabel && globalModelHint && (
+          <p className="text-[11px] font-medium leading-snug text-slate-400 max-w-prose">{globalModelHint}</p>
+        )}
 
         {/* Títol / Nom de la ubicació */}
         <h2 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[0.9] drop-shadow-xl break-words mt-1 transition-colors duration-700 ${safeLocation !== 'UBICACIÓ DESCONEGUDA' ? 'text-white' : 'text-slate-500'}`}>

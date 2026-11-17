@@ -199,6 +199,8 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             sharedPosition={sharedPosition}
             onShare={props.onShare}
             shareLabel={uiText.share.button}
+            globalModelLabel={uiText.globalModelBadge}
+            globalModelHint={uiText.globalModelHint}
           />
 
           <div className="mt-4 md:mt-0">

@@ -475,6 +475,8 @@ export const es = {
   tipUmbrella: "Coge paraguas",
   tipSunscreen: "Protector solar",
   tipCalm: "Disfruta",
+  globalModelBadge: "Modelo global",
+  globalModelHint: "Aquí no llega ningún modelo de alta resolución: la previsión sale de los modelos globales.",
   tipCalmNight: "Noche tranquila",
   tipCoat: "Abrigo grueso",
   tipLayers: "Viste por capas",

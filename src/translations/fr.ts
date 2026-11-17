@@ -476,6 +476,8 @@ export const fr = {
   tipUmbrella: "Prenez un parapluie",
   tipSunscreen: "Écran solaire",
   tipCalm: "Profitez",
+  globalModelBadge: "Modèle global",
+  globalModelHint: "Aucun modèle haute résolution ne couvre ce lieu : la prévision vient des modèles globaux.",
   tipCalmNight: "Nuit calme",
   tipCoat: "Manteau épais",
   tipLayers: "Couches",

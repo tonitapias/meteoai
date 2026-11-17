@@ -480,6 +480,8 @@ export const ca = {
   tipUmbrella: "Agafa paraigua",
   tipSunscreen: "Crema solar",
   tipCalm: "Gaudeix del dia",
+  globalModelBadge: "Model global",
+  globalModelHint: "Aquí no arriba cap model d'alta resolució: la previsió surt dels models globals.",
   tipCalmNight: "Nit tranquil·la",
   tipCoat: "Abric gruixut",
   tipLayers: "Vesteix per capes",
