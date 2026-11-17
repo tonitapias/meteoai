@@ -2,6 +2,8 @@ import { Wind, Zap, Navigation2, AlertTriangle, CloudOff } from 'lucide-react';
 import { WidgetProps } from './widgetTypes';
 import { WIDGET_BASE_STYLE, CARD_VEIL, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans, getWindDirectionText, westLetter } from './widgetHelpers';
+import { getBeaufort } from '../../utils/beaufort';
+import type { Language } from '../../translations';
 
 // Funció helper matemàticament segura per dibuixar arcs SVG (Risc Zero: Protecció contra NaN i Infinity)
 const describeArc = (x: number, y: number, radius: number, startAngle: number, endAngle: number) => {
@@ -19,17 +21,11 @@ const describeArc = (x: number, y: number, radius: number, startAngle: number, e
     return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
 };
 
-// Avaluació de risc ràpida (Escala Beaufort simplificada)
-// [FIX] Abans només distingia 'ca' vs. resta: es/fr veien les etiquetes en
-// anglès en brut, a diferència de tots els altres widgets d'aquest directori.
-const getTacticalLabel = (speed: number, isValid: boolean, t: Record<string, unknown>) => {
-    const label = (key: string, fallback: string) => String(t[key] ?? fallback);
-    if (!isValid) return label('windNoData', 'NO DATA');
-    if (speed < 5) return label('windCalm', 'CALM');
-    if (speed < 20) return label('windModerate', 'MODERATE');
-    if (speed < 40) return label('windStrong', 'STRONG');
-    if (speed < 70) return label('windGale', 'GALE');
-    return label('windStorm', 'STORM');
+// Nom del vent amb l'escala de Beaufort oficial, la mateixa que el modal (utils/beaufort.ts). Abans era una escala
+// simplificada pròpia: 13 km/h hi sortia "Moderat" quan a Beaufort és "vent fluix" (auditoria d'UX del 16/11/2026, B3).
+const getTacticalLabel = (speed: number, isValid: boolean, t: Record<string, unknown>, lang: string) => {
+    if (!isValid) return String(t.windNoData ?? 'NO DATA');
+    return getBeaufort(speed, (['ca', 'es', 'en', 'fr'].includes(lang) ? lang : 'ca') as Language).label;
 };
 
 export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
@@ -64,7 +60,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
   const speedArcAngle = isValidSpeed ? Math.min(359.9, (safeSpeed / maxSpeedScale) * 360) : 0;
   const gustArcAngle = isValidGusts ? Math.min(359.9, (safeGusts / maxSpeedScale) * 360) : 0;
   
-  const tacticalLabel = getTacticalLabel(safeSpeed, isValidSpeed, t);
+  const tacticalLabel = getTacticalLabel(safeSpeed, isValidSpeed, t, lang ?? 'ca');
 
   // SPATIAL UI BASE
   const SPATIAL_WIDGET_STYLE = `${WIDGET_BASE_STYLE} ${CARD_VEIL} relative overflow-hidden bg-gradient-to-br from-[#0c0e15]/95 to-[#05060a]/95 border border-white/10 shadow-[0_16px_32px_rgba(0,0,0,0.6)] transform-gpu flex flex-col transition-colors duration-700`;
