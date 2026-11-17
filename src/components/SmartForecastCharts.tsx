@@ -298,7 +298,7 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
 
           <div className="p-2.5 flex flex-col gap-1.5 justify-center items-center">
             <div className="text-xl font-black tracking-tighter tabular-nums drop-shadow-md" style={{ color: currentConfig.color }}>
-              {showComparison && <span className="text-slate-500 text-[8px] font-bold tracking-widest uppercase mr-1">{primaryLabel}</span>}
+              {showComparison && <span className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mr-1">{primaryLabel}</span>}
               {fmtVal(hoverData.value)}<span className="text-[10px] ml-0.5 opacity-80">{unit}</span>
             </div>
 
@@ -306,13 +306,13 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
               <div className="flex flex-col gap-1 text-[11px] font-bold w-full border-t border-white/5 pt-1.5 mt-0.5">
                 {hoverGust && (
                   <div style={{ color: currentConfig.color }} className="flex justify-between px-1">
-                    <span className="text-slate-500 text-[9px] font-medium tracking-wide">{text.gust}:</span>
+                    <span className="text-slate-400 text-[10px] font-medium tracking-wide">{text.gust}:</span>
                     <span>{fmtVal(hoverGust.value)}{unit}</span>
                   </div>
                 )}
                 {hoverModels.map(({ key, point }) => (
                   <div key={key} style={{ color: MODEL_STYLE[key].color }} className="flex justify-between px-1">
-                    <span className="text-slate-500 text-[9px] font-medium tracking-wide">{MODEL_STYLE[key].label}:</span>
+                    <span className="text-slate-400 text-[10px] font-medium tracking-wide">{MODEL_STYLE[key].label}:</span>
                     <span>{fmtVal(point.value)}{unit}</span>
                   </div>
                 ))}
@@ -459,9 +459,9 @@ const KeyFigures = ({ items }: { items: KeyFigureData[] }) => (
     <div className="grid grid-cols-3 gap-2 mb-3">
         {items.map(item => (
             <div key={item.label} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2 min-w-0">
-                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">{item.label}</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{item.label}</div>
                 <div className="text-lg font-black tabular-nums text-slate-100 leading-tight mt-0.5">{item.value}</div>
-                <div className="text-[10px] font-bold text-slate-500 truncate min-h-[14px]">{item.sub}</div>
+                <div className="text-[10px] font-bold text-slate-400 truncate min-h-[14px]">{item.sub}</div>
             </div>
         ))}
     </div>
@@ -496,7 +496,7 @@ const AgreementRow = ({ level, text }: { level: AgreementLevel | null; text: Sma
 );
 
 const Note = ({ children }: { children: ReactNode }) => (
-    <p className="text-[11px] font-medium text-slate-500 mt-2 px-1">{children}</p>
+    <p className="text-[11px] font-medium text-slate-400 mt-2 px-1">{children}</p>
 );
 
 // Cota de neu sense res a dibuixar (a l'estiu és a 4.500 m tota la finestra): una frase en lloc d'una línia plana.
@@ -506,7 +506,7 @@ const SnowCompactCard = ({ label, value, message }: { label: string; value: stri
             <Mountain className="w-5 h-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</div>
             {value && <div className="text-lg font-black tabular-nums text-slate-100 leading-tight">{value}</div>}
             <div className="text-[11px] font-medium text-slate-400 mt-0.5">{message}</div>
         </div>
@@ -799,11 +799,11 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
                   className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 flex-1 justify-center ${
                       activeTab === tab.id
                       ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-900/50 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transform scale-[1.02]'
-                      : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'
+                      : 'text-slate-400 hover:text-slate-300 hover:bg-white/5 border border-transparent'
                   }`}
                   aria-pressed={activeTab === tab.id}
               >
-                  <tab.icon className={`w-3.5 h-3.5 transition-all duration-300 ${activeTab === tab.id ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.6)]' : 'text-slate-500'}`} />
+                  <tab.icon className={`w-3.5 h-3.5 transition-all duration-300 ${activeTab === tab.id ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.6)]' : 'text-slate-400'}`} />
                   {tab.label}
               </button>
           ))}

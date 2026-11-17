@@ -250,7 +250,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
 
             <button onClick={handleTacticalClose} aria-label={t.closeConsole} className="p-2.5 bg-black/40 border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative backdrop-blur-md shadow-inner">
                 <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
             </button>
         </div>
 
@@ -289,10 +289,10 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                 <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${totalRain > 0 ? 'bg-cyan-900/40 text-cyan-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
                                     <Droplets className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${totalRain > 0 ? 'text-cyan-200' : 'text-slate-400'}`}>{t.precip}</span>
+                                <span className={`text-[10px] uppercase font-bold tracking-widest ${totalRain > 0 ? 'text-cyan-200' : 'text-slate-400'}`}>{t.precip}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${totalRain > 0 ? 'text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]' : 'text-slate-200'}`}>
-                                {formatDecimal(totalRain, safeLang)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>mm</span>
+                                {formatDecimal(totalRain, safeLang)}<span className={`text-[10px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-400'}`}>mm</span>
                             </div>
                          </div>
 
@@ -302,10 +302,10 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                 <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'bg-rose-900/40 text-rose-400' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'bg-amber-900/40 text-amber-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
                                     <Wind className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'text-rose-200' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'text-amber-200' : 'text-slate-400'}`}>{t.maxGust}</span>
+                                <span className={`text-[10px] uppercase font-bold tracking-widest ${maxGust >= WEATHER_THRESHOLDS.WIND.EXTREME ? 'text-rose-200' : maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'text-amber-200' : 'text-slate-400'}`}>{t.maxGust}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getGustColor(maxGust)}`}>
-                                {Math.round(maxGust)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'opacity-80' : 'opacity-50 text-white'}`}>km/h</span>
+                                {Math.round(maxGust)}<span className={`text-[10px] md:text-xs font-bold ml-1 ${maxGust >= WEATHER_THRESHOLDS.WIND.STRONG ? 'opacity-80' : 'opacity-50 text-white'}`}>km/h</span>
                             </div>
                          </div>
 
@@ -315,10 +315,10 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                 <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-slate-400 group-hover:bg-white/10 transition-colors">
                                     <Mountain className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className="text-[8px] md:text-[10px] uppercase text-slate-400 font-bold tracking-widest">{t.minIso}</span>
+                                <span className="text-[10px] uppercase text-slate-400 font-bold tracking-widest">{t.minIso}</span>
                             </div>
                             <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-200 tracking-tighter">
-                                {Math.round(minIso)}<span className="text-[9px] md:text-xs font-bold ml-1 text-slate-500">m</span>
+                                {Math.round(minIso)}<span className="text-[10px] md:text-xs font-bold ml-1 text-slate-400">m</span>
                             </div>
                          </div>
 
@@ -328,10 +328,10 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                 <div className={`p-1 sm:p-1.5 rounded-lg transition-colors ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'bg-rose-900/40 text-rose-400' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'bg-amber-900/40 text-amber-400' : 'bg-white/5 text-slate-400 group-hover:bg-white/10'}`}>
                                     <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                                 </div>
-                                <span className={`text-[8px] md:text-[10px] uppercase font-bold tracking-widest ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'text-rose-200' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'text-amber-200' : 'text-slate-400'}`}>{t.cape}</span>
+                                <span className={`text-[10px] uppercase font-bold tracking-widest ${maxCape >= WEATHER_THRESHOLDS.ALERTS.CAPE_STORM ? 'text-rose-200' : maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'text-amber-200' : 'text-slate-400'}`}>{t.cape}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${getCapeColor(maxCape)}`}>
-                                {Math.round(maxCape)}<span className={`text-[9px] md:text-xs font-bold ml-1 ${maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'opacity-80' : 'opacity-50 text-white'}`}>J/kg</span>
+                                {Math.round(maxCape)}<span className={`text-[10px] md:text-xs font-bold ml-1 ${maxCape >= WEATHER_THRESHOLDS.CAPE.MIN_STORM ? 'opacity-80' : 'opacity-50 text-white'}`}>J/kg</span>
                             </div>
                          </div>
                     </div>
@@ -340,7 +340,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                         {hourlyRows.length === 0 ? (
                             <div className="p-20 text-center flex flex-col items-center">
                                 <ShieldCheck className="w-10 h-10 text-slate-700/50 mb-4" />
-                                <span className="text-slate-500 text-xs md:text-sm font-mono font-bold uppercase tracking-widest">{t.noData}</span>
+                                <span className="text-slate-400 text-xs md:text-sm font-mono font-bold uppercase tracking-widest">{t.noData}</span>
                             </div>
                         ) : (
                             hourlyRows.map((row, index) => {
@@ -379,12 +379,12 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                             <div className="flex items-center gap-3 sm:gap-4 w-[25%] md:w-1/4">
                                                 <div className="flex flex-col">
                                                     <div className="text-sm sm:text-base md:text-lg font-bold text-slate-300 tabular-nums tracking-tighter">
-                                                        {String(row.hour).padStart(2, '0')}<span className="text-[9px] md:text-[10px] text-slate-600 font-bold ml-[1px]">:00</span>
+                                                        {String(row.hour).padStart(2, '0')}<span className="text-[10px] text-slate-600 font-bold ml-[1px]">:00</span>
                                                     </div>
                                                     {stormRisk && (
                                                         <div className="flex items-center gap-1 mt-0.5 text-rose-400">
                                                             <Zap className="w-2.5 h-2.5 fill-current" />
-                                                            <span className="text-[8px] font-black uppercase tracking-wider hidden sm:inline">{t.storm}</span>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">{t.storm}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -397,17 +397,17 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex flex-col items-end sm:items-center">
                                                         <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tabular-nums tracking-tighter drop-shadow-sm w-12 sm:w-14 text-right sm:text-center">
-                                                            {Math.round(row.temp)}<span className="text-xs md:text-sm text-slate-500 font-bold ml-[1px]">°</span>
+                                                            {Math.round(row.temp)}<span className="text-xs md:text-sm text-slate-400 font-bold ml-[1px]">°</span>
                                                         </div>
 
                                                         <div className="flex md:hidden items-center gap-1 mt-[-2px]">
-                                                            <span className="text-[7px] text-slate-500 font-mono uppercase tracking-widest">{t.isoShort}</span>
-                                                            <span className="text-[9px] font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
+                                                            <span className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">{t.isoShort}</span>
+                                                            <span className="text-[10px] font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
                                                         </div>
                                                     </div>
 
                                                     <div className="hidden md:flex flex-col items-center justify-center w-14">
-                                                        <span className="text-[8px] text-slate-500 font-mono font-bold mb-0.5 uppercase">{t.iso0}</span>
+                                                        <span className="text-[10px] text-slate-400 font-mono font-bold mb-0.5 uppercase">{t.iso0}</span>
                                                         <span className="text-xs font-bold text-slate-300 tabular-nums">{Math.round(row.freezingLevel)}</span>
                                                     </div>
                                                 </div>

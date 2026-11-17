@@ -81,7 +81,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
               {hasData ? (
                   <Droplets className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-colors duration-500 shrink-0" /> 
               ) : (
-                  <CloudOff className="w-4 h-4 text-slate-500 shrink-0" />
+                  <CloudOff className="w-4 h-4 text-slate-400 shrink-0" />
               )}
               <span className="tracking-wider text-slate-200 truncate">{tDew}</span>
           </div>
@@ -97,7 +97,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
                   </span>
                   <div className="flex items-center gap-1 mt-1 sm:mt-1.5 w-full min-w-0">
                       {hasValue && safeValue < 0 && <AlertTriangle className="w-2.5 h-2.5 text-cyan-400 shrink-0" />}
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate w-full">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate w-full">
                           {SHORT_LABELS[lang as keyof typeof SHORT_LABELS]?.dew ?? SHORT_LABELS.ca.dew}
                       </span>
                   </div>
@@ -112,7 +112,7 @@ export const DewPointWidget = ({ value, humidity, lang }: WidgetProps) => {
                   <span className={`text-2xl sm:text-3xl xl:text-3xl font-black tabular-nums tracking-tighter leading-none whitespace-nowrap w-full text-right ${hasHumidity ? 'text-cyan-400 drop-shadow-md' : 'text-slate-600'}`}>
                       {displayHum}{hasHumidity ? '%' : ''}
                   </span>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1 sm:mt-1.5 text-right truncate w-full">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 sm:mt-1.5 text-right truncate w-full">
                       {SHORT_LABELS[lang as keyof typeof SHORT_LABELS]?.hum ?? SHORT_LABELS.ca.hum}
                   </span>
               </div>

@@ -54,9 +54,9 @@ export const MinutelyPreciseChart = ({ data, label, lang = 'ca', currentPrecip: 
                         {processedData.map((val, i) => (
                             <div key={`minutely-${i}`} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
                                 {val > 0 ? (
-                                    <span className="text-[9px] font-black mb-0.5 text-white drop-shadow-md">{formatDecimal(val, lang)}<span className="opacity-50 text-[8px] ml-0.5">mm</span></span>
+                                    <span className="text-[10px] font-black mb-0.5 text-white drop-shadow-md">{formatDecimal(val, lang)}<span className="opacity-50 text-[10px] ml-0.5">mm</span></span>
                                 ) : (
-                                    <span className="text-[9px] font-bold mb-0.5 text-slate-600 opacity-50">-</span>
+                                    <span className="text-[10px] font-bold mb-0.5 text-slate-600 opacity-50">-</span>
                                 )}
                                 <div className="w-full bg-[#050608]/80 rounded-sm relative h-full max-h-[40px] overflow-hidden flex items-end border border-white/5 shadow-inner">
                                     <div

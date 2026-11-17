@@ -221,12 +221,12 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
           </div>
           <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
         </div>
 
         {!hasData ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
             <CloudOff className="w-10 h-10 text-slate-600" />
             {t.noData}
           </div>
@@ -236,7 +236,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
             {/* HEROI: índex actual */}
             <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="flex flex-col items-center sm:items-start gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.uvNow}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.uvNow}</span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${severity.color}`}>
                   {typeof currentUV === 'number' ? formatDecimal(currentUV, safeLang) : '--'}
                 </span>
@@ -278,10 +278,10 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
                   <span className="text-[11px] font-mono font-bold text-slate-200">
                     {isScrubbing ? activeEntry.timeStr.slice(11, 16) : t.now}
                     {' · UV '}<span className={getUVCategory((isScrubbing ? activeEntry.uv : currentUV) ?? 0).color}>{(isScrubbing ? activeEntry.uv : currentUV ?? null) !== null ? formatDecimal(isScrubbing ? activeEntry.uv as number : currentUV as number, safeLang) : '--'}</span>
-                    {activeEntry.uvClear !== null && <span className="text-slate-500"> · {t.clearSky} {formatDecimal(activeEntry.uvClear, safeLang)}</span>}
+                    {activeEntry.uvClear !== null && <span className="text-slate-400"> · {t.clearSky} {formatDecimal(activeEntry.uvClear, safeLang)}</span>}
                   </span>
                 ) : (
-                  <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
+                  <span className="text-[10px] text-slate-600 italic">{t.scrubHint}</span>
                 )}
               </div>
 

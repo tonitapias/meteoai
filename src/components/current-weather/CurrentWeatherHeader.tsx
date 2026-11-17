@@ -70,7 +70,7 @@ export const CurrentWeatherHeader = ({
             // No és un lloc qualsevol: és on era qui ha enviat l'enllaç.
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border bg-cyan-500/10 border-cyan-500/40 shadow-[inset_0_1px_4px_rgba(34,211,238,0.15)]">
               <MapPinned className="w-3 h-3 text-cyan-300" aria-hidden="true" />
-              <span className="text-[9px] font-mono font-black tracking-widest uppercase text-cyan-100">
+              <span className="text-[10px] font-mono font-black tracking-widest uppercase text-cyan-100">
                 {sharedPosition.label}
               </span>
             </div>
@@ -79,9 +79,9 @@ export const CurrentWeatherHeader = ({
             {safeCountry !== '--' ? (
                 <Navigation className="w-3 h-3 text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.5)]" />
             ) : (
-                <MapPinOff className="w-3 h-3 text-slate-500" />
+                <MapPinOff className="w-3 h-3 text-slate-400" />
             )}
-            <span className={`text-[9px] font-mono font-black tracking-widest uppercase transition-colors duration-500 ${safeCountry !== '--' ? 'text-indigo-200' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-mono font-black tracking-widest uppercase transition-colors duration-500 ${safeCountry !== '--' ? 'text-indigo-200' : 'text-slate-400'}`}>
               {safeCountry}
             </span>
           </div>
@@ -90,11 +90,11 @@ export const CurrentWeatherHeader = ({
           {/* Un sol distintiu del model a Ara: abans "AROME HD" sortia aquí, al botó i a la franja de 24 h (auditoria
               d'UX del 16/11/2026, B7). */}
           {modelLabel ? (regionalBadgeElsewhere ? null : (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 shadow-[inset_0_1px_4px_rgba(16,185,129,0.2)] text-[9px] font-mono font-black text-emerald-400 tracking-widest uppercase transition-all duration-300">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 shadow-[inset_0_1px_4px_rgba(16,185,129,0.2)] text-[10px] font-mono font-black text-emerald-400 tracking-widest uppercase transition-all duration-300">
               <Zap className="w-3 h-3 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" /> {modelLabel}
             </span>
           )) : (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/30 shadow-[inset_0_1px_4px_rgba(99,102,241,0.2)] text-[9px] font-mono font-black text-indigo-400 tracking-widest uppercase transition-all duration-300">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/30 shadow-[inset_0_1px_4px_rgba(99,102,241,0.2)] text-[10px] font-mono font-black text-indigo-400 tracking-widest uppercase transition-all duration-300">
               <ShieldCheck className="w-3 h-3 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]" /> {globalModelLabel}
             </span>
           )}
@@ -120,7 +120,7 @@ export const CurrentWeatherHeader = ({
 
         {/* Títol / Nom de la ubicació: el títol principal de la pàgina (h1). Abans ho era la temperatura i la ciutat era
             un h2 (auditoria d'UX del 16/11/2026, B12). */}
-        <h1 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[0.9] drop-shadow-xl break-words mt-1 transition-colors duration-700 ${safeLocation !== 'UBICACIÓ DESCONEGUDA' ? 'text-white' : 'text-slate-500'}`}>
+        <h1 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[0.9] drop-shadow-xl break-words mt-1 transition-colors duration-700 ${safeLocation !== 'UBICACIÓ DESCONEGUDA' ? 'text-white' : 'text-slate-400'}`}>
           {safeLocation}
         </h1>
 
@@ -139,7 +139,7 @@ export const CurrentWeatherHeader = ({
           <div className={`h-4 w-px transition-colors duration-500 ${safeDate !== '--/--/----' || isValidElevation ? 'bg-white/10' : 'bg-slate-800'}`}></div>
           
           <div className={`flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider transition-colors duration-500 ${isValidElevation ? 'text-slate-400' : 'text-slate-600'}`} title="Altitud">
-            <Mountain className={`w-4 h-4 transition-colors duration-500 ${isValidElevation ? 'text-slate-500' : 'text-slate-700'}`} />
+            <Mountain className={`w-4 h-4 transition-colors duration-500 ${isValidElevation ? 'text-slate-400' : 'text-slate-700'}`} />
             <span className="tabular-nums">{safeElevation}{isValidElevation ? 'm' : ''}</span>
           </div>
         </div>

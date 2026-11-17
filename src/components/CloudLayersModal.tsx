@@ -67,7 +67,7 @@ interface Severity { label: string; color: string; stroke: string; borderColor: 
 
 // Nivell i etiqueta compartits amb el giny del tauler (utils/cloudCoverLevel.ts): targeta i modal diuen el mateix.
 function getCloudSeverity(effectiveCover: number | null, t: Record<string, string>): Severity {
-  if (effectiveCover === null) return { label: t.unknown, color: 'text-slate-500', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
+  if (effectiveCover === null) return { label: t.unknown, color: 'text-slate-400', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
   const level = cloudCoverLevel(effectiveCover);
   // Colors per franges de cobertura (com el giny): 15-45 % blau cel; 45-85 % indi, parcialment i molt ennuvolat.
   if (level === 'clear') return { label: t.clear, color: 'text-emerald-400', stroke: '#34d399', borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' };
@@ -260,12 +260,12 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
           </div>
           <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
         </div>
 
         {!hasData ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
             <CloudOff className="w-10 h-10 text-slate-600" />
             {t.noData}
           </div>
@@ -275,13 +275,13 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
             {/* HEROI: cobertura efectiva ara, o a l'hora del cursor quan s'explora el gràfic */}
             <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="flex flex-col items-center sm:items-start gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   {t.coverNow} · <span className={isScrubbing ? 'text-slate-200' : ''}>{activeTimeLabel}</span>
                 </span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${displaySeverity.color}`}>
                   {displayEffective !== null ? Math.round(displayEffective) : '--'}
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">%</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">%</span>
               </div>
               <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${displaySeverity.borderColor}`}>
@@ -310,7 +310,7 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                     {' · '}<span className={displaySeverity.color}>{displayEffective !== null ? `${Math.round(displayEffective)}%` : '--'}</span>
                   </span>
                 ) : (
-                  <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
+                  <span className="text-[10px] text-slate-600 italic">{t.scrubHint}</span>
                 )}
               </div>
 
@@ -358,7 +358,7 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
                   {dayMarkers.map(m => (
-                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}
                     </span>
                   ))}
@@ -394,7 +394,7 @@ const LayerCard = memo(function LayerCard({ label, value, color }: LayerCardProp
       <span className="text-xl font-black tabular-nums leading-none text-white">
         {value !== null ? Math.round(value) : '--'}<span className="text-[10px] align-top text-slate-400 ml-0.5">%</span>
       </span>
-      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
     </div>
   );
 });
@@ -403,7 +403,7 @@ const LegendDot = memo(function LegendDot({ color, label }: { color: string; lab
   return (
     <div className="flex items-center gap-1.5">
       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></span>
-      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
     </div>
   );
 });

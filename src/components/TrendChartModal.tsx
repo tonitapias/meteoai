@@ -134,7 +134,7 @@ const PRECIP_BADGE_CLASS: Record<PrecipTone, string> = {
   heavy: 'bg-blue-500/25 border-blue-400/50'
 };
 const PRECIP_TEXT_CLASS: Record<PrecipTone, string> = {
-  dim: 'text-slate-500', soft: 'text-blue-300/80', normal: 'text-blue-300', heavy: 'text-blue-100'
+  dim: 'text-slate-400', soft: 'text-blue-300/80', normal: 'text-blue-300', heavy: 'text-blue-100'
 };
 const PRECIP_AMOUNT_CLASS: Record<DailyPrecipClass, string> = {
   trace: 'text-slate-400', light: 'text-cyan-300/90', moderate: 'text-cyan-200', heavy: 'text-white'
@@ -498,7 +498,7 @@ const TrendChartModal = memo(function TrendChartModal({
                 className={`absolute top-0 bottom-0 ${run.regional ? 'bg-cyan-500/[0.06]' : ''} ${run.start > 0 ? 'border-l border-dashed border-cyan-300/40' : ''}`}
                 style={{ left: `${(run.start / N) * 100}%`, width: `${(run.span / N) * 100}%` }}
               >
-                <span className={`block truncate px-1 text-center text-[9px] md:text-[10px] leading-4 font-black uppercase tracking-widest ${run.regional ? 'text-cyan-300' : 'text-slate-500'}`}>
+                <span className={`block truncate px-1 text-center text-[10px] leading-4 font-black uppercase tracking-widest ${run.regional ? 'text-cyan-300' : 'text-slate-400'}`}>
                   {run.regional ? (regionalModelLabel || 'HD') : mDict.globalModel}
                 </span>
               </div>
@@ -556,7 +556,7 @@ const TrendChartModal = memo(function TrendChartModal({
                     }}
                   >
                     {/* Màxima (Dalt) */}
-                    <span className={`absolute bottom-full mb-1.5 md:mb-2 text-[11px] md:text-sm font-black drop-shadow-md ${d.max !== null ? 'text-white' : 'text-slate-500'}`}>
+                    <span className={`absolute bottom-full mb-1.5 md:mb-2 text-[11px] md:text-sm font-black drop-shadow-md ${d.max !== null ? 'text-white' : 'text-slate-400'}`}>
                       {formatDegrees(d.max)}
                     </span>
 
@@ -570,7 +570,7 @@ const TrendChartModal = memo(function TrendChartModal({
                     ></div>
 
                     {/* Mínima (Baix) */}
-                    <span className={`absolute top-full mt-1.5 md:mt-2 text-[10px] md:text-sm font-bold drop-shadow-md ${d.min !== null ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <span className={`absolute top-full mt-1.5 md:mt-2 text-[10px] md:text-sm font-bold drop-shadow-md ${d.min !== null ? 'text-slate-400' : 'text-slate-400'}`}>
                       {formatDegrees(d.min)}
                     </span>
                   </div>
@@ -601,7 +601,7 @@ const TrendChartModal = memo(function TrendChartModal({
 
           {/* ORIGEN DE LES DADES: la nota es veu sempre (abans era un `title`, que en una pantalla tàctil no surt mai) */}
           {showSourceStrip && (
-            <p data-testid="source-note" className="shrink-0 -mt-1 text-center text-[10px] md:text-[11px] font-bold text-slate-500 leading-snug">
+            <p data-testid="source-note" className="shrink-0 -mt-1 text-center text-[10px] md:text-[11px] font-bold text-slate-400 leading-snug">
               {mDict.sourceNote}
             </p>
           )}
@@ -629,7 +629,7 @@ const TrendChartModal = memo(function TrendChartModal({
 
           {/* LLEGENDA */}
           {hasScale && (
-            <div className="shrink-0 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mt-3 md:mt-4 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-500">
+            <div className="shrink-0 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mt-3 md:mt-4 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-400">
               <span className="flex items-center gap-2">
                 <span aria-hidden="true" className="inline-block w-4 h-0.5 rounded-full" style={{ backgroundColor: MAX_LINE_COLOR, opacity: 0.7 }}></span>
                 {mDict.maxLine}

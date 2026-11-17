@@ -614,7 +614,7 @@ export default function DayDetailModal({
                     </div>
                     
                     <div className="divide-y divide-white/5">
-                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-[#0a0b10] shadow-inner sm:sticky sm:top-0 sm:z-20">
+                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-[#0a0b10] shadow-inner sm:sticky sm:top-0 sm:z-20">
                             <div className="col-span-2">{TACTICAL_I18N.colHour}</div>
                             <div className="col-span-2 text-center">{TACTICAL_I18N.colSky}</div>
                             <div className="col-span-3 text-center">{TACTICAL_I18N.colTemp}</div>
@@ -640,7 +640,7 @@ export default function DayDetailModal({
                                 <div className="col-span-2 flex flex-col items-start gap-0.5 text-xs md:text-sm font-mono font-bold text-slate-400 group-hover:text-cyan-300 transition-colors">
                                     {row.hour}
                                     {isNowRow && (
-                                        <span className="px-1 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[8px] font-black uppercase tracking-widest text-cyan-300">{labelNow}</span>
+                                        <span className="px-1 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[10px] font-black uppercase tracking-widest text-cyan-300">{labelNow}</span>
                                     )}
                                 </div>
                                 
@@ -667,7 +667,7 @@ export default function DayDetailModal({
                                                 </span>
                                             )}
                                             {row.precipSum !== null && row.precipSum > 0 && (
-                                                <span className="text-[9px] text-slate-400 font-mono font-bold bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-inner">
+                                                <span className="text-[10px] text-slate-400 font-mono font-bold bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-inner">
                                                     {formatPrecipitation(row.precipSum, row.snowfall, lang)}
                                                 </span>
                                             )}
@@ -681,7 +681,7 @@ export default function DayDetailModal({
                                     {hasWind ? (
                                         <>
                                             <span className="text-slate-400 group-hover:text-emerald-400">{Math.round(row.windSpeed!)}</span>
-                                            <span className="text-[8px] uppercase tracking-widest text-slate-600">km/h</span>
+                                            <span className="text-[10px] uppercase tracking-widest text-slate-600">km/h</span>
                                         </>
                                     ) : (
                                         <span className="text-slate-600 text-lg leading-none">--</span>

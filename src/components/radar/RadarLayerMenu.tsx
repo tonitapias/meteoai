@@ -426,7 +426,7 @@ export function RadarLayerMenu({
                             )}
                           </span>
                           {' '}
-                          <span className={`text-[11px] ${selected ? 'text-cyan-200/80' : 'text-slate-500'}`}>{hdRegions[agency]}</span>
+                          <span className={`text-[11px] ${selected ? 'text-cyan-200/80' : 'text-slate-400'}`}>{hdRegions[agency]}</span>
                         </button>
                       );
                     })}

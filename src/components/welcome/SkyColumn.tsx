@@ -252,7 +252,7 @@ export default function SkyColumn({ sky, labels, compact = false }: SkyColumnPro
     opacity: shown ? 1 : 0,
     transition: `opacity 700ms ease-out ${delay}ms`,
   });
-  const textSize = compact ? 'text-[9.5px]' : 'text-[11px]';
+  const textSize = compact ? 'text-[10px]' : 'text-[11px]';
   const bandSize = compact ? 'text-[10px]' : 'text-[12px]';
 
   return (

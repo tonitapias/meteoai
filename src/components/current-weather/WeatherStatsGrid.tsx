@@ -114,7 +114,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
             {isValidWind
               ? <Wind className={`${ICON} text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]`} aria-hidden="true" />
               : <CloudOff className={`${ICON} text-slate-400`} aria-hidden="true" />}
-            <span className={`flex items-center gap-0.5 text-[10px] font-black tracking-wider ${isValidDir ? 'text-slate-200' : 'text-slate-500'}`}>
+            <span className={`flex items-center gap-0.5 text-[10px] font-black tracking-wider ${isValidDir ? 'text-slate-200' : 'text-slate-400'}`}>
               {isValidDir && windDirection !== null && windDirection !== undefined && (
                 <Navigation className="w-3 h-3 text-emerald-400" style={{ transform: `rotate(${windDirection}deg)` }} aria-hidden="true" />
               )}
@@ -124,11 +124,11 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           <span className={`${LABEL} ${isValidWind ? 'text-slate-200' : 'text-slate-400'}`}>{t.wind}</span>
           <div className="mt-auto pt-1.5 z-10 relative">
             <div className="flex items-baseline gap-1">
-              <span className={`${VALUE} ${isValidWind ? 'text-white' : 'text-slate-500'}`}>{safeVal(windSpeed)}</span>
-              <span className={`text-[10px] font-bold uppercase ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>km/h</span>
+              <span className={`${VALUE} ${isValidWind ? 'text-white' : 'text-slate-400'}`}>{safeVal(windSpeed)}</span>
+              <span className={`text-[10px] font-bold uppercase ${isValidWind ? 'text-slate-400' : 'text-slate-400'}`}>km/h</span>
             </div>
             <div className={`${SUB} text-slate-400`}>
-              {t.gusts} <span className={`font-black tabular-nums ${isValidGusts ? 'text-indigo-300' : 'text-slate-500'}`}>{safeVal(windGusts)}</span>
+              {t.gusts} <span className={`font-black tabular-nums ${isValidGusts ? 'text-indigo-300' : 'text-slate-400'}`}>{safeVal(windGusts)}</span>
             </div>
           </div>
         </div>
@@ -144,8 +144,8 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           <span className={`${LABEL} ${isValidHum ? 'text-slate-200' : 'text-slate-400'}`}>{t.humidity}</span>
           <div className="mt-auto pt-1.5 z-10 relative">
             <div className="flex items-baseline gap-0.5">
-              <span className={`${VALUE} ${isValidHum ? 'text-white' : 'text-slate-500'}`}>{safeVal(humidity)}</span>
-              <span className={`text-xs font-bold ${isValidHum ? 'text-slate-400' : 'text-slate-500'}`}>%</span>
+              <span className={`${VALUE} ${isValidHum ? 'text-white' : 'text-slate-400'}`}>{safeVal(humidity)}</span>
+              <span className={`text-xs font-bold ${isValidHum ? 'text-slate-400' : 'text-slate-400'}`}>%</span>
             </div>
             <div className={SUB} aria-hidden="true"></div>
           </div>
@@ -162,8 +162,8 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           <span className={`${LABEL} ${isValidTemp ? 'text-slate-200' : 'text-slate-400'}`}>{t.feelsLike}</span>
           <div className="mt-auto pt-1.5 z-10 relative">
             <div className="flex items-baseline gap-0.5">
-              <span className={`${VALUE} ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>{safeVal(apparentTemp)}</span>
-              <span className={`text-xs font-bold ${isValidTemp ? 'text-slate-400' : 'text-slate-500'}`}>°</span>
+              <span className={`${VALUE} ${isValidTemp ? 'text-white' : 'text-slate-400'}`}>{safeVal(apparentTemp)}</span>
+              <span className={`text-xs font-bold ${isValidTemp ? 'text-slate-400' : 'text-slate-400'}`}>°</span>
             </div>
             <div className={SUB} aria-hidden="true"></div>
           </div>
@@ -192,16 +192,16 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
           </div>
           
           <div className="flex items-baseline gap-1.5">
-            <span className={`text-3xl sm:text-4xl md:text-5xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidWind ? 'text-white' : 'text-slate-500'}`}>
+            <span className={`text-3xl sm:text-4xl md:text-5xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidWind ? 'text-white' : 'text-slate-400'}`}>
               {safeVal(windSpeed)}
             </span>
-            <span className={`text-[11px] sm:text-xs font-bold uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>km/h</span>
+            <span className={`text-[11px] sm:text-xs font-bold uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-400'}`}>km/h</span>
           </div>
           
-          <div className={`text-[11px] sm:text-xs font-mono font-medium mt-1 sm:mt-1.5 uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-500'}`}>
-            {t.gusts}: <span className={`font-black tabular-nums drop-shadow-md ${isValidGusts ? 'text-indigo-300' : 'text-slate-500'}`}>
+          <div className={`text-[11px] sm:text-xs font-mono font-medium mt-1 sm:mt-1.5 uppercase transition-colors duration-500 ${isValidWind ? 'text-slate-400' : 'text-slate-400'}`}>
+            {t.gusts}: <span className={`font-black tabular-nums drop-shadow-md ${isValidGusts ? 'text-indigo-300' : 'text-slate-400'}`}>
               {safeVal(windGusts)}
-            </span> <span className={isValidGusts ? 'text-slate-500' : 'text-slate-600'}>km/h</span>
+            </span> <span className={isValidGusts ? 'text-slate-400' : 'text-slate-600'}>km/h</span>
           </div>
         </div>
 
@@ -209,8 +209,8 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
         <div className="flex flex-col items-center gap-2 sm:gap-2.5 z-10 relative">
           <div className={`relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border shadow-inner transition-colors duration-500 ${isValidDir ? 'bg-[#06080D]/80 border-white/10' : 'bg-[#1a1d27]/50 border-slate-700/60'}`}>
             {/* Marques de la brúixola decoratives amb alt contrast */}
-            <div className={`absolute top-1 md:top-1.5 text-[8px] md:text-[9px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-400' : 'text-slate-600'}`}>N</div>
-            <div className={`absolute bottom-1 md:bottom-1.5 text-[8px] md:text-[9px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-400' : 'text-slate-600'}`}>S</div>
+            <div className={`absolute top-1 md:top-1.5 text-[10px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-400' : 'text-slate-600'}`}>N</div>
+            <div className={`absolute bottom-1 md:bottom-1.5 text-[10px] font-black transition-colors duration-500 ${isValidDir ? 'text-slate-400' : 'text-slate-600'}`}>S</div>
             
             {isValidDir && windDirection !== null && windDirection !== undefined ? (
               <Navigation 
@@ -218,7 +218,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
                 style={{ transform: `rotate(${windDirection}deg)` }}
               />
             ) : (
-              <span className="text-slate-500 font-mono text-sm sm:text-base font-bold z-10 relative">--</span>
+              <span className="text-slate-400 font-mono text-sm sm:text-base font-bold z-10 relative">--</span>
             )}
           </div>
           <span className={`text-[11px] sm:text-xs font-black tracking-widest px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md border transition-colors duration-500 drop-shadow-sm ${isValidDir ? 'text-white bg-white/10 border-white/10' : 'text-slate-400 bg-[#1a1d27]/50 border-slate-700/60'}`}>
@@ -244,10 +244,10 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
             </span>
           </div>
           <div className="flex items-baseline gap-1 mt-auto z-10 relative">
-            <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidHum ? 'text-white' : 'text-slate-500'}`}>
+            <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidHum ? 'text-white' : 'text-slate-400'}`}>
               {safeVal(humidity)}
             </span>
-            <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidHum ? 'text-slate-400' : 'text-slate-500'}`}>%</span>
+            <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidHum ? 'text-slate-400' : 'text-slate-400'}`}>%</span>
           </div>
         </div>
 
@@ -265,10 +265,10 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
             </span>
           </div>
           <div className="flex items-baseline gap-1 mt-auto z-10 relative">
-            <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>
+            <span className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold tabular-nums tracking-tight transition-colors duration-500 drop-shadow-lg ${isValidTemp ? 'text-white' : 'text-slate-400'}`}>
               {safeVal(apparentTemp)}
             </span>
-            <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidTemp ? 'text-slate-400' : 'text-slate-500'}`}>°</span>
+            <span className={`text-xs sm:text-sm font-bold transition-colors duration-500 ${isValidTemp ? 'text-slate-400' : 'text-slate-400'}`}>°</span>
           </div>
         </div>
 

@@ -200,13 +200,13 @@ const TacticalSvgChart = ({
         <div className="flex items-center justify-between flex-wrap gap-2 mb-4 shrink-0 relative z-10">
            <div className="flex items-baseline gap-2">
                <span className="text-sm md:text-base font-black text-white uppercase tracking-widest">{title}</span>
-               <span className="text-[10px] md:text-xs text-slate-500 font-bold">({unit})</span>
+               <span className="text-[10px] md:text-xs text-slate-400 font-bold">({unit})</span>
            </div>
-           <div className="flex flex-wrap gap-2 md:gap-3 text-[9px] md:text-[10px] font-black tracking-widest uppercase bg-black/60 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
+           <div className="flex flex-wrap gap-2 md:gap-3 text-[10px] font-black tracking-widest uppercase bg-black/60 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
               {series.map((s, idx) => (
                  <span key={s.id} className="flex items-center gap-1.5">
                      <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ backgroundColor: s.colorHex, color: s.colorHex }}></div>
-                     <span className={idx === 0 ? 'text-slate-100 drop-shadow-md' : 'text-slate-500'}>{s.label}</span>
+                     <span className={idx === 0 ? 'text-slate-100 drop-shadow-md' : 'text-slate-400'}>{s.label}</span>
                  </span>
               ))}
            </div>
@@ -423,7 +423,7 @@ export const ConsensusChartsModal: React.FC<ConsensusChartsModalProps> = ({
             </div>
             <div>
               <h3 id="consensus-charts-modal-title" className="text-white font-black uppercase tracking-[0.2em] text-[11px] sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
-              <p className="text-[9px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5 md:mt-1">{t.subtitle}</p>
+              <p className="text-[10px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5 md:mt-1">{t.subtitle}</p>
             </div>
           </div>
           <button onClick={closeModal} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 border border-white/10 flex items-center justify-center md:hover:bg-white/10 active:scale-95 transition-all duration-300 text-white relative z-10"><X className="w-5 h-5" /></button>

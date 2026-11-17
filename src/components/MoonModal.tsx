@@ -354,7 +354,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                       </p>
                     )}
                     {folkName && (
-                      <p className="mt-2 text-[12px] text-amber-200/90">{folkName} <span className="text-slate-500">({t.folkName})</span></p>
+                      <p className="mt-2 text-[12px] text-amber-200/90">{folkName} <span className="text-slate-400">({t.folkName})</span></p>
                     )}
                   </div>
                 </div>
@@ -366,7 +366,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   {([['rise', riseSet?.rise, riseAz, 'text-cyan-200'], ['set', riseSet?.set, setAz, 'text-amber-200']] as const).map(([k, ev, az, cls]) => (
                     <div key={k} className={k === 'set' ? 'text-right' : ''}>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{k === 'rise' ? t.rise : t.set}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{k === 'rise' ? t.rise : t.set}</p>
                       <p className={`mt-1 font-mono tabular-nums text-[28px] md:text-[30px] font-semibold leading-none ${ev?.formatted ? cls : 'text-slate-600'}`}>
                         {ev?.formatted ?? '--:--'}
                         {ev?.isNextDay && <sup className="ml-0.5 text-[11px] text-slate-400" title={t.nextDayShort}>+1d</sup>}
@@ -393,7 +393,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                 <div className="relative mt-3 h-1.5 rounded-full bg-gradient-to-r from-cyan-500/40 via-slate-600/40 to-violet-500/40" aria-hidden="true">
                   <span className="absolute top-1/2 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white ring-2 ring-[#0c0f17]" style={{ left: `${gaugePercent}%` }} />
                 </div>
-                <div className="mt-1.5 flex justify-between text-[11px] text-slate-500"><span>{t.perigee}</span><span>{t.apogee}</span></div>
+                <div className="mt-1.5 flex justify-between text-[11px] text-slate-400"><span>{t.perigee}</span><span>{t.apogee}</span></div>
               </section>
 
               {/* Pròxima plena i nova (des d'ara) */}
@@ -444,7 +444,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                           <span className="text-right font-mono tabular-nums text-[12px] text-slate-300">{r.illum}%</span>
                           <span className="text-right font-mono tabular-nums text-[12px] text-cyan-200">{r.rise ?? '--:--'}</span>
                           <span className="text-right font-mono tabular-nums text-[12px] text-amber-200">
-                            {r.set ?? '--:--'}{r.setNext && <sup className="text-[9px] text-slate-400">+1d</sup>}
+                            {r.set ?? '--:--'}{r.setNext && <sup className="text-[10px] text-slate-400">+1d</sup>}
                           </span>
                         </button>
                       </li>

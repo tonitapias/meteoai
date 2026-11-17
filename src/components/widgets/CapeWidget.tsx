@@ -24,7 +24,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
     
     // Estats inicials per defecte (Pèrdua de telemetria / Risc Desconegut)
     let severity = String(t.capeUnknown || 'DESCONEGUT');
-    let color = 'text-slate-500';
+    let color = 'text-slate-400';
     let barColor = 'bg-slate-700/50';
     let borderColor = 'border-slate-500/20';
     let bgGlow = 'from-slate-950/20 to-black/80';
@@ -91,7 +91,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                   {hasValidData ? (
                       <Zap className={`w-4 h-4 ${color} drop-shadow-[0_0_8px_currentColor] transition-colors duration-500`} /> 
                   ) : (
-                      <CloudOff className="w-4 h-4 text-slate-500" />
+                      <CloudOff className="w-4 h-4 text-slate-400" />
                   )}
                   <span className="tracking-wider text-slate-200">
                     {String(t.capeNowTitle || "CAPE ACTUAL")}
@@ -104,7 +104,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                       {hasValidData && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>}
                       <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${hasValidData ? 'bg-cyan-500' : 'bg-slate-500'}`}></span>
                   </span>
-                  <Activity className={`w-3 h-3 ${hasValidData ? 'text-cyan-400' : 'text-slate-500'}`} />
+                  <Activity className={`w-3 h-3 ${hasValidData ? 'text-cyan-400' : 'text-slate-400'}`} />
               </div>
           </div>
 
@@ -134,7 +134,7 @@ export const CapeWidget = ({ capeData = [], currentHourIndex = 0, lang }: CapeWi
                   
                   <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border bg-black/55 w-fit transition-colors duration-500 ${hasValidData && safeCape >= CAPE.MIN_STORM ? borderColor : 'border-white/5'}`}>
                       {hasValidData && safeCape >= CAPE.MIN_STORM && <AlertTriangle className={`w-3.5 h-3.5 ${color}`} />}
-                      {!hasValidData && <CloudOff className="w-3.5 h-3.5 text-slate-500" />}
+                      {!hasValidData && <CloudOff className="w-3.5 h-3.5 text-slate-400" />}
                       <span className={`text-[10px] font-black uppercase tracking-wider ${color}`}>
                           {severity}
                       </span>

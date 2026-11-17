@@ -32,7 +32,7 @@ const LEVEL_TEXT: Record<CloudCoverLevel | 'unknown', string> = {
   partial: 'text-indigo-400',
   veryCloudy: 'text-indigo-400',
   overcast: 'text-slate-300',
-  unknown: 'text-slate-500',
+  unknown: 'text-slate-400',
 };
 
 // Xifra al costat del perfil només quan la targeta fa >= 340 px; més estreta, apilats (si no, "MITJANS" no hi cabia).
@@ -71,7 +71,7 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
       <div className={`relative z-10 flex-1 flex min-h-0 ${BODY_LAYOUT}`}>
         {/* Cobertura efectiva ara: el mateix número i nivell que el modal */}
         <div className={`shrink-0 flex flex-col justify-center ${HERO_BOX}`}>
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-snug">{cl.effective || 'Cobertura efectiva'}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-snug">{cl.effective || 'Cobertura efectiva'}</span>
           <div className={`flex min-w-0 ${HERO_VALUE}`}>
             <span className={`flex items-start leading-none shrink-0 ${LEVEL_TEXT[level]}`}>
               <span className="text-4xl font-black tracking-tighter tabular-nums">{effective === null ? '--' : Math.round(effective)}</span>
@@ -91,11 +91,11 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
                 <div className="flex items-center gap-1.5 min-w-0">
                   {isValid
                     ? <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
-                    : <CloudOff className="w-3 h-3 text-slate-500 shrink-0" />}
-                  <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isValid ? 'text-slate-200' : 'text-slate-500'}`}>{labels[key]}</span>
-                  <span className={`ml-auto pl-1 flex items-start leading-none shrink-0 ${isValid ? 'text-white' : 'text-slate-500'}`}>
+                    : <CloudOff className="w-3 h-3 text-slate-400 shrink-0" />}
+                  <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isValid ? 'text-slate-200' : 'text-slate-400'}`}>{labels[key]}</span>
+                  <span className={`ml-auto pl-1 flex items-start leading-none shrink-0 ${isValid ? 'text-white' : 'text-slate-400'}`}>
                     <span className="text-[15px] font-black tabular-nums">{isValid ? Math.round(value) : '--'}</span>
-                    {isValid && <span className="text-[9px] font-bold text-slate-400 ml-0.5">%</span>}
+                    {isValid && <span className="text-[10px] font-bold text-slate-400 ml-0.5">%</span>}
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
@@ -108,7 +108,7 @@ export const CloudLayersWidget = ({ low, mid, high, lang }: WidgetProps) => {
                   )}
                 </div>
                 {base && (
-                  <span className="absolute right-2.5 bottom-0 translate-y-1/2 z-10 px-1.5 rounded-full border border-white/10 bg-[#0c0f1c] text-[8px] leading-[14px] font-bold tabular-nums text-slate-400">
+                  <span className="absolute right-2.5 bottom-0 translate-y-1/2 z-10 px-1.5 rounded-full border border-white/10 bg-[#0c0f1c] text-[10px] leading-[14px] font-bold tabular-nums text-slate-400">
                     {base}
                   </span>
                 )}

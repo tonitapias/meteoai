@@ -60,10 +60,10 @@ export const DayPartsStrip = ({ parts, title, labels, nowLabel, nowHour, lang = 
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{labels[part.key]}</span>
                   {isCurrent && (
-                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[8px] font-black uppercase tracking-widest text-cyan-300">{nowLabel}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[10px] font-black uppercase tracking-widest text-cyan-300">{nowLabel}</span>
                   )}
                 </div>
-                <span className="text-[9px] font-mono font-bold text-slate-600 tabular-nums">
+                <span className="text-[10px] font-mono font-bold text-slate-600 tabular-nums">
                   {String(part.from).padStart(2, '0')}–{String(part.to).padStart(2, '0')}h
                 </span>
 

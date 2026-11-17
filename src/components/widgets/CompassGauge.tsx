@@ -79,7 +79,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
       <div className="flex justify-between items-start w-full z-10 p-2">
           <div className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} flex items-center gap-2`}>
               <div className={`p-1.5 rounded-lg border shadow-sm transition-colors duration-500 ${isValidSpeed ? 'bg-cyan-500/10 border-cyan-500/20 shadow-[0_0_12px_rgba(34,211,238,0.2)]' : 'bg-slate-800/50 border-slate-700/50'}`}>
-                 {isValidSpeed ? <Wind className="w-4 h-4 text-cyan-400" /> : <CloudOff className="w-4 h-4 text-slate-500" />}
+                 {isValidSpeed ? <Wind className="w-4 h-4 text-cyan-400" /> : <CloudOff className="w-4 h-4 text-slate-400" />}
               </div>
               <span className="tracking-widest font-bold text-slate-200">{String(t.wind || "VENT")}</span>
           </div>
@@ -178,7 +178,7 @@ export const CompassGauge = ({ degrees, speed, gusts, lang }: WidgetProps) => {
              <div className="absolute flex flex-col items-center justify-center z-30 w-40 h-40 rounded-full mt-2">
                 
                 {/* Etiqueta Tàctica (Beaufort o Error) */}
-                <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 px-2 py-0.5 rounded-full border transition-colors duration-500 ${isValidSpeed ? 'text-slate-400 bg-white/5 border-white/5' : 'text-slate-500 bg-black/40 border-slate-700/50'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 px-2 py-0.5 rounded-full border transition-colors duration-500 ${isValidSpeed ? 'text-slate-400 bg-white/5 border-white/5' : 'text-slate-400 bg-black/40 border-slate-700/50'}`}>
                     {tacticalLabel}
                 </span>
 
