@@ -105,3 +105,16 @@ describe('CurrentWeatherHeader: títol principal', () => {
         expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Barcelona');
     });
 });
+
+// Auditoria d'UX del 16/11/2026 (B7): "AROME HD" sortia a la capçalera, al botó del model i a la franja de 24 h.
+describe('CurrentWeatherHeader: un sol distintiu del model', () => {
+    it('si la targeta ja té el botó del model regional, la capçalera no el repeteix', () => {
+        render(<CurrentWeatherHeader locationName="Barcelona" modelLabel="AROME HD" regionalBadgeElsewhere />);
+        expect(screen.queryByText('AROME HD')).toBeNull();
+    });
+
+    it('sense el botó, el distintiu hi és', () => {
+        render(<CurrentWeatherHeader locationName="Barcelona" modelLabel="AROME HD" />);
+        expect(screen.getByText('AROME HD')).toBeInTheDocument();
+    });
+});

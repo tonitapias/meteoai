@@ -201,6 +201,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
             shareLabel={uiText.share.button}
             globalModelLabel={uiText.globalModelBadge}
             globalModelHint={uiText.globalModelHint}
+            regionalBadgeElsewhere={Boolean(props.activeRegionalModel?.label)}
           />
 
           <div className="mt-4 md:mt-0">
