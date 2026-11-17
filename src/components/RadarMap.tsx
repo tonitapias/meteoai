@@ -285,11 +285,11 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               aria-label={t('openBrowser')}
               className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
-              <span className="text-[9px] font-mono uppercase tracking-wider leading-none">{t('radarData')}</span>
-              <span className="text-[8px] font-mono opacity-70 leading-none">{t('radarFail')}</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider leading-none">{t('radarData')}</span>
+              <span className="text-[10px] font-mono opacity-70 leading-none">{t('radarFail')}</span>
             </a>
             {/* Atribució obligatòria de Mapbox i OpenStreetMap (mapes Fosc/Clar, relleu 3D i etiquetes). */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[10px] font-mono leading-none text-slate-400 pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200">
               <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">© Mapbox</a>
               <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">© OpenStreetMap</a>
             </div>
@@ -298,7 +298,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               href="https://www.eumetsat.int/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[10px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
               {EUMETSAT_ATTRIBUTION}
             </a>
@@ -309,7 +309,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               href="https://nasa-gibs.github.io/gibs-api-docs/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[10px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
               NASA GIBS · NOAA/NESDIS · GOES (CIRA) · Himawari (JMA)
             </a>
@@ -319,7 +319,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               href="https://view.eumetsat.int/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[10px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
               Airmass RGB: EUMETSAT · GOES (NOAA) · Himawari (JMA)
             </a>
@@ -328,7 +328,7 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
               href="https://nowcoast.noaa.gov/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[8px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
+              className="px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md border border-white/10 text-[10px] font-mono leading-none text-slate-400 hover:text-cyan-300 hover:border-white/20 transition-colors pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-200"
             >
               NOAA nowCOAST · NLDN/GLD360
             </a>

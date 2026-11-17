@@ -42,9 +42,9 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
             {hasValidData ? (
                 <Clock className="w-3.5 h-3.5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)] transition-colors duration-500" />
             ) : (
-                <CloudOff className="w-3.5 h-3.5 text-slate-500" />
+                <CloudOff className="w-3.5 h-3.5 text-slate-400" />
             )}
-            <span className={`text-[10px] font-black uppercase tracking-[0.25em] transition-colors duration-500 ${hasValidData ? 'text-slate-300' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-[0.25em] transition-colors duration-500 ${hasValidData ? 'text-slate-300' : 'text-slate-400'}`}>
                 {widgetTitle}
             </span>
          </div>
@@ -57,7 +57,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
       {!hasValidData ? (
           <div className="flex-1 flex flex-col items-center justify-center min-h-[180px] z-10">
               <CloudOff className="w-8 h-8 text-slate-600 mb-2 opacity-50" />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   {stripText.noData}
               </span>
           </div>
@@ -101,7 +101,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
                     </div>
                     
                     <div className="flex flex-col items-center w-full gap-1.5">
-                        <span className={`text-lg font-black tabular-nums tracking-tight ${displayTemp === '--' ? 'text-slate-500' : 'text-white'}`}>
+                        <span className={`text-lg font-black tabular-nums tracking-tight ${displayTemp === '--' ? 'text-slate-400' : 'text-white'}`}>
                             {displayTemp}°
                         </span>
                         
@@ -119,7 +119,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
                             </div>
                         </div>
                         
-                        <span className="text-[9px] font-black text-cyan-400 tabular-nums h-2 leading-none opacity-90 drop-shadow-sm">
+                        <span className="text-[10px] font-black text-cyan-400 tabular-nums h-2 leading-none opacity-90 drop-shadow-sm">
                             {hour.precipText || ''}
                         </span>
                     </div>

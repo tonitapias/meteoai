@@ -28,7 +28,7 @@ export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: Visi
   // Lògica d'estat visual
   let status = t.nodata;
   let blurClass = "opacity-20"; 
-  let colorClass = "text-slate-500";
+  let colorClass = "text-slate-400";
   let progress = 0;
   let bgGlow = "from-slate-900/50 to-black/80";
   let borderColor = "border-slate-700/50";
@@ -78,7 +78,7 @@ export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: Visi
         {hasValidData ? (
             <Eye className="w-4 h-4 text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] transition-colors duration-500" />
         ) : (
-            <CloudOff className="w-4 h-4 text-slate-500" />
+            <CloudOff className="w-4 h-4 text-slate-400" />
         )}
         <span className="tracking-wider text-slate-200">
           {t.title}
@@ -94,7 +94,7 @@ export const VisibilityWidget = ({ visibility, bound = null, lang = 'ca' }: Visi
           <span className={`text-xs font-black uppercase tracking-widest transition-colors duration-500 ${hasValidData ? 'text-slate-400' : 'text-slate-600'}`}>km</span>
         </div>
         
-        <div className={`mt-2 flex items-center justify-center px-3 py-1 rounded-md border shadow-inner transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a] border-white/10 ' + colorClass : 'bg-slate-800/50 border-slate-700/50 text-slate-500'}`}>
+        <div className={`mt-2 flex items-center justify-center px-3 py-1 rounded-md border shadow-inner transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a] border-white/10 ' + colorClass : 'bg-slate-800/50 border-slate-700/50 text-slate-400'}`}>
             <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest opacity-90">
                 {status}
             </span>

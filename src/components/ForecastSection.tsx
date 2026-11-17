@@ -242,7 +242,7 @@ const ForecastSection = memo(function ForecastSection({
                     {day.precipProb !== null && day.precipProb > 0 && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <Umbrella className="w-2.5 h-2.5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.5)]" />
-                        <span className="text-[9px] md:text-[10px] font-black text-cyan-400 tabular-nums">{day.precipProb}%</span>
+                        <span className="text-[10px] font-black text-cyan-400 tabular-nums">{day.precipProb}%</span>
                       </div>
                     )}
                   </div>
@@ -272,23 +272,23 @@ const ForecastSection = memo(function ForecastSection({
                   <span className="text-[15px] font-black text-slate-200 group-hover:text-white tabular-nums leading-none mb-1 transition-colors duration-300">
                     {day.maxTempLabel}
                   </span>
-                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-cyan-400 tabular-nums leading-none transition-colors duration-300">
+                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-cyan-400 tabular-nums leading-none transition-colors duration-300">
                     {day.minTempLabel}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 md:gap-3 w-[80px] md:w-[130px]">
                   {day.precipSum !== null && day.precipSum > 0 ? (
-                    <span className="text-[9px] md:text-[10px] text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                    <span className="text-[10px] text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
                       {formatPrecipitation(day.precipSum, day.snowSum, lang)}
                     </span>
                   ) : (
-                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
+                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
                       {day.precipSum === 0 ? NO_PRECIP_LABEL : NO_DATA_LABEL}
                     </span>
                   )}
                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#050608] flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500 border border-white/10 group-hover:border-indigo-400 shrink-0 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_10px_rgba(99,102,241,0.8)]">
-                    <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-white transition-colors" />
+                    <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-white transition-colors" />
                   </div>
                 </div>
               </button>

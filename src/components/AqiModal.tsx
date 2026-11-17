@@ -79,7 +79,7 @@ interface Severity { label: string; color: string; stroke: string; borderColor: 
 // Bandes oficials EAQI (Agència Europea de Medi Ambient) i USAQI (EPA) — mateixos llindars
 // que ja pinta AqiWidget.tsx::getAqiState, reutilitzats tal qual per coherència visual.
 function getAqiSeverity(value: number | null, type: 'EAQI' | 'USAQI' | null, t: Record<string, string>): Severity {
-  if (value === null || type === null) return { label: t.unknown, color: 'text-slate-500', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
+  if (value === null || type === null) return { label: t.unknown, color: 'text-slate-400', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
   if (type === 'EAQI') {
     if (value > 150) return { label: t.extreme, color: 'text-purple-500', stroke: '#a855f7', borderColor: 'border-purple-500/30', bgGlow: 'from-purple-950/40 to-black/90' };
     if (value > 100) return { label: t.veryPoor, color: 'text-fuchsia-500', stroke: '#d946ef', borderColor: 'border-fuchsia-500/30', bgGlow: 'from-fuchsia-950/30 to-black/90' };
@@ -280,12 +280,12 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
           </div>
           <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
         </div>
 
         {!hasData ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
             <CloudOff className="w-10 h-10 text-slate-600" />
             {t.noData}
           </div>
@@ -295,7 +295,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
             {/* HEROI: índex actual */}
             <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="flex flex-col items-center sm:items-start gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.aqiNow} {currentType ? `(${currentType})` : ''}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.aqiNow} {currentType ? `(${currentType})` : ''}</span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${severity.color}`}>
                   {currentValue !== null ? Math.round(currentValue) : '--'}
                 </span>
@@ -326,7 +326,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                     {' · EAQI '}<span className={getAqiSeverity(isScrubbing ? activeEntry.eaqi : currentValue, (isScrubbing ? activeEntry.eaqi : currentValue) !== null ? 'EAQI' : null, t).color}>{(isScrubbing ? activeEntry.eaqi : currentValue) !== null ? Math.round((isScrubbing ? activeEntry.eaqi : currentValue) as number) : '--'}</span>
                   </span>
                 ) : (
-                  <span className="text-[9px] text-slate-600 italic">{hasHourlyEaqi ? t.scrubHint : t.noHourly}</span>
+                  <span className="text-[10px] text-slate-600 italic">{hasHourlyEaqi ? t.scrubHint : t.noHourly}</span>
                 )}
               </div>
 
@@ -372,7 +372,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                   {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                   <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
                     {dayMarkers.map(m => (
-                      <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                      <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                         {m.label}
                       </span>
                     ))}
@@ -396,9 +396,9 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {pollutants.map(p => (
                     <div key={p.key} className="rounded-xl border border-white/5 astro-card-fill p-3 flex flex-col gap-1">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{p.key}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{p.key}</span>
                       <span className="text-lg font-black tabular-nums leading-none text-white">{typeof p.value === 'number' ? formatDecimal(p.value, safeLang) : '--'}</span>
-                      <span className="text-[9px] font-bold text-slate-500 tracking-wide">µg/m³</span>
+                      <span className="text-[10px] font-bold text-slate-400 tracking-wide">µg/m³</span>
                     </div>
                   ))}
                 </div>

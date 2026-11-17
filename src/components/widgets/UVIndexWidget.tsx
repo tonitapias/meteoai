@@ -55,7 +55,7 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
       {/* Capçalera */}
       <div className="flex items-center justify-between mb-2 relative z-10">
         <div className="flex items-center gap-2">
-          <Sun className={`w-4 h-4 transition-colors duration-500 ${isDataMissing ? 'text-slate-500' : category.color} ${!isDataMissing && requiresShield ? 'animate-pulse ' + category.glow : ''}`} />
+          <Sun className={`w-4 h-4 transition-colors duration-500 ${isDataMissing ? 'text-slate-400' : category.color} ${!isDataMissing && requiresShield ? 'animate-pulse ' + category.glow : ''}`} />
           <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
             {lang === 'ca' ? "Índex UV" : lang === 'es' ? "Índice UV" : lang === 'en' ? "UV Index" : "Indice UV"}
           </span>
@@ -125,7 +125,7 @@ export const UVIndexWidget: React.FC<UVIndexWidgetProps> = ({ uvIndex, lang = 'c
                 ) : (
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                 )}
-                <span className={`text-[8.5px] sm:text-[9.5px] font-bold uppercase tracking-wider ${requiresShield ? category.color : 'text-emerald-500'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${requiresShield ? category.color : 'text-emerald-500'}`}>
                   {actionLabel}
                 </span>
               </div>

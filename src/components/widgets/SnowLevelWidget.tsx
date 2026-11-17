@@ -130,7 +130,7 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
                     {hasValidData ? (
                         <Mountain className="w-4 h-4 text-sky-300" />
                     ) : (
-                        <CloudOff className="w-4 h-4 text-slate-500" />
+                        <CloudOff className="w-4 h-4 text-slate-400" />
                     )}
                     <span className="tracking-wider text-slate-200">{tTitle}</span>
                 </div>
@@ -146,11 +146,11 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
                 {/* Xifra d'ara + mínima de les pròximes 48 h */}
                 <div className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center gap-3 sm:gap-4 sm:w-48 lg:w-56 shrink-0 px-1">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.now}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.now}</span>
                         <span className={`text-4xl sm:text-5xl font-black tracking-tighter tabular-nums leading-none ${hasValidData ? 'text-white' : 'text-slate-600'}`}>
                             {displayLevel}
                         </span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest mt-1.5 ${hasValidData ? 'text-sky-200' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] font-black uppercase tracking-widest mt-1.5 ${hasValidData ? 'text-sky-200' : 'text-slate-400'}`}>
                             {hasValidData ? unitLabel : t.noData}
                         </span>
                     </div>
@@ -158,7 +158,7 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
                         <div className="flex items-start gap-2 sm:pt-3 sm:border-t sm:border-white/5 sm:w-full">
                             <Snowflake className="w-3.5 h-3.5 text-rose-300 mt-0.5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.min48}</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.min48}</span>
                                 <span className="text-xs font-bold text-slate-100 tabular-nums">{minText}</span>
                             </div>
                         </div>
@@ -214,12 +214,12 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
                             <>
                                 {/* Etiquetes en HTML: el SVG s'estira (preserveAspectRatio none) i deformaria el text i els punts */}
                                 {chart.ticks.map(tk => (
-                                    <span key={tk.label} className="absolute left-4 -translate-y-1/2 px-0.5 rounded-sm bg-black/40 text-[9px] leading-none font-mono text-slate-500 tabular-nums" style={{ top: `${tk.y}%` }}>
+                                    <span key={tk.label} className="absolute left-4 -translate-y-1/2 px-0.5 rounded-sm bg-black/40 text-[10px] leading-none font-mono text-slate-400 tabular-nums" style={{ top: `${tk.y}%` }}>
                                         {tk.label}
                                     </span>
                                 ))}
                                 {chart.hereY !== null && hereM !== null && (
-                                    <span className={`absolute right-1.5 ${chart.hereY < 20 ? 'translate-y-0.5' : '-translate-y-full'} px-1 rounded-sm bg-black/50 text-[9px] font-mono font-bold text-amber-300/80 tabular-nums`} style={{ top: `${chart.hereY}%` }}>
+                                    <span className={`absolute right-1.5 ${chart.hereY < 20 ? 'translate-y-0.5' : '-translate-y-full'} px-1 rounded-sm bg-black/50 text-[10px] font-mono font-bold text-amber-300/80 tabular-nums`} style={{ top: `${chart.hereY}%` }}>
                                         {t.here} · {toDisplay(hereM)} {unitShort}
                                     </span>
                                 )}
@@ -238,7 +238,7 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
 
                     {/* Eix de temps en una franja pròpia perquè les dates no trepitgin la línia */}
                     {chart && (
-                        <div className="relative h-5 shrink-0 border-t border-white/5 bg-black/20 text-[9px] font-mono font-bold">
+                        <div className="relative h-5 shrink-0 border-t border-white/5 bg-black/20 text-[10px] font-mono font-bold">
                             <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-sky-300">{t.now.toUpperCase()}</span>
                             {/* Un canvi de dia a tocar dels extrems no s'etiqueta: xocaria amb "ARA" o "+48 h" */}
                             {chart.days.filter(d => d.x >= 14 && d.x <= 86).map(d => (
@@ -246,7 +246,7 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
                                     {d.label}
                                 </span>
                             ))}
-                            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500">{t.end}</span>
+                            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400">{t.end}</span>
                         </div>
                     )}
                 </div>

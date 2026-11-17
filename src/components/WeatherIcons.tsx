@@ -322,5 +322,5 @@ export const getWeatherIcon = (
     // Tempesta amb calamarsa (96, 99): l'etiqueta ja ho deia però la icona era la de la tempesta normal.
     if (safeCode >= 96) return <HailStormIcon className={`${commonProps.className} text-fuchsia-400 fill-fuchsia-400/20 animate-pulse drop-shadow-[0_0_15px_rgba(192,38,211,0.8)]`} />;
     
-    return <Cloud {...commonProps} className={`${commonProps.className} text-slate-500 fill-slate-500/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
+    return <Cloud {...commonProps} className={`${commonProps.className} text-slate-400 fill-slate-500/20 animate-[pulse_4s_ease-in-out_infinite]`} />;
 };

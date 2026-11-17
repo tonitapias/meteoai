@@ -137,7 +137,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
                   <h3 id="radar-modal-title" className="text-lg sm:text-2xl font-black text-white tracking-tight uppercase drop-shadow-lg truncate">
                     {isRadar ? t('radarTitle') : t('windTitle')}
                   </h3>
-                  <span className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-widest border transition-colors duration-500 shadow-sm ${isRadar ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'}`}>
+                  <span className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-widest border transition-colors duration-500 shadow-sm ${isRadar ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isRadar ? 'bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,1)]'}`}></span>
                     {t('liveBadge')}
                   </span>

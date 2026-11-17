@@ -38,10 +38,10 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
     const aqiData = extractAqiData(data);
 
     const getAqiState = (result: AqiResult | null) => {
-        if (!result) return { color: 'text-slate-500', bg: 'bg-slate-500/20', shadow: 'shadow-none', label: tLocal.nd, barMax: 100 };
+        if (!result) return { color: 'text-slate-400', bg: 'bg-slate-500/20', shadow: 'shadow-none', label: tLocal.nd, barMax: 100 };
 
         const level = getAqiLevel(result);
-        const style = (result.type === 'EAQI' ? EAQI_STYLES : USAQI_STYLES)[level] ?? { color: 'text-slate-500', bg: 'bg-slate-500/20', shadow: 'shadow-none' };
+        const style = (result.type === 'EAQI' ? EAQI_STYLES : USAQI_STYLES)[level] ?? { color: 'text-slate-400', bg: 'bg-slate-500/20', shadow: 'shadow-none' };
         return { ...style, label: tLocal[level], barMax: result.type === 'EAQI' ? 200 : 500 };
     };
 
@@ -70,7 +70,7 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
             {/* Contenidor Icona */}
             <div className={`relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-xl border shadow-inner group z-10 transition-colors duration-500 ${hasValidData ? 'bg-[#0f111a]/80 border-white/10' : 'bg-slate-800/40 border-slate-700/50'}`}>
                 {!hasValidData ? (
-                    <CloudOff className="w-8 h-8 sm:w-10 sm:h-10 text-slate-500 opacity-80" />
+                    <CloudOff className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400 opacity-80" />
                 ) : (
                     <Wind className={`w-8 h-8 sm:w-10 sm:h-10 ${color} transition-colors duration-500 filter drop-shadow-[0_0_8px_currentColor]`} />
                 )}
@@ -84,7 +84,7 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                         {titleAqi} {hasValidData && aqiData?.type === 'EAQI' ? '(EU)' : ''}
                     </span>
-                    <span className={`text-xs sm:text-sm font-mono font-black ${hasValidData ? color : 'text-slate-500'} tabular-nums px-2 py-0.5 rounded border transition-colors duration-500 ${hasValidData ? 'bg-black/40 border-white/5' : 'bg-transparent border-slate-700/50'}`}>
+                    <span className={`text-xs sm:text-sm font-mono font-black ${hasValidData ? color : 'text-slate-400'} tabular-nums px-2 py-0.5 rounded border transition-colors duration-500 ${hasValidData ? 'bg-black/40 border-white/5' : 'bg-transparent border-slate-700/50'}`}>
                         {hasValidData ? `AQI ${displayValue}` : 'AQI --'}
                     </span>
                 </div>
@@ -133,7 +133,7 @@ export const AqiWidget = ({ data, lang }: WidgetProps) => {
                     
                     {/* Renderitzat impecable a nivell de tipatge per als contaminants principals */}
                     {hasValidData && hasMicroTelemetry && (
-                        <div className="flex gap-2 text-[9px] sm:text-[10px] font-mono text-slate-500 bg-black/30 px-1.5 py-0.5 rounded border border-white/5">
+                        <div className="flex gap-2 text-[10px] font-mono text-slate-400 bg-black/30 px-1.5 py-0.5 rounded border border-white/5">
                             {pm25 !== null && <span>PM2.5 <span className="text-slate-300">{formatDecimal(pm25, safeLang)}</span></span>}
                             {pm10 !== null && <span>PM10 <span className="text-slate-300">{formatDecimal(pm10, safeLang)}</span></span>}
                         </div>

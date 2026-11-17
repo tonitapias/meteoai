@@ -18,7 +18,7 @@ interface DayStatCardProps {
 }
 
 export const DayStatCard = ({
-  icon: Icon, label, value, sub, color, glowClasses, note, noteClass = 'text-slate-500', reserveNote, testId, noteTestId
+  icon: Icon, label, value, sub, color, glowClasses, note, noteClass = 'text-slate-400', reserveNote, testId, noteTestId
 }: DayStatCardProps) => (
   <div
     data-testid={testId}
@@ -27,13 +27,13 @@ export const DayStatCard = ({
     <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:12px_12px]"></div>
 
     <div className={`relative z-10 p-2.5 rounded-xl bg-black/50 border border-white/5 mb-1 transition-shadow duration-500 ${value !== '--' ? glowClasses : 'shadow-none opacity-50'}`}>
-        <Icon className={`w-5 h-5 ${value !== '--' ? color : 'text-slate-500'}`} strokeWidth={2.5}/>
+        <Icon className={`w-5 h-5 ${value !== '--' ? color : 'text-slate-400'}`} strokeWidth={2.5}/>
     </div>
 
     <span className="relative z-10 text-[10px] text-slate-400 uppercase font-black tracking-widest">{label}</span>
 
     <span className={`relative z-10 text-xl font-mono font-black tabular-nums tracking-tight transition-colors duration-500 ${value === '--' ? 'text-slate-600' : 'text-slate-100'}`}>
-      {value}<span className="text-xs ml-0.5 font-bold text-slate-500">{value !== '--' ? sub : ''}</span>
+      {value}<span className="text-xs ml-0.5 font-bold text-slate-400">{value !== '--' ? sub : ''}</span>
     </span>
 
     {(note || reserveNote) && (

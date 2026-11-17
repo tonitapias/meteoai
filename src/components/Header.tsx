@@ -285,7 +285,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
           <div className="flex flex-col items-start">
              <span className="text-[10px] sm:text-xs font-black tracking-[0.3em] text-slate-300 group-hover:text-white transition-colors drop-shadow-md">METEOTONI AI</span>
              {debugClicks > 0 && debugClicks < 5 && (
-                 <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono font-bold tracking-widest bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded animate-pulse mt-0.5 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
+                 <span className="text-[10px] text-emerald-400 font-mono font-bold tracking-widest bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded animate-pulse mt-0.5 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
                      {dict.devMode}: {5 - debugClicks}
                  </span>
              )}
@@ -319,7 +319,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                 }
             `}
           >
-            <div className="pl-3 text-slate-500">
+            <div className="pl-3 text-slate-400">
                 {loading || isSearching ? (
                     <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-sky-400" />
                 ) : (
@@ -384,7 +384,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
             <div className="absolute top-full left-0 w-full mt-2 bg-[#020617] border border-sky-500/20 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 z-10">
                 {showFavorites && (
                     <div className="py-2">
-                        <div className="px-4 py-2 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
+                        <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
                             <Star className="w-3.5 h-3.5 text-amber-400" /> {dict.favorites}
                         </div>
                         {favorites.map((fav, idx) => (
@@ -405,7 +405,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                 )}
                 {showSuggestionsList && (
                     <div className="py-2">
-                         <div className="px-4 py-2 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
+                         <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
                             <Navigation className="w-3.5 h-3.5 text-sky-400" /> {dict.results}
                         </div>
                         {suggestions.map((geo, idx) => (

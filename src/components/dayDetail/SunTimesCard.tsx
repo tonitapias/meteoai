@@ -22,7 +22,7 @@ const SunTime = ({ icon: Icon, label, time, tone, align }: {
       <Icon className="w-5 h-5"/>
     </div>
     <div>
-      <span className="block text-[10px] text-slate-500 font-black uppercase tracking-widest">{label}</span>
+      <span className="block text-[10px] text-slate-400 font-black uppercase tracking-widest">{label}</span>
       <div className="text-xl md:text-2xl font-mono font-bold text-slate-200 tabular-nums">{time}</div>
     </div>
   </div>

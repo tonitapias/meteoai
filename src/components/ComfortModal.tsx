@@ -71,7 +71,7 @@ const getSafe = (arr: (number | null)[] | undefined, idx: number): number | null
 interface Severity { label: string; color: string; stroke: string; borderColor: string; bgGlow: string; }
 
 function getComfortSeverity(dewPoint: number | null, t: Record<string, string>): Severity {
-  if (dewPoint === null) return { label: t.unknown, color: 'text-slate-500', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
+  if (dewPoint === null) return { label: t.unknown, color: 'text-slate-400', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
   if (dewPoint > DEW_POINT.OPPRESSIVE) return { label: t.veryOppressive, color: 'text-rose-500', stroke: '#f43f5e', borderColor: 'border-rose-500/30', bgGlow: 'from-rose-950/30 to-black/90' };
   if (dewPoint > DEW_POINT.STICKY) return { label: t.oppressive, color: 'text-orange-500', stroke: '#f97316', borderColor: 'border-orange-500/30', bgGlow: 'from-orange-950/30 to-black/90' };
   if (dewPoint > DEW_POINT.COMFORTABLE) return { label: t.sticky, color: 'text-yellow-300', stroke: '#fde047', borderColor: 'border-yellow-400/20', bgGlow: 'from-yellow-950/20 to-black/90' };
@@ -255,12 +255,12 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
           </div>
           <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
         </div>
 
         {!hasData ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
             <CloudOff className="w-10 h-10 text-slate-600" />
             {t.noData}
           </div>
@@ -270,7 +270,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
             {/* HEROI: punt de rosada actual + humitat */}
             <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col sm:flex-row items-center gap-6">
               <div className="flex flex-col items-center sm:items-start gap-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dewPointNow}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.dewPointNow}</span>
                 <span className={`text-5xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none ${severity.color}`}>
                   {currentDewPoint !== null ? Math.round(currentDewPoint) : '--'}°
                 </span>
@@ -290,7 +290,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
 
             {/* AVÍS: pròxima finestra de xafogor */}
             <div className={`rounded-2xl border p-4 flex items-center gap-4 ${nextComfortWindow ? severity.borderColor + ' bg-black/30' : 'border-white/5 bg-black/20'}`}>
-              <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center border ${nextComfortWindow ? `${severity.borderColor} ${severity.color} bg-black/40` : 'border-white/5 text-slate-500 bg-black/30'}`}>
+              <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center border ${nextComfortWindow ? `${severity.borderColor} ${severity.color} bg-black/40` : 'border-white/5 text-slate-400 bg-black/30'}`}>
                 <Droplets className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -319,7 +319,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
                     {(isScrubbing ? activeEntry.humidity : currentHumidity) !== null && <> {' · '}{t.humidity} {Math.round((isScrubbing ? activeEntry.humidity : currentHumidity) as number)}%</>}
                   </span>
                 ) : (
-                  <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
+                  <span className="text-[10px] text-slate-600 italic">{t.scrubHint}</span>
                 )}
               </div>
 
@@ -364,7 +364,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
                   {dayMarkers.map(m => (
-                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}
                     </span>
                   ))}

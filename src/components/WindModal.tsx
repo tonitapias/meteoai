@@ -70,7 +70,7 @@ interface Severity { color: string; stroke: string; borderColor: string; bgGlow:
 // classifica RegionalModelModal.tsx (STRONG/EXTREME), per no inventar una segona escala de
 // colors dins l'app.
 function getWindSeverity(gustKmh: number | null): Severity {
-  if (gustKmh === null) return { color: 'text-slate-500', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
+  if (gustKmh === null) return { color: 'text-slate-400', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
   if (gustKmh >= WIND.EXTREME) return { color: 'text-rose-400', stroke: '#fb7185', borderColor: 'border-rose-500/30', bgGlow: 'from-rose-950/30 to-black/90' };
   if (gustKmh >= WIND.STRONG) return { color: 'text-amber-400', stroke: '#fbbf24', borderColor: 'border-amber-400/30', bgGlow: 'from-amber-950/25 to-black/90' };
   return { color: 'text-cyan-400', stroke: '#22d3ee', borderColor: 'border-cyan-500/20', bgGlow: 'from-cyan-950/20 to-black/90' };
@@ -302,12 +302,12 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
           </div>
           <button onClick={handleClose} className="p-2.5 astro-card-fill border border-white/5 rounded-full text-slate-400 hover:bg-white/10 hover:text-white active:scale-90 transition-all duration-200 group relative">
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-500 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400 opacity-0 group-hover:opacity-100 hidden md:block transition-opacity">ESC</span>
           </button>
         </div>
 
         {!hasData ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-sm p-8 text-center gap-3">
             <CloudOff className="w-10 h-10 text-slate-600" />
             {t.noData}
           </div>
@@ -362,7 +362,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                   {currentGusts !== null && currentSpeed !== null && currentGusts > currentSpeed + 5 && (
                     <div className={`mt-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 border border-white/10 ${severity.color}`}>
                       <Zap className="w-3 h-3 fill-current" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">{t.gusts}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{t.gusts}</span>
                       <span className="text-xs font-mono font-black tabular-nums">{Math.round(currentGusts)}</span>
                     </div>
                   )}
@@ -380,7 +380,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
 
             {/* AVÍS: pròxima ratxa forta */}
             <div className={`rounded-2xl border p-4 flex items-center gap-4 ${nextGustWindow ? severity.borderColor + ' bg-black/30' : 'border-white/5 bg-black/20'}`}>
-              <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center border ${nextGustWindow ? `${severity.borderColor} ${severity.color} bg-black/40` : 'border-white/5 text-slate-500 bg-black/30'}`}>
+              <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center border ${nextGustWindow ? `${severity.borderColor} ${severity.color} bg-black/40` : 'border-white/5 text-slate-400 bg-black/30'}`}>
                 <Zap className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -410,7 +410,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                     {' '}{t.kmh}
                   </span>
                 ) : (
-                  <span className="text-[9px] text-slate-600 italic">{t.scrubHint}</span>
+                  <span className="text-[10px] text-slate-600 italic">{t.scrubHint}</span>
                 )}
               </div>
 
@@ -452,7 +452,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
                   {dayMarkers.map(m => (
-                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[9px] font-mono font-bold text-slate-500" style={{ left: `${pctX(m.i)}%` }}>
+                    <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}
                     </span>
                   ))}
@@ -500,7 +500,7 @@ const LegendItem = memo(function LegendItem({ color, dashed, label }: { color: s
   return (
     <div className="flex items-center gap-1.5">
       <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: dashed ? 'transparent' : color, borderTop: dashed ? `1.5px dashed ${color}` : undefined }}></span>
-      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
     </div>
   );
 });

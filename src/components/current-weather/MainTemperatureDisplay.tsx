@@ -41,7 +41,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
             {/* Càpsula d'Estat Meteorològic (Spatial UI) */}
             <div className={`flex items-center gap-3 px-3 py-1.5 rounded-full border w-fit shadow-[inset_0_1px_4px_rgba(255,255,255,0.1)] transition-colors duration-500 ${isValidTemp ? 'bg-black/40 border-white/10' : 'bg-slate-900/50 border-slate-700/50'}`}>
                 <span className={`w-2 h-2 rounded-full transition-colors duration-500 ${isValidTemp ? statusColor : 'bg-slate-600'}`}></span>
-                <span className={`text-xs font-black uppercase tracking-wider transition-colors duration-500 ${isValidTemp ? 'text-white' : 'text-slate-500'}`}>
+                <span className={`text-xs font-black uppercase tracking-wider transition-colors duration-500 ${isValidTemp ? 'text-white' : 'text-slate-400'}`}>
                     {weatherLabel}
                 </span>
             </div>
@@ -59,7 +59,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
             <div className="flex items-center gap-4 text-sm font-mono font-bold">
                 <div className="flex items-center gap-1">
                     <ArrowUp className={`w-3.5 h-3.5 transition-colors duration-500 ${isValidMax ? 'text-rose-400' : 'text-slate-600'}`} />
-                    <span className={`tabular-nums transition-colors duration-500 ${isValidMax ? 'text-white' : 'text-slate-500'}`}>
+                    <span className={`tabular-nums transition-colors duration-500 ${isValidMax ? 'text-white' : 'text-slate-400'}`}>
                         {safeVal(max)}°
                     </span>
                 </div>
@@ -69,7 +69,7 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
                 
                 <div className="flex items-center gap-1">
                     <ArrowDown className={`w-3.5 h-3.5 transition-colors duration-500 ${isValidMin ? 'text-cyan-400' : 'text-slate-600'}`} />
-                    <span className={`tabular-nums transition-colors duration-500 ${isValidMin ? 'text-white' : 'text-slate-500'}`}>
+                    <span className={`tabular-nums transition-colors duration-500 ${isValidMin ? 'text-white' : 'text-slate-400'}`}>
                         {safeVal(min)}°
                     </span>
                 </div>

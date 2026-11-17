@@ -29,13 +29,13 @@ interface SmartChartReadoutProps {
 export const SmartChartReadout = ({ title, isNow, nowLabel, chips, hint, minHeight }: SmartChartReadoutProps) => (
     <div data-testid="readout-strip" className="mb-3 px-1" style={{ minHeight }}>
         {title === null ? (
-            <div className="flex items-center text-[11px] font-medium text-slate-500 leading-snug" style={{ minHeight }}>{hint}</div>
+            <div className="flex items-center text-[11px] font-medium text-slate-400 leading-snug" style={{ minHeight }}>{hint}</div>
         ) : (
             <>
                 <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] font-black uppercase tracking-widest text-slate-300 tabular-nums">{title}</span>
                     {isNow && (
-                        <span data-testid="readout-now" className="text-[9px] font-black uppercase tracking-widest text-cyan-300 border border-cyan-500/30 bg-cyan-500/10 rounded-full px-2 py-0.5">
+                        <span data-testid="readout-now" className="text-[10px] font-black uppercase tracking-widest text-cyan-300 border border-cyan-500/30 bg-cyan-500/10 rounded-full px-2 py-0.5">
                             {nowLabel}
                         </span>
                     )}
@@ -48,7 +48,7 @@ export const SmartChartReadout = ({ title, isNow, nowLabel, chips, hint, minHeig
                             className={`inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border px-2.5 py-1.5 text-[11px] leading-none ${chip.primary ? 'border-white/20' : 'border-white/5'}`}
                         >
                             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: chip.color }} aria-hidden="true"></span>
-                            <span className="font-medium text-slate-500">{chip.label}</span>
+                            <span className="font-medium text-slate-400">{chip.label}</span>
                             <span className="font-black tabular-nums" style={{ color: chip.color }}>{chip.value}</span>
                         </span>
                     ))}

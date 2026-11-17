@@ -110,11 +110,11 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const title = t.title.replace('{model}', regionalModelLabel);
 
   const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
-    if (!isValidNum(local) || !isValidNum(global) || local === global) return <MoveRight className="w-4 h-4 text-slate-500" />;
+    if (!isValidNum(local) || !isValidNum(global) || local === global) return <MoveRight className="w-4 h-4 text-slate-400" />;
     const isUp = global > local;
     let iconClass = "w-4 h-4 transition-transform duration-300 drop-shadow-sm ";
     if (type === 'temp') iconClass += isUp ? "text-rose-500" : "text-sky-400";
-    else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-500";
+    else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-400";
     else iconClass += isUp ? "text-amber-400" : "text-emerald-400";
     return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
   };
@@ -221,7 +221,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                         <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
-                        <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>
+                        <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(localTemp, metrics.globalTemp, 'temp')}</div>
                     </div>
                  </div>
@@ -234,10 +234,10 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
                         <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localPrecip)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-[9px] font-normal text-slate-400 ml-[1px]">mm</span></span></div>
+                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">mm</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
-                        <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>
+                        <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(localPrecip, metrics.globalPrecip, 'rain')}</div>
                     </div>
                  </div>
@@ -249,10 +249,10 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
                         <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">km/h</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[9px] font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
+                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex gap-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-2 flex justify-center items-center gap-2 border border-white/5 shadow-inner">
-                        <span className="text-[10px] md:text-[11px] text-slate-500 font-black">{t.diff}</span>
+                        <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(localWind, metrics.globalWind, 'wind')}</div>
                     </div>
                  </div>

@@ -101,7 +101,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ weatherData, regionalModelLabel
                 <div className="flex justify-between"><span>ERRORS:</span> <span className={error ? "text-red-400" : "text-green-400"}>{error ? "YES" : "NO"}</span></div>
             </div>
             
-            <div className="mt-2 text-[9px] text-green-500/50 text-center italic">
+            <div className="mt-2 text-[10px] text-green-500/50 text-center italic">
                 {isDragging ? "Deixa anar per fixar" : "Arrossega per moure"}
             </div>
         </div>

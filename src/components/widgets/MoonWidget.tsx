@@ -75,7 +75,7 @@ function moonRiseSet(target: Date, lat: number, lon: number, timezone?: string):
     }
 }
 
-const LAB = 'text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500';
+const LAB = 'text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400';
 
 export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: MoonWidgetProps) => {
     // DOCTRINA RISC ZERO: Validació estricta d'objecte i extracció tipada
@@ -133,7 +133,7 @@ export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: M
         <div className={`${WIDGET_BASE_STYLE} select-none`}>
             <div className="flex items-center justify-between gap-2 min-h-[28px] relative z-10">
                 <span className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} min-w-0`}>
-                    {hasData ? <Moon className="w-4 h-4 text-indigo-300 shrink-0" aria-hidden="true" /> : <CloudOff className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />}
+                    {hasData ? <Moon className="w-4 h-4 text-indigo-300 shrink-0" aria-hidden="true" /> : <CloudOff className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />}
                     <span className="tracking-wider text-slate-200 truncate">{titleMoon}</span>
                 </span>
                 <span className="shrink-0 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-300">
@@ -148,7 +148,7 @@ export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: M
             </div>
 
             <div className="text-center mt-0.5">
-                <div className={`text-[17px] font-bold leading-tight ${hasData ? 'text-slate-100' : 'text-slate-500'}`}>{moonText}</div>
+                <div className={`text-[17px] font-bold leading-tight ${hasData ? 'text-slate-100' : 'text-slate-400'}`}>{moonText}</div>
                 <div className="text-[12px] text-slate-400 mt-0.5">
                     <span className="font-mono text-indigo-100">{hasData ? illumination : '--'}%</span> {text.illuminated}
                     {pos && (
@@ -166,15 +166,15 @@ export const MoonWidget = ({ phase, ageDays, lat, lon, lang, date, timezone }: M
                 <div className="font-mono text-[12.5px] leading-[1.45]">
                     <div className="flex items-baseline gap-1">
                         <span className="sr-only">{text.rise}</span>
-                        <span className="text-slate-500" aria-hidden="true">↑</span>
+                        <span className="text-slate-400" aria-hidden="true">↑</span>
                         <span className={riseSet?.rise ? 'text-cyan-300' : 'text-slate-600'}>{riseSet?.rise || '--:--'}</span>
-                        {riseSet?.riseNextDay && <span className="font-sans text-[9px] text-cyan-200/60">+1d</span>}
+                        {riseSet?.riseNextDay && <span className="font-sans text-[10px] text-cyan-200/60">+1d</span>}
                     </div>
                     <div className="flex items-baseline gap-1">
                         <span className="sr-only">{text.set}</span>
-                        <span className="text-slate-500" aria-hidden="true">↓</span>
+                        <span className="text-slate-400" aria-hidden="true">↓</span>
                         <span className={riseSet?.set ? 'text-amber-300' : 'text-slate-600'}>{riseSet?.set || '--:--'}</span>
-                        {riseSet?.setNextDay && <span className="font-sans text-[9px] text-amber-200/60">+1d</span>}
+                        {riseSet?.setNextDay && <span className="font-sans text-[10px] text-amber-200/60">+1d</span>}
                     </div>
                 </div>
                 <div className="text-right min-w-0">

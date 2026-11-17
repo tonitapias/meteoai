@@ -57,7 +57,7 @@ export const CircularGauge = ({
     const strokeDashoffset = circumference - (percent / 100) * circumference;
 
     // --- AVALUACIÓ DE TENDÈNCIA (ESTRÈS BAROMÈTRIC) ---
-    let trendColor = "text-slate-500";
+    let trendColor = "text-slate-400";
     let trendBg = "bg-black/20 border-white/5";
     let trendIcon = <ArrowRight className="w-3 h-3" />;
     let trendText = t.no_data;
@@ -111,7 +111,7 @@ export const CircularGauge = ({
                     x1={x1} y1={y1} x2={x2} y2={y2} 
                     stroke="currentColor" 
                     strokeWidth={isCardinal ? "1.5" : "0.5"} 
-                    className={isCardinal ? "text-indigo-400/40" : "text-slate-500/20"} 
+                    className={isCardinal ? "text-indigo-400/40" : "text-slate-400/20"} 
                 />
             );
         });
@@ -166,7 +166,7 @@ export const CircularGauge = ({
                                     {safeValue}
                                 </span>
                                 {subText && (
-                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                                         {subText}
                                     </span>
                                 )}
@@ -186,7 +186,7 @@ export const CircularGauge = ({
                     <div className={`w-full flex items-center justify-between px-2 py-1.5 rounded border ${trendBg} transition-colors duration-500`}>
                         <div className={`flex items-center gap-1.5 ${trendColor}`}>
                             {trendIcon}
-                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider leading-none">
+                            <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
                                 {trendText}
                             </span>
                         </div>

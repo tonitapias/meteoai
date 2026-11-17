@@ -63,7 +63,7 @@ interface SunArcWidgetProps {
 }
 
 const pct = (v: number, of: number) => `${Math.round((v / of) * 10000) / 100}%`;
-const LAB = 'text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500';
+const LAB = 'text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400';
 
 /** Hora de sortida/posta amb el "+1"/"−1" si cau en un altre dia local (dies polars o latituds altes). */
 const EdgeTime = ({ tt }: { tt: TimeText | null }) => (
@@ -147,11 +147,11 @@ export const SunArcWidget = ({ lang, lat, lon, timezone, utcOffset, daily }: Sun
             {/* Capçalera: títol i compte enrere */}
             <div className="flex items-center justify-between gap-2 min-h-[28px] relative z-10">
                 <span className={`${TITLE_STYLE.replace('mb-4', 'mb-0')} min-w-0`}>
-                    {pos ? <Sun className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" /> : <CloudOff className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />}
+                    {pos ? <Sun className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" /> : <CloudOff className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />}
                     <span className="tracking-wider text-slate-200 truncate">{text.title}</span>
                 </span>
                 {!pos ? (
-                    <span className="shrink-0 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11px] font-bold text-slate-500">{text.noData}</span>
+                    <span className="shrink-0 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11px] font-bold text-slate-400">{text.noData}</span>
                 ) : countdown ? (
                     <span className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[12px] font-semibold ${cdIsSunset ? 'text-amber-200' : 'text-indigo-200'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${cdIsSunset ? 'bg-amber-400' : 'bg-indigo-400'}`} aria-hidden="true" />

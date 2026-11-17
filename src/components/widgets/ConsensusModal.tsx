@@ -78,11 +78,11 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
   };
 
   const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
-    if (typeof local !== 'number' || typeof global !== 'number' || local === global) return <MoveRight className="w-4 h-4 text-slate-500" />;
+    if (typeof local !== 'number' || typeof global !== 'number' || local === global) return <MoveRight className="w-4 h-4 text-slate-400" />;
     const isUp = global > local;
     let iconClass = "w-4 h-4 transition-transform duration-300 ";
     if (type === 'temp') iconClass += isUp ? "text-rose-500" : "text-sky-400";
-    else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-500";
+    else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-400";
     else iconClass += isUp ? "text-amber-400" : "text-emerald-400";
     return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
   };
@@ -162,13 +162,13 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
               
               <div className="relative z-10 flex-1 grid grid-cols-2 gap-3 sm:flex sm:grid-cols-none sm:items-center sm:justify-center sm:gap-8 w-full">
                 <div className="flex flex-col items-start sm:items-end bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
-                  <span className="text-[10px] text-slate-500 font-black tracking-widest mb-1 sm:mb-0.5">{t.local}</span>
+                  <span className="text-[10px] text-slate-400 font-black tracking-widest mb-1 sm:mb-0.5">{t.local}</span>
                   <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none tracking-tighter drop-shadow-md">
                     {formatVal(locVal)}<span className="text-[10px] text-slate-400 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>
                   {activeModal === 'wind' && (
                     <span className="text-[10px] text-amber-400 font-mono mt-1 font-black flex items-center gap-0.5 drop-shadow-[0_0_4px_rgba(245,158,11,0.4)] animate-pulse">
-                      ⚡ {formatVal(locGustVal)}<span className="text-[8px] text-amber-500/70 font-bold uppercase">km/h</span>
+                      ⚡ {formatVal(locGustVal)}<span className="text-[10px] text-amber-500/70 font-bold uppercase">km/h</span>
                     </span>
                   )}
                 </div>
@@ -176,13 +176,13 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                 <div className="hidden sm:block w-px h-8 bg-gradient-to-b from-transparent via-slate-500/50 to-transparent"></div>
                 
                 <div className="flex flex-col items-start bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
-                  <span className="text-[10px] text-slate-500 font-black tracking-widest mb-1 sm:mb-0.5">{t.global}</span>
+                  <span className="text-[10px] text-slate-400 font-black tracking-widest mb-1 sm:mb-0.5">{t.global}</span>
                   <span className="text-base sm:text-lg md:text-xl font-black text-slate-400 leading-none tracking-tighter">
                     {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold uppercase">{unit}</span>
                   </span>
                   {activeModal === 'wind' && (
-                    <span className="text-[10px] text-slate-500 font-mono mt-1 font-bold flex items-center gap-0.5">
-                      ⚡ {formatVal(gloGustVal)}<span className="text-[8px] text-slate-600/70 font-bold uppercase">km/h</span>
+                    <span className="text-[10px] text-slate-400 font-mono mt-1 font-bold flex items-center gap-0.5">
+                      ⚡ {formatVal(gloGustVal)}<span className="text-[10px] text-slate-600/70 font-bold uppercase">km/h</span>
                     </span>
                   )}
                 </div>
@@ -211,7 +211,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
             </div>
             <div>
               <h3 id="consensus-modal-title" className="text-white font-black uppercase tracking-[0.2em] text-xs sm:text-sm md:text-base drop-shadow-md">{t.modalTitle}</h3>
-              <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5">
+              <p className="text-[10px] md:text-xs text-slate-400 font-mono tracking-widest mt-0.5">
                 {activeModal === 'temp' ? t.tempLabel : activeModal === 'rain' ? t.rainLabel : t.windLabel}
               </p>
             </div>

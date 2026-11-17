@@ -50,7 +50,7 @@ export const SmartChartLegend = ({
                 <span
                     key={model.key}
                     data-testid={`legend-${model.key}`}
-                    className={`${CHIP} border-dashed border-white/10 text-slate-500`}
+                    className={`${CHIP} border-dashed border-white/10 text-slate-400`}
                 >
                     <span className="w-2 h-2 rounded-full border" style={{ borderColor: model.color }} aria-hidden="true"></span>
                     {model.label} {text.identical}
@@ -87,6 +87,6 @@ export const SmartChartLegend = ({
             </button>
         )}
 
-        {updatedText && <span className="ml-auto text-[10px] font-bold tracking-wide text-slate-500">{updatedText}</span>}
+        {updatedText && <span className="ml-auto text-[10px] font-bold tracking-wide text-slate-400">{updatedText}</span>}
     </div>
 );
