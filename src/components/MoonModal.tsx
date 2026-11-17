@@ -122,7 +122,7 @@ const FOLK_FULL_MOON_NAMES: Record<Language, string[]> = {
   fr: ['Lune du Loup', 'Lune de Neige', 'Lune des Vers', 'Lune Rose', 'Lune des Fleurs', 'Lune des Fraises', 'Lune du Cerf', "Lune de l'Esturgeon", 'Lune des Moissons', 'Lune du Chasseur', 'Lune du Castor', 'Lune Froide'],
 };
 
-// Mateixos llindars que la targeta (MoonWidget) i que MoonPhaseIcon.
+// Mateixos llindars que la targeta (MoonWidget).
 const getPhaseName = (phase: number, lang: Language): string => {
   const p = Math.max(0, Math.min(1, phase));
   let idx = 0;
