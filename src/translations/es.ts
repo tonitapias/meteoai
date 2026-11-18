@@ -73,6 +73,9 @@ export const es = {
   animPlaying: "ANIMACIÓN EN CURSO",
   animCurrent: "CAPTURA ACTUAL",
   animFrameAge: "IMAGEN DE HACE {{n}} MIN",
+  radarTimeline: "Hora de la imagen del radar",
+  radarFrameValue: "{{time}}, hace {{n}} min",
+  radarFrameNow: "{{time}}, la más reciente",
   btnRefresh: "Actualizar datos",
   btnForceSync: "Reintentar Conexión",
 

@@ -211,6 +211,9 @@ export function useRadarAnimation({
   const [isPlaying, setIsPlaying] = useState(false);
   const [framesCount, setFramesCount] = useState(0);
   const [currentFrameTimestamp, setCurrentFrameTimestamp] = useState<number | null>(null);
+  // Per a la barra de temps (auditoria d'UX, segona volta, M6): l'índex del fotograma que es veu i les hores de tots.
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [frameTimes, setFrameTimes] = useState<number[]>([]);
 
   const isPlayingRef = useRef<boolean>(false);
   const hostRef = useRef<string>('');
@@ -734,6 +737,7 @@ export function useRadarAnimation({
          timeDisplayRef.current.textContent = formatTime(currentFrameTime);
       }
       setCurrentFrameTimestamp(currentFrameTime);
+      setFrameIndex(safeIndex);
       currentFrameTimestampRef.current = currentFrameTime;
 
       if (!isPlayingRef.current) {
@@ -899,6 +903,7 @@ export function useRadarAnimation({
     radarFramesRef.current = times;
     satFramesRef.current = sFrames;
     setFramesCount(times.length);
+    setFrameTimes(times);
 
     cleanupExpiredLayers(hostChanged ? [] : frames, sFrames);
     pruneUnneededHd();
@@ -951,6 +956,20 @@ export function useRadarAnimation({
     applyFrameVisibility(currentFrameIndexRef.current);
   }, [applyFrameVisibility]);
 
+  // Anar a un fotograma concret (barra de temps): atura l'animació i el mostra. applyFrameVisibility ja carrega els
+  // tres següents, com fa l'animació.
+  const seekFrame = useCallback((index: number) => {
+    const total = radarFramesRef.current.length;
+    if (total === 0 || !Number.isFinite(index)) return;
+    const target = Math.max(0, Math.min(total - 1, Math.round(index)));
+    if (isPlayingRef.current) {
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+    }
+    currentFrameIndexRef.current = target;
+    applyFrameVisibility(target);
+  }, [applyFrameVisibility]);
+
   const setAnimationActive = useCallback((active: boolean) => {
     if (active && isPlayingRef.current && radarFramesRef.current.length > 0) {
       if (animationTimerRef.current) clearInterval(animationTimerRef.current);
@@ -973,6 +992,9 @@ export function useRadarAnimation({
     isPlayingRef,
     framesCount,
     currentFrameTimestamp,
+    frameIndex,
+    frameTimes,
+    seekFrame,
     injectLayersIntoMap,
     togglePlay,
     setAnimationActive,

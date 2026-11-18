@@ -180,7 +180,7 @@ const ForecastSection = memo(function ForecastSection({
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none mix-blend-screen z-0"></div>
         
         <div className="flex items-center justify-between mb-6 z-10 relative px-2">
-          <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+          <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-slate-300">
             <Calendar className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.8)]"/> 
             {typeof tRecord.forecast7days === 'string' ? tRecord.forecast7days : "PREVISIÓ DE 7 DIES"}
           </h3>
@@ -194,7 +194,7 @@ const ForecastSection = memo(function ForecastSection({
             className="group flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-black/60 border border-indigo-500/30 hover:bg-indigo-950/40 hover:border-indigo-400 transition-all duration-300 cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
           >
             <CalendarCheck className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-300 group-hover:text-white transition-colors" />
-            <span className="text-[10px] md:text-xs font-black text-indigo-100 group-hover:text-white tracking-widest uppercase">
+            <span className="text-xs md:text-xs font-black text-indigo-100 group-hover:text-white tracking-widest uppercase">
               {todayText}
             </span>
           </button>
@@ -215,7 +215,7 @@ const ForecastSection = memo(function ForecastSection({
               <div className="w-1 h-[75%] bg-gradient-to-t from-blue-400 to-indigo-400 rounded-full group-hover:h-[85%] transition-all duration-300 delay-150"></div>
             </div>
 
-            <span className="text-[10px] md:text-xs font-black text-cyan-100 group-hover:text-white tracking-widest relative z-10">
+            <span className="text-xs md:text-xs font-black text-cyan-100 group-hover:text-white tracking-widest relative z-10">
               {btnText}
             </span>
           </button>
@@ -236,13 +236,13 @@ const ForecastSection = memo(function ForecastSection({
                     <span className="text-lg md:text-xl font-black tracking-tighter">{day.dateNum}</span>
                   </div>
                   <div className="flex flex-col items-start truncate">
-                    <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[70px] md:max-w-none transition-colors duration-300">
+                    <span className="text-xs md:text-sm font-bold uppercase tracking-wide text-slate-300 group-hover:text-white truncate max-w-[84px] md:max-w-none transition-colors duration-300">
                       {day.dayName}
                     </span>
                     {day.precipProb !== null && day.precipProb > 0 && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <Umbrella className="w-2.5 h-2.5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.5)]" />
-                        <span className="text-[10px] font-black text-cyan-400 tabular-nums">{day.precipProb}%</span>
+                        <span className="text-xs font-black text-cyan-400 tabular-nums">{day.precipProb}%</span>
                       </div>
                     )}
                   </div>
@@ -255,7 +255,7 @@ const ForecastSection = memo(function ForecastSection({
                 </div>
 
                 <div className="hidden md:flex flex-col items-center justify-center w-[130px] px-2">
-                  <div className="w-full flex justify-between text-[11px] font-bold text-slate-400 mb-1.5">
+                  <div className="w-full flex justify-between text-xs font-bold text-slate-400 mb-1.5">
                     <span className="group-hover:text-cyan-300 transition-colors duration-300">{day.minTempLabel}</span>
                     <span className="group-hover:text-red-300 transition-colors duration-300">{day.maxTempLabel}</span>
                   </div>
@@ -272,18 +272,18 @@ const ForecastSection = memo(function ForecastSection({
                   <span className="text-[15px] font-black text-slate-200 group-hover:text-white tabular-nums leading-none mb-1 transition-colors duration-300">
                     {day.maxTempLabel}
                   </span>
-                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-cyan-400 tabular-nums leading-none transition-colors duration-300">
+                  <span className="text-xs font-bold text-slate-400 group-hover:text-cyan-400 tabular-nums leading-none transition-colors duration-300">
                     {day.minTempLabel}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 md:gap-3 w-[80px] md:w-[130px]">
                   {day.precipSum !== null && day.precipSum > 0 ? (
-                    <span className="text-[10px] text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                    <span className="text-xs text-cyan-200 font-mono font-black bg-cyan-950/40 px-1.5 py-1 md:px-2 rounded-md border border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:text-cyan-300 transition-all duration-300 shadow-[inset_0_1px_2px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_8px_rgba(6,182,212,0.4)]">
                       {formatPrecipitation(day.precipSum, day.snowSum, lang)}
                     </span>
                   ) : (
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
+                    <span className="text-xs font-black text-slate-600 uppercase tracking-widest hidden md:block group-hover:text-slate-500 transition-colors">
                       {day.precipSum === 0 ? NO_PRECIP_LABEL : NO_DATA_LABEL}
                     </span>
                   )}

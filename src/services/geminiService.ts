@@ -383,6 +383,9 @@ const FIREWALL_THRESHOLDS = {
     COLD_AMBER: 0, COLD_RED: -10        // °C, <=
 } as const;
 
+/** Ràfega (km/h) a partir de la qual el text de la IA l'ha de citar i no pot dir que el vent és suau (regla VENT del worker). */
+const GUST_MENTION_KMH = 40;
+
 interface DeterministicRisk {
     risk: TacticalRiskLevel;
     hazard: TacticalHazardType | null;
@@ -748,7 +751,13 @@ const buildWindowSummary = (rows: WindowRow[], rainCertainty: RainCertainty | nu
     const gusts = rows.map((r, i) => ({ i, v: r.gust })).filter((x): x is { i: number; v: number } => x.v !== null);
     if (gusts.length > 0) {
         const top = gusts.reduce((a, b) => (b.v > a.v ? b : a));
-        lines.push(`Ràfega màxima: ${top.v}km/h (${at(top.i)})`);
+        // Amb ràfegues de 40 km/h o més, la instrucció va a la mateixa línia (Flash-Lite hi fa més cas que a les regles):
+        // a Girona va escriure "el vent serà suau" amb la targeta marcant ràfegues de 44 km/h (auditoria d'UX, segona
+        // volta, N1b). El worker té la mateixa regla als quatre prompts (per a les apps que no s'hagin actualitzat).
+        const mention = top.v >= GUST_MENTION_KMH
+            ? ` — al text, cita les ràfegues amb la xifra i no diguis que el vent és suau, fluix ni feble`
+            : '';
+        lines.push(`Ràfega màxima: ${top.v}km/h (${at(top.i)})${mention}`);
     }
 
     const wet = rows.map((r, i) => ({ i, v: r.precip })).filter(x => x.v >= RAIN_HOUR_MIN_MM);

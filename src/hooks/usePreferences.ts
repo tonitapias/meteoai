@@ -31,11 +31,27 @@ const loadJSON = <T>(key: string, fallback: T): T => {
   }
 };
 
+/** Quants llocs consultats es recorden (a part dels favorits). */
+export const RECENTS_MAX = 3;
+
+const isValidPlace = (p: unknown): p is LocationData => {
+  const place = p as LocationData | null;
+  return !!place && typeof place.name === 'string' && place.name.trim() !== ''
+    && Number.isFinite(place.latitude) && Number.isFinite(place.longitude);
+};
+
+/** Els darrers llocs triats al cercador, el més recent primer (auditoria d'UX, segona volta, B8). */
+const loadRecents = (): LocationData[] => {
+  const stored = loadJSON<unknown>('meteoai_recents', []);
+  return Array.isArray(stored) ? stored.filter(isValidPlace).slice(0, RECENTS_MAX) : [];
+};
+
 export function usePreferences() {
   // 1. ESTATS AMB CÀRREGA OPTIMITZADA (Sense useEffect inicial)
   const [lang, setLang] = useState<Language>(() => loadString('meteoai_lang', 'ca'));
   const [unit, setUnit] = useState<WeatherUnit>(() => loadString('meteoai_unit', 'C'));
   const [favorites, setFavorites] = useState<LocationData[]>(() => loadJSON('meteoai_favorites', []));
+  const [recents, setRecents] = useState<LocationData[]>(loadRecents);
 
   // Neteja d'una sola vegada (després, les claus ja no hi són i no fa res).
   useEffect(() => { LEGACY_STORAGE_KEYS.forEach(removeStorage); }, []);
@@ -58,6 +74,7 @@ export function usePreferences() {
   }, [lang]);
   useEffect(() => { writeStorage('meteoai_unit', unit); }, [unit]);
   useEffect(() => { writeStorage('meteoai_favorites', JSON.stringify(favorites)); }, [favorites]);
+  useEffect(() => { writeStorage('meteoai_recents', JSON.stringify(recents)); }, [recents]);
 
   // [FIX PRECISIÓ] Memoitzades amb useCallback (com ja feia la versió antiga de
   // PreferencesContext.tsx): sense això, cada render en creava funcions noves,
@@ -80,9 +97,16 @@ export function usePreferences() {
     return favorites.some(f => isSamePlace(f, place));
   }, [favorites]);
 
+  // Un lloc triat al cercador passa a ser el primer dels recents; si ja hi era (el mateix lloc, no el mateix nom), puja.
+  const addRecent = useCallback((place: LocationData) => {
+    if (!isValidPlace(place)) return;
+    setRecents(prev => [place, ...prev.filter(r => !isSamePlace(r, place))].slice(0, RECENTS_MAX));
+  }, []);
+
   return {
     lang, setLang,
     unit, setUnit,
-    favorites, addFavorite, removeFavorite, isFavorite
+    favorites, addFavorite, removeFavorite, isFavorite,
+    recents, addRecent
   };
 }

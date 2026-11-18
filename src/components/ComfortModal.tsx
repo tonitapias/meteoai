@@ -85,7 +85,9 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
   const safeLang: Language = T[lang] ? lang : 'ca';
   const t = T[safeLang];
 
-  const { handleClose } = useAstroModalShell(onClose);
+  // Focus dins el diàleg, Tab que no en surt i fons inert (auditoria d'UX, segona volta, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const { handleClose } = useAstroModalShell(onClose, dialogRef);
 
   const hourly = weatherData.hourly;
   const current = weatherData.current;
@@ -225,7 +227,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
   const bgGradient = severity.bgGlow;
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="comfort-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="comfort-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
       <style>{`
         .comfort-scrollbar { -webkit-overflow-scrolling: touch; }
         .comfort-scrollbar::-webkit-scrollbar { width: 5px; }

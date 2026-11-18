@@ -293,7 +293,28 @@ describe('getGeminiAnalysis — resum calculat de la finestra', () => {
         const s = summaryOf(prompt);
         expect(s).toContain('Temperatura: mínima 20°C (00:00, ara) | màxima 24°C (03:00)');
         expect(s).toContain('Ràfega màxima: 30km/h (02:00)');
+        // Per sota de 40 km/h, cap instrucció sobre el vent.
+        expect(s).not.toContain('cita les ràfegues');
         expect(s).toContain('Pluja: cap hora amb pluja apreciable (totes < 0.2mm/h)');
+    });
+
+    // Girona, 17-11-2026 a les 21:30: "el vent serà suau" amb la targeta marcant ràfegues de 44 km/h (auditoria d'UX,
+    // segona volta, N1b).
+    it('amb ràfegues de 40 km/h o més, la mateixa línia demana citar-les i no dir que el vent és suau', async () => {
+        const weather = calm({ date: '2026-11-17', temp: 20, day: 0 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.wind_gusts_10m = [44, 40, 38, 30, 25, 20, 18, 15];
+        const { prompt } = await run(weather, 0);
+        expect(summaryOf(prompt)).toContain(
+            'Ràfega màxima: 44km/h (00:00, ara) — al text, cita les ràfegues amb la xifra i no diguis que el vent és suau, fluix ni feble');
+    });
+
+    it('amb exactament 40 km/h també (el llindar és inclòs)', async () => {
+        const weather = calm({ date: '2026-11-17', temp: 20, day: 0 });
+        const h = weather.hourly as unknown as Record<string, number[]>;
+        h.wind_gusts_10m = [12, 40, 38, 30, 25, 20, 18, 15];
+        const { prompt } = await run(weather, 0);
+        expect(summaryOf(prompt)).toContain('Ràfega màxima: 40km/h (01:00) — al text, cita les ràfegues');
     });
 
     // Girona, 26-10-2026: "baixarà fins a 14.9°C a les 00:00" sota una tira que deia 15°.

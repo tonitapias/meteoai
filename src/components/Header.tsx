@@ -1,17 +1,14 @@
 // src/components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, House, Settings } from 'lucide-react';
+import { Search, MapPin, Loader2, X, Star, Navigation, CornerDownLeft, House, Settings, History } from 'lucide-react';
 import { usePreferences, LocationData } from '../hooks/usePreferences';
 import { reverseGeocode, GeoSearchResult } from '../services/geocodingService';
 import { useCitySearch } from '../hooks/useCitySearch';
 import { useAppContext } from '../context/AppContext';
 import { useGeoLocation } from '../context/GeoLocationContext';
 import { Language, TranslationType } from '../translations';
-
-// DOCTRINA RISC ZERO: Guàrdia de tipus per discriminar entre favorit i resultat de cerca
-function isLocationData(item: GeoSearchResult | LocationData): item is LocationData {
-  return (item as LocationData).admin1 !== undefined || (item as GeoSearchResult).id === undefined;
-}
+import { isSamePlace } from '../utils/geoDistance';
+import { localizeCountryName } from '../utils/countryName';
 
 // DOCTRINA RISC ZERO: Interfície estricta per blindar totes les cadenes del Header
 interface HeaderTranslations {
@@ -21,6 +18,7 @@ interface HeaderTranslations {
   geoNotSupported: string;
   geoError: string;
   favorites: string;
+  recents: string;
   results: string;
   devMode: string;
   locationTitle: string;
@@ -37,6 +35,7 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoNotSupported: "El teu navegador no suporta la geolocalització.",
     geoError: "No s'ha pogut obtenir la ubicació precisa. Comprova el GPS o la connexió.",
     favorites: "FAVORITS",
+    recents: "RECENTS",
     results: "RESULTATS",
     devMode: "MODE DEV",
     locationTitle: "Localització",
@@ -50,6 +49,7 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoNotSupported: "Tu navegador no soporta la geolocalización.",
     geoError: "No se ha podido obtener la ubicación precisa. Comprueba el GPS o la conexión.",
     favorites: "FAVORITOS",
+    recents: "RECIENTES",
     results: "RESULTADOS",
     devMode: "MODO DEV",
     locationTitle: "Localización",
@@ -63,6 +63,7 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoNotSupported: "Votre navigateur ne supporte pas la géolocalisation.",
     geoError: "Impossible d'obtenir une position précise. Vérifiez le GPS ou la connexion.",
     favorites: "FAVORIS",
+    recents: "RÉCENTS",
     results: "RÉSULTATS",
     devMode: "MODE DÉV",
     locationTitle: "Localisation",
@@ -76,6 +77,7 @@ const DEFAULT_HEADER_TRANSLATIONS: Record<Language, HeaderTranslations> = {
     geoNotSupported: "Your browser does not support geolocation.",
     geoError: "Could not obtain precise location. Check GPS or connection.",
     favorites: "FAVORITES",
+    recents: "RECENT",
     results: "RESULTS",
     devMode: "DEV MODE",
     locationTitle: "Location",
@@ -107,6 +109,9 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   const contextFavorites = Array.isArray(stateRecord.favorites) ? (stateRecord.favorites as LocationData[]) : undefined;
   const { favorites: hookFavorites } = usePreferences();
   const favorites: LocationData[] = contextFavorites ?? hookFavorites ?? [];
+  // Els darrers llocs triats al cercador (auditoria d'UX, segona volta, B8). Sense context (proves antigues), cap.
+  const recents: LocationData[] = Array.isArray(stateRecord.recents) ? (stateRecord.recents as LocationData[]) : [];
+  const addRecent = (actions as { addRecent?: (place: LocationData) => void }).addRecent;
 
   // Cerca compartida amb la benvinguda (espera, sanejament i "últim guanyador").
   const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch(activeLang);
@@ -158,8 +163,15 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
   };
 
   const showFavorites = query.length === 0 && favorites.length > 0;
+  // Amb la cerca buida, sota els favorits, els recents que no ho són (un favorit ja hi surt a dalt).
+  const shownRecents = query.length === 0 ? recents.filter(r => !favorites.some(f => isSamePlace(f, r))) : [];
+  const showRecents = shownRecents.length > 0;
   const showSuggestionsList = query.length >= 3;
-  const activeList: (GeoSearchResult | LocationData)[] = showSuggestionsList ? suggestions : (showFavorites ? favorites : []);
+  // Les fletxes recorren favorits i recents seguits: l'índex dels recents comença on acaben els favorits.
+  const favoritesCount = showFavorites ? favorites.length : 0;
+  const activeList: (GeoSearchResult | LocationData)[] = showSuggestionsList
+    ? suggestions
+    : [...(showFavorites ? favorites : []), ...shownRecents];
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -206,34 +218,40 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
       alert(dict.geoError);
   };
 
-  const processSelection = (lat: number, lon: number, name: string, country?: string) => {
+  // `remember`: el lloc passa a ser el primer dels recents. Els favorits no hi entren (ja tenen la seva llista).
+  const processSelection = (lat: number, lon: number, name: string, country?: string, admin1?: string, remember = true) => {
     setQuery('');
     onSearch(lat, lon, name, country);
+    if (remember) addRecent?.({ name, latitude: lat, longitude: lon, country, admin1 });
     setIsFocused(false);
     setSelectedIndex(-1);
   };
 
-  const handleSelectFavorite = (fav: LocationData) => {
-      if (typeof fav.latitude === 'number' && typeof fav.longitude === 'number' && !isNaN(fav.latitude) && !isNaN(fav.longitude)) {
-          processSelection(fav.latitude, fav.longitude, fav.name, fav.country);
+  const selectSaved = (place: LocationData, remember: boolean) => {
+      if (typeof place.latitude === 'number' && typeof place.longitude === 'number' && !isNaN(place.latitude) && !isNaN(place.longitude)) {
+          processSelection(place.latitude, place.longitude, place.name, place.country, place.admin1, remember);
       } else {
-          console.warn("Favorit sense coordenades vàlides");
+          console.warn("Lloc desat sense coordenades vàlides");
       }
   };
+  const handleSelectFavorite = (fav: LocationData) => selectSaved(fav, false);
+  const handleSelectRecent = (recent: LocationData) => selectSaved(recent, true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedIndex >= 0 && activeList[selectedIndex]) {
         const item = activeList[selectedIndex];
-        if (isLocationData(item)) {
-             handleSelectFavorite(item);
-        } else {
+        if (showSuggestionsList) {
              const geo = item as GeoSearchResult;
-             processSelection(geo.latitude, geo.longitude, geo.name, geo.country);
+             processSelection(geo.latitude, geo.longitude, geo.name, geo.country, geo.admin1);
+        } else if (selectedIndex < favoritesCount) {
+             handleSelectFavorite(item as LocationData);
+        } else {
+             handleSelectRecent(item as LocationData);
         }
     } else if (suggestions.length > 0 && suggestions[0]) {
         const topHit = suggestions[0];
-        processSelection(topHit.latitude, topHit.longitude, topHit.name, topHit.country);
+        processSelection(topHit.latitude, topHit.longitude, topHit.name, topHit.country, topHit.admin1);
     }
   };
 
@@ -381,7 +399,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
 
           {/* DESPLEGABLE DE RESULTATS I FAVORITS */}
           {/* Fons opac i sense header-glass: el seu `background` anul·lava el color i, sense blur, el tauler es llegia a través. */}
-          {isFocused && (showFavorites || (showSuggestionsList && suggestions.length > 0)) && (
+          {isFocused && (showFavorites || showRecents || (showSuggestionsList && suggestions.length > 0)) && (
             <div className="absolute top-full left-0 w-full mt-2 bg-[#020617] border border-sky-500/20 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 z-10">
                 {showFavorites && (
                     <div className="py-2">
@@ -404,6 +422,31 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                         ))}
                     </div>
                 )}
+                {showRecents && (
+                    <div className="py-2" data-testid="search-recents">
+                        <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
+                            <History className="w-3.5 h-3.5 text-sky-400" /> {dict.recents}
+                        </div>
+                        {shownRecents.map((recent, i) => {
+                            const idx = favoritesCount + i;
+                            const where = [recent.admin1, localizeCountryName(recent.country, safeLang)].filter(Boolean).join(', ');
+                            return (
+                                <button
+                                    key={`recent_${recent.name}_${recent.latitude}_${recent.longitude}`}
+                                    onClick={() => handleSelectRecent(recent)}
+                                    onMouseEnter={() => setSelectedIndex(idx)}
+                                    className={`w-full px-4 py-3 sm:py-4 flex items-center gap-3 transition-all duration-200 group text-left cursor-pointer border-l-2 ${selectedIndex === idx ? 'bg-sky-950/40 border-sky-400' : 'hover:bg-white/5 border-transparent'}`}
+                                >
+                                    <div className="flex-1 min-w-0">
+                                        <div className={`text-sm font-bold truncate transition-colors ${selectedIndex === idx ? 'text-sky-200' : 'text-slate-300 group-hover:text-white'}`}>{recent.name}</div>
+                                        {where && <div className="text-[10px] sm:text-xs text-slate-400 font-mono mt-0.5 truncate">{where}</div>}
+                                    </div>
+                                    {selectedIndex === idx && <CornerDownLeft className="w-4 h-4 text-sky-400 animate-in fade-in slide-in-from-right-2" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
                 {showSuggestionsList && (
                     <div className="py-2">
                          <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 bg-black/40">
@@ -412,7 +455,7 @@ export default function Header({ lang: propLang, t: propT }: HeaderProps = {}) {
                         {suggestions.map((geo, idx) => (
                             <button
                                 key={geo.id}
-                                onClick={() => processSelection(geo.latitude, geo.longitude, geo.name, geo.country)}
+                                onClick={() => processSelection(geo.latitude, geo.longitude, geo.name, geo.country, geo.admin1)}
                                 onMouseEnter={() => setSelectedIndex(idx)}
                                 className={`w-full px-4 py-3 sm:py-4 flex items-center gap-3 transition-all duration-200 group text-left border-l-2 cursor-pointer ${selectedIndex === idx ? 'bg-sky-950/40 border-sky-400' : 'hover:bg-white/5 border-transparent'}`}
                             >
