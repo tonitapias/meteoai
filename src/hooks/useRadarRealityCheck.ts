@@ -1,46 +1,47 @@
 // src/hooks/useRadarRealityCheck.ts
 //
 // Compara la precipitació que el model preveu ARA MATEIX amb el que el radar
-// Doppler detecta realment a la mateixa ubicació. Reaprofita useRadarData()
-// (cache de 5 min) i mostreja un únic píxel de la darrera tessel·la de
-// LibreWXR via radarSampling.ts — no cal muntar cap mapa. Mai RainViewer: la
+// detecta realment a la mateixa ubicació. Reaprofita useRadarData()
+// (cache de 5 min) i mostreja el píxel del lloc (i el seu voltant, per saber si
+// és un ruixat aïllat) de la darrera tessel·la de LibreWXR via radarSampling.ts
+// — no cal muntar cap mapa. Mai RainViewer: la
 // seva paleta fixa no és la que descodifica rgbaToClosestDbz; ni LibreWXR
 // quan hi és encallat (vegeu useRadarSources).
 import { useEffect, useState } from 'react';
 import { useRadarSources } from './useRadarData';
-import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTilePixel, radarTileUrl, sampleZoomForHost } from '../utils/radarSampling';
+import { lonLatToTile, rgbaToClosestDbz, dbzToMmPerHour, fetchTileSample, kmPerTilePixel, radarTileUrl, sampleZoomForHost, type TileSample } from '../utils/radarSampling';
+import { MODEL_MM_H_THRESHOLD, RADAR_MM_H_THRESHOLD, RAIN_EXTENT_RADIUS_KM } from '../utils/radarReality';
 
 type RadarSource = { host: string; radar?: { past: Array<{ path: string }> } };
 
-// Píxel del punt a la darrera imatge d'una font, al zoom que la font serveix (vegeu sampleZoomForHost). null = no s'ha
-// pogut llegir (xarxa, CORS, error del servidor): no vol dir "sense pluja".
-const sampleLatest = (source: RadarSource, lat: number, lon: number): Promise<[number, number, number, number] | null> => {
+// Píxel del punt (i la pluja del voltant) a la darrera imatge d'una font, al zoom que la font serveix (vegeu
+// sampleZoomForHost). null = no s'ha pogut llegir (xarxa, CORS, error del servidor): no vol dir "sense pluja".
+const sampleLatest = (source: RadarSource, lat: number, lon: number): Promise<TileSample | null> => {
   const frames = source.radar?.past;
   if (!frames?.length) return Promise.resolve(null);
-  const tile = lonLatToTile(lon, lat, sampleZoomForHost(source.host));
-  return fetchTilePixel(radarTileUrl(source.host, frames[frames.length - 1].path, tile), tile.px, tile.py);
+  const zoom = sampleZoomForHost(source.host);
+  const tile = lonLatToTile(lon, lat, zoom);
+  const radiusPx = Math.round(RAIN_EXTENT_RADIUS_KM / kmPerTilePixel(lat, zoom));
+  return fetchTileSample(radarTileUrl(source.host, frames[frames.length - 1].path, tile), tile.px, tile.py, radiusPx, RADAR_MM_H_THRESHOLD);
 };
 
 const REFRESH_MS = 5 * 60 * 1000; // Igual que useRadarData.ts CACHE_TTL.
 
-// Llindars conservadors: només avisem quan el radar detecta un eco clar
-// (per sobre del soroll de fons) i el model prediu pràcticament zero.
-// Evita falsos positius per petites diferències residuals entre fonts.
-const RADAR_MM_H_THRESHOLD = 0.5;
-const MODEL_MM_H_THRESHOLD = 0.2;
-
 export interface RadarRealityStatus {
   radarDbz: number | null;
   radarMmPerHour: number;
+  /** Part del voltant (RAIN_EXTENT_RADIUS_KM) on el radar veu pluja; null sense lectura. */
+  rainFraction: number | null;
   hasDiscrepancy: boolean;
 }
 
 interface RadarSample {
   radarDbz: number | null;
   radarMmPerHour: number;
+  rainFraction: number | null;
 }
 
-const IDLE_SAMPLE: RadarSample = { radarDbz: null, radarMmPerHour: 0 };
+const IDLE_SAMPLE: RadarSample = { radarDbz: null, radarMmPerHour: 0, rainFraction: null };
 
 export function useRadarRealityCheck(
   lat: number | undefined,
@@ -76,16 +77,16 @@ export function useRadarRealityCheck(
     // fallar per CORS), no hi ha avís: abans es llegia la de RainViewer, però
     // la seva plugim surt com a 70-73 dBZ amb la taula NEXRAD (vegeu
     // useRadarData) i donava avisos de pluja forta falsos.
-    sampleLatest(radarData, lat, lon).then((pixel) => {
+    sampleLatest(radarData, lat, lon).then((tileSample) => {
       if (cancelled) return;
-      if (!pixel) {
+      if (!tileSample) {
         setSample(IDLE_SAMPLE);
         return;
       }
-      const [r, g, b, a] = pixel;
+      const [r, g, b, a] = tileSample.pixel;
       const dbz = rgbaToClosestDbz(r, g, b, a);
       const mmPerHour = dbz === null ? 0 : dbzToMmPerHour(dbz);
-      setSample({ radarDbz: dbz, radarMmPerHour: mmPerHour });
+      setSample({ radarDbz: dbz, radarMmPerHour: mmPerHour, rainFraction: tileSample.rainFraction });
     });
 
     return () => { cancelled = true; };
