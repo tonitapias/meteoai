@@ -275,8 +275,8 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
 
       <div key={`mapbox-phoenix-${webglKey}`} ref={mapContainerRef} className="w-full h-full" />
 
-      {/* Per sobre dels controls de reproducció: 64 px de botons i, amb més d'un fotograma, la barra de temps (44 px + 8). */}
-      <div className={`absolute ${framesCount > 1 ? 'bottom-[calc(max(env(safe-area-inset-bottom,24px),24px)+124px)]' : 'bottom-[calc(max(env(safe-area-inset-bottom,24px),24px)+72px)]'} left-[max(env(safe-area-inset-left,10px),10px)] z-[999] flex flex-col items-start gap-1.5 pointer-events-none`}>
+      {/* Per sobre dels controls de reproducció (64 px; la barra de temps és dins la targeta de l'hora). */}
+      <div className="absolute bottom-[calc(max(env(safe-area-inset-bottom,24px),24px)+72px)] left-[max(env(safe-area-inset-left,10px),10px)] z-[999] flex flex-col items-start gap-1.5 pointer-events-none">
         {showAttribution && (
           <>
             <a

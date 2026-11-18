@@ -98,3 +98,69 @@ describe('WelcomeSearch — idioma dels resultats', () => {
     expect(searchCity).toHaveBeenLastCalledWith('Londres', 'en');
   });
 });
+
+// Provat al mòbil (v3.63.0): els recents sortien al cercador del tauler però no al de la benvinguda, i el que s'hi
+// triava tampoc no s'hi desava.
+describe('WelcomeSearch — recents', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const LABELS_R = { ...LABELS, recents: 'Recents' };
+  const girona = { name: 'Girona', country: 'Espanya', latitude: 41.98, longitude: 2.82 };
+  const vielha = { name: 'Vielha', admin1: 'Catalunya', country: 'Espanya', latitude: 42.7, longitude: 0.8 };
+  const olot = { name: 'Olot', country: 'Espanya', latitude: 42.18, longitude: 2.49 };
+
+  const renderWithRecents = (favorites = [girona], recents = [girona, vielha, olot]) => {
+    const onSelect = vi.fn();
+    const onRemember = vi.fn();
+    render(<WelcomeSearch labels={LABELS_R} favorites={favorites} recents={recents} onRemember={onRemember} onSelect={onSelect} />);
+    return { onSelect, onRemember, input: screen.getByRole('combobox', { name: LABELS.placeholder }) };
+  };
+
+  it('en enfocar el camp buit, surten els recents (sense el que ja és favorit)', () => {
+    const { input } = renderWithRecents();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    fireEvent.focus(input);
+    const list = screen.getByRole('listbox', { name: 'Recents' });
+    const options = screen.getAllByRole('option');
+    expect(options.map(o => o.textContent)).toEqual(['VielhaCatalunya · Espanya', 'OlotEspanya']);
+    expect(list).toHaveTextContent('Recents');
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('un toc en un recent l\'obre i el torna a posar el primer', () => {
+    const { input, onSelect, onRemember } = renderWithRecents();
+    fireEvent.focus(input);
+    fireEvent.mouseDown(screen.getByRole('option', { name: /Olot/ }));
+    expect(onSelect).toHaveBeenCalledWith(42.18, 2.49, 'Olot', 'Espanya');
+    expect(onRemember).toHaveBeenCalledWith(olot);
+  });
+
+  it('amb les fletxes i Enter', () => {
+    const { input, onSelect } = renderWithRecents();
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.submit(input.closest('form')!);
+    expect(onSelect).toHaveBeenCalledWith(42.18, 2.49, 'Olot', 'Espanya');
+  });
+
+  it('un resultat de la cerca es desa com a recent; un favorit, no', async () => {
+    const { input, onSelect, onRemember } = renderWithRecents();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Valencia' } });
+    const options = await screen.findAllByRole('option');
+    fireEvent.mouseDown(options[0]);
+    expect(onRemember).toHaveBeenCalledWith({ name: 'València', latitude: 39.47, longitude: -0.38, country: 'Espanya', admin1: 'Comunitat Valenciana' });
+    onRemember.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Girona' }));
+    expect(onSelect).toHaveBeenLastCalledWith(41.98, 2.82, 'Girona', 'Espanya');
+    expect(onRemember).not.toHaveBeenCalled();
+  });
+
+  it('en escriure, els recents s\'amaguen', () => {
+    const { input } = renderWithRecents();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Ol' } });
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+});
