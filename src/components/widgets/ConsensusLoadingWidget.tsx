@@ -28,7 +28,7 @@ export const ConsensusLoadingWidget: React.FC<ConsensusLoadingWidgetProps> = ({ 
   return (
     <div className="w-full h-[168px] sm:h-[152px] bg-slate-900/60 border border-white/5 rounded-[24px] animate-pulse flex items-center justify-center gap-3">
       <Cpu className="w-4 h-4 text-slate-600 animate-spin" style={{ animationDuration: '2s' }} />
-      <span className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-slate-600">{t.label}</span>
+      <span className="text-xs sm:text-xs font-mono uppercase tracking-widest text-slate-600">{t.label}</span>
     </div>
   );
 };

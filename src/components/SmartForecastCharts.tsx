@@ -148,7 +148,8 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
   const isBars = layer === 'precip';
   const isWind = layer === 'wind';
 
-  const paddingLeft = width < 500 ? 34 : 44;
+  // Prou lloc per a les etiquetes de l'eix a 12 px amb quatre caràcters ("1500", "-12°").
+  const paddingLeft = width < 500 ? 40 : 44;
   const paddingRight = width < 500 ? 12 : 20;
 
   const dims = useMemo(() => ({
@@ -275,7 +276,7 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
       <div className={MATRIX_BG}></div>
 
       {/* Etiqueta Tàctica (Capa z-10): comença just després de l'eix Y perquè no tapi les xifres */}
-      <div className="absolute top-3 text-[10px] font-bold text-slate-300 uppercase tracking-widest z-10 flex items-center gap-2 bg-[#050608]/90 px-3 py-1.5 rounded-md border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{ left: paddingLeft + 8 }}>
+      <div className="absolute top-3 text-xs font-bold text-slate-300 uppercase tracking-widest z-10 flex items-center gap-2 bg-[#050608]/90 px-3 py-1.5 rounded-md border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{ left: paddingLeft + 8 }}>
          <span className="w-2 h-2 rounded-full" style={{backgroundColor: currentConfig.color, boxShadow: `0 0 10px ${currentConfig.color}`}}></span>
          {title ?? currentConfig.title}
       </div>
@@ -292,27 +293,27 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
             width: '160px'
           }}
         >
-          <div className="bg-white/5 py-1.5 rounded-t-xl border-b border-white/5 text-[10px] font-black text-slate-300 tracking-widest uppercase shadow-inner text-center">
+          <div className="bg-white/5 py-1.5 rounded-t-xl border-b border-white/5 text-xs font-black text-slate-300 tracking-widest uppercase shadow-inner text-center">
             {formatRawTime(hoverData.time)}
           </div>
 
           <div className="p-2.5 flex flex-col gap-1.5 justify-center items-center">
             <div className="text-xl font-black tracking-tighter tabular-nums drop-shadow-md" style={{ color: currentConfig.color }}>
-              {showComparison && <span className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mr-1">{primaryLabel}</span>}
-              {fmtVal(hoverData.value)}<span className="text-[10px] ml-0.5 opacity-80">{unit}</span>
+              {showComparison && <span className="text-slate-400 text-xs font-bold tracking-widest uppercase mr-1">{primaryLabel}</span>}
+              {fmtVal(hoverData.value)}<span className="text-xs ml-0.5 opacity-80">{unit}</span>
             </div>
 
             {(showComparison || hoverGust) && (
-              <div className="flex flex-col gap-1 text-[11px] font-bold w-full border-t border-white/5 pt-1.5 mt-0.5">
+              <div className="flex flex-col gap-1 text-xs font-bold w-full border-t border-white/5 pt-1.5 mt-0.5">
                 {hoverGust && (
                   <div style={{ color: currentConfig.color }} className="flex justify-between px-1">
-                    <span className="text-slate-400 text-[10px] font-medium tracking-wide">{text.gust}:</span>
+                    <span className="text-slate-400 text-xs font-medium tracking-wide">{text.gust}:</span>
                     <span>{fmtVal(hoverGust.value)}{unit}</span>
                   </div>
                 )}
                 {hoverModels.map(({ key, point }) => (
                   <div key={key} style={{ color: MODEL_STYLE[key].color }} className="flex justify-between px-1">
-                    <span className="text-slate-400 text-[10px] font-medium tracking-wide">{MODEL_STYLE[key].label}:</span>
+                    <span className="text-slate-400 text-xs font-medium tracking-wide">{MODEL_STYLE[key].label}:</span>
                     <span>{fmtVal(point.value)}{unit}</span>
                   </div>
                 ))}
@@ -356,7 +357,8 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
           return (
             <g key={`tick-${tick}`} data-testid="y-tick">
               <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke={tick === axis.min ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'} strokeWidth="1" strokeDasharray={tick === axis.min ? undefined : '2 5'} />
-              <text x={paddingLeft - 6} y={y + 3.5} textAnchor="end" fill="#64748b" fontSize="10" fontWeight="700" className="font-mono">{fmtTick(tick)}</text>
+              {/* 12 px i #94a3b8 (contrast AA sobre el fons fosc; abans 10 px i #64748b, ~3,9:1): auditoria d'UX, segona volta, M9. */}
+              <text x={paddingLeft - 6} y={y + 4} textAnchor="end" fill="#94a3b8" fontSize="12" fontWeight="700" className="font-mono">{fmtTick(tick)}</text>
             </g>
           );
         })}
@@ -367,7 +369,7 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
           return (
             <g key={`day-${i}`} data-testid="midnight-marker">
               <line x1={x} y1={PADDING_TOP} x2={x} y2={baselineY} stroke="rgba(148,163,184,0.45)" strokeWidth="1" strokeDasharray="3 4" />
-              <text x={x + 5} y={PADDING_TOP + 12} fill="#94a3b8" fontSize="10" fontWeight="700" className="font-mono">{formatDayLabel(data[i].time, locale)}</text>
+              <text x={x + 5} y={PADDING_TOP + 12} fill="#94a3b8" fontSize="12" fontWeight="700" className="font-mono">{formatDayLabel(data[i].time, locale)}</text>
             </g>
           );
         })}
@@ -418,7 +420,7 @@ const SingleHourlyChart = memo(({ data, comparisonData, drawnModels, bandModels,
             if (!isNow && i % everyLabel !== 0) return null;
             if (!isNow && nowPoint !== null && Math.abs(p.x - nowPoint.x) < 34) return null;
             return (
-              <text key={`txt-${i}`} x={p.x} y={height - 10} textAnchor="middle" fill={isNow ? '#e2e8f0' : '#64748b'} fontSize="10" fontWeight="700" className={`${isNow ? '' : 'opacity-80 '}uppercase tracking-widest font-mono`}>
+              <text key={`txt-${i}`} x={p.x} y={height - 10} textAnchor="middle" fill={isNow ? '#e2e8f0' : '#94a3b8'} fontSize="12" fontWeight="700" className={`${isNow ? '' : 'opacity-80 '}uppercase tracking-widest font-mono`}>
                 {isNow ? text.legend.now : `${getRawHour(p.time)}h`}
               </text>
             );
@@ -459,9 +461,9 @@ const KeyFigures = ({ items }: { items: KeyFigureData[] }) => (
     <div className="grid grid-cols-3 gap-2 mb-3">
         {items.map(item => (
             <div key={item.label} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2 min-w-0">
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{item.label}</div>
+                <div className="text-xs font-black uppercase tracking-widest text-slate-400 leading-tight">{item.label}</div>
                 <div className="text-lg font-black tabular-nums text-slate-100 leading-tight mt-0.5">{item.value}</div>
-                <div className="text-[10px] font-bold text-slate-400 truncate min-h-[14px]">{item.sub}</div>
+                <div className="text-xs font-bold text-slate-400 truncate min-h-[14px]">{item.sub}</div>
             </div>
         ))}
     </div>
@@ -479,7 +481,7 @@ const AgreementBadge = ({ level, text }: { level: AgreementLevel | null; text: S
     const key = level ?? 'none';
     return (
         <div
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-[#050608]/90 text-[10px] font-black uppercase tracking-widest ${AGREEMENT_CHIP_CLASSES[key]}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-[#050608]/90 text-xs font-black uppercase tracking-widest ${AGREEMENT_CHIP_CLASSES[key]}`}
             title={text.hint}
         >
             <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true"></span>
@@ -496,7 +498,7 @@ const AgreementRow = ({ level, text }: { level: AgreementLevel | null; text: Sma
 );
 
 const Note = ({ children }: { children: ReactNode }) => (
-    <p className="text-[11px] font-medium text-slate-400 mt-2 px-1">{children}</p>
+    <p className="text-xs font-medium text-slate-400 mt-2 px-1">{children}</p>
 );
 
 // Cota de neu sense res a dibuixar (a l'estiu és a 4.500 m tota la finestra): una frase en lloc d'una línia plana.
@@ -506,9 +508,9 @@ const SnowCompactCard = ({ label, value, message }: { label: string; value: stri
             <Mountain className="w-5 h-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</div>
+            <div className="text-xs font-black uppercase tracking-widest text-slate-400">{label}</div>
             {value && <div className="text-lg font-black tabular-nums text-slate-100 leading-tight">{value}</div>}
-            <div className="text-[11px] font-medium text-slate-400 mt-0.5">{message}</div>
+            <div className="text-xs font-medium text-slate-400 mt-0.5">{message}</div>
         </div>
     </div>
 );
@@ -796,7 +798,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, unit, lang = 'ca', reg
               <button
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id); setHoveredIndex(null); }}
-                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 flex-1 justify-center ${
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 flex-1 justify-center ${
                       activeTab === tab.id
                       ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-900/50 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transform scale-[1.02]'
                       : 'text-slate-400 hover:text-slate-300 hover:bg-white/5 border border-transparent'

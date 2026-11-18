@@ -27,7 +27,7 @@ interface SmartChartLegendProps {
     text: SmartForecastText['legend'];
 }
 
-const CHIP = 'inline-flex items-center gap-1.5 px-3 min-h-[32px] rounded-full border text-[10px] font-black uppercase tracking-widest transition-colors';
+const CHIP = 'inline-flex items-center gap-1.5 px-3 min-h-[32px] rounded-full border text-xs font-black uppercase tracking-widest transition-colors';
 
 export const SmartChartLegend = ({
     principalLabel,
@@ -87,6 +87,6 @@ export const SmartChartLegend = ({
             </button>
         )}
 
-        {updatedText && <span className="ml-auto text-[10px] font-bold tracking-wide text-slate-400">{updatedText}</span>}
+        {updatedText && <span className="ml-auto text-xs font-bold tracking-wide text-slate-400">{updatedText}</span>}
     </div>
 );

@@ -198,7 +198,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     </div>
                     <div>
                        <h2 className="text-xs md:text-sm font-black text-white uppercase tracking-[0.2em] drop-shadow-md">{title}</h2>
-                       <span className={`block mt-0.5 md:mt-1 text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-widest ${theme.accent} drop-shadow-sm`}>{t.subtitle}</span>
+                       <span className={`block mt-0.5 md:mt-1 text-xs md:text-xs font-black uppercase tracking-widest ${theme.accent} drop-shadow-sm`}>{t.subtitle}</span>
                     </div>
                  </div>
               </div>
@@ -206,7 +206,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
               {metrics.futureDivergence && (
                 <div className="flex items-center gap-2 md:gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-2.5 [transform:translateZ(35px)] shadow-[0_8px_20px_rgba(245,158,11,0.15)]">
                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-amber-400 shrink-0 drop-shadow-md animate-pulse" />
-                   <span className="text-[10px] sm:text-[11px] md:text-xs font-bold text-amber-200 tracking-wide">{t.futureDivergence}</span>
+                   <span className="text-xs md:text-xs font-bold text-amber-200 tracking-wide">{t.futureDivergence}</span>
                 </div>
               )}
 
@@ -215,15 +215,15 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                  <div {...cardButtonProps('temp')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-rose-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95`}>
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
                         <Thermometer className="w-4 h-4 md:w-5 md:h-5 group-hover:text-rose-500 transition-colors duration-300 drop-shadow-md" />
-                        <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.temp}</span>
+                        <span className="text-xs md:text-xs font-black tracking-widest drop-shadow-sm">{t.temp}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
                         <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{formatVal(localTemp)}<span className="text-xs sm:text-sm text-slate-400 font-bold ml-0.5">°</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
+                        <div className="text-xs font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
-                        <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(localTemp, metrics.globalTemp, 'temp')}</div>
+                        <span className="text-xs text-slate-400 font-black">{t.diff}</span>
+                        <div className="flex items-center gap-1 text-xs sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(localTemp, metrics.globalTemp, 'temp')}</div>
                     </div>
                  </div>
 
@@ -231,30 +231,30 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                     {isSnowRisk && <div className="absolute inset-0 bg-sky-500/10 rounded-[20px] md:rounded-[24px] animate-pulse pointer-events-none"></div>}
                     <div className={`flex items-center gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4 ${isSnowRisk ? 'text-sky-300 drop-shadow-[0_0_8px_currentColor]' : 'text-slate-300'}`}>
                         {isSnowRisk ? <CloudSnow className="w-4 h-4 md:w-5 md:h-5 text-white transition-colors duration-300" /> : <CloudRain className="w-4 h-4 md:w-5 md:h-5 group-hover:text-sky-400 transition-colors duration-300 drop-shadow-md" />}
-                        <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{isSnowRisk ? t.snow : t.rain}</span>
+                        <span className="text-xs md:text-xs font-black tracking-widest drop-shadow-sm">{isSnowRisk ? t.snow : t.rain}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localPrecip)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">mm</span></span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localPrecip)}</span><span className="text-xs sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
+                        <div className="text-xs font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-xs font-normal text-slate-400 ml-[1px]">mm</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
-                        <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(localPrecip, metrics.globalPrecip, 'rain')}</div>
+                        <span className="text-xs text-slate-400 font-black">{t.diff}</span>
+                        <div className="flex items-center gap-1 text-xs sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(localPrecip, metrics.globalPrecip, 'rain')}</div>
                     </div>
                  </div>
 
                  <div {...cardButtonProps('wind')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95`}>
                     <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
                         <Wind className="w-4 h-4 md:w-5 md:h-5 group-hover:text-amber-400 transition-colors duration-300 drop-shadow-md" />
-                        <span className="text-[10px] sm:text-[11px] md:text-xs font-black tracking-widest drop-shadow-sm">{t.wind}</span>
+                        <span className="text-xs md:text-xs font-black tracking-widest drop-shadow-sm">{t.wind}</span>
                     </div>
                     <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-[10px] sm:text-xs text-slate-400 font-bold ml-1">km/h</span></div>
-                        <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-[10px] font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
+                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-xs sm:text-xs text-slate-400 font-bold ml-1">km/h</span></div>
+                        <div className="text-xs font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-xs font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
                     </div>
                     <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
-                        <span className="text-[10px] md:text-[11px] text-slate-400 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(localWind, metrics.globalWind, 'wind')}</div>
+                        <span className="text-xs text-slate-400 font-black">{t.diff}</span>
+                        <div className="flex items-center gap-1 text-xs sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(localWind, metrics.globalWind, 'wind')}</div>
                     </div>
                  </div>
               </div>
@@ -265,7 +265,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
                      className="w-full relative group overflow-hidden bg-black/60 border border-white/10 hover:border-cyan-500/40 rounded-xl md:rounded-2xl py-3 md:py-4 flex items-center justify-center gap-3 transition-all duration-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] active:scale-[0.98]"
                   >
                      <LineChart className="w-4 h-4 md:w-5 md:h-5 text-cyan-400 group-hover:text-cyan-300 drop-shadow-[0_0_8px_currentColor] transition-colors relative z-10" />
-                     <span className="text-[11px] sm:text-xs md:text-sm font-black text-cyan-100 group-hover:text-white uppercase tracking-[0.2em] relative z-10 transition-colors drop-shadow-md">
+                     <span className="text-xs sm:text-xs md:text-sm font-black text-cyan-100 group-hover:text-white uppercase tracking-[0.2em] relative z-10 transition-colors drop-shadow-md">
                         {t.chartsBtn}
                      </span>
                   </button>

@@ -125,21 +125,21 @@ export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = (
 
          <div className="flex flex-col text-center sm:text-left z-10 w-full [transform:translateZ(30px)]">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-3 gap-3">
-               <h2 className="text-[11px] sm:text-xs font-bold text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] uppercase tracking-[0.2em]">
+               <h2 className="text-xs sm:text-xs font-bold text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] uppercase tracking-[0.2em]">
                  {t.title}
                </h2>
-               <div className="inline-flex items-center self-center sm:self-auto gap-1.5 text-[10px] font-black uppercase px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 tracking-widest">
+               <div className="inline-flex items-center self-center sm:self-auto gap-1.5 text-xs font-black uppercase px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 tracking-widest">
                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                  {t.badge}
                </div>
             </div>
 
-            <p className="text-[11px] sm:text-[13px] text-amber-100/60 leading-relaxed font-light mb-4">
+            <p className="text-xs sm:text-[13px] text-amber-100/60 leading-relaxed font-light mb-4">
                {t.description}
             </p>
 
             <div className="mt-auto flex items-center justify-between border-t border-amber-900/50 pt-3">
-               <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-amber-500">
+               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-amber-500">
                   <Cpu className="w-3.5 h-3.5 animate-pulse" />
                   <span>{t.action}</span>
                </div>
