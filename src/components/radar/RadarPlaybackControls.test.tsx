@@ -21,7 +21,25 @@ describe('RadarPlaybackControls — edat de la imatge en pausa', () => {
         vi.setSystemTime(NOW_S * 1000);
         renderAt(63);
         await act(async () => { await vi.advanceTimersByTimeAsync(1); });
-        expect(screen.getByText('IMATGE DE FA 63 MIN')).toBeInTheDocument();
+        expect(screen.getByText('FA 63 MIN')).toBeInTheDocument();
+    });
+
+    // Provat al mòbil (v3.64.0): arrossegant enrere, «IMATGE DE FA 42 MIN» saltava a dues línies i empenyia l'hora
+    // fins a sobre de la línia de progrés.
+    it('l\'etiqueta és curta en els quatre idiomes i no pot saltar de línia', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOW_S * 1000);
+        const expected = { ca: 'FA 117 MIN', es: 'HACE 117 MIN', en: '117 MIN AGO', fr: 'IL Y A 117 MIN' } as const;
+        for (const [lang, text] of Object.entries(expected)) {
+            await i18n.changeLanguage(lang);
+            const { unmount } = renderAt(117);
+            await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+            const label = screen.getByText(text);
+            expect(label.className).toMatch(/whitespace-nowrap/);
+            expect(label.className).toMatch(/truncate/);
+            unmount();
+        }
+        await i18n.changeLanguage('ca');
     });
 
     it('una imatge recent (fins a 10 min) continua sent la captura actual', async () => {

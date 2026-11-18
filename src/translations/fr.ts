@@ -73,7 +73,7 @@ export const fr = {
   btnPause: "Pause",
   animPlaying: "ANIMATION EN COURS",
   animCurrent: "IMAGE ACTUELLE",
-  animFrameAge: "IMAGE D'IL Y A {{n}} MIN",
+  animFrameAge: "IL Y A {{n}} MIN",
   radarTimeline: "Heure de l'image radar",
   radarFrameValue: "{{time}}, il y a {{n}} min",
   radarFrameNow: "{{time}}, la plus récente",

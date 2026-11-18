@@ -20,6 +20,7 @@ import {
 } from '../utils/radarPhysics';
 import { loadRadarLayers, saveRadarLayers } from '../utils/radarLayerPrefs';
 import type { Language } from '../translations';
+import { getSafeLocale } from '../utils/formatters';
 
 // 2. DOMINI D'ESTAT EXTRET
 import { useRadarSources } from '../hooks/useRadarData';
@@ -98,10 +99,12 @@ export default function RadarMap({ lat, lon, isActive, showLayerMenu, setShowLay
   const overlaysRef = useRef<Overlays>(overlays);
   const currentFrameTimestampRef = useRef<number | null>(null);
 
+  // Sempre en 24 h i en l'idioma de l'app: abans era el del mòbil i, en anglès, sortia «05:00 PM», que no cap a la
+  // targeta de l'hora dels controls.
   const formatTime = useCallback((ts?: number | null) => {
     if (ts === null || ts === undefined || isNaN(ts)) return "--:--";
-    return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }, []);
+    return new Date(ts * 1000).toLocaleTimeString(getSafeLocale(lang), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  }, [lang]);
 
   // Capes independents (pluja, llamps, nit...). Els núvols van per setCloudSource.
   const toggleOverlay = useCallback((key: OverlayToggleKey) => {
