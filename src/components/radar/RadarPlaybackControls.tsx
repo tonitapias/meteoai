@@ -99,7 +99,7 @@ export function RadarPlaybackControls({ isPlaying, togglePlay, framesCount, curr
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className={`pointer-events-auto relative flex flex-col flex-1 items-center justify-center h-16 bg-black/50 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 ring-1 ring-white/5 select-none ${canSeek ? 'cursor-ew-resize touch-none pb-1' : ''}`}
+        className={`pointer-events-auto relative flex flex-col flex-1 min-w-0 items-center justify-center h-16 bg-black/50 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-4 ring-1 ring-white/5 select-none overflow-hidden ${canSeek ? 'cursor-ew-resize touch-none pb-3' : ''}`}
       >
         {canSeek && (
           <>
@@ -116,15 +116,18 @@ export function RadarPlaybackControls({ isPlaying, togglePlay, framesCount, curr
               className="peer sr-only"
             />
             {/* El focus del teclat, a tota la targeta (l'input és invisible). */}
-            <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-400/80" />
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl peer-focus-visible:ring-2 peer-focus-visible:ring-inset peer-focus-visible:ring-cyan-400/80" />
           </>
         )}
-        <span className="text-[10px] text-cyan-300 font-mono font-black uppercase tracking-[0.25em] mb-0.5 drop-shadow-[0_1px_4px_rgba(0,0,0,1)]">
+        {/* Una sola línia, sempre: arrossegant enrere, «IMATGE DE FA 42 MIN» saltava a dues línies (amb la lletra del
+            mòbil una mica gran) i empenyia l'hora fins a sobre de la línia de progrés. Ara l'etiqueta és curta («FA 42
+            MIN») i, si un dia no hi cabés, es retalla dins la targeta. pb-3 reserva la franja de la línia de progrés. */}
+        <span className="block max-w-full truncate whitespace-nowrap leading-none text-[10px] text-cyan-300 font-mono font-black uppercase tracking-[0.12em] mb-1 drop-shadow-[0_1px_4px_rgba(0,0,0,1)]">
           {isPlaying ? t('animPlaying') : pausedLabel}
         </span>
-        <div className="flex items-center gap-3">
-          <span className={`h-2.5 w-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,1)] ${isPlaying ? 'bg-cyan-400 animate-ping shadow-[0_0_15px_rgba(6,182,212,0.8)]' : 'bg-cyan-500'}`}></span>
-          <span ref={timeDisplayRef} className="text-white font-mono font-black text-2xl tracking-tighter tabular-nums drop-shadow-[0_2px_12px_rgba(0,0,0,1)]">
+        <div className="flex items-center gap-3 max-w-full leading-none">
+          <span className={`shrink-0 h-2.5 w-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,1)] ${isPlaying ? 'bg-cyan-400 animate-ping shadow-[0_0_15px_rgba(6,182,212,0.8)]' : 'bg-cyan-500'}`}></span>
+          <span ref={timeDisplayRef} className="whitespace-nowrap leading-none text-white font-mono font-black text-2xl tracking-tighter tabular-nums drop-shadow-[0_2px_12px_rgba(0,0,0,1)]">
             {currentFrameTimestamp ? formatTime(currentFrameTimestamp) : '--:--'}
           </span>
         </div>
