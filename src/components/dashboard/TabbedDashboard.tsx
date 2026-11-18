@@ -141,6 +141,7 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                             lat={loc?.latitude}
                             lon={loc?.longitude}
                             modelMmPerHourNow={(calculations.minutelyPreciseData?.[0] || 0) * 4}
+                            forecastHours={calculations.chartData24h}
                             lang={flags.lang}
                         />
                     </Suspense>

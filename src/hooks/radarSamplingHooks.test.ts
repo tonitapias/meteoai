@@ -19,12 +19,18 @@ vi.mock('./useRadarData', () => ({
 const WET: [number, number, number, number] = [255, 255, 0, 255];
 const DRY: [number, number, number, number] = [0, 0, 0, 0];
 const pixels = vi.hoisted(() => ({ byUrl: new Map<string, [number, number, number, number] | null>(), calls: [] as string[] }));
+const pixelFor = (url: string) => {
+    pixels.calls.push(url);
+    for (const [key, value] of pixels.byUrl) if (url.includes(key)) return value;
+    return DRY;
+};
 vi.mock('../utils/radarSampling', async (orig) => ({
     ...(await orig<typeof import('../utils/radarSampling')>()),
-    fetchTilePixel: vi.fn(async (url: string) => {
-        pixels.calls.push(url);
-        for (const [key, value] of pixels.byUrl) if (url.includes(key)) return value;
-        return DRY;
+    fetchTilePixel: vi.fn(async (url: string) => pixelFor(url)),
+    // L'avís de pluja llegeix el píxel i el voltant (rainFractionAround es prova a radarSampling.test.ts).
+    fetchTileSample: vi.fn(async (url: string) => {
+        const pixel = pixelFor(url);
+        return pixel ? { pixel, rainFraction: pixel[3] ? 1 : 0 } : null;
     })
 }));
 
@@ -54,6 +60,15 @@ describe('useRadarRealityCheck', () => {
         await waitFor(() => expect(result.current.hasDiscrepancy).toBe(true));
         expect(pixels.calls).toHaveLength(1);
         expect(pixels.calls[0]).toContain('librewxr.net/v2/radar/100/512/8/');
+        expect(result.current.rainFraction).toBe(1);
+    });
+
+    it('si la previsió ja porta pluja ara, no avisa', async () => {
+        pixels.byUrl.set('/v2/radar/100/', WET);
+        const { result } = renderHook(() => useRadarRealityCheck(41.98, 2.82, 0.8));
+        await waitFor(() => expect(pixels.calls).toHaveLength(1));
+        await waitFor(() => expect(result.current.radarMmPerHour).toBeGreaterThan(0.5));
+        expect(result.current.hasDiscrepancy).toBe(false);
     });
 
     it('si la tessel·la de LibreWXR no es pot llegir, no avisa i no llegeix la de RainViewer', async () => {

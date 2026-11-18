@@ -3,7 +3,7 @@
 // Mostreig puntual del radar: donat un lat/lon, llegim el píxel exacte de la
 // tessel·la PNG de radar (sense muntar cap mapa) i el traduïm a una
 // estimació de precipitació. Serveix per detectar quan el radar veu pluja
-// real que el model no preveu (useRadarRealityCheck.ts).
+// real que la previsió no té en aquest moment (useRadarRealityCheck.ts).
 
 // Taula oficial dBZ -> RGBA de l'esquema "NEXRAD Level III" (id 6 a l'API de
 // RainViewer/LibreWXR, el que fan servir el mapa i aquest mostreig).
@@ -165,6 +165,99 @@ export function fetchTilePixel(tileUrl: string, px: number, py: number): Promise
       }
     };
 
+    img.src = tileUrl;
+  });
+}
+
+/** Km que fa un píxel d'una tessel·la Web Mercator a aquesta latitud (d'est a oest; de nord a sud és el mateix). */
+export function kmPerTilePixel(lat: number, zoom: number, tileSize = 512): number {
+  return (40075.016686 * Math.cos((lat * Math.PI) / 180)) / (2 ** zoom * tileSize);
+}
+
+/**
+ * Fracció dels píxels d'un cercle (centre (cx, cy), radi radiusPx) d'una imatge RGBA de width x height on el radar
+ * veu una pluja d'almenys minMmPerHour. Només compta els píxels que són dins la imatge: si el lloc és a la vora de
+ * la tessel·la, el cercle hi queda retallat i la fracció és la de la part que s'hi veu.
+ */
+export function rainFractionAround(
+  rgba: Uint8ClampedArray, width: number, height: number,
+  cx: number, cy: number, radiusPx: number, minMmPerHour: number
+): number {
+  const mmByColor = new Map<number, number>();
+  const r2 = radiusPx * radiusPx;
+  let total = 0;
+  let rainy = 0;
+  for (let y = Math.max(0, cy - radiusPx); y <= Math.min(height - 1, cy + radiusPx); y++) {
+    for (let x = Math.max(0, cx - radiusPx); x <= Math.min(width - 1, cx + radiusPx); x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r2) continue;
+      total++;
+      const i = (y * width + x) * 4;
+      if (rgba[i + 3] < 10) continue;
+      const key = (rgba[i] << 16) | (rgba[i + 1] << 8) | rgba[i + 2];
+      let mm = mmByColor.get(key);
+      if (mm === undefined) {
+        const dbz = rgbaToClosestDbz(rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]);
+        mm = dbz === null ? 0 : dbzToMmPerHour(dbz);
+        mmByColor.set(key, mm);
+      }
+      if (mm >= minMmPerHour) rainy++;
+    }
+  }
+  return total ? rainy / total : 0;
+}
+
+export interface TileSample {
+  /** El píxel del lloc. */
+  pixel: [number, number, number, number];
+  /** Vegeu rainFractionAround. */
+  rainFraction: number;
+}
+
+/**
+ * Com fetchTilePixel (mateixes garanties: mai llença ni queda penjada; null si no es pot llegir), però a més del
+ * píxel del lloc diu quina part del voltant (radi radiusPx) té pluja: només es llegeix aquest tros de la tessel·la.
+ */
+export function fetchTileSample(
+  tileUrl: string, px: number, py: number, radiusPx: number, minMmPerHour: number
+): Promise<TileSample | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value: TileSample | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve(value);
+    };
+    const timeoutId = setTimeout(() => settle(null), TILE_FETCH_TIMEOUT_MS);
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onerror = () => settle(null);
+    img.onload = () => {
+      try {
+        const x0 = Math.max(0, px - radiusPx);
+        const y0 = Math.max(0, py - radiusPx);
+        const width = Math.min(img.naturalWidth - 1, px + radiusPx) - x0 + 1;
+        const height = Math.min(img.naturalHeight - 1, py + radiusPx) - y0 + 1;
+        if (width <= 0 || height <= 0) return settle(null);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return settle(null);
+        ctx.drawImage(img, -x0, -y0);
+        const data = ctx.getImageData(0, 0, width, height).data;
+        const cx = px - x0;
+        const cy = py - y0;
+        const i = (cy * width + cx) * 4;
+        settle({
+          pixel: [data[i], data[i + 1], data[i + 2], data[i + 3]],
+          rainFraction: rainFractionAround(data, width, height, cx, cy, radiusPx, minMmPerHour)
+        });
+      } catch {
+        settle(null);
+      }
+    };
     img.src = tileUrl;
   });
 }
