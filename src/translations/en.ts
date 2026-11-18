@@ -74,6 +74,9 @@ export const en = {
   animPlaying: "ANIMATION PLAYING",
   animCurrent: "CURRENT FRAME",
   animFrameAge: "FRAME FROM {{n}} MIN AGO",
+  radarTimeline: "Radar image time",
+  radarFrameValue: "{{time}}, {{n}} min ago",
+  radarFrameNow: "{{time}}, the latest",
   btnRefresh: "Refresh data",
   btnForceSync: "Retry Connection",
 

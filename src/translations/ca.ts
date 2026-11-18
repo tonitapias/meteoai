@@ -72,6 +72,9 @@ export const ca = {
   animPlaying: "ANIMACIÓ EN CURS",
   animCurrent: "CAPTURA ACTUAL",
   animFrameAge: "IMATGE DE FA {{n}} MIN",
+  radarTimeline: "Hora de la imatge del radar",
+  radarFrameValue: "{{time}}, fa {{n}} min",
+  radarFrameNow: "{{time}}, la més recent",
   btnRefresh: "Actualitzar dades",
   btnForceSync: "Reintentar Connexió",
 
