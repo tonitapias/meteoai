@@ -67,7 +67,9 @@ export default function PlanetExtremesModal({ lang, unit, entry, place, onClose 
     const s = PLANET_STRINGS[lang] ?? PLANET_STRINGS.ca;
     const r = RECORD_STRINGS[lang] ?? RECORD_STRINGS.ca;
     const nav = usePlanetNavigation(entry, onClose);
-    const { now } = useAstroModalShell(nav.closeAll);
+    // Focus dins el diàleg, Tab que no en surt i fons inert (auditoria d'UX, segona volta, M7).
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const { now } = useAstroModalShell(nav.closeAll, dialogRef);
     const nowMs = now.getTime();
     const { status, data } = usePlanetExtremes();
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -119,7 +121,7 @@ export default function PlanetExtremesModal({ lang, unit, entry, place, onClose 
     const isOrbit = view.kind === 'orbit';
 
     return (
-        <div role="dialog" aria-modal="true" aria-labelledby="planet-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="planet-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
             {/* Alçades en % de l'overlay i no en dvh, com la resta de fulls (motors sense dvh). */}
             <div className={`w-full h-[96%] sm:h-auto sm:max-h-[calc(90%+1.8rem)] md:max-h-[calc(90%+2.7rem)] landscape:h-full landscape:sm:h-auto landscape:sm:max-h-[calc(90%+1.8rem)] max-w-sm md:max-w-3xl flex flex-col ${isOrbit ? 'min-h-0 sm:min-h-[min(46rem,90%)]' : 'min-h-0'} bg-gradient-to-b ${SHEET_GRADIENT} rounded-t-[24px] sm:rounded-[32px] border-t sm:border border-cyan-500/20 shadow-[0_0_100px_rgba(0,0,0,0.9)] overflow-hidden relative`} style={SHEET_VARS}>
                 <div className={MATRIX_BG}></div>

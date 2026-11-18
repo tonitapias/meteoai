@@ -3,7 +3,8 @@
 // estable amb Escape, bloqueig de scroll de fons, pausa de les animacions del dashboard que
 // queda tapat i el rellotge viu de 30s que alimenta les lectures en temps real. L'historial
 // "enrere" del navegador NO es gestiona aquí — ja el centralitza useModalHistory a useViewState.ts.
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type RefObject } from 'react';
+import { useDialogFocus } from './useDialogFocus';
 
 interface AstroModalShellResult {
   handleClose: () => void;
@@ -32,7 +33,16 @@ export const pauseBackgroundAnimations = (): (() => void) => {
   return () => paused.forEach(a => { if (a.playState === 'paused' && targetOf(a)?.isConnected) a.play(); });
 };
 
-export const useAstroModalShell = (onClose: () => void): AstroModalShellResult => {
+const NO_DIALOG: RefObject<HTMLElement | null> = { current: null };
+
+/**
+ * `dialogRef`: l'arrel del diàleg. Amb la ref, el focus hi entra, el Tab no en surt, el fons queda inert i en tancar
+ * torna al giny que l'ha obert (useDialogFocus). Sense, res d'això: Solar i Lluna ja criden useDialogFocus pel seu
+ * compte. Abans cap dels modals de ginys (pressió, UV, aire, CAPE, rosada, visibilitat, núvols, cota de neu, vent,
+ * extrems del planeta) movia el focus (auditoria d'UX, segona volta, M7).
+ */
+export const useAstroModalShell = (onClose: () => void, dialogRef?: RefObject<HTMLElement | null>): AstroModalShellResult => {
+  useDialogFocus(dialogRef !== undefined, dialogRef ?? NO_DIALOG);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   const handleClose = useCallback(() => onCloseRef.current(), []);

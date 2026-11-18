@@ -71,7 +71,9 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
   const safeLang: Language = T[lang] ? lang : 'ca';
   const t = T[safeLang];
 
-  const { handleClose } = useAstroModalShell(onClose);
+  // Focus dins el diàleg, Tab que no en surt i fons inert (auditoria d'UX, segona volta, M7).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const { handleClose } = useAstroModalShell(onClose, dialogRef);
 
   const isFt = unit === 'F';
   const toDisplay = (m: number) => Math.round(isFt ? m * 3.28084 : m);
@@ -182,7 +184,7 @@ export default function SnowLevelModal({ freezingLevel, chartDataFull, unit, onC
   }, [windowEntries]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="snowlevel-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="snowlevel-modal-title" className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 landscape:p-0 landscape:sm:p-4 bg-black">
       <style>{`
         .snowlevel-scrollbar { -webkit-overflow-scrolling: touch; }
         .snowlevel-scrollbar::-webkit-scrollbar { width: 5px; }
