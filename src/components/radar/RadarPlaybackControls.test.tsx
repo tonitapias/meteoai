@@ -58,9 +58,34 @@ describe('RadarPlaybackControls — barra de temps', () => {
         expect(slider).toHaveAttribute('max', '3');
         expect(slider).toHaveValue('1');
         expect(slider).toHaveAttribute('aria-valuetext', `${hhmm(TIMES[1])}, fa 50 min`);
-        // Les hores dels extrems.
-        expect(screen.getByText(hhmm(TIMES[0]))).toBeInTheDocument();
-        expect(screen.getByText(hhmm(TIMES[3]))).toBeInTheDocument();
+    });
+
+    // Al mòbil, la fila a part ocupava massa: la barra és la mateixa targeta de l'hora (v3.63.0 → la versió següent).
+    it('no afegeix cap fila: el control és dins la targeta de l\'hora, amb una línia de progrés', async () => {
+        await i18n.changeLanguage('ca');
+        renderBar(1);
+        const scrubber = screen.getByTestId('radar-scrubber');
+        expect(scrubber.contains(screen.getByRole('slider'))).toBe(true);
+        expect(scrubber.contains(screen.getByText(hhmm(TIMES[1])))).toBe(true);
+        // 1 de 3 → a un terç.
+        const fill = screen.getByTestId('radar-progress').firstElementChild as HTMLElement;
+        expect(fill.style.width).toMatch(/^33\.3/);
+        // Les hores dels extrems ja no hi són.
+        expect(screen.queryByText(hhmm(TIMES[0]))).toBeNull();
+    });
+
+    it('arrossegar el dit per la targeta va passant pels fotogrames, sense repetir-ne cap', async () => {
+        await i18n.changeLanguage('ca');
+        const onSeek = renderBar(3);
+        const scrubber = screen.getByTestId('radar-scrubber');
+        vi.spyOn(scrubber, 'getBoundingClientRect').mockReturnValue({ left: 100, width: 300, top: 0, right: 400, bottom: 64, height: 64, x: 100, y: 0, toJSON: () => ({}) });
+        fireEvent.pointerDown(scrubber, { clientX: 100, pointerId: 1, pointerType: 'touch' }); // l'esquerra: el primer
+        fireEvent.pointerMove(scrubber, { clientX: 105, pointerId: 1, pointerType: 'touch' }); // encara el primer
+        fireEvent.pointerMove(scrubber, { clientX: 250, pointerId: 1, pointerType: 'touch' }); // el mig: el segon (1,5 → 2)
+        fireEvent.pointerMove(scrubber, { clientX: 450, pointerId: 1, pointerType: 'touch' }); // passat la dreta: l'últim
+        fireEvent.pointerUp(scrubber, { clientX: 450, pointerId: 1, pointerType: 'touch' });
+        fireEvent.pointerMove(scrubber, { clientX: 100, pointerId: 1, pointerType: 'touch' }); // ja no arrossega
+        expect(onSeek.mock.calls.map(c => c[0])).toEqual([0, 2, 3]);
     });
 
     it("a l'últim fotograma diu que és el més recent", async () => {
