@@ -275,6 +275,7 @@ export const en = {
     noResults: "No results",
     favorites: "Favorites",
     moreFavorites: "Show {n} more favorites",
+    recents: "Recent",
     help: "How it works",
     language: "Language",
     dataCredit: "Data: Open-Meteo, with models from ECMWF, NOAA, DWD and national weather services",

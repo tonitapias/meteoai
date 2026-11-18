@@ -5,10 +5,12 @@
 // gairebé sempre, i encara més amb el teclat obert) i fa l'alçada de l'espai que queda visible.
 // El camp i els favorits són blancs translúcids (sense desenfocament): es veu el cel a través. La llista, opaca.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { Loader2, Search, Star } from 'lucide-react';
+import { History, Loader2, Search, Star } from 'lucide-react';
 import { useCitySearch } from '../../hooks/useCitySearch';
 import type { LocationData } from '../../hooks/usePreferences';
 import type { Language } from '../../translations';
+import { isSamePlace } from '../../utils/geoDistance';
+import { localizeCountryName } from '../../utils/countryName';
 
 export interface WelcomeSearchLabels {
   placeholder: string;
@@ -17,11 +19,17 @@ export interface WelcomeSearchLabels {
   favorites: string;
   /** Text accessible del botó "+N" ({n} = favorits amagats). */
   moreFavorites: string;
+  /** Títol de la llista dels darrers llocs triats. */
+  recents?: string;
 }
 
 interface WelcomeSearchProps {
   labels: WelcomeSearchLabels;
   favorites: LocationData[];
+  /** Els darrers llocs triats al cercador (el més recent primer): surten en enfocar-lo sense escriure-hi res. */
+  recents?: LocationData[];
+  /** Un lloc triat al cercador (un resultat o un recent) passa a ser el primer dels recents. Els favorits, no. */
+  onRemember?: (place: LocationData) => void;
   /** Idioma dels noms dels resultats (el de la interfície). */
   lang?: Language;
   disabled?: boolean;
@@ -39,7 +47,7 @@ const LIST_MAX = 288;
 const LIST_MIN = 120;
 const GAP = 12;
 
-export default function WelcomeSearch({ labels, favorites, lang = 'ca', disabled = false, emphasized = false, onSelect }: WelcomeSearchProps) {
+export default function WelcomeSearch({ labels, favorites, recents = [], onRemember, lang = 'ca', disabled = false, emphasized = false, onSelect }: WelcomeSearchProps) {
   const { query, setQuery, suggestions, isSearching, selectedIndex, setSelectedIndex } = useCitySearch(lang);
   const [open, setOpen] = useState(false);
   const [allFavorites, setAllFavorites] = useState(false);
@@ -48,7 +56,12 @@ export default function WelcomeSearch({ labels, favorites, lang = 'ca', disabled
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const showList = open && query.trim().length >= 3;
+  const showResults = open && query.trim().length >= 3;
+  // Amb el camp buit, els recents (com al cercador del tauler): els que ja són favorits ja surten a sota com a botons.
+  const shownRecents = recents.filter(r => !favorites.some(f => isSamePlace(f, r)));
+  const showRecents = open && query.trim().length === 0 && shownRecents.length > 0 && !!labels.recents;
+  const showList = showResults || showRecents;
+  const optionCount = showResults ? suggestions.length : showRecents ? shownRecents.length : 0;
 
   // Espai visible a sobre i a sota del camp. visualViewport és l'àrea que es veu de debò: amb el teclat del
   // mòbil obert, és la meitat de dalt de la pantalla.
@@ -84,24 +97,31 @@ export default function WelcomeSearch({ labels, favorites, lang = 'ca', disabled
       vv?.removeEventListener('scroll', measure);
     };
   }, [showList, measure]);
-  const pick = (lat: number, lon: number, name: string, country?: string) => {
+  // Un resultat de la cerca o un recent: s'obre i passa a ser el primer dels recents.
+  const pick = (place: LocationData) => {
     setQuery('');
     setOpen(false);
     setSelectedIndex(-1);
-    onSelect(lat, lon, name, country);
+    onRemember?.(place);
+    onSelect(place.latitude, place.longitude, place.name, place.country);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') { setOpen(false); setSelectedIndex(-1); return; }
-    if (!showList || suggestions.length === 0) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((selectedIndex + 1) % suggestions.length); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((selectedIndex - 1 + suggestions.length) % suggestions.length); }
+    if (!showList || optionCount === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((selectedIndex + 1) % optionCount); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((selectedIndex - 1 + optionCount) % optionCount); }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (showRecents) {
+      const recent = shownRecents[selectedIndex];
+      if (recent) pick(recent);
+      return;
+    }
     const hit = suggestions[selectedIndex >= 0 ? selectedIndex : 0];
-    if (hit) pick(hit.latitude, hit.longitude, hit.name, hit.country);
+    if (hit) pick({ name: hit.name, latitude: hit.latitude, longitude: hit.longitude, country: hit.country, admin1: hit.admin1 });
   };
 
   const validFavorites = favorites
@@ -145,24 +165,49 @@ export default function WelcomeSearch({ labels, favorites, lang = 'ca', disabled
           <ul
             id={`${listId}-list`}
             role="listbox"
-            aria-label={labels.placeholder}
+            aria-label={showRecents ? labels.recents : labels.placeholder}
             data-placement={placement.up ? 'up' : 'down'}
             style={{ maxHeight: placement.maxHeight }}
             className={`absolute left-0 right-0 z-30 overflow-y-auto overscroll-contain rounded-2xl border border-[#2a3242] bg-[#0b0f19] py-1.5 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.85)] ${placement.up ? 'bottom-full mb-2' : 'top-full mt-2'}`}
           >
-            {isSearching && suggestions.length === 0 && (
+            {showRecents && (
+              <>
+                <li role="presentation" className="flex items-center gap-2 px-4 pt-1.5 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <History className="w-3.5 h-3.5 text-sky-300" aria-hidden="true" />
+                  {labels.recents}
+                </li>
+                {shownRecents.map((r, i) => {
+                  const where = [r.admin1, localizeCountryName(r.country, lang)].filter(Boolean).join(' · ');
+                  return (
+                    <li
+                      key={`recent-${r.name}-${r.latitude}-${r.longitude}`}
+                      id={`${listId}-opt-${i}`}
+                      role="option"
+                      aria-selected={i === selectedIndex}
+                      onMouseDown={(e) => { e.preventDefault(); pick(r); }}
+                      onMouseEnter={() => setSelectedIndex(i)}
+                      className={`flex min-h-[44px] cursor-pointer flex-col justify-center px-4 py-2 ${i === selectedIndex ? 'bg-white/[0.07]' : ''}`}
+                    >
+                      <span className="text-[15px] font-medium text-slate-100">{r.name}</span>
+                      {where && <span className="text-xs text-slate-400">{where}</span>}
+                    </li>
+                  );
+                })}
+              </>
+            )}
+            {showResults && isSearching && suggestions.length === 0 && (
               <li className="px-4 py-3 text-sm text-slate-400">{labels.searching}</li>
             )}
-            {!isSearching && suggestions.length === 0 && (
+            {showResults && !isSearching && suggestions.length === 0 && (
               <li className="px-4 py-3 text-sm text-slate-400">{labels.noResults}</li>
             )}
-            {suggestions.map((s, i) => (
+            {showResults && suggestions.map((s, i) => (
               <li
                 key={s.id}
                 id={`${listId}-opt-${i}`}
                 role="option"
                 aria-selected={i === selectedIndex}
-                onMouseDown={(e) => { e.preventDefault(); pick(s.latitude, s.longitude, s.name, s.country); }}
+                onMouseDown={(e) => { e.preventDefault(); pick({ name: s.name, latitude: s.latitude, longitude: s.longitude, country: s.country, admin1: s.admin1 }); }}
                 onMouseEnter={() => setSelectedIndex(i)}
                 className={`flex min-h-[44px] cursor-pointer flex-col justify-center px-4 py-2 ${i === selectedIndex ? 'bg-white/[0.07]' : ''}`}
               >

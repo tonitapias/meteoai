@@ -276,6 +276,7 @@ export const ca = {
     noResults: "Cap resultat",
     favorites: "Favorits",
     moreFavorites: "Mostra {n} favorits més",
+    recents: "Recents",
     help: "Com funciona",
     language: "Idioma",
     dataCredit: "Dades: Open-Meteo, amb models de l'ECMWF, la NOAA, el DWD i serveis meteorològics nacionals",

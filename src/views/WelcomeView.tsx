@@ -39,6 +39,8 @@ export default function WelcomeView({ controller }: WelcomeViewProps) {
            onLocate={actions.handleGetCurrentLocation}
            onSelectLocation={actions.fetchWeatherByCoords}
            favorites={state.favorites}
+           recents={state.recents}
+           onRememberPlace={actions.addRecent}
            loading={state.loading}
            onDebugToggle={actions.toggleDebug}
            unit={flags.unit}

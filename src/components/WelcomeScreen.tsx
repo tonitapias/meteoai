@@ -43,6 +43,10 @@ interface WelcomeScreenProps {
   onLocate: () => Promise<LocateResult>;
   onSelectLocation: (lat: number, lon: number, name: string, country?: string) => void;
   favorites: LocationData[];
+  /** Els darrers llocs triats al cercador (com al del tauler): surten en enfocar-lo sense escriure-hi res. */
+  recents?: LocationData[];
+  /** Desa com a recent un lloc triat al cercador (no els favorits ni el GPS). */
+  onRememberPlace?: (place: LocationData) => void;
   loading: boolean;
   /** 5 tocs seguits a la marca: panell de depuració (com el títol de la capçalera). */
   onDebugToggle?: () => void;
@@ -85,7 +89,7 @@ function starMaskOutside({ left, top, right, bottom }: TextBox): string {
   ].join(', ');
 }
 
-export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, loading, onDebugToggle, unit = 'C', onNotify }: WelcomeScreenProps) {
+export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLocation, favorites, recents, onRememberPlace, loading, onDebugToggle, unit = 'C', onNotify }: WelcomeScreenProps) {
   const w = t.welcome;
   const permission = useGeoPermission();
   // Arriba quan s'ha carregat SkyScene; fins llavors, fons fosc neutre i la línia de dalt sense el moment del dia.
@@ -404,8 +408,10 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
               </p>
             )}
             <WelcomeSearch
-              labels={{ placeholder: w.searchPlaceholder, searching: w.searching, noResults: w.noResults, favorites: w.favorites, moreFavorites: w.moreFavorites }}
+              labels={{ placeholder: w.searchPlaceholder, searching: w.searching, noResults: w.noResults, favorites: w.favorites, moreFavorites: w.moreFavorites, recents: w.recents }}
               favorites={favorites}
+              recents={recents}
+              onRemember={onRememberPlace}
               lang={lang}
               disabled={loading}
               emphasized={searchFirst}
