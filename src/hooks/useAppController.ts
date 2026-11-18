@@ -18,7 +18,8 @@ export function useAppController() {
   // Aquestes són les úniques dades que necessitem abans d'arrencar res més
   const { 
     lang, setLang, unit,
-    favorites, addFavorite, removeFavorite, isFavorite
+    favorites, addFavorite, removeFavorite, isFavorite,
+    recents, addRecent
   } = usePreferences();
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['ca'];
@@ -107,6 +108,8 @@ export function useAppController() {
           lightning: data.state.lightning,
           calculations: data.state.calculations,
           favorites,
+          // Els darrers llocs triats al cercador (a part dels favorits): la capçalera els mostra en enfocar-lo.
+          recents,
           notification: ui.state.notification,
           now: ui.state.now
       },
@@ -119,6 +122,7 @@ export function useAppController() {
 
           // Accions de Preferències
           handleToggleFavorite: appActions.handleToggleFavorite,
+          addRecent,
           handleSharePlace: appActions.handleSharePlace,
           shareMyPosition: appActions.shareMyPosition,
           shareWeatherOnly: appActions.shareWeatherOnly,
@@ -159,7 +163,7 @@ export function useAppController() {
       t
   }), [
       data.state.weatherData, data.state.aqiData, data.state.loading, openingLink, sharedPlace, data.state.error,
-      data.state.aiAnalysis, data.state.lightning, data.state.calculations, favorites, ui.state.notification, ui.state.now,
+      data.state.aiAnalysis, data.state.lightning, data.state.calculations, favorites, recents, addRecent, ui.state.notification, ui.state.now,
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation, goHome,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
       appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,

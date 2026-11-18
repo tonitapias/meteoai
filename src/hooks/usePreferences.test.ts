@@ -59,3 +59,41 @@ describe('favorits', () => {
         expect(result.current.favorites).toHaveLength(1);
     });
 });
+
+// Auditoria d'UX, segona volta (B8): els 3 darrers llocs triats al cercador, a part dels favorits.
+describe('recents', () => {
+    afterEach(() => { localStorage.clear(); });
+
+    const place = (name: string, latitude: number, longitude = 2) => ({ name, country: 'Espanya', latitude, longitude });
+
+    it('es recorden els 3 últims, el més recent primer, i es desen', () => {
+        const { result } = renderHook(() => usePreferences());
+        for (const p of [place('Girona', 41.98), place('Vic', 41.93), place('Olot', 42.18), place('Ripoll', 42.2)]) {
+            act(() => result.current.addRecent(p));
+        }
+        expect(result.current.recents.map(r => r.name)).toEqual(['Ripoll', 'Olot', 'Vic']);
+        expect(JSON.parse(localStorage.getItem('meteoai_recents') ?? '[]').map((r: { name: string }) => r.name)).toEqual(['Ripoll', 'Olot', 'Vic']);
+    });
+
+    it('un lloc que ja hi era puja al primer lloc (el mateix lloc, no el mateix nom)', () => {
+        const { result } = renderHook(() => usePreferences());
+        act(() => result.current.addRecent(place('Sant Pere', 41.26, 1.77)));
+        act(() => result.current.addRecent(place('Vic', 41.93)));
+        act(() => result.current.addRecent(place('Sant Pere', 42.19, 3.08)));
+        act(() => result.current.addRecent(place('Sant Pere', 41.2605, 1.7708)));
+        expect(result.current.recents.map(r => [r.name, r.latitude])).toEqual([['Sant Pere', 41.2605], ['Sant Pere', 42.19], ['Vic', 41.93]]);
+    });
+
+    it('en tornar a obrir l\'app hi són, i les entrades dolentes de l\'emmagatzematge es descarten', () => {
+        localStorage.setItem('meteoai_recents', JSON.stringify([place('Girona', 41.98), { name: 'Sense coordenades' }, null, place('Vic', 41.93), place('Olot', 42.18), place('Ripoll', 42.2)]));
+        const { result } = renderHook(() => usePreferences());
+        expect(result.current.recents.map(r => r.name)).toEqual(['Girona', 'Vic', 'Olot']);
+    });
+
+    it('un lloc sense nom o sense coordenades no s\'hi afegeix', () => {
+        const { result } = renderHook(() => usePreferences());
+        act(() => result.current.addRecent({ name: '', latitude: 41, longitude: 2 }));
+        act(() => result.current.addRecent({ name: 'X', latitude: NaN, longitude: 2 }));
+        expect(result.current.recents).toEqual([]);
+    });
+});

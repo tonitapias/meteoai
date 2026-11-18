@@ -33,7 +33,9 @@ const createMockPrefs = (unit: WeatherUnit, lang: Language): ReturnType<typeof u
   favorites: [],
   addFavorite: vi.fn(),
   removeFavorite: vi.fn(),
-  isFavorite: vi.fn().mockReturnValue(false)
+  isFavorite: vi.fn().mockReturnValue(false),
+  recents: [],
+  addRecent: vi.fn()
 });
 
 const mockData: ExtendedWeatherData = {
