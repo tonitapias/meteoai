@@ -20,6 +20,8 @@ MeteoToni AI combina la potència predictiva dels models meteorològics globals 
 
 **Obre-la a [meteotoniai.com](https://meteotoniai.com).** Des de la v3.46.0 l'app viu al seu propi domini; l'adreça antiga (`tonitapias.github.io/meteoai`) avisa de la mudança i hi porta amb els favorits i les preferències.
 
+Les novetats de cada versió són al [registre de canvis](CHANGELOG.md).
+
 ### ⚠️ Propòsit i Limitacions
 MeteoToni AI és exclusivament una eina d'informació analítica. Proporciona dades basades en models matemàtics, **però les matemàtiques no eviten els riscos físics**. Aquesta aplicació no és un sistema de prevenció d'accidents, no detecta perills objectius sobre el terreny i no garanteix la seguretat en cap ruta. L'avaluació final de les condicions i la presa de decisions recau sempre, i de manera innegociable, en la formació, l'experiència visual i el criteri de l'usuari sobre el terreny.
 
