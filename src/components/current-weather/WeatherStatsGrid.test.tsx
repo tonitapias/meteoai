@@ -47,3 +47,15 @@ describe('WeatherStatsGrid → fila compacta', () => {
         expect(labels('fr')).toContain('Ressenti');
     });
 });
+
+describe('WeatherStatsGrid → fletxa de direcció', () => {
+    it('apunta cap on va el vent, com la brúixola del Detall (abans anava 45° desviada)', () => {
+        // 315° (NO): el vent va cap al SE (135°). La icona Navigation ja apunta al NE (45°), així que gira 90°.
+        for (const compact of [false, true]) {
+            const { container, unmount } = renderGrid({ compact });
+            const arrow = container.querySelector('svg.lucide-navigation') as SVGElement;
+            expect(arrow.style.transform).toBe('rotate(90deg)');
+            unmount();
+        }
+    });
+});

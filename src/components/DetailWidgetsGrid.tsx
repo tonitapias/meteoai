@@ -1,9 +1,9 @@
 // src/components/DetailWidgetsGrid.tsx
-// La graella dels ginys de detall (vent, UV, visibilitat... lluna, sol i cota de neu), cadascun a la seva targeta, que
-// n'obre el modal. Abans vivia dins ExpertWidgets; ara és una peça a part i `ids` tria quins ginys hi surten i en quin
+// La graella dels ginys de detall (temperatura, vent, UV, visibilitat... lluna, sol i cota de neu), cadascun a la seva
+// targeta, que n'obre el modal. Abans vivia dins ExpertWidgets; ara és una peça a part i `ids` tria quins ginys hi surten i en quin
 // ordre, perquè es puguin repartir en llocs diferents. Els valors es calculen exactament igual que abans.
 import React, { useMemo } from 'react';
-import { AlertOctagon } from 'lucide-react';
+import { Gauge } from 'lucide-react';
 import { getMoonPhase, getCurrentDewPoint } from '../utils/weatherMath';
 import { getMoonAgeDays } from '../utils/lunarPhases';
 import type { SolarDaily } from '../utils/solar/solarForecast';
@@ -19,6 +19,10 @@ import { resolveCurrentDisplayVisibility } from '../utils/visibilityDisplay';
 import { preloadSolarModal } from './solar/preloadSolarModal';
 import type { ChartDataPoint } from './ForecastSection';
 import { ALL_DETAIL_WIDGETS, type DetailWidgetId } from './detailWidgetIds';
+import { buildTemperatureWindow } from '../utils/temperatureDetail';
+import { buildDetailCardLabel, type DetailCardInput } from '../utils/detailCardLabel';
+import { nextSunEvent } from '../utils/solar/nextSunEvent';
+import { pressureDelta3h } from '../utils/pressureTrend';
 import {
   CompassGauge,
   SnowLevelWidget,
@@ -29,24 +33,29 @@ import {
   SunArcWidget,
   MoonWidget,
   AqiWidget,
-  VisibilityWidget
+  VisibilityWidget,
+  TemperatureWidget
 } from './widgets';
 
 const DEFAULT_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-20 grid-flow-dense';
 
 // onIntent: el dit toca o el focus arriba a la targeta, abans del clic; serveix per precarregar el modal.
-// fullRow: ocupa tota la fila a qualsevol amplada. És per a la cota de neu, que només surt de vegades i
-// sempre queda l'última: sense això a PC es quedava sola en 1 de 4 columnes (i en 1 de 2 a tauleta).
+// fullRow: ocupa tota la fila a qualsevol amplada. És per als ginys panoràmics: la temperatura (la primera) i la cota de
+// neu, que només surt de vegades i sempre queda l'última: sense això a PC es quedava sola en 1 de 4 columnes (i en 1 de 2
+// a tauleta).
 // `col-span-full` (de la primera a l'última columna) val per a qualsevol graella, també la de 3 de les pestanyes.
-interface WidgetCardProps { children: React.ReactNode; cols?: number; fullRow?: boolean; onClick?: () => void; onIntent?: () => void; }
+// label: nom accessible del botó ("Vent 6 km/h SO · Detall", utils/detailCardLabel.ts). Sense nom, el lector de pantalla
+// llegia tot el contingut de la targeta barrejat ("VENT 239° SO N S O E VENT FLUIXET 6 KM/H…").
+interface WidgetCardProps { children: React.ReactNode; label: string; cols?: number; fullRow?: boolean; onClick?: () => void; onIntent?: () => void; }
 
-const WidgetCard = ({ children, cols = 1, fullRow = false, onClick, onIntent }: WidgetCardProps) => (
+const WidgetCard = ({ children, label, cols = 1, fullRow = false, onClick, onIntent }: WidgetCardProps) => (
   <div
     className={`${fullRow ? 'col-span-full' : `col-span-1 ${cols === 2 ? 'md:col-span-2' : ''}`} h-full flex flex-col animate-in fade-in zoom-in-95 duration-700 fill-mode-both rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-lg ${onClick ? 'cursor-pointer transition-colors hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60' : ''}`}
     onClick={onClick}
     onPointerDown={onIntent}
     onFocus={onIntent}
     role={onClick ? 'button' : undefined}
+    aria-label={onClick ? label : undefined}
     tabIndex={onClick ? 0 : undefined}
     onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
   >
@@ -74,6 +83,7 @@ export interface DetailWidgetsGridProps {
   onShowCloudLayersModal: () => void;
   onShowSnowLevelModal: () => void;
   onShowWindModal: () => void;
+  onShowTemperatureModal: () => void;
   // Codi de temps de la capçalera (ja passat per la política de boira): decideix si el giny de
   // Visibilitat pot dir "boira" (vegeu utils/visibilityDisplay.ts).
   effectiveCode?: number | null;
@@ -85,16 +95,17 @@ export interface DetailWidgetsGridProps {
   className?: string;
 }
 
-export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, effectiveCode = null, now, ids = ALL_DETAIL_WIDGETS, className = DEFAULT_GRID_CLASS }: DetailWidgetsGridProps) {
+export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, onShowTemperatureModal, effectiveCode = null, now, ids = ALL_DETAIL_WIDGETS, className = DEFAULT_GRID_CLASS }: DetailWidgetsGridProps) {
   const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
 
   // La fase és d'un instant, no d'una hora local: abans es llegia current.time (hora LOCAL) com si fos
   // UTC i el giny anava desfasat tantes hores com el fus (2 h a Barcelona, 11 h a Sydney) respecte al
   // modal, que fa servir l'hora real. Sense rellotge de l'app (tests), l'hora del sistema.
   const moonNowMs = typeof now === 'number' && Number.isFinite(now) ? now : undefined;
-  const { moonPhaseVal, moonAgeDays } = useMemo(() => {
+  // clockMs: el mateix instant per al nom accessible de la lluna i del sol.
+  const { moonPhaseVal, moonAgeDays, clockMs } = useMemo(() => {
     const at = moonNowMs !== undefined ? new Date(moonNowMs) : new Date();
-    return { moonPhaseVal: getMoonPhase(at), moonAgeDays: getMoonAgeDays(at) };
+    return { moonPhaseVal: getMoonPhase(at), moonAgeDays: getMoonAgeDays(at), clockMs: at.getTime() };
   }, [moonNowMs]);
 
   const showSnowWidget = typeof freezingLevel === 'number' && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
@@ -135,33 +146,44 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
     return idx;
   }, [hourly, current]);
 
-  // DOCTRINA RISC ZERO: Extracció del ΔP (Tendència Baromètrica de les últimes 3h)
-  const pressureTrend = useMemo(() => {
-    if (!hourly || !Array.isArray(hourly.pressure_msl)) return undefined;
-
-    if (currentHourIndex >= 3) {
-        const currentP = hourly.pressure_msl[currentHourIndex];
-        const pastP = hourly.pressure_msl[currentHourIndex - 3];
-
-        if (typeof currentP === 'number' && typeof pastP === 'number') {
-            return Number((currentP - pastP).toFixed(1));
-        }
-    }
-    return undefined;
-  }, [hourly, currentHourIndex]);
+  // DOCTRINA RISC ZERO: ΔP de les últimes 3 h, el mateix càlcul que el modal (utils/pressureTrend.ts); null si falta.
+  const pressureTrend = pressureDelta3h(hourly?.pressure_msl, currentHourIndex);
 
   const safeCapeData = useMemo(() => {
     if (!hourly || !Array.isArray(hourly.cape)) return [];
     return hourly.cape.map(c => typeof c === 'number' ? c : null);
   }, [hourly]);
 
+  // --- Valors per al nom accessible de les targetes que no el reben ja calculat (només si la targeta hi és) ---
+  // La temperatura d'ara del giny (i de la capçalera): la primera hora de la seva finestra.
+  const temperatureNow = useMemo(
+    () => (ids.includes('temperature') ? buildTemperatureWindow(weatherData, 1)[0]?.temp ?? null : null),
+    [ids, weatherData]
+  );
+  // La pròxima sortida o posta, la mateixa que compta enrere la targeta Cicle solar.
+  const sunNext = useMemo(
+    () => (ids.includes('sun')
+      ? nextSunEvent(clockMs, safeLat, safeLon, typeof timezone === 'string' ? timezone : null, targetOffsetSeconds, daily as SolarDaily | undefined)
+      : null),
+    [ids, clockMs, safeLat, safeLon, timezone, targetOffsetSeconds, daily]
+  );
+
   if (!current) return null;
+
+  const cardLabel = (input: DetailCardInput) => buildDetailCardLabel(input, lang);
 
   const renderWidget = (id: DetailWidgetId): React.ReactNode => {
     switch (id) {
+      case 'temperature':
+        // Panoràmic a tota l'amplada (com la cota de neu): ara, sensació, rang d'avui i les pròximes 24 h.
+        return (
+          <WidgetCard key={id} fullRow onClick={onShowTemperatureModal} label={cardLabel({ id, celsius: temperatureNow, unit })}>
+              <TemperatureWidget weatherData={weatherData} unit={unit} lang={lang} />
+          </WidgetCard>
+        );
       case 'wind':
         return (
-          <WidgetCard key={id} onClick={onShowWindModal}>
+          <WidgetCard key={id} onClick={onShowWindModal} label={cardLabel({ id, kmh: currentWindSpeed, degrees: currentWindDir })}>
               <CompassGauge
                 degrees={currentWindDir}
                 speed={currentWindSpeed}
@@ -173,27 +195,28 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
         );
       case 'uv':
         return (
-          <WidgetCard key={id} onClick={onShowUvModal}>
+          <WidgetCard key={id} onClick={onShowUvModal} label={cardLabel({ id, index: currentUV })}>
               <UVIndexWidget uvIndex={currentUV} lang={lang} />
           </WidgetCard>
         );
       case 'visibility':
         return (
-          <WidgetCard key={id} onClick={onShowVisibilityModal}>
+          <WidgetCard key={id} onClick={onShowVisibilityModal} label={cardLabel({ id, meters: currentVisibility, bound: visibilityBound })}>
               <VisibilityWidget visibility={currentVisibility} bound={visibilityBound} lang={lang} />
           </WidgetCard>
         );
       case 'cloudLayers':
         return (
-          <WidgetCard key={id} onClick={onShowCloudLayersModal}>
+          <WidgetCard key={id} onClick={onShowCloudLayersModal} label={cardLabel({ id, low: currentCloudLow, mid: currentCloudMid, high: currentCloudHigh })}>
               <CloudLayersWidget low={currentCloudLow} mid={currentCloudMid} high={currentCloudHigh} lang={lang} />
           </WidgetCard>
         );
       case 'pressure':
         return (
-          <WidgetCard key={id} onClick={onShowPressureModal}>
+          <WidgetCard key={id} onClick={onShowPressureModal} label={cardLabel({ id, hpa: currentPressure })}>
               <CircularGauge
-                  icon={<AlertOctagon className="w-5 h-5 text-indigo-400"/>}
+                  // Gauge, la mateixa icona que el modal de Pressió (abans AlertOctagon, que semblava un avís).
+                  icon={<Gauge className="w-5 h-5 text-indigo-400"/>}
                   label={trLabels.pressure}
                   value={currentPressure}
                   max={1050}
@@ -206,7 +229,7 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
         );
       case 'dewPoint':
         return (
-          <WidgetCard key={id} onClick={onShowComfortModal}>
+          <WidgetCard key={id} onClick={onShowComfortModal} label={cardLabel({ id, celsius: dewPointValue })}>
               {/* Risc Zero Aplicat: Evitem el "?? 0" en l'humitat i confiem en el tipatge natiu undefined */}
               <DewPointWidget
                   value={dewPointValue}
@@ -217,19 +240,19 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
         );
       case 'cape':
         return (
-          <WidgetCard key={id} onClick={onShowStormModal}>
+          <WidgetCard key={id} onClick={onShowStormModal} label={cardLabel({ id, jkg: safeCapeData[currentHourIndex] ?? null })}>
               <CapeWidget capeData={safeCapeData} currentHourIndex={currentHourIndex} lang={lang} />
           </WidgetCard>
         );
       case 'aqi':
         return (
-          <WidgetCard key={id} cols={2} onClick={onShowAqiModal}>
+          <WidgetCard key={id} cols={2} onClick={onShowAqiModal} label={cardLabel({ id, current: aqiData?.current })}>
               <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
           </WidgetCard>
         );
       case 'moon':
         return (
-          <WidgetCard key={id} onClick={onShowMoonModal}>
+          <WidgetCard key={id} onClick={onShowMoonModal} label={cardLabel({ id, nowMs: clockMs })}>
               <MoonWidget
                   phase={moonPhaseVal}
                   ageDays={moonAgeDays}
@@ -243,7 +266,7 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
         );
       case 'sun':
         return (
-          <WidgetCard key={id} cols={2} onClick={onShowSolarModal} onIntent={preloadSolarModal}>
+          <WidgetCard key={id} cols={2} onClick={onShowSolarModal} onIntent={preloadSolarModal} label={cardLabel({ id, next: sunNext })}>
               {/* El mateix model del dia que el modal: hores d'Open-Meteo si quadren amb l'astronomia (daily), si no suncalc. */}
               <SunArcWidget
                   lang={lang}
@@ -258,7 +281,7 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
       case 'snowLevel':
         if (!showSnowWidget || freezingLevel === null) return null;
         return (
-          <WidgetCard key={id} fullRow onClick={onShowSnowLevelModal}>
+          <WidgetCard key={id} fullRow onClick={onShowSnowLevelModal} label={cardLabel({ id, freezingLevel, unit })}>
               <SnowLevelWidget
                   freezingLevel={freezingLevel}
                   chartData={chartDataFull}

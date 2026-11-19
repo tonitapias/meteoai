@@ -5,6 +5,7 @@ import { WIDGET_BASE_STYLE, TITLE_STYLE, MATRIX_BG } from './widgetStyles';
 import { getTrans } from './widgetHelpers';
 import { Language } from '../../translations';
 import { buildSnowLevelWindow } from '../../utils/snowLevelWindow';
+import { calculateSnowLevel } from '../../utils/rules/winterRules';
 
 // Giny panoràmic: ocupa tota l'última fila de la graella (vegeu `fullRow` a DetailWidgetsGrid), així que
 // a l'esquerra hi ha la xifra d'ara i la mínima de 48 h, i a la dreta un perfil altitud × temps on la
@@ -37,8 +38,9 @@ export const SnowLevelWidget = ({ freezingLevel, unit, lang, chartData, elevatio
 
     // Risc Zero: Validació estricta abans de cap càlcul termodinàmic
     const hasValidData = typeof freezingLevel === 'number' && !isNaN(freezingLevel);
-    // El límit de neu sol situar-se uns 300m per sota de la isoterma 0ºC (mateix càlcul que el modal).
-    const snowLimit = hasValidData ? Math.max(0, freezingLevel - 300) : null;
+    // El límit de neu sol situar-se uns 300m per sota de la isoterma 0ºC (mateix càlcul que el modal i que el nom
+    // accessible de la targeta: calculateSnowLevel, abans una còpia en línia de la mateixa fórmula).
+    const snowLimit = calculateSnowLevel(freezingLevel);
 
     const isFt = unit === 'imperial' || unit === 'F';
     const toDisplay = (m: number) => Math.round(isFt ? m * 3.28084 : m);

@@ -42,3 +42,10 @@ describe('CloudLayersModal — l\'heroi segueix l\'hora explorada al gràfic', (
     expect(heroCaption(container)).toBe('Cobertura Efectiva · ARA');
   });
 });
+
+describe("CloudLayersModal — escala a l'eix vertical del gràfic", () => {
+  it('20, 40, 60 i 80 % (la cobertura va de 0 a 100 %)', () => {
+    const { container } = render(<CloudLayersModal weatherData={buildWeather()} onClose={() => {}} lang="ca" />);
+    expect([...container.querySelectorAll('[data-tick]')].map(s => s.textContent)).toEqual(['20%', '40%', '60%', '80%']);
+  });
+});

@@ -12,6 +12,8 @@ import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 const { DEW_POINT } = WEATHER_THRESHOLDS;
 
@@ -128,6 +130,10 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
     const vals = windowEntries.map(e => e.dewPoint).filter((v): v is number => v !== null);
     return vals.length > 0 ? Math.max(...vals) : null;
   }, [windowEntries]);
+  const minDewPoint = useMemo(() => {
+    const vals = windowEntries.map(e => e.dewPoint).filter((v): v is number => v !== null);
+    return vals.length > 0 ? Math.min(...vals) : null;
+  }, [windowEntries]);
 
   const hoursSticky = useMemo(
     () => windowEntries.filter(e => e.dewPoint !== null && e.dewPoint >= DEW_POINT.COMFORTABLE).length,
@@ -190,7 +196,11 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
 
   // --- Geometria del gràfic ---
   const yMax = useMemo(() => Math.max(DEW_POINT.OPPRESSIVE + 4, (maxDewPoint ?? 0) + 3), [maxDewPoint]);
-  const yMin = -5;
+  // Terra a −5 °C, però més avall si les dades hi arriben: abans era fix i un punt de rosada de −12 es dibuixava a −5
+  // (amb l'escala a l'eix, s'hauria llegit malament).
+  const yMin = minDewPoint !== null ? Math.min(-5, Math.floor(minDewPoint) - 3) : -5;
+  // Línies guia de l'eix vertical (graus enters), dins del rang real del gràfic.
+  const yTicks = useMemo(() => niceTicks(yMin, yMax, { integer: true }), [yMin, yMax]);
   const dewToY = (v: number) => BOTTOM_Y - ((Math.max(yMin, Math.min(yMax, v)) - yMin) / (yMax - yMin)) * (BOTTOM_Y - TOP_Y);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punt i dates) que va per sobre del SVG estirat.
@@ -347,6 +357,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
                   aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.dewPoint ?? '--'}°` : undefined}
                   onKeyDown={handleKeyDown}
                 >
+                  <ChartGridLines ticks={yTicks} y={dewToY} x2={CHART_W} />
                   <line x1="0" y1={dewToY(DEW_POINT.COMFORTABLE)} x2={CHART_W} y2={dewToY(DEW_POINT.COMFORTABLE)} stroke="#fde047" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={dewToY(DEW_POINT.STICKY)} x2={CHART_W} y2={dewToY(DEW_POINT.STICKY)} stroke="#f97316" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={dewToY(DEW_POINT.OPPRESSIVE)} x2={CHART_W} y2={dewToY(DEW_POINT.OPPRESSIVE)} stroke="#f43f5e" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
@@ -365,6 +376,7 @@ export default function ComfortModal({ weatherData, currentDewPoint: currentDewP
 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <ChartTickLabels ticks={yTicks} topPct={pctY} format={v => `${v}°`} />
                   {dayMarkers.map(m => (
                     <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}

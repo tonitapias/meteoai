@@ -11,6 +11,11 @@ import { MATRIX_BG } from './widgets/widgetStyles';
 import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
+import {
+  AQI_BANDS, AQI_NO_DATA_COLOR, getAqiLevelColor, getAqiLevelFor, type AqiColorFamily, type AqiLevel, type AqiScale,
+} from '../utils/aqiLevel';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 interface AqiModalProps {
   aqiData: AirQualityData | null;
@@ -76,26 +81,39 @@ const getSafe = (arr: (number | null)[] | undefined, idx: number): number | null
 
 interface Severity { label: string; color: string; stroke: string; borderColor: string; bgGlow: string; }
 
-// Bandes oficials EAQI (Agència Europea de Medi Ambient) i USAQI (EPA) — mateixos llindars
-// que ja pinta AqiWidget.tsx::getAqiState, reutilitzats tal qual per coherència visual.
-function getAqiSeverity(value: number | null, type: 'EAQI' | 'USAQI' | null, t: Record<string, string>): Severity {
-  if (value === null || type === null) return { label: t.unknown, color: 'text-slate-400', stroke: '#64748b', borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' };
-  if (type === 'EAQI') {
-    if (value > 150) return { label: t.extreme, color: 'text-purple-500', stroke: '#a855f7', borderColor: 'border-purple-500/30', bgGlow: 'from-purple-950/40 to-black/90' };
-    if (value > 100) return { label: t.veryPoor, color: 'text-fuchsia-500', stroke: '#d946ef', borderColor: 'border-fuchsia-500/30', bgGlow: 'from-fuchsia-950/30 to-black/90' };
-    if (value > 50) return { label: t.poor, color: 'text-rose-500', stroke: '#f43f5e', borderColor: 'border-rose-500/30', bgGlow: 'from-rose-950/30 to-black/90' };
-    if (value > 40) return { label: t.moderate, color: 'text-yellow-300', stroke: '#fde047', borderColor: 'border-yellow-400/20', bgGlow: 'from-yellow-950/20 to-black/90' };
-    if (value > 20) return { label: t.fair, color: 'text-emerald-400', stroke: '#34d399', borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' };
-    return { label: t.good, color: 'text-cyan-400', stroke: '#22d3ee', borderColor: 'border-cyan-500/20', bgGlow: 'from-cyan-950/20 to-black/90' };
-  }
-  // USAQI
-  if (value > 300) return { label: t.hazardous, color: 'text-red-800', stroke: '#991b1b', borderColor: 'border-red-800/30', bgGlow: 'from-red-950/40 to-black/90' };
-  if (value > 200) return { label: t.veryPoor, color: 'text-fuchsia-500', stroke: '#d946ef', borderColor: 'border-fuchsia-500/30', bgGlow: 'from-fuchsia-950/30 to-black/90' };
-  if (value > 150) return { label: t.poor, color: 'text-rose-500', stroke: '#f43f5e', borderColor: 'border-rose-500/30', bgGlow: 'from-rose-950/30 to-black/90' };
-  if (value > 100) return { label: t.sensitive, color: 'text-amber-400', stroke: '#fbbf24', borderColor: 'border-amber-400/30', bgGlow: 'from-amber-950/30 to-black/90' };
-  if (value > 50) return { label: t.moderate, color: 'text-yellow-300', stroke: '#fde047', borderColor: 'border-yellow-400/20', bgGlow: 'from-yellow-950/20 to-black/90' };
-  return { label: t.good, color: 'text-emerald-400', stroke: '#34d399', borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' };
+// La vora i el degradat del full de cada color (escrits sencers perquè Tailwind els generi).
+const FAMILY_TONE: Record<AqiColorFamily, { borderColor: string; bgGlow: string }> = {
+  cyan: { borderColor: 'border-cyan-500/20', bgGlow: 'from-cyan-950/20 to-black/90' },
+  emerald: { borderColor: 'border-emerald-500/20', bgGlow: 'from-emerald-950/20 to-black/90' },
+  yellow: { borderColor: 'border-yellow-400/20', bgGlow: 'from-yellow-950/20 to-black/90' },
+  amber: { borderColor: 'border-amber-400/30', bgGlow: 'from-amber-950/30 to-black/90' },
+  rose: { borderColor: 'border-rose-500/30', bgGlow: 'from-rose-950/30 to-black/90' },
+  fuchsia: { borderColor: 'border-fuchsia-500/30', bgGlow: 'from-fuchsia-950/30 to-black/90' },
+  purple: { borderColor: 'border-purple-500/30', bgGlow: 'from-purple-950/40 to-black/90' },
+  red: { borderColor: 'border-red-800/30', bgGlow: 'from-red-950/40 to-black/90' },
+  slate: { borderColor: 'border-slate-500/20', bgGlow: 'from-slate-950/20 to-black/90' },
+};
+
+// Clau del diccionari T de cada nivell.
+const LEVEL_KEY: Record<AqiLevel, string> = {
+  good: 'good', fair: 'fair', moderate: 'moderate', sensitive: 'sensitive', poor: 'poor',
+  very_poor: 'veryPoor', extreme: 'extreme', hazardous: 'hazardous',
+};
+
+// Nivell i color de l'índex amb les bandes i els colors del giny (utils/aqiLevel.ts): abans n'hi havia una còpia aquí.
+function getAqiSeverity(value: number | null, type: AqiScale | null, t: Record<string, string>): Severity {
+  if (value === null || type === null) return { label: t.unknown, color: AQI_NO_DATA_COLOR.text, stroke: AQI_NO_DATA_COLOR.hex, ...FAMILY_TONE.slate };
+  const level = getAqiLevelFor(value, type);
+  const c = getAqiLevelColor(level, type);
+  return { label: t[LEVEL_KEY[level]], color: c.text, stroke: c.hex, ...FAMILY_TONE[c.family] };
 }
+
+// Línies guia del gràfic (EAQI): on comencen la raonable, la dolenta i la molt dolenta, amb el color de cada una.
+const EAQI_GUIDES = (['fair', 'poor', 'very_poor'] as const).map(level => {
+  const bands = AQI_BANDS.EAQI;
+  const i = bands.findIndex(b => b.level === level);
+  return { value: bands[i - 1].max, stroke: getAqiLevelColor(level, 'EAQI').hex };
+});
 
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 
@@ -118,7 +136,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
 
   const hasData = !!current && (typeof current.european_aqi === 'number' || typeof current.us_aqi === 'number');
 
-  const currentType: 'EAQI' | 'USAQI' | null = typeof current?.european_aqi === 'number' ? 'EAQI' : typeof current?.us_aqi === 'number' ? 'USAQI' : null;
+  const currentType: AqiScale | null =typeof current?.european_aqi === 'number' ? 'EAQI' : typeof current?.us_aqi === 'number' ? 'USAQI' : null;
   const currentValue = currentType === 'EAQI' ? current?.european_aqi ?? null : currentType === 'USAQI' ? current?.us_aqi ?? null : null;
   const severity = getAqiSeverity(currentValue, currentType, t);
 
@@ -196,6 +214,9 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
   // --- Geometria del gràfic ---
   const yMax = useMemo(() => Math.max(100, (maxAqi48 ?? 0) * 1.1), [maxAqi48]);
   const aqiToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(yMax, v)) / yMax) * (BOTTOM_Y - TOP_Y);
+  // Línies guia de l'eix vertical (índex enter), de 0 al sostre del gràfic: amb el sostre de 100, cauen a les vores de
+  // les bandes (20, 40, 60, 80).
+  const yTicks = useMemo(() => niceTicks(0, yMax, { integer: true }), [yMax]);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punt i dates) que va per sobre del SVG estirat.
   const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
@@ -355,9 +376,10 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
                     aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · EAQI ${activeEntry.eaqi ?? '--'}` : undefined}
                     onKeyDown={handleKeyDown}
                   >
-                    <line x1="0" y1={aqiToY(20)} x2={CHART_W} y2={aqiToY(20)} stroke="#34d399" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-                    <line x1="0" y1={aqiToY(50)} x2={CHART_W} y2={aqiToY(50)} stroke="#f43f5e" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-                    <line x1="0" y1={aqiToY(100)} x2={CHART_W} y2={aqiToY(100)} stroke="#d946ef" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                    <ChartGridLines ticks={yTicks} y={aqiToY} x2={CHART_W} />
+                    {EAQI_GUIDES.map(g => (
+                      <line key={g.value} x1="0" y1={aqiToY(g.value)} x2={CHART_W} y2={aqiToY(g.value)} stroke={g.stroke} strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                    ))}
 
                     {dayMarkers.map(m => (
                       <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
@@ -373,6 +395,7 @@ export default function AqiModal({ aqiData, onClose, lang = 'ca' }: AqiModalProp
 
                   {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                   <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                    <ChartTickLabels ticks={yTicks} topPct={pctY} format={v => String(v)} />
                     {dayMarkers.map(m => (
                       <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                         {m.label}

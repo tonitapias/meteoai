@@ -25,6 +25,7 @@ const VisibilityModal = lazy(() => import('../VisibilityModal'));
 const CloudLayersModal = lazy(() => import('../CloudLayersModal'));
 const SnowLevelModal = lazy(() => import('../SnowLevelModal'));
 const WindModal = lazy(() => import('../WindModal'));
+const TemperatureModal = lazy(() => import('../TemperatureModal'));
 const SharePositionSheet = lazy(() => import('../SharePositionSheet'));
 const SettingsSheet = lazy(() => import('../SettingsSheet'));
 const PlanetExtremesModal = lazy(() => import('../planet/PlanetExtremesModal'));
@@ -166,6 +167,14 @@ export const DashboardModals = () => {
                 <WindModal
                     weatherData={weatherData}
                     onClose={() => actions.setShowWindModal(false)}
+                    lang={flags.lang}
+                />
+            )}
+            {modals.showTemperatureModal && (
+                <TemperatureModal
+                    weatherData={weatherData}
+                    unit={flags.unit}
+                    onClose={() => actions.setShowTemperatureModal(false)}
                     lang={flags.lang}
                 />
             )}

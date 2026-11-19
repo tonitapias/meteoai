@@ -32,7 +32,7 @@ const renderExpert = (effectiveCode: number | null) => render(
         weatherData={buildWeather()} aqiData={null} lang="ca" unit="C" freezingLevel={null}
         onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
         onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
-        onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop}
+        onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop} onShowTemperatureModal={noop}
         effectiveCode={effectiveCode}
     />
 );

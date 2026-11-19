@@ -11,4 +11,5 @@ export * from './MoonWidget';
 export * from './HourlyForecastWidget';
 export * from './TempRangeBar';
 export * from './VisibilityWidget';
+export * from './TemperatureWidget';
 export * from './widgetTypes';

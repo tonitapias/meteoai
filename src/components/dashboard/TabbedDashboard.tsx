@@ -43,7 +43,8 @@ const ConsensusSection = lazy(() => import('../ConsensusSection'));
 const DetailWidgetsGrid = lazy(() => import('../DetailWidgetsGrid'));
 const PlanetExtremesCard = lazy(() => import('../planet/PlanetExtremesCard'));
 
-// Detall: 1 columna al mòbil, 2 a tauleta, 3 a escriptori (els 9 ginys omplen tres files; la cota de neu, a sota).
+// Detall: 1 columna al mòbil, 2 a tauleta, 3 a escriptori (la temperatura a dalt i la cota de neu a sota, totes dues a tota
+// l'amplada; entremig, els 8 ginys omplen tres files).
 const DETAIL_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 grid-flow-dense';
 // Cel: el cicle solar (doble) i la lluna en una sola fila a escriptori.
 const SKY_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 grid-flow-dense';
@@ -259,10 +260,11 @@ const useWidgetGridProps = () => {
         onShowCloudLayersModal: () => actions.setShowCloudLayersModal(true),
         onShowSnowLevelModal: () => actions.setShowSnowLevelModal(true),
         onShowWindModal: () => actions.setShowWindModal(true),
+        onShowTemperatureModal: () => actions.setShowTemperatureModal(true),
     };
 };
 
-// --- Detall: les condicions d'ara (vent, UV, aire, visibilitat, núvols, pressió, rosada, CAPE, cota de neu) --------
+// --- Detall: les condicions d'ara (temperatura, vent, UV, aire, visibilitat, núvols, pressió, rosada, CAPE, cota de neu) --
 const DetailPanel = () => {
     const { state } = useAppContext();
     const gridProps = useWidgetGridProps();

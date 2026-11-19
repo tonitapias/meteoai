@@ -13,6 +13,8 @@ import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { classifyShear, getBulkShearKmh, type ShearClass } from '../utils/rules/shearRules';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 const { CAPE, ALERTS } = WEATHER_THRESHOLDS;
 
@@ -218,6 +220,8 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
   // --- Geometria del gràfic ---
   const yMax = useMemo(() => Math.max(CAPE.EXTREME, (maxCape48 ?? 0) * 1.05), [maxCape48]);
   const capeToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(yMax, v)) / yMax) * (BOTTOM_Y - TOP_Y);
+  // Línies guia de l'eix vertical (J/kg enters), de 0 al sostre del gràfic.
+  const yTicks = useMemo(() => niceTicks(0, yMax, { integer: true }), [yMax]);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punt i dates) que va per sobre del SVG estirat.
   const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
@@ -387,6 +391,7 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
                   aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · CAPE ${activeEntry.cape ?? '--'}` : undefined}
                   onKeyDown={handleKeyDown}
                 >
+                  <ChartGridLines ticks={yTicks} y={capeToY} x2={CHART_W} />
                   {/* Bandes de llindar (fons) */}
                   <line x1="0" y1={capeToY(CAPE.MIN_STORM)} x2={CHART_W} y2={capeToY(CAPE.MIN_STORM)} stroke="#fde047" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={capeToY(ALERTS.CAPE_STORM)} x2={CHART_W} y2={capeToY(ALERTS.CAPE_STORM)} stroke="#fbbf24" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
@@ -421,6 +426,7 @@ export default function StormModal({ weatherData, onClose, lang = 'ca' }: StormM
 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <ChartTickLabels ticks={yTicks} topPct={pctY} format={v => String(v)} />
                   {dayMarkers.map(m => (
                     <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}

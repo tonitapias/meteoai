@@ -107,7 +107,7 @@ describe('TabbedDashboard → cap giny perdut (taula giny → pestanya)', () => 
         for (const [testId, tab] of COVERAGE) {
             expect(await within(panel(tab)!).findByTestId(testId)).toBeTruthy();
         }
-        // Els 11 ginys de la graella, repartits entre Detall i Cel sense repetir-ne cap.
+        // Els 12 ginys de la graella, repartits entre Detall i Cel sense repetir-ne cap.
         const detailIds = (await within(panel('detail')!).findByTestId('DetailWidgetsGrid')).getAttribute('data-ids')!.split(',');
         const skyIds = (await within(panel('sky')!).findByTestId('DetailWidgetsGrid')).getAttribute('data-ids')!.split(',');
         expect(skyIds).toEqual(['sun', 'moon']);

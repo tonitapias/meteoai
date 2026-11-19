@@ -14,6 +14,11 @@ import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { calculateEffectiveCloudCover } from '../utils/rules/cloudRules';
 import { cloudCoverLevel, effectiveCloudCoverNow, CLOUD_LEVEL_LABEL } from '../utils/cloudCoverLevel';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
+
+// Línies guia de l'eix vertical: la cobertura va sempre de 0 a 100 %, així que són fixes (20, 40, 60 i 80 %).
+const COVER_TICKS = niceTicks(0, 100, { integer: true });
 
 const { CLOUDS } = WEATHER_THRESHOLDS;
 
@@ -338,6 +343,7 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
                   aria-valuetext={activeEntry ? `${activeTimeLabel} · ${t.coverNow} ${pctText(displayEffective)} · ${t.high} ${pctText(displayHigh)} · ${t.mid} ${pctText(displayMid)} · ${t.low} ${pctText(displayLow)}` : undefined}
                   onKeyDown={handleKeyDown}
                 >
+                  <ChartGridLines ticks={COVER_TICKS} y={valToY} x2={CHART_W} />
                   <line x1="0" y1={valToY(CLOUDS.FEW)} x2={CHART_W} y2={valToY(CLOUDS.FEW)} stroke="#34d399" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={valToY(CLOUDS.SCATTERED)} x2={CHART_W} y2={valToY(CLOUDS.SCATTERED)} stroke="#38bdf8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   {/* De parcialment a molt ennuvolat (CLOUDS.MOSTLY_CLOUDY): els cinc estats de la capçalera tenen quatre talls. */}
@@ -359,6 +365,7 @@ export default function CloudLayersModal({ weatherData, onClose, lang = 'ca' }: 
 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <ChartTickLabels ticks={COVER_TICKS} topPct={pctY} format={v => `${v}%`} />
                   {dayMarkers.map(m => (
                     <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}

@@ -12,6 +12,8 @@ import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { getUVCategory, needsUVProtection } from '../utils/uvIndexUtils';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 interface UvModalProps {
   weatherData: ExtendedWeatherData;
@@ -161,6 +163,8 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
   // --- Geometria del gràfic ---
   const yMax = useMemo(() => Math.max(12, (maxUvClearToday ?? maxUvToday ?? 0) * 1.1), [maxUvToday, maxUvClearToday]);
   const uvToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(yMax, v)) / yMax) * (BOTTOM_Y - TOP_Y);
+  // Línies guia de l'eix vertical: índex enter (com es llegeix l'UV), de 0 al sostre del gràfic.
+  const yTicks = useMemo(() => niceTicks(0, yMax, { integer: true }), [yMax]);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punt actiu) que va per sobre del SVG estirat.
   const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
@@ -310,6 +314,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
                     aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · UV ${activeEntry.uv ?? '--'}` : undefined}
                     onKeyDown={handleKeyDown}
                   >
+                    <ChartGridLines ticks={yTicks} y={uvToY} x2={CHART_W} />
                     <line x1="0" y1={uvToY(3)} x2={CHART_W} y2={uvToY(3)} stroke="#fbbf24" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                     <line x1="0" y1={uvToY(6)} x2={CHART_W} y2={uvToY(6)} stroke="#f97316" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                     <line x1="0" y1={uvToY(8)} x2={CHART_W} y2={uvToY(8)} stroke="#ef4444" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
@@ -330,6 +335,7 @@ export default function UvModal({ weatherData, currentUV, onClose, lang = 'ca' }
 
                   {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                   <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                    <ChartTickLabels ticks={yTicks} topPct={pctY} format={v => String(v)} />
                     {activeEntry && activeEntry.uv !== null && (
                       <span className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center" style={{ left: `${pctX(activeIndex)}%`, top: `${pctY(activeEntry.uv)}%` }}>
                         <span className="absolute inset-0 rounded-full opacity-25" style={{ backgroundColor: strokeHex }} />

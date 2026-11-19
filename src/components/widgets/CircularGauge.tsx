@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import { MATRIX_BG, CARD_VEIL } from './widgetStyles';
 import { formatDecimal } from '../../utils/formatters';
-import { classifyPressureTrend, PRESSURE_TREND_LABEL } from '../../utils/pressureTrend';
+import { classifyPressureTrend, PRESSURE_TREND_HOURS, PRESSURE_TREND_LABEL } from '../../utils/pressureTrend';
 import type { Language } from '../../translations';
 
 interface CircularGaugeProps {
@@ -16,12 +16,12 @@ interface CircularGaugeProps {
     lang?: 'ca' | 'es' | 'en' | 'fr' | string;
 }
 
-// Diccionari Tàctic i18n
+// Diccionari Tàctic i18n. window: la finestra de la variació del xip de tendència ("+2,6 hPa · 3 h").
 const widgetTranslations: Record<string, Record<string, string>> = {
-    ca: { no_data: "--", error: "SENSE DADES" },
-    es: { no_data: "--", error: "SIN DATOS" },
-    en: { no_data: "--", error: "NO DATA" },
-    fr: { no_data: "--", error: "PAS DE DONNÉES" }
+    ca: { no_data: "--", error: "SENSE DADES", window: "{h} h" },
+    es: { no_data: "--", error: "SIN DATOS", window: "{h} h" },
+    en: { no_data: "--", error: "NO DATA", window: "{h} h" },
+    fr: { no_data: "--", error: "PAS DE DONNÉES", window: "{h} h" }
 };
 
 export const CircularGauge = ({ 
@@ -66,7 +66,9 @@ export const CircularGauge = ({
 
     if (typeof trendValue === 'number' && !isNaN(trendValue)) {
         showTrend = true;
-        safeTrendValue = `${trendValue > 0 ? '+' : ''}${formatDecimal(trendValue, lang)}`;
+        // Amb la unitat i la finestra: abans només "+2,6", sense saber de què ni en quant de temps.
+        const windowText = t.window.replace('{h}', String(PRESSURE_TREND_HOURS));
+        safeTrendValue = `${trendValue > 0 ? '+' : ''}${formatDecimal(trendValue, lang)}${subText ? ` ${subText}` : ''} · ${windowText}`;
 
         // Mateixos llindars i etiquetes que el modal de Pressió (utils/pressureTrend.ts): abans aquí hi havia una escala
         // pròpia i "Estable / pujant" amb −0,1 hPa (auditoria d'UX del 16/11/2026, B2).
@@ -181,16 +183,18 @@ export const CircularGauge = ({
             </div>
 
             {/* Capa 3: TELEMETRIA - Càpsula de Tendència (ΔP) */}
-            <div className="mt-auto pt-2 z-10 w-full h-8 flex items-end">
+            {/* La xifra no es parteix mai; a les targetes estretes (2 columnes, ~290 px) l'etiqueta llarga ("Baixant molt
+                ràpidament") passa a dues línies i el contenidor creix (min-h) en lloc de desbordar-se. */}
+            <div className="mt-auto pt-2 z-10 w-full min-h-8 flex items-end">
                 {showTrend && safeTrendValue !== null ? (
-                    <div className={`w-full flex items-center justify-between px-2 py-1.5 rounded border ${trendBg} transition-colors duration-500`}>
-                        <div className={`flex items-center gap-1.5 ${trendColor}`}>
-                            {trendIcon}
-                            <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
+                    <div className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded border ${trendBg} transition-colors duration-500`}>
+                        <div className={`flex items-center gap-1.5 min-w-0 ${trendColor}`}>
+                            <span className="shrink-0">{trendIcon}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider leading-tight">
                                 {trendText}
                             </span>
                         </div>
-                        <span className={`text-xs font-mono font-black tracking-tight ${trendColor} leading-none`}>
+                        <span className={`shrink-0 whitespace-nowrap text-xs font-mono font-black tracking-tight ${trendColor} leading-none`}>
                             {safeTrendValue}
                         </span>
                     </div>

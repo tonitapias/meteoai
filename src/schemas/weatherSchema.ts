@@ -143,6 +143,11 @@ export const AirQualitySchema = z.object({
     nitrogen_dioxide: safeNumber.optional(),
     ozone: safeNumber.optional(),
     sulphur_dioxide: safeNumber.optional(),
+    // Subíndexs europeus de cada contaminant (el color de les barres del giny de Qualitat de l'aire).
+    european_aqi_pm2_5: safeNumber.optional(),
+    european_aqi_pm10: safeNumber.optional(),
+    european_aqi_nitrogen_dioxide: safeNumber.optional(),
+    european_aqi_ozone: safeNumber.optional(),
     // Camps addicionals per al desglossament complet d'AqiModal (ja arribaven per
     // .passthrough() però sense tipar — PARAMS_AQI_CURRENT ja els demanava).
     dust: safeNumber.optional(),

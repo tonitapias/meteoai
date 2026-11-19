@@ -57,9 +57,12 @@ export const PARAMS_DAILY = [
 // --- QUALITAT DE L'AIRE ---
 
 export const PARAMS_AQI_CURRENT = [
-    "european_aqi", "us_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone", 
-    "sulphur_dioxide", "dust", "uv_index", "ammonia", "alder_pollen", "birch_pollen", 
-    "grass_pollen", "mugwort_pollen", "olive_pollen", "ragweed_pollen"
+    "european_aqi", "us_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone",
+    "sulphur_dioxide", "dust", "uv_index", "ammonia", "alder_pollen", "birch_pollen",
+    "grass_pollen", "mugwort_pollen", "olive_pollen", "ragweed_pollen",
+    // Subíndex europeu de cada contaminant (mateixa escala que european_aqi, que n'és el màxim): el color de les
+    // barres del giny de Qualitat de l'aire (utils/aqiLevel.ts::extractPollutantBreakdown).
+    "european_aqi_pm2_5", "european_aqi_pm10", "european_aqi_nitrogen_dioxide", "european_aqi_ozone"
 ] as const;
 
 export const PARAMS_AQI_HOURLY = [
