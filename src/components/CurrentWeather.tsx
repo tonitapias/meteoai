@@ -191,7 +191,7 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         <div className="md:hidden absolute inset-0 bg-gradient-to-tr from-cyan-500/5 via-transparent to-indigo-500/5 pointer-events-none z-0"></div>
 
         {/* LEFT COLUMN: Context & Temp */}
-        <div className="flex-1 flex flex-col justify-between z-10 relative md:[transform:translateZ(10px)]">
+        <div className="flex-1 min-w-0 flex flex-col justify-between z-10 relative md:[transform:translateZ(10px)]">
           <CurrentWeatherHeader
             locationName={weather.meta.locationName as string | undefined}
             country={localizedCountry}

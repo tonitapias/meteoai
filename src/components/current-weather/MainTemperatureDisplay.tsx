@@ -20,18 +20,25 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
   const isValidMax = typeof max === 'number' && !isNaN(max);
   const isValidMin = typeof min === 'number' && !isNaN(min);
 
+  // "-33°" té 4 caràcters (mono) contra els 3 de "23°": a mida plena desquadra la targeta.
+  // Amb 4 o més, la xifra es redueix a 3/4 perquè ocupi la mateixa amplada que una de 3.
+  const tempText = `${safeVal(temp)}°`;
+  const tempSize = tempText.length >= 4
+    ? 'text-[4.5rem] sm:text-[6rem] md:text-[7.5rem]'
+    : 'text-[6rem] sm:text-[8rem] md:text-[10rem]';
+
   return (
-    <div className="mt-8 md:mt-12 flex flex-col md:flex-row items-baseline md:items-end gap-6 relative z-10">
-        
+    <div className="mt-8 md:mt-12 flex flex-col md:flex-row md:flex-wrap items-baseline md:items-end gap-6 relative z-10">
+
         {/* TEMPERATURA PRINCIPAL */}
         <div className="relative leading-none">
-            <p data-testid="current-temp" className={`text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
-                {safeVal(temp)}°
+            <p data-testid="current-temp" className={`${tempSize} font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
+                {tempText}
             </p>
-            
+
             {/* SPATIAL UI: Aura atmosfèrica de la temperatura (S'apaga si perdem senyal) */}
-            <div className={`absolute inset-0 text-[6rem] sm:text-[8rem] md:text-[10rem] font-mono font-medium blur-[40px] opacity-20 select-none pointer-events-none tracking-tighter tabular-nums transition-colors duration-1000 ${isValidTemp ? 'text-indigo-400' : 'text-transparent'}`}>
-                {safeVal(temp)}°
+            <div className={`absolute inset-0 ${tempSize} font-mono font-medium blur-[40px] opacity-20 select-none pointer-events-none tracking-tighter tabular-nums transition-colors duration-1000 ${isValidTemp ? 'text-indigo-400' : 'text-transparent'}`}>
+                {tempText}
             </div>
         </div>
 
