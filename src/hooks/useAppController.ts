@@ -149,6 +149,7 @@ export function useAppController() {
           setShowCloudLayersModal: ui.actions.setShowCloudLayersModal,
           setShowSnowLevelModal: ui.actions.setShowSnowLevelModal,
           setShowWindModal: ui.actions.setShowWindModal,
+          setShowTemperatureModal: ui.actions.setShowTemperatureModal,
           setPlanetModal: ui.actions.setPlanetModal
       },
       flags: {
@@ -172,7 +173,7 @@ export function useAppController() {
       ui.actions.setShowSolarModal, ui.actions.setShowMoonModal, ui.actions.setShowStormModal,
       ui.actions.setShowAqiModal, ui.actions.setShowUvModal, ui.actions.setShowPressureModal,
       ui.actions.setShowComfortModal, ui.actions.setShowVisibilityModal, ui.actions.setShowCloudLayersModal,
-      ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal, ui.actions.setPlanetModal,
+      ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal, ui.actions.setShowTemperatureModal, ui.actions.setPlanetModal,
       data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang,
       ui.modals, t
   ]);

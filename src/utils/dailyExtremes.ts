@@ -4,9 +4,10 @@
 // Abans cadascú ho calculava pel seu compte: la llista aplicava la correcció d'inversió tèrmica i el
 // gràfic llegia el valor cru del model, així que a l'hivern (nits serenes i en calma) una mateixa mínima
 // sortia fins a 3,5° més alta al gràfic que a la llista i al detall del dia.
-import type { StrictCurrentWeather } from '../types/weatherLogicTypes';
+import type { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { getInversionCorrectedTemp } from './rules/temperatureCorrections';
-import { getSafeMonthFromIso } from './weatherMath';
+import { extractValidArrayNum, getSafeLatitude, getSafeMonthFromIso } from './weatherMath';
+import { generateHourlyChartData } from './weatherMappers';
 
 /** Mínim que cal d'una hora del chart horari complet (chartDataFull) per a aquests càlculs. */
 export interface HourlyPoint {
@@ -75,6 +76,24 @@ export const resolveDailyExtremes = (
         maxRegional: hottest.regionalTemp === true,
         minRegional: coldest.regionalTemp === true
     };
+};
+
+/**
+ * Màxima i mínima d'AVUI (el primer dia de `daily`), en °C: les de la capçalera, la llista de 7 dies, el detall "Avui" i
+ * el giny de Temperatura. Abans el càlcul vivia dins useCurrentWeatherLogic i el giny n'hauria hagut de fer una còpia.
+ * daily.temperature_2m_max/min[0] és el diari del model global en brut: a la zona d'AROME la capçalera deia 27,8° de
+ * màxima mentre les hores d'avui arribaven a 30,8° (Girona, 26-09-2026). Sense hores d'avui es queda el diari (o null).
+ * Temperatura crua i en °C a propòsit (vegeu weatherMappers): la conversió a °F la fa qui la mostra.
+ */
+export const resolveTodayExtremes = (data: ExtendedWeatherData | null | undefined): { max: number | null; min: number | null } => {
+    const daily = data?.daily;
+    const rawMax = extractValidArrayNum(daily?.temperature_2m_max, 0);
+    const rawMin = extractValidArrayNum(daily?.temperature_2m_min, 0);
+    const today = typeof daily?.time?.[0] === 'string' ? daily.time[0].slice(0, 10) : null;
+    if (!data || !today) return { max: rawMax, min: rawMin };
+    const dayHours = hoursOfDate(generateHourlyChartData(data, 0, 'C'), today);
+    const { max, min } = resolveDailyExtremes(rawMax, rawMin, dayHours, getSafeLatitude(data.location));
+    return { max, min };
 };
 
 /** Mitjana de núvols (%) de les hores de sol del dia, o null si no hi ha hores de sol amb dades horàries. */

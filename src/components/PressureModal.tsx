@@ -13,6 +13,9 @@ import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
+import { classifyPressureTrend, pressureDelta3h, PRESSURE_TREND_HOURS, PRESSURE_TREND_LABEL, type PressureTrendKey } from '../utils/pressureTrend';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 const { PRESSURE } = WEATHER_THRESHOLDS;
 
@@ -30,9 +33,6 @@ const T: Record<Language, Record<string, string>> = {
     pressureNow: 'Pressió Actual', evolution: 'Evolució', scrubHint: 'Toca o arrossega per explorar',
     steepestChange: 'Canvi Més Sobtat', now: 'ARA', hoursShort: 'h',
     minPressure: 'Mínima 48h', maxPressure: 'Màxima 48h', trend3h: 'Tendència (3h)',
-    stable: 'Estable', risingSlow: 'Pujant Lentament', fallingSlow: 'Baixant Lentament',
-    rising: 'Pujant', falling: 'Baixant', risingRapid: 'Pujant Ràpidament', fallingRapid: 'Baixant Ràpidament',
-    risingVeryRapid: 'Pujant Molt Ràpidament', fallingVeryRapid: 'Baixant Molt Ràpidament',
     at_: 'a les',
   },
   es: {
@@ -40,9 +40,6 @@ const T: Record<Language, Record<string, string>> = {
     pressureNow: 'Presión Actual', evolution: 'Evolución', scrubHint: 'Toca o arrastra para explorar',
     steepestChange: 'Cambio Más Brusco', now: 'AHORA', hoursShort: 'h',
     minPressure: 'Mínima 48h', maxPressure: 'Máxima 48h', trend3h: 'Tendencia (3h)',
-    stable: 'Estable', risingSlow: 'Subiendo Lentamente', fallingSlow: 'Bajando Lentamente',
-    rising: 'Subiendo', falling: 'Bajando', risingRapid: 'Subiendo Rápidamente', fallingRapid: 'Bajando Rápidamente',
-    risingVeryRapid: 'Subiendo Muy Rápido', fallingVeryRapid: 'Bajando Muy Rápido',
     at_: 'a las',
   },
   en: {
@@ -50,9 +47,6 @@ const T: Record<Language, Record<string, string>> = {
     pressureNow: 'Current Pressure', evolution: 'Evolution', scrubHint: 'Tap or drag to explore',
     steepestChange: 'Steepest Change', now: 'NOW', hoursShort: 'h',
     minPressure: 'Min 48h', maxPressure: 'Max 48h', trend3h: 'Trend (3h)',
-    stable: 'Steady', risingSlow: 'Rising Slowly', fallingSlow: 'Falling Slowly',
-    rising: 'Rising', falling: 'Falling', risingRapid: 'Rising Quickly', fallingRapid: 'Falling Quickly',
-    risingVeryRapid: 'Rising Very Rapidly', fallingVeryRapid: 'Falling Very Rapidly',
     at_: 'at',
   },
   fr: {
@@ -60,9 +54,6 @@ const T: Record<Language, Record<string, string>> = {
     pressureNow: 'Pression Actuelle', evolution: 'Évolution', scrubHint: 'Touchez ou glissez pour explorer',
     steepestChange: 'Changement Le Plus Brusque', now: 'MAINTENANT', hoursShort: 'h',
     minPressure: 'Min 48h', maxPressure: 'Max 48h', trend3h: 'Tendance (3h)',
-    stable: 'Stable', risingSlow: 'Hausse Lente', fallingSlow: 'Baisse Lente',
-    rising: 'En Hausse', falling: 'En Baisse', risingRapid: 'Hausse Rapide', fallingRapid: 'Baisse Rapide',
-    risingVeryRapid: 'Hausse Très Rapide', fallingVeryRapid: 'Baisse Très Rapide',
     at_: 'à',
   },
 };
@@ -72,21 +63,29 @@ const getSafe = (arr: (number | null)[] | undefined, idx: number): number | null
   return typeof v === 'number' && !isNaN(v) ? v : null;
 };
 
-interface TrendInfo { label: string; direction: 'up' | 'down' | 'flat'; color: string; stroke: string; }
+// border (xip de la tendència) i borderSoft (avís del canvi més sobtat): classes escrites senceres. Abans es feien amb
+// color.replace('text-', 'border-') + '/40', i Tailwind no pot generar una classe que no apareix escrita enlloc: les vores
+// sortien gris clar en lloc del color de la tendència.
+interface TrendInfo { label: string; direction: 'up' | 'down' | 'flat'; color: string; border: string; borderSoft: string; stroke: string; }
 
-// Classificació real de tendència baromètrica a 3h (terminologia de butlletins marítims) —
-// vegeu WEATHER_THRESHOLDS.PRESSURE (weatherConfig.ts) per als llindars.
-function classifyTrend(delta3h: number | null, t: Record<string, string>): TrendInfo {
-  if (delta3h === null) return { label: t.stable, direction: 'flat', color: 'text-slate-400', stroke: '#94a3b8' };
-  const abs = Math.abs(delta3h);
-  const direction: 'up' | 'down' | 'flat' = abs < PRESSURE.STABLE ? 'flat' : delta3h > 0 ? 'up' : 'down';
-  if (direction === 'flat') return { label: t.stable, direction, color: 'text-slate-400', stroke: '#94a3b8' };
-  const isUp = direction === 'up';
-  if (abs <= PRESSURE.SLOW) return { label: isUp ? t.risingSlow : t.fallingSlow, direction, color: isUp ? 'text-emerald-400' : 'text-amber-400', stroke: isUp ? '#34d399' : '#fbbf24' };
-  if (abs <= PRESSURE.MODERATE) return { label: isUp ? t.rising : t.falling, direction, color: isUp ? 'text-emerald-400' : 'text-amber-400', stroke: isUp ? '#34d399' : '#fbbf24' };
-  if (abs <= PRESSURE.RAPID) return { label: isUp ? t.risingRapid : t.fallingRapid, direction, color: isUp ? 'text-orange-400' : 'text-orange-500', stroke: '#f97316' };
-  return { label: isUp ? t.risingVeryRapid : t.fallingVeryRapid, direction, color: 'text-rose-500', stroke: '#f43f5e' };
-}
+// Colors de cada tendència. La classificació (terminologia dels butlletins marítims, WEATHER_THRESHOLDS.PRESSURE) i el
+// nom són els de la targeta del Detall (utils/pressureTrend.ts): abans el modal en tenia una còpia pròpia (classifyTrend).
+const TREND_STYLE: Record<PressureTrendKey, Omit<TrendInfo, 'label'>> = {
+  stable: { direction: 'flat', color: 'text-slate-400', border: 'border-slate-400/40', borderSoft: 'border-slate-400/30', stroke: '#94a3b8' },
+  risingSlow: { direction: 'up', color: 'text-emerald-400', border: 'border-emerald-400/40', borderSoft: 'border-emerald-400/30', stroke: '#34d399' },
+  rising: { direction: 'up', color: 'text-emerald-400', border: 'border-emerald-400/40', borderSoft: 'border-emerald-400/30', stroke: '#34d399' },
+  risingRapid: { direction: 'up', color: 'text-orange-400', border: 'border-orange-400/40', borderSoft: 'border-orange-400/30', stroke: '#f97316' },
+  risingVeryRapid: { direction: 'up', color: 'text-rose-500', border: 'border-rose-500/40', borderSoft: 'border-rose-500/30', stroke: '#f43f5e' },
+  fallingSlow: { direction: 'down', color: 'text-amber-400', border: 'border-amber-400/40', borderSoft: 'border-amber-400/30', stroke: '#fbbf24' },
+  falling: { direction: 'down', color: 'text-amber-400', border: 'border-amber-400/40', borderSoft: 'border-amber-400/30', stroke: '#fbbf24' },
+  fallingRapid: { direction: 'down', color: 'text-orange-500', border: 'border-orange-500/40', borderSoft: 'border-orange-500/30', stroke: '#f97316' },
+  fallingVeryRapid: { direction: 'down', color: 'text-rose-500', border: 'border-rose-500/40', borderSoft: 'border-rose-500/30', stroke: '#f43f5e' },
+};
+
+const trendInfo = (delta3h: number, lang: Language): TrendInfo => {
+  const key = classifyPressureTrend(delta3h);
+  return { label: PRESSURE_TREND_LABEL[lang][key], ...TREND_STYLE[key] };
+};
 
 const CHART_W = 400, CHART_H = 160, TOP_Y = 12, BOTTOM_Y = 140;
 const SHEET_GRADIENT = 'from-indigo-950/30 to-black/90';
@@ -128,14 +127,10 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
   // cosa que faria que el giny i el modal mostressin números diferents per al mateix "ara".
   const currentPressure = typeof current?.pressure_msl === 'number' ? current.pressure_msl : (N > 0 ? windowEntries[0].pressure : null);
 
-  const currentDelta3h = useMemo(() => {
-    if (!hourly || currentHourIndex < 3) return null;
-    const nowP = getSafe(hourly.pressure_msl, currentHourIndex);
-    const pastP = getSafe(hourly.pressure_msl, currentHourIndex - 3);
-    return nowP !== null && pastP !== null ? Number((nowP - pastP).toFixed(1)) : null;
-  }, [hourly, currentHourIndex]);
-
-  const trend = classifyTrend(currentDelta3h, t);
+  // El mateix ΔP de 3 h que la targeta (pressureDelta3h). DOCTRINA RISC ZERO: sense les dues hores no hi ha tendència
+  // (abans es mostrava "Estable", una dada inventada).
+  const currentDelta3h = pressureDelta3h(hourly?.pressure_msl, currentHourIndex);
+  const trend = currentDelta3h !== null ? trendInfo(currentDelta3h, safeLang) : null;
 
   const minPressure = useMemo(() => {
     const vals = windowEntries.map(e => e.pressure).filter((v): v is number => v !== null);
@@ -149,15 +144,13 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
   // --- Canvi més sobtat: escaneja tota la finestra amb un ΔP mòbil de 3h ---
   const steepestChange = useMemo(() => {
     let best: { idx: number; delta: number } | null = null;
-    for (let i = 3; i < N; i++) {
-      const now = windowEntries[i].pressure;
-      const past = windowEntries[i - 3].pressure;
-      if (now === null || past === null) continue;
-      const delta = Number((now - past).toFixed(1));
+    for (let i = PRESSURE_TREND_HOURS; i < N; i++) {
+      const delta = pressureDelta3h(hourly?.pressure_msl, windowEntries[i].idx);
+      if (delta === null) continue;
       if (!best || Math.abs(delta) > Math.abs(best.delta)) best = { idx: i, delta };
     }
     return best;
-  }, [windowEntries, N]);
+  }, [hourly, windowEntries, N]);
 
   // --- Scrub horitzontal (mateix patró RAF que Storm/AQI/UV) ---
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
@@ -212,6 +205,8 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
     const range = yBounds.max - yBounds.min || 1;
     return BOTTOM_Y - ((Math.max(yBounds.min, Math.min(yBounds.max, v)) - yBounds.min) / range) * (BOTTOM_Y - TOP_Y);
   };
+  // Línies guia de l'eix vertical (hPa enters), dins del mateix rang real que la línia: sense zero.
+  const yTicks = useMemo(() => niceTicks(yBounds.min, yBounds.max, { integer: true }), [yBounds]);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punts i dates) que va per sobre del SVG estirat.
   const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
@@ -296,27 +291,27 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
                 </span>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">hPa</span>
               </div>
-              <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${trend.color.replace('text-', 'border-')}/40`}>
-                  {trend.direction === 'up' ? <TrendingUp className={`w-3.5 h-3.5 ${trend.color}`} /> : trend.direction === 'down' ? <TrendingDown className={`w-3.5 h-3.5 ${trend.color}`} /> : <Minus className="w-3.5 h-3.5 text-slate-400" />}
-                  <span className={`text-xs font-black uppercase tracking-wider ${trend.color}`}>{trend.label}</span>
-                </div>
-                {currentDelta3h !== null && (
+              {trend !== null && currentDelta3h !== null && (
+                <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${trend.border}`}>
+                    {trend.direction === 'up' ? <TrendingUp className={`w-3.5 h-3.5 ${trend.color}`} /> : trend.direction === 'down' ? <TrendingDown className={`w-3.5 h-3.5 ${trend.color}`} /> : <Minus className="w-3.5 h-3.5 text-slate-400" />}
+                    <span className={`text-xs font-black uppercase tracking-wider ${trend.color}`}>{trend.label}</span>
+                  </div>
                   <div className="flex items-center gap-2 mt-1 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.trend3h}</span>
                     <span className={`text-xs font-mono font-bold ${trend.color}`}>{currentDelta3h > 0 ? '+' : ''}{formatDecimal(currentDelta3h, safeLang)} hPa</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* AVÍS: canvi més sobtat de la finestra */}
             {steepestChange && Math.abs(steepestChange.delta) >= PRESSURE.SLOW && (() => {
-              const steepTrend = classifyTrend(steepestChange.delta, t);
+              const steepTrend = trendInfo(steepestChange.delta, safeLang);
               const entry = windowEntries[steepestChange.idx];
               return (
-                <div className={`rounded-2xl border p-4 flex items-center gap-4 bg-black/30 ${steepTrend.color.replace('text-', 'border-')}/30`}>
-                  <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center border bg-black/40 ${steepTrend.color.replace('text-', 'border-')}/30 ${steepTrend.color}`}>
+                <div className={`rounded-2xl border p-4 flex items-center gap-4 bg-black/30 ${steepTrend.borderSoft}`}>
+                  <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center border bg-black/40 ${steepTrend.borderSoft} ${steepTrend.color}`}>
                     {steepTrend.direction === 'up' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                   </div>
                   <div className="flex flex-col">
@@ -367,6 +362,7 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
                   aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.pressure ?? '--'} hPa` : undefined}
                   onKeyDown={handleKeyDown}
                 >
+                  <ChartGridLines ticks={yTicks} y={pressureToY} x2={CHART_W} />
                   {dayMarkers.map(m => (
                     <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
                   ))}
@@ -381,6 +377,7 @@ export default function PressureModal({ weatherData, onClose, lang = 'ca' }: Pre
 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <ChartTickLabels ticks={yTicks} topPct={pctY} format={v => formatDecimal(v, safeLang, 1, true)} />
                   {dayMarkers.map(m => (
                     <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}

@@ -94,3 +94,10 @@ describe('VisibilityModal — alineat amb la política de boira', () => {
         expect(heroValue(container)).toBe('≥2');
     });
 });
+
+describe("VisibilityModal — escala a l'eix vertical del gràfic", () => {
+    it('5 i 10 km (de 0 al sostre de 15 km), amb la coma de l\'idioma si cal', () => {
+        const { container } = render(<VisibilityModal weatherData={buildWeather(94)} effectiveCode={3} onClose={() => {}} lang="ca" />);
+        expect([...container.querySelectorAll('[data-tick]')].map(s => s.textContent)).toEqual(['5 km', '10 km']);
+    });
+});

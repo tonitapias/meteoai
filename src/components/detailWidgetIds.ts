@@ -4,10 +4,10 @@
 
 /** Cada giny de la graella. */
 export type DetailWidgetId =
-  | 'wind' | 'uv' | 'visibility' | 'cloudLayers' | 'pressure' | 'dewPoint'
+  | 'temperature' | 'wind' | 'uv' | 'visibility' | 'cloudLayers' | 'pressure' | 'dewPoint'
   | 'cape' | 'aqi' | 'moon' | 'sun' | 'snowLevel';
 
 /** Tots els ginys, en l'ordre de sempre (Detall i Cel se'ls reparteixen: vegeu tabs/dashboardTabs.ts). */
 export const ALL_DETAIL_WIDGETS: readonly DetailWidgetId[] = [
-  'wind', 'uv', 'visibility', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'aqi', 'moon', 'sun', 'snowLevel'
+  'temperature', 'wind', 'uv', 'visibility', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'aqi', 'moon', 'sun', 'snowLevel'
 ];

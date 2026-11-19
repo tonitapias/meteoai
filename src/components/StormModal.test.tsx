@@ -54,3 +54,10 @@ describe('StormModal — cisallament', () => {
         expect(screen.getByTestId('storm-peak-shear').textContent).toContain('Organised storms possible (multicells)');
     });
 });
+
+describe("StormModal — escala a l'eix vertical del gràfic", () => {
+    it('1000 i 2000 J/kg (de 0 al sostre de 3000), al costat dels llindars', () => {
+        const { container } = render(<StormModal weatherData={buildWeather()} onClose={() => {}} lang="ca" />);
+        expect([...container.querySelectorAll('[data-tick]')].map(s => s.textContent)).toEqual(['1000', '2000']);
+    });
+});

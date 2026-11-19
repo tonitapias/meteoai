@@ -2,11 +2,28 @@
 // Tendència de la pressió en 3 h amb la terminologia dels butlletins marítims (vegeu README §8 i WEATHER_THRESHOLDS.PRESSURE):
 // estable / pujant-baixant lentament / pujant-baixant / ràpidament / molt ràpidament. La fan servir el giny de Detall i
 // el modal de Pressió. Abans el giny tenia una escala pròpia amb un sol calaix per a "Estable / pujant": amb −0,1 hPa
-// deia "Estable / pujant" mentre el modal deia "Baixant lentament" (auditoria d'UX del 16/11/2026, B2).
+// deia "Estable / pujant" mentre el modal deia "Baixant lentament" (auditoria d'UX del 16/11/2026, B2). El modal en tenia,
+// a més, una còpia pròpia (classifyTrend) amb els mateixos llindars: ara tots dos fan servir classifyPressureTrend, i la
+// variació de 3 h també surt d'un sol lloc (pressureDelta3h).
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import type { Language } from '../translations';
 
 const { PRESSURE } = WEATHER_THRESHOLDS;
+
+/** Finestra de la tendència (hores): la dels butlletins. */
+export const PRESSURE_TREND_HOURS = 3;
+
+/**
+ * Variació de la pressió (hPa) en les 3 hores que acaben a `index` (hourly.pressure_msl), arrodonida a la dècima.
+ * DOCTRINA RISC ZERO: null si falta alguna de les dues hores (mai una tendència "estable" inventada).
+ */
+export function pressureDelta3h(series: unknown, index: number): number | null {
+  if (!Array.isArray(series) || !Number.isInteger(index) || index < PRESSURE_TREND_HOURS) return null;
+  const now: unknown = series[index];
+  const past: unknown = series[index - PRESSURE_TREND_HOURS];
+  if (typeof now !== 'number' || typeof past !== 'number' || !Number.isFinite(now) || !Number.isFinite(past)) return null;
+  return Number((now - past).toFixed(1));
+}
 
 export type PressureTrendKey =
   | 'stable'

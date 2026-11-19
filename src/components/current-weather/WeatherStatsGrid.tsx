@@ -3,6 +3,9 @@ import { Droplets, Activity, Navigation, Wind, CloudOff } from 'lucide-react';
 import { Language } from '../../translations';
 import { MATRIX_BG_RESPONSIVE as MATRIX_BG } from '../widgets/widgetStyles';
 import { safeVal } from '../widgets/widgetHelpers';
+// La fletxa apunta cap on va el vent, com la brúixola del Detall i de WindModal. Abans girava la icona Navigation (que
+// ja apunta al NE) sense compensar-ho: anava 45° desviada (amb vent de 293°, apuntava a 338°).
+import { NAVIGATION_ICON_BASE_DEG, windArrowRotation } from '../../utils/windDial';
 
 interface WeatherStatsGridProps {
   windSpeed: number | null;
@@ -116,7 +119,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
               : <CloudOff className={`${ICON} text-slate-400`} aria-hidden="true" />}
             <span className={`flex items-center gap-0.5 text-[10px] font-black tracking-wider ${isValidDir ? 'text-slate-200' : 'text-slate-400'}`}>
               {isValidDir && windDirection !== null && windDirection !== undefined && (
-                <Navigation className="w-3 h-3 text-emerald-400" style={{ transform: `rotate(${windDirection}deg)` }} aria-hidden="true" />
+                <Navigation className="w-3 h-3 text-emerald-400" style={{ transform: `rotate(${windArrowRotation(windDirection, NAVIGATION_ICON_BASE_DEG)}deg)` }} aria-hidden="true" />
               )}
               {getCardinal(windDirection)}
             </span>
@@ -215,7 +218,7 @@ export const WeatherStatsGrid = ({ windSpeed, windGusts, windDirection, humidity
             {isValidDir && windDirection !== null && windDirection !== undefined ? (
               <Navigation 
                 className="w-5 h-5 md:w-6 md:h-6 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] transition-transform duration-1000 ease-out z-10 relative" 
-                style={{ transform: `rotate(${windDirection}deg)` }}
+                style={{ transform: `rotate(${windArrowRotation(windDirection, NAVIGATION_ICON_BASE_DEG)}deg)` }}
               />
             ) : (
               <span className="text-slate-400 font-mono text-sm sm:text-base font-bold z-10 relative">--</span>

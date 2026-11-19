@@ -17,7 +17,7 @@ const weather = {
 const handlers = () => ({
     onShowSolarModal: vi.fn(), onShowMoonModal: vi.fn(), onShowStormModal: vi.fn(), onShowAqiModal: vi.fn(),
     onShowUvModal: vi.fn(), onShowPressureModal: vi.fn(), onShowComfortModal: vi.fn(), onShowVisibilityModal: vi.fn(),
-    onShowCloudLayersModal: vi.fn(), onShowSnowLevelModal: vi.fn(), onShowWindModal: vi.fn(),
+    onShowCloudLayersModal: vi.fn(), onShowSnowLevelModal: vi.fn(), onShowWindModal: vi.fn(), onShowTemperatureModal: vi.fn(),
 });
 
 const renderGrid = (opts: { ids?: readonly DetailWidgetId[]; freezingLevel?: number | null; on?: ReturnType<typeof handlers> } = {}) => {
@@ -35,20 +35,27 @@ const renderGrid = (opts: { ids?: readonly DetailWidgetId[]; freezingLevel?: num
 };
 
 describe('DetailWidgetsGrid → quins ginys i en quin ordre', () => {
-    it('per defecte, els de la vista completa: sense cota de neu, 10 (del vent al cicle solar)', () => {
+    it('per defecte, tots: sense cota de neu, 11 (de la temperatura al cicle solar)', () => {
         const { cards } = renderGrid();
-        expect(ALL_DETAIL_WIDGETS).toHaveLength(11);
-        expect(cards).toHaveLength(10);
-        expect(cards[0].textContent).toMatch(/vent/i);
-        expect(cards[9].textContent).toMatch(/cicle solar/i);
+        expect(ALL_DETAIL_WIDGETS).toHaveLength(12);
+        expect(cards).toHaveLength(11);
+        expect(cards[0].textContent).toMatch(/temperatura/i);
+        expect(cards[1].textContent).toMatch(/vent/i);
+        expect(cards[10].textContent).toMatch(/cicle solar/i);
     });
 
-    it('amb la cota de neu prou baixa, 11, i la cota l\'última i a tota l\'amplada (sigui quina sigui la graella)', () => {
+    it('la temperatura, la primera i a tota l\'amplada (panoràmica): no ocupa cap cel·la de la graella', () => {
+        const { cards } = renderGrid();
+        expect(cards[0].className).toContain('col-span-full');
+        expect(cards[0].textContent).toContain('20°');
+    });
+
+    it('amb la cota de neu prou baixa, 12, i la cota l\'última i a tota l\'amplada (sigui quina sigui la graella)', () => {
         const { cards } = renderGrid({ freezingLevel: 1200 });
-        expect(cards).toHaveLength(11);
-        expect(cards[10].textContent).toMatch(/cota/i);
-        expect(cards[10].className).toContain('col-span-full');
-        expect(cards[9].className).toContain('md:col-span-2');
+        expect(cards).toHaveLength(12);
+        expect(cards[11].textContent).toMatch(/cota/i);
+        expect(cards[11].className).toContain('col-span-full');
+        expect(cards[10].className).toContain('md:col-span-2');
     });
 
     it('`ids` tria els ginys i l\'ordre: sol i lluna, en aquest ordre', () => {
@@ -64,11 +71,13 @@ describe('DetailWidgetsGrid → quins ginys i en quin ordre', () => {
 
     it('cada targeta continua obrint el seu modal, sigui on sigui', () => {
         const on = handlers();
-        const { cards } = renderGrid({ ids: ['moon', 'wind'], on });
+        const { cards } = renderGrid({ ids: ['moon', 'wind', 'temperature'], on });
         fireEvent.click(cards[0]);
         fireEvent.click(cards[1]);
+        fireEvent.click(cards[2]);
         expect(on.onShowMoonModal).toHaveBeenCalledTimes(1);
         expect(on.onShowWindModal).toHaveBeenCalledTimes(1);
+        expect(on.onShowTemperatureModal).toHaveBeenCalledTimes(1);
         expect(on.onShowSolarModal).not.toHaveBeenCalled();
     });
 });

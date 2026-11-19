@@ -10,6 +10,8 @@ import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import type { RegionalModel } from '../constants/regionalModels';
 import { buildRegionalHourlyRows } from '../utils/regionalHourlyRows';
+// Les fletxes de vent apunten cap on va, com totes les de l'app (utils/windDial.ts).
+import { windArrowRotation } from '../utils/windDial';
 
 interface RegionalModelModalProps {
   lat: number;
@@ -429,7 +431,7 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                                 <div className="flex items-center justify-end gap-1.5 md:gap-2 text-sm md:text-base font-bold text-slate-200 tabular-nums">
                                                     <ArrowUp
                                                         className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan-500/60 transition-transform duration-500"
-                                                        style={{ transform: `rotate(${row.windDir + 180}deg)` }}
+                                                        style={{ transform: `rotate(${windArrowRotation(row.windDir)}deg)` }}
                                                     />
                                                     <span className={getGustColor(row.wind)}>{Math.round(row.wind)}</span>
                                                     {row.gust > row.wind + 5 && (

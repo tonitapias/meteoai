@@ -20,7 +20,7 @@ const renderAt = (now: number, currentTime: string) => render(
         weatherData={weather(currentTime)} aqiData={null} lang="ca" unit="C" freezingLevel={null} now={now}
         onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
         onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
-        onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop}
+        onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop} onShowTemperatureModal={noop}
     />
 );
 

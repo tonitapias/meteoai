@@ -33,6 +33,7 @@ export function useViewState() {
     const [showCloudLayersModal, setShowCloudLayersModal] = useState(false);
     const [showSnowLevelModal, setShowSnowLevelModal] = useState(false);
     const [showWindModal, setShowWindModal] = useState(false);
+    const [showTemperatureModal, setShowTemperatureModal] = useState(false);
     // Detall d'«Extrems del planeta»: null tancat; si no, la pantalla amb què s'obre (la llista o una fitxa).
     const [planetModal, setPlanetModal] = useState<PlanetEntry | null>(null);
     // Finestra "Què vols compartir?": només amb la posició del GPS (vegeu useAppActions.handleSharePlace).
@@ -67,6 +68,7 @@ export function useViewState() {
     useModalHistory(showCloudLayersModal, useCallback(() => setShowCloudLayersModal(false), []));
     useModalHistory(showSnowLevelModal, useCallback(() => setShowSnowLevelModal(false), []));
     useModalHistory(showWindModal, useCallback(() => setShowWindModal(false), []));
+    useModalHistory(showTemperatureModal, useCallback(() => setShowTemperatureModal(false), []));
     useModalHistory(planetModal !== null, useCallback(() => setPlanetModal(null), []));
     useModalHistory(showShareSheet, useCallback(() => setShowShareSheet(false), []));
     useModalHistory(showSettings, useCallback(() => setShowSettings(false), []));
@@ -102,6 +104,7 @@ export function useViewState() {
                 showCloudLayersModal,
                 showSnowLevelModal,
                 showWindModal,
+                showTemperatureModal,
                 planetModal,
                 showShareSheet,
                 showSettings
@@ -128,6 +131,7 @@ export function useViewState() {
             setShowCloudLayersModal,
             setShowSnowLevelModal,
             setShowWindModal,
+            setShowTemperatureModal,
             setPlanetModal,
             setShowShareSheet,
             setShowSettings

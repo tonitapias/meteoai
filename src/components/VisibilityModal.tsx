@@ -21,6 +21,9 @@ import {
   formatVisibilityKm,
   type VisibilityBound,
 } from '../utils/visibilityDisplay';
+import { formatDecimal } from '../utils/formatters';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 const { VISIBILITY } = WEATHER_THRESHOLDS;
 
@@ -215,6 +218,8 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
   // GOOD ja és "excel·lent" indistintament) ---
   const CHART_MAX_M = 15000;
   const visToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(CHART_MAX_M, v)) / CHART_MAX_M) * (BOTTOM_Y - TOP_Y);
+  // Línies guia de l'eix vertical (en metres; l'etiqueta, en km), de 0 al sostre fix del gràfic.
+  const yTicks = niceTicks(0, CHART_MAX_M);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punt i dates) que va per sobre del SVG estirat.
   const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
@@ -365,6 +370,7 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
                   aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.bound === 'min' ? '≥ ' : activeEntry.bound === 'max' ? '≤ ' : ''}${activeEntry.visibility ?? '--'} m` : undefined}
                   onKeyDown={handleKeyDown}
                 >
+                  <ChartGridLines ticks={yTicks} y={visToY} x2={CHART_W} />
                   <line x1="0" y1={visToY(VISIBILITY.FOG)} x2={CHART_W} y2={visToY(VISIBILITY.FOG)} stroke="#f43f5e" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={visToY(VISIBILITY.HAZE)} x2={CHART_W} y2={visToY(VISIBILITY.HAZE)} stroke="#fbbf24" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
                   <line x1="0" y1={visToY(VISIBILITY.GOOD)} x2={CHART_W} y2={visToY(VISIBILITY.GOOD)} stroke="#38bdf8" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
@@ -383,6 +389,7 @@ export default function VisibilityModal({ weatherData, effectiveCode = null, onC
 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <ChartTickLabels ticks={yTicks} topPct={pctY} format={m => `${formatDecimal(m / 1000, safeLang, 1, true)} km`} />
                   {dayMarkers.map(m => (
                     <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}

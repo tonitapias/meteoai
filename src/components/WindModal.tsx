@@ -14,8 +14,12 @@ import { astroSheetVars, SHEET_HALO, sheetHaloStyle } from './astroModalStyles';
 import { StatCard } from './AstroStatCard';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
-import { getWindDirectionText, westLetter } from './widgets/widgetHelpers';
+import { getWindDirectionText } from './widgets/widgetHelpers';
+import { WindDial } from './widgets/WindDial';
 import { getBeaufort } from '../utils/beaufort';
+import { windArrowRotation } from '../utils/windDial';
+import { niceTicks } from '../utils/chartTicks';
+import { ChartGridLines, ChartTickLabels } from './widgets/ChartTicks';
 
 const { WIND } = WEATHER_THRESHOLDS;
 
@@ -129,6 +133,8 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
   const severity = getWindSeverity(currentGusts ?? currentSpeed);
   const beaufort = currentSpeed !== null ? getBeaufort(currentSpeed, safeLang) : null;
   const directionText = currentDir !== null ? getWindDirectionText(currentDir, lang) : null;
+  // Les ratxes es mostren (a l'arc i al xip) quan superen la velocitat en més de 5 km/h, com al giny.
+  const hasGusts = currentGusts !== null && currentSpeed !== null && currentGusts > currentSpeed + 5;
 
   const maxGustWindow = useMemo(() => {
     let best: { idx: number; value: number } | null = null;
@@ -230,6 +236,8 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
   }, [windowEntries]);
 
   const valToY = (v: number) => BOTTOM_Y - (Math.max(0, Math.min(yMax, v)) / yMax) * (BOTTOM_Y - TOP_Y);
+  // Línies guia de l'eix vertical (km/h enters), de 0 (el zero de la velocitat, que sí que toca) al sostre del gràfic.
+  const yTicks = useMemo(() => niceTicks(0, yMax, { integer: true }), [yMax]);
   const idxToX = (i: number) => N > 1 ? (i / (N - 1)) * CHART_W : 0;
   // Mateixes coordenades en % de la capa HTML (punts i dates) que va per sobre del SVG estirat.
   const pctX = (i: number) => (idxToX(i) / CHART_W) * 100;
@@ -318,42 +326,19 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
 
             {/* HEROI: brúixola gran + Beaufort */}
             <div className="relative rounded-2xl border border-white/5 astro-card-fill p-5 flex flex-col items-center gap-3">
-              <div className="relative w-60 h-60 sm:w-64 sm:h-64 flex items-center justify-center">
-                <svg width="100%" height="100%" viewBox="0 0 200 200" className="absolute inset-0">
-                  <circle cx="100" cy="100" r="82" fill="none" stroke="#131722" strokeWidth="14" />
-                  {[...Array(36)].map((_, i) => {
-                    const angle = i * 10;
-                    const isCardinal = i % 9 === 0;
-                    const innerR = isCardinal ? 68 : 73;
-                    const outerR = 90;
-                    const x1 = 100 + innerR * Math.cos((angle - 90) * Math.PI / 180);
-                    const y1 = 100 + innerR * Math.sin((angle - 90) * Math.PI / 180);
-                    const x2 = 100 + outerR * Math.cos((angle - 90) * Math.PI / 180);
-                    const y2 = 100 + outerR * Math.sin((angle - 90) * Math.PI / 180);
-                    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={isCardinal ? '#475569' : '#1e293b'} strokeWidth={isCardinal ? '2' : '1'} opacity="0.7" />;
-                  })}
-                  {currentGusts !== null && currentSpeed !== null && currentGusts > currentSpeed + 5 && (
-                    <path d={`M 100 18 A 82 82 0 ${Math.min(359.9, (currentGusts / 120) * 360) > 180 ? 1 : 0} 1 ${100 + 82 * Math.sin(Math.min(359.9, (currentGusts / 120) * 360) * Math.PI / 180)} ${100 - 82 * Math.cos(Math.min(359.9, (currentGusts / 120) * 360) * Math.PI / 180)}`} fill="none" stroke={severity.stroke} strokeWidth="14" strokeLinecap="round" opacity="0.25" />
-                  )}
-                  {currentSpeed !== null && currentSpeed > 0 && (
-                    <path d={`M 100 18 A 82 82 0 ${Math.min(359.9, (currentSpeed / 120) * 360) > 180 ? 1 : 0} 1 ${100 + 82 * Math.sin(Math.min(359.9, (currentSpeed / 120) * 360) * Math.PI / 180)} ${100 - 82 * Math.cos(Math.min(359.9, (currentSpeed / 120) * 360) * Math.PI / 180)}`} fill="none" stroke={severity.stroke} strokeWidth="14" strokeLinecap="round" className="drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]" />
-                  )}
-                </svg>
-
-                {currentDir !== null && (
-                  <div className="absolute w-full h-full flex items-start justify-center pointer-events-none z-20" style={{ transform: `rotate(${currentDir}deg)` }}>
-                    <div className="mt-[-6px] rounded-full p-1.5 border shadow-[0_4px_12px_rgba(0,0,0,0.8)] bg-[#0c0e15] border-slate-700">
-                      <Navigation2 className={`w-5 h-5 ${severity.color} drop-shadow-[0_0_8px_currentColor]`} style={{ transform: 'rotate(180deg)', fill: 'currentColor', fillOpacity: 0.2 }} />
-                    </div>
-                  </div>
-                )}
-
-                <span className="absolute top-6 left-1/2 -translate-x-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] px-1 rounded">N</span>
-                <span className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] px-1 rounded">S</span>
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] py-1 rounded">{westLetter(lang)}</span>
-                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400 bg-[#0c0e15] py-1 rounded">E</span>
-
-                <div className="absolute flex flex-col items-center justify-center z-30 w-36 h-36 rounded-full">
+              {/* La mateixa brúixola que el giny (WindDial): direcció a l'anell; velocitat i ratxes a l'arc de baix */}
+              <WindDial
+                degrees={currentDir}
+                speed={currentSpeed}
+                gusts={currentGusts}
+                showGusts={hasGusts}
+                speedColors={[severity.stroke, severity.stroke]}
+                gustColor={severity.stroke}
+                needleClassName={severity.color}
+                lang={lang}
+                className="w-60 h-60 sm:w-64 sm:h-64"
+              >
+                <div className="absolute flex flex-col items-center justify-center z-30 -mt-3">
                   <span className="text-[10px] font-mono font-bold text-slate-400 mb-1">
                     {currentDir !== null ? `${Math.round(currentDir)}° ${directionText}` : '--'}
                   </span>
@@ -361,23 +346,26 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                     {currentSpeed !== null ? Math.round(currentSpeed) : '--'}
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">{t.kmh}</span>
-                  {currentGusts !== null && currentSpeed !== null && currentGusts > currentSpeed + 5 && (
-                    <div className={`mt-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 border border-white/10 ${severity.color}`}>
-                      <Zap className="w-3 h-3 fill-current" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{t.gusts}</span>
-                      <span className="text-xs font-mono font-black tabular-nums">{Math.round(currentGusts)}</span>
-                    </div>
-                  )}
                 </div>
-              </div>
+              </WindDial>
 
-              {beaufort && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${severity.borderColor}`}>
-                  <span className={`text-xs font-black uppercase tracking-wider ${severity.color}`}>
-                    {safeLang === 'ca' ? 'Força' : safeLang === 'es' ? 'Fuerza' : safeLang === 'fr' ? 'Force' : 'Force'} {beaufort.force} · {beaufort.label}
-                  </span>
-                </div>
-              )}
+              {/* Beaufort i, si són rellevants, les ratxes (abans dins la brúixola: ara hi ha l'arc de velocitat) */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {beaufort && (
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-black/40 w-fit ${severity.borderColor}`}>
+                    <span className={`text-xs font-black uppercase tracking-wider ${severity.color}`}>
+                      {safeLang === 'ca' ? 'Força' : safeLang === 'es' ? 'Fuerza' : safeLang === 'fr' ? 'Force' : 'Force'} {beaufort.force} · {beaufort.label}
+                    </span>
+                  </div>
+                )}
+                {hasGusts && currentGusts !== null && (
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 border border-white/10 ${severity.color}`}>
+                    <Zap className="w-3 h-3 fill-current" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t.gusts}</span>
+                    <span className="text-xs font-mono font-black tabular-nums">{Math.round(currentGusts)}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* AVÍS: pròxima ratxa forta */}
@@ -438,6 +426,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                   aria-valuetext={activeEntry ? `${activeEntry.timeStr.slice(11, 16)} · ${activeEntry.speed ?? '--'} km/h` : undefined}
                   onKeyDown={handleKeyDown}
                 >
+                  <ChartGridLines ticks={yTicks} y={valToY} x2={CHART_W} />
                   {dayMarkers.map(m => (
                     <line key={m.i} x1={idxToX(m.i)} y1={TOP_Y} x2={idxToX(m.i)} y2={BOTTOM_Y} stroke="#475569" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
                   ))}
@@ -453,6 +442,7 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
 
                 {/* Capa HTML per sobre del SVG (sense capturar el punter: el scrub el fa el SVG) */}
                 <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <ChartTickLabels ticks={yTicks} topPct={pctY} format={v => String(v)} />
                   {dayMarkers.map(m => (
                     <span key={m.i} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-400" style={{ left: `${pctX(m.i)}%` }}>
                       {m.label}
@@ -475,7 +465,8 @@ export default function WindModal({ weatherData, onClose, lang = 'ca' }: WindMod
                 {dirSamples.map(s => (
                   <div key={s.idx} className="flex flex-col items-center gap-0.5">
                     {s.dir !== null ? (
-                      <Navigation2 className="w-3 h-3 text-slate-400" style={{ transform: `rotate(${s.dir + 180}deg)` }} />
+                      // Cap on va el vent (utils/windDial.ts), com l'agulla de la brúixola.
+                      <Navigation2 className="w-3 h-3 text-slate-400" style={{ transform: `rotate(${windArrowRotation(s.dir)}deg)` }} />
                     ) : (
                       <span className="w-3 h-3" />
                     )}
