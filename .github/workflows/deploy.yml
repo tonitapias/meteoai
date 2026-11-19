@@ -57,8 +57,10 @@ jobs:
           VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
         run: npm run build
 
+      # v4: la mateixa acció i les mateixes entrades, però amb Node 24 (la v3 declarava Node 20, obsolet als runners de
+      # GitHub). El canvi trencador de la v4 (Wrangler v4 per defecte) no ens afecta: la versió va fixada a sota.
       - name: Deploy to Cloudflare
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
