@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ArrowUp, ArrowDown, Haze } from 'lucide-react';
 import { safeVal } from '../widgets/widgetHelpers';
 
@@ -12,9 +13,15 @@ interface MainTemperatureDisplayProps {
   /** Xifra amb la unitat ("438 µg/m³"): es mostra SENSE majúscules, perquè `uppercase` converteix µg en ΜG (sembla mg). */
   advisoryValue?: string;
   advisoryTitle?: string;
+  /**
+   * Targeta compacta (mòbil): la icona del temps, a la mateixa fila que la xifra. Només competeix amb l'amplada
+   * de la xifra, no amb la de l'etiqueta ("PARCIALMENT ENNUVOLAT"), que va a sota: si no, una etiqueta llarga
+   * la feia baixar i la targeta s'allargava. Si ni així hi cap (p. ex. "-12°" a 320 px), baixa a sota.
+   */
+  aside?: ReactNode;
 }
 
-export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusColor, advisoryLabel, advisoryValue, advisoryTitle }: MainTemperatureDisplayProps) => {
+export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusColor, advisoryLabel, advisoryValue, advisoryTitle, aside }: MainTemperatureDisplayProps) => {
   // DOCTRINA RISC ZERO: Validació estricta numèrica per separar 0°C (Glaçada) de null (Sense Dades)
   const isValidTemp = typeof temp === 'number' && !isNaN(temp);
   const isValidMax = typeof max === 'number' && !isNaN(max);
@@ -27,20 +34,29 @@ export const MainTemperatureDisplay = ({ temp, max, min, weatherLabel, statusCol
     ? 'text-[4.5rem] sm:text-[6rem] md:text-[7.5rem]'
     : 'text-[6rem] sm:text-[8rem] md:text-[10rem]';
 
+  const temperatureNumber = (
+    <div className="relative leading-none">
+        <p data-testid="current-temp" className={`${tempSize} font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
+            {tempText}
+        </p>
+
+        {/* SPATIAL UI: Aura atmosfèrica de la temperatura (S'apaga si perdem senyal) */}
+        <div className={`absolute inset-0 ${tempSize} font-mono font-medium blur-[40px] opacity-20 select-none pointer-events-none tracking-tighter tabular-nums transition-colors duration-1000 ${isValidTemp ? 'text-indigo-400' : 'text-transparent'}`}>
+            {tempText}
+        </div>
+    </div>
+  );
+
   return (
     <div className="mt-8 md:mt-12 flex flex-col md:flex-row md:flex-wrap items-baseline md:items-end gap-6 relative z-10">
 
-        {/* TEMPERATURA PRINCIPAL */}
-        <div className="relative leading-none">
-            <p data-testid="current-temp" className={`${tempSize} font-mono font-medium tracking-tighter tabular-nums drop-shadow-2xl z-10 relative transition-colors duration-700 ${isValidTemp ? 'text-white' : 'text-slate-600'}`}>
-                {tempText}
-            </p>
-
-            {/* SPATIAL UI: Aura atmosfèrica de la temperatura (S'apaga si perdem senyal) */}
-            <div className={`absolute inset-0 ${tempSize} font-mono font-medium blur-[40px] opacity-20 select-none pointer-events-none tracking-tighter tabular-nums transition-colors duration-1000 ${isValidTemp ? 'text-indigo-400' : 'text-transparent'}`}>
-                {tempText}
-            </div>
-        </div>
+        {/* TEMPERATURA PRINCIPAL (amb la icona al costat a la targeta compacta) */}
+        {aside ? (
+          <div className="w-full flex flex-wrap items-start justify-between gap-x-3">
+            {temperatureNumber}
+            <div className="ml-auto shrink-0">{aside}</div>
+          </div>
+        ) : temperatureNumber}
 
         {/* MÈTRIQUES I ESTAT */}
         <div className="flex flex-col gap-4 pb-6 md:pb-10 min-w-[140px] z-10 relative">

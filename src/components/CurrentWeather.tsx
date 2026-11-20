@@ -131,19 +131,6 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
       ? `PM10 ${Math.round(dustAdvisory.pm10 ?? 0)} µg/m³`
       : undefined;
 
-  const temperatureDisplay = (
-    <MainTemperatureDisplay
-      temp={parseMetric(weather.temps.main)}
-      max={parseMetric(weather.temps.max)}
-      min={parseMetric(weather.temps.min)}
-      weatherLabel={weather.visuals.weatherLabel as string}
-      statusColor={weather.visuals.statusColor as string}
-      advisoryLabel={advisoryLabel}
-      advisoryValue={advisoryValue}
-      advisoryTitle={advisoryText}
-    />
-  );
-
   // La icona del temps (i, a sobre, l'avís de pols). Compacta: més petita, per anar al costat de la temperatura.
   const renderWeatherIcon = (compact: boolean) => (
     <div className="drop-shadow-[0_0_30px_rgba(99,102,241,0.4)] md:drop-shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-transform duration-700 hover:scale-105 relative z-20">
@@ -165,6 +152,20 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
         </span>
       )}
     </div>
+  );
+
+  const temperatureDisplay = (
+    <MainTemperatureDisplay
+      temp={parseMetric(weather.temps.main)}
+      max={parseMetric(weather.temps.max)}
+      min={parseMetric(weather.temps.min)}
+      weatherLabel={weather.visuals.weatherLabel as string}
+      statusColor={weather.visuals.statusColor as string}
+      advisoryLabel={advisoryLabel}
+      advisoryValue={advisoryValue}
+      advisoryTitle={advisoryText}
+      aside={iconBesideTemp ? renderWeatherIcon(true) : undefined}
+    />
   );
 
   // SPATIAL UI BASE AMB MATRIU DE FONS (Optimitzat per baix consum)
@@ -208,13 +209,8 @@ export default function CurrentWeather(props: CurrentWeatherProps) {
           />
 
           <div className="mt-4 md:mt-0">
-            {iconBesideTemp ? (
-              // Targeta compacta (mòbil): la icona a la dreta de la xifra, a la seva alçada. Si no hi cap, baixa a sota.
-              <div className="flex flex-wrap items-start justify-between gap-x-3">
-                {temperatureDisplay}
-                <div className="ml-auto mt-8 shrink-0">{renderWeatherIcon(true)}</div>
-              </div>
-            ) : temperatureDisplay}
+            {/* Targeta compacta (mòbil): la icona a la dreta de la xifra (no de l'etiqueta), a la seva alçada. */}
+            {temperatureDisplay}
           </div>
         </div>
 
