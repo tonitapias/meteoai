@@ -26,6 +26,31 @@ export const isSleetCode = (code: number): boolean => code === 68 || code === 69
 /** Neu: nevada (71-75), neu granulada (77) i ruixats de neu (85-86). */
 export const isSnowCode = (code: number): boolean => (code >= 71 && code <= 77) || code === 85 || code === 86;
 
+/**
+ * Filtre de plausibilitat per a un codi de neu o de gel BRUT del model (el que fa saltar l'avís "Neu, gebrada o gel").
+ * Deliberadament ampli (la doctrina és "millor un avís de més"): només descarta el que és físicament impossible.
+ * Cas real (San Francisco, 20-11-2026): Open-Meteo va servir un 71 (neu) amb 10 °C, la cota de gel a 1630 m i 0 cm
+ * de neu; la icona ja el desfeia, però l'avís deia "Neu prevista cap a les 07:00".
+ * - Neu (71-77, 85-86): val si el model hi posa neu (snowfall > 0), si fa <= TEMP_MIX (4 °C) o si la cota de gel és
+ *   a menys de FREEZING_BUFFER per sobre del terra.
+ * - Gel (56/57/66/67): val si fa <= TEMP_MIX (la cota de gel no ajuda: la pluja gelant ve d'una capa càlida en altura).
+ * Sense temperatura no podem jutjar: el codi es manté.
+ */
+export const isRawWinterCodePlausible = (
+    code: number,
+    temp: number | null | undefined,
+    freezingLevel: number | null | undefined,
+    elevation: number,
+    snowfall: number | null | undefined
+): boolean => {
+    if (typeof temp !== 'number' || !Number.isFinite(temp)) return true;
+    if (temp <= SNOW.TEMP_MIX) return true;
+    if (isFreezingPrecipCode(code)) return false;
+    if (!isSnowCode(code)) return true;
+    if (typeof snowfall === 'number' && snowfall > 0) return true;
+    return typeof freezingLevel === 'number' && freezingLevel - elevation < SNOW.FREEZING_BUFFER;
+};
+
 /** Determina si la pluja s'ha de convertir en neu (o aiguaneu) per temperatura */
 export const determineSnowCode = (
     code: number,

@@ -139,10 +139,48 @@ describe('getGeminiAnalysis — detall del motiu (risk_detail)', () => {
     });
 
     it('neu (73) i pluja gelant (66) es distingeixen', async () => {
-        const snow = await analyse(buildWeather({ weather_code: [0, 73, 0, 0, 0, 0, 0, 0] }));
+        const cold = { temperature_2m: Array.from({ length: 8 }, () => 0.5), apparent_temperature: Array.from({ length: 8 }, () => -2) };
+        const snow = await analyse(buildWeather({ ...cold, weather_code: [0, 73, 0, 0, 0, 0, 0, 0] }));
         expect(snow?.risk_detail).toMatchObject({ hazard: 'SNOW_ICE', hour: '01:00', event: 'snow' });
-        const freezing = await analyse(buildWeather({ weather_code: [0, 0, 66, 0, 0, 0, 0, 0] }));
+        const freezing = await analyse(buildWeather({ ...cold, weather_code: [0, 0, 66, 0, 0, 0, 0, 0] }));
         expect(freezing?.risk_detail).toMatchObject({ hazard: 'SNOW_ICE', hour: '02:00', event: 'freezing' });
+    });
+
+    // Cas real (San Francisco, 20-11-2026): Open-Meteo va servir un 71 (neu) a les 07:00 amb 10 °C, 5,9 mm, la cota de
+    // gel a 1630 m i 0 cm de neu. La icona ja el desfeia, però el bàner deia "Neu prevista cap a les 07:00".
+    describe('codis de neu o gel bruts impossibles', () => {
+        it('neu a 10 °C amb la cota de gel a 1630 m i sense neu: cap avís de neu', async () => {
+            const result = await analyse(buildWeather({
+                temperature_2m: [9, 9, 9.5, 9.8, 10.1, 9.8, 10, 10], apparent_temperature: Array.from({ length: 8 }, () => 8),
+                weather_code: [3, 51, 51, 3, 71, 2, 0, 0], precipitation: [0, 0.2, 0.2, 0, 1.5, 0, 0, 0],
+                freezing_level_height: Array.from({ length: 8 }, () => 1630), snowfall: Array.from({ length: 8 }, () => 0),
+            }));
+            expect(result?.hazard_type).not.toBe('SNOW_ICE');
+            expect(result?.risk_detail?.event).not.toBe('snow');
+        });
+
+        it('pluja gelant a 10 °C: cap avís de gel', async () => {
+            const result = await analyse(buildWeather({
+                temperature_2m: Array.from({ length: 8 }, () => 10), weather_code: [0, 0, 66, 0, 0, 0, 0, 0],
+            }));
+            expect(result?.hazard_type).not.toBe('SNOW_ICE');
+        });
+
+        it('a 6 °C però amb neu al model (snowfall > 0): l\'avís es manté', async () => {
+            const result = await analyse(buildWeather({
+                temperature_2m: Array.from({ length: 8 }, () => 6), weather_code: [0, 71, 0, 0, 0, 0, 0, 0],
+                snowfall: [0, 0.3, 0, 0, 0, 0, 0, 0],
+            }));
+            expect(result?.risk_detail).toMatchObject({ hazard: 'SNOW_ICE', hour: '01:00', event: 'snow' });
+        });
+
+        it('a 6 °C amb la cota de gel tocant al terra: l\'avís es manté', async () => {
+            const result = await analyse(buildWeather({
+                temperature_2m: Array.from({ length: 8 }, () => 6), weather_code: [0, 71, 0, 0, 0, 0, 0, 0],
+                freezing_level_height: Array.from({ length: 8 }, () => 650),
+            }));
+            expect(result?.risk_detail).toMatchObject({ hazard: 'SNOW_ICE', event: 'snow' });
+        });
     });
 
     // Cas real (Norilsk, 13-10-2026): neu i temperatura sota zero alhora. El tallafocs es queda la neu (el codi es mira

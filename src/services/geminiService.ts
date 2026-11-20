@@ -3,7 +3,7 @@ import { ExtendedWeatherData, StrictCurrentWeather, type ShortRangeAgreement } f
 import { prepareContextForAI } from '../utils/aiContext';
 import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, getHourlyDisplayTemp, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { isMostlyCloudy } from '../utils/rules/cloudRules';
-import { isSleetCode, isSnowCode } from '../utils/rules/winterRules';
+import { isRawWinterCodePlausible, isSleetCode, isSnowCode } from '../utils/rules/winterRules';
 import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules';
 import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeMonthFromIso } from '../utils/weatherMath';
@@ -539,6 +539,8 @@ const evaluateDeterministicRisk = (
         const wmoArr = (hourly.weather_code ?? hourly.weathercode) as (number | null)[] | undefined;
         const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
         const precipArr = hourly.precipitation as (number | null)[] | undefined;
+        const freezingArr = hourly.freezing_level_height as (number | null)[] | undefined;
+        const snowfallArr = hourly.snowfall as (number | null)[] | undefined;
         const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
         const latitude = resolveLatitude(weatherData);
 
@@ -575,9 +577,11 @@ const evaluateDeterministicRisk = (
 
             // Tempesta i neu/gel: es mantenen sobre el codi BRUT del model (doctrina "les dades
             // crues sempre guanyen": és millor un avís de més que un de menys).
+            // Excepte quan és físicament impossible (neu a 10 °C amb la cota de gel a 1600 m): isRawWinterCodePlausible.
             const rawSevere = wmo !== undefined && wmo !== null;
             if (rawSevere && (wmo === 95 || wmo === 96 || wmo === 99)) upgradeRisk(wmo === 99 ? 'RED' : 'AMBER', 'CONVECTIVE', i, wmo === 95 ? 'storm' : 'storm_hail');
-            else if (rawSevere && [56, 57, 66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)) {
+            else if (rawSevere && [56, 57, 66, 67, 71, 73, 75, 77, 85, 86].includes(wmo as number)
+                && isRawWinterCodePlausible(wmo as number, temp, freezingArr?.[i], elevation, snowfallArr?.[i])) {
                 upgradeRisk('AMBER', 'SNOW_ICE', i, [56, 57, 66, 67].includes(wmo as number) ? 'freezing' : 'snow');
             }
             else {
