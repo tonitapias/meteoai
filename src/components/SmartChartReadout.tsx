@@ -1,16 +1,15 @@
 // src/components/SmartChartReadout.tsx
-// Franja de lectura dels gràfics a MÒBIL: les dades de l'hora que toques, en una alçada FIXA sobre el gràfic.
-// A escriptori les dades surten en un cartell flotant, però en una pantalla de 330 px aquest cartell (160 ×
-// 170 px) tapava mig gràfic; una franja fixa no el tapa mai, no fa saltar la pàgina i queda per sobre de
-// la zona on el dit ja tapa el gràfic.
+// La lectura dels gràfics horaris de Previsió: el valor de l'hora en gran (en repòs, el d'ARA; si toques o passes per
+// sobre del gràfic, el d'aquella hora), el nom del model que la dona i, a sota, el valor de cada model en una línia.
+// Substitueix les tres targetes de xifres i els cinc xips d'abans: una sola lectura, a l'alçada fixa de cada
+// pestanya perquè el gràfic de sota no es mogui mentre s'arrossega. Al costat, el que hi posi qui la fa servir
+// (l'acord entre models).
+import type { ReactNode } from 'react';
 
-export interface ReadoutChip {
+export interface ReadoutItem {
     key: string;
     label: string;
-    color: string;
     value: string;
-    /** La línia principal: es marca amb una vora més visible. */
-    primary?: boolean;
 }
 
 interface SmartChartReadoutProps {
@@ -19,41 +18,56 @@ interface SmartChartReadoutProps {
     /** En repòs (cap hora tocada) mostra l'hora actual i ho diu amb una etiqueta. */
     isNow: boolean;
     nowLabel: string;
-    chips: ReadoutChip[];
+    /** Valor de la línia principal ("15°", "0,4 mm"...). */
+    value: string | null;
+    /** Un segon valor al costat del principal (la probabilitat de la pluja, la ratxa del vent). */
+    note?: { key: string; text: string } | null;
+    /** Model de la línia principal a aquella hora ("AROME HD" o "MODEL GLOBAL"). */
+    source: string | null;
+    models: ReadoutItem[];
     /** Text d'ajuda quan encara no hi ha cap hora a mostrar. */
     hint: string;
-    /** Alçada mínima (px) perquè el gràfic de sota no es mogui mentre s'arrossega. */
+    aside?: ReactNode;
+    /** Alçada mínima (px): fixa per pestanya. */
     minHeight: number;
 }
 
-export const SmartChartReadout = ({ title, isNow, nowLabel, chips, hint, minHeight }: SmartChartReadoutProps) => (
-    <div data-testid="readout-strip" className="mb-3 px-1" style={{ minHeight }}>
-        {title === null ? (
-            <div className="flex items-center text-xs font-medium text-slate-400 leading-snug" style={{ minHeight }}>{hint}</div>
-        ) : (
-            <>
-                <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-black uppercase tracking-widest text-slate-300 tabular-nums">{title}</span>
-                    {isNow && (
-                        <span data-testid="readout-now" className="text-xs font-black uppercase tracking-widest text-cyan-300 border border-cyan-500/30 bg-cyan-500/10 rounded-full px-2 py-0.5">
-                            {nowLabel}
-                        </span>
-                    )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                    {chips.map(chip => (
-                        <span
-                            key={chip.key}
-                            data-testid={`readout-${chip.key}`}
-                            className={`inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border px-2.5 py-1.5 text-xs leading-none ${chip.primary ? 'border-white/20' : 'border-white/5'}`}
-                        >
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: chip.color }} aria-hidden="true"></span>
-                            <span className="font-medium text-slate-400">{chip.label}</span>
-                            <span className="font-black tabular-nums" style={{ color: chip.color }}>{chip.value}</span>
-                        </span>
-                    ))}
-                </div>
-            </>
+export const SmartChartReadout = ({ title, isNow, nowLabel, value, note, source, models, hint, aside, minHeight }: SmartChartReadoutProps) => (
+    <div data-testid="readout" className="flex flex-col gap-2" style={{ minHeight }}>
+        <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+                {title === null ? (
+                    <p className="max-w-[16rem] pt-1 text-[13px] leading-snug text-slate-400">{hint}</p>
+                ) : (
+                    <>
+                        <div className="font-mono text-[11px] uppercase tracking-[0.08em] text-slate-400 tabular-nums">
+                            {isNow && <span data-testid="readout-now" className="text-cyan-300">{nowLabel} · </span>}
+                            {title}
+                        </div>
+                        <div data-testid="readout-primary" className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                            {/* La xifra en gran i la unitat ("km/h", "mm", "m") més petita: hi cap la ratxa o la probabilitat al costat. */}
+                            <span className="text-[40px] leading-none font-semibold tracking-tight text-slate-50 tabular-nums">
+                                {value === null ? '—' : value.split(' ')[0]}
+                                {value !== null && value.includes(' ') && (
+                                    <>{' '}<span className="text-lg font-medium tracking-normal text-slate-300">{value.slice(value.indexOf(' ') + 1)}</span></>
+                                )}
+                            </span>
+                            {note && <span data-testid={`readout-${note.key}`} className="text-sm text-slate-300 tabular-nums">{note.text}</span>}
+                            {source && <span className="text-xs text-slate-400">{source}</span>}
+                        </div>
+                    </>
+                )}
+            </div>
+            {aside}
+        </div>
+        {title !== null && models.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] tabular-nums">
+                {models.map(m => (
+                    <span key={m.key} data-testid={`readout-${m.key}`} className="whitespace-nowrap">
+                        <span className="text-slate-400">{m.label}</span> <span className="text-slate-200">{m.value}</span>
+                    </span>
+                ))}
+            </div>
         )}
     </div>
 );

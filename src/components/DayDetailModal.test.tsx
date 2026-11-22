@@ -92,7 +92,6 @@ describe('DayDetailModal — coherència amb la llista de 7 dies', () => {
             <ForecastSection
                 chartData={generateHourlyChartData(data, 0, 'C') as never}
                 dailyData={data.daily}
-                weeklyExtremes={{ min: 10, max: 35 }}
                 lang="ca"
                 onDayClick={() => {}}
                 latitude={41.55}
@@ -217,14 +216,13 @@ describe('DayDetailModal — capçalera amb l\'estat del dia', () => {
                 chartData={generateHourlyChartData(data, 0, 'C') as never}
                 dailyData={data.daily}
                 dayHourCodes={getHourCodesByDate(data.hourly as unknown as HourlySeries, 200, data.hourlyComparison)}
-                weeklyExtremes={{ min: 10, max: 35 }}
                 lang="ca"
                 onDayClick={() => {}}
                 latitude={41.55}
             />
         );
-        // La primera fila de la llista és l'índex 1 (22 de setembre), el mateix que obre el detall.
-        const listCode = screen.getAllByTestId('day-icon')[0].getAttribute('data-code');
+        // La primera fila de la llista és avui; la segona, l'índex 1 (22 de setembre), el mateix que obre el detall.
+        const listCode = screen.getAllByTestId('day-icon')[1].getAttribute('data-code');
         list.unmount();
 
         renderDetail(data);

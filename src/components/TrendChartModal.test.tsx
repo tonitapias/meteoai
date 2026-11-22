@@ -338,15 +338,14 @@ describe('TrendChartModal — mateixes xifres que la llista de 7 dies', () => {
             <ForecastSection
                 chartData={chartData}
                 dailyData={daily}
-                weeklyExtremes={{ min: 0, max: 30 }}
                 lang="ca"
                 onDayClick={() => {}}
                 latitude={41.9}
             />
         );
-        // Cada fila mostra cada xifra dues vegades (variant d'escriptori i de mòbil).
-        expect(screen.getAllByText('8°')).toHaveLength(14);
-        expect(screen.getAllByText('18°')).toHaveLength(14);
+        // Una xifra per fila: avui i els 7 dies següents.
+        expect(screen.getAllByText('8°')).toHaveLength(8);
+        expect(screen.getAllByText('18°')).toHaveLength(8);
         expect(screen.queryByText('10°')).toBeNull();
     });
 });
@@ -600,7 +599,6 @@ describe('ForecastSection ↔ gràfic: obrir el detall d\'un dia des del gràfic
             <ForecastSection
                 chartData={[]}
                 dailyData={dailyData}
-                weeklyExtremes={{ min: 0, max: 30 }}
                 lang="ca"
                 onDayClick={onDayClick}
                 latitude={41.9}
@@ -611,7 +609,7 @@ describe('ForecastSection ↔ gràfic: obrir el detall d\'un dia des del gràfic
         const onDayClick = vi.fn();
         renderSection(onDayClick);
 
-        fireEvent.click(screen.getByLabelText('Obrir gràfic de temperatures'));
+        fireEvent.click(screen.getByLabelText('Obrir el gràfic de temperatures'));
         expect(screen.getByRole('dialog')).toBeTruthy();
 
         fireEvent.click(screen.getAllByTestId('trend-day')[4]);

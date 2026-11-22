@@ -38,12 +38,15 @@ const comparison = (over: Partial<Record<ChartModelKey, HourlyChartPoint[]>> = {
 });
 
 const renderCharts = (props: Partial<React.ComponentProps<typeof SmartForecastCharts>> = {}) =>
-    render(<SmartForecastCharts data={primary} comparisonData={comparison()} unit="°C" lang="ca" regionalModelLabel="AROME HD" {...props} />);
+    render(<SmartForecastCharts data={primary} comparisonData={comparison()} lang="ca" regionalModelLabel="AROME HD" {...props} />);
 
 const hoverHour = (container: HTMLElement, index: number) => {
     const rects = container.querySelectorAll('rect.cursor-crosshair');
     fireEvent.mouseEnter(rects[index]);
 };
+const tab = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
+const openModels = () => fireEvent.click(screen.getByTestId('models-toggle'));
+const readout = () => screen.getByTestId('readout');
 
 describe('SmartForecastCharts', () => {
     it('sense dades no dibuixa res', () => {
@@ -51,31 +54,59 @@ describe('SmartForecastCharts', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
-    it('mostra les xifres clau de cada mètrica calculades de la sèrie que dibuixa', () => {
+    it('una mètrica cada vegada, amb quatre pestanyes curtes', () => {
         renderCharts();
-        // Temperatura: màxima 25,75° a l'última hora (13H) i mínima 20° a la primera (14H).
-        expect(screen.getAllByText('Màxima').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('26°').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('20°').length).toBeGreaterThan(0);
-        // Pluja: 1,2 mm de la principal (a les 22H) i rang dels models.
+        const labels = screen.getAllByRole('button').filter(b => b.hasAttribute('aria-pressed') && !b.dataset.testid).map(b => b.textContent);
+        expect(labels).toEqual(['Temp', 'Pluja', 'Vent', 'Neu']);
+        expect(screen.getByRole('button', { name: 'Temperatura' })).toHaveAttribute('aria-pressed', 'true');
+        tab('Pluja');
+        expect(screen.getByRole('button', { name: 'Pluja' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', { name: 'Temperatura' })).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('la temperatura marca la màxima i la mínima sobre la corba, de la sèrie que dibuixa', () => {
+        renderCharts();
+        // Màxima 25,75° a l'última hora (13H) i mínima 20° a la primera (14H).
+        expect(within(screen.getByTestId('pill-high')).getByText('Màxima')).toBeInTheDocument();
+        expect(screen.getByTestId('pill-high')).toHaveTextContent('26°');
+        expect(screen.getByTestId('pill-high')).toHaveTextContent('13H');
+        expect(screen.getByTestId('pill-low')).toHaveTextContent('20°');
+        expect(screen.getByTestId('pill-low')).toHaveTextContent('14H');
+    });
+
+    it('el desacord màxim de la temperatura va a la frase de l\'acord i, amb tots els models, al claudàtor', () => {
+        const { container } = renderCharts();
+        expect(screen.getByText(/fins a 4,0° de diferència a les/)).toBeInTheDocument();
+        expect(container.querySelector('[data-testid="spread-bracket"]')).not.toBeNull();
+    });
+
+    it('la pluja, el vent i la cota porten les seves xifres en una línia sota el gràfic', () => {
+        renderCharts();
+        tab('Pluja');
+        expect(screen.getByText('Total 24 h')).toBeInTheDocument();
         expect(screen.getAllByText('1,2 mm').length).toBeGreaterThan(0);
         expect(screen.getAllByText('22H').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Models amb pluja').length).toBeGreaterThan(0);
-        // Vent: ratxa màxima de 20 km/h.
-        expect(screen.getAllByText('Ratxa màx.').length).toBeGreaterThan(0);
+        // La línia principal i els 4 models globals: tots cinc preveuen pluja.
+        expect(screen.getByText(/5 de 5 models en donen/)).toBeInTheDocument();
+        tab('Vent');
+        expect(screen.getByText('Ratxa màx.')).toBeInTheDocument();
+        expect(screen.getAllByText('20 km/h').length).toBeGreaterThan(0);
+        tab('Cota de neu');
+        expect(screen.getByText('Cota mínima')).toBeInTheDocument();
+        expect(screen.getByText('Cota màxima')).toBeInTheDocument();
     });
 
-    it('cada gràfic porta el seu xip d\'acord entre models (temperatura amb 4° de dispersió = baix)', () => {
+    it('cada pestanya porta l\'acord entre models (temperatura amb 4° de dispersió = baix)', () => {
         renderCharts();
-        expect(screen.getAllByText('Acord baix').length).toBeGreaterThan(0);
+        expect(screen.getByText('Acord baix')).toBeInTheDocument();
     });
 
-    it('sense models de comparació: xip "Sense comparació", cap banda, cap xip de model a la llegenda', () => {
+    it('sense models de comparació: "Sense comparació", cap banda, cap botó de models', () => {
         const { container } = renderCharts({ comparisonData: null });
-        expect(screen.getAllByText('Sense comparació').length).toBeGreaterThan(0);
+        expect(screen.getByText('Sense comparació')).toBeInTheDocument();
         expect(container.querySelector('[data-testid="model-band"]')).toBeNull();
+        expect(screen.queryByTestId('models-toggle')).toBeNull();
         expect(screen.queryByTestId('legend-ecmwf')).toBeNull();
-        expect(screen.queryByTestId('legend-band')).toBeNull();
     });
 
     it('dibuixa la banda entre el model més alt i el més baix', () => {
@@ -83,106 +114,129 @@ describe('SmartForecastCharts', () => {
         expect(container.querySelectorAll('[data-testid="model-band"]').length).toBeGreaterThan(0);
     });
 
-    it('volum i probabilitat de pluja van en un sol panell: una pestanya "PLUJA" i cap "VOLUM"/"PROB." solta', () => {
-        const { container } = renderCharts();
-        const tabs = within(container.querySelector('.md\\:hidden') as HTMLElement).getAllByRole('button').map(b => b.textContent);
-        expect(tabs).toEqual(['Temperatura', 'PLUJA', 'Vent', 'Cota de neu']);
-        fireEvent.click(screen.getByRole('button', { name: 'PLUJA' }));
-        // Dins del panell de pluja hi ha els dos gràfics apilats (a mòbil i a escriptori).
-        expect(screen.getAllByText('VOLUM (MM)').length).toBeGreaterThanOrEqual(2);
-        expect(screen.getAllByText('Prob. Pluja').length).toBeGreaterThanOrEqual(2);
+    it('la pluja apila volum i probabilitat en una sola pestanya', () => {
+        renderCharts();
+        tab('Pluja');
+        expect(screen.getByText('VOLUM (MM)')).toBeInTheDocument();
+        expect(screen.getByText('Prob. Pluja')).toBeInTheDocument();
     });
 
-    it('el cartell mostra els 4 models, AIFS inclòs', () => {
+    it('la lectura mostra els 4 models, AIFS inclòs', () => {
         const { container } = renderCharts();
         hoverHour(container, 3);
-        for (const label of ['ECMWF:', 'GFS:', 'ICON:', 'AIFS:']) {
-            expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+        for (const key of ['ecmwf', 'gfs', 'icon', 'aifs']) {
+            expect(within(readout()).getByTestId(`readout-${key}`)).toBeInTheDocument();
         }
     });
 
-    it('el cartell diu el model REAL de la línia principal segons l\'hora (regional o global)', () => {
+    it('la lectura diu el model REAL de la línia principal segons l\'hora (regional o global)', () => {
         const { container } = renderCharts();
         hoverHour(container, 3); // dins les 12 primeres hores: regional
-        expect(screen.getAllByText('AROME HD').length).toBeGreaterThan(0);
-        expect(screen.queryAllByText('MODEL GLOBAL')).toHaveLength(0);
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('AROME HD');
         hoverHour(container, 18); // després: model global
-        expect(screen.getAllByText('MODEL GLOBAL').length).toBeGreaterThan(0);
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('MODEL GLOBAL');
     });
 
-    it('un model idèntic a la línia principal no es dibuixa ni surt al cartell, s\'avisa i segueix a la banda', () => {
+    it('un model idèntic a la línia principal no es dibuixa ni surt a la lectura, s\'avisa i segueix a la banda', () => {
         const identical = model(0).map((p, i) => ({ ...p, temp: primary[i].temp }));
         const { container } = renderCharts({ comparisonData: comparison({ icon: identical }) });
         hoverHour(container, 3);
-        expect(screen.queryAllByText('ICON:')).toHaveLength(0);
-        expect(screen.getAllByText('ECMWF:').length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/ICON = model principal/).length).toBeGreaterThan(0);
+        expect(within(readout()).queryByTestId('readout-icon')).toBeNull();
+        expect(within(readout()).getByTestId('readout-ecmwf')).toBeInTheDocument();
+        expect(screen.getByText(/ICON = model principal/)).toBeInTheDocument();
         expect(container.querySelectorAll('[data-testid="model-band"]').length).toBeGreaterThan(0);
     });
 
     it('avisa que AIFS no publica probabilitat de pluja (només quan AIFS hi és i no en té)', () => {
         renderCharts();
-        expect(screen.getAllByText(/AIFS no publica probabilitat de pluja/).length).toBeGreaterThan(0);
+        tab('Pluja');
+        expect(screen.getByText(/AIFS no publica probabilitat de pluja/)).toBeInTheDocument();
     });
 
     it('sense AIFS no hi ha cap avís d\'AIFS', () => {
         renderCharts({ comparisonData: comparison({ aifs: [] }) });
-        expect(screen.queryAllByText(/AIFS no publica/)).toHaveLength(0);
+        tab('Pluja');
+        expect(screen.queryByText(/AIFS no publica/)).toBeNull();
     });
 
     it('sense model regional, la línia principal és "MODEL GLOBAL" a totes les hores', () => {
         const { container } = renderCharts({ regionalModelLabel: null });
         hoverHour(container, 3);
-        expect(screen.getAllByText('MODEL GLOBAL').length).toBeGreaterThan(0);
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('MODEL GLOBAL');
         expect(screen.queryAllByText('AROME HD')).toHaveLength(0);
     });
 
     it('els textos surten en l\'idioma de l\'usuari', () => {
         renderCharts({ lang: 'en' });
-        expect(screen.getAllByText('High').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Max gust').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Low agreement').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('RAIN').length).toBeGreaterThan(0);
+        expect(within(screen.getByTestId('pill-high')).getByText('High')).toBeInTheDocument();
+        expect(screen.getByText('Low agreement')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Rain' })).toBeInTheDocument();
+        tab('Wind');
+        expect(screen.getByText('Max gust')).toBeInTheDocument();
     });
 });
 
-describe('SmartForecastCharts: llegenda', () => {
-    it('diu el model de la línia principal i té un xip per model i un per a la banda', () => {
+describe('SmartForecastCharts: capçalera i llegenda', () => {
+    it('la capçalera diu les hores i de quin model i quina hora és la previsió', () => {
+        renderCharts({ updatedAt: '2026-09-21T14:05' });
+        expect(screen.getByText('Pròximes 24 h')).toBeInTheDocument();
+        expect(screen.getByTestId('chart-source')).toHaveTextContent('AROME HD · de les 14:05');
+    });
+
+    it('sense hora de la previsió (o il·legible) només hi ha el model', () => {
+        const { unmount } = renderCharts({ updatedAt: null });
+        expect(screen.getByTestId('chart-source').textContent).toBe('AROME HD');
+        unmount();
+        renderCharts({ updatedAt: 'ahir', regionalModelLabel: null });
+        expect(screen.getByTestId('chart-source').textContent).toBe('MODEL GLOBAL');
+    });
+
+    it('dins d\'una altra targeta (framed=false) no hi ha marc ni capçalera', () => {
+        renderCharts({ framed: false, updatedAt: '2026-09-21T14:05' });
+        expect(screen.queryByText('Pròximes 24 h')).toBeNull();
+        expect(screen.queryByTestId('chart-source')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Temperatura' })).toBeInTheDocument();
+    });
+
+    it('la llegenda diu quina línia és quina, i els models estan plegats sota «Models»', () => {
         renderCharts();
-        expect(screen.getByText('Principal · AROME HD')).toBeInTheDocument();
+        expect(screen.getByText('4 models globals')).toBeInTheDocument();
+        expect(screen.getByText('marge entre models')).toBeInTheDocument();
+        expect(screen.getByTestId('models-toggle')).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByTestId('legend-ecmwf')).toBeNull();
+        openModels();
+        expect(screen.getByTestId('models-toggle')).toHaveAttribute('aria-expanded', 'true');
         for (const key of ['ecmwf', 'gfs', 'icon', 'aifs']) {
             expect(screen.getByTestId(`legend-${key}`)).toHaveAttribute('aria-pressed', 'true');
         }
         expect(screen.getByTestId('legend-band')).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('sense model regional, la principal és el model global', () => {
-        renderCharts({ regionalModelLabel: null });
-        expect(screen.getByText('Principal · MODEL GLOBAL')).toBeInTheDocument();
-    });
-
-    it('amagar un model l\'esborra de TOTS els gràfics i del cartell; tornar-lo a activar el recupera', () => {
+    it('amagar un model l\'esborra de TOTS els gràfics i de la lectura; tornar-lo a activar el recupera', () => {
         const { container } = renderCharts();
+        openModels();
         fireEvent.click(screen.getByTestId('legend-gfs'));
         expect(screen.getByTestId('legend-gfs')).toHaveAttribute('aria-pressed', 'false');
         hoverHour(container, 3);
-        expect(screen.queryAllByText('GFS:')).toHaveLength(0);
-        expect(screen.getAllByText('ECMWF:').length).toBeGreaterThan(0);
+        expect(within(readout()).queryByTestId('readout-gfs')).toBeNull();
+        expect(within(readout()).getByTestId('readout-ecmwf')).toBeInTheDocument();
         fireEvent.click(screen.getByTestId('legend-gfs'));
         hoverHour(container, 3);
-        expect(screen.getAllByText('GFS:').length).toBeGreaterThan(0);
+        expect(within(readout()).getByTestId('readout-gfs')).toBeInTheDocument();
     });
 
-    it('amagar un model NO canvia l\'acord entre models: és un fet de la previsió, no de la vista', () => {
-        renderCharts();
-        const before = screen.getAllByText('Acord baix').length;
+    it('amagar un model NO canvia l\'acord entre models (és un fet de la previsió), però treu el claudàtor del marge', () => {
+        const { container } = renderCharts();
+        openModels();
         fireEvent.click(screen.getByTestId('legend-gfs'));
         fireEvent.click(screen.getByTestId('legend-icon'));
-        expect(screen.getAllByText('Acord baix')).toHaveLength(before);
+        expect(screen.getByText('Acord baix')).toBeInTheDocument();
+        expect(container.querySelector('[data-testid="spread-bracket"]')).toBeNull();
     });
 
-    it('el xip de la banda l\'amaga i la torna a mostrar', () => {
+    it('el botó del marge l\'amaga i el torna a mostrar', () => {
         const { container } = renderCharts();
+        openModels();
         fireEvent.click(screen.getByTestId('legend-band'));
         expect(screen.getByTestId('legend-band')).toHaveAttribute('aria-pressed', 'false');
         expect(container.querySelectorAll('[data-testid="model-band"]')).toHaveLength(0);
@@ -190,39 +244,29 @@ describe('SmartForecastCharts: llegenda', () => {
         expect(container.querySelectorAll('[data-testid="model-band"]').length).toBeGreaterThan(0);
     });
 
-    it('la banda només inclou els models visibles: amagar-ne dos deixa la banda entre els altres dos', () => {
+    it('el marge només inclou els models visibles: amagar-ne un el canvia', () => {
         const { container } = renderCharts();
         const bandOf = () => container.querySelector('[data-testid="model-band"]')?.getAttribute('d');
         const full = bandOf();
+        openModels();
         fireEvent.click(screen.getByTestId('legend-gfs')); // el més alt
         expect(bandOf()).not.toBe(full);
     });
 
-    it('un model idèntic a la principal surt a la llegenda com a xip fix ("ICON = principal"), no com a botó', () => {
+    it('un model idèntic a la principal surt com a etiqueta fixa ("ICON = principal"), no com a botó', () => {
         const identical = model(0).map((p, i) => ({ ...p, temp: primary[i].temp }));
         renderCharts({ comparisonData: comparison({ icon: identical }) });
+        openModels();
         const chip = screen.getByTestId('legend-icon');
         expect(chip.tagName).toBe('SPAN');
         expect(chip).toHaveTextContent('ICON = principal');
-    });
-
-    it('diu de quina hora és la previsió', () => {
-        renderCharts({ updatedAt: '2026-09-21T14:05' });
-        expect(screen.getByText('Previsió de les 14:05')).toBeInTheDocument();
-    });
-
-    it('sense hora de la previsió (o il·legible) no hi ha cap rètol', () => {
-        renderCharts({ updatedAt: null });
-        expect(screen.queryByText(/Previsió de les/)).toBeNull();
-        renderCharts({ updatedAt: 'ahir' });
-        expect(screen.queryByText(/Previsió de les/)).toBeNull();
     });
 });
 
 describe('SmartForecastCharts: lectura del gràfic', () => {
     it('cada gràfic té escala a l\'eix Y', () => {
         const { container } = renderCharts();
-        expect(container.querySelectorAll('[data-testid="y-tick"]').length).toBeGreaterThan(10);
+        expect(container.querySelectorAll('[data-testid="y-tick"]').length).toBeGreaterThan(2);
         // La temperatura porta el símbol de grau a les xifres de l'eix.
         const tempTicks = [...container.querySelectorAll('[data-testid="y-tick"] text')].map(t => t.textContent);
         expect(tempTicks.some(t => /^\d+°$/.test(t ?? ''))).toBe(true);
@@ -238,7 +282,7 @@ describe('SmartForecastCharts: lectura del gràfic', () => {
         expect(container.querySelectorAll('[data-testid="midnight-marker"]').length).toBeGreaterThan(0);
         expect(screen.getAllByText('dt. 22').length).toBeGreaterThan(0);
         const sameDay = primary.map((p, i) => ({ ...p, time: `2026-09-22T${String(i).padStart(2, '0')}:00` }));
-        const other = render(<SmartForecastCharts data={sameDay} comparisonData={null} unit="°C" lang="ca" />);
+        const other = render(<SmartForecastCharts data={sameDay} comparisonData={null} lang="ca" />);
         expect(other.container.querySelectorAll('[data-testid="midnight-marker"]')).toHaveLength(0);
     });
 
@@ -246,7 +290,7 @@ describe('SmartForecastCharts: lectura del gràfic', () => {
         const { container } = renderCharts({ nowIndex: 0 });
         expect(container.querySelectorAll('[data-testid="now-marker"]').length).toBeGreaterThan(0);
         expect(screen.getAllByText('ARA').length).toBeGreaterThan(0);
-        const without = render(<SmartForecastCharts data={primary} comparisonData={null} unit="°C" lang="ca" />);
+        const without = render(<SmartForecastCharts data={primary} comparisonData={null} lang="ca" />);
         expect(without.container.querySelectorAll('[data-testid="now-marker"]')).toHaveLength(0);
         expect(within(without.container).queryAllByText('ARA')).toHaveLength(0);
     });
@@ -258,207 +302,166 @@ describe('SmartForecastCharts: lectura del gràfic', () => {
 
     it('el volum de pluja es dibuixa amb barres (una per hora amb pluja) i un punt per model', () => {
         const { container } = renderCharts();
+        tab('Pluja');
         // La principal plou una sola hora (index 8); els 4 models, una (index 9).
         const bars = container.querySelectorAll('[data-testid="precip-bar"]');
         const dots = container.querySelectorAll('[data-testid="precip-dot"]');
-        expect(bars.length).toBeGreaterThan(0);
+        expect(bars.length).toBe(1);
         expect(dots.length).toBe(bars.length * 4);
     });
 
     it('un model amagat no deixa punts al volum', () => {
         const { container } = renderCharts();
+        tab('Pluja');
         const withAll = container.querySelectorAll('[data-testid="precip-dot"]').length;
+        openModels();
         fireEvent.click(screen.getByTestId('legend-ecmwf'));
         expect(container.querySelectorAll('[data-testid="precip-dot"]').length).toBeLessThan(withAll);
     });
 
-    it('el vent porta la línia de ratxes i el cartell en diu el valor', () => {
+    it('el vent porta la línia de ratxes i la lectura en diu el valor', () => {
         const { container } = renderCharts();
+        tab('Vent');
         expect(container.querySelectorAll('[data-testid="gust-line"]').length).toBeGreaterThan(0);
         hoverHour(container, 3);
-        expect(screen.getAllByText('Ratxa:').length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Línia contínua: vent sostingut\. Discontínua: ratxes\./).length).toBeGreaterThan(0);
+        expect(within(readout()).getByTestId('readout-gust')).toHaveTextContent('Ratxa 20 km/h');
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('10 km/h');
+        expect(screen.getByText(/Línia contínua: vent sostingut\. Discontínua: ratxes\./)).toBeInTheDocument();
     });
 
-    it('sense ratxes a les dades, no hi ha línia de ratxes (ni una de plana a 0)', () => {
+    it('sense ratxes a les dades, no hi ha línia de ratxes ni ratxa a la lectura (ni un 0 km/h)', () => {
         const noGusts = primary.map(p => ({ ...p, gusts: null }));
         const { container } = renderCharts({ data: noGusts });
+        tab('Vent');
         expect(container.querySelectorAll('[data-testid="gust-line"]')).toHaveLength(0);
+        hoverHour(container, 3);
+        expect(within(readout()).queryByTestId('readout-gust')).toBeNull();
     });
 });
 
 describe('SmartForecastCharts: cota de neu', () => {
     it('amb cota per sota del límit de visualització es dibuixa el gràfic i les xifres', () => {
         const { container } = renderCharts();
-        expect(screen.getAllByText('Cota mínima').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Cota màxima').length).toBeGreaterThan(0);
+        tab('Cota de neu');
+        expect(screen.getByText('Cota mínima')).toBeInTheDocument();
         expect(container.querySelectorAll('[data-testid="snow-compact"]')).toHaveLength(0);
     });
 
-    it('si la cota és per sobre del límit TOTA la finestra (estiu), una frase en lloc d\'una línia plana', () => {
+    it('si la cota és per sobre del límit TOTA la finestra (estiu), una frase en lloc d\'una línia plana, i cap lectura', () => {
         const summer = primary.map(p => ({ ...p, snowLevel: 4500 }));
         const { container } = renderCharts({ data: summer, comparisonData: null });
-        expect(container.querySelectorAll('[data-testid="snow-compact"]').length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Sense neu prevista: la cota és per sobre de 3\.500 m durant tota la finestra\./).length).toBeGreaterThan(0);
-        expect(screen.getAllByText('> 3.500 m').length).toBeGreaterThan(0);
-        expect(screen.queryAllByText('Cota mínima')).toHaveLength(0);
+        tab('Cota de neu');
+        expect(container.querySelectorAll('[data-testid="snow-compact"]')).toHaveLength(1);
+        expect(screen.getByText(/Sense neu prevista: la cota és per sobre de 3\.500 m durant tota la finestra\./)).toBeInTheDocument();
+        expect(screen.getByText('> 3.500 m')).toBeInTheDocument();
+        expect(screen.queryByText('Cota mínima')).toBeNull();
+        expect(screen.queryByTestId('readout')).toBeNull();
     });
 
     it('sense cap dada de cota ho diu, sense inventar-se un valor', () => {
         const none = primary.map(p => ({ ...p, snowLevel: null }));
         renderCharts({ data: none, comparisonData: null });
-        expect(screen.getAllByText(/Cap model publica la cota de neu/).length).toBeGreaterThan(0);
+        tab('Cota de neu');
+        expect(screen.getByText(/Cap model publica la cota de neu/)).toBeInTheDocument();
         expect(screen.queryAllByText(/^> /)).toHaveLength(0);
     });
 });
 
 describe('SmartForecastCharts: mòbil', () => {
-    it('els gràfics ocupen l\'amplada de la pantalla: cap contenidor de 700 px amb desplaçament lateral', () => {
+    it('els gràfics ocupen l\'amplada de la pantalla: cap contenidor amb desplaçament lateral', () => {
         const { container } = renderCharts();
         expect(container.querySelector('.min-w-\\[700px\\]')).toBeNull();
-        expect(container.querySelector('.overflow-x-auto:not(.no-scrollbar)')).toBeNull();
+        expect(container.querySelector('.overflow-x-auto')).toBeNull();
     });
 
-    it('arrossegar el dit per sobre del gràfic recorre les hores i en mostra el cartell', () => {
+    it('arrossegar el dit per sobre del gràfic recorre les hores i les mostra a la lectura', () => {
         const { container } = renderCharts();
         const svg = container.querySelector('svg[role="img"]') as SVGSVGElement;
-        // jsdom no fa layout: amb amplada 1000 i marges 44/20, x = 512 cau cap a la meitat (~ hora 12).
+        // jsdom no fa layout: amb amplada 1000 i marges 6/36, x = 512 cau cap a la meitat (hora 12).
         fireEvent.touchMove(svg, { touches: [{ clientX: 512, clientY: 100 }] });
-        expect(screen.getAllByText('02:00').length).toBeGreaterThan(0);
-        fireEvent.touchMove(svg, { touches: [{ clientX: 44, clientY: 100 }] });
-        expect(screen.getAllByText('14:00').length).toBeGreaterThan(0);
+        expect(readout()).toHaveTextContent('02:00');
+        fireEvent.touchMove(svg, { touches: [{ clientX: 6, clientY: 100 }] });
+        expect(readout()).toHaveTextContent('14:00');
     });
 });
 
-describe('SmartForecastCharts: franja de lectura (mòbil)', () => {
-    const strip = () => screen.getByTestId('readout-strip');
-    const mobileTree = (container: HTMLElement) => container.querySelectorAll('.md\\:hidden')[1] as HTMLElement;
-
+describe('SmartForecastCharts: lectura de l\'hora', () => {
     it("en repòs mostra les dades d'ARA i ho diu amb l'etiqueta ARA", () => {
         renderCharts({ nowIndex: 0 });
-        expect(within(strip()).getByTestId('readout-now')).toHaveTextContent('ARA');
-        expect(strip()).toHaveTextContent('14:00 · dl. 21');
-        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('AROME HD');
-        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('20°C');
+        expect(within(readout()).getByTestId('readout-now')).toHaveTextContent('ARA');
+        expect(readout()).toHaveTextContent('14:00 · dl. 21');
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('AROME HD');
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('20°');
     });
 
     it("sense cap hora d'ARA (p. ex. el detall d'un altre dia) no s'inventa cap hora: mostra el text d'ajuda", () => {
         renderCharts();
-        expect(strip()).toHaveTextContent('Arrossega el dit per sobre del gràfic per veure les dades de cada hora.');
+        expect(readout()).toHaveTextContent('Toca el gràfic o passa-hi per sobre per veure cada hora.');
         expect(screen.queryByTestId('readout-now')).toBeNull();
-        expect(within(strip()).queryByTestId('readout-primary')).toBeNull();
+        expect(within(readout()).queryByTestId('readout-primary')).toBeNull();
     });
 
     it("un ARA que no és dins la sèrie tampoc s'inventa res", () => {
         renderCharts({ nowIndex: 99 });
-        expect(strip()).toHaveTextContent('Arrossega el dit');
+        expect(readout()).toHaveTextContent('Toca el gràfic');
         expect(screen.queryByTestId('readout-now')).toBeNull();
     });
 
     it("en tocar una hora mostra les dades d'AQUELLA hora de cada model i deixa d'estar en repòs", () => {
         const { container } = renderCharts({ nowIndex: 0 });
         hoverHour(container, 12);
-        expect(strip()).toHaveTextContent('02:00 · dt. 22');
+        expect(readout()).toHaveTextContent('02:00 · dt. 22');
         expect(screen.queryByTestId('readout-now')).toBeNull();
-        const s = within(strip());
-        expect(s.getByTestId('readout-primary')).toHaveTextContent('23°C');
-        expect(s.getByTestId('readout-ecmwf')).toHaveTextContent('22°C');
-        expect(s.getByTestId('readout-gfs')).toHaveTextContent('25°C');
-        expect(s.getByTestId('readout-icon')).toHaveTextContent('21°C');
-        expect(s.getByTestId('readout-aifs')).toHaveTextContent('24°C');
+        const r = within(readout());
+        expect(r.getByTestId('readout-primary')).toHaveTextContent('23°');
+        expect(r.getByTestId('readout-ecmwf')).toHaveTextContent('22°');
+        expect(r.getByTestId('readout-gfs')).toHaveTextContent('25°');
+        expect(r.getByTestId('readout-icon')).toHaveTextContent('21°');
+        expect(r.getByTestId('readout-aifs')).toHaveTextContent('24°');
     });
 
-    it("el nom de la línia principal és el del model REAL d'aquella hora (regional o global)", () => {
+    it("a la pluja, el volum en gran i la probabilitat al costat; cada model, volum i probabilitat (AIFS, només el volum)", () => {
         const { container } = renderCharts();
-        hoverHour(container, 3);
-        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('AROME HD');
-        hoverHour(container, 18);
-        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('MODEL GLOBAL');
-    });
-
-    it("a mòbil el cartell flotant ja no tapa el gràfic (les dades surten a la franja), però a escriptori es manté", () => {
-        const { container } = renderCharts();
-        hoverHour(container, 3);
-        // El cartell flotant etiqueta els models amb dos punts ("ECMWF:"); la franja, sense.
-        expect(within(mobileTree(container)).queryByText('ECMWF:')).toBeNull();
-        expect(screen.getAllByText('ECMWF:').length).toBeGreaterThan(0);
-        // El cursor (línia i punts sobre la corba) es dibuixa igualment a mòbil.
-        expect(mobileTree(container).querySelectorAll('svg circle').length).toBeGreaterThan(0);
-    });
-
-    it("respecta els models amagats a la llegenda", () => {
-        const { container } = renderCharts();
-        fireEvent.click(screen.getByTestId('legend-gfs'));
-        hoverHour(container, 3);
-        expect(within(strip()).queryByTestId('readout-gfs')).toBeNull();
-        expect(within(strip()).getByTestId('readout-ecmwf')).toBeInTheDocument();
-    });
-
-    it("a la pluja hi ha UNA sola franja amb volum i probabilitat de cada model (AIFS, només el volum)", () => {
-        const { container } = renderCharts();
-        fireEvent.click(screen.getByRole('button', { name: 'PLUJA' }));
-        expect(screen.getAllByTestId('readout-strip')).toHaveLength(1);
+        tab('Pluja');
+        expect(screen.getAllByTestId('readout')).toHaveLength(1);
         hoverHour(container, 8);
-        const s = within(strip());
-        expect(s.getByTestId('readout-primary')).toHaveTextContent('1,2 mm · 10 %');
-        expect(s.getByTestId('readout-ecmwf')).toHaveTextContent('0,0 mm · 10 %');
-        expect(s.getByTestId('readout-aifs')).toHaveTextContent('0,0 mm');
-        expect(s.getByTestId('readout-aifs')).not.toHaveTextContent('%');
-    });
-
-    it("al vent afegeix la ratxa", () => {
-        const { container } = renderCharts();
-        fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
-        hoverHour(container, 3);
-        expect(within(strip()).getByTestId('readout-gust')).toHaveTextContent('20 km/h');
-        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('10 km/h');
-    });
-
-    it("sense ratxes a les dades, no hi ha xip de ratxa (ni un 0 km/h)", () => {
-        const noGusts = primary.map(p => ({ ...p, gusts: null }));
-        const { container } = renderCharts({ data: noGusts });
-        fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
-        hoverHour(container, 3);
-        expect(within(strip()).queryByTestId('readout-gust')).toBeNull();
+        const r = within(readout());
+        expect(r.getByTestId('readout-primary')).toHaveTextContent('1,2 mm');
+        expect(r.getByTestId('readout-prob')).toHaveTextContent('10%');
+        expect(r.getByTestId('readout-ecmwf')).toHaveTextContent('0,0 mm · 10%');
+        expect(r.getByTestId('readout-aifs')).toHaveTextContent('0,0 mm');
+        expect(r.getByTestId('readout-aifs')).not.toHaveTextContent('%');
     });
 
     it("a la cota de neu diu la cota de cada model que en publica (AIFS no)", () => {
         const { container } = renderCharts();
-        fireEvent.click(screen.getByRole('button', { name: 'Cota de neu' }));
+        tab('Cota de neu');
         hoverHour(container, 3);
-        expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('3.000 m');
-        expect(within(strip()).getByTestId('readout-gfs')).toHaveTextContent('3.000 m');
-        expect(within(strip()).queryByTestId('readout-aifs')).toBeNull();
+        expect(within(readout()).getByTestId('readout-primary')).toHaveTextContent('3.000 m');
+        expect(within(readout()).getByTestId('readout-gfs')).toHaveTextContent('3.000 m');
+        expect(within(readout()).queryByTestId('readout-aifs')).toBeNull();
     });
 
-    it("la cota de neu compacta (estiu) no porta franja: no hi ha cap gràfic per llegir", () => {
-        const summer = primary.map(p => ({ ...p, snowLevel: 4500 }));
-        renderCharts({ data: summer, comparisonData: null });
-        fireEvent.click(screen.getByRole('button', { name: 'Cota de neu' }));
-        expect(screen.queryByTestId('readout-strip')).toBeNull();
-    });
-
-    it("la franja té alçada fixa per pestanya, perquè el gràfic de sota no es mogui mentre s'arrossega", () => {
+    it("la lectura té alçada fixa per pestanya, perquè el gràfic de sota no es mogui mentre s'arrossega", () => {
         const { container } = renderCharts({ nowIndex: 0 });
-        expect(strip().style.minHeight).toBe('96px');
+        expect(readout().style.minHeight).toBe('92px');
         hoverHour(container, 5);
-        expect(strip().style.minHeight).toBe('96px');
-        fireEvent.click(screen.getByRole('button', { name: 'PLUJA' }));
-        expect(strip().style.minHeight).toBe('132px');
+        expect(readout().style.minHeight).toBe('92px');
+        tab('Pluja');
+        expect(readout().style.minHeight).toBe('112px');
     });
 
-    it("en canviar de pestanya la franja torna a l'estat de repòs (ARA) en lloc d'arrossegar l'última hora tocada", () => {
+    it("en canviar de pestanya la lectura torna a l'estat de repòs (ARA) en lloc d'arrossegar l'última hora tocada", () => {
         const { container } = renderCharts({ nowIndex: 0 });
         hoverHour(container, 12);
         expect(screen.queryByTestId('readout-now')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
+        tab('Vent');
         expect(screen.getByTestId('readout-now')).toHaveTextContent('ARA');
-        expect(strip()).toHaveTextContent('14:00 · dl. 21');
+        expect(readout()).toHaveTextContent('14:00 · dl. 21');
     });
 
-    it("els textos de la franja surten en l'idioma de l'usuari", () => {
+    it("els textos de la lectura surten en l'idioma de l'usuari", () => {
         renderCharts({ lang: 'en' });
-        expect(strip()).toHaveTextContent('Drag your finger across the chart to see the data for each hour.');
+        expect(readout()).toHaveTextContent('Tap or hover over the chart to see each hour.');
     });
 });
-

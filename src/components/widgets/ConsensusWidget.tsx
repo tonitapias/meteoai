@@ -14,10 +14,11 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MoveRight,
-  Cpu,
   LineChart,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
+import { MATRIX_BG } from './widgetStyles';
 
 export type ModalType = 'temp' | 'rain' | 'wind' | 'charts';
 
@@ -41,8 +42,8 @@ interface ConsensusWidgetProps {
 
 // [FIX PRECISIÓ] La comparació és amb Open-Meteo "best_match" (el mateix motor de selecció
 // automàtica de model que ja fem servir a weatherApi.ts): "Global", com a ConsensusModal.tsx.
-// Paraules senceres i no "GLO" ni "Δ", que no s'entenien (auditoria d'UX, segona volta, N4). En mòbil, a la casella de
-// la diferència l'etiqueta va a sobre de la xifra: en tres columnes de 390 px no hi cabien una al costat de l'altra.
+// Paraules senceres i no "GLO" ni "Δ", que no s'entenien (auditoria d'UX, segona volta, N4). Al mòbil cada magnitud
+// és una fila (en tres columnes de 390 px no hi cabien les xifres); a partir de 768 px, tres columnes.
 //
 // Sense veredicte d'acord: abans hi havia "Precisió NN %" i "Alineat / Discrepància / Divergència", una puntuació
 // sense calibrar feta amb l'hora actual del regional contra best_match, que contradeia a la mateixa pantalla el xip
@@ -52,40 +53,31 @@ const translations = {
   ca: {
     title: '{model} contra el global',
     subtitle: 'Diferència ara mateix',
-    temp: 'TEMP', rain: 'PLUJA', snow: 'NEU', wind: 'VENT', diff: 'Diferència', secondary: 'Global',
+    temp: 'Temperatura', rain: 'Pluja', snow: 'Neu', wind: 'Vent', diff: 'Diferència', secondary: 'Global',
     chartsBtn: 'Compara els models',
     futureDivergence: 'Possible canvi brusc en 3h (pluja forta o vent fort)'
   },
   es: {
     title: '{model} frente al global',
     subtitle: 'Diferencia ahora mismo',
-    temp: 'TEMP', rain: 'LLUVIA', snow: 'NIEVE', wind: 'VIENTO', diff: 'Diferencia', secondary: 'Global',
+    temp: 'Temperatura', rain: 'Lluvia', snow: 'Nieve', wind: 'Viento', diff: 'Diferencia', secondary: 'Global',
     chartsBtn: 'Compara los modelos',
     futureDivergence: 'Posible cambio brusco en 3h (lluvia o viento fuerte)'
   },
   en: {
     title: '{model} vs global',
     subtitle: 'Difference right now',
-    temp: 'TEMP', rain: 'RAIN', snow: 'SNOW', wind: 'WIND', diff: 'Difference', secondary: 'Global',
+    temp: 'Temperature', rain: 'Rain', snow: 'Snow', wind: 'Wind', diff: 'Difference', secondary: 'Global',
     chartsBtn: 'Compare models',
     futureDivergence: 'Possible sudden shift in 3h (heavy rain or strong wind)'
   },
   fr: {
     title: '{model} face au global',
     subtitle: 'Écart en ce moment',
-    temp: 'TEMP', rain: 'PLUIE', snow: 'NEIGE', wind: 'VENT', diff: 'Écart', secondary: 'Global',
+    temp: 'Température', rain: 'Pluie', snow: 'Neige', wind: 'Vent', diff: 'Écart', secondary: 'Global',
     chartsBtn: 'Comparer les modèles',
     futureDivergence: 'Changement brusque possible en 3h (pluie ou vent fort)'
   }
-};
-
-// Un sol to, neutre: sense semàfor, perquè la targeta ja no jutja si els models coincideixen.
-const THEME = {
-  accent: 'text-indigo-300',
-  border: 'border-indigo-500/20',
-  bg: 'bg-indigo-500/10',
-  glow: 'from-indigo-900/20',
-  shadow: 'shadow-[0_15px_40px_rgba(99,102,241,0.12)]',
 };
 
 export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
@@ -107,17 +99,17 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   const safeGlobalTemp = isValidNum(metrics.globalTemp) ? metrics.globalTemp : null;
   const isSnowRisk = (safeLocalTemp !== undefined && safeLocalTemp <= 2) || (safeGlobalTemp !== null && safeGlobalTemp <= 2);
 
-  const theme = THEME;
+  // Neutre: sense semàfor, perquè la targeta no jutja si els models coincideixen. La fletxa només diu cap on va el global.
   const title = t.title.replace('{model}', regionalModelLabel);
 
   const renderTrend = (local: number | null | undefined, global: number | null | undefined, type: 'temp' | 'rain' | 'wind') => {
-    if (!isValidNum(local) || !isValidNum(global) || local === global) return <MoveRight className="w-4 h-4 text-slate-400" />;
+    if (!isValidNum(local) || !isValidNum(global) || local === global) return <MoveRight className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />;
     const isUp = global > local;
-    let iconClass = "w-4 h-4 transition-transform duration-300 drop-shadow-sm ";
+    let iconClass = "w-3.5 h-3.5 ";
     if (type === 'temp') iconClass += isUp ? "text-rose-500" : "text-sky-400";
     else if (type === 'rain') iconClass += isUp ? "text-sky-400" : "text-slate-400";
     else iconClass += isUp ? "text-amber-400" : "text-emerald-400";
-    return isUp ? <ArrowUpRight className={iconClass} /> : <ArrowDownRight className={iconClass} />;
+    return isUp ? <ArrowUpRight className={iconClass} aria-hidden="true" /> : <ArrowDownRight className={iconClass} aria-hidden="true" />;
   };
 
   // Decimals en el format de l'idioma ("18,3", no "18.3"), com la resta de l'app.
@@ -139,7 +131,7 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
     tabIndex: 0,
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(type); } }
   });
-  const CARD_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60';
+  const CARD_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-400/60';
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
@@ -171,109 +163,91 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
       return () => { document.body.style.overflow = original; };
   }, [isModalOpen]);
 
+  // Les tres xifres d'ara: el model regional en gran, el global al costat i la diferència a la dreta. Una fila per
+  // magnitud al mòbil; a partir de 768 px, tres columnes separades per línies fines. Cada una obre el seu detall.
+  const cells: Array<{ type: 'temp' | 'rain' | 'wind'; icon: React.ReactNode; label: string; local: string; unit: string; global: string; delta: string; trend: React.ReactNode }> = [
+    {
+      type: 'temp',
+      icon: <Thermometer className="w-3.5 h-3.5" aria-hidden="true" />,
+      label: t.temp,
+      local: `${formatVal(localTemp)}°`, unit: '',
+      global: `${formatVal(metrics.globalTemp)}°`,
+      delta: `${formatDelta(metrics.tempDiff)}°`,
+      trend: renderTrend(localTemp, metrics.globalTemp, 'temp')
+    },
+    {
+      type: 'rain',
+      icon: isSnowRisk ? <CloudSnow className="w-3.5 h-3.5 text-sky-300" aria-hidden="true" /> : <CloudRain className="w-3.5 h-3.5" aria-hidden="true" />,
+      label: isSnowRisk ? t.snow : t.rain,
+      local: formatVal(localPrecip), unit: 'mm',
+      global: `${formatVal(metrics.globalPrecip)} mm`,
+      delta: formatDelta(metrics.precipDiff),
+      trend: renderTrend(localPrecip, metrics.globalPrecip, 'rain')
+    },
+    {
+      type: 'wind',
+      icon: <Wind className="w-3.5 h-3.5" aria-hidden="true" />,
+      label: t.wind,
+      local: formatVal(localWind), unit: 'km/h',
+      global: `${formatVal(metrics.globalWind)} km/h`,
+      delta: formatDelta(metrics.windDiff),
+      trend: renderTrend(localWind, metrics.globalWind, 'wind')
+    }
+  ];
+
   return (
     <>
-      <div className="w-full relative perspective-[2000px]">
-        {/* SPATIAL UI: Animacions restringides a Desktop (md:) per estalviar bateria operativa en mòbil */}
-        <style>
-          {`
-            @keyframes spatial-float-pc { 0%, 100% { transform: rotateX(1deg) rotateY(-0.5deg) translateY(0px); } 50% { transform: rotateX(-0.5deg) rotateY(0.5deg) translateY(-2px); } }
-            .preserve-3d { transform-style: preserve-3d; }
-          `}
-        </style>
+      <section className="relative w-full overflow-hidden rounded-[2rem] border border-white/[0.07] bg-gradient-to-b from-[#0e1018] to-[#0a0b11]">
+        <div className={MATRIX_BG}></div>
 
-        <div className={`w-full relative bg-[#060913]/90 border ${theme.border} rounded-[24px] md:rounded-[32px] ${theme.shadow} preserve-3d md:animate-[spatial-float-pc_10s_ease-in-out_infinite] transition-transform duration-500`}>
-           <div className="absolute inset-0 overflow-hidden rounded-[24px] md:rounded-[32px]">
-              <div className={`absolute inset-0 bg-[linear-gradient(currentColor_1px,transparent_1px),linear-gradient(90deg,currentColor_1px,transparent_1px)] bg-[size:24px_24px] md:bg-[size:32px_32px] opacity-[0.03] [transform:translateZ(-50px)] ${theme.accent}`}></div>
-              <div className={`absolute inset-0 bg-gradient-to-br ${theme.glow} to-transparent opacity-60 md:opacity-40`}></div>
-           </div>
-
-           <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 md:gap-8 relative z-10 preserve-3d">
-              <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-4 sm:gap-0 [transform:translateZ(30px)]">
-                 <div className="flex items-center gap-3 md:gap-4">
-                    <div className={`w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#0a0f1c] border ${theme.border} flex items-center justify-center shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] relative overflow-hidden`}>
-                       <Cpu className={`w-4 h-4 md:w-5 md:h-5 ${theme.accent} relative z-10 drop-shadow-[0_0_8px_currentColor]`} />
-                       {/* Animació pulse només visible a Desktop o evitada si es vol màxim estalvi */}
-                       <div className={`absolute inset-0 opacity-20 md:animate-pulse ${theme.bg}`}></div>
-                    </div>
-                    <div>
-                       <h2 className="text-xs md:text-sm font-black text-white uppercase tracking-[0.2em] drop-shadow-md">{title}</h2>
-                       <span className={`block mt-0.5 md:mt-1 text-xs md:text-xs font-black uppercase tracking-widest ${theme.accent} drop-shadow-sm`}>{t.subtitle}</span>
-                    </div>
-                 </div>
-              </div>
-
-              {metrics.futureDivergence && (
-                <div className="flex items-center gap-2 md:gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-2.5 [transform:translateZ(35px)] shadow-[0_8px_20px_rgba(245,158,11,0.15)]">
-                   <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-amber-400 shrink-0 drop-shadow-md animate-pulse" />
-                   <span className="text-xs md:text-xs font-bold text-amber-200 tracking-wide">{t.futureDivergence}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 w-full preserve-3d [transform:translateZ(40px)]">
-                 {/* MIDES DE TEXT I CONTRAST MILLORATS PER A LECTURA EXTERIOR */}
-                 <div {...cardButtonProps('temp')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-rose-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95`}>
-                    <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
-                        <Thermometer className="w-4 h-4 md:w-5 md:h-5 group-hover:text-rose-500 transition-colors duration-300 drop-shadow-md" />
-                        <span className="text-xs md:text-xs font-black tracking-widest drop-shadow-sm">{t.temp}</span>
-                    </div>
-                    <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-none tracking-tighter drop-shadow-lg">{formatVal(localTemp)}<span className="text-xs sm:text-sm text-slate-400 font-bold ml-0.5">°</span></div>
-                        <div className="text-xs font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalTemp)}°</span></div>
-                    </div>
-                    <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
-                        <span className="text-xs text-slate-400 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-xs sm:text-xs font-black text-white">{formatDelta(metrics.tempDiff)}° {renderTrend(localTemp, metrics.globalTemp, 'temp')}</div>
-                    </div>
-                 </div>
-
-                 <div {...cardButtonProps('rain')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:bg-black/60 md:hover:-translate-y-1 active:scale-95 ${isSnowRisk ? 'border-sky-500/30' : 'border-white/10 hover:border-sky-500/30'}`}>
-                    {isSnowRisk && <div className="absolute inset-0 bg-sky-500/10 rounded-[20px] md:rounded-[24px] animate-pulse pointer-events-none"></div>}
-                    <div className={`flex items-center gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4 ${isSnowRisk ? 'text-sky-300 drop-shadow-[0_0_8px_currentColor]' : 'text-slate-300'}`}>
-                        {isSnowRisk ? <CloudSnow className="w-4 h-4 md:w-5 md:h-5 text-white transition-colors duration-300" /> : <CloudRain className="w-4 h-4 md:w-5 md:h-5 group-hover:text-sky-400 transition-colors duration-300 drop-shadow-md" />}
-                        <span className="text-xs md:text-xs font-black tracking-widest drop-shadow-sm">{isSnowRisk ? t.snow : t.rain}</span>
-                    </div>
-                    <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localPrecip)}</span><span className="text-xs sm:text-xs text-slate-400 font-bold ml-1">mm</span></div>
-                        <div className="text-xs font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalPrecip)}<span className="text-xs font-normal text-slate-400 ml-[1px]">mm</span></span></div>
-                    </div>
-                    <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
-                        <span className="text-xs text-slate-400 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-xs sm:text-xs font-black text-white">{formatDelta(metrics.precipDiff)} {renderTrend(localPrecip, metrics.globalPrecip, 'rain')}</div>
-                    </div>
-                 </div>
-
-                 <div {...cardButtonProps('wind')} className={`cursor-pointer ${CARD_FOCUS} group relative bg-black/40 transition-all duration-300 rounded-[20px] md:rounded-[24px] p-3 sm:p-4 md:p-5 border border-white/10 flex flex-col items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/30 hover:bg-black/60 md:hover:-translate-y-1 active:scale-95`}>
-                    <div className="flex items-center gap-1.5 md:gap-2 text-slate-300 mb-2 sm:mb-3 md:mb-4">
-                        <Wind className="w-4 h-4 md:w-5 md:h-5 group-hover:text-amber-400 transition-colors duration-300 drop-shadow-md" />
-                        <span className="text-xs md:text-xs font-black tracking-widest drop-shadow-sm">{t.wind}</span>
-                    </div>
-                    <div className="flex flex-col items-center mb-4 md:mb-5">
-                        <div className="flex items-baseline leading-none tracking-tighter drop-shadow-lg"><span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{formatVal(localWind)}</span><span className="text-xs sm:text-xs text-slate-400 font-bold ml-1">km/h</span></div>
-                        <div className="text-xs font-medium text-slate-400 mt-1.5 flex flex-wrap justify-center gap-x-1 items-baseline">{t.secondary} <span className="text-slate-200 font-black">{formatVal(metrics.globalWind)}<span className="text-xs font-normal text-slate-400 ml-[1px]">km/h</span></span></div>
-                    </div>
-                    <div className="w-full bg-black/80 rounded-xl py-1.5 sm:py-2 px-1 flex flex-col sm:flex-row justify-center items-center gap-0.5 sm:gap-2 border border-white/5 shadow-inner">
-                        <span className="text-xs text-slate-400 font-black">{t.diff}</span>
-                        <div className="flex items-center gap-1 text-xs sm:text-xs font-black text-white">{formatDelta(metrics.windDiff)} {renderTrend(localWind, metrics.globalWind, 'wind')}</div>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="w-full [transform:translateZ(20px)] mt-[-10px] md:mt-[-15px]">
-                  <button 
-                     onClick={() => openModal('charts')}
-                     className="w-full relative group overflow-hidden bg-black/60 border border-white/10 hover:border-cyan-500/40 rounded-xl md:rounded-2xl py-3 md:py-4 flex items-center justify-center gap-3 transition-all duration-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] active:scale-[0.98]"
-                  >
-                     <LineChart className="w-4 h-4 md:w-5 md:h-5 text-cyan-400 group-hover:text-cyan-300 drop-shadow-[0_0_8px_currentColor] transition-colors relative z-10" />
-                     <span className="text-xs sm:text-xs md:text-sm font-black text-cyan-100 group-hover:text-white uppercase tracking-[0.2em] relative z-10 transition-colors drop-shadow-md">
-                        {t.chartsBtn}
-                     </span>
-                  </button>
-              </div>
-
-           </div>
+        <div className="relative z-10 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 px-4 sm:px-5 md:px-6 pt-4 md:pt-5 pb-3">
+          <div className="min-w-0">
+            <span className="block font-mono text-[11px] uppercase tracking-[0.16em] text-slate-400">{t.subtitle}</span>
+            <h2 className="mt-1 text-base font-semibold text-slate-100">{title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => openModal('charts')}
+            className="inline-flex items-center gap-1.5 min-h-[36px] text-[13px] font-semibold text-indigo-300 hover:text-indigo-100 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400 rounded-md"
+          >
+            <LineChart className="w-4 h-4" aria-hidden="true" />
+            <span>{t.chartsBtn}</span>
+            <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
         </div>
-      </div>
+
+        {metrics.futureDivergence && (
+          <div className="relative z-10 mx-4 sm:mx-5 md:mx-6 mb-3 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" aria-hidden="true" />
+            <span className="text-xs font-semibold text-amber-200">{t.futureDivergence}</span>
+          </div>
+        )}
+
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 border-t border-white/[0.06]">
+          {cells.map((cell, i) => (
+            <div
+              key={cell.type}
+              {...cardButtonProps(cell.type)}
+              className={`group flex cursor-pointer items-center gap-3 px-4 sm:px-5 md:px-6 py-3.5 md:py-4 transition-colors hover:bg-white/[0.03] ${CARD_FOCUS} ${i > 0 ? 'border-t md:border-t-0 md:border-l border-white/[0.06]' : ''}`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-[13px] text-slate-400">{cell.icon}<span>{cell.label}</span></div>
+                <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5">
+                  <span className="text-xl md:text-2xl font-semibold tracking-tight text-slate-50 tabular-nums">
+                    {cell.local}{cell.unit && <span className="ml-1 text-xs font-normal text-slate-400">{cell.unit}</span>}
+                  </span>
+                  <span className="text-[13px] text-slate-400 tabular-nums"><span>{t.secondary}</span> <span className="text-slate-200">{cell.global}</span></span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#7a879b]">{t.diff}</div>
+                <div className="mt-0.5 flex items-center justify-end gap-1 font-mono text-[13px] text-slate-200 tabular-nums">{cell.delta}{cell.trend}</div>
+              </div>
+              <ChevronRight className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-slate-300 transition-colors" aria-hidden="true" />
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Els modals van a document.body: dins del tauler, algun contenidor amb transform crea un context d'apilament
           propi i la capçalera de la pàgina (z-50) es pintava per sobre del modal (z-100) quan era visible. */}

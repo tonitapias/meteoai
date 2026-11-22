@@ -45,7 +45,7 @@ describe('ConsensusWidget — modals fora del tauler', () => {
     it('el detall de la temperatura també surt del tauler', () => {
         renderInTransformedDashboard();
         const before = document.body.children.length;
-        fireEvent.click(screen.getByText('TEMP'));
+        fireEvent.click(screen.getByText('Temperatura'));
 
         expect(document.body.children.length).toBe(before + 1);
         expect(screen.getByTestId('tauler').querySelector('.fixed.inset-0')).toBeNull();
@@ -91,7 +91,7 @@ describe('ConsensusWidget — els modals són diàlegs amb el focus a dins', () 
 
     it('el detall de la temperatura també', () => {
         renderInTransformedDashboard();
-        fireEvent.click(screen.getByText('TEMP'));
+        fireEvent.click(screen.getByText('Temperatura'));
         const dialog = screen.getByRole('dialog');
         expect(dialog.getAttribute('aria-modal')).toBe('true');
         expect(dialog.contains(document.activeElement)).toBe(true);
@@ -103,7 +103,7 @@ describe('ConsensusWidget — targetes accessibles amb el teclat', () => {
 
     it('les tres targetes són botons enfocables i s\'obren amb Enter i amb Espai', () => {
         renderInTransformedDashboard();
-        const cards = screen.getAllByRole('button').filter(b => /TEMP|PLUJA|VENT/.test(b.textContent ?? ''));
+        const cards = screen.getAllByRole('button').filter(b => /Temperatura|Pluja|Vent/.test(b.textContent ?? ''));
         expect(cards).toHaveLength(3);
         cards.forEach(card => expect(card).toHaveAttribute('tabindex', '0'));
 
@@ -119,7 +119,9 @@ describe('ConsensusWidget — targetes accessibles amb el teclat', () => {
     it('les xifres van amb coma decimal i el vent en km/h', () => {
         renderInTransformedDashboard();
         expect(screen.getByText('22,6°')).toBeInTheDocument();
-        expect(screen.getAllByText('km/h').length).toBeGreaterThanOrEqual(2);
+        // El regional i el global, tots dos en km/h.
+        expect(screen.getByText('km/h')).toBeInTheDocument();
+        expect(screen.getByText(/^10(,0)? km\/h$/)).toBeInTheDocument();
         expect(screen.queryByText('kmh')).not.toBeInTheDocument();
     });
 });
@@ -141,7 +143,7 @@ describe('ConsensusWidget — paraules senceres, sense abreviatures', () => {
         render(<ConsensusWidget metrics={METRICS} localTemp={23} localPrecip={0} localWind={12} lang="ca"
             regionalModelLabel="AROME HD" hourlyTimes={['2026-11-17T21:00']} hourlyGlobalTimes={['2026-11-17T21:00']}
             hourlyLocal={{ temp: [19] }} hourlyGlobal={{ temp: [18.6] }} utcOffset={3600} />);
-        fireEvent.click(screen.getByText('TEMP'));
+        fireEvent.click(screen.getByText('Temperatura'));
         const dialog = screen.getByRole('dialog');
         expect(dialog.textContent).toContain('AROME HD');
         expect(dialog.textContent).toContain('Global');

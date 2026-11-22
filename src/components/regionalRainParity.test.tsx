@@ -69,7 +69,6 @@ const renderList = (data: ExtendedWeatherData) =>
         <ForecastSection
             chartData={generateHourlyChartData(data, 0, 'C') as never}
             dailyData={data.daily}
-            weeklyExtremes={{ min: 10, max: 35 }}
             lang="ca"
             onDayClick={() => {}}
             latitude={41.55}
@@ -101,7 +100,7 @@ describe("pluja regional: la probabilitat i el total d'un dia són els MATEIXOS 
 
     it("amb l'evidència regional el 22 de setembre és del 20 % (no del 70 %) i porta 4 mm a la llista", () => {
         renderList(withRegional());
-        // La primera fila de la llista és el dia 1 (22 de setembre); els altres dies segueixen al 10 %.
+        // La segona fila de la llista (la primera és avui) és el dia 1 (22 de setembre); els altres dies segueixen al 10 %.
         expect(screen.getAllByText('20%')).toHaveLength(1);
         expect(screen.queryByText('70%')).toBeNull();
         expect(screen.getAllByText('10%').length).toBeGreaterThan(0);
