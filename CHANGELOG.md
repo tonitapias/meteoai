@@ -1,8 +1,24 @@
 # Registre de canvis
 
-Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.65.0...v3.66.0](https://github.com/tonitapias/meteoai/compare/v3.65.0...v3.66.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
+Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.66.0...v3.67.0](https://github.com/tonitapias/meteoai/compare/v3.66.0...v3.67.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
 
 Les seccions «Millores publicades entre la vX i la vY» recullen el que es va publicar sense canviar de versió. Les de la v3.26.0 i la v3.9.9, al final, són les notes de les primeres *releases*, tal com es van escriure.
+
+## 🗓️ Novetats de la v3.67.0: la pestanya Previsió, redissenyada
+
+- **La setmana comença avui.** La primera fila de la llista és avui, amb la màxima, la mínima i la icona de tot el dia, les mateixes que la targeta principal i el detall; obre el detall d'avui. El botó «Avui» de la capçalera ja no cal.
+- **La franja del cel de cada dia.** Sota cada dia, una franja de 24 hores amb el cel de cada hora: sol, clarianes, núvol, boira, pluja, neu, tempesta o nit. Es veu quan plourà o farà sol, no només si en farà. Surt dels mateixos codis que trien la icona del dia, així que no poden dir coses diferents. La quantitat de pluja va a sota, on cau, i a la fila d'avui les hores passades s'apaguen i una marca diu on és ara. A l'ordinador i a la tauleta, cada dia fa una sola línia i les franges apilades es llegeixen com un mosaic de dies i nits.
+- **Les pròximes 24 hores, d'un cop d'ull.** El gràfic surt de seguida: quatre pestanyes curtes (Temp · Pluja · Vent · Neu) que hi caben a qualsevol mòbil, també a l'ordinador. Una sola lectura gran dona el valor de l'hora (la d'ara, o la que toques o per on passes el ratolí) i el de cada model, en lloc de les tres targetes i els cinc xips d'abans. L'acord entre models porta una frase que diu d'on surt («fins a 4,0° de diferència a les 05H»).
+- **Es veu quina és la previsió.** La previsió va en color i els quatre models globals en gris fi, cadascun amb el seu traç, sense resplendor. A la temperatura, la màxima, la mínima i el desacord màxim van marcats sobre la corba, com al giny de Detall; la pluja, el vent i la cota de neu porten les seves xifres en una línia a sota. L'escala, a la dreta. Els models que vulguis amagar, des de «Models».
+- **AROME HD contra el global, en tres files.** Les tres xifres d'ara (temperatura, pluja i vent) del model regional i del global, amb la diferència, en tres files al mòbil i en tres columnes a l'ordinador. Cada una obre el seu detall com abans.
+- **Més lleuger als mòbils modestos.** Fora la taca de llum difuminada de la llista, l'animació 3D de la comparació de models i les animacions infinites de la targeta que surt on no hi ha model d'alta resolució.
+- El detall del dia fa servir els mateixos gràfics horaris. Als quatre idiomes.
+
+## 🛠️ Millores publicades entre la v3.66.0 i la v3.67.0
+
+- **«Ratxes» a tot arreu.** L'app deia «ratxes» en uns llocs i «ràfegues» en uns altres (el detall del dia, els gràfics, el bàner «Motiu», el consell de seguretat i l'avís de vent). Ara és «ratxa» a tot arreu, com als avisos del Meteocat, també al text de la IA.
+- **La targeta principal ja no es desquadra al mòbil.** Amb una etiqueta llarga («Parcialment ennuvolat») la icona baixava a sota en gran, i una temperatura negativa de dues xifres («−33°») no hi cabia.
+- **Cap avís de neu o gel impossible.** Un codi de neu del model amb 10 °C i la cota de gel a 1.600 m feia sortir «Neu prevista»; ara l'avís només en surt quan és possible.
 
 ## 🌡️ Novetats de la v3.66.0: la pestanya Detall, més clara
 
