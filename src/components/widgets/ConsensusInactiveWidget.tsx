@@ -2,6 +2,7 @@
 import React from 'react';
 import { Language } from '../../translations';
 import { Cpu, AlertTriangle } from 'lucide-react';
+import { MATRIX_BG } from './widgetStyles';
 
 interface ConsensusInactiveWidgetProps {
   lang?: Language | string;
@@ -86,73 +87,24 @@ export const ConsensusInactiveWidget: React.FC<ConsensusInactiveWidgetProps> = (
     action: langT.action[reason]
   };
 
+  // Mateix marc que la targeta activa (vores fines, sense animacions infinites ni resplendor): és un avís tranquil.
   return (
-    <div className="w-full relative perspective-[1000px]">
-      <style>
-        {`
-          @keyframes float3d {
-            0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(-2deg); }
-            50% { transform: translateY(-5px) rotateX(-1deg) rotateY(1deg); }
-          }
-          @keyframes spin3d {
-            from { transform: rotateY(0deg) rotateX(15deg); }
-            to { transform: rotateY(360deg) rotateX(15deg); }
-          }
-          .preserve-3d { transform-style: preserve-3d; }
-        `}
-      </style>
-
-      <div className="w-full bg-[#030712]/80 border border-amber-900/40 rounded-[24px] p-6 shadow-[0_20px_50px_rgba(245,158,11,0.15)] relative overflow-hidden flex flex-col sm:flex-row items-center gap-8 preserve-3d animate-[float3d_6s_ease-in-out_infinite]">
-
-         <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.03)_1px,transparent_1px)] bg-[size:24px_24px] opacity-40 [transform:translateZ(-50px)]"></div>
-
-         <div className="relative flex items-center justify-center shrink-0 w-32 h-32 preserve-3d">
-            <div className="absolute -bottom-4 w-20 h-4 bg-amber-400/30 shadow-[0_-20px_40px_rgba(251,191,36,0.5)] rounded-[100%] blur-md"></div>
-            <div className="absolute bottom-0 w-24 h-32 bg-gradient-to-t from-amber-500/10 to-transparent blur-sm [transform:rotateX(45deg)] opacity-70"></div>
-
-            <div className="relative w-20 h-20 preserve-3d animate-[spin3d_12s_linear_infinite]">
-               <div className="absolute inset-0 rounded-full border-[1.5px] border-amber-500/60 shadow-[0_0_15px_rgba(251,191,36,0.3)] [transform:rotateX(90deg)]"></div>
-               <div className="absolute inset-0 rounded-full border border-amber-500/30"></div>
-               <div className="absolute inset-0 rounded-full border border-amber-500/30 [transform:rotateY(45deg)]"></div>
-               <div className="absolute inset-0 rounded-full border border-amber-500/30 [transform:rotateY(90deg)]"></div>
-               <div className="absolute inset-0 rounded-full border border-amber-500/30 [transform:rotateY(135deg)]"></div>
-
-               <div className="absolute inset-0 flex items-center justify-center [transform:rotateY(-90deg)]">
-                  <div className="w-2 h-2 rounded-full bg-amber-100 shadow-[0_0_20px_10px_rgba(251,191,36,0.5)]"></div>
-               </div>
-            </div>
-         </div>
-
-         <div className="flex flex-col text-center sm:text-left z-10 w-full [transform:translateZ(30px)]">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-3 gap-3">
-               <h2 className="text-xs sm:text-xs font-bold text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] uppercase tracking-[0.2em]">
-                 {t.title}
-               </h2>
-               <div className="inline-flex items-center self-center sm:self-auto gap-1.5 text-xs font-black uppercase px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 tracking-widest">
-                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                 {t.badge}
-               </div>
-            </div>
-
-            <p className="text-xs sm:text-[13px] text-amber-100/60 leading-relaxed font-light mb-4">
-               {t.description}
-            </p>
-
-            <div className="mt-auto flex items-center justify-between border-t border-amber-900/50 pt-3">
-               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-amber-500">
-                  <Cpu className="w-3.5 h-3.5 animate-pulse" />
-                  <span>{t.action}</span>
-               </div>
-
-               <div className="flex items-end gap-0.5 h-3 opacity-60">
-                  <div className="w-1 h-full bg-amber-600 animate-[bounce_1s_infinite]"></div>
-                  <div className="w-1 h-2/3 bg-amber-600 animate-[bounce_1.5s_infinite]"></div>
-                  <div className="w-1 h-1 bg-amber-600 animate-[bounce_0.8s_infinite]"></div>
-                  <div className="w-1 h-3/4 bg-amber-600 animate-[bounce_1.2s_infinite]"></div>
-               </div>
-            </div>
-         </div>
+    <section className="relative w-full overflow-hidden rounded-[2rem] border border-white/[0.07] bg-gradient-to-b from-[#0e1018] to-[#0a0b11]">
+      <div className={MATRIX_BG}></div>
+      <div className="relative z-10 px-4 sm:px-5 md:px-6 py-4 md:py-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 className="text-base font-semibold text-slate-100">{t.title}</h2>
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-300">
+            <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+            {t.badge}
+          </span>
+        </div>
+        <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-slate-400">{t.description}</p>
+        <div className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-[#7a879b]">
+          <Cpu className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{t.action}</span>
+        </div>
       </div>
-    </div>
+    </section>
   );
 };

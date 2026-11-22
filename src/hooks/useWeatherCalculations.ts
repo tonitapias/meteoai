@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { getShiftedDate } from '../utils/weatherMath';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { getHourCodesByDate, type HourlySeries } from '../utils/hourlyWeatherCode';
+import { buildDaySky } from '../utils/daySky';
 import { WeatherUnit } from '../utils/formatters';
 
 // ELS NOUS MICRO-HOOKS
@@ -66,6 +67,12 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     return getHourCodesByDate(weatherData.hourly as unknown as HourlySeries, elevation, weatherData.hourlyComparison);
   }, [weatherData]);
 
+  // La franja del cel de cada dia (sol, núvol, pluja... de 00 a 24 h) amb aquests mateixos codis.
+  const daySky = useMemo(
+    () => buildDaySky(weatherData?.hourly as unknown as HourlySeries | undefined, dayHourCodes),
+    [weatherData, dayHourCodes]
+  );
+
   // 3. Retornem exactament el mateix objecte de sempre (Contracte intacte cap a la UI)
   return { 
     shiftedNow, 
@@ -82,6 +89,7 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     chartDataFull,
     chartSeries,
     dayHourCodes,
-    weeklyExtremes 
+    daySky,
+    weeklyExtremes
   };
 }

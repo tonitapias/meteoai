@@ -1,17 +1,19 @@
 // src/components/smartForecastI18n.ts
-// Textos dels gràfics d'Expert (SmartForecastCharts): xifres clau, xip d'acord, llegenda i notes.
-// Mateix patró que TrendChartModal/ConsensusChartsModal: diccionari propi per idioma, sense dependre de
-// les claus globals de translations/ perquè aquest chunk es carrega lazy.
+// Textos dels gràfics horaris de Previsió (SmartForecastCharts): pestanyes, lectura, xip d'acord, xifres clau,
+// llegenda i notes. Mateix patró que TrendChartModal/ConsensusChartsModal: diccionari propi per idioma, sense
+// dependre de les claus globals de translations/ perquè aquest chunk es carrega lazy.
 import type { Language } from '../translations';
 
 export interface SmartForecastText {
-    /** Títol de la pestanya i del panell que fusiona volum i probabilitat de pluja. */
-    rain: string;
+    /** Rètol del bloc: les hores que dibuixen els gràfics. */
+    window: string;
+    /** Pestanyes, curtes perquè les quatre càpiguen en una pantalla de 320 px. */
+    tabs: { temp: string; rain: string; wind: string; snow: string };
     /** Rètol del gràfic de volum (mm/h). */
     volume: string;
     /** Nom de la línia principal quan no ve d'un model regional. */
     globalModel: string;
-    /** Nom de la ratxa de vent al cartell. */
+    /** Nom de la ratxa de vent a la lectura. */
     gust: string;
     figures: {
         high: string;
@@ -42,20 +44,30 @@ export interface SmartForecastText {
         medium: string;
         low: string;
         none: string;
-        /** Explicació completa (títol/`aria-label` del xip). */
+        /** Explicació completa (títol del xip). */
         hint: string;
     };
+    /** Una frase sota el xip d'acord: de què surt. `{value}`, `{hour}`, `{n}`, `{m}`. */
+    explain: {
+        temp: string;
+        rain: string;
+        spread: string;
+    };
     legend: {
-        /** Etiqueta del grup de la llegenda (lector de pantalla). */
+        /** Etiqueta del grup de botons dels models (lector de pantalla). */
         label: string;
-        /** Davant del nom del model de la línia principal: "Principal · AROME HD". */
-        principal: string;
+        /** Capçalera del bloc: "AROME HD · de les 14:05". `{model}`, `{time}` (HH:MM, del lloc). */
+        source: string;
+        /** "4 models globals". `{n}`. */
+        globals: string;
+        /** Fons gris entre el model més alt i el més baix. */
+        margin: string;
+        /** Botó que desplega els models per amagar-ne o mostrar-ne. */
+        models: string;
         band: string;
         /** Al costat d'un model que no es dibuixa perquè és idèntic a la principal: "ICON = principal". */
         identical: string;
-        /** `{time}`: hora (HH:MM, del lloc) de les dades. */
-        updated: string;
-        /** Etiqueta de l'eix X sota la marca de l'hora actual. */
+        /** Etiqueta de l'eix X sota la marca de l'hora actual i de la lectura en repòs. */
         now: string;
     };
     notes: {
@@ -72,14 +84,15 @@ export interface SmartForecastText {
         noData: string;
     };
     strip: {
-        /** Text de la franja de lectura (mòbil) quan encara no hi ha cap hora per mostrar. */
+        /** Text de la lectura quan encara no hi ha cap hora per mostrar. */
         hint: string;
     };
 }
 
 export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
     ca: {
-        rain: 'PLUJA',
+        window: 'Pròximes 24 h',
+        tabs: { temp: 'Temp', rain: 'Pluja', wind: 'Vent', snow: 'Neu' },
         volume: 'VOLUM (MM)',
         globalModel: 'MODEL GLOBAL',
         gust: 'Ratxa',
@@ -104,12 +117,19 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             none: 'Sense comparació',
             hint: 'Acord entre els models globals (ECMWF, GFS, ICON, AIFS)'
         },
+        explain: {
+            temp: 'fins a {value} de diferència a les {hour}',
+            rain: '{n} de {m} models en donen',
+            spread: '{value} de diferència mitjana'
+        },
         legend: {
             label: 'Models dels gràfics',
-            principal: 'Principal',
-            band: 'Banda de models',
+            source: '{model} · de les {time}',
+            globals: '{n} models globals',
+            margin: 'marge entre models',
+            models: 'Models',
+            band: 'Marge entre models',
             identical: '= principal',
-            updated: 'Previsió de les {time}',
             now: 'ARA'
         },
         notes: {
@@ -122,11 +142,12 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             noData: 'Cap model publica la cota de neu per a aquestes hores.'
         },
         strip: {
-            hint: 'Arrossega el dit per sobre del gràfic per veure les dades de cada hora.'
+            hint: 'Toca el gràfic o passa-hi per sobre per veure cada hora.'
         }
     },
     es: {
-        rain: 'LLUVIA',
+        window: 'Próximas 24 h',
+        tabs: { temp: 'Temp', rain: 'Lluvia', wind: 'Viento', snow: 'Nieve' },
         volume: 'VOLUMEN (MM)',
         globalModel: 'MODELO GLOBAL',
         gust: 'Racha',
@@ -151,12 +172,19 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             none: 'Sin comparación',
             hint: 'Acuerdo entre los modelos globales (ECMWF, GFS, ICON, AIFS)'
         },
+        explain: {
+            temp: 'hasta {value} de diferencia a las {hour}',
+            rain: '{n} de {m} modelos dan lluvia',
+            spread: '{value} de diferencia media'
+        },
         legend: {
             label: 'Modelos de los gráficos',
-            principal: 'Principal',
-            band: 'Banda de modelos',
+            source: '{model} · de las {time}',
+            globals: '{n} modelos globales',
+            margin: 'margen entre modelos',
+            models: 'Modelos',
+            band: 'Margen entre modelos',
             identical: '= principal',
-            updated: 'Previsión de las {time}',
             now: 'AHORA'
         },
         notes: {
@@ -169,11 +197,12 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             noData: 'Ningún modelo publica la cota de nieve para estas horas.'
         },
         strip: {
-            hint: 'Arrastra el dedo sobre el gráfico para ver los datos de cada hora.'
+            hint: 'Toca el gráfico o pasa por encima para ver cada hora.'
         }
     },
     en: {
-        rain: 'RAIN',
+        window: 'Next 24 h',
+        tabs: { temp: 'Temp', rain: 'Rain', wind: 'Wind', snow: 'Snow' },
         volume: 'VOLUME (MM)',
         globalModel: 'GLOBAL MODEL',
         gust: 'Gust',
@@ -198,12 +227,19 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             none: 'No comparison',
             hint: 'Agreement between the global models (ECMWF, GFS, ICON, AIFS)'
         },
+        explain: {
+            temp: 'up to {value} apart at {hour}',
+            rain: '{n} of {m} models show rain',
+            spread: '{value} average difference'
+        },
         legend: {
             label: 'Chart models',
-            principal: 'Main',
-            band: 'Model band',
+            source: '{model} · as of {time}',
+            globals: '{n} global models',
+            margin: 'spread between models',
+            models: 'Models',
+            band: 'Spread between models',
             identical: '= main',
-            updated: 'Forecast as of {time}',
             now: 'NOW'
         },
         notes: {
@@ -216,11 +252,12 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             noData: 'No model publishes the snow level for these hours.'
         },
         strip: {
-            hint: 'Drag your finger across the chart to see the data for each hour.'
+            hint: 'Tap or hover over the chart to see each hour.'
         }
     },
     fr: {
-        rain: 'PLUIE',
+        window: '24 prochaines heures',
+        tabs: { temp: 'Temp', rain: 'Pluie', wind: 'Vent', snow: 'Neige' },
         volume: 'VOLUME (MM)',
         globalModel: 'MODÈLE GLOBAL',
         gust: 'Rafale',
@@ -245,12 +282,19 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             none: 'Pas de comparaison',
             hint: 'Accord entre les modèles globaux (ECMWF, GFS, ICON, AIFS)'
         },
+        explain: {
+            temp: "jusqu'à {value} d'écart à {hour}",
+            rain: '{n} modèles sur {m} en prévoient',
+            spread: "{value} d'écart moyen"
+        },
         legend: {
             label: 'Modèles des graphiques',
-            principal: 'Principal',
-            band: 'Bande de modèles',
+            source: '{model} · de {time}',
+            globals: '{n} modèles globaux',
+            margin: 'écart entre modèles',
+            models: 'Modèles',
+            band: 'Écart entre modèles',
             identical: '= principal',
-            updated: 'Prévision de {time}',
             now: 'ACTU'
         },
         notes: {
@@ -263,7 +307,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             noData: 'Aucun modèle ne publie la cote de neige pour ces heures.'
         },
         strip: {
-            hint: 'Faites glisser le doigt sur le graphique pour voir les données de chaque heure.'
+            hint: 'Touchez le graphique ou survolez-le pour voir chaque heure.'
         }
     }
 };

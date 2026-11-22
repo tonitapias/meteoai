@@ -26,9 +26,10 @@ export const ConsensusLoadingWidget: React.FC<ConsensusLoadingWidgetProps> = ({ 
   const t = translations[safeLang];
 
   return (
-    <div className="w-full h-[168px] sm:h-[152px] bg-slate-900/60 border border-white/5 rounded-[24px] animate-pulse flex items-center justify-center gap-3">
-      <Cpu className="w-4 h-4 text-slate-600 animate-spin" style={{ animationDuration: '2s' }} />
-      <span className="text-xs sm:text-xs font-mono uppercase tracking-widest text-slate-600">{t.label}</span>
+    // Mateix marc que la targeta carregada (vores fines, sense resplendor); l'alçada és la d'una fila de tres xifres.
+    <div className="w-full h-[168px] md:h-[150px] rounded-[2rem] border border-white/[0.07] bg-gradient-to-b from-[#0e1018] to-[#0a0b11] flex items-center justify-center gap-3">
+      <Cpu className="w-4 h-4 text-slate-500 animate-spin" style={{ animationDuration: '2s' }} aria-hidden="true" />
+      <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-400">{t.label}</span>
     </div>
   );
 };

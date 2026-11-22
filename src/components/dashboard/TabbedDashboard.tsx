@@ -16,6 +16,8 @@ import { usePlanetHeadline } from '../../hooks/usePlanetHeadline';
 import { buildDetailTeaser } from '../../utils/detailTeaser';
 import { getSafeLatitude } from '../../utils/weatherMath';
 import { findNowIndex } from '../../utils/hourlyChartSeries';
+import { hoursOfDate } from '../../utils/dailyExtremes';
+import { generateHourlyChartData } from '../../utils/weatherMappers';
 import { isRegionalModelActive } from '../../constants/regionalModels';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 import CurrentWeather from '../CurrentWeather';
@@ -184,17 +186,22 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
 const ForecastPanel = () => {
     const { state, actions, flags } = useAppContext();
     const { weatherData, calculations } = state;
-    // A partir de 1280 px els gràfics van al costat dels 7 dies, amb pestanyes (una mètrica cada vegada).
-    const isWide = useMinWidth('(min-width: 1280px)');
+    // Totes les hores d'avui des de les 00 h (chartDataFull comença ara): la fila «Avui» de la setmana en treu la
+    // màxima, la mínima i la icona de tot el dia, com la targeta principal i el detall del dia.
+    const todayHours = useMemo(() => {
+        const today = weatherData?.daily?.time?.[0];
+        if (!weatherData || typeof today !== 'string') return undefined;
+        return hoursOfDate(generateHourlyChartData(weatherData, 0, flags.unit), today.slice(0, 10));
+    }, [weatherData, flags.unit]);
     if (!weatherData) return null;
     const regionalModelLabel = isRegionalModelActive(weatherData.current?.source) ? (weatherData.current.source as string) : null;
 
     return (
         <>
-            {/* A partir de 1280 px: els 7 dies i els gràfics horaris un al costat de l'altre (6/12 cadascun) i el motor de
-                consens a sota, a tota l'amplada. Els gràfics, amb pestanyes com al mòbil (en lloc de les quatre mètriques
-                una sota l'altra, uns 2.100 px), fan gairebé la mateixa alçada que els dies; les dues targetes s'estiren fins
-                a la més alta perquè les vores quadrin. Més estret, un sota l'altre en l'ordre de sempre: dies, gràfics, consens. */}
+            {/* A partir de 1280 px: la setmana i els gràfics horaris un al costat de l'altre (6/12 cadascun) i el model
+                regional contra el global a sota, a tota l'amplada. Els gràfics porten pestanyes a totes les amplades (una
+                mètrica cada vegada); les dues targetes s'estiren fins a la més alta perquè les vores quadrin. Més estret,
+                un sota l'altre en l'ordre de sempre: setmana, gràfics, comparació. */}
             <div className={`${STACK} xl:grid xl:grid-cols-12`}>
                 <div className="xl:col-span-6 xl:[&>*]:h-full xl:[&>*>*:first-child]:flex-1">
                     <Suspense fallback={<SectionSkeleton />}>
@@ -202,9 +209,11 @@ const ForecastPanel = () => {
                             chartData={calculations.chartDataFull || []}
                             dailyData={weatherData.daily}
                             dayHourCodes={calculations.dayHourCodes}
+                            daySky={calculations.daySky}
+                            todayHours={todayHours}
+                            localNow={calculations.shiftedNow ?? state.now}
                             dailyComparison={weatherData.dailyComparison}
                             regionalModelLabel={regionalModelLabel}
-                            weeklyExtremes={calculations.weeklyExtremes}
                             lang={flags.lang}
                             onDayClick={actions.setSelectedDayIndex}
                             latitude={getSafeLatitude(weatherData.location)}
@@ -212,17 +221,15 @@ const ForecastPanel = () => {
                     </Suspense>
                 </div>
 
-                <div className="xl:col-span-6 bento-card p-4 sm:p-6 md:p-8 bg-[#0B0C15]/90 border border-white/10 shadow-2xl">
+                <div className="xl:col-span-6 xl:[&>*]:h-full">
                     <Suspense fallback={<SectionSkeleton />}>
                         <SmartForecastCharts
                             data={calculations.chartSeries?.primary ?? []}
                             comparisonData={calculations.chartSeries?.comparison ?? null}
-                            unit={flags.unit === 'F' ? '°F' : '°C'}
                             lang={flags.lang}
                             regionalModelLabel={regionalModelLabel}
                             nowIndex={findNowIndex(calculations.chartSeries?.primary ?? [], weatherData.current?.time)}
                             updatedAt={weatherData.offlineSnapshot?.issuedAt ?? weatherData.current?.time ?? null}
-                            layout={isWide ? 'tabs' : 'responsive'}
                         />
                     </Suspense>
                 </div>

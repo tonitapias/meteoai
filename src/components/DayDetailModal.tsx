@@ -593,13 +593,13 @@ export default function DayDetailModal({
                       <Thermometer className="w-4 h-4 text-rose-400" /> 
                       {typeof tRecord.hourlyEvolution === 'string' ? tRecord.hourlyEvolution : "EVOLUCIÓ TÈRMICA"}
                    </h3>
-                   <SmartForecastCharts 
-                      data={hourlyData} 
-                      comparisonData={comparisonData} 
-                      unit={unit === 'F' ? '°F' : '°C'} 
-                      lang={lang} 
+                   <SmartForecastCharts
+                      data={hourlyData}
+                      comparisonData={comparisonData}
+                      lang={lang}
                       regionalModelLabel={regionalModelLabel}
                       nowIndex={nowIndex}
+                      framed={false}
                    />
                </div>
             </div>
