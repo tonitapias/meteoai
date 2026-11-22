@@ -12,7 +12,7 @@ const event = (e: RiskDetailEvent, hour: string | null = '05:00', hazard: RiskDe
 describe('formatRiskDetail', () => {
     it('vent AMBER en català', () => {
         expect(formatRiskDetail(measured('WIND', 'AMBER', 61.9, 50), 'ca'))
-            .toBe('Ràfegues de fins a 62 km/h cap a les 17:00 (precaució a partir de 50 km/h)');
+            .toBe('Ratxes de fins a 62 km/h cap a les 17:00 (precaució a partir de 50 km/h)');
     });
 
     it('pluja RED amb coma decimal i "la 01:00"', () => {

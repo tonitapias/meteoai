@@ -48,7 +48,7 @@ describe('AIInsights — semàfor de risc sense nivell', () => {
     });
 
     it('sense nivell, els avisos locals el decideixen: precaució amb un avís, alerta amb un de greu', () => {
-        const { unmount } = render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Vent', msg: 'Ràfegues fortes.', level: 'warning' }] })} />);
+        const { unmount } = render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Vent', msg: 'Ratxes fortes.', level: 'warning' }] })} />);
         expect(screen.getByText('AVÍS PRECAUCIÓ')).toBeTruthy();
         unmount();
         render(<AIInsights lang="ca" analysis={analysis({ alerts: [{ type: 'Tempesta', msg: 'Tempestes.', level: 'high' }] })} />);
@@ -67,7 +67,7 @@ describe('AIInsights — detall del motiu', () => {
     it('sota el bàner "Motiu" hi ha la xifra i l\'hora del tallafocs', () => {
         render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND', risk_detail: WIND_DETAIL })} />);
         expect(screen.getByTestId('hazard-detail').textContent)
-            .toBe('Ràfegues de fins a 62 km/h cap a les 17:00 (precaució a partir de 50 km/h)');
+            .toBe('Ratxes de fins a 62 km/h cap a les 17:00 (precaució a partir de 50 km/h)');
     });
 
     it('en un altre idioma, el detall també', () => {
@@ -87,7 +87,7 @@ describe('AIInsights — detall del motiu', () => {
     it('sense detall (anàlisi antiga en cache, o la IA veu un perill que les regles no cobreixen), només el bàner', () => {
         render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND' })} />);
         expect(screen.queryByTestId('hazard-detail')).toBeNull();
-        expect(screen.getByText('VENT FORT I RÀFEGUES')).toBeTruthy();
+        expect(screen.getByText('VENT FORT I RATXES')).toBeTruthy();
     });
 });
 
@@ -95,13 +95,13 @@ describe('AIInsights — consells d\'un avís que arriba sense cap', () => {
     it('AMBER sense consells (el tallafocs ha pujat un GREEN de la IA): en surt un de fix per al perill', () => {
         render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND', tips: [] })} />);
         expect(screen.getByText('Punts clau per a les properes hores:')).toBeTruthy();
-        expect(screen.getByText('Ràfegues fortes: Assegureu objectes solts i eviteu zones arbrades')).toBeTruthy();
+        expect(screen.getByText('Ratxes fortes: Assegureu objectes solts i eviteu zones arbrades')).toBeTruthy();
     });
 
     it('si la IA ja dona consells, es mostren els seus i no el fix', () => {
         render(<AIInsights lang="ca" analysis={analysis({ risk_level: 'AMBER', hazard_type: 'WIND', tips: [{ category: 'WIND', text: 'Vent: consell de la IA' }] })} />);
         expect(screen.getByText('Vent: consell de la IA')).toBeTruthy();
-        expect(screen.queryByText('Ràfegues fortes: Assegureu objectes solts i eviteu zones arbrades')).toBeNull();
+        expect(screen.queryByText('Ratxes fortes: Assegureu objectes solts i eviteu zones arbrades')).toBeNull();
     });
 
     it('amb el temps tranquil (GREEN) no hi ha consells', () => {

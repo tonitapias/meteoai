@@ -107,7 +107,7 @@ describe('buildChartInsights: temperatura i vent de la línia principal', () => 
         expect(t.low).toBeNull();
     });
 
-    it('ràfega i vent màxims; les ràfegues absents són null, no 0', () => {
+    it('ratxa i vent màxims; les ratxes absents són null, no 0', () => {
         const withGusts = buildChartInsights(series(i => ({ wind: 8 + (i === 7 ? 6 : 0), gusts: 15 + (i === 9 ? 20 : 0) })), null).wind;
         expect(withGusts.maxGust).toEqual({ value: 35, index: 9 });
         expect(withGusts.maxWind).toEqual({ value: 14, index: 7 });

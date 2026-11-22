@@ -332,7 +332,7 @@ export default function DayDetailModal({
 
   const precipNote = precipProbMax !== null ? `${TACTICAL_I18N.rainChance} ${Math.round(precipProbMax)}%` : undefined;
 
-  const labelGusts = tDayDetail.gusts || 'RÀFEGUES';
+  const labelGusts = tDayDetail.gusts || 'RATXES';
   const gustsNote = gustsMax !== null ? `${labelGusts} ${Math.round(gustsMax)} km/h` : undefined;
 
   // Categoria de risc de l'índex UV amb la mateixa taula (i colors) que el widget d'UV i el modal solar.

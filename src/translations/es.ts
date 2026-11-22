@@ -455,7 +455,7 @@ export const es = {
   alertStorm: "Inestabilidad acusada (CAPE alto) y tormentas.",
   alertSnow: "Precaución: Nieve acumulada prevista.",
   alertWindExtreme: "Viento huracanado. Peligro exterior.",
-  alertWindHigh: "Ráfagas fuertes. Cuidado objetos.",
+  alertWindHigh: "Rachas fuertes. Cuidado objetos.",
   alertHeatExtreme: "Calor extremo. Evita el sol.",
   alertHeatHigh: "Temperaturas altas. Hidrátate.",
   alertColdExtreme: "Frío severo. Riesgo congelación.",

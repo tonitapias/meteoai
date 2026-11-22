@@ -77,7 +77,7 @@ const LOCAL_UI_TEXTS: Record<string, LocalUIText> = {
         retry: 'Torna-ho a provar',
         hazards: {
             NONE: '',
-            WIND: 'VENT FORT I RÀFEGUES',
+            WIND: 'VENT FORT I RATXES',
             RAIN: 'PLUJA INTENSA SOSTINGUDA',
             THERMAL: 'TEMPERATURES EXTREMES',
             HEAT: 'CALOR INTENSA O XAFOGOR',

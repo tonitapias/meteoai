@@ -7,7 +7,7 @@ import type { Language } from '../translations';
 describe('getHazardFallbackTips', () => {
     it('un avís AMBER de vent sense consells en rep un de vent', () => {
         expect(getHazardFallbackTips('AMBER', 'WIND', 'ca')).toEqual([
-            { category: 'WIND', text: 'Ràfegues fortes: Assegureu objectes solts i eviteu zones arbrades' },
+            { category: 'WIND', text: 'Ratxes fortes: Assegureu objectes solts i eviteu zones arbrades' },
         ]);
     });
 

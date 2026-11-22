@@ -60,7 +60,7 @@ const analyse = async (weather: ExtendedWeatherData, risk = 'GREEN', hazard = 'N
     return getGeminiAnalysis(weather, 'ca', 0, aqi);
 };
 
-// Ràfegues: el pic (62) és a les 02:00; la primera hora per sobre de 50 és la 01:00 (55).
+// Ratxes: el pic (62) és a les 02:00; la primera hora per sobre de 50 és la 01:00 (55).
 const WINDY = { wind_gusts_10m: [30, 55, 62, 51, 40, 20, 10, 10] };
 
 describe('getGeminiAnalysis — detall del motiu (risk_detail)', () => {
@@ -70,7 +70,7 @@ describe('getGeminiAnalysis — detall del motiu (risk_detail)', () => {
         vi.mocked(cacheService.set).mockClear();
     });
 
-    it('vent: la ràfega màxima de la finestra i la seva hora, amb el llindar AMBER', async () => {
+    it('vent: la ratxa màxima de la finestra i la seva hora, amb el llindar AMBER', async () => {
         const result = await analyse(buildWeather(WINDY));
         expect(result?.risk_level).toBe('AMBER');
         expect(result?.hazard_type).toBe('WIND');
@@ -82,7 +82,7 @@ describe('getGeminiAnalysis — detall del motiu (risk_detail)', () => {
         expect(result?.risk_detail?.value).toBe(62);
     });
 
-    it('si la IA veu un altre perill al mateix nivell (es queda el seu), no hi ha detall: les ràfegues no expliquen la pluja', async () => {
+    it('si la IA veu un altre perill al mateix nivell (es queda el seu), no hi ha detall: les ratxes no expliquen la pluja', async () => {
         const result = await analyse(buildWeather(WINDY), 'AMBER', 'RAIN');
         expect(result?.hazard_type).toBe('RAIN');
         expect(result?.risk_detail).toBeUndefined();
@@ -121,7 +121,7 @@ describe('getGeminiAnalysis — detall del motiu (risk_detail)', () => {
         expect(result?.risk_detail).toEqual({ level: 'AMBER', hazard: 'COLD', hour: '03:00', value: -2.6, threshold: 0, event: null });
     });
 
-    it("el pic es busca només dins la finestra de 6 hores (la ràfega de 90 a les 07:00 no hi compta)", async () => {
+    it("el pic es busca només dins la finestra de 6 hores (la ratxa de 90 a les 07:00 no hi compta)", async () => {
         const result = await analyse(buildWeather({ wind_gusts_10m: [30, 55, 52, 51, 40, 20, 10, 90] }));
         expect(result?.risk_detail?.level).toBe('AMBER');
         expect(result?.risk_detail?.value).toBe(55);
@@ -248,7 +248,7 @@ describe('evaluateRulesRisk — l\'avís provisional surt de les regles', () => 
         expect(evaluateRulesRisk(buildWeather())).toEqual({ risk_level: 'GREEN', hazard_type: 'NONE' });
     });
 
-    it('amb ràfegues de 62 km/h dins la finestra, AMBER per vent amb el mateix detall que la resposta final', async () => {
+    it('amb ratxes de 62 km/h dins la finestra, AMBER per vent amb el mateix detall que la resposta final', async () => {
         const rules = evaluateRulesRisk(buildWeather(WINDY));
         expect(rules.risk_level).toBe('AMBER');
         expect(rules.hazard_type).toBe('WIND');
@@ -267,7 +267,7 @@ describe('evaluateRulesRisk — l\'avís provisional surt de les regles', () => 
         expect(final?.risk_level).toBe('RED');
     });
 
-    it('les ràfegues fora de les 6 hores no hi compten (mateixa finestra que la IA)', () => {
+    it('les ratxes fora de les 6 hores no hi compten (mateixa finestra que la IA)', () => {
         expect(evaluateRulesRisk(buildWeather({ wind_gusts_10m: [10, 10, 10, 10, 10, 10, 70, 70] })).risk_level).toBe('GREEN');
     });
 

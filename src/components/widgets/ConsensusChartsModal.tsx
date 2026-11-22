@@ -43,7 +43,7 @@ const translations = {
     temp: 'Temperatura',
     rain: 'Precipitació',
     wind: 'Vent Sostingut (10m)',
-    gusts: 'Ràfegues de Vent',
+    gusts: 'Ratxes de Vent',
   },
   es: {
     modalTitle: 'Comparación de modelos',
@@ -52,7 +52,7 @@ const translations = {
     temp: 'Temperatura',
     rain: 'Precipitación',
     wind: 'Viento Sostenido (10m)',
-    gusts: 'Ráfagas de Viento',
+    gusts: 'Rachas de Viento',
   },
   en: {
     modalTitle: 'Model comparison',
@@ -132,7 +132,7 @@ const TacticalSvgChart = ({
   
   // [FIX PRECISIÓ] Abans es detectava "és un gràfic de vent?" mirant si el títol ja
   // traduït contenia "VENT"/"Wind"/"Vent" — en castellà "Viento" no conté "Vent" com a
-  // subcadena, així que els gràfics de vent/ràfegues en castellà no començaven mai a
+  // subcadena, així que els gràfics de vent/ratxes en castellà no començaven mai a
   // zero. Ara es passa un booleà explícit, independent de l'idioma.
   const isZeroBased = type === 'bar' || zeroBased;
   if (isZeroBased && min > 0) min = 0;

@@ -251,9 +251,9 @@ describe('DayDetailModal — targetes', () => {
         expect(note.className).toContain('text-orange-500');
     });
 
-    it('el vent porta la ràfega màxima de les hores del dia', () => {
+    it('el vent porta la ratxa màxima de les hores del dia', () => {
         renderDetail(build());
-        expect(screen.getByTestId('note-gusts').textContent).toBe('RÀFEGUES 34 km/h');
+        expect(screen.getByTestId('note-gusts').textContent).toBe('RATXES 34 km/h');
     });
 
     it('un dia sense neu possible (isoterma alta o sense dada) mostra les hores de sol en lloc de la cota de neu', () => {

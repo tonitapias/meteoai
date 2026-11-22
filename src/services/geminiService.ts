@@ -34,7 +34,7 @@ export interface TacticalTip {
 export type RiskDetailEvent = 'storm' | 'storm_hail' | 'snow' | 'sleet' | 'freezing' | 'rime' | 'fog' | 'dust' | 'particles' | 'lightning';
 
 /**
- * Per què el tallafocs veu aquest nivell: el valor pic de la finestra (ràfega, mm/h, temperatura) i la seva hora, o la
+ * Per què el tallafocs veu aquest nivell: el valor pic de la finestra (ratxa, mm/h, temperatura) i la seva hora, o la
  * primera hora del fenomen. El bàner "Motiu" en fa una línia amb xifres que no surten de la IA.
  */
 export interface RiskDetail {
@@ -383,7 +383,7 @@ const FIREWALL_THRESHOLDS = {
     COLD_AMBER: 0, COLD_RED: -10        // °C, <=
 } as const;
 
-/** Ràfega (km/h) a partir de la qual el text de la IA l'ha de citar i no pot dir que el vent és suau (regla VENT del worker). */
+/** Ratxa (km/h) a partir de la qual el text de la IA l'ha de citar i no pot dir que el vent és suau (regla VENT del worker). */
 const GUST_MENTION_KMH = 40;
 
 interface DeterministicRisk {
@@ -456,7 +456,7 @@ const WEEKDAYS_CA = ['diumenge', 'dilluns', 'dimarts', 'dimecres', 'dijous', 'di
 
 /**
  * Fenòmens importants de MÉS ENLLÀ de la finestra de 6 hores, fins a 48 hores: tempesta, neu, pluja forta (>= 5 mm/h) o
- * ràfegues fortes (>= 50 km/h), amb el dia i l'hora de la primera hora de cadascun. Abans la IA només veia 6 hores: a
+ * ratxes fortes (>= 50 km/h), amb el dia i l'hora de la primera hora de cadascun. Abans la IA només veia 6 hores: a
  * Buenos Aires, amb una tempesta i 24 mm l'endemà, el text deia "temps tranquil" i no n'esmentava res (M1). No toca el
  * nivell de risc, que continua sent el de les 6 hores. null si no n'hi ha cap (o les hores no tenen data).
  */
@@ -470,7 +470,7 @@ export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: nu
     const today = typeof times[start] === 'string' ? (times[start] as string).slice(0, 10) : null;
     if (!today) return null;
 
-    type Kind = 'tempesta' | 'neu' | 'pluja forta' | 'ràfegues fortes';
+    type Kind = 'tempesta' | 'neu' | 'pluja forta' | 'ratxes fortes';
     const found = new Map<Kind, { index: number; peak: number | null }>();
     const note = (kind: Kind, i: number, value: number | null) => {
         const prev = found.get(kind);
@@ -485,7 +485,7 @@ export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: nu
         const mm = precipArr?.[i];
         if (typeof mm === 'number' && mm >= FIREWALL_THRESHOLDS.RAIN_AMBER) note('pluja forta', i, mm);
         const gust = gustsArr?.[i];
-        if (typeof gust === 'number' && gust >= FIREWALL_THRESHOLDS.GUST_AMBER) note('ràfegues fortes', i, gust);
+        if (typeof gust === 'number' && gust >= FIREWALL_THRESHOLDS.GUST_AMBER) note('ratxes fortes', i, gust);
     }
     if (found.size === 0) return null;
 
@@ -501,7 +501,7 @@ export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: nu
         .slice(0, 3)
         .map(([kind, { index, peak }]) => {
             const iso = String(times[index]);
-            const unit = kind === 'pluja forta' ? ' mm/h' : kind === 'ràfegues fortes' ? ' km/h' : '';
+            const unit = kind === 'pluja forta' ? ' mm/h' : kind === 'ratxes fortes' ? ' km/h' : '';
             return `${kind} ${dayWord(iso)} cap a les ${iso.slice(11, 13)}:00${peak !== null ? ` (fins a ${Math.round(peak)}${unit})` : ''}`;
         });
     return parts.join('; ');
@@ -733,7 +733,7 @@ interface WindowRow {
 }
 
 /**
- * Xifres exactes de la finestra (mínima/màxima, ràfega màxima, pluja total/pic/inici/final), calculades aquí.
+ * Xifres exactes de la finestra (mínima/màxima, ratxa màxima, pluja total/pic/inici/final), calculades aquí.
  * Abans la IA les havia de treure de la taula i les llegia malament: amb 14, 17, 20 i 23 mm/h escrivia
  * "acumulacions de 23 mil·límetres" quan en queien ~80, i amb pluja a partir de les 12:00 deia "intermitent"
  * sense cap hora. Els models petits no sumen ni troben màxims de manera fiable.
@@ -755,13 +755,13 @@ const buildWindowSummary = (rows: WindowRow[], rainCertainty: RainCertainty | nu
     const gusts = rows.map((r, i) => ({ i, v: r.gust })).filter((x): x is { i: number; v: number } => x.v !== null);
     if (gusts.length > 0) {
         const top = gusts.reduce((a, b) => (b.v > a.v ? b : a));
-        // Amb ràfegues de 40 km/h o més, la instrucció va a la mateixa línia (Flash-Lite hi fa més cas que a les regles):
-        // a Girona va escriure "el vent serà suau" amb la targeta marcant ràfegues de 44 km/h (auditoria d'UX, segona
+        // Amb ratxes de 40 km/h o més, la instrucció va a la mateixa línia (Flash-Lite hi fa més cas que a les regles):
+        // a Girona va escriure "el vent serà suau" amb la targeta marcant ratxes de 44 km/h (auditoria d'UX, segona
         // volta, N1b). El worker té la mateixa regla als quatre prompts (per a les apps que no s'hagin actualitzat).
         const mention = top.v >= GUST_MENTION_KMH
-            ? ` — al text, cita les ràfegues amb la xifra i no diguis que el vent és suau, fluix ni feble`
+            ? ` — al text, cita les ratxes amb la xifra i no diguis que el vent és suau, fluix ni feble`
             : '';
-        lines.push(`Ràfega màxima: ${top.v}km/h (${at(top.i)})${mention}`);
+        lines.push(`Ratxa màxima: ${top.v}km/h (${at(top.i)})${mention}`);
     }
 
     const wet = rows.map((r, i) => ({ i, v: r.precip })).filter(x => x.v >= RAIN_HOUR_MIN_MM);
@@ -1003,7 +1003,7 @@ export const getGeminiAnalysis = async (
             const endIndex = evalEndIndex;
 
             const tableRows: string[] = [
-                "| HORA | ESTAT DEL CEL | TEMP | SENSACIÓ | HUMITAT | PLUJA (PROB%) | VENT (RÀFEGUES) | UV | AQI |",
+                "| HORA | ESTAT DEL CEL | TEMP | SENSACIÓ | HUMITAT | PLUJA (PROB%) | VENT (RATXES) | UV | AQI |",
                 "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
             ];
 

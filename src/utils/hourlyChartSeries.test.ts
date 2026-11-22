@@ -105,7 +105,7 @@ describe('buildHourlyChartSeries', () => {
             expect(primary[1].temp).not.toBeNull();
         });
 
-        it('sense probabilitat, volum ni ràfegues a la sèrie, són null (no 0 %, 0 mm, 0 km/h)', () => {
+        it('sense probabilitat, volum ni ratxes a la sèrie, són null (no 0 %, 0 mm, 0 km/h)', () => {
             const hourly = calmClearNight();
             delete hourly.precipitation_probability;
             delete hourly.precipitation;

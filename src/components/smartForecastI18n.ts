@@ -82,7 +82,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         rain: 'PLUJA',
         volume: 'VOLUM (MM)',
         globalModel: 'MODEL GLOBAL',
-        gust: 'Ràfega',
+        gust: 'Ratxa',
         figures: {
             high: 'Màxima',
             low: 'Mínima',
@@ -90,7 +90,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             total24h: 'Total 24 h',
             rainStart: 'Inici de pluja',
             modelsWithRain: 'Models amb pluja',
-            maxGust: 'Ràfega màx.',
+            maxGust: 'Ratxa màx.',
             maxWind: 'Vent màx.',
             avgDisagreement: 'Desacord mitjà',
             snowLow: 'Cota mínima',
@@ -115,7 +115,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         notes: {
             identical: '{names} = model principal (mateixes dades, no es dibuixa).',
             aifsNoProbability: 'AIFS no publica probabilitat de pluja: només surt als volums.',
-            gusts: 'Línia contínua: vent sostingut. Discontínua: ràfegues.'
+            gusts: 'Línia contínua: vent sostingut. Discontínua: ratxes.'
         },
         snow: {
             above: 'Sense neu prevista: la cota és per sobre de {cap} m durant tota la finestra.',

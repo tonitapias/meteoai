@@ -7,7 +7,7 @@ interface DayStatCardProps {
   sub?: string;
   color: string;
   glowClasses: string;
-  /** Línia petita sota la xifra (probabilitat de pluja, ràfegues, categoria UV...). */
+  /** Línia petita sota la xifra (probabilitat de pluja, ratxes, categoria UV...). */
   note?: string;
   /** Classe de color de la nota (per defecte, gris). */
   noteClass?: string;

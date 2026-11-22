@@ -70,7 +70,7 @@ describe('describeBeyondWindow — el que passa més enllà de les 6 hores', () 
         const text = describeBeyondWindow(w, 0, 6)!;
         expect(text).toContain('demà cap a les 15:00');
         expect(text).toContain('pluja forta demà cap a les 15:00 (fins a 24 mm/h)');
-        expect(text).toContain('ràfegues fortes dimecres cap a les 00:00 (fins a 70 km/h)');
+        expect(text).toContain('ratxes fortes dimecres cap a les 00:00 (fins a 70 km/h)');
     });
 
     it('les hores de dins la finestra de 6 hores no hi compten', () => {
@@ -88,9 +88,9 @@ describe('getGeminiAnalysis — moment del dia i més enllà de 6 h al prompt', 
         expect(prompt).not.toContain('MÉS ENLLÀ DE LES 6 HORES');
     });
 
-    it('amb ràfegues fortes l\'endemà, el prompt ho diu i demana una frase al final', async () => {
+    it('amb ratxes fortes l\'endemà, el prompt ho diu i demana una frase al final', async () => {
         const prompt = await promptFor(buildWeather({ wind_gusts_10m: { 20: 65 } }));
-        expect(prompt).toContain('MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d\'ara): ràfegues fortes demà cap a les 16:00 (fins a 65 km/h)');
+        expect(prompt).toContain('MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d\'ara): ratxes fortes demà cap a les 16:00 (fins a 65 km/h)');
         expect(prompt.length).toBeLessThan(4000);
     });
 });

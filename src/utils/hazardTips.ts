@@ -20,7 +20,7 @@ const TIP_CATEGORY: Record<TipHazard, TacticalTipCategory> = {
 // Format "Causa: Efecte pràctic" i com a molt 15 paraules, com els consells de la IA.
 const TIP_TEXTS: Record<Language, Record<TipHazard, string>> = {
     ca: {
-        WIND: 'Ràfegues fortes: Assegureu objectes solts i eviteu zones arbrades',
+        WIND: 'Ratxes fortes: Assegureu objectes solts i eviteu zones arbrades',
         RAIN: 'Pluja intensa: Eviteu passos inundables i conduïu amb precaució',
         HEAT: "Calor intensa: Hidrateu-vos i eviteu l'esforç a les hores centrals",
         COLD: 'Risc de gel: Precaució en els desplaçaments i abrigueu-vos bé',

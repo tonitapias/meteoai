@@ -250,7 +250,7 @@ describe('useDayDetailData: capçalera coherent amb el gràfic i la llista', () 
 });
 
 describe('useDayDetailData: peces del detall ampliat', () => {
-    it('la ràfega màxima surt de les hores del dia i, sense ràfegues horàries, del valor diari', () => {
+    it('la ratxa màxima surt de les hores del dia i, sense ratxes horàries, del valor diari', () => {
         const fromHours = renderHook(() => useDayDetailData(buildSeptember({ hourlyGusts: true }), 1));
         expect(fromHours.result.current.gustsMax).toBe(34);
 
@@ -294,7 +294,7 @@ describe('useDayDetailData: peces del detall ampliat', () => {
         expect(none.result.current.neighbours).toEqual({ prev: null, next: null });
     });
 
-    it('sense weatherData no hi ha cel del dia ni ràfegues', () => {
+    it('sense weatherData no hi ha cel del dia ni ratxes', () => {
         const none = renderHook(() => useDayDetailData(null, null));
         expect(none.result.current.dayCode).toBeNull();
         expect(none.result.current.gustsMax).toBeNull();

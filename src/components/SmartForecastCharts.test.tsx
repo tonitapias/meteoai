@@ -61,8 +61,8 @@ describe('SmartForecastCharts', () => {
         expect(screen.getAllByText('1,2 mm').length).toBeGreaterThan(0);
         expect(screen.getAllByText('22H').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Models amb pluja').length).toBeGreaterThan(0);
-        // Vent: ràfega màxima de 20 km/h.
-        expect(screen.getAllByText('Ràfega màx.').length).toBeGreaterThan(0);
+        // Vent: ratxa màxima de 20 km/h.
+        expect(screen.getAllByText('Ratxa màx.').length).toBeGreaterThan(0);
     });
 
     it('cada gràfic porta el seu xip d\'acord entre models (temperatura amb 4° de dispersió = baix)', () => {
@@ -272,15 +272,15 @@ describe('SmartForecastCharts: lectura del gràfic', () => {
         expect(container.querySelectorAll('[data-testid="precip-dot"]').length).toBeLessThan(withAll);
     });
 
-    it('el vent porta la línia de ràfegues i el cartell en diu el valor', () => {
+    it('el vent porta la línia de ratxes i el cartell en diu el valor', () => {
         const { container } = renderCharts();
         expect(container.querySelectorAll('[data-testid="gust-line"]').length).toBeGreaterThan(0);
         hoverHour(container, 3);
-        expect(screen.getAllByText('Ràfega:').length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Línia contínua: vent sostingut\. Discontínua: ràfegues\./).length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Ratxa:').length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Línia contínua: vent sostingut\. Discontínua: ratxes\./).length).toBeGreaterThan(0);
     });
 
-    it('sense ràfegues a les dades, no hi ha línia de ràfegues (ni una de plana a 0)', () => {
+    it('sense ratxes a les dades, no hi ha línia de ratxes (ni una de plana a 0)', () => {
         const noGusts = primary.map(p => ({ ...p, gusts: null }));
         const { container } = renderCharts({ data: noGusts });
         expect(container.querySelectorAll('[data-testid="gust-line"]')).toHaveLength(0);
@@ -406,7 +406,7 @@ describe('SmartForecastCharts: franja de lectura (mòbil)', () => {
         expect(s.getByTestId('readout-aifs')).not.toHaveTextContent('%');
     });
 
-    it("al vent afegeix la ràfega", () => {
+    it("al vent afegeix la ratxa", () => {
         const { container } = renderCharts();
         fireEvent.click(screen.getByRole('button', { name: 'Vent' }));
         hoverHour(container, 3);
@@ -414,7 +414,7 @@ describe('SmartForecastCharts: franja de lectura (mòbil)', () => {
         expect(within(strip()).getByTestId('readout-primary')).toHaveTextContent('10 km/h');
     });
 
-    it("sense ràfegues a les dades, no hi ha xip de ràfega (ni un 0 km/h)", () => {
+    it("sense ratxes a les dades, no hi ha xip de ratxa (ni un 0 km/h)", () => {
         const noGusts = primary.map(p => ({ ...p, gusts: null }));
         const { container } = renderCharts({ data: noGusts });
         fireEvent.click(screen.getByRole('button', { name: 'Vent' }));

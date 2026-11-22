@@ -25,7 +25,7 @@ const RISK_DETAIL_TEXTS: Record<Language, RiskDetailTexts> = {
         at: (h) => `cap a ${h.startsWith('01:') ? 'la' : 'les'} ${h}`,
         from: (h) => `a partir de ${h.startsWith('01:') ? 'la' : 'les'} ${h}`,
         measured: {
-            WIND: 'Ràfegues de fins a {value} km/h {when} ({limit})',
+            WIND: 'Ratxes de fins a {value} km/h {when} ({limit})',
             RAIN: 'Pluja de fins a {value} mm en una hora {when} ({limit})',
             HEAT: 'Màxima de {value} °C {when} ({limit})',
             COLD: 'Mínima de {value} °C {when} ({limit})'
@@ -141,7 +141,7 @@ const fill = (template: string, values: Record<string, string>): string =>
     template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 
 /**
- * La línia de detall del bàner "Motiu" (p. ex. "Ràfegues de fins a 62 km/h cap a les 17:00 (precaució a partir de
+ * La línia de detall del bàner "Motiu" (p. ex. "Ratxes de fins a 62 km/h cap a les 17:00 (precaució a partir de
  * 50 km/h)"). Null si falta alguna dada: és millor no dir res que dir-ho a mitges.
  */
 export const formatRiskDetail = (detail: RiskDetail, lang: Language): string | null => {

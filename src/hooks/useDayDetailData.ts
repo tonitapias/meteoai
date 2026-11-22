@@ -139,7 +139,7 @@ export const useDayDetailData = (
   const hourlyData = useMemo(() => chartSeries?.primary ?? [], [chartSeries]);
   const comparisonData = chartSeries?.comparison ?? null;
 
-  // Ràfega màxima: la de la mateixa sèrie que dibuixa el gràfic (model regional inclòs); sense cap, la diària.
+  // Ratxa màxima: la de la mateixa sèrie que dibuixa el gràfic (model regional inclòs); sense cap, la diària.
   const gustsMax = useMemo<number | null>(() => {
     if (!weatherData || selectedDayIndex === null) return null;
     return (

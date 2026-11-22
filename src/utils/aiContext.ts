@@ -391,7 +391,7 @@ export const prepareContextForAI = (current: StrictCurrentWeather, daily: Strict
             feels_like: safeNum(current.apparent_temperature),
             is_raining: isActuallyRaining, 
             wind_speed: safeNum(current.wind_speed_10m),
-            // CORRECCIÓ: Afegim ràfegues de vent
+            // CORRECCIÓ: Afegim ratxes de vent
             wind_gusts: safeNum(current.wind_gusts_10m),
             weather_code: safeNum(current.weather_code),
             humidity: safeNum(current.relative_humidity_2m),

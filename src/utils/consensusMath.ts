@@ -277,7 +277,7 @@ export function calculateModelConsensus(
 
     // 6b. RADAR A 3 HORES — Model Local (alta resolució, p.ex. 1.3km AROME)
     // Mateixos llindars que el radar global (pas 6), però sobre la sèrie local:
-    // és el model amb prou detall per detectar un xàfec o ràfega convectiva
+    // és el model amb prou detall per detectar un xàfec o ratxa convectiva
     // local que el model global sol suavitzar fins a fer-lo invisible.
     if (!futureDivergence && localHourlyTimes.length > 0) {
       let localNowIndex = -1;

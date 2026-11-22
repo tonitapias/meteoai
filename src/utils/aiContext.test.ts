@@ -171,7 +171,7 @@ describe("generateAIPrediction — insígnia d'acord entre models", () => {
 // El text de reserva (el que es veu mentre la IA carrega, o si falla) tenia tres frases en català fix: també les
 // rebien els usuaris d'es/en/fr. Ara surten de les claus de traducció que ja existien.
 describe('generateAIPrediction — frases de reserva traduïdes (no català fix)', () => {
-    const CATALAN_FIXED = [/s'intensificarà notablement aviat/, /remetent properament/, /Ràfegues de vent fortes/];
+    const CATALAN_FIXED = [/s'intensificarà notablement aviat/, /remetent properament/, /Ratxes de vent fortes/];
     // El "ara" és la 01:00 (índex 1): precipitació d'ara i de la següent hora.
     // Tres hores (00, 01 i 02 h) perquè l'hora actual (01:00) sigui l'índex 1 de la sèrie (abans el test depenia de fer
     // servir l'hora local com a índex; vegeu X4).
@@ -188,7 +188,7 @@ describe('generateAIPrediction — frases de reserva traduïdes (no català fix)
             if (lang !== 'ca') CATALAN_FIXED.forEach(re => { expect(more).not.toMatch(re); expect(stops).not.toMatch(re); });
         });
 
-        it(`[${lang}] les ràfegues fortes avisen amb el text de la llengua`, () => {
+        it(`[${lang}] les ratxes fortes avisen amb el text de la llengua`, () => {
             const gusty = { ...current, wind_gusts_10m: 60 } as unknown as StrictCurrentWeather;
             const msgs = generateAIPrediction(gusty, daily, hourly, 0, lang, 3, null, 'C').alerts.map(a => a.msg);
             expect(msgs).toContain(t.alertWindHigh);
