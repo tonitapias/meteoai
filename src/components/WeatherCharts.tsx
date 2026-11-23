@@ -5,6 +5,7 @@
 import { CloudRain } from 'lucide-react';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { formatDecimal } from '../utils/formatters';
+import { snowCmFromWater } from '../utils/precipKind';
 import type { Language } from '../translations';
 
 interface MinutelyPreciseChartProps {
@@ -13,9 +14,18 @@ interface MinutelyPreciseChartProps {
     /** Idioma dels decimals ("0,4 mm" / "0.4 mm"). */
     lang?: Language;
     currentPrecip?: number;
+    /** Ara neva (codi de neu o aiguaneu del motor): les quantitats en cm. */
+    snow?: boolean;
 }
 
-export const MinutelyPreciseChart = ({ data, label, lang = 'ca', currentPrecip: _currentPrecip = 0 }: MinutelyPreciseChartProps) => {
+export const MinutelyPreciseChart = ({ data, label, lang = 'ca', currentPrecip: _currentPrecip = 0, snow = false }: MinutelyPreciseChartProps) => {
+    // Pluja en mm, neu en cm (precipKind.ts): si ara neva, els mm d'aigua de cada quart d'hora es diuen en cm de neu.
+    // Una traça que arrodonida seria "0,0" diu "<0,1" (abans, en plena nevada feble, sortia "0,0mm" quatre vegades).
+    const unit = snow ? 'cm' : 'mm';
+    const amountText = (mm: number) => {
+        const v = snow ? snowCmFromWater(mm) : mm;
+        return v < 0.05 ? `<${formatDecimal(0.1, lang)}` : formatDecimal(v, lang);
+    };
     const chartData = Array.isArray(data) ? [...data] : [];
     let processedData = chartData.map(v => v !== null && v !== undefined && !isNaN(v) ? v : 0);
 
@@ -54,7 +64,7 @@ export const MinutelyPreciseChart = ({ data, label, lang = 'ca', currentPrecip: 
                         {processedData.map((val, i) => (
                             <div key={`minutely-${i}`} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
                                 {val > 0 ? (
-                                    <span className="text-[10px] font-black mb-0.5 text-white drop-shadow-md">{formatDecimal(val, lang)}<span className="opacity-50 text-[10px] ml-0.5">mm</span></span>
+                                    <span className="text-[10px] font-black mb-0.5 text-white drop-shadow-md">{amountText(val)}<span className="opacity-50 text-[10px] ml-0.5">{unit}</span></span>
                                 ) : (
                                     <span className="text-[10px] font-bold mb-0.5 text-slate-600 opacity-50">-</span>
                                 )}

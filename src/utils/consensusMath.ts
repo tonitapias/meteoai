@@ -122,6 +122,17 @@ export function getMappedConsensusSeries(
   return { displayTimes, series };
 }
 
+/**
+ * "AROME HD contra el global" i el seu detall parlen de neu (cm) en lloc de pluja (mm) amb fred: un dels dos models a 2 °C
+ * o menys. Els models regionals no publiquen la neu, així que els mm d'aigua dels dos es passen a cm amb la mateixa
+ * relació que la resta de l'app (precipKind.ts, 7 cm = 10 mm): la comparació continua sent justa.
+ */
+export const CONSENSUS_SNOW_MAX_TEMP = 2;
+
+export const isConsensusSnowRisk = (localTemp: number | null | undefined, globalTemp: number | null | undefined): boolean =>
+  (typeof localTemp === 'number' && !Number.isNaN(localTemp) && localTemp <= CONSENSUS_SNOW_MAX_TEMP) ||
+  (typeof globalTemp === 'number' && !Number.isNaN(globalTemp) && globalTemp <= CONSENSUS_SNOW_MAX_TEMP);
+
 export interface ConsensusMetrics {
   isConsensusActive: boolean;
   tempDiff: number | null;

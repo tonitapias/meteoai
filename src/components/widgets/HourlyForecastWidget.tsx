@@ -5,16 +5,21 @@ import { MATRIX_BG } from './widgetStyles';
 
 // Sota cada hora surt la probabilitat de pluja ("96 %") o, si n'hi ha, la quantitat ("4 mm"): sense llegenda no es
 // distingien (auditoria d'UX del 16/11/2026, B6). I "SENSE DADES" en cada idioma (abans en anglès per a es i fr).
+// La neu surt en cm (formatPrecipitation): la llegenda diu les unitats que hi ha a la tira.
 const STRIP_TEXT = {
-  ca: { legend: '% probabilitat · mm quantitat', noData: 'SENSE DADES' },
-  es: { legend: '% probabilidad · mm cantidad', noData: 'SIN DATOS' },
-  en: { legend: '% chance · mm amount', noData: 'NO DATA' },
-  fr: { legend: '% probabilité · mm quantité', noData: 'PAS DE DONNÉES' },
+  ca: { legend: '% probabilitat · mm quantitat', legendSnow: '% probabilitat · cm neu', legendBoth: '% probabilitat · mm pluja · cm neu', noData: 'SENSE DADES' },
+  es: { legend: '% probabilidad · mm cantidad', legendSnow: '% probabilidad · cm nieve', legendBoth: '% probabilidad · mm lluvia · cm nieve', noData: 'SIN DATOS' },
+  en: { legend: '% chance · mm amount', legendSnow: '% chance · cm snow', legendBoth: '% chance · mm rain · cm snow', noData: 'NO DATA' },
+  fr: { legend: '% probabilité · mm quantité', legendSnow: '% probabilité · cm neige', legendBoth: '% probabilité · mm pluie · cm neige', noData: 'PAS DE DONNÉES' },
 } as const;
 
 export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
   const stripText = STRIP_TEXT[lang as keyof typeof STRIP_TEXT] ?? STRIP_TEXT.ca;
   const showLegend = Array.isArray(data) && data.some(h => typeof h.precipText === 'string' && h.precipText !== '');
+  const texts = Array.isArray(data) ? data.map(h => (typeof h.precipText === 'string' ? h.precipText : '')) : [];
+  const hasSnow = texts.some(s => s.endsWith(' cm'));
+  const hasRain = texts.some(s => s.endsWith(' mm'));
+  const legend = hasSnow ? (hasRain ? stripText.legendBoth : stripText.legendSnow) : stripText.legend;
   // DOCTRINA RISC ZERO: Forcem el tipatge global de les traduccions sense usar 'any'
   const t = getTrans(lang) as Record<string, unknown>;
   
@@ -49,7 +54,7 @@ export const HourlyForecastWidget = ({ data, lang }: HourlyWidgetProps) => {
             </span>
          </div>
          {hasValidData && showLegend && (
-            <span className="text-[10px] font-medium text-slate-400 tracking-wide">{stripText.legend}</span>
+            <span className="text-[10px] font-medium text-slate-400 tracking-wide">{legend}</span>
          )}
       </div>
       

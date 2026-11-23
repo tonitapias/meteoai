@@ -487,6 +487,8 @@ describe('getGeminiAnalysis — certesa i fiabilitat al resum', () => {
         h.freezing_level_height = Array.from({ length: 8 }, () => 0);
         const s = await summaryWith(weather, null);
         expect(s).toContain('Tipus de precipitació: NEU (digues "nevarà" o "nevada", mai "plourà")');
+        // I la neu, en cm (els mm són d'aigua): les hores de neu de la finestra a 1,2 mm cadascuna, × 0,7.
+        expect(s).toMatch(/neu acumulada (uns \d+cm|menys d'1cm) \(si dius quanta neu, en cm/);
         // Pluja de debò: cap línia de tipus.
         expect(await summaryWith(eveningRain(), null)).not.toContain('Tipus de precipitació');
     });

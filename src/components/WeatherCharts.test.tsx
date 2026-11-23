@@ -19,6 +19,23 @@ describe('MinutelyPreciseChart', () => {
         expect(container.innerHTML).toBe('');
     });
 
+    // Pas de la Casa, 23/11/2026: "Nevada feble" i la targeta deia "0,0mm" quatre vegades.
+    it('si ara neva, les quantitats surten en cm (mm d\'aigua × 0,7) i una traça diu "<0,1"', () => {
+        render(<MinutelyPreciseChart data={[1, 0.03, 0.5, 0]} label={LABEL} snow />);
+        expect(screen.getByText('0,7')).toBeTruthy();
+        expect(screen.getByText('<0,1')).toBeTruthy();
+        expect(screen.getByText('0,4')).toBeTruthy(); // 0,5 mm → 0,35 cm
+        expect(screen.getAllByText('cm')).toHaveLength(3);
+        expect(screen.queryByText('mm')).toBeNull();
+    });
+
+    it('si plou, en mm, i tampoc no diu mai "0,0"', () => {
+        render(<MinutelyPreciseChart data={[0.03, 0.4]} label={LABEL} />);
+        expect(screen.getByText('<0,1')).toBeTruthy();
+        expect(screen.getByText('0,4')).toBeTruthy();
+        expect(screen.getAllByText('mm')).toHaveLength(2);
+    });
+
     it('amb pluja: la targeta porta el gràfic amb els quatre quarts d\'hora', () => {
         const { container } = render(<MinutelyPreciseChart data={[0, 0.3, 1.2]} label={LABEL} />);
         const card = container.firstElementChild;

@@ -139,6 +139,34 @@ describe('ConsensusWidget — paraules senceres, sense abreviatures', () => {
         expect(container.textContent).not.toMatch(/\bGLO\b|Δ/);
     });
 
+    // Pas de la Casa, 23/11/2026: la fila deia «Neu» amb «0 mm · Global 0 mm».
+    it('amb fred, la fila diu «Neu» i els cm (els mm d\'aigua dels dos models × 0,7)', () => {
+        const cold: ConsensusMetrics = { ...METRICS, globalTemp: -1.5, globalPrecip: 1, precipDiff: -1 };
+        const { container } = render(<ConsensusWidget metrics={cold} localTemp={-2} localPrecip={2} localWind={12} lang="ca" regionalModelLabel="AROME HD" />);
+        expect(screen.getByText('Neu')).toBeTruthy();
+        expect(container.textContent).toContain('0,7 cm');
+        expect(container.textContent).toContain('1,4');
+        expect(container.textContent).not.toMatch(/\d mm/);
+    });
+
+    it('amb calor, la fila diu «Pluja» i els mm', () => {
+        const wet: ConsensusMetrics = { ...METRICS, globalPrecip: 1, precipDiff: -1 };
+        const { container } = render(<ConsensusWidget metrics={wet} localTemp={23} localPrecip={2} localWind={12} lang="ca" regionalModelLabel="AROME HD" />);
+        expect(screen.getByText('Pluja')).toBeTruthy();
+        expect(container.textContent).toMatch(/1(,0)? mm/);
+        expect(container.textContent).not.toContain(' cm');
+    });
+
+    it('el detall hora a hora també posa la neu en cm a les hores de fred, i la pluja en mm a les altres', () => {
+        render(<ConsensusWidget metrics={{ ...METRICS, globalTemp: -1.5 }} localTemp={-2} localPrecip={2} localWind={12} lang="ca"
+            regionalModelLabel="AROME HD" hourlyTimes={['2026-11-17T21:00', '2026-11-17T22:00']} hourlyGlobalTimes={['2026-11-17T21:00', '2026-11-17T22:00']}
+            hourlyLocal={{ temp: [-2, 6], rain: [2, 3] }} hourlyGlobal={{ temp: [-1.5, 6.5], rain: [1, 3] }} utcOffset={0} />);
+        fireEvent.click(screen.getByText('Neu'));
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.textContent).toMatch(/1,4\s*cm/);
+        expect(dialog.textContent).toMatch(/3(,0)?\s*mm/);
+    });
+
     it('el detall hora a hora diu el nom del model i «Global», no «LOC» i «GLO»', () => {
         render(<ConsensusWidget metrics={METRICS} localTemp={23} localPrecip={0} localWind={12} lang="ca"
             regionalModelLabel="AROME HD" hourlyTimes={['2026-11-17T21:00']} hourlyGlobalTimes={['2026-11-17T21:00']}

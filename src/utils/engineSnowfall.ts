@@ -21,9 +21,10 @@ import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { getHourlyWeatherCode, type HourlySeries } from './hourlyWeatherCode';
 import { isSleetCode } from './rules/winterRules';
 import { extractValidArrayNum } from './weatherMath';
+import { SNOW_CM_PER_MM } from './precipKind';
 
-/** cm de neu per mm d'aigua: la relació que fa servir Open-Meteo per al seu `snowfall` (7 cm = 10 mm). */
-export const SNOW_CM_PER_MM = 0.7;
+/** cm de neu per mm d'aigua (7 cm = 10 mm): viu a precipKind.ts, on també decideix si una xifra surt en cm o en mm. */
+export { SNOW_CM_PER_MM };
 
 /** L'aiguaneu és pluja i neu barrejades: només en compta la meitat com a neu. */
 export const SLEET_SNOW_FRACTION = 0.5;

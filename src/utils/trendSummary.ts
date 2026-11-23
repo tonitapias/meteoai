@@ -9,7 +9,8 @@
 //     rang entre models, que només conté la real la meitat de les vegades: amb dades reals (11-2026, 16 ciutats) avisava
 //     de "poc segur" en 8 de 10 canvis que els rangs probables del mateix gràfic donaven per clars.
 //   - PLUJA: els dies que el gràfic destaca (isLikelyWet) i la quantitat més gran d'un sol dia.
-import { isLikelyWet, SNOW_SHOWN_CM } from './precipSignal';
+import { isLikelyWet } from './precipSignal';
+import { precipKind } from './precipKind';
 
 export interface ValueRange {
     low: number;
@@ -229,7 +230,7 @@ const isPrecipCode = (code: number): boolean => (code >= 51 && code <= 77) || (c
  */
 const isWetDay = (d: TrendSummaryDay): boolean => {
     if (d.code === undefined || d.code === null) return isLikelyWet(d.precipProb ?? null);
-    return isPrecipCode(d.code) || (d.precipSum ?? 0) > 0 || (d.snowSum ?? 0) >= SNOW_SHOWN_CM;
+    return isPrecipCode(d.code) || (d.precipSum ?? 0) > 0 || (d.snowSum ?? 0) > 0;
 };
 
 const summarizePrecip = (days: ReadonlyArray<TrendSummaryDay>): PrecipSummary => {
@@ -240,7 +241,8 @@ const summarizePrecip = (days: ReadonlyArray<TrendSummaryDay>): PrecipSummary =>
     days.forEach((d, day) => {
         if (!isWetDay(d)) return;
         const snow = d.snowSum ?? 0;
-        if (snow >= SNOW_SHOWN_CM) {
+        // Dia de neu amb la mateixa regla que la xifra que es veu (precipKind): mana el que cau més.
+        if (precipKind(d.precipSum, snow) === 'snow') {
             snowDays.push(day);
             maxSnow = Math.max(maxSnow ?? 0, snow);
         } else {

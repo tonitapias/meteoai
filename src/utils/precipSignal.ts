@@ -9,8 +9,7 @@ export const isLikelyWet = (prob: number | null): boolean => prob !== null && pr
 // QUANTITAT d'un dia: la probabilitat diu si plourà, no quant. Un 80 % amb 0,3 mm són quatre gotes, i ressaltar-lo
 // igual que un dia de 15 mm el fa semblar un dia de pluja. Llindars de la suma diària (mm).
 export type DailyPrecipClass = 'trace' | 'light' | 'moderate' | 'heavy';
-/** Neu a partir de la qual un dia es mostra com a neu, en cm (el mateix llindar que formatPrecipitation). */
-export const SNOW_SHOWN_CM = 0.2;
+// Si un dia es mostra com a neu (cm) o com a pluja (mm) ho decideix precipKind.ts.
 export const DAILY_PRECIP_LIGHT_MM = 1;
 export const DAILY_PRECIP_MODERATE_MM = 5;
 export const DAILY_PRECIP_HEAVY_MM = 20;

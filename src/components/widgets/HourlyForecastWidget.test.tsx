@@ -12,6 +12,16 @@ describe('HourlyForecastWidget — llegenda de la pluja', () => {
         expect(screen.getByText('% probabilitat · mm quantitat')).toBeInTheDocument();
     });
 
+    it('amb neu, la llegenda diu cm (la tira mostra la neu en cm)', () => {
+        render(<HourlyForecastWidget lang="ca" data={[hour('03H', '0,1 cm'), hour('04H', '40%')] as never} />);
+        expect(screen.getByText('% probabilitat · cm neu')).toBeInTheDocument();
+    });
+
+    it('amb pluja i neu a la mateixa tira, diu totes dues unitats', () => {
+        render(<HourlyForecastWidget lang="en" data={[hour('03H', '0.4 mm'), hour('09H', '1 cm')] as never} />);
+        expect(screen.getByText('% chance · mm rain · cm snow')).toBeInTheDocument();
+    });
+
     it('sense cap xifra de pluja, no hi ha llegenda', () => {
         render(<HourlyForecastWidget lang="es" data={[hour('19H', ''), hour('20H', '')] as never} />);
         expect(screen.queryByText('% probabilidad · mm cantidad')).toBeNull();

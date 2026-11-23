@@ -6,7 +6,8 @@ import { resolveDailyCode } from '../utils/dailyWeatherCode';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds } from '../utils/dailyExtremes';
 import { resolveDailySpread, hasVisibleRange, type DailyModelSpread } from '../utils/dailyModelSpread';
 import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
-import { isLikelyWet, classifyDailyPrecip, SNOW_SHOWN_CM, type DailyPrecipClass } from '../utils/precipSignal';
+import { isLikelyWet, classifyDailyPrecip, type DailyPrecipClass } from '../utils/precipSignal';
+import { precipKind } from '../utils/precipKind';
 import { ReliabilityDots } from './ReliabilityDots';
 import { buildCapsuleGradient } from '../utils/temperatureColors';
 import { summarizeTrend } from '../utils/trendSummary';
@@ -336,7 +337,7 @@ const TrendChartModal = memo(function TrendChartModal({
   // Paraula de la quantitat (quatre gotes, feble...): només per a la pluja; la neu ja diu els cm.
   const rainWord = (d: TrendDay): string | null => {
     const amount = classifyDailyPrecip(d.precipSum);
-    return amount && d.precipSum !== null && d.precipSum > 0 && d.snowSum < SNOW_SHOWN_CM ? mDict.precipClass[amount] : null;
+    return amount && d.precipSum !== null && d.precipSum > 0 && precipKind(d.precipSum, d.snowSum) !== 'snow' ? mDict.precipClass[amount] : null;
   };
 
   // Frase resum: la forma de la setmana, amb la incertesa de les mateixes bandes que es veuen (rang probable calibrat).
