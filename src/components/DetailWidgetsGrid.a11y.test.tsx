@@ -10,7 +10,6 @@ import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import type { Language } from '../translations';
 
 // Barcelona, migdia d'octubre (12:00 local, CEST).
-const NOW = Date.UTC(2026, 9, 18, 10, 0);
 const weather = {
     current: {
         time: '2026-10-18T12:00', weather_code: 1, temperature_2m: 19.2, apparent_temperature: 18.5, relative_humidity_2m: 60,
@@ -32,8 +31,8 @@ const renderGrid = (data: ExtendedWeatherData, opts: { lang?: Language; ids?: re
     render(
         <DetailWidgetsGrid
             weatherData={data} aqiData={opts.aqi ?? null} lang={opts.lang ?? 'ca'} unit="C"
-            freezingLevel={opts.freezingLevel ?? null} now={NOW} ids={opts.ids}
-            onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
+            freezingLevel={opts.freezingLevel ?? null} ids={opts.ids}
+            onShowStormModal={noop} onShowAqiModal={noop}
             onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
             onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop} onShowTemperatureModal={noop}
         />
@@ -45,7 +44,7 @@ describe('DetailWidgetsGrid → nom accessible de cada targeta', () => {
     it('totes les targetes són botons amb nom, i el nom acaba en "· Detall"', () => {
         renderGrid(weather, { aqi: { current: { european_aqi: 23 } }, freezingLevel: 1500 });
         const buttons = screen.getAllByRole('button');
-        expect(buttons).toHaveLength(12);
+        expect(buttons).toHaveLength(10);
         for (const b of buttons) expect(b.getAttribute('aria-label')).toMatch(/^\S.* · Detall$/);
     });
 
@@ -70,11 +69,6 @@ describe('DetailWidgetsGrid → nom accessible de cada targeta', () => {
         expect(within(screen.getByRole('button', { name: 'Cota de neu 1200 m · Detall' })).getByText('1200')).toBeTruthy();
     });
 
-    it("cicle solar: l'hora de la pròxima posta (al migdia)", () => {
-        renderGrid(weather, { ids: ['sun'] });
-        expect(screen.getByRole('button').getAttribute('aria-label')).toMatch(/^Cicle solar, posta de sol a les 1[89]:\d\d · Detall$/);
-    });
-
     it("en l'idioma de l'app", () => {
         renderGrid(weather, { ids: ['wind', 'pressure'], lang: 'en' });
         expect(screen.getByRole('button', { name: 'Wind 27 km/h W · Details' })).toBeTruthy();
@@ -82,10 +76,10 @@ describe('DetailWidgetsGrid → nom accessible de cada targeta', () => {
     });
 
     it('sense dades, només el nom del giny: cap xifra inventada', () => {
-        renderGrid(empty, { ids: ['temperature', 'wind', 'uv', 'visibility', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'aqi', 'sun'] });
+        renderGrid(empty, { ids: ['temperature', 'wind', 'uv', 'visibility', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'aqi'] });
         expect(screen.getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual([
             'Temperatura · Detall', 'Vent · Detall', 'Índex UV · Detall', 'Visibilitat · Detall', 'Capes de núvols · Detall',
-            'Pressió · Detall', 'Punt de rosada · Detall', 'CAPE · Detall', "Qualitat de l'aire · Detall", 'Cicle solar · Detall',
+            'Pressió · Detall', 'Punt de rosada · Detall', 'CAPE · Detall', "Qualitat de l'aire · Detall",
         ]);
     });
 });

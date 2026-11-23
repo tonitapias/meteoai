@@ -1,8 +1,17 @@
 # Registre de canvis
 
-Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.68.0...v3.69.0](https://github.com/tonitapias/meteoai/compare/v3.68.0...v3.69.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
+Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.69.0...v3.70.0](https://github.com/tonitapias/meteoai/compare/v3.69.0...v3.70.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
 
 Les seccions «Millores publicades entre la vX i la vY» recullen el que es va publicar sense canviar de versió. Les de la v3.26.0 i la v3.9.9, al final, són les notes de les primeres *releases*, tal com es van escriure.
+
+## 🌙 Novetats de la v3.70.0: la pestanya Cel, el sol i la nit
+
+- **El sol, a dalt de tot.** La targeta del sol, en el llenguatge de la Previsió: el color del cel d'ara, la corba real del sol pintada per franges de llum i, a sota, els núvols d'avui hora a hora (la mateixa franja que la fila «Avui» de la Previsió, amb el % de núvols de les hores de llum) i la llum del dia. La corba és puntejada quan els núvols previstos tapen el sol. De dia, el compte enrere fins a la posta és la xifra gran, amb l'hora daurada que ve i on és ara el sol; de nit, el compte enrere fins a la sortida va a la capçalera. Al peu, la pròxima hora daurada i quan es fa fosc del tot (de nit, quan clareja).
+- **Aquesta nit, a sota.** De la posta a la sortida, una frase diu com serà la nit amb el cel previst i la lluna («La lluna, darrere dels núvols», «Cel serè i fosc: bona nit d'estrelles», «S'obre a partir de les 02:00»). A sota, l'alçada de la lluna al llarg de la nit, contínua on es veu i puntejada on la tapen els núvols; els núvols previstos, amb els colors de la Previsió; i la foscor, amb les hores de nit fosca. La fila de la lluna obre el modal, i al final hi ha com serà la nit següent.
+- **La lluna ja no diu una posta que ha passat.** De nit, la pestanya deia «↓ 06:26», la posta d'aquell matí; ara diu «es pon demà a les 07:46». Al modal Fase lunar, la sortida i la posta són les de la lluna d'aquell dia (la posta que segueix la sortida, sovint l'endemà), i el dia que la lluna no surt hi diu «—» en lloc de la sortida de l'endemà.
+- **El calendari de la lunació sencera.** El modal Fase lunar ja no mostra 15 dies en llista, sinó la lunació de lluna nova a lluna nova en una graella de setmanes: els dies passats apagats, avui marcat, el dia triat amb la seva sortida i posta, les quatre fases a l'hora exacta, el nom tradicional de cada plena (Lluna del Castor, Lluna Freda…) i la superlluna. «Lunació següent» porta a la seva plena, i ara també es pot anar enrere fins a la primera nit de la lunació.
+- **A l'ordinador,** el sol i la nit van un al costat de l'altre, de la mateixa alçada; al modal lunar, la graella i les fases, en dues columnes.
+- Als quatre idiomes.
 
 ## 🖥️ Novetats de la v3.69.0: el detall del dia a l'ordinador, i la neu es diu neu
 

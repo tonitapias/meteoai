@@ -1,6 +1,6 @@
 // src/utils/solar/nextSunEvent.ts
 // La pròxima sortida o posta del sol amb la seva hora local ("17:25"): la mateixa que compta enrere la targeta Cicle
-// solar (SunArcWidget), amb el mateix model del dia (buildSolarDay: hores d'Open-Meteo si quadren amb l'astronomia, si
+// solar (SunPanel, pestanya Cel), amb el mateix model del dia (buildSolarDay: hores d'Open-Meteo si quadren amb l'astronomia, si
 // no suncalc) i el mateix criteri (upcomingRiseSet). En fa ús el nom accessible de la targeta (detailCardLabel.ts):
 // una hora no canvia cada minut, i així no es desfasa del compte enrere que es veu. Pur, sense React.
 import { buildSolarDay, upcomingRiseSet, type SolarDayModel } from './solarDay';

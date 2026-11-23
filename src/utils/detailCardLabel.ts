@@ -30,7 +30,7 @@ export type DetailCardInput =
   | { id: 'cape'; jkg: number | null | undefined }
   /** aqiData.current, el mateix objecte que rep AqiWidget. */
   | { id: 'aqi'; current: unknown }
-  /** L'instant de la targeta (ms): el nom de la fase és el del dia, com a MoonWidget. */
+  /** L'instant de la pestanya Cel (ms): el nom de la fase és el del dia, com a la fila de la lluna. */
   | { id: 'moon'; nowMs: number }
   | { id: 'sun'; next: NextSunEvent | null }
   /** Nivell de congelació (m): la cota de neu en surt amb calculateSnowLevel, com al giny. */

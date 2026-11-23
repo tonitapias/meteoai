@@ -82,8 +82,8 @@ export function formatClockTime(date: Date | null | undefined, timezone?: string
 }
 
 // --- Sortida/posta de lluna per a un dia local concret, amb detecció "+1d" ---
-// Reimplementa (mateixa tècnica, no compartida per no arriscar una regressió a MoonWidget.tsx)
-// la finestra de 3 dies + comparació via Intl.DateTimeFormat de MoonWidget.tsx:73-125.
+// Finestra de 3 dies + comparació via Intl.DateTimeFormat (la tècnica de l'antiga targeta Fase lunar). El modal ara fa
+// servir getMoonPassForDate (la lluna d'aquell dia); aquesta es manté per als seus tests i usos puntuals.
 
 export interface RiseSetEvent {
   date: Date | null;       // Instant exacte — cal per calcular l'azimut en aquell moment
@@ -137,6 +137,42 @@ export function getMoonRiseSetForDate(
     // Deixem el resultat buit (fallback Risc Zero)
   }
 
+  return result;
+}
+
+/**
+ * La lluna «d'aquell dia»: la sortida del dia local i la posta que la segueix (sovint l'endemà, "+1d"). Si aquell dia la
+ * lluna no surt (passa un dia cada lunació, quan la sortida salta de les 23:xx a les 00:xx de dos dies després), sortida
+ * buida i la posta del dia. Abans, getMoonRiseSetForDate donava la sortida i la posta que cauen en aquella data: de nit,
+ * la posta era la d'aquell matí (ja passada), i un dia sense sortida mostrava la de l'endemà sense el "+1d".
+ */
+export function getMoonPassForDate(
+  localDateStr: string | undefined, lat: number, lon: number, timezone?: string
+): { rise: RiseSetEvent; set: RiseSetEvent } {
+  const result = { rise: { ...EMPTY_EVENT }, set: { ...EMPTY_EVENT } };
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(localDateStr || '');
+  if (!isValidCoord(lat, lon) || !m) return result;
+  try {
+    const tz = typeof timezone === 'string' && timezone.trim() !== '' ? timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const target = `${m[1]}-${m[2]}-${m[3]}`;
+    const dateOf = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+    const anchor = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+    const rises: Date[] = [];
+    const sets: Date[] = [];
+    for (let k = -1; k <= 2; k++) {
+      const t = SunCalc.getMoonTimes(new Date(anchor + k * 86400000), lat, lon);
+      if (t.rise instanceof Date && !isNaN(t.rise.getTime())) rises.push(t.rise);
+      if (t.set instanceof Date && !isNaN(t.set.getTime())) sets.push(t.set);
+    }
+    rises.sort((a, b) => a.getTime() - b.getTime());
+    sets.sort((a, b) => a.getTime() - b.getTime());
+    const rise = rises.find(d => dateOf.format(d) === target);
+    const set = rise ? sets.find(d => d.getTime() > rise.getTime()) : sets.find(d => dateOf.format(d) === target);
+    if (rise) result.rise = { date: rise, formatted: formatClockTime(rise, tz), isNextDay: false };
+    if (set) result.set = { date: set, formatted: formatClockTime(set, tz), isNextDay: dateOf.format(set) > target };
+  } catch {
+    // Resultat buit (fallback Risc Zero)
+  }
   return result;
 }
 

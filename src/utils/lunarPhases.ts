@@ -61,6 +61,28 @@ function lunationIndexAt(ms: number): number {
   return k;
 }
 
+/** Les fases principals d'una lunació (ms UTC), de la lluna nova que l'obre a la que la tanca. */
+export interface Lunation {
+  newMs: number;
+  firstQuarterMs: number;
+  fullMs: number;
+  lastQuarterMs: number;
+  nextNewMs: number;
+}
+
+/** La lunació en curs a `ms` (newMs <= ms < nextNewMs), amb els instants reals de les quatre fases. null si no és vàlid. */
+export function lunationAt(ms: number): Lunation | null {
+  if (!Number.isFinite(ms)) return null;
+  const k = lunationIndexAt(ms);
+  return {
+    newMs: principalPhaseMs(k),
+    firstQuarterMs: principalPhaseMs(k + 0.25),
+    fullMs: principalPhaseMs(k + 0.5),
+    lastQuarterMs: principalPhaseMs(k + 0.75),
+    nextNewMs: principalPhaseMs(k + 1),
+  };
+}
+
 /**
  * Fase lunar 0..1 (0 nova, 0.25 quart creixent, 0.5 plena, 0.75 quart minvant) en un instant.
  * Exacta als quatre instants principals i interpolada en el temps entre ells. NaN si la data no és vàlida.

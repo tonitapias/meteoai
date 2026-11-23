@@ -22,7 +22,7 @@ const renderCard = (data: ExtendedWeatherData) =>
     render(
         <DetailWidgetsGrid
             weatherData={data} aqiData={null} lang="ca" unit="C" freezingLevel={null} ids={['pressure']}
-            onShowSolarModal={noop} onShowMoonModal={noop} onShowStormModal={noop} onShowAqiModal={noop}
+            onShowStormModal={noop} onShowAqiModal={noop}
             onShowUvModal={noop} onShowPressureModal={noop} onShowComfortModal={noop} onShowVisibilityModal={noop}
             onShowCloudLayersModal={noop} onShowSnowLevelModal={noop} onShowWindModal={noop} onShowTemperatureModal={noop}
         />

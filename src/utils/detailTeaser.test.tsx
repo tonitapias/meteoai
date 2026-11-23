@@ -7,7 +7,7 @@ import { getMoonPhase, getMoonPhaseName } from './lunarPhases';
 import { ca } from '../translations/ca';
 import { en } from '../translations/en';
 import { AqiWidget } from '../components/widgets/AqiWidget';
-import { MoonWidget } from '../components/widgets/MoonWidget';
+import { NightPanel } from '../components/sky/NightPanel';
 
 const NOW = Date.UTC(2026, 9, 25, 16, 0);
 
@@ -38,9 +38,8 @@ describe('buildDetailTeaser', () => {
         expect(screen.getByText('RAONABLE')).toBeTruthy();
         expect(items[1].text.toUpperCase()).toBe("QUALITAT DE L'AIRE RAONABLE");
 
-        const phase = getMoonPhase(new Date(NOW));
-        render(<MoonWidget phase={phase} date={NOW} lat={41.73} lon={1.82} lang="ca" />);
-        expect(screen.getByText(items[2].text)).toBeTruthy();
+        const { container } = render(<NightPanel nowMs={NOW} lat={41.73} lon={1.82} timezone="Europe/Madrid" utcOffset={7200} lang="ca" />);
+        expect(container.textContent).toContain(`${items[2].text} · `);
     });
 
     it("amb boira confirmada fa servir el mateix límit que el giny de visibilitat", () => {

@@ -26,7 +26,7 @@ import OfflineSnapshotBanner from '../OfflineSnapshotBanner';
 import { MinutelyPreciseChart } from '../WeatherCharts';
 import TabBar from '../tabs/TabBar';
 import { useMinWidth } from '../solar/useMinWidth';
-import { DASHBOARD_TABS, DETAIL_TAB_WIDGETS, SKY_TAB_WIDGETS, panelElementId, tabElementId, type DashboardTab } from '../tabs/dashboardTabs';
+import { DASHBOARD_TABS, DETAIL_TAB_WIDGETS, panelElementId, tabElementId, type DashboardTab } from '../tabs/dashboardTabs';
 import { pushTabEntryIfNeeded, readTabFromSearch, replaceTabInUrl } from '../tabs/tabHistory';
 import { useTextFieldFocus } from '../tabs/useTextFieldFocus';
 import { SectionSkeleton } from './SectionSkeleton';
@@ -46,13 +46,12 @@ const ForecastSection = lazy(() => import('../ForecastSection'));
 const SmartForecastCharts = lazy(() => import('../SmartForecastCharts'));
 const ConsensusSection = lazy(() => import('../ConsensusSection'));
 const DetailWidgetsGrid = lazy(() => import('../DetailWidgetsGrid'));
+const SkySection = lazy(() => import('../sky/SkySection'));
 const PlanetExtremesCard = lazy(() => import('../planet/PlanetExtremesCard'));
 
 // Detall: 1 columna al mòbil, 2 a tauleta, 3 a escriptori (la temperatura a dalt i la cota de neu a sota, totes dues a tota
 // l'amplada; entremig, els 8 ginys omplen tres files).
 const DETAIL_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 grid-flow-dense';
-// Cel: el cicle solar (doble) i la lluna en una sola fila a escriptori.
-const SKY_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 grid-flow-dense';
 // La pila de cada columna, amb el mateix espai que entre seccions.
 const STACK = 'flex flex-col gap-6 sm:gap-8';
 
@@ -260,7 +259,7 @@ const ForecastPanel = () => {
     );
 };
 
-// Els props comuns de la graella de ginys (Detall i Cel): els mateixos que rebia ExpertWidgets.
+// Els props de la graella de ginys de Detall: els mateixos que rebia ExpertWidgets.
 const useWidgetGridProps = () => {
     const { state, actions, flags } = useAppContext();
     const { calculations } = state;
@@ -271,9 +270,6 @@ const useWidgetGridProps = () => {
         freezingLevel: calculations.currentFreezingLevel ?? null,
         chartDataFull: calculations.chartDataFull,
         effectiveCode: calculations.effectiveWeatherCode,
-        now: state.now.getTime(),
-        onShowSolarModal: () => actions.setShowSolarModal(true),
-        onShowMoonModal: () => actions.setShowMoonModal(true),
         onShowStormModal: () => actions.setShowStormModal(true),
         onShowAqiModal: () => actions.setShowAqiModal(true),
         onShowUvModal: () => actions.setShowUvModal(true),
@@ -299,15 +295,21 @@ const DetailPanel = () => {
     );
 };
 
-// --- Cel: el cicle solar, la lluna i «Més enllà del teu cel» ----------------------------------------------------------
+// --- Cel: el sol, aquesta nit i «Més enllà del teu cel» -----------------------------------------------------------------
 const SkyPanel = () => {
     const { state, actions, flags } = useAppContext();
-    const gridProps = useWidgetGridProps();
     if (!state.weatherData) return null;
     return (
         <>
             <Suspense fallback={<SectionSkeleton />}>
-                <DetailWidgetsGrid weatherData={state.weatherData} ids={SKY_TAB_WIDGETS} className={SKY_GRID_CLASS} {...gridProps} />
+                <SkySection
+                    weatherData={state.weatherData}
+                    daySky={state.calculations.daySky}
+                    lang={flags.lang}
+                    nowMs={state.now.getTime()}
+                    onShowSolarModal={() => actions.setShowSolarModal(true)}
+                    onShowMoonModal={() => actions.setShowMoonModal(true)}
+                />
             </Suspense>
             <Suspense fallback={<SectionSkeleton />}>
                 <PlanetExtremesCard lang={flags.lang} unit={flags.unit} nowMs={state.now.getTime()} onOpen={actions.setPlanetModal} />

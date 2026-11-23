@@ -6,8 +6,6 @@ export * from './SnowLevelWidget';
 export * from './DewPointWidget';
 export * from './CapeWidget';
 export * from './AqiWidget';
-export * from './SunArcWidget';
-export * from './MoonWidget';
 export * from './HourlyForecastWidget';
 export * from './TempRangeBar';
 export * from './VisibilityWidget';

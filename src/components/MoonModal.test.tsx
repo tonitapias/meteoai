@@ -1,12 +1,10 @@
 // src/components/MoonModal.test.tsx
-// Modal Fase lunar amb el llenguatge de la seva targeta: mateixos valors que el giny (fase, il·luminació, edat,
-// posició i pròxima plena), navegació per dies com el modal solar, calendari de 15 dies i hemisferi sud.
+// Modal Fase lunar: mateixos valors que la fila de la lluna del plafó «Aquesta nit» (fase, il·luminació i pròxima
+// plena), navegació per dies com el modal solar, calendari de 15 dies i hemisferi sud.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import MoonModal from './MoonModal';
-import { MoonWidget } from './widgets/MoonWidget';
-import { getMoonPhase } from '../utils/weatherMath';
-import { getMoonAgeDays } from '../utils/lunarPhases';
+import { NightPanel } from './sky/NightPanel';
 import { getCardinalLabel, getMoonCompassPosition } from '../utils/astronomyMath';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
@@ -30,22 +28,19 @@ const navDate = (c: HTMLElement) => c.querySelector('[aria-live]')!.textContent 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
 afterEach(() => { vi.useRealTimers(); });
 
-describe('MoonModal — el mateix que la targeta', () => {
-  it('fase, il·luminació, edat, posició d\'ara i pròxima plena coincideixen amb el giny', () => {
+describe('MoonModal — el mateix que el plafó «Aquesta nit»', () => {
+  it('fase, il·luminació i pròxima plena coincideixen amb la fila de la lluna', () => {
     const { container } = renderModal();
     const card = render(
-      <MoonWidget phase={getMoonPhase(NOW)} ageDays={getMoonAgeDays(NOW)} lat={BCN.lat} lon={BCN.lon} timezone="Europe/Madrid" date={NOW.getTime()} lang="ca" />,
+      <NightPanel lang="ca" lat={BCN.lat} lon={BCN.lon} timezone="Europe/Madrid" utcOffset={7200} nowMs={NOW.getTime()} />,
     ).container.textContent ?? '';
     const h = hero(container);
     expect(h).toContain('Quart Creixent');
-    expect(card).toContain('Quart Creixent');
     expect(h).toContain('50% il·luminada');
-    expect(card).toContain('50% il·luminada');
+    expect(card).toContain('Quart Creixent · 50%');
     expect(h).toContain('Edat 8 dies');
-    expect(card).toContain('Dia 8');
-    // Posició: la targeta diu alçada + punt cardinal; el modal hi afegeix l'azimut en graus.
+    // Posició d'ara al modal: alçada i punt cardinal (el plafó només la marca de nit, sobre el carril de la lluna).
     const p = getMoonCompassPosition(NOW, BCN.lat, BCN.lon)!;
-    expect(card).toContain(`${Math.round(p.altitudeDeg)}° ${getCardinalLabel(p.azimuthDeg, 'ca')}`);
     expect(h).toContain(`+${Math.round(p.altitudeDeg)}°`);
     expect(h).toContain(getCardinalLabel(p.azimuthDeg, 'ca'));
     // Pròxima plena: 26-10 a les 06:11 UTC (USNO) → "en 8 dies" al modal i "8 dies" a la targeta.
@@ -76,28 +71,57 @@ describe('MoonModal — navegació per dies', () => {
     expect(navDate(container)).toMatch(/20/);
     fireEvent.click(screen.getByRole('button', { name: 'Torna a avui' }));
     expect(navDate(container)).toMatch(/^Diumenge, 18 d.octubre$/);
-    expect(screen.getByRole('button', { name: 'Dia anterior' }).getAttribute('aria-disabled')).toBe('true');
+    // Enrere fins a la primera nit de la lunació (lluna nova del 10-10): 8 dies, i prou.
+    const prev = screen.getByRole('button', { name: 'Dia anterior' });
+    expect(prev.getAttribute('aria-disabled')).toBe('false');
+    for (let i = 0; i < 8; i++) fireEvent.click(prev);
+    expect(navDate(container)).toMatch(/10 d.oct/);
+    expect(screen.getByText('Fa 8 dies')).toBeTruthy();
+    expect(prev.getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('el calendari té avui + 14 dies i tocar-ne una fila tria aquell dia', () => {
+  it('el calendari és la lunació sencera (10-10 → 9-11, per setmanes) i tocar-ne un dia el tria', () => {
     const { container } = renderModal();
-    const rows = container.querySelectorAll('ol button');
-    expect(rows).toHaveLength(15);
-    expect(rows[0].getAttribute('aria-current')).toBe('date');
-    expect(rows[0].getAttribute('aria-pressed')).toBe('true');
-    // La fila d'avui diu el mateix que l'heroi (a l'hora real, no al migdia).
-    expect(rows[0].textContent).toContain('50%');
-    fireEvent.click(rows[8]);   // dl. 26: lluna plena
-    expect(rows[8].getAttribute('aria-pressed')).toBe('true');
+    const grid = container.querySelector('ol[aria-label="Tria un dia"]')!;
+    const days = grid.querySelectorAll('button');
+    expect(days).toHaveLength(31);
+    // El 10-10-2026 és dissabte: cinc caselles buides abans (la setmana comença en dilluns).
+    expect(grid.querySelectorAll('li[aria-hidden="true"]')).toHaveLength(5);
+    const today = days[8];
+    expect(today.getAttribute('aria-current')).toBe('date');
+    expect(today.getAttribute('aria-pressed')).toBe('true');
+    expect(today.textContent).toContain('QC');   // el quart creixent és avui
+    // El dia triat: el mateix que l'heroi (a l'hora real) i la lluna d'aquell dia.
+    expect(container.textContent).toMatch(/Avui · dg\. 18 d.oct\..*Quart Creixent · 50%/);
+    fireEvent.click(days[16]);   // dl. 26: lluna plena
+    expect(days[16].getAttribute('aria-pressed')).toBe('true');
     expect(hero(container)).toContain('Lluna Plena');
+    expect(hero(container)).toContain('Lluna del Caçador');
     expect(navDate(container)).toMatch(/26/);
   });
 
-  it('no deixa anar més enllà de 14 dies', () => {
-    renderModal();
+  it('les fases de la lunació a l\'hora exacta, amb el nom de la plena', () => {
+    const { container } = renderModal();
+    expect(container.textContent).toContain("Fases d'aquesta lunació");
+    // Plena del 26-10 a les 04:11 UTC: 05:11 a Barcelona (el 25-10 ja s'ha canviat a l'hora d'hivern).
+    expect(container.textContent).toMatch(/Lluna PlenaLluna del Caçadordl\. 26 d.oct\.05:1\d/);
+  });
+
+  it('«Lunació següent» porta a la seva plena; d\'allà, es torna a la d\'ara', () => {
+    const { container } = renderModal();
+    fireEvent.click(screen.getByRole('button', { name: /Lunació següent/ }));
+    expect(navDate(container)).toMatch(/24 de nov/);
+    expect(hero(container)).toContain('Lluna del Castor');
+    fireEvent.click(screen.getByRole('button', { name: "Torna a la lunació d'ara" }));
+    expect(navDate(container)).toMatch(/^Diumenge, 18 d.octubre$/);
+  });
+
+  it('endavant, fins a l\'última nit de la lunació següent (lluna nova del 9-12)', () => {
+    const { container } = renderModal();
     const next = screen.getByRole('button', { name: 'Dia següent' });
-    for (let i = 0; i < 20; i++) fireEvent.click(next);
+    for (let i = 0; i < 70; i++) fireEvent.click(next);
     expect(next.getAttribute('aria-disabled')).toBe('true');
+    expect(navDate(container)).toMatch(/9 de des/);
   });
 });
 

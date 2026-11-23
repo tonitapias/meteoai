@@ -1,7 +1,8 @@
 // src/components/MoonModal.tsx
 // Modal "Fase lunar", amb el mateix llenguatge que la seva targeta del tauler (la Lluna com és dins de l'anell
 // del cicle) i la mateixa estructura que el modal Cicle solar: capçalera amb el lloc, navegació per dies (fletxes,
-// "Avui", tecles ←/→ i lliscament), targetes opaques i un calendari de 15 dies en llista.
+// "Avui", tecles ←/→ i lliscament), targetes opaques i el calendari de la lunació sencera (de lluna nova a lluna nova),
+// amb les fases principals a l'hora exacta. Es pot anar de la primera nit de la lunació d'ara a l'última de la següent.
 // Pensat per a mòbils de gamma baixa: cap filtre ni animació en bucle; fa servir les classes de closca sm-* del
 // modal solar (solarModal.css: full, vel, capçalera, targetes, botons), que no depenen de cap dada solar.
 //
@@ -9,7 +10,7 @@
 // distància, suncalc al fus de la UBICACIÓ. Avui es calcula a l'hora real (com la targeta); els altres dies, al
 // migdia UTC del dia. "Pròxima plena/nova" sempre és la real des d'ara, no relativa al dia que es mira.
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
 import { Language } from '../translations';
 import { useAstroModalShell } from '../hooks/useAstroModalShell';
@@ -17,9 +18,10 @@ import { useDialogFocus } from '../hooks/useDialogFocus';
 import { swipeDirection } from '../utils/dayNavigation';
 import { getMoonPhase } from '../utils/weatherMath';
 import { getMoonAgeDays, getNamedMoonPhase } from '../utils/lunarPhases';
+import { buildLunationView, lunationRangeLabel, weekdayInitials, type PhaseTag } from '../utils/lunationCalendar';
 import {
   getMoonCompassPosition,
-  getMoonRiseSetForDate,
+  getMoonPassForDate,
   getMoonIlluminationPercent,
   getNextMoonEvent,
   getMoonDistanceCategory,
@@ -33,8 +35,6 @@ import { MoonDisc, MoonWithRing } from './MoonDisc';
 import { SolarDayNav } from './solar/SolarDayNav';
 import './solar/solarModal.css';
 
-/** Últim dia navegable: avui + 14 (la finestra del calendari, com el modal solar). */
-const LAST_OFFSET = 14;
 const MINUS = '−';
 
 interface MoonModalProps {
@@ -50,7 +50,9 @@ interface MoonStrings {
   riseSetTitle: string; rise: string; set: string; nextDayShort: string;
   distance: string; supermoon: string; micromoon: string; perigee: string; apogee: string;
   nextPhases: string; fullMoon: string; newMoon: string; inDaysShort: string; todayShort: string; tomorrowShort: string;
-  folkName: string; calendarTitle: string; chooseDay: string; colDay: string; colPhase: string; source: string;
+  folkName: string; calendarTitle: string; chooseDay: string; source: string;
+  yesterday: string; daysAgo: string; lunationLength: string; phasesTitle: string; nextLunation: string; backToLunation: string;
+  fullOn: string; tags: Record<PhaseTag, string>;
 }
 
 const T: Readonly<Record<Language, MoonStrings>> = {
@@ -63,7 +65,10 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     distance: 'Distància', supermoon: 'Superlluna', micromoon: 'Microlluna', perigee: 'Perigeu', apogee: 'Apogeu',
     nextPhases: 'Pròximes fases', fullMoon: 'Lluna plena', newMoon: 'Lluna nova', inDaysShort: 'en {n} dies',
     todayShort: 'avui', tomorrowShort: 'demà', folkName: 'nom tradicional',
-    calendarTitle: 'Calendari lunar', chooseDay: 'Tria un dia', colDay: 'Dia', colPhase: 'Fase',
+    calendarTitle: 'Calendari lunar', chooseDay: 'Tria un dia',
+    yesterday: 'Ahir', daysAgo: 'Fa {n} dies', lunationLength: 'Lunació de {d} dies i {h} h', phasesTitle: "Fases d'aquesta lunació",
+    nextLunation: 'Lunació següent', backToLunation: "Torna a la lunació d'ara", fullOn: 'Plena {d}',
+    tags: { new: 'nova', fq: 'QC', full: 'plena', lq: 'QM' },
     source: 'Fase i edat: instants reals de les fases principals (algorisme de Meeus). Sortida, posta, posició i distància: càlcul astronòmic per a la ubicació; no depenen de la previsió.',
   },
   es: {
@@ -75,7 +80,10 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     distance: 'Distancia', supermoon: 'Superluna', micromoon: 'Microluna', perigee: 'Perigeo', apogee: 'Apogeo',
     nextPhases: 'Próximas fases', fullMoon: 'Luna llena', newMoon: 'Luna nueva', inDaysShort: 'en {n} días',
     todayShort: 'hoy', tomorrowShort: 'mañana', folkName: 'nombre tradicional',
-    calendarTitle: 'Calendario lunar', chooseDay: 'Elige un día', colDay: 'Día', colPhase: 'Fase',
+    calendarTitle: 'Calendario lunar', chooseDay: 'Elige un día',
+    yesterday: 'Ayer', daysAgo: 'Hace {n} días', lunationLength: 'Lunación de {d} días y {h} h', phasesTitle: 'Fases de esta lunación',
+    nextLunation: 'Lunación siguiente', backToLunation: 'Volver a la lunación actual', fullOn: 'Llena {d}',
+    tags: { new: 'nueva', fq: 'CC', full: 'llena', lq: 'CM' },
     source: 'Fase y edad: instantes reales de las fases principales (algoritmo de Meeus). Salida, puesta, posición y distancia: cálculo astronómico para la ubicación; no dependen de la previsión.',
   },
   en: {
@@ -87,7 +95,10 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     distance: 'Distance', supermoon: 'Supermoon', micromoon: 'Micromoon', perigee: 'Perigee', apogee: 'Apogee',
     nextPhases: 'Next phases', fullMoon: 'Full moon', newMoon: 'New moon', inDaysShort: 'in {n} days',
     todayShort: 'today', tomorrowShort: 'tomorrow', folkName: 'traditional name',
-    calendarTitle: 'Moon calendar', chooseDay: 'Choose a day', colDay: 'Day', colPhase: 'Phase',
+    calendarTitle: 'Moon calendar', chooseDay: 'Choose a day',
+    yesterday: 'Yesterday', daysAgo: '{n} days ago', lunationLength: 'Lunation of {d} days {h} h', phasesTitle: 'Phases of this lunation',
+    nextLunation: 'Next lunation', backToLunation: 'Back to the current lunation', fullOn: 'Full {d}',
+    tags: { new: 'new', fq: 'FQ', full: 'full', lq: 'LQ' },
     source: 'Phase and age: real instants of the principal phases (Meeus algorithm). Rise, set, position and distance: astronomical calculation for the location; they do not depend on the forecast.',
   },
   fr: {
@@ -99,7 +110,10 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     distance: 'Distance', supermoon: 'Superlune', micromoon: 'Microlune', perigee: 'Périgée', apogee: 'Apogée',
     nextPhases: 'Prochaines phases', fullMoon: 'Pleine lune', newMoon: 'Nouvelle lune', inDaysShort: 'dans {n} jours',
     todayShort: "aujourd'hui", tomorrowShort: 'demain', folkName: 'nom traditionnel',
-    calendarTitle: 'Calendrier lunaire', chooseDay: 'Choisir un jour', colDay: 'Jour', colPhase: 'Phase',
+    calendarTitle: 'Calendrier lunaire', chooseDay: 'Choisir un jour',
+    yesterday: 'Hier', daysAgo: 'Il y a {n} jours', lunationLength: 'Lunaison de {d} jours et {h} h', phasesTitle: 'Phases de cette lunaison',
+    nextLunation: 'Lunaison suivante', backToLunation: 'Revenir à la lunaison actuelle', fullOn: 'Pleine {d}',
+    tags: { new: 'NL', fq: 'PQ', full: 'PL', lq: 'DQ' },
     source: 'Phase et âge : instants réels des phases principales (algorithme de Meeus). Lever, coucher, position et distance : calcul astronomique pour le lieu ; ils ne dépendent pas de la prévision.',
   },
 };
@@ -113,16 +127,7 @@ const PHASE_NAME_DICT: Record<Language, string[]> = {
   fr: ['Nouvelle Lune', 'Premier Croissant', 'Premier Quartier', 'Lune Gibbeuse Crois.', 'Pleine Lune', 'Lune Gibbeuse Décrois.', 'Dernier Quartier', 'Dernier Croissant'],
 };
 
-// Noms folklòrics anglosaxons tradicionals (hemisferi Nord). Curiositat cultural, no dada
-// científica — no es mostren a l'hemisferi Sud perquè l'associació estacional s'inverteix.
-const FOLK_FULL_MOON_NAMES: Record<Language, string[]> = {
-  ca: ['Lluna del Llop', 'Lluna de Neu', 'Lluna del Cuc', 'Lluna Rosa', 'Lluna de les Flors', 'Lluna de Maduixa', 'Lluna del Cérvol', 'Lluna de l\'Esturió', 'Lluna de la Collita', 'Lluna del Caçador', 'Lluna del Castor', 'Lluna Freda'],
-  es: ['Luna del Lobo', 'Luna de Nieve', 'Luna del Gusano', 'Luna Rosa', 'Luna de las Flores', 'Luna de Fresa', 'Luna del Ciervo', 'Luna del Esturión', 'Luna de la Cosecha', 'Luna del Cazador', 'Luna del Castor', 'Luna Fría'],
-  en: ['Wolf Moon', 'Snow Moon', 'Worm Moon', 'Pink Moon', 'Flower Moon', 'Strawberry Moon', 'Buck Moon', 'Sturgeon Moon', 'Harvest Moon', "Hunter's Moon", 'Beaver Moon', 'Cold Moon'],
-  fr: ['Lune du Loup', 'Lune de Neige', 'Lune des Vers', 'Lune Rose', 'Lune des Fleurs', 'Lune des Fraises', 'Lune du Cerf', "Lune de l'Esturgeon", 'Lune des Moissons', 'Lune du Chasseur', 'Lune du Castor', 'Lune Froide'],
-};
-
-// Mateixos llindars que la targeta (MoonWidget).
+// Mateixos llindars que la fila de la lluna de la pestanya Cel (getMoonPhaseName).
 const getPhaseName = (phase: number, lang: Language): string => {
   const p = Math.max(0, Math.min(1, phase));
   let idx = 0;
@@ -219,8 +224,10 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   const distanceCategory = viewMoonPos ? getMoonDistanceCategory(viewMoonPos.distanceKm) : 'normal';
   const gaugePercent = viewMoonPos ? getMoonDistanceGaugePercent(viewMoonPos.distanceKm) : 50;
 
+  // La lluna d'aquell dia: la sortida del dia i la posta que la segueix (sovint l'endemà). Abans eren la sortida i la
+  // posta que cauen en aquella data: de nit, «Posta 06:26» era la d'aquell matí, ja passada.
   const riseSet = useMemo(
-    () => (hasValidCoords ? getMoonRiseSetForDate(viewDate, lat, lon, timezone) : null),
+    () => (hasValidCoords ? getMoonPassForDate(viewDate, lat, lon, timezone) : null),
     [hasValidCoords, viewDate, lat, lon, timezone],
   );
   const riseAz = riseSet?.rise.date ? getMoonCompassPosition(riseSet.rise.date, lat, lon) : null;
@@ -229,41 +236,26 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   // Sempre des d'ara (la mateixa funció i el mateix instant de referència que la targeta).
   const nextFull = useMemo(() => getNextMoonEvent('full', now, 45), [now]);
   const nextNew = useMemo(() => getNextMoonEvent('new', now, 45), [now]);
-  const folkName = !isSouth && nextFull && nextFull.daysAhead <= 1 ? FOLK_FULL_MOON_NAMES[safeLang][nextFull.date.getUTCMonth()] : null;
 
-  // Calendari: avui (a l'hora real, com l'heroi i la targeta) i els 14 dies següents (al migdia UTC).
+  // --- La lunació (utils/lunationCalendar.ts): la d'ara i la següent; el calendari és el de la lunació del dia triat ---
+  const lun = useMemo(
+    () => (hasValidCoords
+      ? buildLunationView({ nowMs, liveDate, viewDate, isToday, timezone: timezone ?? null, utcOffsetSec, lat, lon, lang: safeLang })
+      : null),
+    [hasValidCoords, nowMs, liveDate, viewDate, isToday, timezone, utcOffsetSec, lat, lon, safeLang],
+  );
+  const minOffset = lun?.minOffset ?? 0;
+  const maxOffset = lun?.maxOffset ?? 0;
+  const folkName = lun?.folkName ?? null;
+  // Avui, a l'hora real (com l'heroi i la targeta); la resta de dies del calendari, al migdia UTC.
   const nowPhase = getMoonPhase(now);
-  // Hores i dates: un cop per dia i lloc. La fase de la fila d'avui es posa a part (canvia amb el rellotge).
-  const rowsBase = useMemo(() => {
-    if (!hasValidCoords) return [];
-    return Array.from({ length: LAST_OFFSET + 1 }, (_, k) => {
-      const dateStr = addDays(liveDate, k);
-      const anchor = utcNoon(dateStr);
-      const rs = getMoonRiseSetForDate(dateStr, lat, lon, timezone);
-      return {
-        offset: k, dateStr, noonPhase: anchor ? getMoonPhase(anchor) : 0,
-        label: k === 0 ? t.today : formatDateStr(dateStr, locale, 'weekdayDay'),
-        long: formatDateStr(dateStr, locale, 'long'),
-        rise: rs.rise.formatted, set: rs.set.formatted, setNext: rs.set.isNextDay,
-      };
-    });
-  }, [hasValidCoords, liveDate, lat, lon, timezone, locale, t]);
-  const rows = rowsBase.map(r => {
-    const p = r.offset === 0 ? nowPhase : r.noonPhase;
-    return { ...r, phase: p, illum: getMoonIlluminationPercent(p) };
-  });
-  const rangeLabel = `${formatDateStr(liveDate, locale, 'dayMonth')} – ${formatDateStr(addDays(liveDate, LAST_OFFSET), locale, 'dayMonth')}`;
+  const weekdays = useMemo(() => weekdayInitials(locale), [locale]);
 
   // --- Navegació per dies ---
-  const goTo = useCallback((k: number) => setOffset(Math.max(0, Math.min(LAST_OFFSET, k))), [setOffset]);
-  const goPrev = useCallback(() => setOffset(o => Math.max(0, o - 1)), [setOffset]);
-  const goNext = useCallback(() => setOffset(o => Math.min(LAST_OFFSET, o + 1)), [setOffset]);
+  const goTo = useCallback((k: number) => setOffset(Math.max(minOffset, Math.min(maxOffset, k))), [setOffset, minOffset, maxOffset]);
+  const goPrev = useCallback(() => setOffset(o => Math.max(minOffset, o - 1)), [setOffset, minOffset]);
+  const goNext = useCallback(() => setOffset(o => Math.min(maxOffset, o + 1)), [setOffset, maxOffset]);
   const goToday = useCallback(() => setOffset(0), [setOffset]);
-  const selectRow = (k: number, viaPointer: boolean) => {
-    goTo(k);
-    // Amb el dit o el ratolí es torna a dalt per veure el dia triat; amb teclat el focus es queda a la fila.
-    if (viaPointer && scrollRef.current) scrollRef.current.scrollTop = 0;
-  };
 
   // ←/→ a qualsevol lloc del diàleg canvien de dia (com al modal solar), si ningú no ha fet servir la tecla.
   useEffect(() => {
@@ -296,7 +288,8 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
     else if (dir > 0) goNext();
   }, [goPrev, goNext]);
 
-  const relLabel = offset === 0 ? t.today : offset === 1 ? t.tomorrow : fill(t.inDays, offset);
+  const relLabel = offset === 0 ? t.today : offset === 1 ? t.tomorrow : offset === -1 ? t.yesterday
+    : offset > 0 ? fill(t.inDays, offset) : fill(t.daysAgo, -offset);
   const dateLabel = capitalize(formatDateStr(viewDate, locale, isToday ? 'long' : 'short'), locale);
   const navStrings = useMemo(() => ({ dayNav: t.dayNav, prevDay: t.prevDay, nextDay: t.nextDay, backToToday: t.backToToday, today: t.today }), [t]);
 
@@ -330,7 +323,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
             <div className="flex flex-col gap-3 min-[360px]:gap-4 md:grid md:grid-cols-2 md:gap-5 md:items-stretch lg:grid-cols-3 lg:gap-6">
               <div className="md:col-span-2 lg:col-span-3">
                 <SolarDayNav relLabel={relLabel} dateLabel={dateLabel} dateId={dateId} isLive={isToday}
-                  canPrev={offset > 0} canNext={offset < LAST_OFFSET} onPrev={goPrev} onNext={goNext} onToday={goToday} t={navStrings} />
+                  canPrev={offset > minOffset} canNext={offset < maxOffset} onPrev={goPrev} onNext={goNext} onToday={goToday} t={navStrings} />
               </div>
 
               {/* Heroi: la Lluna del dia, com a la targeta */}
@@ -416,42 +409,108 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                 </ul>
               </section>
 
-              {/* Calendari lunar: avui + 14 dies; tocar una fila tria el dia */}
-              <section className="sm-card md:col-span-2 lg:col-span-3" aria-label={t.calendarTitle}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className={LAB}>{t.calendarTitle}</h3>
-                  <span className="text-[11px] text-slate-400 tabular-nums">{rangeLabel}</span>
-                </div>
-                <div className="mt-2 grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8" aria-hidden="true">
-                  {[0, 1].map(k => (
-                    <div key={k} className={`${k === 1 ? 'hidden lg:grid' : 'grid'} grid-cols-[minmax(0,1fr)_28px_3rem_3.25rem_3.75rem] gap-x-2 px-2 h-7 items-center sm-eyebrow`}>
-                      <span>{t.colDay}</span><span>{t.colPhase}</span><span className="text-right">%</span>
-                      <span className="text-right" title={t.rise}>↑</span><span className="text-right" title={t.set}>↓</span>
-                    </div>
-                  ))}
-                </div>
-                <ol className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-[repeat(8,auto)] lg:grid-flow-col lg:gap-x-8" aria-label={t.chooseDay}>
-                  {rows.map(r => {
-                    const selected = r.offset === offset;
-                    return (
-                      <li key={r.dateStr}>
-                        <button type="button" aria-pressed={selected} aria-current={r.offset === 0 ? 'date' : undefined}
-                          aria-label={`${r.long}: ${getPhaseName(r.phase, safeLang)}, ${r.illum}% ${t.illuminated}, ${t.rise} ${r.rise ?? '--:--'}, ${t.set} ${r.set ?? '--:--'}`}
-                          onClick={e => selectRow(r.offset, e.detail > 0)}
-                          className={`sm-focus grid w-full grid-cols-[minmax(0,1fr)_28px_3rem_3.25rem_3.75rem] items-center gap-x-2 rounded-xl px-2 py-1.5 text-left ${selected ? 'bg-indigo-500/[0.12] ring-1 ring-inset ring-indigo-400/40' : 'hover:bg-white/[0.04]'}`}>
-                          <span className={`min-w-0 truncate text-[13px] leading-4 ${r.offset === 0 ? 'font-semibold text-indigo-200' : 'text-slate-200'}`}>{r.label}</span>
-                          <span className="w-6 h-6"><MoonDisc phase={r.phase} south={isSouth} detail={false} /></span>
-                          <span className="text-right font-mono tabular-nums text-[12px] text-slate-300">{r.illum}%</span>
-                          <span className="text-right font-mono tabular-nums text-[12px] text-cyan-200">{r.rise ?? '--:--'}</span>
-                          <span className="text-right font-mono tabular-nums text-[12px] text-amber-200">
-                            {r.set ?? '--:--'}{r.setNext && <sup className="text-[10px] text-slate-400">+1d</sup>}
+              {/* Calendari lunar: la lunació sencera per setmanes; tocar un dia el tria per a tot el modal. A partir de
+                  1024 px, la graella a l'esquerra i les fases a la dreta. */}
+              {lun && (
+                <section className="sm-card md:col-span-2 lg:col-span-3" aria-label={t.calendarTitle}>
+                  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] lg:gap-8">
+                    <div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className={LAB}>{t.calendarTitle}</h3>
+                        <span className="text-[11px] text-slate-400 tabular-nums">{lunationRangeLabel(lun, locale)}</span>
+                      </div>
+                      <p className="mt-1 text-[13px] leading-5 text-slate-300">{t.lunationLength.replace('{d}', String(lun.lengthD)).replace('{h}', String(lun.lengthH))}</p>
+
+                      <div className="mt-3 grid grid-cols-7 pb-1.5 text-center sm-eyebrow" aria-hidden="true">
+                        {weekdays.map(d => <span key={d}>{d}</span>)}
+                      </div>
+                      <ol className="grid grid-cols-7 gap-y-1" aria-label={t.chooseDay}>
+                        {Array.from({ length: lun.lead }, (_, i) => <li key={`b${i}`} aria-hidden="true" />)}
+                        {lun.days.map(d => {
+                          const selected = d.offset === offset;
+                          const isNow = d.offset === 0;
+                          const p = isNow ? nowPhase : d.noonPhase;
+                          return (
+                            <li key={d.dateStr}>
+                              <button type="button" aria-pressed={selected} aria-current={isNow ? 'date' : undefined}
+                                aria-label={`${formatDateStr(d.dateStr, locale, 'long')}: ${getPhaseName(p, safeLang)}, ${getMoonIlluminationPercent(p)}% ${t.illuminated}`}
+                                onClick={() => goTo(d.offset)}
+                                className={`sm-focus flex h-[58px] w-full flex-col items-center gap-0.5 rounded-xl pt-1.5 ${d.offset < 0 ? 'opacity-45' : ''} ${selected ? 'bg-indigo-500/[0.12] ring-1 ring-inset ring-indigo-400/40' : 'hover:bg-white/[0.04]'} ${isNow ? 'shadow-[inset_0_0_0_1.5px_rgba(226,232,240,0.85)]' : ''}`}>
+                                <span className="block w-[26px] h-[26px]"><MoonDisc phase={p} south={isSouth} detail={false} /></span>
+                                <span className={`font-mono tabular-nums text-[11.5px] leading-[13px] ${isNow ? 'text-white font-semibold' : 'text-slate-300'}`}>{d.num}</span>
+                                <span className="text-[8.5px] leading-[10px] uppercase tracking-[0.06em] text-indigo-300">{d.tag ? t.tags[d.tag] : ''}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ol>
+
+                      {/* El dia triat: fase, il·luminació i la lluna d'aquell dia (la sortida i la posta que la segueix) */}
+                      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-indigo-500/[0.10] px-3 py-2.5 ring-1 ring-inset ring-indigo-400/35">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-semibold leading-5 text-indigo-200">
+                            {isToday ? `${t.today} · ` : ''}{formatDateStr(viewDate, locale, 'weekdayDayMonth')}
+                          </p>
+                          <p className="text-[12px] leading-4 text-slate-400">{phaseName} · <span className="font-mono text-slate-200">{illumination}%</span></p>
+                        </div>
+                        <p className="flex shrink-0 gap-3 font-mono tabular-nums text-[13px] whitespace-nowrap">
+                          <span><span className="text-slate-500" aria-hidden="true">↑</span><span className="sr-only">{t.rise}</span> <span className={riseSet?.rise.formatted ? 'text-cyan-200' : 'text-slate-500'}>{riseSet?.rise.formatted ?? '—'}</span></span>
+                          <span>
+                            <span className="text-slate-500" aria-hidden="true">↓</span><span className="sr-only">{t.set}</span> <span className={riseSet?.set.formatted ? 'text-amber-200' : 'text-slate-500'}>{riseSet?.set.formatted ?? '—'}</span>
+                            {riseSet?.set.isNextDay && <sup className="ml-0.5 text-[10px] text-slate-400" title={t.nextDayShort}>+1</sup>}
                           </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Les fases de la lunació a l'hora exacta, amb el nom tradicional de la plena */}
+                    <div className="mt-4 lg:mt-0">
+                      <h4 className={LAB}>{t.phasesTitle}</h4>
+                      <ul className="mt-1">
+                        {lun.phases.map(r => (
+                          <li key={r.key} className={`border-t border-white/[0.06] ${r.past ? 'opacity-50' : ''}`}>
+                            <button type="button" onClick={() => goTo(r.offset)} className="sm-focus flex w-full items-center gap-3 rounded-lg py-2.5 text-left hover:bg-white/[0.03]">
+                              <span className="flex-none w-6 h-6"><MoonDisc phase={r.phase} south={isSouth} detail={false} /></span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-[14px] leading-5 text-slate-100">{r.name}</span>
+                                {(r.folk || r.superMoon) && (
+                                  <span className="block text-[12px] leading-4 text-amber-200/90">
+                                    {r.folk}{r.folk && r.superMoon ? ' · ' : ''}{r.superMoon ? t.supermoon : ''}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="flex-none text-right">
+                                <span className="block text-[12.5px] leading-5 text-slate-300">{formatDateStr(r.dateStr, locale, 'weekdayDayMonth')}</span>
+                                <span className="block font-mono tabular-nums text-[12px] leading-4 text-indigo-200">{r.time}</span>
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      {/* La lunació següent (fins a la seva plena) o, si ja s'hi és, tornar a la d'ara */}
+                      {lun.nextFull ? (
+                        <button type="button" onClick={() => goTo(lun.nextFull!.offset)}
+                          className="sm-focus flex w-full items-center justify-between gap-3 border-t border-white/[0.06] pt-3 pb-1 text-left">
+                          <span className="min-w-0">
+                            <span className="block text-[13.5px] leading-5 text-indigo-200">{t.nextLunation}</span>
+                            <span className="block text-[12px] leading-4 text-slate-400">
+                              {t.fullOn.replace('{d}', formatDateStr(lun.nextFull.dateStr, locale, 'weekdayDayMonth'))}
+                              {lun.nextFull.folk && <> · <span className="text-amber-200/90">{lun.nextFull.folk}</span></>}
+                              {lun.nextFull.superMoon && <> · {t.supermoon}</>}
+                            </span>
+                          </span>
+                          <ChevronRight className="w-4 h-4 flex-none text-indigo-300" aria-hidden="true" />
                         </button>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </section>
+                      ) : lun.gridIsNext ? (
+                        <button type="button" onClick={goToday}
+                          className="sm-focus flex w-full items-center gap-2 border-t border-white/[0.06] pt-3 pb-1 text-left text-[13.5px] text-indigo-200">
+                          <ChevronLeft className="w-4 h-4 flex-none text-indigo-300" aria-hidden="true" />{t.backToLunation}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </section>
+              )}
 
               <p className="px-1 text-[11px] leading-relaxed text-slate-400 md:col-span-2 lg:col-span-3">{t.source}</p>
             </div>
