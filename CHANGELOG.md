@@ -1,8 +1,22 @@
 # Registre de canvis
 
-Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.66.0...v3.67.0](https://github.com/tonitapias/meteoai/compare/v3.66.0...v3.67.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
+Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.67.0...v3.68.0](https://github.com/tonitapias/meteoai/compare/v3.67.0...v3.68.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
 
 Les seccions «Millores publicades entre la vX i la vY» recullen el que es va publicar sense canviar de versió. Les de la v3.26.0 i la v3.9.9, al final, són les notes de les primeres *releases*, tal com es van escriure.
+
+## 📅 Novetats de la v3.68.0: el detall del dia, en una columna
+
+- **La columna del dia.** El detall d'un dia porta la franja del cel de la Previsió girada: les hores de dalt a baix, una per fila, amb el cel de cada hora (els mateixos codis que les icones), la temperatura com una corba que baixa per la columna amb el marge entre els models globals en gris al darrere, la pluja com un histograma de costat i el vent amb la fletxa cap on bufa. Les hores de nit s'enfosqueixen, la sortida i la posta tallen la columna i, avui, una línia marca l'hora en curs. Fa la feina que feien els moments del dia, les targetes i la taula de 24 files.
+- **«Columna | Gràfic».** Un toc torna als gràfics horaris de sempre (Temp · Pluja · Vent · Neu, amb els models).
+- **Els vuit dies, a dalt.** Cada dia amb la seva mini-franja del cel: un toc i canvies de dia. Les fletxes del teclat i el lliscament continuen funcionant.
+- **Un resum que es llegeix.** El cel, la data, la mínima i la màxima en dues línies, i la fiabilitat i el rang probable en una frase en lloc de tres xips. Les xifres del dia (pluja o neu, vent màxim amb la ratxa, UV amb la seva categoria, i les hores de sol o la cota de neu) van en una sola fila.
+- **Avisos oficials del dia.** Si un avís toca aquell dia, surt sota el resum amb les hores i la font, i el dia porta un punt ambre al selector.
+- **Finestra seca.** Els dies que plou, el tram sense pluja més llarg (3 hores o més), marcat també a la columna.
+- **Ratxes i sensació, quan es noten.** La ratxa de cada hora surt en ambre quan és forta (40 km/h o més, o 15 més que el vent mitjà a partir de 25), i la sensació tèrmica quan s'allunya 3° o més de la temperatura.
+- **Més curt i més lleuger.** Al mòbil el detall fa menys de la meitat d'alt (de 3.870 a uns 1.340 px), la creu de tancar ja no tapa la posta ni res, i fora els desenfocaments, les resplendors i les capses dins de capses.
+- **La neu, en cm a tota l'app.** La unitat la tria el que cau més: neu en cm (també una nevada de 0,1 cm) i pluja en mm. Abans, en plena nevada feble, la tira de 24 h deia «0,1 mm», la previsió immediata «0,0mm», el gràfic de les 24 h «Total 0,3 mm · Inici de pluja» i «AROME HD contra el global» «Neu 0 mm». Ara també ho diuen en cm el modal del model regional i el resum que rep la IA, i la llegenda de la tira diu les unitats que hi ha.
+- **Els avisos del radar diuen neu quan neva.** «Podria començar a nevar d'aquí a uns 30 min», «La neu s'ha avançat», «Neu no prevista», o «la pluja o la neu» quan pot ser qualsevol de les dues, segons el cel previst i la temperatura d'ara. A la Pica d'Estats, a -8 °C i nevant, deia «la pluja podria començar».
+- Als quatre idiomes.
 
 ## 🗓️ Novetats de la v3.67.0: la pestanya Previsió, redissenyada
 
