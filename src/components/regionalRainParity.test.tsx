@@ -12,6 +12,8 @@ vi.mock('./WeatherIcons', () => ({
     getWeatherIcon: (code: number | null) => <div data-testid="day-icon" data-code={String(code)} />,
 }));
 vi.mock('./SmartForecastCharts', () => ({ default: () => <div data-testid="smart-charts" /> }));
+// El detall demana els avisos oficials: aquí no han de sortir a la xarxa.
+vi.mock('../hooks/useOfficialAlerts', () => ({ useOfficialAlerts: () => ({ alerts: [] }) }));
 
 const AROME_MODEL = REGIONAL_MODELS.find(m => m.id === 'AROME_HD')!;
 
@@ -118,7 +120,7 @@ describe("pluja regional: la probabilitat i el total d'un dia són els MATEIXOS 
 
     it('i al detall del dia', () => {
         renderDetail(withRegional());
-        expect(screen.getByTestId('note-precip').textContent).toBe('PROB. MÀX 20%');
+        expect(screen.getByTestId('note-precip').textContent).toBe('prob. màx. 20%');
         expect(screen.getByTestId('note-precip').parentElement?.textContent).toContain('4mm');
     });
 

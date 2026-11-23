@@ -1,82 +1,62 @@
-import React, { useMemo, useEffect, useCallback, useRef } from 'react';
-import { X, Calendar, Droplets, Wind, Thermometer, Sun, CloudSun, Mountain, Clock, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
+// src/components/DayDetailModal.tsx
+// El detall d'un dia. Un sol full, com la llista de la Previsió: a dalt la barra amb la creu, el selector de dies (amb la
+// mini-franja de cadascun) i el resum; després els avisos oficials del dia, les xifres i "la columna del dia" (la franja
+// del cel girada, hora per hora). «Columna | Gràfic» torna als gràfics de sempre (Temp · Pluja · Vent · Neu amb els models).
+//
+// Totes les xifres surten de useDayDetailData: la màxima, la mínima, el vent i la pluja són les mateixes que la llista i el
+// gràfic de tendència (vegeu el hook).
+import { useMemo, useEffect, useCallback, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import SmartForecastCharts from './SmartForecastCharts';
 import { ReliabilityDots } from './ReliabilityDots';
-import { DayStatCard } from './dayDetail/DayStatCard';
-import { DayPartsStrip } from './dayDetail/DayPartsStrip';
-import { SunTimesCard } from './dayDetail/SunTimesCard';
+import { DaySelector, type DaySelectorDay } from './dayDetail/DaySelector';
+import { DayFacts, type DayFact } from './dayDetail/DayFacts';
+import { DayAlerts } from './dayDetail/DayAlerts';
+import { DayColumn, type DayColumnLabels } from './dayDetail/DayColumn';
 import { TRANSLATIONS, Language } from '../translations';
-import { ExtendedWeatherData, StrictCurrentWeather } from '../types/weatherLogicTypes';
+import { ExtendedWeatherData, StrictCurrentWeather, type LocationMeta } from '../types/weatherLogicTypes';
 import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale, formatTemp, formatDecimal } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { useDialogFocus } from '../hooks/useDialogFocus';
+import { useOfficialAlerts } from '../hooks/useOfficialAlerts';
 import { hasVisibleRange, type ModelRange } from '../utils/dailyModelSpread';
 import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
 import { isLikelyWet } from '../utils/precipSignal';
 import { getUVCategory } from '../utils/uvIndexUtils';
-import { summarizeDayParts } from '../utils/dayParts';
-import { swipeDirection } from '../utils/dayNavigation';
+import { swipeDirection, FIRST_DETAIL_DAY, LAST_DETAIL_DAY } from '../utils/dayNavigation';
+import { buildDaySky, skyStripBackground } from '../utils/daySky';
+import { buildDayColumn, findDryWindow, temperatureScale, hourFraction, rowOffsetOf } from '../utils/dayColumn';
+import { alertsForDay } from '../utils/alertTime';
 import { getWeatherIcon } from './WeatherIcons';
-import { getHourlyWeatherCode, getHourlyEffectiveCloudCover, resolveIsDay, type HourlySeries } from '../utils/hourlyWeatherCode';
-import { getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { getSafeLatitude, getSafeArrayNum as getSafeArrNum, extractValidArrayNum, getSafeMonthFromIso } from '../utils/weatherMath';
+import { getHourCodesByDate, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { MATRIX_BG } from './widgets/widgetStyles';
 import { isRegionalModelActive } from '../constants/regionalModels';
-
-// DOCTRINA RISC ZERO: Interfície estricta
-interface TableRowData {
-    hour: string;
-    temp: number | null;
-    code: number | null;
-    precipProb: number | null;
-    precipSum: number | null;
-    snowfall: number | null;
-    windSpeed: number | null;
-    isDay: boolean;
-    cloudCover: number | null;
-}
-
-// HELPER RISC ZERO: Extreu l'hora d'un ISO string sense passar per Date/fus horari del navegador
-const getSafeHourFromIso = (isoString: string | undefined): number | null => {
-    if (!isoString || !isoString.includes('T')) return null;
-    const timePart = isoString.split('T')[1];
-    if (!timePart) return null;
-    const hour = parseInt(timePart.slice(0, 2), 10);
-    return isNaN(hour) ? null : hour;
-};
 
 interface DayDetailModalProps {
   weatherData: ExtendedWeatherData | null;
   selectedDayIndex: number | null;
   onClose: () => void;
-  /** Si hi és, el detall es pot canviar al dia anterior/següent (fletxes, ←/→ i lliscant) sense tancar-lo. */
+  /** Si hi és, el detall es pot canviar de dia (selector, ←/→ i lliscant) sense tancar-lo. */
   onSelectDay?: (dayIndex: number) => void;
   unit: WeatherUnit;
   lang: Language;
 }
 
-export default function DayDetailModal({ 
-  weatherData, 
-  selectedDayIndex, 
-  onClose, 
+type HoursView = 'column' | 'chart';
+
+const capitalize = (text: string, locale: string) => text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
+
+export default function DayDetailModal({
+  weatherData,
+  selectedDayIndex,
+  onClose,
   onSelectDay,
-  unit, 
+  unit,
   lang
 }: DayDetailModalProps) {
-  const tRecord = (TRANSLATIONS[lang] || TRANSLATIONS['ca']) as Record<string, unknown>;
-  const tDayDetail = (typeof tRecord.dayDetail === 'object' && tRecord.dayDetail !== null) ? (tRecord.dayDetail as Record<string, string>) : {};
-  
-  const TACTICAL_I18N = useMemo(() => ({
-    detailHeader: lang === 'en' ? 'DAY DETAIL' : lang === 'fr' ? 'DÉTAIL DU JOUR' : lang === 'es' ? 'DETALLE DEL DÍA' : 'DETALL DEL DIA',
-    hourlyHeader: lang === 'en' ? 'HOURLY FORECAST' : lang === 'fr' ? 'PRÉVISIONS HORAIRES' : lang === 'es' ? 'PREVISIÓN POR HORAS' : 'PREVISIÓ PER HORES',
-    colHour: lang === 'en' ? 'HOUR' : lang === 'fr' ? 'HEURE' : 'HORA',
-    colSky: lang === 'en' ? 'SKY' : lang === 'fr' ? 'CIEL' : lang === 'es' ? 'CIELO' : 'CEL',
-    colTemp: 'TEMP',
-    colRain: lang === 'en' ? 'RAIN' : lang === 'fr' ? 'PLUIE' : lang === 'es' ? 'LLUVIA' : 'PLUJA',
-    colWind: lang === 'en' ? 'WIND' : lang === 'es' ? 'VIENTO' : 'VENT',
-    rainChance: lang === 'en' ? 'MAX CHANCE' : lang === 'fr' ? 'PROB. MAX' : lang === 'es' ? 'PROB. MÁX' : 'PROB. MÀX'
-  }), [lang]);
-
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.ca;
+  const td = t.dayDetail;
+  const locale = getSafeLocale(lang);
   const confidenceText = CONFIDENCE_TEXT[lang] || CONFIDENCE_TEXT.ca;
 
   const {
@@ -84,8 +64,16 @@ export default function DayDetailModal({
     hourlyData, comparisonData, snowLevelText, snowLevelRelevant, daylightSec, neighbours, dayIndices, nowIndex
   } = useDayDetailData(weatherData, selectedDayIndex, unit);
 
+  const [view, setView] = useState<HoursView>('column');
+
   // Model regional actiu a la ubicació (p. ex. "AROME HD"), o null si tota la previsió és del model global.
   const regionalModelLabel = isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null;
+
+  // Avisos oficials: la mateixa consulta que la franja de la pestanya Ara (es comparteix uns minuts, vegeu el hook).
+  const loc = weatherData?.location as LocationMeta | undefined;
+  const { alerts } = useOfficialAlerts(loc?.latitude, loc?.longitude, lang);
+  const timeZone = typeof weatherData?.timezone === 'string' ? weatherData.timezone : undefined;
+  const [openedAt] = useState(() => Date.now());
 
   const dialogRef = useRef<HTMLDivElement>(null);
   // Focus dins el diàleg en obrir-lo, Tab que hi dóna la volta i retorn del focus en tancar-lo (com el gràfic de tendència).
@@ -99,21 +87,19 @@ export default function DayDetailModal({
   }, []);
 
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      if (e.target === e.currentTarget) {
-          onClose();
-      }
+      if (e.target === e.currentTarget) onClose();
   }, [onClose]);
 
-  // L'historial del navegador (botó "enrere") ja el gestiona useModalHistory,
-  // registrat des de useViewState.ts — aquí només cal l'atall de teclat Escape.
+  // L'historial del navegador (botó "enrere") ja el gestiona useModalHistory, registrat des de useViewState.ts — aquí
+  // només cal l'atall de teclat Escape.
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Canvi de dia sense tancar el detall: només dins els dies que la llista ja mostra i només si qui obre el
-  // modal ens dóna com canviar-lo (onSelectDay).
+  // Canvi de dia sense tancar el detall: només dins els dies que la previsió ensenya i només si qui obre el modal ens dóna
+  // com canviar-lo (onSelectDay).
   const prevDay = onSelectDay ? neighbours.prev : null;
   const nextDay = onSelectDay ? neighbours.next : null;
   const goToDay = useCallback((target: number | null) => {
@@ -158,166 +144,94 @@ export default function DayDetailModal({
       else if (direction === -1) goToDay(prevDay);
   };
 
-  const formattedPrecipitation = useMemo(() => {
-    if (!dayData || !weatherData || selectedDayIndex === null) return { val: "--", unit: "" };
-    
-    const dailyRaw = weatherData.daily as unknown as Record<string, unknown>;
-    const snowSumArr = dailyRaw.snowfall_sum;
-    const snowSum = Array.isArray(snowSumArr) && typeof snowSumArr[selectedDayIndex] === 'number' 
-        ? (snowSumArr[selectedDayIndex] as number) 
-        : 0;
-    
-    if (typeof dayData.precipSum !== 'number' || isNaN(dayData.precipSum)) {
-        return { val: "--", unit: "" };
-    }
+  // Franja del cel de cada dia (la de la llista de la Previsió) per al selector.
+  const daySky = useMemo(() => {
+      if (!weatherData?.hourly) return {};
+      const hourly = weatherData.hourly as unknown as HourlySeries;
+      const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+      return buildDaySky(hourly, getHourCodesByDate(hourly, elevation, weatherData.hourlyComparison));
+  }, [weatherData]);
 
-    const rawString = formatPrecipitation(dayData.precipSum, snowSum, lang);
-    const [val, u] = rawString.split(' '); 
-    return { val, unit: u };
-  }, [dayData, weatherData, selectedDayIndex, lang]);
+  // Avisos de cada dia del selector (i del dia obert).
+  const dayKeys = useMemo(() => {
+      const times = weatherData?.daily?.time ?? [];
+      const last = Math.min(LAST_DETAIL_DAY, times.length - 1);
+      const keys: Array<{ index: number; key: string }> = [];
+      for (let i = FIRST_DETAIL_DAY; i <= last; i++) {
+          const raw = times[i];
+          if (typeof raw === 'string' && raw.length >= 10) keys.push({ index: i, key: raw.slice(0, 10) });
+      }
+      return keys;
+  }, [weatherData]);
 
-  const tableRows = useMemo<TableRowData[]>(() => {
-    if (!weatherData || !weatherData.hourly || !Array.isArray(weatherData.hourly.time) || dayIndices.length === 0) return [];
+  const alertsByDay = useMemo(() => {
+      const out = new Map<string, ReturnType<typeof alertsForDay>>();
+      for (const { key } of dayKeys) out.set(key, alertsForDay(alerts, key, timeZone, openedAt));
+      return out;
+  }, [alerts, dayKeys, timeZone, openedAt]);
 
-    let sunriseHour = 7;
-    let sunsetHour = 20;
-    
-    if (selectedDayIndex !== null && Array.isArray(weatherData.daily.sunrise) && Array.isArray(weatherData.daily.sunset)) {
-        const sr = weatherData.daily.sunrise[selectedDayIndex];
-        const ss = weatherData.daily.sunset[selectedDayIndex];
-        const parsedSunrise = typeof sr === 'string' ? getSafeHourFromIso(sr) : null;
-        const parsedSunset = typeof ss === 'string' ? getSafeHourFromIso(ss) : null;
-        if (parsedSunrise !== null) sunriseHour = parsedSunrise;
-        if (parsedSunset !== null) sunsetHour = parsedSunset;
-    }
+  const todayKey = typeof weatherData?.current?.time === 'string' ? weatherData.current.time.slice(0, 10) : null;
 
-    const rows: TableRowData[] = [];
-    const hRaw = weatherData.hourly as unknown as Record<string, unknown>;
-    const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
+  const weekDays = useMemo<DaySelectorDay[]>(() => dayKeys.map(({ index, key }) => {
+      const date = new Date(`${key}T12:00:00`);
+      const isToday = key === todayKey;
+      const weekdayShort = date.toLocaleDateString(locale, { weekday: 'short' }).replace(/\.$/, '');
+      const name = isToday ? `${t.today} ${date.getDate()}` : capitalize(date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric' }), locale);
+      const hasAlert = (alertsByDay.get(key)?.length ?? 0) > 0;
+      return {
+          index,
+          abbr: isToday && t.today.length <= 5 ? t.today : weekdayShort,
+          date: date.getDate(),
+          aria: hasAlert ? `${name}, ${td.dayHasAlert}` : name,
+          strip: skyStripBackground(daySky[key] ?? []),
+          hasAlert
+      };
+  }), [dayKeys, todayKey, locale, t.today, td.dayHasAlert, alertsByDay, daySky]);
 
-    // [NETEJA] Abans: for (let i=0; i<24; i++) amb idx = startIndex + i, calculat amb
-    // un findIndex propi — assumia un bloc contigu de 24 hores. Ara reutilitzem
-    // dayIndices del hook (useDayDetailData), que filtra per data real i és robust
-    // encara que hi hagi menys/més de 24 hores o algun forat.
-    for (const idx of dayIndices) {
-        const time = weatherData.hourly.time[idx];
-        if (typeof time !== 'string') continue;
-
-        // DOCTRINA RISC ZERO: temp/pluja/vent es mostren directament a la taula —
-        // si falten, null (i "--" a la UI, ja implementat més avall), mai un 0
-        // fals. windForCalc alimenta només getInversionCorrectedTemp, que encara
-        // necessita un número.
-        const rawTemp = extractValidArrayNum(hRaw.temperature_2m, idx);
-        const precipProb = extractValidArrayNum(hRaw.precipitation_probability, idx);
-        const precipSum = extractValidArrayNum(hRaw.precipitation, idx);
-        const snowfall = extractValidArrayNum(hRaw.snowfall, idx);
-        const windSpeed = extractValidArrayNum(hRaw.wind_speed_10m, idx);
-
-        const windForCalc = windSpeed ?? 0;
-
-        // Capes de núvols: només per a la correcció d'inversió de la temperatura
-        // mostrada (el codi de la icona el calcula getHourlyWeatherCode).
-        const cloudLow = getSafeArrNum(hRaw.cloud_cover_low, idx, 0);
-        const cloudMid = getSafeArrNum(hRaw.cloud_cover_mid, idx, 0);
-        const cloudHigh = getSafeArrNum(hRaw.cloud_cover_high, idx, 0);
-
-        // Dia/nit: l'`is_day` de l'API (exacte al minut) mana. L'aproximació per hora
-        // sencera de sortida/posta només és l'última reserva: sempre falla a les hores
-        // frontera (sortida 07:35 → donava "dia" a les 07:00, encara de nit; posta 19:53
-        // → donava "nit" a les 19:00, encara de dia) i deixava aquesta taula amb una
-        // icona diferent de la de l'evolució horària per a la mateixa hora.
-        const currentHour = parseInt(time.split('T')[1]?.slice(0, 2) || "0", 10);
-        const isDay = resolveIsDay(hRaw, idx, () => currentHour >= sunriseHour && currentHour < sunsetHour);
-        const isDayNum = isDay ? 1 : 0;
-
-        // Codi de la icona: font única (utils/hourlyWeatherCode.ts), la mateixa que fan
-        // servir Forecast24h i el modal del model regional.
-        const finalCode = getHourlyWeatherCode(hRaw as HourlySeries, idx, elevation, weatherData.hourlyComparison);
-
-        // Sense temperatura real d'aquesta hora, no té sentit "corregir-la" —
-        // es manté null i la UI ja sap mostrar "--°" (vegeu hasTemp més avall).
-        const displayTemp = rawTemp !== null
-            ? getInversionCorrectedTemp(
-                {
-                    temperature_2m: rawTemp,
-                    cloud_cover_low: cloudLow,
-                    cloud_cover_mid: cloudMid,
-                    cloud_cover_high: cloudHigh,
-                    wind_speed_10m: windForCalc,
-                    is_day: isDayNum
-                } as unknown as StrictCurrentWeather,
-                getSafeMonthFromIso(time),
-                getSafeLatitude(weatherData?.location)
-            )
-            : null;
-
-        rows.push({
-            hour: time.split('T')[1]?.slice(0, 5) || "--:--",
-            temp: displayTemp,
-            code: finalCode, // [Codi processat per motor]
-            precipProb,
-            precipSum,
-            snowfall,
-            windSpeed,
-            isDay,
-            cloudCover: getHourlyEffectiveCloudCover(hRaw as HourlySeries, idx)
-        });
-    }
-
-    return rows;
-  }, [weatherData, selectedDayIndex, dayIndices]);
-
-  // Resum per franges (matinada, matí, tarda, nit) de les MATEIXES files que mostra la taula.
-  const dayParts = useMemo(() => summarizeDayParts(tableRows), [tableRows]);
+  // La columna del dia: les mateixes hores que el gràfic (hourlyData) amb el cel del motor i els models globals.
+  const columnRows = useMemo(() => {
+      if (!weatherData?.hourly) return [];
+      return buildDayColumn({
+          hourly: weatherData.hourly as unknown as HourlySeries,
+          dayIndices,
+          primary: hourlyData,
+          comparison: comparisonData,
+          elevation: typeof weatherData.elevation === 'number' ? weatherData.elevation : 0,
+          hourlyComparison: weatherData.hourlyComparison,
+          unit
+      });
+  }, [weatherData, dayIndices, hourlyData, comparisonData, unit]);
+  const tempScale = useMemo(() => temperatureScale(columnRows), [columnRows]);
+  const dryWindow = useMemo(() => findDryWindow(columnRows), [columnRows]);
 
   if (!dayData) return null;
 
   const formatTime = (isoString?: string) => {
-      if (!isoString || !isoString.includes('T')) return "--:--";
-      const timePart = isoString.split('T')[1];
-      return timePart ? timePart.slice(0, 5) : "--:--";
+      if (!isoString || !isoString.includes('T')) return null;
+      return isoString.split('T')[1]?.slice(0, 5) || null;
   };
 
   const formatDate = (isoString: string) => {
       try {
-          // [FIX PRECISIÓ] Forcem hora local (T12:00:00) perquè una data bare
-          // "YYYY-MM-DD" no es llegeixi com a mitjanit UTC i mostri el dia anterior
-          // en fusos horaris darrere d'UTC. Mateix fix que ForecastSection.tsx.
+          // [FIX PRECISIÓ] Hora local (T12:00:00) perquè una data "YYYY-MM-DD" no es llegeixi com a mitjanit UTC i mostri
+          // el dia anterior en fusos horaris darrere d'UTC. Majúscula només a la primera lletra (auditoria d'UX, B1).
           const datePart = isoString.includes('T') ? isoString.split('T')[0] : isoString;
-          const text = new Date(datePart + 'T12:00:00').toLocaleDateString(getSafeLocale(lang), {
-              weekday: 'long', day: 'numeric', month: 'long'
-          });
-          // Majúscula només a la primera lletra: la classe CSS capitalize la posava a cada paraula («Dimarts, 17 De
-          // Novembre», auditoria d'UX del 16/11/2026, B1).
-          return text.charAt(0).toLocaleUpperCase(getSafeLocale(lang)) + text.slice(1);
+          const text = new Date(datePart + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+          return capitalize(text, locale);
       } catch { return isoString; }
   };
 
-  // Màxima, mínima i vent màxim vénen de les HORES del dia (vegeu useDayDetailData): són les mateixes
-  // xifres que la llista de 7 dies i que el gràfic i la taula d'aquest mateix detall.
+  // Màxima, mínima i vent màxim vénen de les HORES del dia (vegeu useDayDetailData): les mateixes xifres que la llista de
+  // 7 dies i que la columna i el gràfic d'aquest mateix detall.
   const safeMaxTemp = typeof extremes?.max === 'number' && !isNaN(extremes.max) ? Math.round(extremes.max) : '--';
   const safeMinTemp = typeof extremes?.min === 'number' && !isNaN(extremes.min) ? Math.round(extremes.min) : '--';
   const safeWindMax = typeof windMax === 'number' && !isNaN(windMax) ? Math.round(windMax) : '--';
   const safeUvMax = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? formatDecimal(dayData.uvMax, lang) : '--';
 
-  const safeSnowLevel = snowLevelText;
-  const snowLevelUnit = '';
-
-  // Etiquetes de les targetes: el bloc `dayDetail` de les traduccions (p. ex. "VENT MÀX"), no les paraules
-  // soltes de l'app ("Vent"), que hi feien semblar un vent mitjà quan és el màxim del dia.
-  const labelPrecip = tDayDetail.precip || TACTICAL_I18N.colRain;
-  const labelWind = tDayDetail.wind || (lang === 'en' ? 'MAX WIND' : lang === 'fr' ? 'VENT MAX' : lang === 'es' ? 'VIENTO MÁX' : 'VENT MÀX');
-  const labelUv = tDayDetail.uv || 'UV';
-  const labelSnow = tDayDetail.snowLevel || (typeof tRecord.snowLevel === 'string' ? tRecord.snowLevel : 'COTA NEU');
-  const labelSunrise = tDayDetail.sunrise || (typeof tRecord.sunrise === 'string' ? tRecord.sunrise : 'SORTIDA');
-  const labelSunset = tDayDetail.sunset || (typeof tRecord.sunset === 'string' ? tRecord.sunset : 'POSTA');
-  const labelClose = typeof tRecord.closeWindow === 'string' ? tRecord.closeWindow : 'Tancar finestra';
-  const labelMax = typeof tRecord.max === 'string' ? tRecord.max : 'Màx';
-  const labelMin = typeof tRecord.min === 'string' ? tRecord.min : 'Mín';
-
-  // Fiabilitat, rang probable i origen de les temperatures del dia: la mateixa informació que ja dóna
-  // el gràfic de tendència, perquè una xifra sense aquest context sembla més segura del que és.
-  // El rang és en °C (com les xifres de useDayDetailData) i es passa a la unitat de l'usuari en mostrar-lo.
+  // Fiabilitat, rang probable i origen de les temperatures del dia (com al gràfic de tendència): una xifra sense aquest
+  // context sembla més segura del que és. El rang és en °C i es passa a la unitat de l'usuari en mostrar-lo.
+  const labelMax = typeof t.max === 'string' ? t.max : 'Màx';
+  const labelMin = typeof t.min === 'string' ? t.min : 'Mín';
   const formatRange = (r: ModelRange) => `${formatTemp(r.low, unit)}–${formatTemp(r.high, unit)}°`;
   const maxRange = spread?.maxProbable ?? null;
   const minRange = spread?.minProbable ?? null;
@@ -326,44 +240,97 @@ export default function DayDetailModal({
       hasVisibleRange(minRange) ? `${labelMin} ${formatRange(minRange)}` : null
   ].filter((p): p is string => p !== null);
   const reliabilityLevel = spread?.reliability ?? null;
-  // Només hi ha origen que dir quan la ubicació té model regional: un dia de model global entre dies
-  // regionals és justament el salt que l'usuari ha de poder explicar-se.
+  // Només hi ha origen que dir quan la ubicació té model regional: un dia de model global entre dies regionals és
+  // justament el salt que l'usuari ha de poder explicar-se.
   const sourceLabel = regionalModelLabel ? (isRegionalDay ? regionalModelLabel : confidenceText.globalModel) : null;
-
-  const precipNote = precipProbMax !== null ? `${TACTICAL_I18N.rainChance} ${Math.round(precipProbMax)}%` : undefined;
-
-  const labelGusts = tDayDetail.gusts || 'RATXES';
-  const gustsNote = gustsMax !== null ? `${labelGusts} ${Math.round(gustsMax)} km/h` : undefined;
-
-  // Categoria de risc de l'índex UV amb la mateixa taula (i colors) que el widget d'UV i el modal solar.
-  const uvCategory = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? getUVCategory(dayData.uvMax) : null;
-
-  // Quarta targeta contextual: la cota de neu quan hi pot haver neu; si no, les hores de sol (sobre les de llum).
-  const labelSunshine = tDayDetail.sunshine || 'HORES DE SOL';
-  const sunshineValue = formatHoursMinutes(dayData.sunshineSec);
-  const sunshineNote = sunshineValue !== '--' && daylightSec !== null
-      ? `${tDayDetail.outOf || 'de'} ${formatHoursMinutes(daylightSec)}`
-      : undefined;
-
-  const labelNow = tDayDetail.now || 'ARA';
-  const labelPrevDay = tDayDetail.prevDay || 'Dia anterior';
-  const labelNextDay = tDayDetail.nextDay || 'Dia següent';
-  const partLabels = {
-      night: tDayDetail.partNight || 'Matinada',
-      morning: tDayDetail.partMorning || 'Matí',
-      afternoon: tDayDetail.partAfternoon || 'Tarda',
-      evening: tDayDetail.partEvening || 'Nit'
-  };
 
   // Estat del cel del dia amb la mateixa etiqueta que la resta de l'app (p. ex. "Majorment serè").
   const skyLabel = dayCode !== null
       ? getWeatherLabel({ weather_code: dayCode } as unknown as StrictCurrentWeather, lang, avgDaylightClouds)
       : '';
 
-  // Hora local d'"ara" si el dia mostrat és avui (marca la franja i la fila en curs i atenua el que ja ha passat).
-  const nowRowHour = nowIndex !== null ? parseInt(tableRows[nowIndex]?.hour?.slice(0, 2) ?? '', 10) : NaN;
-  const nowHour = isNaN(nowRowHour) ? null : nowRowHour;
+  // Xifres del dia. La quarta és contextual: la cota de neu quan hi pot haver neu; si no, les hores de sol.
+  const dailyRaw = weatherData?.daily as unknown as Record<string, unknown> | undefined;
+  const snowSumArr = dailyRaw?.snowfall_sum;
+  const snowSum = Array.isArray(snowSumArr) && selectedDayIndex !== null && typeof snowSumArr[selectedDayIndex] === 'number'
+      ? (snowSumArr[selectedDayIndex] as number)
+      : 0;
+  const [precipValue, precipUnit] = typeof dayData.precipSum === 'number' && !isNaN(dayData.precipSum)
+      ? formatPrecipitation(dayData.precipSum, snowSum, lang).split(' ')
+      : ['--', ''];
+  const uvCategory = typeof dayData.uvMax === 'number' && !isNaN(dayData.uvMax) ? getUVCategory(dayData.uvMax) : null;
+  const sunshineValue = formatHoursMinutes(dayData.sunshineSec);
 
+  // Si la xifra és de neu (cm), l'etiqueta també: «Pluja 4 cm» no té sentit.
+  const precipLabel = precipUnit === 'cm' ? capitalize(t.forecastWeek.sky.snow, locale) : td.rainShort;
+
+  const facts: DayFact[] = [
+      {
+          label: precipLabel, value: precipValue, unit: precipUnit,
+          note: precipProbMax !== null ? `${td.maxChance} ${Math.round(precipProbMax)}%` : undefined,
+          noteClass: isLikelyWet(precipProbMax) ? 'text-cyan-300' : 'text-slate-400', noteTestId: 'note-precip', testId: 'stat-precip'
+      },
+      {
+          label: td.wind, value: safeWindMax, unit: 'km/h',
+          note: gustsMax !== null ? `${td.gustsShort} ${Math.round(gustsMax)} km/h` : undefined,
+          noteTestId: 'note-gusts', testId: 'stat-wind'
+      },
+      {
+          label: td.uv, value: safeUvMax,
+          note: uvCategory ? uvCategory.label[lang].toLocaleLowerCase(locale) : undefined,
+          noteClass: uvCategory?.color, noteTestId: 'note-uv', testId: 'stat-uv'
+      },
+      snowLevelRelevant
+          ? { label: td.snowLevel, value: snowLevelText, testId: 'stat-snow' }
+          : {
+              label: td.sunShort, value: sunshineValue, testId: 'stat-sunshine', noteTestId: 'note-sunshine',
+              note: sunshineValue !== '--' && daylightSec !== null ? `${td.outOf} ${formatHoursMinutes(daylightSec)}` : undefined
+          }
+  ];
+
+  // Sol i "ara" dins la columna.
+  const sunrise = formatTime(dayData.sunrise);
+  const sunset = formatTime(dayData.sunset);
+  const sunriseOffset = rowOffsetOf(columnRows, hourFraction(dayData.sunrise));
+  const sunsetOffset = rowOffsetOf(columnRows, hourFraction(dayData.sunset));
+  const nowPoint = nowIndex !== null ? hourlyData[nowIndex] : undefined;
+  const nowRow = nowPoint ? columnRows.findIndex(r => r.time === nowPoint.time) : -1;
+  const nowFraction = hourFraction(typeof weatherData?.current?.time === 'string' ? weatherData.current.time : null);
+  const nowOffset = nowRow !== -1 && nowFraction !== null ? nowRow + (nowFraction - Math.floor(nowFraction)) : null;
+
+  const dayAlerts = alertsByDay.get(dayData.date.slice(0, 10)) ?? [];
+
+  const columnLabels: DayColumnLabels = {
+      parts: [td.partNight, td.partMorning, td.partAfternoon, td.partEvening],
+      rain: td.rainShort,
+      wind: td.windShort,
+      daylight: td.daylight,
+      dryWindow: td.dryWindow,
+      legendForecast: td.legendForecast,
+      legendBand: td.legendBand,
+      legendRain: td.legendRain,
+      legendFeels: td.legendFeels,
+      legendGust: td.legendGust,
+      legendSun: td.legendSun,
+      legendWind: td.legendWind,
+      now: td.now,
+      feelsWord: td.feelsWord,
+      gustsWord: td.gustsShort,
+      rainChanceWord: td.rainChanceWord,
+      sky: t.forecastWeek.sky
+  };
+
+  const viewButton = (value: HoursView, label: string) => (
+      <button
+          type="button"
+          data-testid={`view-${value}`}
+          aria-pressed={view === value}
+          onClick={() => setView(value)}
+          className={`h-[30px] px-3 rounded-[9px] text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${view === value ? 'bg-white/[0.08] font-semibold text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}
+      >
+          {label}
+      </button>
+  );
 
   return (
     <div
@@ -371,331 +338,137 @@ export default function DayDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="day-detail-modal-title"
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#020617]/95 backdrop-blur-xl animate-in fade-in duration-200"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#03050a]/90 animate-in fade-in duration-200"
         onClick={handleBackdropClick}
     >
       <div
           ref={scrollRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          className="bg-[#050608] sm:border border-white/10 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[95vh] overflow-y-auto custom-scrollbar sm:rounded-[2rem] shadow-2xl relative sm:ring-1 sm:ring-white/5"
+          className="relative w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[94vh] overflow-y-auto custom-scrollbar bg-[#0a0b11] sm:rounded-[2rem] sm:border sm:border-white/[0.07] shadow-2xl"
       >
-          
-          <button 
-            onClick={onClose}
-            className="fixed sm:absolute top-4 right-4 md:top-5 md:right-5 p-3 sm:p-2 bg-black/50 sm:bg-slate-900 rounded-full text-slate-400 hover:text-cyan-400 border border-white/10 sm:border-slate-700 hover:border-cyan-500/50 backdrop-blur-md transition-all z-50 hover:rotate-90 duration-300 shadow-md active:scale-95"
-            aria-label={labelClose}
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="relative min-h-full bg-gradient-to-b from-[#0e1018] to-[#0a0b11]">
+          <div className={MATRIX_BG}></div>
 
-          <div className="p-6 pb-8 bg-gradient-to-b from-[#0f111a] to-[#050608] border-b border-white/5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-60 shadow-[0_0_15px_rgba(34,211,238,0.5)] z-20"></div>
-              <div className={MATRIX_BG}></div>
-              <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[300px] h-[100px] bg-cyan-500/10 rounded-[100%] blur-[40px] pointer-events-none"></div>
-
-              <div className="flex flex-col items-center justify-center text-center relative z-10 pt-6 sm:pt-2">
-                  <div className="flex items-center gap-2 text-cyan-400 font-black uppercase tracking-[0.3em] text-[10px] mb-3 bg-cyan-950/40 px-3 py-1.5 rounded-md border border-cyan-500/30 backdrop-blur-md shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-                      <Calendar className="w-3.5 h-3.5" /> {tDayDetail.forecast || TACTICAL_I18N.detailHeader}
-                  </div>
-                  
-                  {/* Graella fixa (fletxa · títol · fletxa): les fletxes no es mouen segons la llargada del dia (B14). */}
-                  <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 md:gap-4 w-full">
-                      {onSelectDay && (
-                          <button
-                              type="button"
-                              data-testid="day-prev"
-                              style={{ gridColumn: 1, justifySelf: 'center' }}
-                              onClick={() => goToDay(prevDay)}
-                              disabled={prevDay === null}
-                              aria-label={labelPrevDay}
-                              className="shrink-0 p-2 md:p-2.5 rounded-full border border-white/10 bg-black/40 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 transition-colors disabled:opacity-25 disabled:pointer-events-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+          {/* Barra de dalt: la creu dins del flux, mai sobre el contingut */}
+          <div className="sticky top-0 z-20 h-14 flex items-center justify-between gap-3 pl-5 pr-2 sm:pl-6 sm:pr-3 bg-[#0e1018] border-b border-white/[0.05]">
+              <span className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                  {td.forecast}
+                  {sourceLabel && (
+                      <>
+                          <span aria-hidden="true"> · </span>
+                          <span
+                              data-testid="day-source"
+                              data-regional={isRegionalDay}
+                              className={isRegionalDay ? 'text-cyan-300' : 'text-slate-400'}
                           >
-                              <ChevronLeft className="w-5 h-5" />
-                          </button>
-                      )}
-                      <h2 id="day-detail-modal-title" className="col-start-2 text-center text-3xl md:text-5xl font-black text-white tracking-tight mb-2 drop-shadow-lg min-w-0">
-                          {formatDate(dayData.date)}
-                      </h2>
-                      {onSelectDay && (
-                          <button
-                              type="button"
-                              data-testid="day-next"
-                              style={{ gridColumn: 3, justifySelf: 'center' }}
-                              onClick={() => goToDay(nextDay)}
-                              disabled={nextDay === null}
-                              aria-label={labelNextDay}
-                              className="shrink-0 p-2 md:p-2.5 rounded-full border border-white/10 bg-black/40 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 transition-colors disabled:opacity-25 disabled:pointer-events-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
-                          >
-                              <ChevronRight className="w-5 h-5" />
-                          </button>
-                      )}
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mt-4">
-                  {dayCode !== null && (
-                      <div data-testid="day-sky" className="flex items-center gap-3">
-                          {getWeatherIcon(dayCode, "w-12 h-12 md:w-14 md:h-14", true, 0, windMax ?? 0, null, 0, avgDaylightClouds)}
-                          {skyLabel && skyLabel !== '---' && (
-                              <span data-testid="day-sky-label" className="max-w-[9rem] text-left text-sm md:text-base font-black uppercase tracking-widest leading-tight text-slate-200">
-                                  {skyLabel}
-                              </span>
-                          )}
-                      </div>
-                  )}
-
-                  <div className="flex items-center justify-center gap-6 bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner backdrop-blur-md">
-                      <div className="flex items-center gap-2">
-                          <ArrowUp className={`w-4 h-4 ${safeMaxTemp !== '--' ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]' : 'text-slate-600'}`} />
-                          <span data-testid="day-max" className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMaxTemp !== '--' ? 'text-slate-100' : 'text-slate-600'}`}>
-                              {safeMaxTemp}°
+                              {sourceLabel}
                           </span>
-                      </div>
-                      <div className="w-px h-6 bg-white/10"></div>
-                      <div className="flex items-center gap-2">
-                          <ArrowDown className={`w-4 h-4 ${safeMinTemp !== '--' ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'text-slate-600'}`} />
-                          <span data-testid="day-min" className={`text-3xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-500 ${safeMinTemp !== '--' ? 'text-slate-300' : 'text-slate-600'}`}>
-                              {safeMinTemp}°
-                          </span>
-                      </div>
-                  </div>
-                  </div>
-
-                  {(reliabilityLevel || rangeParts.length > 0 || sourceLabel) && (
-                      <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-                          {reliabilityLevel && (
-                              <span
-                                  data-testid="day-reliability"
-                                  data-level={reliabilityLevel}
-                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-widest text-slate-300 backdrop-blur-md"
-                              >
-                                  <ReliabilityDots level={reliabilityLevel} />
-                                  {confidenceText.reliability[reliabilityLevel]}
-                              </span>
-                          )}
-                          {rangeParts.length > 0 && (
-                              <span
-                                  data-testid="day-probable-range"
-                                  className="inline-block px-2.5 py-1.5 rounded-full border border-white/10 bg-black/40 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 tabular-nums backdrop-blur-md"
-                              >
-                                  {confidenceText.probableRange}:{' '}
-                                  {/* Si a mòbil no hi cap tot en una línia, el salt cau entre la màxima i la mínima, mai dins d'un rang. */}
-                                  {rangeParts.map((part, i) => (
-                                      <React.Fragment key={part}>
-                                          {i > 0 ? ' ' : ''}
-                                          <span className="whitespace-nowrap">{i > 0 ? '· ' : ''}{part}</span>
-                                      </React.Fragment>
-                                  ))}
-                              </span>
-                          )}
-                          {sourceLabel && (
-                              <span
-                                  data-testid="day-source"
-                                  data-regional={isRegionalDay}
-                                  className={`inline-flex items-center px-2.5 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest backdrop-blur-md ${isRegionalDay ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-white/5 border-white/10 text-slate-400'}`}
-                              >
-                                  {sourceLabel}
-                              </span>
-                          )}
-                      </div>
+                      </>
                   )}
-              </div>
+              </span>
+              <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={t.closeWindow}
+                  className="shrink-0 w-11 h-11 flex items-center justify-center rounded-[14px] border border-white/10 bg-black/30 text-slate-300 hover:text-white hover:border-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+              >
+                  <X className="w-5 h-5" />
+              </button>
           </div>
 
-          <div className="p-4 md:p-8 space-y-6 relative z-10">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <DayStatCard
-                    icon={Droplets}
-                    label={labelPrecip}
-                    value={formattedPrecipitation.val}
-                    sub={formattedPrecipitation.unit}
-                    note={precipNote}
-                    noteTestId="note-precip"
-                    noteClass={isLikelyWet(precipProbMax) ? 'text-blue-300' : 'text-slate-600'}
-                    reserveNote
-                    color="text-blue-400"
-                    glowClasses="shadow-[0_0_12px_rgba(96,165,250,0.25)] group-hover:shadow-[0_0_20px_rgba(96,165,250,0.5)]"
-                />
-                <DayStatCard
-                    icon={Wind}
-                    label={labelWind}
-                    value={safeWindMax}
-                    sub={safeWindMax !== '--' ? "km/h" : ""}
-                    note={gustsNote}
-                    noteTestId="note-gusts"
-                    noteClass="text-emerald-300/80"
-                    reserveNote
-                    color="text-emerald-400"
-                    glowClasses="shadow-[0_0_12px_rgba(52,211,153,0.25)] group-hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]"
-                />
-                <DayStatCard
-                    icon={Sun}
-                    label={labelUv}
-                    value={safeUvMax}
-                    sub=""
-                    note={uvCategory ? uvCategory.label[lang] : undefined}
-                    noteTestId="note-uv"
-                    noteClass={uvCategory?.color}
-                    reserveNote
-                    color="text-amber-400"
-                    glowClasses="shadow-[0_0_12px_rgba(251,191,36,0.25)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.5)]"
-                />
-                {snowLevelRelevant ? (
-                    <DayStatCard
-                        testId="stat-snow"
-                        icon={Mountain}
-                        label={labelSnow}
-                        value={safeSnowLevel}
-                        sub={snowLevelUnit}
-                        reserveNote
-                        color="text-indigo-400"
-                        glowClasses="shadow-[0_0_12px_rgba(129,140,248,0.25)] group-hover:shadow-[0_0_20px_rgba(129,140,248,0.5)]"
-                    />
-                ) : (
-                    <DayStatCard
-                        testId="stat-sunshine"
-                        icon={CloudSun}
-                        label={labelSunshine}
-                        value={sunshineValue}
-                        sub=""
-                        note={sunshineNote}
-                        noteTestId="note-sunshine"
-                        noteClass="text-amber-300/80"
-                        reserveNote
-                        color="text-amber-300"
-                        glowClasses="shadow-[0_0_12px_rgba(252,211,77,0.25)] group-hover:shadow-[0_0_20px_rgba(252,211,77,0.5)]"
-                    />
-                )}
-            </div>
-
-            <SunTimesCard
-                sunriseLabel={labelSunrise}
-                sunsetLabel={labelSunset}
-                sunrise={formatTime(dayData.sunrise)}
-                sunset={formatTime(dayData.sunset)}
-                duration={daylightSec !== null ? formatHoursMinutes(daylightSec) : null}
-                durationLabel={tDayDetail.daylight || 'de llum'}
-            />
-
-            <DayPartsStrip
-                parts={dayParts}
-                title={tDayDetail.partsTitle || 'MOMENTS DEL DIA'}
-                labels={partLabels}
-                nowLabel={labelNow}
-                nowHour={nowHour}
-                lang={lang}
-            />
-
-            <div data-no-swipe className="relative overflow-hidden bg-[#0a0b10] border border-white/5 rounded-3xl p-5 md:p-8 shadow-inner">
-               <div className={MATRIX_BG}></div>
-               <div className="relative z-10">
-                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6 flex items-center gap-2">
-                      <Thermometer className="w-4 h-4 text-rose-400" /> 
-                      {typeof tRecord.hourlyEvolution === 'string' ? tRecord.hourlyEvolution : "EVOLUCIÓ TÈRMICA"}
-                   </h3>
-                   <SmartForecastCharts
-                      data={hourlyData}
-                      comparisonData={comparisonData}
-                      lang={lang}
-                      regionalModelLabel={regionalModelLabel}
-                      nowIndex={nowIndex}
-                      framed={false}
-                   />
-               </div>
-            </div>
-
-            {tableRows && tableRows.length > 0 && (
-                <div className="bg-[#0a0b10] border border-white/5 rounded-3xl overflow-clip shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
-                    <div className="px-6 md:px-8 py-5 border-b border-white/5 bg-[#0f111a]/90 backdrop-blur-md">
-                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-cyan-400" /> 
-                            {TACTICAL_I18N.hourlyHeader}
-                        </h3>
-                    </div>
-                    
-                    <div className="divide-y divide-white/5">
-                        <div className="grid grid-cols-12 px-4 md:px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-[#0a0b10] shadow-inner sm:sticky sm:top-0 sm:z-20">
-                            <div className="col-span-2">{TACTICAL_I18N.colHour}</div>
-                            <div className="col-span-2 text-center">{TACTICAL_I18N.colSky}</div>
-                            <div className="col-span-3 text-center">{TACTICAL_I18N.colTemp}</div>
-                            <div className="col-span-3 text-right">{TACTICAL_I18N.colRain}</div>
-                            <div className="col-span-2 text-right">{TACTICAL_I18N.colWind}</div>
-                        </div>
-                        
-                        {tableRows.map((row: TableRowData, idx: number) => {
-                            const showPrecip = (row.precipProb !== null && row.precipProb > 0) || (row.precipSum !== null && row.precipSum > 0);
-                            const hasTemp = row.temp !== null;
-                            const hasWind = row.windSpeed !== null;
-                            const isNowRow = nowIndex !== null && idx === nowIndex;
-                            const isPastRow = nowIndex !== null && idx < nowIndex;
-                            
-                            return (
-                            <div
-                                key={`row-${idx}`}
-                                data-testid="hour-row"
-                                data-now={isNowRow}
-                                aria-current={isNowRow ? 'time' : undefined}
-                                className={`grid grid-cols-12 px-4 md:px-6 py-4 items-center hover:bg-white/[0.02] transition-colors group ${isNowRow ? 'bg-cyan-500/[0.07]' : ''} ${isPastRow ? 'opacity-50' : ''}`}
-                            >
-                                <div className="col-span-2 flex flex-col items-start gap-0.5 text-xs md:text-sm font-mono font-bold text-slate-400 group-hover:text-cyan-300 transition-colors">
-                                    {row.hour}
-                                    {isNowRow && (
-                                        <span className="px-1 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[10px] font-black uppercase tracking-widest text-cyan-300">{labelNow}</span>
-                                    )}
-                                </div>
-                                
-                                <div className="col-span-2 flex justify-center">
-                                    <div className="scale-[0.6] md:scale-75 origin-center filter drop-shadow-md group-hover:scale-90 transition-transform duration-300">
-                                        {getWeatherIcon(row.code, "w-10 h-10", row.isDay, row.precipProb ?? 0, row.windSpeed || 0, row.temp, row.precipSum ?? 0, row.cloudCover)}
-                                    </div>
-                                </div>
-                                
-                                <div className="col-span-3 text-center text-sm md:text-base font-mono font-bold tabular-nums">
-                                    {hasTemp ? (
-                                        <span className="text-white">{Math.round(row.temp!)}°</span>
-                                    ) : (
-                                        <span className="text-slate-600">--°</span>
-                                    )}
-                                </div>
-                                
-                                <div className="col-span-3 flex flex-col md:flex-row justify-end items-end md:items-center gap-0.5 md:gap-1.5">
-                                    {showPrecip ? (
-                                        <>
-                                            {row.precipProb !== null && (
-                                                <span className="text-[10px] md:text-[11px] font-black text-blue-400 tabular-nums">
-                                                    {row.precipProb}%
-                                                </span>
-                                            )}
-                                            {row.precipSum !== null && row.precipSum > 0 && (
-                                                <span className="text-[10px] text-slate-400 font-mono font-bold bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-inner">
-                                                    {formatPrecipitation(row.precipSum, row.snowfall, lang)}
-                                                </span>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <span className="text-slate-700 font-bold">-</span>
-                                    )}
-                                </div>
-                                
-                                <div className="col-span-2 flex flex-col items-end text-xs font-mono font-bold tabular-nums transition-colors">
-                                    {hasWind ? (
-                                        <>
-                                            <span className="text-slate-400 group-hover:text-emerald-400">{Math.round(row.windSpeed!)}</span>
-                                            <span className="text-[10px] uppercase tracking-widest text-slate-600">km/h</span>
-                                        </>
-                                    ) : (
-                                        <span className="text-slate-600 text-lg leading-none">--</span>
-                                    )}
-                                </div>
-                            </div>
-                            );
-                        })}
-                    </div>
+          <div className="relative">
+            {onSelectDay && selectedDayIndex !== null && (
+                <div className="pt-2">
+                    <DaySelector days={weekDays} selected={selectedDayIndex} onSelect={goToDay} label={td.daysNav} />
                 </div>
             )}
-            
+
+            {/* Resum: cel, data, mínima i màxima, i la fiabilitat dita en una frase */}
+            <section className="px-5 sm:px-6 pt-3.5 pb-4 border-t border-white/[0.06]">
+                <div className="flex items-center gap-3.5">
+                    {dayCode !== null && (
+                        <div data-testid="day-sky" className="shrink-0">
+                            {getWeatherIcon(dayCode, 'w-11 h-11', true, 0, windMax ?? 0, null, 0, avgDaylightClouds)}
+                        </div>
+                    )}
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        {skyLabel && skyLabel !== '---' && (
+                            <p data-testid="day-sky-label" className="text-[19px] font-semibold leading-tight tracking-[-0.01em] text-slate-100">{skyLabel}</p>
+                        )}
+                        <h2 id="day-detail-modal-title" className="text-[13px] font-normal text-slate-400">{formatDate(dayData.date)}</h2>
+                    </div>
+                    <div className="shrink-0 flex items-baseline gap-2.5 tabular-nums">
+                        <span data-testid="day-min" className={`text-xl ${safeMinTemp !== '--' ? 'text-[#7a879b]' : 'text-slate-600'}`}>{safeMinTemp}°</span>
+                        <span data-testid="day-max" className={`text-[42px] leading-none font-light tracking-[-0.02em] ${safeMaxTemp !== '--' ? 'text-slate-50' : 'text-slate-600'}`}>{safeMaxTemp}°</span>
+                    </div>
+                </div>
+                {(reliabilityLevel || rangeParts.length > 0) && (
+                    <p className="mt-3 text-[13px] leading-relaxed text-slate-400">
+                        {reliabilityLevel && (
+                            <span data-testid="day-reliability" data-level={reliabilityLevel} className="inline-flex items-center gap-2 mr-1.5 align-baseline">
+                                <ReliabilityDots level={reliabilityLevel} />
+                                <span className="font-medium text-slate-200">{confidenceText.reliability[reliabilityLevel]}.</span>
+                            </span>
+                        )}
+                        {rangeParts.length > 0 && (
+                            <span data-testid="day-probable-range" className="tabular-nums">
+                                {confidenceText.probableRange}:{' '}
+                                {/* Si no hi cap tot en una línia, el salt cau entre la màxima i la mínima, mai dins d'un rang. */}
+                                {rangeParts.map((part, i) => (
+                                    <span key={part} className="whitespace-nowrap">{i > 0 ? ' · ' : ''}{part}</span>
+                                ))}
+                            </span>
+                        )}
+                    </p>
+                )}
+            </section>
+
+            <DayAlerts alerts={dayAlerts} lang={lang} timeZone={timeZone} label={td.officialAlert} />
+
+            <DayFacts facts={facts} />
+
+            {/* Les hores: la columna del dia o els gràfics de sempre */}
+            <section className="border-t border-white/[0.06] pt-3.5">
+                <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pb-3">
+                    <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{td.columnTitle}</h3>
+                    <div role="group" aria-label={td.viewAria} className="flex p-[3px] gap-0.5 rounded-xl bg-black/35 border border-white/[0.06]">
+                        {viewButton('column', td.viewColumn)}
+                        {viewButton('chart', td.viewChart)}
+                    </div>
+                </div>
+
+                {view === 'column' ? (
+                    <DayColumn
+                        rows={columnRows}
+                        scale={tempScale}
+                        dryWindow={dryWindow}
+                        sunriseOffset={sunriseOffset}
+                        sunsetOffset={sunsetOffset}
+                        nowOffset={nowOffset}
+                        sunrise={sunrise}
+                        sunset={sunset}
+                        daylight={daylightSec !== null ? formatHoursMinutes(daylightSec) : null}
+                        labels={columnLabels}
+                        lang={lang}
+                    />
+                ) : (
+                    <div data-no-swipe className="px-3 sm:px-4 pb-4">
+                        <SmartForecastCharts
+                            data={hourlyData}
+                            comparisonData={comparisonData}
+                            lang={lang}
+                            regionalModelLabel={regionalModelLabel}
+                            nowIndex={nowIndex}
+                            framed={false}
+                        />
+                    </div>
+                )}
+            </section>
+
             <div className="h-6"></div>
           </div>
+        </div>
       </div>
     </div>
   );
