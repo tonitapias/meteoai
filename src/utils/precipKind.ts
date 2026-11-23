@@ -34,3 +34,29 @@ export const precipKind = (precipMm: number | null | undefined, snowCm: number |
 
 /** cm de neu d'una quantitat d'aigua que se sap que és neu (mm × 0,7). */
 export const snowCmFromWater = (mm: number): number => mm * SNOW_CM_PER_MM;
+
+/** La paraula d'un text sobre el que cau: «pluja», «neu» o «pluja o neu» (precipitació). */
+export type PrecipWord = 'rain' | 'snow' | 'mixed';
+
+/** Sense precipitació a la previsió (es parla de si n'hi haurà), la temperatura d'ara decideix (°C). */
+export const SNOW_WORD_MAX_TEMP_C = 0;
+export const MIXED_WORD_MAX_TEMP_C = 2;
+
+/**
+ * Quina paraula toca per a una finestra de temps (p. ex. la insígnia «Pluja incerta» de les pròximes 6 hores): neu si
+ * el que cau és sobretot neu, «pluja o neu» si en cau de tots dos, pluja si no. Si no en cau res, la temperatura d'ara.
+ */
+export const precipWordFor = (
+    precipMm: number | null | undefined,
+    snowCm: number | null | undefined,
+    tempC: number | null | undefined
+): PrecipWord => {
+    const kind = precipKind(precipMm, snowCm);
+    if (kind === 'snow') return 'snow';
+    if (kind === 'rain') return amountOf(snowCm) > 0 ? 'mixed' : 'rain';
+    if (typeof tempC === 'number' && Number.isFinite(tempC)) {
+        if (tempC <= SNOW_WORD_MAX_TEMP_C) return 'snow';
+        if (tempC <= MIXED_WORD_MAX_TEMP_C) return 'mixed';
+    }
+    return 'rain';
+};

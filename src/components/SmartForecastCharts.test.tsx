@@ -310,6 +310,8 @@ describe('SmartForecastCharts: lectura del gràfic', () => {
         expect(screen.queryByText('Inici de pluja')).toBeNull();
         expect(screen.getByText(/mm d'aigua$/)).toBeInTheDocument();
         expect(screen.getByText("VOLUM (MM D'AIGUA)")).toBeInTheDocument();
+        expect(screen.getByText('Prob. precipitació')).toBeInTheDocument();
+        expect(screen.queryByText('Prob. Pluja')).toBeNull();
         // La lectura de l'hora (ara, una hora de neu): cm.
         expect(readout().textContent).toContain('0,7 cm');
     });

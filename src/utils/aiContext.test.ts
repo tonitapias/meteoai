@@ -141,6 +141,29 @@ describe("generateAIPrediction — insígnia d'acord entre models", () => {
         expect(badge({ level: 'low', cause: 'rain', tempMarginC: null })).toMatchObject({ text: tr.aiConfidenceRainLow, color: 'red', hint: tr.aiConfidenceHintRain });
     });
 
+    // Pas de la Casa, 23/11/2026: a -4 °C i amb neu a les hores següents, la insígnia deia «Pluja incerta».
+    it('si el que cau és neu, «Neu dubtosa» o «Neu incerta»', () => {
+        const cold = { ...current, temperature_2m: -4 } as StrictCurrentWeather;
+        const snowy = { time: ['2026-09-19T01:00', '2026-09-19T02:00'], precipitation: [0.4, 0.6], snowfall: [0.28, 0.42], precipitation_probability: [60, 70], cape: [0, 0] } as unknown as StrictHourlyWeather;
+        const low = generateAIPrediction(cold, daily, snowy, 0, 'ca', 73, { level: 'low', cause: 'rain', tempMarginC: null }, 'C');
+        expect(low).toMatchObject({ confidence: 'Neu incerta', confidenceColor: 'red', confidenceHint: tr.aiConfidenceHintSnow });
+        const mod = generateAIPrediction(cold, daily, snowy, 0, 'es', 73, { level: 'medium', cause: 'rain', tempMarginC: null }, 'C');
+        expect(mod.confidence).toBe('Nieve dudosa');
+    });
+
+    it('sense precipitació prevista, la temperatura d\'ara: sota zero neu, entre 0 i 2 °C «Precipitació»', () => {
+        const at = (temp: number) => generateAIPrediction({ ...current, temperature_2m: temp } as StrictCurrentWeather, daily, hourly, 0, 'ca', 3, { level: 'low', cause: 'rain', tempMarginC: null }, 'C').confidence;
+        expect(at(-2)).toBe('Neu incerta');
+        expect(at(1.5)).toBe('Precipitació incerta');
+        expect(at(9)).toBe(tr.aiConfidenceRainLow);
+    });
+
+    it('temperatura i neu alhora: el text general, amb la neu a l\'explicació', () => {
+        const cold = { ...current, temperature_2m: -4 } as StrictCurrentWeather;
+        const out = generateAIPrediction(cold, daily, hourly, 0, 'ca', 3, { level: 'low', cause: 'both', tempMarginC: 3 }, 'C');
+        expect(out).toMatchObject({ confidence: tr.aiConfidenceLow, confidenceHint: tr.aiConfidenceHintBothSnow });
+    });
+
     it('temperatura i pluja alhora: els textos generals, ambre o vermell', () => {
         expect(badge({ level: 'medium', cause: 'both', tempMarginC: 3 })).toMatchObject({ text: tr.aiConfidenceMod, color: 'amber', hint: tr.aiConfidenceHintBoth });
         expect(badge({ level: 'low', cause: 'both', tempMarginC: 4 })).toMatchObject({ text: tr.aiConfidenceLow, color: 'red', hint: tr.aiConfidenceHintBoth });

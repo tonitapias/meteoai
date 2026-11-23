@@ -312,6 +312,8 @@ export default function DayDetailModal({
       legendFeels: td.legendFeels,
       legendGust: td.legendGust,
       legendSun: td.legendSun,
+      legendRainSnow: td.legendRainSnow,
+      legendRainMixed: td.legendRainMixed,
       legendWind: td.legendWind,
       now: td.now,
       feelsWord: td.feelsWord,
@@ -320,6 +322,7 @@ export default function DayDetailModal({
       sky: t.forecastWeek.sky
   };
 
+      snowChanceWord: td.snowChanceWord,
   const viewButton = (value: HoursView, label: string) => (
       <button
           type="button"

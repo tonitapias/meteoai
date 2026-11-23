@@ -13,6 +13,7 @@ import { CHART_MODEL_KEYS } from './hourlyChartSeries';
 import { getHourlyWeatherCode, type HourlyComparison, type HourlySeries } from './hourlyWeatherCode';
 import { skyKindOfCode, type SkyKind } from './daySky';
 import { extractValidArrayNum } from './weatherMath';
+import { precipKind, SNOW_WORD_MAX_TEMP_C } from './precipKind';
 
 /** La sensació tèrmica només surt quan s'allunya prou de la temperatura (en °C): si no, és la mateixa xifra repetida. */
 export const FEELS_LIKE_MIN_DIFF_C = 3;
@@ -50,6 +51,11 @@ export interface DayColumnRow {
     windDir: number | null;
     /** Ratxa de l'hora, NOMÉS quan és notable (vegeu isNotableGust). */
     gust: number | null;
+    /**
+     * El que hi cau (o hi pot caure) és neu: el motor hi posa neu, el que cau és sobretot neu, o fa 0 °C o menys i el cel
+     * no és de pluja. Decideix si la probabilitat de l'hora es diu "de neu" (a -5 °C deia "de pluja").
+     */
+    snowy: boolean;
 }
 
 export const isNotableGust = (gust: number | null, wind: number | null): boolean => {
@@ -106,22 +112,29 @@ export const buildDayColumn = ({
 
         const wind = point?.wind ?? extractValidArrayNum(hourly.wind_speed_10m, idx);
         const gustValue = point?.gusts ?? extractValidArrayNum(hourly.wind_gusts_10m, idx);
+        const kind = skyKindOfCode(getHourlyWeatherCode(hourly, idx, elevation, hourlyComparison));
+        const precip = point?.precip ?? extractValidArrayNum(hourly.precipitation, idx);
+        const snowfall = extractValidArrayNum(hourly.snowfall, idx);
+        const tempC = temp !== null ? toCelsius(temp, unit) : null;
+        const snowy = kind === 'snow' || precipKind(precip, snowfall) === 'snow'
+            || (kind !== 'rain' && kind !== 'storm' && tempC !== null && tempC <= SNOW_WORD_MAX_TEMP_C);
 
         rows.push({
             time,
             hour,
-            kind: skyKindOfCode(getHourlyWeatherCode(hourly, idx, elevation, hourlyComparison)),
+            kind,
             isDay: point?.isDay ?? true,
             temp,
             feels,
             bandLow: hasBand ? Math.min(...models) : null,
             bandHigh: hasBand ? Math.max(...models) : null,
             precipProb: point?.rain ?? extractValidArrayNum(hourly.precipitation_probability, idx),
-            precip: point?.precip ?? extractValidArrayNum(hourly.precipitation, idx),
-            snowfall: extractValidArrayNum(hourly.snowfall, idx),
+            precip,
+            snowfall,
             wind,
             windDir: extractValidArrayNum(hourly.wind_direction_10m, idx),
-            gust: isNotableGust(gustValue, wind) ? gustValue : null
+            gust: isNotableGust(gustValue, wind) ? gustValue : null,
+            snowy
         });
     }
     return rows;

@@ -91,6 +91,33 @@ describe('buildDayColumn', () => {
     });
 });
 
+describe('buildDayColumn — hores de neu', () => {
+    const primary = (temp: number) => TIMES.map(t => point(t, temp));
+
+    it("una hora sense precipitació a -5° és de neu (la seva probabilitat es diu «de neu»), no de pluja", () => {
+        const rows = buildDayColumn({ hourly: hourlyOf({ weather_code: TIMES.map(() => 3) }), dayIndices: INDICES, primary: primary(-5), comparison: null, elevation: 0, unit: 'C' });
+        expect(['clear', 'partly', 'cloudy']).toContain(rows[13].kind);
+        expect(rows[13].snowy).toBe(true);
+    });
+
+    it('una hora de pluja no és de neu encara que la temperatura sigui baixa', () => {
+        const hourly = hourlyOf({ weather_code: TIMES.map(() => 61), precipitation: TIMES.map(() => 1.2), precipitation_probability: TIMES.map(() => 80) });
+        const rows = buildDayColumn({ hourly, dayIndices: INDICES, primary: primary(3), comparison: null, elevation: 0, unit: 'C' });
+        expect(rows[13].kind).toBe('rain');
+        expect(rows[13].snowy).toBe(false);
+    });
+
+    it('a 8° la mateixa hora és de pluja', () => {
+        const rows = buildDayColumn({ hourly: hourlyOf({ weather_code: TIMES.map(() => 3) }), dayIndices: INDICES, primary: primary(8), comparison: null, elevation: 0, unit: 'C' });
+        expect(rows[13].snowy).toBe(false);
+    });
+
+    it('en Fahrenheit, 23 °F (-5 °C) també és de neu', () => {
+        const rows = buildDayColumn({ hourly: hourlyOf({ weather_code: TIMES.map(() => 3) }), dayIndices: INDICES, primary: primary(23), comparison: null, elevation: 0, unit: 'F' });
+        expect(rows[13].snowy).toBe(true);
+    });
+});
+
 describe('isNotableGust', () => {
     it('a partir de 40 km/h sempre', () => {
         expect(isNotableGust(40, 35)).toBe(true);
@@ -112,7 +139,7 @@ const KIND: Record<string, SkyKind> = { r: 'rain', R: 'rain', p: 'partly', P: 'p
 const MM = [0.3, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.1, 0, 0, 0.1, 0.2, 0.5, 0.1, 0];
 const rowOf = (hour: number, kind: SkyKind | null, precip = 0): DayColumnRow => ({
     time: `${DATE}T${String(hour).padStart(2, '0')}:00`, hour, kind, isDay: true, temp: 14, feels: null,
-    bandLow: null, bandHigh: null, precipProb: 0, precip, snowfall: 0, wind: 5, windDir: null, gust: null
+    bandLow: null, bandHigh: null, precipProb: 0, precip, snowfall: 0, wind: 5, windDir: null, gust: null, snowy: kind === 'snow'
 });
 const barcelona = () => SKY.split('').map((c, h) => rowOf(h, KIND[c], MM[h]));
 

@@ -5,14 +5,15 @@
 // començar d'aquí a uns 37 min". El radar no distingeix la pluja de la neu; ho diu el cel que el motor preveu per a aquestes
 // hores (daySky, els mateixos codis que la franja de la Previsió i les icones).
 import type { SkyHour } from './daySky';
+import { MIXED_WORD_MAX_TEMP_C, SNOW_WORD_MAX_TEMP_C, type PrecipWord } from './precipKind';
 
-export type NowcastKind = 'rain' | 'snow' | 'mixed';
+export type NowcastKind = PrecipWord;
 
 /** Quantes hores es miren a partir de l'hora d'ara (el nowcast del radar arriba a un parell d'hores). */
 const HOURS_AHEAD = 2;
-/** Sense precipitació a la previsió (el radar la veu igualment), la temperatura d'ara decideix. */
-const SNOW_MAX_TEMP = 0;
-const MIXED_MAX_TEMP = 2;
+/** Sense precipitació a la previsió (el radar la veu igualment), la temperatura d'ara decideix (precipKind.ts). */
+const SNOW_MAX_TEMP = SNOW_WORD_MAX_TEMP_C;
+const MIXED_MAX_TEMP = MIXED_WORD_MAX_TEMP_C;
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const dateKeyOf = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;

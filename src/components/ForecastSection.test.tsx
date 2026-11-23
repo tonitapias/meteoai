@@ -194,4 +194,20 @@ describe('ForecastSection — nom accessible dels dies', () => {
         expect(labels).toHaveLength(8);
         expect(labels[1]).toMatch(/^\S+ \d+: de -?\d+° a -?\d+°, 40 % de probabilitat de pluja$/);
     });
+
+    // Pica d'Estats, 23/11/2026: a -8 °C, cada dia deia «de probabilitat de pluja».
+    it('un dia de neu, o tot ell sota zero, diu «de probabilitat de neu»', () => {
+        const snowy = {
+            ...dailyData,
+            temperature_2m_max: DATES.map((_, i) => (i === 3 ? -2 : 20)),
+            temperature_2m_min: DATES.map((_, i) => (i === 3 ? -8 : 10)),
+            snowfall_sum: DATES.map((_, i) => (i === 2 ? 2.1 : 0)),
+            precipitation_sum: DATES.map((_, i) => (i === 2 ? 3 : 1)),
+        } as unknown as StrictDailyWeather;
+        renderWeek({ dailyData: snowy, chartData: chartData.map(h => ({ ...h, temp: h.time.startsWith(DATES[3]) ? -5 : h.temp })) as never });
+        const labels = dayRows().map(b => b.getAttribute('aria-label') ?? '');
+        expect(labels[2]).toMatch(/de probabilitat de neu$/); // 2,1 cm de neu
+        expect(labels[3]).toMatch(/de probabilitat de neu$/); // màxima sota zero
+        expect(labels[4]).toMatch(/de probabilitat de pluja$/);
+    });
 });

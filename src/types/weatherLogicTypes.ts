@@ -78,6 +78,15 @@ export interface TranslationMap {
   aiConfidenceHintTemp: string;
   aiConfidenceHintRain: string;
   aiConfidenceHintBoth: string;
+  /** La mateixa insígnia quan el que cau és neu, o pluja i neu (aiContext.ts → precipWordFor). */
+  aiConfidenceSnowMod: string;
+  aiConfidenceSnowLow: string;
+  aiConfidencePrecipMod: string;
+  aiConfidencePrecipLow: string;
+  aiConfidenceHintSnow: string;
+  aiConfidenceHintPrecip: string;
+  aiConfidenceHintBothSnow: string;
+  aiConfidenceHintBothPrecip: string;
   [key: string]: unknown;
 }
 
