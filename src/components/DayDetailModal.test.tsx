@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import DayDetailModal from './DayDetailModal';
 import ForecastSection from './ForecastSection';
@@ -7,12 +7,16 @@ import { generateHourlyChartData } from '../utils/weatherMappers';
 import { getHourCodesByDate, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { TRANSLATIONS } from '../translations';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
+import type { OfficialAlert } from '../services/alertsApi';
 
 vi.mock('./WeatherIcons', () => ({
     getWeatherIcon: (code: number | null) => <div data-testid="day-icon" data-code={String(code)} />,
 }));
 // Els gràfics tenen els seus propis tests (SmartForecastCharts.test.tsx): aquí només importa què reben.
 vi.mock('./SmartForecastCharts', () => ({ default: () => <div data-testid="smart-charts" /> }));
+// Els avisos oficials no surten a la xarxa des dels tests.
+const mockAlerts = vi.hoisted(() => ({ current: [] as OfficialAlert[] }));
+vi.mock('../hooks/useOfficialAlerts', () => ({ useOfficialAlerts: () => ({ alerts: mockAlerts.current }) }));
 
 // Setembre a Sabadell (mesurat amb dades reals d'Open-Meteo): el valor DIARI és del model global
 // (27,6°/17,5°, vent 15 km/h) però les hores del dia porten el model regional (AROME HD: 29,1°/21,4°, vent 13).
@@ -157,12 +161,12 @@ describe('DayDetailModal — fiabilitat, rang i font', () => {
 describe('DayDetailModal — precipitació', () => {
     it('sempre diu la probabilitat màxima de pluja, també quan el total és 0 mm', () => {
         renderDetail(build());
-        expect(screen.getByTestId('note-precip').textContent).toBe('PROB. MÀX 10%');
+        expect(screen.getByTestId('note-precip').textContent).toBe('prob. màx. 10%');
     });
 
-    it('si la taula té una hora més alta que el valor diari, la targeta no pot dir menys', () => {
+    it('si una hora del dia és més alta que el valor diari, la xifra no pot dir menys', () => {
         renderDetail(build({ hourlyProb: i => (i === 24 + 17 ? 70 : 0) }));
-        expect(screen.getByTestId('note-precip').textContent).toBe('PROB. MÀX 70%');
+        expect(screen.getByTestId('note-precip').textContent).toBe('prob. màx. 70%');
     });
 });
 
@@ -233,32 +237,32 @@ describe('DayDetailModal — capçalera amb l\'estat del dia', () => {
     });
 });
 
-describe('DayDetailModal — targetes', () => {
+describe('DayDetailModal — xifres del dia', () => {
     // Categories de l'OMS sobre l'índex arrodonit (uvIndexUtils.roundUVIndex): 5,4 → 5 moderat; 5,8 → 6 alt.
     it("l'índex UV porta la categoria de risc (5,4 → moderat, ambre) amb la mateixa taula que el widget d'UV", () => {
         renderDetail(build({ uv: 5.4 }));
         const note = screen.getByTestId('note-uv');
-        expect(note.textContent).toBe('MODERAT');
+        expect(note.textContent).toBe('moderat');
         expect(note.className).toContain('text-amber-400');
     });
 
     it('un UV alt canvia de categoria i de color', () => {
         renderDetail(build({ uv: 7.4 }));
         const note = screen.getByTestId('note-uv');
-        expect(note.textContent).toBe('ALT');
+        expect(note.textContent).toBe('alt');
         expect(note.className).toContain('text-orange-500');
     });
 
     it('el vent porta la ratxa màxima de les hores del dia', () => {
         renderDetail(build());
-        expect(screen.getByTestId('note-gusts').textContent).toBe('RATXES 34 km/h');
+        expect(screen.getByTestId('note-gusts').textContent).toBe('ratxes 34 km/h');
     });
 
     it('un dia sense neu possible (isoterma alta o sense dada) mostra les hores de sol en lloc de la cota de neu', () => {
         renderDetail(build());
         expect(screen.queryByTestId('stat-snow')).toBeNull();
         const sunshine = screen.getByTestId('stat-sunshine');
-        expect(within(sunshine).getByText('HORES DE SOL')).toBeTruthy();
+        expect(within(sunshine).getByText('Sol')).toBeTruthy();
         expect(within(sunshine).getByText('9h 48m')).toBeTruthy();
         expect(screen.getByTestId('note-sunshine').textContent).toBe('de 12h 10m');
     });
@@ -276,6 +280,21 @@ describe('DayDetailModal — targetes', () => {
         expect(within(screen.getByTestId('stat-snow')).getByText('> 3500m')).toBeTruthy();
     });
 
+    it('un dia de neu diu «Neu» i els cm, no «Pluja»', () => {
+        renderDetail(build({ freezing: 5000, snowfallDay1: 2 }));
+        const cell = screen.getByTestId('stat-precip');
+        expect(within(cell).getByText('Neu')).toBeTruthy();
+        expect(within(cell).queryByText('Pluja')).toBeNull();
+        expect(cell.textContent).toContain('2cm');
+    });
+
+    it('un dia de pluja diu «Pluja» i els mm', () => {
+        renderDetail(build({ rain: true }));
+        const cell = screen.getByTestId('stat-precip');
+        expect(within(cell).getByText('Pluja')).toBeTruthy();
+        expect(cell.textContent).toContain('5mm');
+    });
+
     it('una isoterma per sobre del límit i sense neu no ocupa cap targeta: hores de sol', () => {
         renderDetail(build({ freezing: 5000 }));
         expect(screen.queryByTestId('stat-snow')).toBeNull();
@@ -284,69 +303,125 @@ describe('DayDetailModal — targetes', () => {
 
     it("s'adapta a l'idioma (anglès)", () => {
         renderDetail(build(), 'en');
-        expect(screen.getByTestId('note-gusts').textContent).toBe('GUSTS 34 km/h');
-        expect(within(screen.getByTestId('stat-sunshine')).getByText('SUNSHINE')).toBeTruthy();
+        expect(screen.getByTestId('note-gusts').textContent).toBe('gusts 34 km/h');
+        expect(within(screen.getByTestId('stat-sunshine')).getByText('Sun')).toBeTruthy();
         expect(screen.getByTestId('note-sunshine').textContent).toBe('of 12h 10m');
-        expect(screen.getByTestId('note-uv').textContent).toBe('HIGH'); // UV 5,8 → 6 (OMS)
+        expect(screen.getByTestId('note-uv').textContent).toBe('high'); // UV 5,8 → 6 (OMS)
     });
 });
 
-describe('DayDetailModal — sortida i posta', () => {
-    it('una sola fila amb les dues hores i la durada del dia', () => {
-        renderDetail(build());
-        const card = screen.getByTestId('sun-times');
-        expect(within(card).getByText('07:39')).toBeTruthy();
-        expect(within(card).getByText('19:49')).toBeTruthy();
-        expect(within(card).getByTestId('daylight').textContent).toBe('12h 10m de llum');
-    });
-});
-
-describe('DayDetailModal — moments del dia', () => {
-    it('resumeix el dia en 4 franges amb el rang de temperatura de les seves hores', () => {
-        renderDetail(build());
-        const parts = screen.getAllByTestId('day-part');
-        expect(parts.map(p => p.getAttribute('data-part'))).toEqual(['night', 'morning', 'afternoon', 'evening']);
-
-        const byKey = (k: string) => parts.find(p => p.getAttribute('data-part') === k) as HTMLElement;
-        // Matinada: 25° tot el rato · matí: la mínima de 21,4° (06 h) fins a 25° · tarda: fins als 29,1° de les 15 h.
-        expect(within(byKey('night')).getByText('25°')).toBeTruthy();
-        expect(within(byKey('morning')).getByText('21° – 25°')).toBeTruthy();
-        expect(within(byKey('afternoon')).getByText('25° – 29°')).toBeTruthy();
-    });
-
-    it('les franges amb pluja diuen la probabilitat; les seques, un guionet', () => {
+describe('DayDetailModal — la columna del dia', () => {
+    it('una fila per hora, amb el cel dels codis del motor (pluja de 14 a 17 h)', () => {
         renderDetail(build({ rain: true }));
-        const parts = screen.getAllByTestId('day-part');
-        const afternoon = parts.find(p => p.getAttribute('data-part') === 'afternoon') as HTMLElement;
-        expect(within(afternoon).getByText('80%')).toBeTruthy();
-        const morning = parts.find(p => p.getAttribute('data-part') === 'morning') as HTMLElement;
-        expect(within(morning).queryByText(/%/)).toBeNull();
+        const rows = screen.getAllByTestId('hour-row');
+        expect(rows).toHaveLength(24);
+        const kinds = screen.getAllByTestId('sky-cell').map(c => c.getAttribute('data-kind'));
+        expect(kinds.slice(14, 18)).toEqual(['rain', 'rain', 'rain', 'rain']);
+        expect(kinds[10]).toBe('clear');
     });
 
-    it('un dia que no és avui no marca cap franja ni cap hora com a "ara"', () => {
+    it('la sortida i la posta del sol: les hores, la durada i les dues línies que tallen la columna', () => {
         renderDetail(build());
-        screen.getAllByTestId('day-part').forEach(p => {
-            expect(p.getAttribute('data-current')).toBe('false');
-            expect(p.getAttribute('data-past')).toBe('false');
-        });
-        screen.getAllByTestId('hour-row').forEach(r => expect(r.getAttribute('data-now')).toBe('false'));
+        const sun = screen.getByTestId('sun-times');
+        expect(within(sun).getByText('07:39')).toBeTruthy();
+        expect(within(sun).getByText('19:49')).toBeTruthy();
+        expect(screen.getByTestId('daylight').textContent).toContain('12h 10m de llum');
+        expect(screen.getByTestId('sunrise-line')).toBeTruthy();
+        expect(screen.getByTestId('sunset-line')).toBeTruthy();
     });
 
-    it('avui (12:00) marca la franja i la fila en curs i atenua el que ja ha passat', () => {
-        renderDetail(build(), 'ca', { selectedDayIndex: 0 });
-        const state = (k: string) => screen.getAllByTestId('day-part').find(p => p.getAttribute('data-part') === k) as HTMLElement;
-        expect(state('afternoon').getAttribute('data-current')).toBe('true');
-        expect(within(state('afternoon')).getByText('ARA')).toBeTruthy();
-        expect(state('night').getAttribute('data-past')).toBe('true');
-        expect(state('morning').getAttribute('data-past')).toBe('true');
-        expect(state('evening').getAttribute('data-past')).toBe('false');
+    it('la temperatura de cada hora és la del gràfic (la màxima de 29° a les 15 h)', () => {
+        renderDetail(build());
+        const labels = screen.getAllByTestId('temp-label').map(l => l.textContent);
+        expect(labels[15]).toBe('29°');
+        expect(labels[6]).toBe('21°');
+    });
 
+    it('la finestra seca només surt un dia amb pluja: aquí, de les 0 a les 14 h', () => {
+        const dry = renderDetail(build());
+        expect(screen.queryByTestId('dry-window')).toBeNull();
+        dry.unmount();
+
+        renderDetail(build({ rain: true }));
+        expect(screen.getByTestId('dry-window').textContent).toContain('Finestra seca 00–14 h');
+        expect(screen.getByTestId('dry-bracket')).toBeTruthy();
+    });
+
+    it('la ratxa només surt a les hores que és notable (34 km/h amb 5 de vent, a les 15 h)', () => {
+        renderDetail(build());
+        const gusts = screen.getAllByTestId('gust');
+        expect(gusts).toHaveLength(1);
+        expect(gusts[0].textContent).toBe('34');
+        expect(screen.getAllByTestId('hour-row')[15].contains(gusts[0])).toBe(true);
+    });
+
+    it('cada hora té un nom accessible amb les seves xifres', () => {
+        renderDetail(build({ rain: true }));
+        expect(screen.getAllByTestId('hour-row')[15].textContent).toContain('15 h, 29°');
+        expect(screen.getAllByTestId('hour-row')[15].textContent).toContain('80% de probabilitat de pluja');
+    });
+
+    it('un dia que no és avui no marca cap hora com a "ara"', () => {
+        renderDetail(build());
+        screen.getAllByTestId('hour-row').forEach(r => expect(r.getAttribute('data-now')).toBe('false'));
+        expect(screen.queryByTestId('now-line')).toBeNull();
+    });
+
+    it('avui (12:00) marca la fila en curs i atenua el que ja ha passat', () => {
+        renderDetail(build(), 'ca', { selectedDayIndex: 0 });
         const rows = screen.getAllByTestId('hour-row');
         expect(rows.filter(r => r.getAttribute('data-now') === 'true')).toHaveLength(1);
         expect(rows[12].getAttribute('data-now')).toBe('true');
         expect(rows[12].getAttribute('aria-current')).toBe('time');
         expect(rows[11].className).toContain('opacity-50');
         expect(rows[13].className).not.toContain('opacity-50');
+        expect(screen.getByTestId('now-line')).toBeTruthy();
+    });
+
+    it('«Columna | Gràfic»: la columna d\'entrada i els gràfics de sempre en un toc', () => {
+        renderDetail(build());
+        expect(screen.getByTestId('day-column')).toBeTruthy();
+        expect(screen.queryByTestId('smart-charts')).toBeNull();
+        expect(screen.getByTestId('view-column').getAttribute('aria-pressed')).toBe('true');
+
+        fireEvent.click(screen.getByTestId('view-chart'));
+        expect(screen.getByTestId('smart-charts')).toBeTruthy();
+        expect(screen.queryByTestId('day-column')).toBeNull();
+        expect(screen.getByTestId('view-chart').getAttribute('aria-pressed')).toBe('true');
+    });
+});
+
+describe('DayDetailModal — avisos oficials del dia', () => {
+    afterEach(() => {
+        mockAlerts.current = [];
+        vi.useRealTimers();
+    });
+
+    const alertOf = (extra: Partial<OfficialAlert>): OfficialAlert => ({
+        id: 'vent', event: 'Avís groc per vent', severity: 'Moderate', headline: 'Ratxes de més de 72 km/h', description: '',
+        instruction: null, senderName: 'Meteocat', expires: null, sourceName: 'Meteocat', sourceUrl: 'https://meteo.cat',
+        textLang: 'ca', ...extra
+    });
+
+    it("surt al dia que toca, amb un punt al selector, i no als altres", () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-09-21T12:00:00+02:00'));
+        mockAlerts.current = [alertOf({ onset: '2026-09-22T12:00:00+02:00', expires: '2026-09-22T21:00:00+02:00' })];
+
+        const day1 = renderDetail(build(), 'ca', { onSelectDay: vi.fn() });
+        expect(within(screen.getByTestId('day-alert')).getByText('Avís groc per vent')).toBeTruthy();
+        const dots = screen.getAllByTestId('day-tab-alert');
+        expect(dots).toHaveLength(1);
+        expect(dots[0].closest('[data-testid="day-tab"]')?.getAttribute('data-index')).toBe('1');
+        day1.unmount();
+
+        renderDetail(build(), 'ca', { selectedDayIndex: 2, onSelectDay: vi.fn() });
+        expect(screen.queryByTestId('day-alert')).toBeNull();
+    });
+
+    it("sense avisos no hi ha cap secció d'avisos", () => {
+        renderDetail(build());
+        expect(screen.queryByTestId('day-alerts')).toBeNull();
     });
 });
 
@@ -356,44 +431,29 @@ describe('DayDetailModal — canvi de dia', () => {
         fireEvent.touchEnd(target, { changedTouches: [{ clientX: to[0], clientY: to[1] }] });
     };
 
-    it('les fletxes porten al dia anterior i al següent', () => {
+    it('el selector porta els dies que es poden obrir, amb el dia obert marcat', () => {
         const onSelectDay = vi.fn();
         renderDetail(build(), 'ca', { selectedDayIndex: 2, onSelectDay });
-        fireEvent.click(screen.getByTestId('day-prev'));
-        expect(onSelectDay).toHaveBeenLastCalledWith(1);
-        fireEvent.click(screen.getByTestId('day-next'));
+        const tabs = screen.getAllByTestId('day-tab');
+        expect(tabs.map(t => t.getAttribute('data-index'))).toEqual(['0', '1', '2', '3']);
+        expect(tabs[2].getAttribute('aria-current')).toBe('date');
+        expect(tabs[1].getAttribute('aria-current')).toBeNull();
+
+        fireEvent.click(tabs[0]);
+        expect(onSelectDay).toHaveBeenLastCalledWith(0);
+        fireEvent.click(tabs[3]);
         expect(onSelectDay).toHaveBeenLastCalledWith(3);
     });
 
-    it("als extrems la fletxa corresponent està desactivada: avui no té anterior i l'últim dia no té següent", () => {
-        const today = renderDetail(build(), 'ca', { selectedDayIndex: 0, onSelectDay: vi.fn() });
-        expect((screen.getByTestId('day-prev') as HTMLButtonElement).disabled).toBe(true);
-        expect((screen.getByTestId('day-next') as HTMLButtonElement).disabled).toBe(false);
-        today.unmount();
-
-        renderDetail(build(), 'ca', { selectedDayIndex: 3, onSelectDay: vi.fn() });
-        expect((screen.getByTestId('day-next') as HTMLButtonElement).disabled).toBe(true);
-        expect((screen.getByTestId('day-prev') as HTMLButtonElement).disabled).toBe(false);
-    });
-
-    it('des de demà la fletxa enrere porta a avui', () => {
-        const onSelectDay = vi.fn();
-        renderDetail(build(), 'ca', { selectedDayIndex: 1, onSelectDay });
-        expect((screen.getByTestId('day-prev') as HTMLButtonElement).disabled).toBe(false);
-        fireEvent.click(screen.getByTestId('day-prev'));
-        expect(onSelectDay).toHaveBeenLastCalledWith(0);
-    });
-
-    it('les fletxes tenen nom accessible traduït', () => {
+    it('el primer dia és avui, i cada dia té un nom accessible en el seu idioma', () => {
         renderDetail(build(), 'es', { selectedDayIndex: 2, onSelectDay: vi.fn() });
-        expect(screen.getByRole('button', { name: 'Día anterior' })).toBeTruthy();
-        expect(screen.getByRole('button', { name: 'Día siguiente' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Hoy 21' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Martes 22' })).toBeTruthy();
     });
 
-    it('sense onSelectDay no hi ha fletxes ni el teclat canvia de dia', () => {
+    it('sense onSelectDay no hi ha selector ni el teclat canvia de dia', () => {
         renderDetail(build(), 'ca', { selectedDayIndex: 2 });
-        expect(screen.queryByTestId('day-prev')).toBeNull();
-        expect(screen.queryByTestId('day-next')).toBeNull();
+        expect(screen.queryByTestId('day-tab')).toBeNull();
     });
 
     it('el teclat ←/→ canvia de dia; amb modificadors no fa res', () => {
@@ -449,6 +509,7 @@ describe('DayDetailModal — canvi de dia', () => {
     it('sobre els gràfics el gest horitzontal és del gràfic (llegir hores), no de canvi de dia', () => {
         const onSelectDay = vi.fn();
         renderDetail(build(), 'ca', { selectedDayIndex: 2, onSelectDay });
+        fireEvent.click(screen.getByTestId('view-chart'));
         swipe(screen.getByTestId('smart-charts'), [250, 300], [100, 300]);
         expect(onSelectDay).not.toHaveBeenCalled();
     });

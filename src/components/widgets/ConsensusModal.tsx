@@ -4,7 +4,8 @@ import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Language } from '../../translations';
 import { Thermometer, CloudRain, Wind, X, ArrowUpRight, ArrowDownRight, MoveRight } from 'lucide-react';
 import { ModalType } from './ConsensusWidget';
-import { getMappedConsensusSeries, HourlySeriesBundle } from '../../utils/consensusMath';
+import { getMappedConsensusSeries, HourlySeriesBundle, isConsensusSnowRisk } from '../../utils/consensusMath';
+import { snowCmFromWater } from '../../utils/precipKind';
 import { formatDecimal } from '../../utils/formatters';
 
 interface ConsensusModalProps {
@@ -125,8 +126,13 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
     return (
       <div className="flex flex-col gap-3 max-h-[60vh] sm:max-h-[65vh] md:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2 pb-4 custom-scrollbar">
         {displayTimes.map((timeKey, i) => {
-          const locVal = locArr[i];
-          const gloVal = gloArr[i];
+          // Pluja en mm, neu en cm: amb fred a aquella hora (la mateixa regla que la fila de la targeta), els mm d'aigua dels
+          // dos models es mostren en cm de neu. L'amplada de la barra continua sortint de l'aigua.
+          const snowRow = activeModal === 'rain' && isConsensusSnowRisk(locSeries?.temp?.[i], gloSeries?.temp?.[i]);
+          const shown = (v: number | null | undefined) => (snowRow && typeof v === 'number' && !isNaN(v) ? snowCmFromWater(v) : v);
+          const rowUnit = activeModal === 'rain' ? (snowRow ? 'cm' : 'mm') : unit;
+          const locVal = shown(locArr[i]);
+          const gloVal = shown(gloArr[i]);
           const locGustVal = locGusts[i];
           const gloGustVal = gloGusts[i];
           
@@ -136,7 +142,10 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
           const diff = diffRounded !== null ? formatDecimal(diffRounded, safeLang) : '--';
           const isNow = i === 0;
 
-          const refVal = isValidLoc ? locVal : (isValidGlo ? gloVal : null);
+          // La barra, sempre amb l'aigua (la mateixa escala per a totes les files, siguin de pluja o de neu).
+          const rawLoc = locArr[i];
+          const rawGlo = gloArr[i];
+          const refVal = typeof rawLoc === 'number' && !isNaN(rawLoc) ? rawLoc : (typeof rawGlo === 'number' && !isNaN(rawGlo) ? rawGlo : null);
           let widthPct = 0;
           if (refVal !== null && maxVal > minVal) {
               widthPct = ((refVal - minVal) / (maxVal - minVal)) * 100;
@@ -168,7 +177,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                 <div className="flex flex-col items-start sm:items-end bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
                   <span className="text-[10px] text-slate-400 font-black tracking-widest mb-1 sm:mb-0.5">{localName}</span>
                   <span className="text-base sm:text-lg md:text-xl font-black text-white leading-none tracking-tighter drop-shadow-md">
-                    {formatVal(locVal)}<span className="text-[10px] text-slate-400 ml-0.5 font-bold uppercase">{unit}</span>
+                    {formatVal(locVal)}<span className="text-[10px] text-slate-400 ml-0.5 font-bold uppercase">{rowUnit}</span>
                   </span>
                   {activeModal === 'wind' && (
                     <span className="text-[10px] text-amber-400 font-mono mt-1 font-black flex items-center gap-0.5 drop-shadow-[0_0_4px_rgba(245,158,11,0.4)] animate-pulse">
@@ -182,7 +191,7 @@ export const ConsensusModal: React.FC<ConsensusModalProps> = ({
                 <div className="flex flex-col items-start bg-black/30 sm:bg-transparent border border-white/5 sm:border-0 rounded-xl p-2.5 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none shadow-inner sm:shadow-none">
                   <span className="text-[10px] text-slate-400 font-black tracking-widest mb-1 sm:mb-0.5">{t.global}</span>
                   <span className="text-base sm:text-lg md:text-xl font-black text-slate-400 leading-none tracking-tighter">
-                    {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold uppercase">{unit}</span>
+                    {formatVal(gloVal)}<span className="text-[10px] text-slate-600 ml-0.5 font-bold uppercase">{rowUnit}</span>
                   </span>
                   {activeModal === 'wind' && (
                     <span className="text-[10px] text-slate-400 font-mono mt-1 font-bold flex items-center gap-0.5">

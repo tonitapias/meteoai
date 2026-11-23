@@ -300,6 +300,28 @@ describe('SmartForecastCharts: lectura del gràfic', () => {
         expect(container.querySelectorAll('[data-testid="now-marker"]')).toHaveLength(0);
     });
 
+    // Pas de la Casa, 23/11/2026: la llista deia «0,3 cm» i aquí «Total 24 h 0,3 mm» i «Inici de pluja».
+    it('si el que cau és neu, el total i la lectura diuen cm i «Inici de neu»; els models, mm d\'aigua', () => {
+        const snowy = Array.from({ length: HOURS }, (_, i) => pt(i, { precip: i === 3 || i === 4 ? 1 : 0, snowfall: i === 3 || i === 4 ? 0.7 : 0 }));
+        renderCharts({ data: snowy, nowIndex: 3 });
+        tab('Pluja');
+        expect(screen.getByText('1,4 cm')).toBeInTheDocument();
+        expect(screen.getByText('Inici de neu')).toBeInTheDocument();
+        expect(screen.queryByText('Inici de pluja')).toBeNull();
+        expect(screen.getByText(/mm d'aigua$/)).toBeInTheDocument();
+        expect(screen.getByText("VOLUM (MM D'AIGUA)")).toBeInTheDocument();
+        // La lectura de l'hora (ara, una hora de neu): cm.
+        expect(readout().textContent).toContain('0,7 cm');
+    });
+
+    it('si plou, tot continua en mm', () => {
+        renderCharts();
+        tab('Pluja');
+        expect(screen.getByText('Inici de pluja')).toBeInTheDocument();
+        expect(screen.getByText('VOLUM (MM)')).toBeInTheDocument();
+        expect(screen.queryByText(/ cm$/)).toBeNull();
+    });
+
     it('el volum de pluja es dibuixa amb barres (una per hora amb pluja) i un punt per model', () => {
         const { container } = renderCharts();
         tab('Pluja');

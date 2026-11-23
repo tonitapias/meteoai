@@ -7,6 +7,12 @@ import { isRawWinterCodePlausible, isSleetCode, isSnowCode } from '../utils/rule
 import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules';
 import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
 import { getSafeMonthFromIso } from '../utils/weatherMath';
+import { snowfallCmForHour } from '../utils/engineSnowfall';
+
+// Codis representatius per passar el tipus de cada hora (neu / aiguaneu) a snowfallCmForHour: la mateixa relació
+// (7 cm per 10 mm; l'aiguaneu, la meitat) que la neu de la llista, la tira i el detall.
+const SNOW_CODE_FOR_SUMMARY = 73;
+const SLEET_CODE_FOR_SUMMARY = 68;
 import * as Sentry from "@sentry/react";
 import { cacheService } from './cacheService';
 import { compassPhraseCa, lightningBand, lightningMinutesAgo, LIGHTNING_NEAR_KM, type LightningNearby } from './lightningService';
@@ -793,7 +799,11 @@ const buildWindowSummary = (rows: WindowRow[], rainCertainty: RainCertainty | nu
         if (kinds.has('neu') || kinds.has('aiguaneu')) {
             const kind = kinds.size > 1 ? `barrejada (${[...kinds].join(', ')})`
                 : kinds.has('neu') ? 'NEU (digues "nevarà" o "nevada", mai "plourà")' : 'AIGUANEU (pluja i neu barrejades)';
-            lines.push(`Tipus de precipitació: ${kind}`);
+            // Pluja en mm, neu en cm (precipKind.ts): els mm de dalt són d'aigua. Sense els cm, la IA podia escriure "una
+            // nevada d'uns 4 mm" sota una llista que deia "3 cm" (revisió d'unitats del 23/11/2026).
+            const snowCm = wet.reduce((sum, x) => sum + (snowfallCmForHour(rows[x.i].kind === 'neu' ? SNOW_CODE_FOR_SUMMARY : rows[x.i].kind === 'aiguaneu' ? SLEET_CODE_FOR_SUMMARY : 0, x.v) ?? 0), 0);
+            const snowText = snowCm < 1 ? "menys d'1cm" : `uns ${Math.round(snowCm)}cm`;
+            lines.push(`Tipus de precipitació: ${kind} | neu acumulada ${snowText} (si dius quanta neu, en cm; els mm de la línia de pluja són d'aigua)`);
         }
     }
 

@@ -69,4 +69,25 @@ describe('RadarRealityBanner', () => {
         expect(screen.getByText('Pluie non prévue')).toBeTruthy();
         expect(screen.getByText("Selon le radar, il pleut modérément ici, mais la prévision n'en attendait pas dans les prochaines heures. La pluie couvre une large zone alentour.")).toBeTruthy();
     });
+
+    // Pica d'Estats, 23/11/2026: a -8 °C i nevant, els avisos del radar parlaven de pluja.
+    it('si el que cau és neu, parla de neu', () => {
+        const { rerender } = render(<RadarRealityBanner modelMmPerHourNow={0} forecastHours={RAIN_AT_1} lang="ca" kind="snow" />);
+        expect(screen.getByText("La neu s'ha avançat")).toBeTruthy();
+        expect(screen.getByText("Segons el radar, aquí ja neva de manera moderada. La previsió no l'esperava fins cap a la 01:00.")).toBeTruthy();
+        rerender(<RadarRealityBanner modelMmPerHourNow={0} forecastHours={DRY} lang="ca" kind="snow" />);
+        expect(screen.getByText('Neu no prevista')).toBeTruthy();
+        expect(screen.getByText("Segons el radar, aquí neva de manera moderada, però la previsió no n'esperava en les properes hores. La neu cobreix una zona àmplia al voltant.")).toBeTruthy();
+        expect(screen.queryByText(/pluja/i)).toBeNull();
+    });
+
+    it('si pot ser qualsevol de les dues, ho diu (en cada idioma)', () => {
+        const { rerender } = render(<RadarRealityBanner modelMmPerHourNow={0} forecastHours={DRY} lang="ca" kind="mixed" />);
+        expect(screen.getByText('Pluja o neu no previstes')).toBeTruthy();
+        rerender(<RadarRealityBanner modelMmPerHourNow={0} forecastHours={RAIN_AT_1} lang="en" kind="mixed" />);
+        expect(screen.getByText('Rain or snow has come early')).toBeTruthy();
+        rerender(<RadarRealityBanner modelMmPerHourNow={0} forecastHours={RAIN_AT_1} lang="fr" kind="snow" />);
+        expect(screen.getByText('La neige est en avance')).toBeTruthy();
+    });
+
 });

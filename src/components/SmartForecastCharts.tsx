@@ -36,6 +36,7 @@ import {
 import { dayChangeIndices, formatDayLabel, nightRuns } from '../utils/chartTimeMarks';
 import { CHART_MODEL_KEYS, type ChartModelKey, type HourlyChartPoint } from '../utils/hourlyChartSeries';
 import { getSafeLocale } from '../utils/formatters';
+import { precipKind } from '../utils/precipKind';
 import { getSmartForecastText, type SmartForecastText } from './smartForecastI18n';
 import { DashSample, SmartChartLegend, type LegendModel } from './SmartChartLegend';
 import { SmartChartReadout, type ReadoutItem } from './SmartChartReadout';
@@ -591,14 +592,18 @@ const SmartForecastCharts = memo(({ data, comparisonData, lang = 'ca', regionalM
           ? fmt(rain.modelTotals.min)
           : `${fmt(rain.modelTotals.min)}–${fmt(rain.modelTotals.max)}`)
       : '';
+  // Pluja en mm, neu en cm (precipKind.ts): si el que cau a la finestra és sobretot neu, el total i l'inici parlen de
+  // neu. Els models donen aigua (cadascun reparteix la pluja i la neu a la seva manera): el seu rang queda en mm d'aigua.
+  const snowTotal = data.reduce((sum, p) => sum + (typeof p.snowfall === 'number' && p.snowfall > 0 ? p.snowfall : 0), 0);
+  const snowWindow = precipKind(rain.total, snowTotal) === 'snow';
   const rainFigures: KeyFigureData[] = [
       {
           label: text.figures.total24h,
-          value: rain.total !== null ? `${fmt(rain.total)} mm` : '—',
-          sub: totalsRange ? `${text.sub.models} ${totalsRange} mm` : ''
+          value: snowWindow ? `${fmt(snowTotal)} cm` : rain.total !== null ? `${fmt(rain.total)} mm` : '—',
+          sub: totalsRange ? `${text.sub.models} ${totalsRange} mm${snowTotal > 0 ? ` ${text.sub.water}` : ''}` : ''
       },
       {
-          label: text.figures.rainStart,
+          label: snowWindow ? text.figures.snowStart : text.figures.rainStart,
           value: rain.firstRain !== null ? hourAt(rain.firstRain) : '—',
           sub: startRange ? `${text.sub.models} ${startRange}` : ''
       },
@@ -666,7 +671,11 @@ const SmartForecastCharts = memo(({ data, comparisonData, lang = 'ca', regionalM
   const point = stripIndex !== null ? data[stripIndex] : null;
   const primaryValue = point
       ? activeTab === 'rain'
-          ? (point.precip === null ? null : `${oneDecimal(point.precip)} mm`)
+          ? (point.precip === null
+              ? null
+              : precipKind(point.precip, point.snowfall) === 'snow' && typeof point.snowfall === 'number'
+                  ? `${oneDecimal(point.snowfall)} cm`
+                  : `${oneDecimal(point.precip)} mm`)
           : formatValue(activeTab, point)
       : null;
   const primaryNote = point && activeTab === 'rain' && point.rain !== null
@@ -738,7 +747,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, lang = 'ca', regionalM
           // Volum (barres) i probabilitat (línies), apilats: comparteixen l'eix de temps i el cursor.
           charts: (
               <div className="flex flex-col gap-3">
-                  {chartEl('precip', 190, { label: text.volume })}
+                  {chartEl('precip', 190, { label: snowTotal > 0 ? text.volumeWater : text.volume })}
                   {chartEl('rain', 200, { label: typeof tRecord.rainProb === 'string' ? tRecord.rainProb : 'PROB.' })}
               </div>
           )

@@ -11,6 +11,8 @@ export interface SmartForecastText {
     tabs: { temp: string; rain: string; wind: string; snow: string };
     /** Rètol del gràfic de volum (mm/h). */
     volume: string;
+    /** El mateix rètol quan hi ha neu: el volum continua sent d'aigua (la neu, en cm, va a la lectura i al total). */
+    volumeWater: string;
     /** Nom de la línia principal quan no ve d'un model regional. */
     globalModel: string;
     /** Nom de la ratxa de vent a la lectura. */
@@ -21,6 +23,8 @@ export interface SmartForecastText {
         maxDisagreement: string;
         total24h: string;
         rainStart: string;
+        /** "Inici de neu": quan el que cau a la finestra és sobretot neu (precipKind). */
+        snowStart: string;
         modelsWithRain: string;
         maxGust: string;
         maxWind: string;
@@ -37,6 +41,8 @@ export interface SmartForecastText {
         /** "4 de 4". */
         of: string;
         rainThreshold: string;
+        /** "models 0,0–0,4 mm d'aigua": els models donen aigua, no neu. */
+        water: string;
         betweenModels: string;
     };
     agreement: {
@@ -94,6 +100,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         window: 'Pròximes 24 h',
         tabs: { temp: 'Temp', rain: 'Pluja', wind: 'Vent', snow: 'Neu' },
         volume: 'VOLUM (MM)',
+        volumeWater: "VOLUM (MM D'AIGUA)",
         globalModel: 'MODEL GLOBAL',
         gust: 'Ratxa',
         figures: {
@@ -102,6 +109,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             maxDisagreement: 'Desacord màx.',
             total24h: 'Total 24 h',
             rainStart: 'Inici de pluja',
+            snowStart: 'Inici de neu',
             modelsWithRain: 'Models amb pluja',
             maxGust: 'Ratxa màx.',
             maxWind: 'Vent màx.',
@@ -109,7 +117,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             snowLow: 'Cota mínima',
             snowHigh: 'Cota màxima'
         },
-        sub: { models: 'models', at: 'a les', of: 'de', rainThreshold: 'volum ≥ 0,2 mm', betweenModels: 'entre models' },
+        sub: { models: 'models', at: 'a les', of: 'de', rainThreshold: 'volum ≥ 0,2 mm', water: "d'aigua", betweenModels: 'entre models' },
         agreement: {
             high: 'Acord alt',
             medium: 'Acord mitjà',
@@ -149,6 +157,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         window: 'Próximas 24 h',
         tabs: { temp: 'Temp', rain: 'Lluvia', wind: 'Viento', snow: 'Nieve' },
         volume: 'VOLUMEN (MM)',
+        volumeWater: 'VOLUMEN (MM DE AGUA)',
         globalModel: 'MODELO GLOBAL',
         gust: 'Racha',
         figures: {
@@ -157,6 +166,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             maxDisagreement: 'Desacuerdo máx.',
             total24h: 'Total 24 h',
             rainStart: 'Inicio de lluvia',
+            snowStart: 'Inicio de nieve',
             modelsWithRain: 'Modelos con lluvia',
             maxGust: 'Racha máx.',
             maxWind: 'Viento máx.',
@@ -164,7 +174,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             snowLow: 'Cota mínima',
             snowHigh: 'Cota máxima'
         },
-        sub: { models: 'modelos', at: 'a las', of: 'de', rainThreshold: 'volumen ≥ 0,2 mm', betweenModels: 'entre modelos' },
+        sub: { models: 'modelos', at: 'a las', of: 'de', rainThreshold: 'volumen ≥ 0,2 mm', water: 'de agua', betweenModels: 'entre modelos' },
         agreement: {
             high: 'Acuerdo alto',
             medium: 'Acuerdo medio',
@@ -204,6 +214,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         window: 'Next 24 h',
         tabs: { temp: 'Temp', rain: 'Rain', wind: 'Wind', snow: 'Snow' },
         volume: 'VOLUME (MM)',
+        volumeWater: 'VOLUME (MM OF WATER)',
         globalModel: 'GLOBAL MODEL',
         gust: 'Gust',
         figures: {
@@ -212,6 +223,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             maxDisagreement: 'Max disagreement',
             total24h: '24 h total',
             rainStart: 'Rain starts',
+            snowStart: 'Snow starts',
             modelsWithRain: 'Models with rain',
             maxGust: 'Max gust',
             maxWind: 'Max wind',
@@ -219,7 +231,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             snowLow: 'Min snow level',
             snowHigh: 'Max snow level'
         },
-        sub: { models: 'models', at: 'at', of: 'of', rainThreshold: 'volume ≥ 0.2 mm', betweenModels: 'between models' },
+        sub: { models: 'models', at: 'at', of: 'of', rainThreshold: 'volume ≥ 0.2 mm', water: 'of water', betweenModels: 'between models' },
         agreement: {
             high: 'High agreement',
             medium: 'Medium agreement',
@@ -259,6 +271,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         window: '24 prochaines heures',
         tabs: { temp: 'Temp', rain: 'Pluie', wind: 'Vent', snow: 'Neige' },
         volume: 'VOLUME (MM)',
+        volumeWater: "VOLUME (MM D'EAU)",
         globalModel: 'MODÈLE GLOBAL',
         gust: 'Rafale',
         figures: {
@@ -267,6 +280,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             maxDisagreement: 'Désaccord max.',
             total24h: 'Total 24 h',
             rainStart: 'Début de pluie',
+            snowStart: 'Début de neige',
             modelsWithRain: 'Modèles avec pluie',
             maxGust: 'Rafale max.',
             maxWind: 'Vent max.',
@@ -274,7 +288,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
             snowLow: 'Cote min.',
             snowHigh: 'Cote max.'
         },
-        sub: { models: 'modèles', at: 'à', of: 'sur', rainThreshold: 'volume ≥ 0,2 mm', betweenModels: 'entre modèles' },
+        sub: { models: 'modèles', at: 'à', of: 'sur', rainThreshold: 'volume ≥ 0,2 mm', water: "d'eau", betweenModels: 'entre modèles' },
         agreement: {
             high: 'Accord élevé',
             medium: 'Accord moyen',

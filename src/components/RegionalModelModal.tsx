@@ -5,6 +5,13 @@ import { X, Wind, Droplets, Snowflake, Activity, Zap, AlertOctagon, ShieldCheck,
 import { getWeatherIcon } from './WeatherIcons';
 import { Language } from '../translations';
 import { formatDecimal } from '../utils/formatters';
+import { precipKind, SNOW_CM_PER_MM } from '../utils/precipKind';
+import { snowfallCmForHour } from '../utils/engineSnowfall';
+
+// Pluja en mm, neu en cm: el model regional no publica la neu, així que es fa com a la resta de l'app (engineSnowfall.ts):
+// les hores amb codi de neu passen els seus mm a cm (aiguaneu, la meitat).
+const snowCmOf = (row: { code: number; precip: number }): number =>
+  snowfallCmForHour(row.code, row.precip > 0 ? row.precip : 0) ?? 0;
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -177,6 +184,12 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
   const maxGust = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.gust)), [hourlyRows]);
   const maxCape = useMemo(() => hourlyRows.length === 0 ? 0 : Math.max(...hourlyRows.map(r => r.cape)), [hourlyRows]);
   const totalRain = useMemo(() => hourlyRows.reduce((acc, row) => acc + (row.precip > 0 ? row.precip : 0), 0), [hourlyRows]);
+  const totalSnowCm = useMemo(() => hourlyRows.reduce((acc, row) => acc + snowCmOf(row), 0), [hourlyRows]);
+  const totalRainOnlyMm = Math.max(0, totalRain - totalSnowCm / SNOW_CM_PER_MM);
+  const totalParts = [
+      totalRainOnlyMm >= 0.05 || totalSnowCm < 0.05 ? { value: totalRainOnlyMm, unit: 'mm' } : null,
+      totalSnowCm >= 0.05 ? { value: totalSnowCm, unit: 'cm' } : null
+  ].filter((p): p is { value: number; unit: string } => p !== null);
   // La isoterma 0 ha de gestionar bé el null si no hi ha dades
   const minIso = useMemo(() => hourlyRows.length === 0 ? 0 : Math.min(...hourlyRows.map(r => r.freezingLevel)), [hourlyRows]);
 
@@ -294,7 +307,12 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                 <span className={`text-[10px] uppercase font-bold tracking-widest ${totalRain > 0 ? 'text-cyan-200' : 'text-slate-400'}`}>{t.precip}</span>
                             </div>
                             <div className={`text-xl sm:text-2xl md:text-3xl font-black tracking-tighter ${totalRain > 0 ? 'text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]' : 'text-slate-200'}`}>
-                                {formatDecimal(totalRain, safeLang)}<span className={`text-[10px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-400'}`}>mm</span>
+                                {totalParts.map((part, i) => (
+                                    <span key={part.unit} data-testid={`regional-total-${part.unit}`}>
+                                        {i > 0 && <span className="text-slate-500 font-bold mx-1.5">·</span>}
+                                        {formatDecimal(part.value, safeLang)}<span className={`text-[10px] md:text-xs font-bold ml-1 ${totalRain > 0 ? 'text-cyan-400' : 'text-slate-400'}`}>{part.unit}</span>
+                                    </span>
+                                ))}
                             </div>
                          </div>
 
@@ -414,12 +432,16 @@ export default function RegionalModelModal({ lat, lon, model, onClose, lang = 'c
                                                     </div>
                                                 </div>
 
-                                                <div className="w-[45px] sm:w-[65px] flex justify-end sm:justify-start">
+                                                <div className="min-w-[45px] sm:w-[72px] flex justify-end sm:justify-start">
                                                     {row.precip > 0 ? (
                                                         <div className="flex items-center gap-1.5 text-cyan-100 font-bold text-[10px] sm:text-xs bg-cyan-950/60 px-2 sm:px-2.5 py-1 rounded-md border border-cyan-500/30 shadow-[inset_0_1px_4px_rgba(6,182,212,0.2)] relative overflow-hidden">
                                                             <div className="absolute bottom-0 left-0 w-full bg-cyan-500/30 transition-all duration-500" style={{ height: `${Math.min(100, (row.precip / 10) * 100)}%` }}></div>
                                                             {isSnow ? <Snowflake className="w-3 h-3 text-cyan-300 relative z-10" /> : <Droplets className="w-3 h-3 text-cyan-400 relative z-10 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]" />}
-                                                            <span className="relative z-10">{formatDecimal(row.precip, safeLang)}</span>
+                                                            <span className="relative z-10 whitespace-nowrap" data-testid="regional-row-precip">
+                                                                {precipKind(row.precip, snowCmOf(row)) === 'snow'
+                                                                    ? <>{formatDecimal(snowCmOf(row), safeLang)}<span className="ml-0.5 text-[9px] opacity-70">cm</span></>
+                                                                    : <>{formatDecimal(row.precip, safeLang)}<span className="ml-0.5 text-[9px] opacity-70">mm</span></>}
+                                                            </span>
                                                         </div>
                                                     ) : (
                                                         <span className="text-[10px] font-mono font-bold text-slate-700/50">-</span>

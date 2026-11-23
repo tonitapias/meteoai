@@ -4,6 +4,7 @@ import { ChevronDown, ExternalLink, ShieldAlert } from 'lucide-react';
 import { useOfficialAlerts } from '../hooks/useOfficialAlerts';
 import { Language } from '../translations';
 import type { OfficialAlert } from '../services/alertsApi';
+import { describeAlertWhen, isAlertStillValid, isSafeExternalUrl } from '../utils/alertTime';
 
 interface OfficialAlertBannerProps {
     lat?: number;
@@ -61,65 +62,12 @@ const LOCAL_UI_TEXTS: Record<Language, LocalUIText> = {
     }
 };
 
-const LOCALE_MAP: Record<Language, string> = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
-
-// Una zona que el navegador no coneix fa llançar Intl: llavors, la del dispositiu.
-const formatSafe = (date: Date, locale: string, options: Intl.DateTimeFormatOptions, timeZone?: string): string => {
-    try {
-        return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(date);
-    } catch {
-        return new Intl.DateTimeFormat(locale, options).format(date);
-    }
-};
-
-const validDate = (iso: string | null | undefined): Date | null => {
-    if (!iso) return null;
-    const date = new Date(iso);
-    return Number.isFinite(date.getTime()) ? date : null;
-};
-
-const formatExpires = (expires: string | null, lang: Language, timeZone?: string): string | null => {
-    const date = validDate(expires);
-    return date ? formatSafe(date, LOCALE_MAP[lang] || 'ca-ES', { dateStyle: 'short', timeStyle: 'short' }, timeZone) : null;
-};
-
-/** "dt. 18:00": dia de la setmana i hora (24 h), en l'idioma de l'app. */
-const formatWeekdayTime = (date: Date, lang: Language, timeZone?: string): string => {
-    const locale = LOCALE_MAP[lang] || 'ca-ES';
-    const weekday = formatSafe(date, locale, { weekday: 'short' }, timeZone);
-    const time = formatSafe(date, locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, timeZone);
-    return `${weekday} ${time}`;
-};
-
 /**
- * Quan val l'avís: "De dt. 18:00 a dt. 23:59" si la font en dona l'inici (Meteocat); si no, "Vàlida fins: 19/11/26 23:59"
- * com abans. Abans, a Meteocat, només sortia el final de l'avís sencer (totes les comarques) i llegit com a UTC.
+ * Quan val l'avís: "De dt. 18:00 a dt. 23:59" si la font en dona l'inici (Meteocat); si no, "Vàlida fins: 19/11/26 23:59".
+ * Les hores, el venciment i l'esquema segur de l'enllaç viuen a utils/alertTime.ts (també els fa servir el detall del dia).
  */
-const describeWhen = (alert: OfficialAlert, lang: Language, ui: LocalUIText, timeZone?: string): string | null => {
-    const onset = validDate(alert.onset);
-    const expires = validDate(alert.expires);
-    if (onset && expires) {
-        return ui.range
-            .replace('{from}', formatWeekdayTime(onset, lang, timeZone))
-            .replace('{to}', formatWeekdayTime(expires, lang, timeZone));
-    }
-    const until = formatExpires(alert.expires, lang, timeZone);
-    return until ? `${ui.validUntil}: ${until}` : null;
-};
-
-// Un avís segueix valent fins que s'acaba l'últim minut (les fonts donen 23:59).
-const isStillValid = (alert: OfficialAlert, nowMs: number | undefined): boolean => {
-    const expires = validDate(alert.expires);
-    return nowMs === undefined || !expires || expires.getTime() + 60_000 > nowMs;
-};
-
-// [FIX] `sourceUrl` ve d'una font oficial externa (7 fonts + pas de traducció
-// IA pel mig) i es renderitzava directament com a `href` sense comprovar
-// l'esquema: un `javascript:`/`data:` maliciós hi executaria codi en clic. Si
-// la font o el Worker es veiessin compromesos, o un bug de normalització
-// mangés el camp, no hi havia cap defensa. Només acceptem http(s).
-const isSafeExternalUrl = (url: string | null | undefined): boolean =>
-    typeof url === 'string' && /^https:\/\//i.test(url);
+const describeWhen = (alert: OfficialAlert, lang: Language, ui: LocalUIText, timeZone?: string): string | null =>
+    describeAlertWhen(alert, lang, timeZone, ui);
 
 // Fila compacta per a les alertes que no són la principal (severitat menor):
 // mateixa informació (esdeveniment, venciment, font), format reduït.
@@ -163,7 +111,7 @@ const OfficialAlertBanner = ({ lat, lon, lang, timeZone, nowMs }: OfficialAlertB
     const { alerts: fetched } = useOfficialAlerts(lat, lon, lang);
     const [expanded, setExpanded] = useState(false);
     const ui = LOCAL_UI_TEXTS[lang] || LOCAL_UI_TEXTS.ca;
-    const alerts = fetched.filter((alert) => isStillValid(alert, nowMs));
+    const alerts = fetched.filter((alert) => isAlertStillValid(alert, nowMs));
 
     if (alerts.length === 0) return null;
 

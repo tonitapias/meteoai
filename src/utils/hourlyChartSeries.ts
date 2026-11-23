@@ -33,6 +33,11 @@ export type HourlyChartPoint = {
     rain: number | null;
     /** Volum de pluja (mm/h). */
     precip: number | null;
+    /**
+     * Neu de l'hora (cm): la del motor a la línia principal (engineSnowfall.ts); la del model, si la publica, als models.
+     * Amb `precip`, decideix si la xifra de l'hora surt en cm o en mm (precipKind.ts).
+     */
+    snowfall?: number | null;
     wind: number | null;
     gusts: number | null;
     /** Cota de neu (m). */
@@ -120,6 +125,7 @@ export const buildHourlyChartSeries = (
             temp: toUserUnit(correctedTemp),
             rain: read('precipitation_probability'),
             precip: read('precipitation'),
+            snowfall: read('snowfall'),
             wind: read('wind_speed_10m'),
             gusts: read('wind_gusts_10m'),
             snowLevel: calculateSnowLevel(snowSource),

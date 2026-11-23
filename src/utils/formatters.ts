@@ -3,6 +3,7 @@ import { TRANSLATIONS, Language } from '../translations';
 import { TranslationMap, StrictCurrentWeather } from '../types/weatherLogicTypes';
 import { safeNum } from './weatherMath';
 import { isMostlyCloudy } from './rules/cloudRules';
+import { precipKind } from './precipKind';
 
 // Re-exportem tipus si cal, però preferim usar els importats
 export type WeatherUnit = 'C' | 'F';
@@ -107,19 +108,22 @@ export const formatHoursMinutes = (totalSeconds: number | null | undefined): str
   return `${h}h ${m.toString().padStart(2, '0')}m`;
 };
 
-// Decimals en el format de l'idioma ("0,4 mm"; "0.4 mm" en anglès), com formatDecimal.
-export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null, lang: Language = 'ca'): string => {
-  const safePrecip = precipitationTotal ?? 0;
-  const safeSnow = snowfall ?? 0;
-
-  if (safeSnow >= 0.2) {
-    return safeSnow < 1 
-      ? `${formatDecimal(safeSnow, lang)} cm`
-      : `${Math.round(safeSnow)} cm`;
-  }
-  
-  if (safePrecip < 1 && safePrecip > 0) {
-    return `${formatDecimal(safePrecip, lang)} mm`;
-  }
-  return `${Math.round(safePrecip)} mm`;
+/**
+ * Una quantitat amb la seva unitat: un decimal per sota d'1 ("0,4 mm"; "0.4 mm" en anglès), enters a partir d'1 i
+ * "<0,1" per a una traça que arrodonida seria 0,0.
+ */
+export const formatAmount = (value: number | null | undefined, unit: 'mm' | 'cm', lang: Language = 'ca'): string => {
+  const v = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+  if (v === 0) return `0 ${unit}`;
+  if (v < 0.05) return `<${formatDecimal(0.1, lang)} ${unit}`;
+  return v < 1 ? `${formatDecimal(v, lang)} ${unit}` : `${Math.round(v)} ${unit}`;
 };
+
+/**
+ * Pluja en mm i neu en cm: la xifra és de neu (cm) si la neu és el que més cau, i de pluja (mm) si no (precipKind.ts).
+ * `precipitationTotal` són els mm d'aigua de tot (neu inclosa) i `snowfall` els cm de neu.
+ */
+export const formatPrecipitation = (precipitationTotal: number | null, snowfall: number | null, lang: Language = 'ca'): string =>
+  precipKind(precipitationTotal, snowfall) === 'snow'
+    ? formatAmount(snowfall, 'cm', lang)
+    : formatAmount(precipitationTotal, 'mm', lang);

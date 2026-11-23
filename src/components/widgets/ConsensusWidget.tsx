@@ -1,7 +1,8 @@
 // src/components/widgets/ConsensusWidget.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ConsensusMetrics, HourlySeriesBundle } from '../../utils/consensusMath';
+import { ConsensusMetrics, HourlySeriesBundle, isConsensusSnowRisk } from '../../utils/consensusMath';
+import { snowCmFromWater } from '../../utils/precipKind';
 import { Language } from '../../translations';
 import { ConsensusModal } from './ConsensusModal';
 import { ConsensusChartsModal } from './ConsensusChartsModal';
@@ -97,7 +98,10 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
   
   const safeLocalTemp = isValidNum(localTemp) ? localTemp : undefined;
   const safeGlobalTemp = isValidNum(metrics.globalTemp) ? metrics.globalTemp : null;
-  const isSnowRisk = (safeLocalTemp !== undefined && safeLocalTemp <= 2) || (safeGlobalTemp !== null && safeGlobalTemp <= 2);
+  const isSnowRisk = isConsensusSnowRisk(safeLocalTemp, safeGlobalTemp);
+  // Amb fred la fila diu «Neu» i, per tant, cm (els mm d'aigua dels dos models × 0,7): «Neu 0 mm» no tenia sentit.
+  const precipUnit = isSnowRisk ? 'cm' : 'mm';
+  const asShown = (mm: number | null | undefined) => (isValidNum(mm) && isSnowRisk ? snowCmFromWater(mm) : mm);
 
   // Neutre: sense semàfor, perquè la targeta no jutja si els models coincideixen. La fletxa només diu cap on va el global.
   const title = t.title.replace('{model}', regionalModelLabel);
@@ -179,9 +183,9 @@ export const ConsensusWidget: React.FC<ConsensusWidgetProps> = ({
       type: 'rain',
       icon: isSnowRisk ? <CloudSnow className="w-3.5 h-3.5 text-sky-300" aria-hidden="true" /> : <CloudRain className="w-3.5 h-3.5" aria-hidden="true" />,
       label: isSnowRisk ? t.snow : t.rain,
-      local: formatVal(localPrecip), unit: 'mm',
-      global: `${formatVal(metrics.globalPrecip)} mm`,
-      delta: formatDelta(metrics.precipDiff),
+      local: formatVal(asShown(localPrecip)), unit: precipUnit,
+      global: `${formatVal(asShown(metrics.globalPrecip))} ${precipUnit}`,
+      delta: formatDelta(asShown(metrics.precipDiff)),
       trend: renderTrend(localPrecip, metrics.globalPrecip, 'rain')
     },
     {
