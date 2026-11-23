@@ -11,6 +11,7 @@ import {
     ShortRangeAgreement
 } from '../types/weatherLogicTypes';
 import { safeNum, extractValidNum } from './weatherMath';
+import { precipWordFor, type PrecipWord } from './precipKind';
 import { isFreezingPrecipCode, isSleetCode } from './rules/winterRules';
 import type { DustKind } from './rules/aerosolRules';
 
@@ -195,7 +196,33 @@ const NO_BADGE: ConfidenceBadge = { confidence: "", confidenceLevel: null, confi
 // Insígnia de l'anàlisi +6h: diu QUÈ és incert. Un dubte només de temperatura és ambre i porta el seu marge
 // ("Temperatura ±3°"), mai vermell: el vermell queda per quan la majoria de models globals contradiuen si plourà
 // (o quan dubten la temperatura i la pluja alhora).
-const describeAgreement = (agreement: ShortRangeAgreement | null, tr: TranslationMap, unit: string): ConfidenceBadge => {
+// La paraula de la insígnia segueix el que cau en aquestes 6 hores (precipKind.ts): a la Pica d'Estats, a -8 °C i nevant,
+// deia «Pluja incerta».
+const BADGE_WORDS: Record<PrecipWord, { mod: keyof TranslationMap; low: keyof TranslationMap; hint: keyof TranslationMap; both: keyof TranslationMap }> = {
+    rain: { mod: 'aiConfidenceRainMod', low: 'aiConfidenceRainLow', hint: 'aiConfidenceHintRain', both: 'aiConfidenceHintBoth' },
+    snow: { mod: 'aiConfidenceSnowMod', low: 'aiConfidenceSnowLow', hint: 'aiConfidenceHintSnow', both: 'aiConfidenceHintBothSnow' },
+    mixed: { mod: 'aiConfidencePrecipMod', low: 'aiConfidencePrecipLow', hint: 'aiConfidenceHintPrecip', both: 'aiConfidenceHintBothPrecip' }
+};
+
+/** Què cau (o pot caure) en les 6 hores de la insígnia: la pluja i la neu de la sèrie i, si no n'hi ha, la temperatura d'ara. */
+const badgeWordFor = (hourly: StrictHourlyWeather, nowIndex: number, tempC: number | null): PrecipWord => {
+    const raw = hourly as unknown as Record<string, unknown>;
+    const sum = (key: string) => {
+        const arr = raw[key];
+        if (!Array.isArray(arr)) return 0;
+        return arr.slice(Math.max(0, nowIndex), Math.max(0, nowIndex) + 6)
+            .reduce((s: number, v: unknown) => s + (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0), 0);
+    };
+    return precipWordFor(sum('precipitation'), sum('snowfall'), tempC);
+};
+
+const textOf = (tr: TranslationMap, key: keyof TranslationMap, fallback: keyof TranslationMap): string => {
+    const value = tr[key];
+    return typeof value === 'string' && value !== '' ? value : String(tr[fallback]);
+};
+
+const describeAgreement = (agreement: ShortRangeAgreement | null, tr: TranslationMap, unit: string, word: PrecipWord = 'rain'): ConfidenceBadge => {
+    const words = BADGE_WORDS[word];
     if (!agreement) return NO_BADGE;
     const { level, cause, tempMarginC } = agreement;
     if (level === 'high' || cause === null) {
@@ -211,14 +238,16 @@ const describeAgreement = (agreement: ShortRangeAgreement | null, tr: Translatio
         };
     }
     if (cause === 'rain') {
+        const hint = textOf(tr, words.hint, 'aiConfidenceHintRain');
         return level === 'low'
-            ? { confidence: tr.aiConfidenceRainLow, confidenceLevel: level, confidenceColor: 'red', confidenceHint: tr.aiConfidenceHintRain }
-            : { confidence: tr.aiConfidenceRainMod, confidenceLevel: level, confidenceColor: 'amber', confidenceHint: tr.aiConfidenceHintRain };
+            ? { confidence: textOf(tr, words.low, 'aiConfidenceRainLow'), confidenceLevel: level, confidenceColor: 'red', confidenceHint: hint }
+            : { confidence: textOf(tr, words.mod, 'aiConfidenceRainMod'), confidenceLevel: level, confidenceColor: 'amber', confidenceHint: hint };
     }
-    // Temperatura i pluja alhora.
+    // Temperatura i pluja (o neu) alhora.
+    const bothHint = textOf(tr, words.both, 'aiConfidenceHintBoth');
     return level === 'low'
-        ? { confidence: tr.aiConfidenceLow, confidenceLevel: level, confidenceColor: 'red', confidenceHint: tr.aiConfidenceHintBoth }
-        : { confidence: tr.aiConfidenceMod, confidenceLevel: level, confidenceColor: 'amber', confidenceHint: tr.aiConfidenceHintBoth };
+        ? { confidence: tr.aiConfidenceLow, confidenceLevel: level, confidenceColor: 'red', confidenceHint: bothHint }
+        : { confidence: tr.aiConfidenceMod, confidenceLevel: level, confidenceColor: 'amber', confidenceHint: bothHint };
 };
 
 const analyzeWind = (windSpeed: number, tr: TranslationMap) => {
@@ -340,7 +369,7 @@ export const generateAIPrediction = (
         }, tr);
 
         // Sense comparació entre models (agreement null) no hi ha insígnia: abans sortia "Consens Models" per defecte.
-        const badge = describeAgreement(agreement, tr, unit);
+        const badge = describeAgreement(agreement, tr, unit, badgeWordFor(hourly, nowIndex, validTemp));
 
         const finalString = summaryParts.filter(Boolean).join("").replace(/\s+/g, ' ');
 

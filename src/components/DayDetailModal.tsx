@@ -30,6 +30,7 @@ import { alertsForDay } from '../utils/alertTime';
 import { getWeatherIcon } from './WeatherIcons';
 import { getHourCodesByDate, type HourlySeries } from '../utils/hourlyWeatherCode';
 import { MATRIX_BG } from './widgets/widgetStyles';
+import { useMinWidth } from './solar/useMinWidth';
 import { isRegionalModelActive } from '../constants/regionalModels';
 
 interface DayDetailModalProps {
@@ -65,6 +66,8 @@ export default function DayDetailModal({
   } = useDayDetailData(weatherData, selectedDayIndex, unit);
 
   const [view, setView] = useState<HoursView>('column');
+  // A partir de 1024 px, el detall fa dues columnes i la columna i els gràfics es veuen alhora (sense «Columna | Gràfic»).
+  const wide = useMinWidth('(min-width: 1024px)');
 
   // Model regional actiu a la ubicació (p. ex. "AROME HD"), o null si tota la previsió és del model global.
   const regionalModelLabel = isRegionalModelActive(weatherData?.current?.source) ? (weatherData?.current?.source as string) : null;
@@ -309,6 +312,8 @@ export default function DayDetailModal({
       legendForecast: td.legendForecast,
       legendBand: td.legendBand,
       legendRain: td.legendRain,
+      legendRainSnow: td.legendRainSnow,
+      legendRainMixed: td.legendRainMixed,
       legendFeels: td.legendFeels,
       legendGust: td.legendGust,
       legendSun: td.legendSun,
@@ -317,8 +322,37 @@ export default function DayDetailModal({
       feelsWord: td.feelsWord,
       gustsWord: td.gustsShort,
       rainChanceWord: td.rainChanceWord,
+      snowChanceWord: td.snowChanceWord,
       sky: t.forecastWeek.sky
   };
+
+  const columnView = (
+      <DayColumn
+          rows={columnRows}
+          scale={tempScale}
+          dryWindow={dryWindow}
+          sunriseOffset={sunriseOffset}
+          sunsetOffset={sunsetOffset}
+          nowOffset={nowOffset}
+          sunrise={sunrise}
+          sunset={sunset}
+          daylight={daylightSec !== null ? formatHoursMinutes(daylightSec) : null}
+          labels={columnLabels}
+          lang={lang}
+      />
+  );
+  const chartView = (
+      <div data-no-swipe className="px-3 sm:px-4 pb-4">
+          <SmartForecastCharts
+              data={hourlyData}
+              comparisonData={comparisonData}
+              lang={lang}
+              regionalModelLabel={regionalModelLabel}
+              nowIndex={nowIndex}
+              framed={false}
+          />
+      </div>
+  );
 
   const viewButton = (value: HoursView, label: string) => (
       <button
@@ -345,7 +379,7 @@ export default function DayDetailModal({
           ref={scrollRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          className="relative w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[94vh] overflow-y-auto custom-scrollbar bg-[#0a0b11] sm:rounded-[2rem] sm:border sm:border-white/[0.07] shadow-2xl"
+          className="relative w-full h-full sm:h-auto sm:max-w-2xl lg:max-w-5xl sm:max-h-[94vh] overflow-y-auto custom-scrollbar bg-[#0a0b11] sm:rounded-[2rem] sm:border sm:border-white/[0.07] shadow-2xl"
       >
         <div className="relative min-h-full bg-gradient-to-b from-[#0e1018] to-[#0a0b11]">
           <div className={MATRIX_BG}></div>
@@ -384,6 +418,10 @@ export default function DayDetailModal({
                 </div>
             )}
 
+            {/* A l'ordinador (≥ 1024 px), dues columnes: a l'esquerra el resum, les xifres i els gràfics; a la dreta, la
+                columna del dia. Al mòbil i a la tauleta, una sola columna amb «Columna | Gràfic». */}
+            <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start">
+            <div data-testid="day-detail-side" className="min-w-0 lg:border-r lg:border-white/[0.06] lg:pb-2">
             {/* Resum: cel, data, mínima i màxima, i la fiabilitat dita en una frase */}
             <section className="px-5 sm:px-6 pt-3.5 pb-4 border-t border-white/[0.06]">
                 <div className="flex items-center gap-3.5">
@@ -428,43 +466,30 @@ export default function DayDetailModal({
 
             <DayFacts facts={facts} />
 
-            {/* Les hores: la columna del dia o els gràfics de sempre */}
-            <section className="border-t border-white/[0.06] pt-3.5">
-                <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pb-3">
+            {/* A l'ordinador, els gràfics de sempre hi són sempre, al costat de la columna */}
+            {wide && (
+                <section data-testid="day-detail-charts" className="border-t border-white/[0.06] pt-3.5">
+                    <h3 className="px-5 sm:px-6 pb-3 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{t.hourlyEvolution}</h3>
+                    {chartView}
+                </section>
+            )}
+            </div>
+
+            {/* Les hores: la columna del dia o, al mòbil, els gràfics de sempre */}
+            <section className="min-w-0 border-t border-white/[0.06] pt-3.5">
+                <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pb-3 min-h-[39px]">
                     <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">{td.columnTitle}</h3>
-                    <div role="group" aria-label={td.viewAria} className="flex p-[3px] gap-0.5 rounded-xl bg-black/35 border border-white/[0.06]">
-                        {viewButton('column', td.viewColumn)}
-                        {viewButton('chart', td.viewChart)}
-                    </div>
+                    {!wide && (
+                        <div role="group" aria-label={td.viewAria} className="flex p-[3px] gap-0.5 rounded-xl bg-black/35 border border-white/[0.06]">
+                            {viewButton('column', td.viewColumn)}
+                            {viewButton('chart', td.viewChart)}
+                        </div>
+                    )}
                 </div>
 
-                {view === 'column' ? (
-                    <DayColumn
-                        rows={columnRows}
-                        scale={tempScale}
-                        dryWindow={dryWindow}
-                        sunriseOffset={sunriseOffset}
-                        sunsetOffset={sunsetOffset}
-                        nowOffset={nowOffset}
-                        sunrise={sunrise}
-                        sunset={sunset}
-                        daylight={daylightSec !== null ? formatHoursMinutes(daylightSec) : null}
-                        labels={columnLabels}
-                        lang={lang}
-                    />
-                ) : (
-                    <div data-no-swipe className="px-3 sm:px-4 pb-4">
-                        <SmartForecastCharts
-                            data={hourlyData}
-                            comparisonData={comparisonData}
-                            lang={lang}
-                            regionalModelLabel={regionalModelLabel}
-                            nowIndex={nowIndex}
-                            framed={false}
-                        />
-                    </div>
-                )}
+                {wide || view === 'column' ? columnView : chartView}
             </section>
+            </div>
 
             <div className="h-6"></div>
           </div>

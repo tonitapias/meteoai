@@ -22,6 +22,18 @@ describe('RadarNowcastBanner — pluja, neu o totes dues', () => {
         expect(screen.getByText('Radar suggests rain or snow could start in about 37 min.')).toBeInTheDocument();
     });
 
+    // Pica d'Estats: «Nevada moderada» a la capçalera i el radar deia que començaria d'aquí a 37 min.
+    it('si la previsió ja diu que neva, ho diu i explica que el radar encara no ho veu', () => {
+        render(<RadarNowcastBanner lat={42.67} lon={1.4} lang="ca" kind="snow" modelPrecipNow />);
+        expect(screen.getByText("La previsió diu que ja neva, però el radar encara no ho veu aquí: segons el radar, arribaria d'aquí a uns 37 min.")).toBeInTheDocument();
+        expect(screen.queryByText(/podria començar a nevar/)).toBeNull();
+    });
+
+    it('sense precipitació a la previsió d\'ara, el «podria començar» de sempre', () => {
+        render(<RadarNowcastBanner lat={42.67} lon={1.4} lang="en" kind="rain" modelPrecipNow={false} />);
+        expect(screen.getByText('Radar suggests rain could start in about 37 min.')).toBeInTheDocument();
+    });
+
     it('també quan s\'acaba ara mateix, en cada idioma', () => {
         timing.current = { type: 'end', inMinutes: 0 };
         render(<RadarNowcastBanner lat={42.67} lon={1.4} lang="es" kind="snow" />);

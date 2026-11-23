@@ -748,7 +748,7 @@ const SmartForecastCharts = memo(({ data, comparisonData, lang = 'ca', regionalM
           charts: (
               <div className="flex flex-col gap-3">
                   {chartEl('precip', 190, { label: snowTotal > 0 ? text.volumeWater : text.volume })}
-                  {chartEl('rain', 200, { label: typeof tRecord.rainProb === 'string' ? tRecord.rainProb : 'PROB.' })}
+                  {chartEl('rain', 200, { label: snowTotal > 0 ? text.probPrecip : typeof tRecord.rainProb === 'string' ? tRecord.rainProb : 'PROB.' })}
               </div>
           )
       },

@@ -22,6 +22,9 @@ export interface DayColumnLabels {
   legendForecast: string;
   legendBand: string;
   legendRain: string;
+  /** La llegenda de la probabilitat si el que pot caure és neu, o pluja i neu. */
+  legendRainSnow: string;
+  legendRainMixed: string;
   legendFeels: string;
   legendGust: string;
   legendSun: string;
@@ -30,6 +33,7 @@ export interface DayColumnLabels {
   feelsWord: string;
   gustsWord: string;
   rainChanceWord: string;
+  snowChanceWord: string;
   sky: Record<SkyKind, string>;
 }
 
@@ -133,6 +137,14 @@ export const DayColumn = memo(function DayColumn({
     };
   }, [rows, x]);
 
+  // Una hora "de neu" (utils/dayColumn.ts → snowy): la probabilitat d'aquella hora és de neu.
+  const isSnowHour = (r: DayColumnRow) => r.snowy;
+  const probRows = rows.filter(r => r.precipProb !== null && r.precipProb > 0);
+  const snowProbRows = probRows.filter(isSnowHour).length;
+  const rainLegend = snowProbRows === 0 ? labels.legendRain
+    : snowProbRows === probRows.length ? labels.legendRainSnow
+      : labels.legendRainMixed;
+
   const hasBand = geometry.bandPolys.length > 0;
   const hasFeels = rows.some(r => r.feels !== null);
   const hasGust = rows.some(r => r.gust !== null);
@@ -148,7 +160,7 @@ export const DayColumn = memo(function DayColumn({
     if (r.temp !== null) parts.push(`${Math.round(r.temp)}°`);
     if (r.feels !== null) parts.push(`${labels.feelsWord} ${Math.round(r.feels)}°`);
     if (r.kind) parts.push(labels.sky[r.kind]);
-    if (r.precipProb !== null && r.precipProb > 0) parts.push(`${Math.round(r.precipProb)}% ${labels.rainChanceWord}`);
+    if (r.precipProb !== null && r.precipProb > 0) parts.push(`${Math.round(r.precipProb)}% ${isSnowHour(r) ? labels.snowChanceWord : labels.rainChanceWord}`);
     if ((r.precip ?? 0) > 0 || (r.snowfall ?? 0) > 0) parts.push(formatPrecipitation(r.precip, r.snowfall, lang));
     if (r.wind !== null) parts.push(`${labels.wind.toLocaleLowerCase()} ${Math.round(r.wind)} km/h`);
     if (r.gust !== null) parts.push(`${labels.gustsWord} ${Math.round(r.gust)} km/h`);
@@ -336,7 +348,7 @@ export const DayColumn = memo(function DayColumn({
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-0.5 rounded-full bg-indigo-400" aria-hidden="true"></span>{labels.legendForecast}</span>
         {hasBand && <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-slate-400/30" aria-hidden="true"></span>{labels.legendBand}</span>}
         {hasFeels && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-slate-300/80" aria-hidden="true"></span>{labels.legendFeels}</span>}
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-cyan-400/30" aria-hidden="true"></span>{labels.legendRain}</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-cyan-400/30" aria-hidden="true"></span>{rainLegend}</span>
         {hasGust && <span className="text-amber-300">{labels.legendGust}</span>}
         {(sunriseOffset !== null || sunsetOffset !== null) && (
           <span className="flex items-center gap-1.5"><span className="w-3.5 border-t border-dashed border-amber-300/70" aria-hidden="true"></span>{labels.legendSun}</span>

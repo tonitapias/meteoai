@@ -8,6 +8,7 @@ import { LineChart } from 'lucide-react';
 import { getWeatherIcon } from './WeatherIcons';
 import { TRANSLATIONS, Language } from '../translations';
 import { formatPrecipitation, getSafeLocale } from '../utils/formatters';
+import { precipKind, SNOW_WORD_MAX_TEMP_C } from '../utils/precipKind';
 import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
 import { StrictDailyWeather, ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { hoursOfDate, resolveDailyExtremes, averageDaylightClouds, type HourlyPoint } from '../utils/dailyExtremes';
@@ -63,11 +64,12 @@ interface ForecastSectionProps {
 
 // Nom accessible de cada dia en una frase: abans era el text enganxat de la fila, «17dimarts3%16°22°CAP» (auditoria
 // d'UX del 16/11/2026, B10).
+// Un dia de neu diu "de neu" (precipKind.ts): a la Pica d'Estats, a -8 °C, deia "de probabilitat de pluja".
 const I18N_DAY_ARIA = {
-  ca: (day: string, min: string, max: string, prob: string) => `${day}: de ${min} a ${max}, ${prob} de probabilitat de pluja`,
-  es: (day: string, min: string, max: string, prob: string) => `${day}: de ${min} a ${max}, ${prob} de probabilidad de lluvia`,
-  fr: (day: string, min: string, max: string, prob: string) => `${day} : de ${min} à ${max}, ${prob} de probabilité de pluie`,
-  en: (day: string, min: string, max: string, prob: string) => `${day}: ${min} to ${max}, ${prob} chance of rain`
+  ca: (day: string, min: string, max: string, prob: string, snow: boolean) => `${day}: de ${min} a ${max}, ${prob} de probabilitat de ${snow ? 'neu' : 'pluja'}`,
+  es: (day: string, min: string, max: string, prob: string, snow: boolean) => `${day}: de ${min} a ${max}, ${prob} de probabilidad de ${snow ? 'nieve' : 'lluvia'}`,
+  fr: (day: string, min: string, max: string, prob: string, snow: boolean) => `${day} : de ${min} à ${max}, ${prob} de probabilité de ${snow ? 'neige' : 'pluie'}`,
+  en: (day: string, min: string, max: string, prob: string, snow: boolean) => `${day}: ${min} to ${max}, ${prob} chance of ${snow ? 'snow' : 'rain'}`
 };
 
 // Avui + els 7 dies següents (la sèrie diària en porta 8).
@@ -156,12 +158,18 @@ const ForecastSection = memo(function ForecastSection({
       const code = resolveDailyCode(rawCode, avgClouds, dayHourCodes?.[dateOnly]);
 
       const sky = daySky?.[dateOnly] ?? [];
+      // Un dia "de neu" per al nom accessible: el que cau és sobretot neu, la franja només hi posa neu, o tot el dia fa
+      // 0 °C o menys (a la Pica d'Estats, a -8 °C, deia "de probabilitat de pluja").
+      const snowDay = precipKind(precipSum, snowSum) === 'snow'
+        || (sky.some(h => h.kind === 'snow') && !sky.some(h => h.kind === 'rain' || h.kind === 'storm'))
+        || (maxTemp !== null && maxTemp <= SNOW_WORD_MAX_TEMP_C && !sky.some(h => h.kind === 'rain' || h.kind === 'storm'));
 
       return {
         rawDate, dateOnly, i, dayName, dateNum, code, avgClouds, maxWind, precipProb, precipSum, snowSum,
         maxTempLabel: maxTemp !== null ? `${Math.round(maxTemp)}°` : '--°',
         minTempLabel: minTemp !== null ? `${Math.round(minTemp)}°` : '--°',
         sky,
+        snowDay,
         skyImage: skyStripBackground(sky),
         precipCenter: mainPrecipCenter(sky),
       };
@@ -242,7 +250,7 @@ const ForecastSection = memo(function ForecastSection({
                 key={`daily-row-${day.rawDate}`}
                 type="button"
                 onClick={() => onDayClick(day.i)}
-                aria-label={dayAria(`${label} ${day.dateNum}`, day.minTempLabel, day.maxTempLabel, prob !== null ? `${Math.round(prob)} %` : '--')}
+                aria-label={dayAria(`${label} ${day.dateNum}`, day.minTempLabel, day.maxTempLabel, prob !== null ? `${Math.round(prob)} %` : '--', day.snowDay)}
                 className={`${ROW_GRID} gap-y-2.5 items-center w-full text-left ${ROW_PAD} py-3 md:py-0 md:h-[62px] border-t border-white/[0.06] transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:bg-white/[0.05] focus-visible:shadow-[inset_0_0_0_2px_rgba(34,211,238,0.5)] ${isToday ? 'bg-white/[0.03]' : ''}`}
               >
                 <span className="flex items-baseline gap-2 min-w-0 whitespace-nowrap">

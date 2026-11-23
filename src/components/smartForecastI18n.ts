@@ -13,6 +13,8 @@ export interface SmartForecastText {
     volume: string;
     /** El mateix rètol quan hi ha neu: el volum continua sent d'aigua (la neu, en cm, va a la lectura i al total). */
     volumeWater: string;
+    /** Rètol del gràfic de probabilitat quan hi ha neu: és la de precipitació, no només la de pluja. */
+    probPrecip: string;
     /** Nom de la línia principal quan no ve d'un model regional. */
     globalModel: string;
     /** Nom de la ratxa de vent a la lectura. */
@@ -101,6 +103,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         tabs: { temp: 'Temp', rain: 'Pluja', wind: 'Vent', snow: 'Neu' },
         volume: 'VOLUM (MM)',
         volumeWater: "VOLUM (MM D'AIGUA)",
+        probPrecip: 'Prob. precipitació',
         globalModel: 'MODEL GLOBAL',
         gust: 'Ratxa',
         figures: {
@@ -158,6 +161,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         tabs: { temp: 'Temp', rain: 'Lluvia', wind: 'Viento', snow: 'Nieve' },
         volume: 'VOLUMEN (MM)',
         volumeWater: 'VOLUMEN (MM DE AGUA)',
+        probPrecip: 'Prob. precipitación',
         globalModel: 'MODELO GLOBAL',
         gust: 'Racha',
         figures: {
@@ -215,6 +219,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         tabs: { temp: 'Temp', rain: 'Rain', wind: 'Wind', snow: 'Snow' },
         volume: 'VOLUME (MM)',
         volumeWater: 'VOLUME (MM OF WATER)',
+        probPrecip: 'Precip. chance',
         globalModel: 'GLOBAL MODEL',
         gust: 'Gust',
         figures: {
@@ -272,6 +277,7 @@ export const SMART_FORECAST_I18N: Record<Language, SmartForecastText> = {
         tabs: { temp: 'Temp', rain: 'Pluie', wind: 'Vent', snow: 'Neige' },
         volume: 'VOLUME (MM)',
         volumeWater: "VOLUME (MM D'EAU)",
+        probPrecip: 'Prob. précipitations',
         globalModel: 'MODÈLE GLOBAL',
         gust: 'Rafale',
         figures: {

@@ -391,6 +391,34 @@ describe('DayDetailModal — la columna del dia', () => {
     });
 });
 
+describe("DayDetailModal — a l'ordinador, dues columnes", () => {
+    const original = window.matchMedia;
+    afterEach(() => { window.matchMedia = original; });
+    const setWidth = (px: number) => {
+        window.matchMedia = ((query: string) => {
+            const min = Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? 0);
+            return { matches: px >= min, media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {} };
+        }) as unknown as typeof window.matchMedia;
+    };
+
+    it('a partir de 1024 px, la columna i els gràfics alhora, sense «Columna | Gràfic»', () => {
+        setWidth(1366);
+        renderDetail(build());
+        expect(screen.getByTestId('day-column')).toBeTruthy();
+        expect(screen.getByTestId('smart-charts')).toBeTruthy();
+        expect(screen.getByTestId('day-detail-charts')).toBeTruthy();
+        expect(screen.queryByTestId('view-chart')).toBeNull();
+    });
+
+    it('per sota, una sola columna amb el commutador', () => {
+        setWidth(800);
+        renderDetail(build());
+        expect(screen.getByTestId('day-column')).toBeTruthy();
+        expect(screen.queryByTestId('smart-charts')).toBeNull();
+        expect(screen.getByTestId('view-chart')).toBeTruthy();
+    });
+});
+
 describe('DayDetailModal — avisos oficials del dia', () => {
     afterEach(() => {
         mockAlerts.current = [];
