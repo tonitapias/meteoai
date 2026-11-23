@@ -1,8 +1,15 @@
 # Registre de canvis
 
-Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.67.0...v3.68.0](https://github.com/tonitapias/meteoai/compare/v3.67.0...v3.68.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
+Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.68.0...v3.69.0](https://github.com/tonitapias/meteoai/compare/v3.68.0...v3.69.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
 
 Les seccions «Millores publicades entre la vX i la vY» recullen el que es va publicar sense canviar de versió. Les de la v3.26.0 i la v3.9.9, al final, són les notes de les primeres *releases*, tal com es van escriure.
+
+## 🖥️ Novetats de la v3.69.0: el detall del dia a l'ordinador, i la neu es diu neu
+
+- **El detall del dia, en dues columnes a l'ordinador.** A partir de 1.024 px el detall s'eixampla: a l'esquerra, el resum, l'avís oficial del dia, les xifres i els gràfics horaris (Temp · Pluja · Vent · Neu, amb els models); a la dreta, la columna del dia. Es veuen totes dues coses alhora, sense el commutador «Columna | Gràfic». Al mòbil i a la tauleta, tot queda igual.
+- **Amb neu, l'app parla de neu.** La insígnia de l'anàlisi de la IA diu «Neu dubtosa» o «Neu incerta» (abans, «Pluja incerta» en plena nevada), i «Precipitació dubtosa» o «incerta» quan pot ser qualsevol de les dues. El gràfic de les pròximes 24 h diu «Prob. precipitació», i el lector de pantalla llegeix «de probabilitat de neu» als dies i a les hores de neu, també sota zero sense precipitació prevista.
+- **El radar ja no contradiu la previsió.** Si la previsió ja diu que neva o plou i el radar encara no ho veu (a dalt d'un cim, per exemple, no hi veu la neu feble), l'avís ho diu així: «La previsió diu que ja neva, però el radar encara no ho veu aquí: segons el radar, arribaria d'aquí a uns 30 min.» Abans deia «podria començar a nevar» amb «Nevada moderada» a la capçalera.
+- Als quatre idiomes.
 
 ## 📅 Novetats de la v3.68.0: el detall del dia, en una columna
 
