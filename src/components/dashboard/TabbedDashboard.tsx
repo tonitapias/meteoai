@@ -34,6 +34,7 @@ import { HighlightsRow } from './HighlightsRow';
 import { PanelPlaceLine } from './PanelPlaceLine';
 import { isSleetCode, isSnowCode } from '../../utils/rules/winterRules';
 import { nowcastPrecipKind } from '../../utils/nowcastKind';
+import { skyKindOfCode } from '../../utils/daySky';
 
 const Forecast24h = lazy(() => import('../Forecast24h'));
 const AIInsights = lazy(() => import('../AIInsights'));
@@ -65,6 +66,9 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
     const nowMs = state.now.getTime();
     // Els dos avisos del radar diuen pluja, neu o totes dues amb el cel previst i la temperatura d'ara (utils/nowcastKind.ts).
     const radarPrecipKind = nowcastPrecipKind(calculations.daySky, calculations.shiftedNow ?? state.now, current?.temperature_2m ?? null);
+    // La previsió ja hi posa precipitació ara (previsió immediata, o el cel d'ara és de pluja, neu o tempesta).
+    const nowSky = skyKindOfCode(calculations.effectiveWeatherCode);
+    const modelPrecipNow = (calculations.minutelyPreciseData?.[0] ?? 0) > 0 || nowSky === 'rain' || nowSky === 'snow' || nowSky === 'storm';
     // Els destacats: pressió, aire, lluna, visibilitat i, si n'hi ha, el fenomen del planeta (vegeu utils/detailTeaser.ts).
     const highlights = useMemo(() => {
         if (!current) return [];
@@ -147,6 +151,7 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
                             lon={loc?.longitude}
                             lang={flags.lang}
                             kind={radarPrecipKind}
+                            modelPrecipNow={modelPrecipNow}
                         />
                     </Suspense>
                     <Suspense fallback={null}>
