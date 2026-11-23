@@ -5,6 +5,7 @@ import {
   getMoonDistanceCategory,
   getMoonDistanceGaugePercent,
   getMoonRiseSetForDate,
+  getMoonPassForDate,
   getNextMoonEvent,
   estimateSunsetQuality,
   getMoonCompassPosition,
@@ -157,5 +158,27 @@ describe('estimateSunsetQuality', () => {
     expect(score).not.toBeNull();
     expect(score!).toBeGreaterThanOrEqual(0);
     expect(score!).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('getMoonPassForDate (la lluna d\'aquell dia: la sortida i la posta que la segueix)', () => {
+  const BCN = [41.38879, 2.15899] as const;
+  it('el 23-11-2026 surt a les 16:13 i es pon l\'endemà a les 07:46 (no la posta del matí, 06:26)', () => {
+    const r = getMoonPassForDate('2026-11-23', BCN[0], BCN[1], 'Europe/Madrid');
+    expect(r.rise.formatted).toMatch(/^16:1\d$/);
+    expect(r.set.formatted).toMatch(/^07:4\d$/);
+    expect(r.set.isNextDay).toBe(true);
+  });
+
+  it('el 30-11-2026 la lluna no surt: sortida buida i la posta d\'aquell dia (abans hi sortia el 00:07 del dia 1)', () => {
+    const r = getMoonPassForDate('2026-11-30', BCN[0], BCN[1], 'Europe/Madrid');
+    expect(r.rise.formatted).toBeNull();
+    expect(r.set.formatted).toMatch(/^12:5\d$/);
+    expect(r.set.isNextDay).toBe(false);
+  });
+
+  it('sense coordenades o data, res', () => {
+    expect(getMoonPassForDate(undefined, BCN[0], BCN[1]).rise.date).toBeNull();
+    expect(getMoonPassForDate('2026-11-23', NaN, 2).set.date).toBeNull();
   });
 });

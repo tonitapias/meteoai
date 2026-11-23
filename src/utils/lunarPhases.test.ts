@@ -3,7 +3,7 @@
 // en UTC i arrodonides al minut. N = lluna nova, Q1 = quart creixent, F = plena, Q3 = quart minvant.
 import { describe, it, expect } from 'vitest';
 import * as SunCalc from 'suncalc';
-import { principalPhaseMs, getMoonPhase, getMoonAgeDays, getMoonPhaseName, getNamedMoonPhase } from './lunarPhases';
+import { principalPhaseMs, getMoonPhase, getMoonAgeDays, getMoonPhaseName, getNamedMoonPhase, lunationAt } from './lunarPhases';
 
 const USNO_2026_2027 = [
   'F 2026-01-03T10:03', 'Q3 2026-01-10T15:48', 'N 2026-01-18T19:52', 'Q1 2026-01-26T04:47',
@@ -132,5 +132,27 @@ describe('getNamedMoonPhase (nom del dia)', () => {
 
     it('data no vàlida: NaN', () => {
         expect(getNamedMoonPhase(new Date('x'))).toBeNaN();
+    });
+});
+
+describe('lunationAt', () => {
+    it('la lunació del 23-11-2026: nova 9-11 07:02 UTC, plena 24-11 14:53, nova 9-12 00:52 (± 3 min, USNO)', () => {
+        const l = lunationAt(Date.parse('2026-11-23T18:00:00Z'))!;
+        const near = (ms: number, iso: string) => expect(Math.abs(ms - Date.parse(iso))).toBeLessThan(3 * 60000);
+        near(l.newMs, '2026-11-09T07:02:00Z');
+        near(l.firstQuarterMs, '2026-11-17T11:48:00Z');
+        near(l.fullMs, '2026-11-24T14:53:00Z');
+        near(l.lastQuarterMs, '2026-12-01T06:09:00Z');
+        near(l.nextNewMs, '2026-12-09T00:52:00Z');
+    });
+
+    it('a l\'instant de la lluna nova ja és la lunació nova; un minut abans, l\'anterior', () => {
+        const l = lunationAt(Date.parse('2026-11-23T18:00:00Z'))!;
+        expect(lunationAt(l.nextNewMs)!.newMs).toBe(l.nextNewMs);
+        expect(lunationAt(l.nextNewMs - 60000)!.newMs).toBe(l.newMs);
+    });
+
+    it('data no vàlida: null', () => {
+        expect(lunationAt(NaN)).toBeNull();
     });
 });
