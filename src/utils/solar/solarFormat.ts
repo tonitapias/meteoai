@@ -30,7 +30,7 @@ export function capitalize(s: string, locale: string): string {
   return s ? s.charAt(0).toLocaleUpperCase(locale) + s.slice(1) : s;
 }
 
-/** Compte enrere amb el format exacte de SunArcWidget: arrodonit avall, "3h 12m" sense zeros; negatiu => null. */
+/** Compte enrere amb el format exacte del plafó del sol (SunPanel): arrodonit avall, "3h 12m" sense zeros; negatiu => null. */
 export function formatCountdown(ms: number): string | null {
   if (!Number.isFinite(ms) || ms < 0) return null;
   const d = Math.floor(ms / 1000);

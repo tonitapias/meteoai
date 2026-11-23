@@ -1,12 +1,10 @@
 // src/components/MoonModal.test.tsx
-// Modal Fase lunar amb el llenguatge de la seva targeta: mateixos valors que el giny (fase, il·luminació, edat,
-// posició i pròxima plena), navegació per dies com el modal solar, calendari de 15 dies i hemisferi sud.
+// Modal Fase lunar: mateixos valors que la fila de la lluna del plafó «Aquesta nit» (fase, il·luminació i pròxima
+// plena), navegació per dies com el modal solar, calendari de 15 dies i hemisferi sud.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import MoonModal from './MoonModal';
-import { MoonWidget } from './widgets/MoonWidget';
-import { getMoonPhase } from '../utils/weatherMath';
-import { getMoonAgeDays } from '../utils/lunarPhases';
+import { NightPanel } from './sky/NightPanel';
 import { getCardinalLabel, getMoonCompassPosition } from '../utils/astronomyMath';
 import type { ExtendedWeatherData } from '../types/weatherLogicTypes';
 
@@ -30,22 +28,19 @@ const navDate = (c: HTMLElement) => c.querySelector('[aria-live]')!.textContent 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
 afterEach(() => { vi.useRealTimers(); });
 
-describe('MoonModal — el mateix que la targeta', () => {
-  it('fase, il·luminació, edat, posició d\'ara i pròxima plena coincideixen amb el giny', () => {
+describe('MoonModal — el mateix que el plafó «Aquesta nit»', () => {
+  it('fase, il·luminació i pròxima plena coincideixen amb la fila de la lluna', () => {
     const { container } = renderModal();
     const card = render(
-      <MoonWidget phase={getMoonPhase(NOW)} ageDays={getMoonAgeDays(NOW)} lat={BCN.lat} lon={BCN.lon} timezone="Europe/Madrid" date={NOW.getTime()} lang="ca" />,
+      <NightPanel lang="ca" lat={BCN.lat} lon={BCN.lon} timezone="Europe/Madrid" utcOffset={7200} nowMs={NOW.getTime()} />,
     ).container.textContent ?? '';
     const h = hero(container);
     expect(h).toContain('Quart Creixent');
-    expect(card).toContain('Quart Creixent');
     expect(h).toContain('50% il·luminada');
-    expect(card).toContain('50% il·luminada');
+    expect(card).toContain('Quart Creixent · 50%');
     expect(h).toContain('Edat 8 dies');
-    expect(card).toContain('Dia 8');
-    // Posició: la targeta diu alçada + punt cardinal; el modal hi afegeix l'azimut en graus.
+    // Posició d'ara al modal: alçada i punt cardinal (el plafó només la marca de nit, sobre el carril de la lluna).
     const p = getMoonCompassPosition(NOW, BCN.lat, BCN.lon)!;
-    expect(card).toContain(`${Math.round(p.altitudeDeg)}° ${getCardinalLabel(p.azimuthDeg, 'ca')}`);
     expect(h).toContain(`+${Math.round(p.altitudeDeg)}°`);
     expect(h).toContain(getCardinalLabel(p.azimuthDeg, 'ca'));
     // Pròxima plena: 26-10 a les 06:11 UTC (USNO) → "en 8 dies" al modal i "8 dies" a la targeta.

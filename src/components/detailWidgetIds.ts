@@ -5,9 +5,10 @@
 /** Cada giny de la graella. */
 export type DetailWidgetId =
   | 'temperature' | 'wind' | 'uv' | 'visibility' | 'cloudLayers' | 'pressure' | 'dewPoint'
-  | 'cape' | 'aqi' | 'moon' | 'sun' | 'snowLevel';
+  | 'cape' | 'aqi' | 'snowLevel';
 
-/** Tots els ginys, en l'ordre de sempre (Detall i Cel se'ls reparteixen: vegeu tabs/dashboardTabs.ts). */
+/** Tots els ginys, en l'ordre de sempre (són els de la pestanya Detall: vegeu tabs/dashboardTabs.ts). El sol i la lluna
+ * són a la pestanya Cel, amb plafons propis (components/sky). */
 export const ALL_DETAIL_WIDGETS: readonly DetailWidgetId[] = [
-  'temperature', 'wind', 'uv', 'visibility', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'aqi', 'moon', 'sun', 'snowLevel'
+  'temperature', 'wind', 'uv', 'visibility', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'aqi', 'snowLevel'
 ];

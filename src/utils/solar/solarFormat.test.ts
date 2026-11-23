@@ -15,7 +15,7 @@ const mulberry32 = (seed: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-describe('formatCountdown (paritat amb SunArcWidget)', () => {
+describe('formatCountdown (paritat amb el plafó del sol)', () => {
   it('arrodonit avall i sense zeros', () => {
     expect(formatCountdown((3 * 3600 + 12 * 60 + 59) * 1000)).toBe('3h 12m');
     expect(formatCountdown(59 * 1000)).toBe('0h 0m');

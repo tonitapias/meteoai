@@ -5,7 +5,7 @@ import { nextSunEvent } from './nextSunEvent';
 import { clearSolarDayCache } from './solarDay';
 
 // Girona, 2026-10-07 (CEST, UTC+2): hores locals d'Open-Meteo a menys de 10 min de suncalc (es fan servir), com a
-// SunArcWidget.test.tsx.
+// SunPanel.test.tsx.
 const DAILY = {
   time: ['2026-10-07', '2026-10-08'],
   sunrise: ['2026-10-07T07:51', '2026-10-08T07:52'],

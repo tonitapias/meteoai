@@ -17,8 +17,5 @@ export const DETAIL_TAB_WIDGETS: readonly DetailWidgetId[] = [
   'temperature', 'wind', 'uv', 'visibility', 'aqi', 'cloudLayers', 'pressure', 'dewPoint', 'cape', 'snowLevel'
 ];
 
-/** Cel: el cicle solar i la lluna (i, a sota, «Més enllà del teu cel»). */
-export const SKY_TAB_WIDGETS: readonly DetailWidgetId[] = ['sun', 'moon'];
-
 export const tabElementId = (tab: DashboardTab): string => `dashboard-tab-${tab}`;
 export const panelElementId = (tab: DashboardTab): string => `dashboard-panel-${tab}`;

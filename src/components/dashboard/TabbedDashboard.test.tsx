@@ -30,6 +30,7 @@ vi.mock('../ForecastSection', () => ({ default: stub('ForecastSection') }));
 vi.mock('../SmartForecastCharts', () => ({ default: stub('SmartForecastCharts') }));
 vi.mock('../ConsensusSection', () => ({ default: stub('ConsensusSection') }));
 vi.mock('../planet/PlanetExtremesCard', () => ({ default: stub('PlanetExtremesCard') }));
+vi.mock('../sky/SkySection', () => ({ default: stub('SkySection') }));
 // El fenomen del planeta (petició diferida al worker): aquí, cap.
 vi.mock('../../hooks/usePlanetHeadline', () => ({ usePlanetHeadline: () => null }));
 vi.mock('../DetailWidgetsGrid', () => ({
@@ -90,6 +91,7 @@ const COVERAGE: Array<[string, string]> = [
     ['ForecastSection', 'forecast'],
     ['SmartForecastCharts', 'forecast'],
     ['ConsensusSection', 'forecast'],
+    ['SkySection', 'sky'],
     ['PlanetExtremesCard', 'sky'],
 ];
 
@@ -107,11 +109,10 @@ describe('TabbedDashboard → cap giny perdut (taula giny → pestanya)', () => 
         for (const [testId, tab] of COVERAGE) {
             expect(await within(panel(tab)!).findByTestId(testId)).toBeTruthy();
         }
-        // Els 12 ginys de la graella, repartits entre Detall i Cel sense repetir-ne cap.
+        // Els 10 ginys de la graella, tots a Detall; Cel ja no en té cap (el sol i la lluna hi tenen plafons propis).
         const detailIds = (await within(panel('detail')!).findByTestId('DetailWidgetsGrid')).getAttribute('data-ids')!.split(',');
-        const skyIds = (await within(panel('sky')!).findByTestId('DetailWidgetsGrid')).getAttribute('data-ids')!.split(',');
-        expect(skyIds).toEqual(['sun', 'moon']);
-        expect([...detailIds, ...skyIds].sort()).toEqual([...ALL_DETAIL_WIDGETS].sort());
+        expect([...detailIds].sort()).toEqual([...ALL_DETAIL_WIDGETS].sort());
+        expect(within(panel('sky')!).queryByTestId('DetailWidgetsGrid')).toBeNull();
     });
 
     it('d\'entrada només hi ha Ara; les altres es munten en obrir-les', async () => {

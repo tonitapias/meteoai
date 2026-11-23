@@ -1,12 +1,10 @@
 // src/components/DetailWidgetsGrid.tsx
-// La graella dels ginys de detall (temperatura, vent, UV, visibilitat... lluna, sol i cota de neu), cadascun a la seva
-// targeta, que n'obre el modal. Abans vivia dins ExpertWidgets; ara és una peça a part i `ids` tria quins ginys hi surten i en quin
+// La graella dels ginys de detall (temperatura, vent, UV, visibilitat... i cota de neu), cadascun a la seva targeta, que
+// n'obre el modal. El sol i la lluna ja no hi són: la pestanya Cel té els seus plafons (components/sky). Abans vivia dins ExpertWidgets; ara és una peça a part i `ids` tria quins ginys hi surten i en quin
 // ordre, perquè es puguin repartir en llocs diferents. Els valors es calculen exactament igual que abans.
 import React, { useMemo } from 'react';
 import { Gauge } from 'lucide-react';
-import { getMoonPhase, getCurrentDewPoint } from '../utils/weatherMath';
-import { getMoonAgeDays } from '../utils/lunarPhases';
-import type { SolarDaily } from '../utils/solar/solarForecast';
+import { getCurrentDewPoint } from '../utils/weatherMath';
 import { ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { WEATHER_THRESHOLDS } from '../constants/weatherConfig';
 
@@ -16,12 +14,10 @@ import { WeatherUnit } from '../utils/formatters';
 import { UVIndexWidget } from './widgets/UVIndexWidget';
 import { getCurrentUV } from '../utils/uvIndexUtils';
 import { resolveCurrentDisplayVisibility } from '../utils/visibilityDisplay';
-import { preloadSolarModal } from './solar/preloadSolarModal';
 import type { ChartDataPoint } from './ForecastSection';
 import { ALL_DETAIL_WIDGETS, type DetailWidgetId } from './detailWidgetIds';
 import { buildTemperatureWindow } from '../utils/temperatureDetail';
 import { buildDetailCardLabel, type DetailCardInput } from '../utils/detailCardLabel';
-import { nextSunEvent } from '../utils/solar/nextSunEvent';
 import { pressureDelta3h } from '../utils/pressureTrend';
 import {
   CompassGauge,
@@ -30,8 +26,6 @@ import {
   CircularGauge,
   DewPointWidget,
   CapeWidget,
-  SunArcWidget,
-  MoonWidget,
   AqiWidget,
   VisibilityWidget,
   TemperatureWidget
@@ -72,8 +66,6 @@ export interface DetailWidgetsGridProps {
   // calculations.chartDataFull (comença a l'hora actual): l'evolució de 48 h del giny de cota de neu,
   // la mateixa sèrie que llegeix SnowLevelModal.
   chartDataFull?: ChartDataPoint[];
-  onShowSolarModal: () => void;
-  onShowMoonModal: () => void;
   onShowStormModal: () => void;
   onShowAqiModal: () => void;
   onShowUvModal: () => void;
@@ -87,26 +79,14 @@ export interface DetailWidgetsGridProps {
   // Codi de temps de la capçalera (ja passat per la política de boira): decideix si el giny de
   // Visibilitat pot dir "boira" (vegeu utils/visibilityDisplay.ts).
   effectiveCode?: number | null;
-  // Rellotge de l'app (ms, useViewState, cada minut): instant real per a la fase i l'edat lunars.
-  now?: number;
   /** Quins ginys i en quin ordre. Per defecte, tots en l'ordre de sempre. */
   ids?: readonly DetailWidgetId[];
   /** Classe de la graella. Per defecte, la de 4 columnes de sempre. */
   className?: string;
 }
 
-export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowSolarModal, onShowMoonModal, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, onShowTemperatureModal, effectiveCode = null, now, ids = ALL_DETAIL_WIDGETS, className = DEFAULT_GRID_CLASS }: DetailWidgetsGridProps) {
-  const { current, hourly, daily, utc_offset_seconds, location, timezone } = weatherData;
-
-  // La fase és d'un instant, no d'una hora local: abans es llegia current.time (hora LOCAL) com si fos
-  // UTC i el giny anava desfasat tantes hores com el fus (2 h a Barcelona, 11 h a Sydney) respecte al
-  // modal, que fa servir l'hora real. Sense rellotge de l'app (tests), l'hora del sistema.
-  const moonNowMs = typeof now === 'number' && Number.isFinite(now) ? now : undefined;
-  // clockMs: el mateix instant per al nom accessible de la lluna i del sol.
-  const { moonPhaseVal, moonAgeDays, clockMs } = useMemo(() => {
-    const at = moonNowMs !== undefined ? new Date(moonNowMs) : new Date();
-    return { moonPhaseVal: getMoonPhase(at), moonAgeDays: getMoonAgeDays(at), clockMs: at.getTime() };
-  }, [moonNowMs]);
+export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, freezingLevel, chartDataFull, onShowStormModal, onShowAqiModal, onShowUvModal, onShowPressureModal, onShowComfortModal, onShowVisibilityModal, onShowCloudLayersModal, onShowSnowLevelModal, onShowWindModal, onShowTemperatureModal, effectiveCode = null, ids = ALL_DETAIL_WIDGETS, className = DEFAULT_GRID_CLASS }: DetailWidgetsGridProps) {
+  const { current, hourly } = weatherData;
 
   const showSnowWidget = typeof freezingLevel === 'number' && freezingLevel < WEATHER_THRESHOLDS.DEFAULTS.MAX_DISPLAY_SNOW_LEVEL;
 
@@ -127,16 +107,6 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
   const currentUV = useMemo(() => getCurrentUV(weatherData), [weatherData]);
 
   const dewPointValue = getCurrentDewPoint(currentTemp, currentHumidity);
-
-  const safeLat = location && typeof (location as Record<string, unknown>).latitude === 'number'
-    ? (location as Record<string, unknown>).latitude as number
-    : undefined;
-  const safeLon = location && typeof (location as Record<string, unknown>).longitude === 'number'
-    ? (location as Record<string, unknown>).longitude as number
-    : undefined;
-
-  const hasKnownOffset = typeof utc_offset_seconds === 'number';
-  const targetOffsetSeconds = hasKnownOffset ? utc_offset_seconds : 0;
 
   const currentHourIndex = useMemo(() => {
     if (!hourly || !current || !Array.isArray(hourly.time) || typeof current.time !== 'string') return -1;
@@ -159,13 +129,6 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
   const temperatureNow = useMemo(
     () => (ids.includes('temperature') ? buildTemperatureWindow(weatherData, 1)[0]?.temp ?? null : null),
     [ids, weatherData]
-  );
-  // La pròxima sortida o posta, la mateixa que compta enrere la targeta Cicle solar.
-  const sunNext = useMemo(
-    () => (ids.includes('sun')
-      ? nextSunEvent(clockMs, safeLat, safeLon, typeof timezone === 'string' ? timezone : null, targetOffsetSeconds, daily as SolarDaily | undefined)
-      : null),
-    [ids, clockMs, safeLat, safeLon, timezone, targetOffsetSeconds, daily]
   );
 
   if (!current) return null;
@@ -248,34 +211,6 @@ export default function DetailWidgetsGrid({ weatherData, aqiData, lang, unit, fr
         return (
           <WidgetCard key={id} cols={2} onClick={onShowAqiModal} label={cardLabel({ id, current: aqiData?.current })}>
               <AqiWidget data={aqiData?.current as Record<string, unknown> | undefined} lang={lang} />
-          </WidgetCard>
-        );
-      case 'moon':
-        return (
-          <WidgetCard key={id} onClick={onShowMoonModal} label={cardLabel({ id, nowMs: clockMs })}>
-              <MoonWidget
-                  phase={moonPhaseVal}
-                  ageDays={moonAgeDays}
-                  date={moonNowMs}
-                  lat={safeLat ?? 41.728}
-                  lon={safeLon ?? 1.824}
-                  timezone={typeof timezone === 'string' ? timezone : undefined}
-                  lang={lang}
-              />
-          </WidgetCard>
-        );
-      case 'sun':
-        return (
-          <WidgetCard key={id} cols={2} onClick={onShowSolarModal} onIntent={preloadSolarModal} label={cardLabel({ id, next: sunNext })}>
-              {/* El mateix model del dia que el modal: hores d'Open-Meteo si quadren amb l'astronomia (daily), si no suncalc. */}
-              <SunArcWidget
-                  lang={lang}
-                  lat={safeLat}
-                  lon={safeLon}
-                  timezone={typeof timezone === 'string' ? timezone : null}
-                  utcOffset={targetOffsetSeconds}
-                  daily={daily as SolarDaily | undefined}
-              />
           </WidgetCard>
         );
       case 'snowLevel':
