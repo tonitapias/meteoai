@@ -14,7 +14,7 @@ import { diffDays, localClock, localDateOf, makeZoneCtx } from '../../utils/sola
 import type { SolarDaily } from '../../utils/solar/solarForecast';
 import { SKY_COLORS, type SkyHour, type SkyKind } from '../../utils/daySky';
 import type { HourlySeries } from '../../utils/hourlyWeatherCode';
-import { cloudHiddenSpans, findNightWindow, nextNightWindow, nightFraction, nightSkyFor, type NightSkyCell, type NightSpan } from '../../utils/sky/nightSky';
+import { cloudHiddenSpans, findNightWindow, moonLaneStart, nextNightWindow, nightFraction, nightSkyFor, type NightSkyCell, type NightSpan } from '../../utils/sky/nightSky';
 import { nightVerdict } from '../../utils/sky/nightVerdict';
 import { moonRiseSetAround } from '../../utils/sky/moonEvents';
 import { LIGHT_COLORS, nightSkySpans, spansBackground } from '../../utils/sky/skyStrips';
@@ -95,6 +95,18 @@ export const NightPanel = ({ lang, lat, lon, timezone, utcOffset, daily, daySky,
       : null),
     [winStart, winEnd, winPolar, la, lo, zone, daily, daySky, hourly],
   );
+  // El dibuix (la lluna, les franges i el regle): la mateixa nit o, si a la posta la lluna ja és a dalt, des que surt
+  // (vegeu moonLaneStart): de dia, un cop ha sortit, la lluna petita ja hi diu on és. La frase i les xifres, de la nit.
+  const lane0 = useMemo(
+    () => (winStart !== null && winEnd !== null ? moonLaneStart({ startMs: winStart, endMs: winEnd, polar: winPolar }, la, lo) : null),
+    [winStart, winEnd, winPolar, la, lo],
+  );
+  const laneStartMs = lane0?.startMs ?? null;
+  const laneFromRise = lane0?.fromRise ?? false;
+  const draw = useMemo(() => {
+    if (!sky || laneStartMs === null || laneStartMs >= sky.startMs) return sky;
+    return nightSkyFor({ startMs: laneStartMs, endMs: sky.endMs, polar: sky.polar }, { lat: la, lon: lo, zone, daily, daySky, hourly });
+  }, [sky, laneStartMs, la, lo, zone, daily, daySky, hourly]);
   const nextSky = useMemo(() => {
     if (winStart === null || winEnd === null) return null;
     const next = nextNightWindow({ startMs: winStart, endMs: winEnd, polar: winPolar }, la, lo, zone, daily);
@@ -114,7 +126,7 @@ export const NightPanel = ({ lang, lat, lon, timezone, utcOffset, daily, daySky,
 
   const verdict = sky ? nightVerdict(sky.sky, sky.endMs - sky.startMs, sky.moon, illum) : null;
   const nextVerdict = nextSky ? nightVerdict(nextSky.sky, nextSky.endMs - nextSky.startMs, nextSky.moon, illum) : null;
-  const nowF = sky ? nightFraction(minuteMs, sky) : null;
+  const nowF = draw ? nightFraction(minuteMs, draw) : null;
 
   // --- Textos ---
   const dayOffset = (ms: number) => diffDays(localToday, localDateOf(ms, zone));
@@ -169,23 +181,25 @@ export const NightPanel = ({ lang, lat, lon, timezone, utcOffset, daily, daySky,
 
   // --- Geometria del carril de la lluna ---
   const lane = useMemo(() => {
-    if (!sky) return null;
-    const peak = sky.moonPeak?.alt ?? 0;
+    if (!draw) return null;
+    const peak = draw.moonPeak?.alt ?? 0;
     const altMax = Math.min(90, Math.max(30, Math.ceil((peak + 8) / 10) * 10));
     const y = (alt: number) => BASE - (alt / altMax) * (BASE - TOP);
-    const path = sky.moon.map((s, i) => `${i === 0 ? 'M' : 'L'}${(s.f * VB_W).toFixed(1)} ${y(s.alt).toFixed(1)}`).join(' ');
-    const hidden = cloudHiddenSpans(sky.sky);
-    return { y, path, hidden, visible: visibleSpans(hidden), cloudBg: spansBackground(nightSkySpans(sky.sky)), darkBg: spansBackground(sky.darkness.map(d => ({ from: d.from, to: d.to, color: LIGHT_COLORS[d.phase] }))) };
-  }, [sky]);
+    const path = draw.moon.map((s, i) => `${i === 0 ? 'M' : 'L'}${(s.f * VB_W).toFixed(1)} ${y(s.alt).toFixed(1)}`).join(' ');
+    const hidden = cloudHiddenSpans(draw.sky);
+    return { y, path, hidden, visible: visibleSpans(hidden), cloudBg: spansBackground(nightSkySpans(draw.sky)), darkBg: spansBackground(draw.darkness.map(d => ({ from: d.from, to: d.to, color: LIGHT_COLORS[d.phase] }))) };
+  }, [draw]);
   const nextCloudBg = useMemo(() => (nextSky ? spansBackground(nightSkySpans(nextSky.sky)) : 'none'), [nextSky]);
 
   // La llegenda dels colors del cel: només els que surten aquesta nit, en l'ordre de Previsió.
-  const skyKinds = SKY_LEGEND_ORDER.filter(k => sky?.sky.some(c => c.kind === k) || nextSky?.sky.some(c => c.kind === k));
+  const skyKinds = SKY_LEGEND_ORDER.filter(k => draw?.sky.some(c => c.kind === k) || nextSky?.sky.some(c => c.kind === k));
   const weekSky = (TRANSLATIONS[lang] ?? TRANSLATIONS.ca).forecastWeek.sky;
 
   const moonUpNow = moonNow !== null && moonNow.altitudeDeg > 0;
   const moonMarker = lane && nowF !== null && moonUpNow ? { f: nowF, top: (lane.y(moonNow.altitudeDeg) / VB_H) * 100 } : null;
-  const peakLabel = sky?.moonPeak && lane ? { f: nightFraction(sky.moonPeak.ms, sky) ?? 0, top: (lane.y(sky.moonPeak.alt) / VB_H) * 100 } : null;
+  const peakLabel = draw?.moonPeak && lane ? { f: nightFraction(draw.moonPeak.ms, draw) ?? 0, top: (lane.y(draw.moonPeak.alt) / VB_H) * 100 } : null;
+  // Els punts de l'horitzó: la sortida (també quan el carril comença just a la sortida) i la posta.
+  const horizonDots = draw ? [draw.moonRiseMs ?? (laneFromRise ? draw.startMs : null), draw.moonSetMs] : [];
 
   const moonRow = (
     <button
@@ -243,7 +257,7 @@ export const NightPanel = ({ lang, lat, lon, timezone, utcOffset, daily, daySky,
                       {lane.visible.map((s, i) => <rect key={i} x={s.from * VB_W} y="0" width={(s.to - s.from) * VB_W} height={BASE} />)}
                     </clipPath>
                   </defs>
-                  {sky.ticks.map(tk => (
+                  {draw?.ticks.map(tk => (
                     <line key={tk.f} x1={tk.f * VB_W} x2={tk.f * VB_W} y1={TOP + 6} y2={BASE} stroke="#ffffff" strokeOpacity=".05" vectorEffect="non-scaling-stroke" />
                   ))}
                   <line x1="0" x2={VB_W} y1={BASE} y2={BASE} stroke="#cbd5e1" strokeOpacity=".3" vectorEffect="non-scaling-stroke" />
@@ -258,18 +272,18 @@ export const NightPanel = ({ lang, lat, lon, timezone, utcOffset, daily, daySky,
                   )}
                 </svg>
               )}
-              {peakLabel && sky.moonPeak && (
+              {peakLabel && draw?.moonPeak && (
                 <span className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap font-mono text-[10.5px] leading-none text-slate-200"
                   style={{ left: pctOf(Math.min(0.88, Math.max(0.12, peakLabel.f))), top: `calc(${peakLabel.top.toFixed(2)}% - 5px)` }}>
-                  {Math.round(sky.moonPeak.alt)}° · {clock(sky.moonPeak.ms)}
+                  {Math.round(draw.moonPeak.alt)}° · {clock(draw.moonPeak.ms)}
                 </span>
               )}
-              {[sky.moonRiseMs, sky.moonSetMs].map((ms, i) => ms !== null && (
+              {draw && horizonDots.map((ms, i) => ms !== null && (
                 <span key={i} className="absolute w-[7px] h-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-[#0b0c13] bg-slate-300"
-                  style={{ left: pctOf(nightFraction(ms, sky) ?? 0), top: `${(BASE / VB_H) * 100}%` }} />
+                  style={{ left: pctOf(nightFraction(ms, draw) ?? 0), top: `${(BASE / VB_H) * 100}%` }} />
               ))}
               {moonMarker && moonNow && (
-                <span className="absolute flex items-center gap-1.5 -translate-y-1/2" style={{ left: pctOf(moonMarker.f), top: `${moonMarker.top.toFixed(2)}%` }}>
+                <span data-testid="moon-now" className="absolute flex items-center gap-1.5 -translate-y-1/2" style={{ left: pctOf(moonMarker.f), top: `${moonMarker.top.toFixed(2)}%` }}>
                   <span className="block w-[15px] h-[15px] -ml-[7.5px] rounded-full bg-[#e6e3da]/15 p-px">
                     <MoonDisc phase={phase} south={la < 0} detail={false} />
                   </span>
@@ -311,7 +325,7 @@ export const NightPanel = ({ lang, lat, lon, timezone, utcOffset, daily, daySky,
             </span>
 
             <span className={`${SKY_RULER} mt-1.5`}>
-              {sky.ticks.map(tk => (
+              {draw?.ticks.map(tk => (
                 <span key={tk.f} className="absolute -translate-x-1/2" style={{ left: pctOf(tk.f) }}>{tk.label}</span>
               ))}
             </span>
