@@ -6,7 +6,7 @@ import { isMostlyCloudy } from '../utils/rules/cloudRules';
 import { isRawWinterCodePlausible, isSleetCode, isSnowCode } from '../utils/rules/winterRules';
 import { resolveDustAdvisory, type DustKind } from '../utils/rules/aerosolRules';
 import { getInversionCorrectedApparent, getInversionCorrectedTemp } from '../utils/rules/temperatureCorrections';
-import { getSafeMonthFromIso } from '../utils/weatherMath';
+import { getSafeMonthFromIso, resolveLocalDate } from '../utils/weatherMath';
 import { snowfallCmForHour } from '../utils/engineSnowfall';
 
 // Codis representatius per passar el tipus de cada hora (neu / aiguaneu) a snowfallCmForHour: la mateixa relació
@@ -404,8 +404,13 @@ interface DeterministicRisk {
 }
 
 /**
- * Finestra de 6 hores que avaluen la IA i el tallafocs: de l'hora actual (current.time dins hourly.time; si no hi és,
- * la primera hora que no ha passat fa més de 30 min) a 6 hores més enllà. Abans era una funció interna de
+ * Finestra de 6 hores que avaluen la IA i el tallafocs: de l'hora en curs a 6 hores més enllà. L'hora en curs és la
+ * de current.time dins hourly.time, comparada per hora ("2026-11-23T23"), com la tira de l'app (findNowIndex) i
+ * l'anàlisi local (resolveNowIndex): current.time va per quarts d'hora ("23:15") i les hores de la sèrie, en punt.
+ * Abans, si no hi havia una hora idèntica, es prenia la primera POSTERIOR: a les 23:15 la finestra començava a les
+ * 00:00 de l'endemà, la línia "més enllà" prenia l'endemà per avui i deia "demà" d'una ratxa de dos dies després
+ * (dilluns a les 23:15, les de dimecres; 24/11/2026). Si l'hora en curs no és a la sèrie, la primera posterior i,
+ * sense current.time, la primera que no ha passat fa més de 30 min. Abans era una funció interna de
  * getGeminiAnalysis; és aquí perquè l'anàlisi provisional (evaluateRulesRisk) miri exactament les mateixes hores.
  */
 const computeEvalWindow = (weatherData: ExtendedWeatherData): { start: number; end: number } => {
@@ -419,6 +424,10 @@ const computeEvalWindow = (weatherData: ExtendedWeatherData): { start: number; e
 
     if (currentTimeRaw !== undefined && currentTimeRaw !== null) {
         startIndex = times.findIndex(t => t === currentTimeRaw);
+        if (startIndex === -1 && typeof currentTimeRaw === 'string' && currentTimeRaw.length >= 13) {
+            const hourKey = currentTimeRaw.slice(0, 13);
+            startIndex = times.findIndex(t => typeof t === 'string' && t.slice(0, 13) === hourKey);
+        }
         if (startIndex === -1 && typeof currentTimeRaw === 'string') {
             startIndex = times.findIndex(t => String(t).localeCompare(String(currentTimeRaw)) >= 0);
         }
@@ -460,28 +469,80 @@ export const dayPartCa = (hour: number): string =>
 
 const WEEKDAYS_CA = ['diumenge', 'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte'];
 
+/** El dia d'avui a la població: el de current.time i, si no n'hi ha, el de la primera hora de la finestra. */
+const resolveLocalToday = (weatherData: ExtendedWeatherData, start: number): string | null => {
+    const utcOffset = (weatherData as unknown as LocatableData).utc_offset_seconds;
+    const times = (weatherData.hourly as { time?: unknown[] } | undefined)?.time;
+    return resolveLocalDate((weatherData.current as Record<string, unknown> | undefined)?.time, utcOffset)
+        ?? (Array.isArray(times) ? resolveLocalDate(times[start], utcOffset) : null);
+};
+
+const dateParts = (date: string): [number, number, number] => date.split('-').map(Number) as [number, number, number];
+
+/** Dies de `from` a `to` (dates locals "2026-11-23"): 0 el mateix dia, 1 l'endemà. */
+const daysBetween = (from: string, to: string): number => {
+    const [fy, fm, fd] = dateParts(from);
+    const [ty, tm, td] = dateParts(to);
+    return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
+};
+
+/** "2026-11-23" + 1 → "2026-11-24". */
+const addDays = (date: string, days: number): string => {
+    const [y, m, d] = dateParts(date);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+};
+
+/** "dimecres 25/11". */
+const weekdayDateCa = (date: string): string => {
+    const [y, m, d] = dateParts(date);
+    return `${WEEKDAYS_CA[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+};
+
+/**
+ * Com rep la IA el dia d'una hora: "avui", "demà (dimarts 24/11)" o "dimecres 25/11". El dia el calcula el codi a partir
+ * de la data local de cada hora: la IA no l'ha de deduir (desfasament temporal del 24/11/2026: dilluns a les 23:15 deia
+ * "demà" d'unes ratxes de dimecres).
+ */
+export const dayLabelCa = (date: string, today: string): string => {
+    const diff = daysBetween(today, date);
+    return diff === 0 ? 'avui' : diff === 1 ? `demà (${weekdayDateCa(date)})` : weekdayDateCa(date);
+};
+
 /**
  * Fenòmens importants de MÉS ENLLÀ de la finestra de 6 hores, fins a 48 hores: tempesta, neu, pluja forta (>= 5 mm/h) o
- * ratxes fortes (>= 50 km/h), amb el dia i l'hora de la primera hora de cadascun. Abans la IA només veia 6 hores: a
- * Buenos Aires, amb una tempesta i 24 mm l'endemà, el text deia "temps tranquil" i no n'esmentava res (M1). No toca el
- * nivell de risc, que continua sent el de les 6 hores. null si no n'hi ha cap (o les hores no tenen data).
+ * ratxes fortes (>= 50 km/h). Per a cada fenomen, cada dia amb la seva franja (primera i última hora) i el seu pic:
+ * "ratxes fortes demà (dimarts 24/11) cap a les 06:00 (fins a 55 km/h) i dimecres 25/11 de 12:00 a 18:00 (fins a
+ * 75 km/h)". Abans només hi havia la primera hora i el pic de les 48 hores, que podia ser d'un altre dia: amb 55 km/h
+ * dimarts i 75 dimecres, deia "demà cap a les 06:00 (fins a 75 km/h)". Abans encara, la IA només veia 6 hores: a Buenos
+ * Aires, amb una tempesta i 24 mm l'endemà, el text deia "temps tranquil" (M1). No toca el nivell de risc, que continua
+ * sent el de les 6 hores. null si no n'hi ha cap (o les hores no tenen data).
  */
 export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: number, end: number): string | null => {
     const hourly = weatherData.hourly as unknown as HourlySeries | undefined;
     const times = (weatherData.hourly as { time?: unknown[] } | undefined)?.time;
     if (!hourly || !Array.isArray(times)) return null;
+    const located = weatherData as unknown as LocatableData;
     const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
     const precipArr = hourly.precipitation as (number | null)[] | undefined;
     const gustsArr = hourly.wind_gusts_10m as (number | null)[] | undefined;
-    const today = typeof times[start] === 'string' ? (times[start] as string).slice(0, 10) : null;
+    const today = resolveLocalToday(weatherData, start);
     if (!today) return null;
 
     type Kind = 'tempesta' | 'neu' | 'pluja forta' | 'ratxes fortes';
-    const found = new Map<Kind, { index: number; peak: number | null }>();
+    interface DaySpan { date: string; first: number; last: number; peak: number | null }
+    const found = new Map<Kind, DaySpan[]>();
     const note = (kind: Kind, i: number, value: number | null) => {
-        const prev = found.get(kind);
-        if (!prev) found.set(kind, { index: i, peak: value });
-        else if (value !== null && (prev.peak === null || value > prev.peak)) prev.peak = value;
+        const date = resolveLocalDate(times[i], located.utc_offset_seconds);
+        if (!date) return;
+        const spans = found.get(kind) ?? [];
+        const span = spans.find(s => s.date === date);
+        if (!span) {
+            spans.push({ date, first: i, last: i, peak: value });
+            found.set(kind, spans);
+            return;
+        }
+        span.last = i;
+        if (value !== null && (span.peak === null || value > span.peak)) span.peak = value;
     };
     const last = Math.min(start + 48, times.length);
     for (let i = end; i < last; i++) {
@@ -495,22 +556,17 @@ export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: nu
     }
     if (found.size === 0) return null;
 
-    const dayWord = (iso: string): string => {
-        const date = iso.slice(0, 10);
-        const [y, m, d] = date.split('-').map(Number);
-        const [ty, tm, td] = today.split('-').map(Number);
-        const diffDays = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86400000);
-        return diffDays === 0 ? 'avui' : diffDays === 1 ? 'demà' : WEEKDAYS_CA[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    const hourOf = (i: number): string => getTacticalHourStr(times[i] as string | number, located.timezone, located.utc_offset_seconds);
+    const describeSpan = (kind: Kind, span: DaySpan): string => {
+        const unit = kind === 'pluja forta' ? ' mm/h' : kind === 'ratxes fortes' ? ' km/h' : '';
+        const when = span.first === span.last ? `cap a les ${hourOf(span.first)}` : `de ${hourOf(span.first)} a ${hourOf(span.last)}`;
+        return `${dayLabelCa(span.date, today)} ${when}${span.peak !== null ? ` (fins a ${Math.round(span.peak)}${unit})` : ''}`;
     };
-    const parts = [...found.entries()]
-        .sort((a, b) => a[1].index - b[1].index)
+    return [...found.entries()]
+        .sort((a, b) => a[1][0].first - b[1][0].first)
         .slice(0, 3)
-        .map(([kind, { index, peak }]) => {
-            const iso = String(times[index]);
-            const unit = kind === 'pluja forta' ? ' mm/h' : kind === 'ratxes fortes' ? ' km/h' : '';
-            return `${kind} ${dayWord(iso)} cap a les ${iso.slice(11, 13)}:00${peak !== null ? ` (fins a ${Math.round(peak)}${unit})` : ''}`;
-        });
-    return parts.join('; ');
+        .map(([kind, spans]) => `${kind} ${spans.map(span => describeSpan(kind, span)).join(' i ')}`)
+        .join('; ');
 };
 
 /** El detall del tallafocs només explica la resposta final si n'ha vist el mateix perill al mateix nivell. */
@@ -729,6 +785,7 @@ const buildRiskDetail = (
 };
 
 interface WindowRow {
+    /** "17:00", o "demà 02:00" si l'hora ja és de l'endemà (vegeu rowHourLabel). */
     hour: string;
     temp: number | null;
     gust: number | null;
@@ -938,6 +995,8 @@ export const getGeminiAnalysis = async (
         // que apareix als últims ~45 min d'una finestra de cache no activava mai
         // el tallafocs fins que la pròpia cache expirava.
         const { start: evalStartIndex, end: evalEndIndex } = computeEvalWindow(weatherData);
+        // Dia d'avui a la població: va al prompt ("DIA D'AVUI") i a la clau de cache.
+        const todayDate = resolveLocalToday(weatherData, evalStartIndex);
 
         // Certesa de la pluja de la finestra (vegeu resolveRainCertainty), amb les mateixes sèries que la taula.
         const rainCertainty = (() => {
@@ -965,7 +1024,10 @@ export const getGeminiAnalysis = async (
             getAqiBandIndex(currentAqi, aqiScale),
             reliability ? `${reliability.level}:${reliability.cause ?? '-'}:${reliability.tempMarginC ?? '-'}` : 'none',
             rainCertainty ?? 'cap',
-            lightningBand(lightning)
+            lightningBand(lightning),
+            // El dia local: el text diu "demà" i "dimecres", i una anàlisi d'ahir dita avui situaria el temps un dia
+            // més enllà (a les 00:05, la de les 23:10 deia "demà" del dia que ja és avui).
+            todayDate ?? 'x'
         ].join('-');
         const elevationKey = context.location.elevation.toString();
         const cacheKey = cacheService.generateAiKey(`${elevationKey}_${modelInfo.name}_${situationKey}`, lat, lon, language);
@@ -1007,6 +1069,14 @@ export const getGeminiAnalysis = async (
         let finestraPrevista = "Sense dades horàries.";
         let windowSummary = '';
 
+        // Etiqueta de cada hora de la finestra: les de l'endemà porten "demà" davant ("demà 02:00"). Abans, a les 23:00
+        // la taula i el resum deien "Ratxa màxima: 65km/h (02:00)" sense cap dia.
+        const rowHourLabel = (timeRaw: unknown, hourStr: string): string => {
+            const date = resolveLocalDate(timeRaw, utcOffset);
+            if (!todayDate || !date || date === todayDate) return hourStr;
+            return `${daysBetween(todayDate, date) === 1 ? 'demà' : weekdayDateCa(date)} ${hourStr}`;
+        };
+
         if (weatherData.hourly && Array.isArray(weatherData.hourly.time) && weatherData.hourly.time.length > 0) {
             const times = weatherData.hourly.time;
             const startIndex = evalStartIndex;
@@ -1036,7 +1106,7 @@ export const getGeminiAnalysis = async (
                 const timeRaw = times[i];
                 if (timeRaw === undefined || timeRaw === null) continue;
 
-                const hourStr = getTacticalHourStr(timeRaw, tz, utcOffset);
+                const hourStr = rowHourLabel(timeRaw, getTacticalHourStr(timeRaw, tz, utcOffset));
                 // Temperatura mostrada (amb la correcció d'inversió), arrodonida al dècim: el càlcul dona xifres llargues.
                 const tempDisplay = getHourlyDisplayTemp(hourlyObj as HourlySeries, i, latitude);
                 const tempNum = tempDisplay !== null ? round1(tempDisplay) : null;
@@ -1124,13 +1194,20 @@ export const getGeminiAnalysis = async (
         const beyond = describeBeyondWindow(weatherData, evalStartIndex, evalEndIndex);
         const beyondLine = beyond
             ? `
-          MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d'ara): ${beyond}. Esmenta-ho en una frase curta al final del text, sense alarmar.`
+          MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d'ara): ${beyond}. Esmenta-ho en una frase curta al final del text, amb el dia tal com surt aquí, sense alarmar.`
+            : '';
+
+        // Quin dia és avui a la població, i quin serà demà. Abans la IA només rebia l'hora ("23:15") i havia de deduir
+        // a quin dia anava cada cosa (desfasament temporal del 24/11/2026).
+        const todayLine = todayDate
+            ? `
+          DIA D'AVUI A LA ZONA: ${weekdayDateCa(todayDate)}/${todayDate.slice(0, 4)} (les hores sense dia són d'avui; demà és ${weekdayDateCa(addDays(todayDate, 1))})`
             : '';
 
         // Prompt descarregat d'instruccions: Només telemetria en brut per al Worker
         const prompt = `
           TELEMETRIA TÀCTICA EN TEMPS REAL - HORITZÓ 6 HORES:
-
+${todayLine}
           HORA LOCAL ACTUAL A LA ZONA: ${currentHourStr} (${descripcioPeriole}${dayPartLine})
           Estat del Cel: ${skyLine}
           Temperatura Real: ${currentDisplayTemp !== null ? `${currentDisplayTemp}°C${shownTempNote(currentDisplayTemp)}` : 'N/D'} | Humitat Relativa: ${currentHumidity !== null ? `${currentHumidity}%` : 'N/D'}

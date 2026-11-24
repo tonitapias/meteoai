@@ -19,6 +19,7 @@ import {
     type RiskDetail
 } from '../services/geminiService';
 import { lightningBand, LIGHTNING_NEAR_KM, type LightningNearby } from '../services/lightningService';
+import { resolveLocalDate } from '../utils/weatherMath';
 import { Language } from '../translations';
 import { WeatherUnit } from '../utils/formatters';
 
@@ -99,8 +100,13 @@ export function useWeatherAI(
     // les mateixes dades de la pantalla. No es demana cap anàlisi nova sobre dades velles, i la clau diferent fa que,
     // quan torni la previsió nova, l'anàlisi remota s'hi faci encara que la resta de la clau coincideixi.
     const isOfflineSnapshot = !!weatherData.offlineSnapshot;
+    // Dia local de la població: el text de la IA diu "demà" i "dimecres". Sense el dia a la clau, amb l'app oberta i la
+    // mateixa situació, els refrescos de després de mitjanit no demanaven cap anàlisi nova i el "demà" d'ahir es quedava
+    // a la pantalla (desfasament temporal del 24/11/2026).
+    const utcOffset = typeof wd?.['utc_offset_seconds'] === 'number' ? (wd['utc_offset_seconds'] as number) : undefined;
+    const localDay = resolveLocalDate((current as unknown as Record<string, unknown>).time, utcOffset) ?? 'x';
     // Llamps: només la banda de distància (cap, o trams de 10 km fins a 50), no els km exactes de cada refresc.
-    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}-${lightningBand(lightning)}-${isOfflineSnapshot ? 'desada' : 'nova'}`;
+    const currentKey = `${lat}-${lon}-${weatherCode}-${effectiveCode ?? 'x'}-${lang}-${unit}-${aqiVal}-${relLevel}-${dustKind ?? 'n'}-${mostlyCloudy ? 'mc' : 'c'}-${lightningBand(lightning)}-${isOfflineSnapshot ? 'desada' : 'nova'}-${localDay}`;
 
     // 3. Circuit Breaker (Prevenció d'infinites crides a la xarxa o renders)
     wantedKey.current = currentKey;
