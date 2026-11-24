@@ -73,11 +73,17 @@ describe('describeBeyondWindow — el que passa més enllà de les 6 hores', () 
         expect(text).toContain('ratxes fortes dimecres 18/11 cap a les 00:00 (fins a 70 km/h)');
     });
 
-    it('cada dia porta el seu pic: no s\'atribueix a demà el màxim de demà passat', () => {
+    it('cada dia porta el seu pic: no s\'atribueix a demà el màxim de demà passat, i el més fort va marcat', () => {
         // Hora 6 = 17/11 a les 02:00 (demà, 55 km/h); hora 19 = 17/11 a les 15:00 (demà, 60); hora 46 = 18/11 a les 18:00
-        // (dimecres, 75). Abans: "ratxes fortes demà cap a les 02:00 (fins a 75 km/h)".
+        // (dimecres, 75). Abans: "ratxes fortes demà cap a les 02:00 (fins a 75 km/h)". Sense la marca, la IA (3 de 3
+        // crides reals) només esmentava el primer dia.
         const w = buildWeather({ wind_gusts_10m: { 6: 55, 19: 60, 46: 75 } });
-        expect(describeBeyondWindow(w, 0, 6)).toBe('ratxes fortes demà (dimarts 17/11) de 02:00 a 15:00 (fins a 60 km/h) i dimecres 18/11 cap a les 18:00 (fins a 75 km/h)');
+        expect(describeBeyondWindow(w, 0, 6)).toBe('ratxes fortes demà (dimarts 17/11) de 02:00 a 15:00 (fins a 60 km/h) i dimecres 18/11 cap a les 18:00 (fins a 75 km/h; el pic més fort)');
+    });
+
+    it('amb un sol dia, o amb el mateix pic en dos dies, no es marca cap pic', () => {
+        expect(describeBeyondWindow(buildWeather({ wind_gusts_10m: { 6: 55, 19: 60 } }), 0, 6)).not.toContain('el pic més fort');
+        expect(describeBeyondWindow(buildWeather({ wind_gusts_10m: { 19: 60, 46: 60 } }), 0, 6)).not.toContain('el pic més fort');
     });
 
     it('les hores de dins la finestra de 6 hores no hi compten', () => {
@@ -97,7 +103,7 @@ describe('getGeminiAnalysis — moment del dia i més enllà de 6 h al prompt', 
 
     it('amb ratxes fortes l\'endemà, el prompt ho diu i demana una frase al final', async () => {
         const prompt = await promptFor(buildWeather({ wind_gusts_10m: { 20: 65 } }));
-        expect(prompt).toContain('MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d\'ara): ratxes fortes demà (dimarts 17/11) cap a les 16:00 (fins a 65 km/h). Esmenta-ho en una frase curta al final del text, amb el dia tal com surt aquí');
+        expect(prompt).toContain('MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d\'ara): ratxes fortes demà (dimarts 17/11) cap a les 16:00 (fins a 65 km/h). Esmenta-ho en una frase curta al final del text, sense alarmar: digues cada dia pel nom ("demà", "dimecres"), sense la data, i no et deixis el dia del pic més fort.');
         expect(prompt.length).toBeLessThan(4000);
     });
 

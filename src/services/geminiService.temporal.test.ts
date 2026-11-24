@@ -118,8 +118,11 @@ interface Mention {
     day: string | null;
 }
 
-/** Un tram d'un fenomen a la línia "més enllà": "<dia> cap a les 14:00" o "<dia> de 12:00 a 18:00", amb el pic o sense. */
-const BEYOND_SEGMENT = /^(.+?) (?:cap a les \d{2}:\d{2}|de \d{2}:\d{2} a \d{2}:\d{2})(?: \(fins a (\d+) (?:km|mm)\/h\))?$/;
+/**
+ * Un tram d'un fenomen a la línia "més enllà": "<dia> cap a les 14:00" o "<dia> de 12:00 a 18:00", amb el pic o sense
+ * (i, si és el dia del pic més fort del fenomen, "; el pic més fort").
+ */
+const BEYOND_SEGMENT = /^(.+?) (?:cap a les \d{2}:\d{2}|de \d{2}:\d{2} a \d{2}:\d{2})(?: \(fins a (\d+) (?:km|mm)\/h(?:; [^)]*)?\))?$/;
 
 /**
  * On parla el prompt d'un fenomen (amb el pic `value`, si es dona): a la línia "MÉS ENLLÀ DE LES 6 HORES" (fenòmens
@@ -130,7 +133,8 @@ const BEYOND_SEGMENT = /^(.+?) (?:cap a les \d{2}:\d{2}|de \d{2}:\d{2} a \d{2}:\
 const findMention = (prompt: string, kind: Phenomenon, value?: number): Mention | null => {
     const beyond = prompt.match(/MÉS ENLLÀ DE LES 6 HORES[^:]*: (.+?)\. Esmenta-ho/)?.[1];
     if (beyond) {
-        for (const entry of beyond.split('; ')) {
+        // Els fenòmens van separats per "; " davant del nom del fenomen (dins d'un tram hi pot haver "; el pic més fort").
+        for (const entry of beyond.split(/; (?=(?:ratxes fortes|pluja forta|tempesta|neu) )/)) {
             if (!entry.startsWith(`${kind} `)) continue;
             for (const segment of entry.slice(kind.length + 1).split(' i ')) {
                 const m = segment.match(BEYOND_SEGMENT);

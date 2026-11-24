@@ -557,15 +557,30 @@ export const describeBeyondWindow = (weatherData: ExtendedWeatherData, start: nu
     if (found.size === 0) return null;
 
     const hourOf = (i: number): string => getTacticalHourStr(times[i] as string | number, located.timezone, located.utc_offset_seconds);
-    const describeSpan = (kind: Kind, span: DaySpan): string => {
+    /**
+     * El dia del pic més fort d'un fenomen, si en té més d'un i un pic és més alt que tots els altres; si no, -1. Amb
+     * 55 km/h dimarts i 75 dimecres, la IA (3 de 3 crides reals, 24/11/2026) només esmentava el primer dia: el codi li
+     * marca quin no es pot deixar.
+     */
+    const strongestSpan = (spans: DaySpan[]): number => {
+        const peaks = spans.map(s => (s.peak !== null ? Math.round(s.peak) : null));
+        if (peaks.filter(p => p !== null).length < 2) return -1;
+        const top = Math.max(...peaks.filter((p): p is number => p !== null));
+        return peaks.filter(p => p === top).length === 1 ? peaks.indexOf(top) : -1;
+    };
+    const describeSpan = (kind: Kind, span: DaySpan, strongest: boolean): string => {
         const unit = kind === 'pluja forta' ? ' mm/h' : kind === 'ratxes fortes' ? ' km/h' : '';
         const when = span.first === span.last ? `cap a les ${hourOf(span.first)}` : `de ${hourOf(span.first)} a ${hourOf(span.last)}`;
-        return `${dayLabelCa(span.date, today)} ${when}${span.peak !== null ? ` (fins a ${Math.round(span.peak)}${unit})` : ''}`;
+        const peak = span.peak !== null ? ` (fins a ${Math.round(span.peak)}${unit}${strongest ? '; el pic més fort' : ''})` : '';
+        return `${dayLabelCa(span.date, today)} ${when}${peak}`;
     };
     return [...found.entries()]
         .sort((a, b) => a[1][0].first - b[1][0].first)
         .slice(0, 3)
-        .map(([kind, spans]) => `${kind} ${spans.map(span => describeSpan(kind, span)).join(' i ')}`)
+        .map(([kind, spans]) => {
+            const strongest = strongestSpan(spans);
+            return `${kind} ${spans.map((span, k) => describeSpan(kind, span, k === strongest)).join(' i ')}`;
+        })
         .join('; ');
 };
 
@@ -1194,7 +1209,7 @@ export const getGeminiAnalysis = async (
         const beyond = describeBeyondWindow(weatherData, evalStartIndex, evalEndIndex);
         const beyondLine = beyond
             ? `
-          MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d'ara): ${beyond}. Esmenta-ho en una frase curta al final del text, amb el dia tal com surt aquí, sense alarmar.`
+          MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d'ara): ${beyond}. Esmenta-ho en una frase curta al final del text, sense alarmar: digues cada dia pel nom ("demà", "dimecres"), sense la data, i no et deixis el dia del pic més fort.`
             : '';
 
         // Quin dia és avui a la població, i quin serà demà. Abans la IA només rebia l'hora ("23:15") i havia de deduir
