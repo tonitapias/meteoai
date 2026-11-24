@@ -126,9 +126,10 @@ describe('getGeminiAnalysis — llamps observats', () => {
         await analyse(buildWeather(), at(23));
         await analyse(buildWeather(), at(8));
         const situations = vi.mocked(cacheService.generateAiKey).mock.calls.map(([situation]) => situation);
-        expect(situations[0]).toMatch(/-l0$/);
-        expect(situations[1]).toMatch(/-l3$/);
-        expect(situations[2]).toMatch(/-l1$/);
+        // Després del tram dels llamps hi va el dia local (un altre dia, una altra anàlisi).
+        expect(situations[0]).toMatch(/-l0-(\d{4}-\d{2}-\d{2}|x)$/);
+        expect(situations[1]).toMatch(/-l3-(\d{4}-\d{2}-\d{2}|x)$/);
+        expect(situations[2]).toMatch(/-l1-(\d{4}-\d{2}-\d{2}|x)$/);
     });
 
     it("resposta en cache amb el motiu dels llamps: la distància és la d'ara, no la desada", async () => {

@@ -94,6 +94,27 @@ export const resolveHourlyEpoch = (timeStr: string, utcOffsetSeconds: number): n
 };
 
 /**
+ * Data local ("2026-11-23") d'una hora d'una sèrie meteorològica o de current.time, a la població consultada: el text
+ * tal qual si no porta zona (Open-Meteo amb timezone=auto); si en porta, o és un epoch en segons, l'instant passat a
+ * l'hora de la població amb el seu desplaçament. Mai el fus del navegador. null si no se'n pot treure.
+ * La fan servir la IA (quin dia és "avui" i "demà" al prompt) i les claus de les seves anàlisis (un altre dia, una
+ * altra anàlisi): desfasament temporal del 24/11/2026.
+ */
+export const resolveLocalDate = (timeRaw: unknown, utcOffsetSeconds: number | undefined): string | null => {
+    const offsetMs = (utcOffsetSeconds ?? 0) * 1000;
+    if (typeof timeRaw === 'string') {
+        const hasExplicitTz = timeRaw.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(timeRaw);
+        if (!hasExplicitTz) return /^\d{4}-\d{2}-\d{2}/.test(timeRaw) ? timeRaw.slice(0, 10) : null;
+        const epoch = resolveHourlyEpoch(timeRaw, utcOffsetSeconds ?? 0);
+        return isNaN(epoch) ? null : new Date(epoch + offsetMs).toISOString().slice(0, 10);
+    }
+    if (typeof timeRaw === 'number' && Number.isFinite(timeRaw)) {
+        return new Date(timeRaw * 1000 + offsetMs).toISOString().slice(0, 10);
+    }
+    return null;
+};
+
+/**
  * Fórmula de Magnus-Tetens per calcular el Punt de Rosada.
  * T = Temperatura (ºC), RH = Humitat Relativa (%)
  */

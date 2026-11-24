@@ -64,13 +64,20 @@ describe('describeBeyondWindow — el que passa més enllà de les 6 hores', () 
         expect(describeBeyondWindow(buildWeather(), 0, 6)).toBeNull();
     });
 
-    it('una tempesta i pluja forta l\'endemà, amb el dia i l\'hora (avui/demà o el dia de la setmana)', () => {
+    it('una tempesta i pluja forta l\'endemà, amb el dia, la data i la franja horària', () => {
         // Hora 19 = 17/11 a les 15:00 (demà); hora 28 = 18/11 a les 00:00 (dimecres).
         const w = buildWeather({ weather_code: { 19: 95 }, precipitation: { 19: 12, 20: 24 }, cape: { 19: 1500 }, cloud_cover_low: { 19: 100, 20: 100 }, wind_gusts_10m: { 28: 70 } });
         const text = describeBeyondWindow(w, 0, 6)!;
-        expect(text).toContain('demà cap a les 15:00');
-        expect(text).toContain('pluja forta demà cap a les 15:00 (fins a 24 mm/h)');
-        expect(text).toContain('ratxes fortes dimecres cap a les 00:00 (fins a 70 km/h)');
+        expect(text).toContain('tempesta demà (dimarts 17/11) cap a les 15:00');
+        expect(text).toContain('pluja forta demà (dimarts 17/11) de 15:00 a 16:00 (fins a 24 mm/h)');
+        expect(text).toContain('ratxes fortes dimecres 18/11 cap a les 00:00 (fins a 70 km/h)');
+    });
+
+    it('cada dia porta el seu pic: no s\'atribueix a demà el màxim de demà passat', () => {
+        // Hora 6 = 17/11 a les 02:00 (demà, 55 km/h); hora 19 = 17/11 a les 15:00 (demà, 60); hora 46 = 18/11 a les 18:00
+        // (dimecres, 75). Abans: "ratxes fortes demà cap a les 02:00 (fins a 75 km/h)".
+        const w = buildWeather({ wind_gusts_10m: { 6: 55, 19: 60, 46: 75 } });
+        expect(describeBeyondWindow(w, 0, 6)).toBe('ratxes fortes demà (dimarts 17/11) de 02:00 a 15:00 (fins a 60 km/h) i dimecres 18/11 cap a les 18:00 (fins a 75 km/h)');
     });
 
     it('les hores de dins la finestra de 6 hores no hi compten', () => {
@@ -90,7 +97,16 @@ describe('getGeminiAnalysis — moment del dia i més enllà de 6 h al prompt', 
 
     it('amb ratxes fortes l\'endemà, el prompt ho diu i demana una frase al final', async () => {
         const prompt = await promptFor(buildWeather({ wind_gusts_10m: { 20: 65 } }));
-        expect(prompt).toContain('MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d\'ara): ratxes fortes demà cap a les 16:00 (fins a 65 km/h)');
+        expect(prompt).toContain('MÉS ENLLÀ DE LES 6 HORES (fins a 48 h; no compta per al nivell de risc d\'ara): ratxes fortes demà (dimarts 17/11) cap a les 16:00 (fins a 65 km/h). Esmenta-ho en una frase curta al final del text, amb el dia tal com surt aquí');
         expect(prompt.length).toBeLessThan(4000);
+    });
+
+    it('el prompt diu quin dia és avui i marca amb "demà" les hores de després de mitjanit', async () => {
+        // 16/11 a les 20:00: la finestra de 6 hores arriba a la 01:00 del 17/11.
+        const prompt = await promptFor(buildWeather());
+        expect(prompt).toContain("DIA D'AVUI A LA ZONA: dilluns 16/11/2026 (les hores sense dia són d'avui; demà és dimarts 17/11)");
+        expect(prompt).toContain('| 23:00 |');
+        expect(prompt).toContain('| demà 00:00 |');
+        expect(prompt).toContain('| demà 01:00 |');
     });
 });

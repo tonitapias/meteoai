@@ -309,3 +309,35 @@ describe('useWeatherAI — detall del motiu', () => {
         expect(result.current.aiAnalysis?.risk_detail).toBeUndefined();
     });
 });
+
+// Desfasament temporal del 24/11/2026: la clau no portava el dia. Amb l'app oberta i la mateixa situació, els refrescos
+// de després de mitjanit no demanaven cap anàlisi nova, i el text d'ahir ("demà hi haurà ratxes") seguia a la pantalla
+// quan aquell "demà" ja era avui.
+describe('useWeatherAI — un altre dia, una altra anàlisi', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        generateAIPrediction.mockReset().mockReturnValue({ text: 'local', tips: [], alerts: [], confidence: 'x', confidenceLevel: 'high' });
+        getGeminiAnalysis.mockReset().mockResolvedValue(null);
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    const flush = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(600); }); };
+    /** La mateixa situació (boira, 15 °C, Girona) a una altra hora local, com un refresc de la previsió. */
+    const at = (time: string) => ({ ...WEATHER, utc_offset_seconds: 3600, current: { ...WEATHER.current, time } }) as unknown as ExtendedWeatherData;
+
+    it('un refresc del mateix dia no la repeteix, però el primer de l\'endemà sí', async () => {
+        const { rerender } = renderHook(
+            ({ wd }: { wd: ExtendedWeatherData }) => useWeatherAI(wd, null, 'ca', 'C', null, 45),
+            { initialProps: { wd: at('2026-11-23T23:00') } }
+        );
+        await flush();
+        rerender({ wd: at('2026-11-23T23:45') });
+        await flush();
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(1);
+
+        rerender({ wd: at('2026-11-24T00:00') });
+        await flush();
+        expect(getGeminiAnalysis).toHaveBeenCalledTimes(2);
+        expect((getGeminiAnalysis.mock.calls[1][0] as ExtendedWeatherData).current.time).toBe('2026-11-24T00:00');
+    });
+});
