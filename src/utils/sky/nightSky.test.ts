@@ -2,7 +2,7 @@
 // La nit del plafó «Aquesta nit»: finestra de posta a sortida (també de matinada i de dia), nit polar, foscor, lluna,
 // el cel de cada hora retallat a la finestra i el regle de 3 en 3 hores. Barcelona, 23 → 24/11/2026 (UTC+1).
 import { describe, it, expect, beforeEach } from 'vitest';
-import { buildNightSky, cloudHiddenSpans, findNightWindow, nextNightWindow, nightFraction, skyCellsFor } from './nightSky';
+import { buildNightSky, cloudHiddenSpans, findNightWindow, moonLaneStart, nextNightWindow, nightFraction, skyCellsFor } from './nightSky';
 import { makeZoneCtx, localClock } from '../solar/solarTime';
 import { clearSolarDayCache } from '../solar/solarDay';
 import type { SkyHour, SkyKind } from '../daySky';
@@ -147,5 +147,25 @@ describe('skyCellsFor (el dia del plafó del sol)', () => {
     // El sol, tapat de les 12 a les 17 h (les hores de dia amb núvol).
     const hidden = cloudHiddenSpans(cells.filter(c => c.isDay));
     expect(hidden).toEqual([{ from: 12 / 24, to: 17 / 24 }]);
+  });
+});
+
+describe('moonLaneStart (on comença el carril de la lluna)', () => {
+  const windowAt = (iso: string) => findNightWindow(at(iso), BCN.lat, BCN.lon, zone)!;
+
+  it('23-11: a la posta (17:26) la lluna ja és a dalt; el carril comença quan surt (16:13)', () => {
+    const r = moonLaneStart(windowAt('2026-11-23T14:00:00Z'), BCN.lat, BCN.lon);
+    expect(r.fromRise).toBe(true);
+    expect(minutesApart(clock(r.startMs), '16:13')).toBeLessThanOrEqual(2);
+  });
+
+  it('3-12: la lluna surt a les 02:24, després de la posta; el carril comença a la posta', () => {
+    const w = windowAt('2026-12-03T14:00:00Z');
+    expect(moonLaneStart(w, BCN.lat, BCN.lon)).toEqual({ startMs: w.startMs, fromRise: false });
+  });
+
+  it('12-11: la lluna creixent surt a les 10:52, més de 6 h abans de la posta; el carril comença 6 h abans', () => {
+    const w = windowAt('2026-11-12T14:00:00Z');
+    expect(moonLaneStart(w, BCN.lat, BCN.lon)).toEqual({ startMs: w.startMs - 6 * 3600000, fromRise: false });
   });
 });

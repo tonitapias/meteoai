@@ -119,3 +119,16 @@ describe('NightPanel — idioma', () => {
     expect(screen.getByText(verdict)).toBeTruthy();
   });
 });
+
+describe('NightPanel — la lluna petita de dia', () => {
+  it('a les 16:30, amb la lluna sortida (16:13) i el sol encara a dalt, ja diu on és', () => {
+    const { getByTestId } = renderPanel({ nowMs: Date.parse('2026-11-23T15:30:00Z') });
+    expect(getByTestId('moon-now').textContent).toMatch(/^\d+° (NE|ENE|E)$/);
+  });
+
+  it('a les 15:15, abans que surti, no hi és; i la frase continua sent de la nit', () => {
+    const { queryByTestId, container } = renderPanel({ nowMs: AFTERNOON });
+    expect(queryByTestId('moon-now')).toBeNull();
+    expect(container.textContent).toMatch(/17:2\d → 07:5\d/);
+  });
+});

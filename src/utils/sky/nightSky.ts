@@ -8,6 +8,7 @@ import { addDays, localClock, localDateOf, wallTimeToUtcMs, zonedDayStartMs, typ
 import { omEdgesFor, type SolarDaily } from '../solar/solarForecast';
 import type { SkyHour, SkyKind } from '../daySky';
 import { getHourlyEffectiveCloudCover } from '../hourlyWeatherCode';
+import { moonRiseSetAround } from './moonEvents';
 import type { HourlySeries } from '../hourlyWeatherCode';
 
 const MIN = 60000;
@@ -217,6 +218,23 @@ export function nightSkyFor(w: NightWindow, input: Omit<NightSkyInput, 'nowMs'>)
     cloudRange,
     ticks: ticksOf(w, zone),
   };
+}
+
+/** Fins a quant abans de la posta pot començar el carril de la lluna (perquè la nit hi continuï manant). */
+export const MOON_LANE_MAX_LEAD_MS = 6 * HOUR;
+
+/**
+ * On comença el carril de la lluna del plafó: a la posta o, si a la posta la lluna ja és a dalt, a la seva sortida (com a
+ * molt MOON_LANE_MAX_LEAD_MS abans de la posta). Així, de dia, un cop la lluna ha sortit ja s'hi veu on és. `fromRise`:
+ * el carril comença just a la sortida (s'hi dibuixa el punt de l'horitzó). La frase i les xifres continuen sent de la nit.
+ */
+export function moonLaneStart(w: NightWindow, lat: number, lon: number): { startMs: number; fromRise: boolean } {
+  const atSunset = { startMs: w.startMs, fromRise: false };
+  if (w.polar !== 'none') return atSunset;
+  const around = moonRiseSetAround(w.startMs, lat, lon);
+  if (!around.up || around.riseMs === null || around.riseMs >= w.startMs) return atSunset;
+  const earliest = w.startMs - MOON_LANE_MAX_LEAD_MS;
+  return around.riseMs >= earliest ? { startMs: around.riseMs, fromRise: true } : { startMs: earliest, fromRise: false };
 }
 
 /** La nit que segueix la d'ara (per a la línia «Demà a la nit»). */
