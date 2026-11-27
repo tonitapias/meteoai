@@ -2,6 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --- LLETRES DEL TITULAR DE BENVINGUDA ---
+   Primera línia: Fraunces (OFL, src/assets/fonts/OFL-Fraunces.txt), un tall fix (pes 420, SOFT 30, òptica 48).
+   Segona línia: Satisfy (Apache 2.0, src/assets/fonts/LICENSE-Satisfy.txt), manuscrita, amb el temps dins les
+   lletres (utils/welcome/headlineMarks.ts en porta les mesures). Totes dues retallades als caràcters del català, el
+   castellà, el francès i l'anglès (titular-chars.txt; Satisfy, a més, la "ı" sense punt). Uns 25 KB en total, i
+   només es baixen a la benvinguda.
+   La de reserva de Fraunces és Georgia ajustada a l'amplada i a la línia de base: si la lletra triga, la primera
+   línia ja ocupa el mateix lloc i el canvi no fa saltar la pantalla. La segona no es mostra fins que la lletra és a
+   punt (o al cap d'1,5 s), així que no en cal. */
+@font-face {
+  font-family: 'Fraunces Titular';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/fraunces-titular-roman.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces Titular Reserva';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Georgia');
+  size-adjust: 101.8%;
+  ascent-override: 96%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Satisfy Titular';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/satisfy-titular.woff2') format('woff2');
+}
+
+/* --- L'ESCRIPTURA DEL TITULAR ---
+   Un sol cop: la segona línia s'escriu d'esquerra a dreta (una màscara amb la punta suau), després surt l'astre de
+   la "i" i arriba el núvol de l'accent. El farciment i el marge negatiu fan que la màscara cobreixi també els
+   dibuixos de dalt i les cues de les lletres, sense moure res. Sense animacions si el sistema les té reduïdes. */
+.titular-escriu {
+  padding: 0.6em 0.3em 0.4em 0;
+  margin: -0.6em -0.3em -0.4em 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 44%, transparent 56%);
+  mask-image: linear-gradient(90deg, #000 44%, transparent 56%);
+  -webkit-mask-size: 260% 100%;
+  mask-size: 260% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+  animation: titular-escriu 1.5s cubic-bezier(0.45, 0.05, 0.4, 1) 0.15s both;
+}
+@keyframes titular-escriu {
+  to { -webkit-mask-position: 0 0; mask-position: 0 0; }
+}
+.titular-astre { animation: titular-astre 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) 1.5s both; }
+@keyframes titular-astre {
+  from { opacity: 0; transform: scale(0.2) rotate(-70deg); }
+}
+.titular-nuvol { animation: titular-nuvol 0.7s ease-out 1.75s both; }
+@keyframes titular-nuvol {
+  from { opacity: 0; transform: translateX(-0.3em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .titular-escriu { animation: none; -webkit-mask-image: none; mask-image: none; }
+  .titular-astre, .titular-nuvol { animation: none; }
+}
+
 @layer base {
   body {
     @apply antialiased text-slate-50 selection:bg-indigo-500/30 selection:text-white bg-slate-950;

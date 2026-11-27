@@ -40,7 +40,10 @@ export default defineConfig({
       registerType: 'prompt',
       workbox: {
         skipWaiting: false,
-        clientsClaim: false
+        clientsClaim: false,
+        // Per defecte només js/css/html: s'hi afegeixen les lletres del titular de benvinguda (uns 25 KB) perquè
+        // sense connexió la pantalla d'inici es vegi igual.
+        globPatterns: ['**/*.{js,css,html}', '**/fraunces-titular-*.woff2', '**/satisfy-titular-*.woff2']
       },
       devOptions: {
         enabled: true //[cite: 3]

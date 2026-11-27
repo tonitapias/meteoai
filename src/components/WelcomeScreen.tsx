@@ -4,7 +4,7 @@
 // titular). "Utilitza la meva ubicació" amb un sol toc, el cercador i els favorits a la mateixa zona, i errors
 // d'ubicació explicats a sota del botó, que no es queda mai bloquejat. Sense blur, filtres ni animacions
 // contínues (mòbils modestos).
-import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { Fragment, useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { ChevronDown, HelpCircle, Navigation } from 'lucide-react';
 import { Language, TranslationType } from '../translations';
 import { APP_VERSION } from '../utils/appVersion';
@@ -14,6 +14,8 @@ import { useGeoPermission } from '../hooks/welcome/useGeoPermission';
 import type { WelcomeSky } from '../utils/welcome/welcomeSky';
 import { welcomeEyebrow } from '../utils/welcome/welcomeEyebrow';
 import { splitHeadline, WELCOME_ACCENT } from '../utils/welcome/welcomeAccent';
+import { headlinePieces } from '../utils/welcome/headlineMarks';
+import { useFontReady } from '../hooks/welcome/useFontReady';
 import WelcomeSearch from './welcome/WelcomeSearch';
 import { StarfieldBackdrop } from './StarfieldBackdrop';
 import { useMinWidth } from './solar/useMinWidth';
@@ -30,6 +32,9 @@ const SkyScene = lazy(() => import('./welcome/SkyScene'));
 // Del mateix tros: quan hi ha lluna a la línia de dalt, el cel (i doncs aquest codi) ja ha arribat.
 const EyebrowMoon = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowMoon })));
 const EyebrowSun = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.EyebrowSun })));
+// I els dibuixos de dins del titular (l'astre de la "i" i el núvol de l'accent), que també depenen del cel.
+const HeadlineAstre = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.HeadlineAstre })));
+const HeadlineCloud = lazy(() => import('./welcome/SkyScene').then(m => ({ default: m.HeadlineCloud })));
 // Els secrets de la columna (estirar-la cap amunt tres cops, o aixafar-la cap avall): només es baixen si algú els troba.
 const loadSkyElevator = () => import('./welcome/SkyElevator');
 const SkyElevator = lazy(loadSkyElevator);
@@ -63,6 +68,11 @@ const LANGS: readonly Language[] = ['ca', 'es', 'en', 'fr'];
 // Al selector del mòbil, cada idioma amb el seu nom (el selector nadiu mostra tancat el text de l'opció).
 const LANG_NAMES: Readonly<Record<Language, string>> = { ca: 'Català', es: 'Español', en: 'English', fr: 'Français' };
 const LOCALE: Readonly<Record<Language, string>> = { ca: 'ca-ES', es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
+/** Mida del titular al mòbil, per idioma: la més gran amb què cada titular fa les mateixes línies que amb la lletra del
+ *  sistema (dues de 360 a 412 px; el francès i l'anglès, més llargs, en feien tres als més estrets). */
+const HEADLINE_MOBILE_SIZE: Readonly<Record<Language, string>> = { ca: 'text-[33px]', es: 'text-[32px]', fr: 'text-[31px]', en: 'text-[30px]' };
+/** Com a molt, tant d'espera per la lletra manuscrita i el cel abans d'escriure la segona línia del titular. */
+const HEADLINE_WRITE_WAIT_MS = 1500;
 /** A partir d'aquí es diu a l'usuari que pot cercar el lloc mentre el GPS encara busca. */
 const SLOW_LOCATE_MS = 5000;
 /** Després d'això el botó torna a l'estat normal amb l'avís de "massa espera" (la petició pot acabar després). */
@@ -238,6 +248,21 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
   const [headlineFirst, headlineAccent] = splitHeadline(w.headline);
   const accent = sky ? WELCOME_ACCENT[sky.phase] : undefined;
 
+  // La segona línia, manuscrita, amb el temps dins les lletres: l'astre que hi ha al cel fa de punt de la "i" (o del
+  // punt final) i un núvol fa d'accent. S'escriu un sol cop, quan la lletra i el cel són a punt; si triguen, al cap
+  // d'1,5 s s'escriu sense dibuixos (i, si la lletra arriba després, hi apareixen).
+  const scriptReady = useFontReady('1em "Satisfy Titular"', 'vist');
+  const pieces = useMemo(() => headlinePieces(headlineAccent), [headlineAccent]);
+  const decorated = scriptReady && !!sky && pieces.some(p => p.kind === 'mark');
+  const astreKind = !sky ? 'sol' : sky.phase !== 'nit' ? 'sol' : sky.moon.angle !== null ? 'lluna' : 'estrella';
+  const [waitedOut, setWaitedOut] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setWaitedOut(true), HEADLINE_WRITE_WAIT_MS);
+    return () => clearTimeout(t);
+  }, []);
+  const [writeDone, setWriteDone] = useState(false);
+  const writeState = writeDone ? 'fet' : (scriptReady && sky) || waitedOut ? 'escriu' : 'espera';
+
   // De nit, les estrelles no passen per darrere del text (entre les lletres semblaven taques): es mesura on és el
   // bloc de text, i torna a mesurar-se si canvia la mida de la pantalla o del text (idioma, avisos d'ubicació).
   const night = sky?.phase === 'nit';
@@ -363,16 +388,47 @@ export default function WelcomeScreen({ lang, setLang, t, onLocate, onSelectLoca
           <p className="text-[13px] sm:text-sm text-slate-300">
             {eyebrow.head}
             {eyebrow.moment && <> · {eyebrow.moon && sky && (
-              <Suspense fallback={null}><EyebrowMoon phase={sky.moon.phase} south={sky.south} /></Suspense>
+              <Suspense fallback={null}><EyebrowMoon phase={sky.moon.phase} south={sky.south} color={WELCOME_ACCENT[sky.phase]} /></Suspense>
             )}{!eyebrow.moon && sky && sky.phase !== 'nit' && (
               <Suspense fallback={null}><EyebrowSun phase={sky.phase} color={WELCOME_ACCENT[sky.phase]} /></Suspense>
             )}{eyebrow.moment}</>}
           </p>
-          {/* Dues línies partides per la coma; la segona, amb l'accent del moment quan arriba el cel. */}
-          <h1 className="text-[30px] leading-[1.06] sm:text-5xl lg:text-[clamp(40px,4vw,58px)] lg:leading-[1.03] font-semibold tracking-[-0.025em] text-balance">
+          {/* Dues línies partides per la coma. La primera, en Fraunces (el pes ja va dins la lletra, per això
+              font-normal); la segona, manuscrita (Satisfy), amb l'accent del moment quan arriba el cel i el temps dins
+              les lletres. Els lectors de pantalla llegeixen el text de debò; la "i" sense punt només es veu. */}
+          <h1 className={`font-titular font-normal ${HEADLINE_MOBILE_SIZE[lang] ?? 'text-[33px]'} sm:text-[min(52px,7.4vw)] lg:text-[clamp(44px,4.4vw,64px)] leading-[1.04] tracking-[-0.018em] text-balance`}>
             {headlineAccent ? (
               <>
-                <span className="block">{headlineFirst}</span> <span className="block transition-colors duration-700 motion-reduce:transition-none" style={{ color: accent }}>{headlineAccent}</span>
+                <span className="block">{headlineFirst}</span>{' '}
+                <span
+                  className={`block font-titular-ma text-[1.1em] leading-[1.12] mt-[0.3em] tracking-normal whitespace-nowrap transition-colors duration-700 motion-reduce:transition-none ${writeState === 'espera' ? 'opacity-0' : writeState === 'escriu' ? 'titular-escriu' : ''}`}
+                  style={{ color: accent }}
+                  onAnimationEnd={e => { if (e.target === e.currentTarget) setWriteDone(true); }}
+                >
+                  {decorated && sky ? (
+                    <>
+                      <span className="sr-only">{headlineAccent}</span>
+                      <span aria-hidden="true">
+                        {pieces.map((p, i) => p.kind === 'text' ? <Fragment key={i}>{p.text}</Fragment> : (
+                          <span key={i} className="relative">
+                            {p.hideChar ? <span className="text-transparent">{p.char}</span> : p.char}
+                            <span
+                              key={p.mark === 'astre' ? astreKind : 'nuvol'}
+                              className={`absolute pointer-events-none ${p.mark === 'astre' ? 'titular-astre' : 'titular-nuvol'}`}
+                              style={{ left: `${p.box.left}em`, top: `${p.box.top}em`, width: `${p.box.width}em`, height: `${p.box.height}em` }}
+                            >
+                              <Suspense fallback={null}>
+                                {p.mark === 'astre'
+                                  ? <HeadlineAstre kind={astreKind} color={accent ?? '#fde68a'} phase={sky.moon.phase} south={sky.south} />
+                                  : <HeadlineCloud phase={sky.phase} />}
+                              </Suspense>
+                            </span>
+                          </span>
+                        ))}
+                      </span>
+                    </>
+                  ) : headlineAccent}
+                </span>
               </>
             ) : headlineFirst}
           </h1>
