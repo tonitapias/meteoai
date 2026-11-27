@@ -1,5 +1,5 @@
 // src/hooks/useViewState.ts
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, startTransition } from 'react';
 import { useModalHistory } from './useModalHistory';
 import { NOTIFICATION_TYPES } from '../constants/errorConstants';
 import type { PlanetEntry } from '../utils/planetNav';
@@ -42,9 +42,11 @@ export function useViewState() {
     const [showSettings, setShowSettings] = useState(false);
 
     // --- 3. Efectes Visuals (Rellotge) ---
-    useEffect(() => { 
-        const timer = setInterval(() => setNow(new Date()), 60000); 
-        return () => clearInterval(timer); 
+    // Cada minut es torna a pintar tot el tauler (l'hora, el sol, els càlculs d'ara). Com a transició, React ho fa a
+    // trossos i un toc de l'usuari ho interromp: abans, un toc que hi coincidia esperava fins que acabava (INP).
+    useEffect(() => {
+        const timer = setInterval(() => startTransition(() => setNow(new Date())), 60000);
+        return () => clearInterval(timer);
     }, []);
 
     // --- 4. Gestió d'Historial (Back Button) ---

@@ -18,6 +18,7 @@ import { ExtendedWeatherData, StrictCurrentWeather, type LocationMeta } from '..
 import { WeatherUnit, formatPrecipitation, formatHoursMinutes, getWeatherLabel, getSafeLocale, formatTemp, formatDecimal } from '../utils/formatters';
 import { useDayDetailData } from '../hooks/useDayDetailData';
 import { useDialogFocus } from '../hooks/useDialogFocus';
+import { useAfterFirstPaint } from '../hooks/useAfterFirstPaint';
 import { useOfficialAlerts } from '../hooks/useOfficialAlerts';
 import { hasVisibleRange, type ModelRange } from '../utils/dailyModelSpread';
 import { CONFIDENCE_TEXT } from '../utils/forecastConfidenceText';
@@ -45,6 +46,15 @@ interface DayDetailModalProps {
 
 type HoursView = 'column' | 'chart';
 
+// El marc del detall (fons, full, barra de dalt i creu). El comparteixen el marc buit del primer frame i el detall
+// complet, element per element: React hi reaprofita el DOM i el fade-in no torna a començar quan arriba el contingut.
+const FRAME_ROOT = 'fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#03050a]/90 animate-in fade-in duration-200';
+const FRAME_SHEET = 'relative w-full h-full sm:h-auto sm:max-w-2xl lg:max-w-5xl sm:max-h-[94vh] overflow-y-auto custom-scrollbar bg-[#0a0b11] sm:rounded-[2rem] sm:border sm:border-white/[0.07] shadow-2xl';
+const FRAME_INNER = 'relative min-h-full bg-gradient-to-b from-[#0e1018] to-[#0a0b11]';
+const FRAME_BAR = 'sticky top-0 z-20 h-14 flex items-center justify-between gap-3 pl-5 pr-2 sm:pl-6 sm:pr-3 bg-[#0e1018] border-b border-white/[0.05]';
+const FRAME_BAR_LABEL = 'min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400';
+const FRAME_CLOSE = 'shrink-0 w-11 h-11 flex items-center justify-center rounded-[14px] border border-white/10 bg-black/30 text-slate-300 hover:text-white hover:border-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400';
+
 const capitalize = (text: string, locale: string) => text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
 
 export default function DayDetailModal({
@@ -60,10 +70,16 @@ export default function DayDetailModal({
   const locale = getSafeLocale(lang);
   const confidenceText = CONFIDENCE_TEXT[lang] || CONFIDENCE_TEXT.ca;
 
+  // INP: en obrir el detall, primer es pinta el marc (fons, barra i creu) i els càlculs del dia (les hores, la franja del
+  // cel de tota la setmana, la columna) es fan després del primer pintat. Abans es feien dins del clic i, en un mòbil
+  // modest, no es veia res durant 0,5-0,7 s. Fins aleshores els càlculs reben `null` (vegeu el marc buit més avall).
+  const ready = useAfterFirstPaint();
+  const data = ready ? weatherData : null;
+
   const {
     dayData, extremes, dayCode, avgDaylightClouds, windMax, gustsMax, precipProbMax, spread, isRegionalDay,
     hourlyData, comparisonData, snowLevelText, snowLevelRelevant, daylightSec, neighbours, dayIndices, nowIndex
-  } = useDayDetailData(weatherData, selectedDayIndex, unit);
+  } = useDayDetailData(data, selectedDayIndex, unit);
 
   const [view, setView] = useState<HoursView>('column');
   // A partir de 1024 px, el detall fa dues columnes i la columna i els gràfics es veuen alhora (sense «Columna | Gràfic»).
@@ -149,15 +165,15 @@ export default function DayDetailModal({
 
   // Franja del cel de cada dia (la de la llista de la Previsió) per al selector.
   const daySky = useMemo(() => {
-      if (!weatherData?.hourly) return {};
-      const hourly = weatherData.hourly as unknown as HourlySeries;
-      const elevation = typeof weatherData.elevation === 'number' ? weatherData.elevation : 0;
-      return buildDaySky(hourly, getHourCodesByDate(hourly, elevation, weatherData.hourlyComparison));
-  }, [weatherData]);
+      if (!data?.hourly) return {};
+      const hourly = data.hourly as unknown as HourlySeries;
+      const elevation = typeof data.elevation === 'number' ? data.elevation : 0;
+      return buildDaySky(hourly, getHourCodesByDate(hourly, elevation, data.hourlyComparison));
+  }, [data]);
 
   // Avisos de cada dia del selector (i del dia obert).
   const dayKeys = useMemo(() => {
-      const times = weatherData?.daily?.time ?? [];
+      const times = data?.daily?.time ?? [];
       const last = Math.min(LAST_DETAIL_DAY, times.length - 1);
       const keys: Array<{ index: number; key: string }> = [];
       for (let i = FIRST_DETAIL_DAY; i <= last; i++) {
@@ -165,7 +181,7 @@ export default function DayDetailModal({
           if (typeof raw === 'string' && raw.length >= 10) keys.push({ index: i, key: raw.slice(0, 10) });
       }
       return keys;
-  }, [weatherData]);
+  }, [data]);
 
   const alertsByDay = useMemo(() => {
       const out = new Map<string, ReturnType<typeof alertsForDay>>();
@@ -193,19 +209,38 @@ export default function DayDetailModal({
 
   // La columna del dia: les mateixes hores que el gràfic (hourlyData) amb el cel del motor i els models globals.
   const columnRows = useMemo(() => {
-      if (!weatherData?.hourly) return [];
+      if (!data?.hourly) return [];
       return buildDayColumn({
-          hourly: weatherData.hourly as unknown as HourlySeries,
+          hourly: data.hourly as unknown as HourlySeries,
           dayIndices,
           primary: hourlyData,
           comparison: comparisonData,
-          elevation: typeof weatherData.elevation === 'number' ? weatherData.elevation : 0,
-          hourlyComparison: weatherData.hourlyComparison,
+          elevation: typeof data.elevation === 'number' ? data.elevation : 0,
+          hourlyComparison: data.hourlyComparison,
           unit
       });
-  }, [weatherData, dayIndices, hourlyData, comparisonData, unit]);
+  }, [data, dayIndices, hourlyData, comparisonData, unit]);
   const tempScale = useMemo(() => temperatureScale(columnRows), [columnRows]);
   const dryWindow = useMemo(() => findDryWindow(columnRows), [columnRows]);
+
+  // Primer frame: el marc buit (vegeu `ready`). La creu, Esc i l'enrere ja hi funcionen.
+  if (!ready) {
+    return (
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="day-detail-modal-title" className={FRAME_ROOT} onClick={handleBackdropClick}>
+        <div ref={scrollRef} className={FRAME_SHEET}>
+          <div className={FRAME_INNER}>
+            <div className={MATRIX_BG}></div>
+            <div className={FRAME_BAR}>
+              <span className={FRAME_BAR_LABEL}>{td.forecast}</span>
+              <button type="button" onClick={onClose} aria-label={t.closeWindow} className={FRAME_CLOSE}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!dayData) return null;
 
@@ -372,21 +407,21 @@ export default function DayDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="day-detail-modal-title"
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-[#03050a]/90 animate-in fade-in duration-200"
+        className={FRAME_ROOT}
         onClick={handleBackdropClick}
     >
       <div
           ref={scrollRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          className="relative w-full h-full sm:h-auto sm:max-w-2xl lg:max-w-5xl sm:max-h-[94vh] overflow-y-auto custom-scrollbar bg-[#0a0b11] sm:rounded-[2rem] sm:border sm:border-white/[0.07] shadow-2xl"
+          className={FRAME_SHEET}
       >
-        <div className="relative min-h-full bg-gradient-to-b from-[#0e1018] to-[#0a0b11]">
+        <div className={FRAME_INNER}>
           <div className={MATRIX_BG}></div>
 
           {/* Barra de dalt: la creu dins del flux, mai sobre el contingut */}
-          <div className="sticky top-0 z-20 h-14 flex items-center justify-between gap-3 pl-5 pr-2 sm:pl-6 sm:pr-3 bg-[#0e1018] border-b border-white/[0.05]">
-              <span className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+          <div className={FRAME_BAR}>
+              <span className={FRAME_BAR_LABEL}>
                   {td.forecast}
                   {sourceLabel && (
                       <>
@@ -405,7 +440,7 @@ export default function DayDetailModal({
                   type="button"
                   onClick={onClose}
                   aria-label={t.closeWindow}
-                  className="shrink-0 w-11 h-11 flex items-center justify-center rounded-[14px] border border-white/10 bg-black/30 text-slate-300 hover:text-white hover:border-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+                  className={FRAME_CLOSE}
               >
                   <X className="w-5 h-5" />
               </button>
