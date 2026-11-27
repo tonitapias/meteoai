@@ -9,6 +9,9 @@ import type { StrictDailyWeather } from '../types/weatherLogicTypes';
 vi.mock('./WeatherIcons', () => ({
     getWeatherIcon: (code: number | null) => <div data-testid="day-icon" data-code={String(code)} />,
 }));
+// El gràfic pinta primer el marc i els dies després del primer pintat (INP): aquí es proven els dies, així que ja
+// "s'ha pintat". El marc del primer frame té el seu test (TrendChartModal.firstPaint.test.tsx).
+vi.mock('../hooks/useAfterFirstPaint', () => ({ useAfterFirstPaint: () => true }));
 
 const SEPT = ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27'];
 const JAN = ['2026-01-10', '2026-01-11', '2026-01-12', '2026-01-13', '2026-01-14', '2026-01-15', '2026-01-16', '2026-01-17'];
