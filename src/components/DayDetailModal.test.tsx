@@ -17,6 +17,9 @@ vi.mock('./SmartForecastCharts', () => ({ default: () => <div data-testid="smart
 // Els avisos oficials no surten a la xarxa des dels tests.
 const mockAlerts = vi.hoisted(() => ({ current: [] as OfficialAlert[] }));
 vi.mock('../hooks/useOfficialAlerts', () => ({ useOfficialAlerts: () => ({ alerts: mockAlerts.current }) }));
+// El detall pinta primer el marc i el contingut després del primer pintat (INP): aquí es prova el contingut, així que
+// ja "s'ha pintat". El marc del primer frame té el seu test (DayDetailModal.firstPaint.test.tsx).
+vi.mock('../hooks/useAfterFirstPaint', () => ({ useAfterFirstPaint: () => true }));
 
 // Setembre a Sabadell (mesurat amb dades reals d'Open-Meteo): el valor DIARI és del model global
 // (27,6°/17,5°, vent 15 km/h) però les hores del dia porten el model regional (AROME HD: 29,1°/21,4°, vent 13).

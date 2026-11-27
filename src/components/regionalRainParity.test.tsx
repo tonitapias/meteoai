@@ -14,6 +14,8 @@ vi.mock('./WeatherIcons', () => ({
 vi.mock('./SmartForecastCharts', () => ({ default: () => <div data-testid="smart-charts" /> }));
 // El detall demana els avisos oficials: aquí no han de sortir a la xarxa.
 vi.mock('../hooks/useOfficialAlerts', () => ({ useOfficialAlerts: () => ({ alerts: [] }) }));
+// El contingut del detall arriba després del primer pintat (vegeu DayDetailModal): aquí ja "s'ha pintat".
+vi.mock('../hooks/useAfterFirstPaint', () => ({ useAfterFirstPaint: () => true }));
 
 const AROME_MODEL = REGIONAL_MODELS.find(m => m.id === 'AROME_HD')!;
 
