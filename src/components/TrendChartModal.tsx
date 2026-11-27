@@ -15,6 +15,7 @@ import { describeTrend } from '../utils/trendSummaryText';
 import { getSafeArrayNum, extractValidArrayNum } from '../utils/weatherMath';
 import { getSafeLocale, formatPrecipitation } from '../utils/formatters';
 import { useDialogFocus } from '../hooks/useDialogFocus';
+import { useAfterFirstPaint } from '../hooks/useAfterFirstPaint';
 import { Language } from '../translations';
 import { StrictDailyWeather, ExtendedWeatherData } from '../types/weatherLogicTypes';
 import { MATRIX_BG } from './widgets/widgetStyles';
@@ -186,9 +187,26 @@ const I18N_ARIA_CLOSE = {
 };
 
 
-const TrendChartModal = memo(function TrendChartModal({
+// El marc del gràfic (fons, targeta i capçalera). El comparteixen el marc buit del primer frame i el gràfic complet,
+// element per element: React hi reaprofita el DOM quan arriba el contingut.
+// Sense backdrop-blur: el difuminat del tauler a pantalla completa es calculava just en obrir-lo (com al radar); el vel
+// passa de /80 a /90 perquè el tauler de sota no es llegeixi nítid.
+const FRAME_ROOT = 'fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 bg-black/90 transition-opacity overflow-y-auto';
+const FRAME_CARD = 'w-full max-w-5xl bg-gradient-to-br from-[#0f111a] to-black border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden transform-gpu flex flex-col my-auto max-h-[95vh] pointer-events-auto';
+const FRAME_GLOW = 'absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none mix-blend-screen z-0';
+
+// Només es munta obert: així el gràfic es pot pintar en dos temps cada vegada que s'obre (vegeu TrendChartDialog).
+const TrendChartModal = memo(function TrendChartModal(props: TrendChartModalProps) {
+  return props.isOpen ? <TrendChartDialog {...props} /> : null;
+});
+
+function TrendChartDialog({
   isOpen, onClose, dailyData, chartData, dayHourCodes, lang, latitude, dailyComparison, regionalModelLabel, onDayClick
 }: TrendChartModalProps) {
+
+  // INP: en obrir el gràfic, primer es pinta el marc (fons, targeta, títol i creu) i els 7 dies (extrems, icones,
+  // bandes, resum) es calculen després del primer pintat. Abans es feia tot dins del clic: 0,4-0,8 s en un mòbil modest.
+  const ready = useAfterFirstPaint();
 
   const dialogRef = useRef<HTMLDivElement>(null);
   // Focus dins el diàleg en obrir-lo, Tab que hi dóna la volta i retorn del focus en tancar-lo.
@@ -229,7 +247,7 @@ const TrendChartModal = memo(function TrendChartModal({
   // chartData/lang no haguessin canviat. Cal situar-lo ABANS dels `return null`
   // condicionals de sota (regles dels Hooks).
   const trendData = useMemo((): TrendDay[] => {
-    if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return [];
+    if (!ready || !dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return [];
 
     return dailyData.time.slice(1, 8).map((rawDate: unknown, index: number): TrendDay => {
       const i = index + 1;
@@ -280,15 +298,57 @@ const TrendChartModal = memo(function TrendChartModal({
 
       return { dayIndex: i, max, min, code, avgClouds, wind, precipProb, precipSum, snowSum, dayInitial, dayName, spread, regional };
     });
-  }, [dailyData, chartData, dayHourCodes, lang, latitude, dailyComparison]);
+  }, [ready, dailyData, chartData, dayHourCodes, lang, latitude, dailyComparison]);
 
   if (!isOpen) return null;
   if (!dailyData || !Array.isArray(dailyData.time) || dailyData.time.length < 8) return null;
   if (typeof document === 'undefined') return null;
-  if (trendData.length === 0) return null;
 
   const mDict = I18N_MODAL[lang] || I18N_MODAL['ca'];
   const closeAriaLabel = I18N_ARIA_CLOSE[lang] || I18N_ARIA_CLOSE['ca'];
+
+  // Capçalera: el títol i la creu, iguals al marc buit i al gràfic complet.
+  const header = (
+    <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/5 relative z-10 shrink-0">
+      <div className="flex items-center gap-3 md:gap-4">
+        <div className="p-2 md:p-3 rounded-xl bg-indigo-500/20 border border-indigo-500/30">
+          <LineChart className="w-5 h-5 md:w-7 md:h-7 text-indigo-400" />
+        </div>
+        <div>
+          <h2 id="trend-chart-modal-title" className="text-sm md:text-xl font-black uppercase tracking-widest text-white leading-none mb-1 md:mb-2">
+            {mDict.title}
+          </h2>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">
+            {mDict.trend}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onClose}
+        aria-label={closeAriaLabel}
+        className="p-2 md:p-3 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors border border-white/5 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
+      >
+        <X className="w-5 h-5 md:w-6 md:h-6" />
+      </button>
+    </div>
+  );
+
+  // Primer frame: el marc buit (vegeu `ready`). La creu, Esc, tocar fora i l'enrere ja hi funcionen.
+  if (!ready) {
+    return createPortal(
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="trend-chart-modal-title" className={FRAME_ROOT}>
+        <div className="absolute inset-0 cursor-pointer" onClick={onClose} aria-hidden="true"></div>
+        <div className={FRAME_CARD}>
+          <div className={MATRIX_BG}></div>
+          <div className={FRAME_GLOW}></div>
+          {header}
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  if (trendData.length === 0) return null;
 
   // 2. MOTOR MATEMÀTIC DE COLUMNES DE RANG (Candlestick)
   // L'escala només compta els dies complets: un dia sense dada no pot arrossegar-la cap a 0°.
@@ -410,37 +470,16 @@ const TrendChartModal = memo(function TrendChartModal({
       aria-modal="true"
       aria-labelledby="trend-chart-modal-title"
       aria-describedby={summaryText ? 'trend-chart-summary' : undefined}
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 bg-black/80 backdrop-blur-xl transition-opacity overflow-y-auto"
+      className={FRAME_ROOT}
     >
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} aria-hidden="true"></div>
 
-      <div className="w-full max-w-5xl bg-gradient-to-br from-[#0f111a] to-black border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden transform-gpu flex flex-col my-auto max-h-[95vh] pointer-events-auto">
+      <div className={FRAME_CARD}>
         <div className={MATRIX_BG}></div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none mix-blend-screen z-0"></div>
+        <div className={FRAME_GLOW}></div>
 
         {/* HEADER MODAL */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/5 relative z-10 shrink-0">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2 md:p-3 rounded-xl bg-indigo-500/20 border border-indigo-500/30">
-              <LineChart className="w-5 h-5 md:w-7 md:h-7 text-indigo-400" />
-            </div>
-            <div>
-              <h2 id="trend-chart-modal-title" className="text-sm md:text-xl font-black uppercase tracking-widest text-white leading-none mb-1 md:mb-2">
-                {mDict.title}
-              </h2>
-              <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">
-                {mDict.trend}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label={closeAriaLabel}
-            className="p-2 md:p-3 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors border border-white/5 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
-          >
-            <X className="w-5 h-5 md:w-6 md:h-6" />
-          </button>
-        </div>
+        {header}
 
         {/* CONTINGUT GRÀFIC I DADES: columna flexible que s'ajusta a l'alçada de la finestra
             (el gràfic encongeix abans que res no quedi tallat; si ni així hi cap, hi ha scroll) */}
@@ -662,6 +701,6 @@ const TrendChartModal = memo(function TrendChartModal({
   );
 
   return createPortal(modalContent, document.body);
-});
+}
 
 export default TrendChartModal;
