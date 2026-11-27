@@ -1,6 +1,8 @@
 // RadarModal.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
+import { useAfterFirstPaint } from '../hooks/useAfterFirstPaint';
+import { afterNextPaint } from '../utils/afterNextPaint';
 import { X, CloudRain, Wind, Radio } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import RadarMap from './RadarMap';
@@ -30,22 +32,38 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
     onCloseRef.current = onClose;
   }, [onClose]);
 
+  // INP: el mapa (new mapboxgl.Map i els seus primers frames) es munta un cop pintada la carcassa. Si es muntava amb
+  // el modal, React el creava dins del mateix clic i no es veia res fins al cap de ~350 ms al PC (0,6-0,8 s amb la CPU
+  // d'un mòbil modest, mesurat a producció el 27/11/2026).
+  const mapReady = useAfterFirstPaint();
+
+  // Tancar també va en dos temps: primer el modal s'amaga (aquest frame), i després es desmunta (map.remove() i tornar
+  // a pintar el tauler), en una tasca a part. Si no, un «enrere» o Esc podia trigar fins a 1 s a fer-se veure.
+  const [closing, setClosing] = useState(false);
+  const cancelCloseRef = useRef<(() => void) | null>(null);
+  const closeAfterPaint = useCallback(() => {
+    if (cancelCloseRef.current) return; // ja s'està tancant
+    setClosing(true);
+    cancelCloseRef.current = afterNextPaint(() => onCloseRef.current());
+  }, []);
+  useEffect(() => () => cancelCloseRef.current?.(), []);
+
   const handleTacticalClose = useCallback(() => {
     if (window.history.state?.modalId === 'radarLive') {
       window.history.back();
     } else {
-      onCloseRef.current();
+      closeAfterPaint();
     }
-  }, []);
+  }, [closeAfterPaint]);
 
   const handleFullClose = useCallback(() => {
     if (window.history.state?.modalId === 'radarLive') {
       window.history.go(layerMenuHistoryPushedRef.current ? -2 : -1);
       layerMenuHistoryPushedRef.current = false;
     } else {
-      onCloseRef.current();
+      closeAfterPaint();
     }
-  }, []);
+  }, [closeAfterPaint]);
 
   // Risc Zero: Cicle de vida de la History API.
   // El pushState és idempotent (només l'apliquem si encara no hi som) perquè
@@ -79,7 +97,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
         return;
       }
 
-      onCloseRef.current();
+      closeAfterPaint();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -94,7 +112,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleTacticalClose]);
+  }, [handleTacticalClose, closeAfterPaint]);
 
   useEffect(() => {
     if (showLayerMenu) {
@@ -113,7 +131,10 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
   const MATRIX_BG = `absolute inset-0 z-0 opacity-[0.04] pointer-events-none bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:16px_16px]`;
 
   return (
-    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="radar-modal-title" className="fixed inset-0 z-[100] flex flex-col sm:p-4 md:p-6 lg:p-8 bg-[#020308]/95 sm:bg-[#020308]/85 backdrop-blur-2xl animate-in fade-in duration-300 select-none [transform:translateZ(0)]">
+    // Sense backdrop-blur (ni aquí ni a la capçalera ni als botons): al mòbil el panell opac el tapava del tot, i a partir
+    // de 640 px el difuminat del tauler a pantalla completa es tornava a calcular a cada fotograma del fade-in i del mapa.
+    // Al marge del PC el vel passa de /85 a /90 perquè el tauler de sota no es llegeixi nítid.
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="radar-modal-title" className={`fixed inset-0 z-[100] flex flex-col sm:p-4 md:p-6 lg:p-8 bg-[#020308]/95 sm:bg-[#020308]/90 animate-in fade-in duration-300 select-none [transform:translateZ(0)] ${closing ? 'invisible' : ''}`}>
       
       {/* h-full (100 % de l'overlay) i no 100dvh: als motors sense dvh el full es col·lapsava a la
           capçalera i el mapa quedava a 0 px d'alçada. */}
@@ -124,7 +145,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
           <div className={`absolute -top-32 left-1/2 -translate-x-1/2 w-[150%] sm:w-3/4 h-64 bg-gradient-to-b ${isRadar ? 'from-cyan-500/20' : 'from-emerald-500/20'} to-transparent blur-[80px] transition-colors duration-700`}></div>
         </div>
 
-        <header className="px-4 py-3 pt-[max(env(safe-area-inset-top,12px),12px)] sm:px-6 sm:py-5 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 z-30 bg-[#050810]/70 backdrop-blur-xl relative shadow-[0_4px_32px_rgba(0,0,0,0.5)]">
+        <header className="px-4 py-3 pt-[max(env(safe-area-inset-top,12px),12px)] sm:px-6 sm:py-5 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 z-30 bg-[#050810]/70 relative shadow-[0_4px_32px_rgba(0,0,0,0.5)]">
           
           <div className="flex items-center justify-between w-full sm:w-auto min-w-0 gap-2">
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 w-full">
@@ -152,7 +173,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
             <button 
               type="button"
               onClick={handleFullClose}
-              className="sm:hidden shrink-0 p-3 bg-black/40 border border-white/15 rounded-xl text-slate-200 active:bg-rose-500/20 active:border-rose-500/50 active:text-rose-400 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-md"
+              className="sm:hidden shrink-0 p-3 bg-black/40 border border-white/15 rounded-xl text-slate-200 active:bg-rose-500/20 active:border-rose-500/50 active:text-rose-400 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
               aria-label={t('closeWindow')}
             >
               <X className="w-6 h-6" />
@@ -180,7 +201,7 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
             <button 
               type="button"
               onClick={handleFullClose}
-              className="hidden sm:flex shrink-0 p-3.5 bg-black/40 border border-white/15 rounded-2xl text-slate-200 hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 active:scale-95 transition-all shadow-[0_8px_24px_rgba(0,0,0,0.6)] backdrop-blur-md group"
+              className="hidden sm:flex shrink-0 p-3.5 bg-black/40 border border-white/15 rounded-2xl text-slate-200 hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 active:scale-95 transition-all shadow-[0_8px_24px_rgba(0,0,0,0.6)] group"
               aria-label={t('closeWindow')}
             >
               <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -191,13 +212,15 @@ export default function RadarModal({ lat, lon, onClose }: RadarModalProps) {
         <div className="flex-1 min-h-0 w-full relative z-10 bg-[#020308]">
           
           <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isRadar ? 'opacity-100 z-20 pointer-events-auto' : 'opacity-0 pointer-events-none z-0'}`}>
-             <RadarMap
-               lat={lat}
-               lon={lon}
-               isActive={isRadar}
-               showLayerMenu={showLayerMenu}
-               setShowLayerMenu={setShowLayerMenu}
-             />
+             {mapReady && (
+               <RadarMap
+                 lat={lat}
+                 lon={lon}
+                 isActive={isRadar}
+                 showLayerMenu={showLayerMenu}
+                 setShowLayerMenu={setShowLayerMenu}
+               />
+             )}
           </div>
 
           {/* PERF (fluïdesa): a diferència de RadarMap (que ja es pausa sol via
