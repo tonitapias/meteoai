@@ -11,7 +11,7 @@
 // de manera que l'enrere des de Previsió, Detall o Cel torna a Ara i, des d'Ara, surt com sempre. Els modals no hi
 // noten res: el seu enrere i la seva Esc continuen tancant-los i la pestanya no canvia.
 import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useAppContext, useModals } from '../../context/AppContext';
+import { useAiAnalysis, useAppContext, useModals } from '../../context/AppContext';
 import { usePlanetHeadline } from '../../hooks/usePlanetHeadline';
 import { buildDetailTeaser } from '../../utils/detailTeaser';
 import { getSafeLatitude } from '../../utils/weatherMath';
@@ -20,6 +20,7 @@ import { hoursOfDate } from '../../utils/dailyExtremes';
 import { generateHourlyChartData } from '../../utils/weatherMappers';
 import { isRegionalModelActive } from '../../constants/regionalModels';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
+import type { Language } from '../../translations';
 import CurrentWeather from '../CurrentWeather';
 import ErrorBoundary from '../ErrorBoundary';
 import OfflineSnapshotBanner from '../OfflineSnapshotBanner';
@@ -54,6 +55,9 @@ const PlanetExtremesCard = lazy(() => import('../planet/PlanetExtremesCard'));
 const DETAIL_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 grid-flow-dense';
 // La pila de cada columna, amb el mateix espai que entre seccions.
 const STACK = 'flex flex-col gap-6 sm:gap-8';
+
+// L'anàlisi de la IA té el seu propi context: quan arriba, només es torna a pintar aquest bloc, no tot el panell Ara.
+const LiveAIInsights = ({ lang }: { lang: Language }) => <AIInsights analysis={useAiAnalysis()} lang={lang} />;
 
 // Els quatre panells van amb memo i no reben cap prop que canviï: canviar de pestanya, o obrir i tancar un modal, ja no
 // els torna a renderitzar (abans, ~195 components per canvi de pestanya). Només es tornen a pintar quan canvien les
@@ -180,7 +184,7 @@ const NowPanel = memo(function NowPanel({ onGoTo }: { onGoTo: (tab: DashboardTab
 
                 <div className="contents xl:flex xl:flex-col xl:gap-8 xl:[&>*:first-child]:flex-1">
                     <Suspense fallback={<SectionSkeleton />}>
-                        <AIInsights analysis={state.aiAnalysis} lang={flags.lang} />
+                        <LiveAIInsights lang={flags.lang} />
                     </Suspense>
 
                     {/* Sense valors no hi ha element (al mòbil, un buit a la pila hi afegiria l'espai entre seccions). */}

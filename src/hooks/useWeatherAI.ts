@@ -1,5 +1,5 @@
 // src/hooks/useWeatherAI.ts
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
 import { 
     ExtendedWeatherData, 
     ShortRangeAgreement,
@@ -124,7 +124,10 @@ export function useWeatherAI(
         // El nivell de risc provisional és el de les regles (el tallafocs de les mateixes 6 hores), no un AMBER per
         // defecte: abans sortia "Avís precaució" sense cap motiu mentre la IA responia, quan no responia i amb la
         // previsió desada. La resposta de la IA només el pot mantenir o pujar (vegeu evaluateRulesRisk).
-        setAiAnalysis({ ...local, ...evaluateRulesRisk(weatherData, dustKind, lightning) });
+        // Com a transició (també la resposta de sota): arriba sola uns segons després de la previsió, sovint mentre
+        // l'usuari ja toca la pantalla, i així React l'interromp en lloc de fer-lo esperar (INP).
+        const localAnalysis = { ...local, ...evaluateRulesRisk(weatherData, dustKind, lightning) };
+        startTransition(() => setAiAnalysis(localAnalysis));
         if (isOfflineSnapshot) return;
 
         // Crida externa a la telemetria avançada (Gemini / Groq Worker)
@@ -133,7 +136,7 @@ export function useWeatherAI(
         // Només si aquesta consulta encara és la vigent i la que hi ha a la pantalla: la resposta d'una consulta
         // anterior no s'enganxa al text local d'una altra.
         if (gemini && gemini.text && startedKey.current === currentKey && wantedKey.current === currentKey) {
-          setAiAnalysis((prev) => {
+          startTransition(() => setAiAnalysis((prev) => {
               if (!prev) return null;
               return {
                 ...prev,
@@ -149,7 +152,7 @@ export function useWeatherAI(
                 source: 'MeteoToni AI Network',
                 engine: gemini.engine
               };
-          });
+          }));
         }
       } catch (e) {
         console.error("🚨 Error useWeatherAI:", e);

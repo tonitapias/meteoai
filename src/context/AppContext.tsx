@@ -9,12 +9,17 @@ type ControllerType = ReturnType<typeof useAppController>;
 // L'estat dels modals (quin és obert) va en un context a part. Si anés amb la resta, obrir o tancar qualsevol modal
 // canviaria el valor del context i tornaria a renderitzar tot el tauler (uns 200-350 components; en un mòbil modest,
 // centenars de mil·lisegons dins del mateix clic). Ara només el llegeixen DashboardModals i TabbedDashboard.
-type AppContextValue = Omit<ControllerType, 'modals'>;
+// L'anàlisi de la IA, igual: arriba en dos passos uns segons després de la previsió (el text local i després la
+// resposta del worker) i, dins del context principal, cada pas tornava a renderitzar tot el tauler. Només la llegeix
+// AIInsights (useAiAnalysis).
+type AppContextValue = Omit<ControllerType, 'modals' | 'aiAnalysis'>;
 type ModalsValue = ControllerType['modals'];
+type AiAnalysisValue = ControllerType['aiAnalysis'];
 
 // 2. Creem el Context (inicialment null)
 const AppContext = createContext<AppContextValue | null>(null);
 const ModalsContext = createContext<ModalsValue | null>(null);
+const AiAnalysisContext = createContext<AiAnalysisValue>(null);
 
 // 3. El Provider: És l'embolcall que "injectarà" les dades
 interface AppProviderProps {
@@ -25,12 +30,14 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children, controller }) => {
   // useAppController manté state/actions/flags/t com els mateixos objectes quan només canvia un modal: així aquest
   // valor tampoc no canvia i els consumidors de useAppContext no es tornen a renderitzar.
-  const { state, actions, flags, t, modals } = controller;
+  const { state, actions, flags, t, modals, aiAnalysis } = controller;
   const value = useMemo(() => ({ state, actions, flags, t }), [state, actions, flags, t]);
   return (
     <AppContext.Provider value={value}>
       <ModalsContext.Provider value={modals}>
-        {children}
+        <AiAnalysisContext.Provider value={aiAnalysis ?? null}>
+          {children}
+        </AiAnalysisContext.Provider>
       </ModalsContext.Provider>
     </AppContext.Provider>
   );
@@ -45,6 +52,10 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+// L'anàlisi de la IA (vegeu AiAnalysisContext), o null mentre no n'hi ha.
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAiAnalysis = () => useContext(AiAnalysisContext);
 
 // Quin modal és obert (vegeu ModalsContext). Els setters són a useAppContext().actions.
 // eslint-disable-next-line react-refresh/only-export-components

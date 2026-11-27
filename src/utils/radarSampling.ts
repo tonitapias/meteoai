@@ -128,6 +128,43 @@ export function dbzToMmPerHour(dbz: number): number {
 const TILE_FETCH_TIMEOUT_MS = 10000;
 
 /**
+ * Els píxels RGBA del rectangle (sx, sy, width, height) d'una imatge ja carregada, o null si no es poden llegir.
+ *
+ * INP: es fa en carregar el tauler (la comprovació de LibreWXR encallat llegeix quatre tessel·les senceres de 512 px) i
+ * abans bloquejava el fil principal just quan l'usuari començava a tocar. Ara la imatge es descodifica (i es retalla)
+ * fora del fil principal amb createImageBitmap, i es llegeix d'un canvas de CPU (`willReadFrequently`), sense esperar
+ * que la GPU torni els píxels. Sense createImageBitmap (navegadors antics), com abans: drawImage de la imatge.
+ */
+export async function readImagePixels(
+  img: HTMLImageElement, sx: number, sy: number, width: number, height: number
+): Promise<Uint8ClampedArray | null> {
+  if (width <= 0 || height <= 0) return null;
+  let bitmap: ImageBitmap | null = null;
+  if (typeof createImageBitmap === 'function') {
+    try {
+      bitmap = await createImageBitmap(img, sx, sy, width, height);
+    } catch {
+      bitmap = null;
+    }
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    bitmap?.close();
+    return null;
+  }
+  if (bitmap) {
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+  } else {
+    ctx.drawImage(img, -sx, -sy);
+  }
+  return ctx.getImageData(0, 0, width, height).data;
+}
+
+/**
  * Descarrega una única tessel·la PNG i en llegeix el píxel (px, py). Els
  * hosts de radar (librewxr.net i rainviewer.com) envien
  * `Access-Control-Allow-Origin: *`, així que la lectura del canvas no queda
@@ -150,19 +187,9 @@ export function fetchTilePixel(tileUrl: string, px: number, py: number): Promise
     img.onerror = () => settle(null);
 
     img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return settle(null);
-
-        ctx.drawImage(img, -px, -py);
-        const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-        settle([r, g, b, a]);
-      } catch {
-        settle(null);
-      }
+      readImagePixels(img, px, py, 1, 1)
+        .then((data) => settle(data ? [data[0], data[1], data[2], data[3]] : null))
+        .catch(() => settle(null));
     };
 
     img.src = tileUrl;
@@ -234,29 +261,22 @@ export function fetchTileSample(
     img.crossOrigin = 'anonymous';
     img.onerror = () => settle(null);
     img.onload = () => {
-      try {
-        const x0 = Math.max(0, px - radiusPx);
-        const y0 = Math.max(0, py - radiusPx);
-        const width = Math.min(img.naturalWidth - 1, px + radiusPx) - x0 + 1;
-        const height = Math.min(img.naturalHeight - 1, py + radiusPx) - y0 + 1;
-        if (width <= 0 || height <= 0) return settle(null);
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return settle(null);
-        ctx.drawImage(img, -x0, -y0);
-        const data = ctx.getImageData(0, 0, width, height).data;
-        const cx = px - x0;
-        const cy = py - y0;
-        const i = (cy * width + cx) * 4;
-        settle({
-          pixel: [data[i], data[i + 1], data[i + 2], data[i + 3]],
-          rainFraction: rainFractionAround(data, width, height, cx, cy, radiusPx, minMmPerHour)
-        });
-      } catch {
-        settle(null);
-      }
+      const x0 = Math.max(0, px - radiusPx);
+      const y0 = Math.max(0, py - radiusPx);
+      const width = Math.min(img.naturalWidth - 1, px + radiusPx) - x0 + 1;
+      const height = Math.min(img.naturalHeight - 1, py + radiusPx) - y0 + 1;
+      readImagePixels(img, x0, y0, width, height)
+        .then((data) => {
+          if (!data) return settle(null);
+          const cx = px - x0;
+          const cy = py - y0;
+          const i = (cy * width + cx) * 4;
+          settle({
+            pixel: [data[i], data[i + 1], data[i + 2], data[i + 3]],
+            rainFraction: rainFractionAround(data, width, height, cx, cy, radiusPx, minMmPerHour)
+          });
+        })
+        .catch(() => settle(null));
     };
     img.src = tileUrl;
   });
@@ -296,17 +316,9 @@ export function fetchTileRgba(tileUrl: string, timeoutMs = STUCK_TILE_TIMEOUT_MS
     img.crossOrigin = 'anonymous';
     img.onerror = () => settle(null);
     img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx || !canvas.width || !canvas.height) return settle(null);
-        ctx.drawImage(img, 0, 0);
-        settle(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
-      } catch {
-        settle(null);
-      }
+      readImagePixels(img, 0, 0, img.naturalWidth, img.naturalHeight)
+        .then(settle)
+        .catch(() => settle(null));
     };
     img.src = tileUrl;
   });

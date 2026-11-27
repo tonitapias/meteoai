@@ -363,6 +363,21 @@ describe('TabbedDashboard → historial (enrere i endavant)', () => {
         expect(renders).toEqual(before);
     });
 
+    it('quan arriba l\'anàlisi de la IA, només es torna a pintar el seu bloc', async () => {
+        const controller = makeController({ latitude: 41.39, longitude: 2.16 }, true);
+        const { rerender } = render(ui(controller));
+        for (const [testId, tab] of COVERAGE) {
+            if (tab === 'now') await within(panel(tab)!).findByTestId(testId);
+        }
+        const before = { ...renders };
+
+        // El mateix estat i les mateixes accions: només arriba l'anàlisi (com fa useAppController).
+        rerender(ui({ ...controller, aiAnalysis: { text: 'Cel serè' } } as Controller));
+
+        expect(renders.AIInsights).toBe((before.AIInsights ?? 0) + 1);
+        expect({ ...renders, AIInsights: before.AIInsights }).toEqual(before);
+    });
+
     it('amb un modal obert, la barra queda inert i no toca l\'historial', () => {
         const controller = makeController({ latitude: 41.39, longitude: 2.16 });
         controller.modals = { ...controller.modals, showRadar: true };
