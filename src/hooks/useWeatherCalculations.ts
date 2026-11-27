@@ -74,16 +74,18 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
   );
 
   // 3. Retornem exactament el mateix objecte de sempre (Contracte intacte cap a la UI)
-  return { 
-    shiftedNow, 
-    minutelyPreciseData, 
-    currentRainProbability, 
-    currentFreezingLevel, 
-    effectiveWeatherCode, 
+  // Memoitzat: arriba al context de l'app (state.calculations). Un objecte nou a cada render de l'App (obrir un modal,
+  // un avís...) feia canviar el context i tornava a renderitzar tot el tauler (INP).
+  return useMemo(() => ({
+    shiftedNow,
+    minutelyPreciseData,
+    currentRainProbability,
+    currentFreezingLevel,
+    effectiveWeatherCode,
     effectiveCloudCover,
-    barometricTrend, 
-    currentCape, 
-    currentDewPoint, 
+    barometricTrend,
+    currentCape,
+    currentDewPoint,
     reliability,
     chartData24h,
     chartDataFull,
@@ -91,5 +93,9 @@ export function useWeatherCalculations(weatherData: ExtendedWeatherData | null, 
     dayHourCodes,
     daySky,
     weeklyExtremes
-  };
+  }), [
+    shiftedNow, minutelyPreciseData, currentRainProbability, currentFreezingLevel, effectiveWeatherCode,
+    effectiveCloudCover, barometricTrend, currentCape, currentDewPoint, reliability, chartData24h, chartDataFull,
+    chartSeries, dayHourCodes, daySky, weeklyExtremes
+  ]);
 }

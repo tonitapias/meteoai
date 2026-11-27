@@ -95,7 +95,9 @@ export function useAppController() {
   // canviat (weatherData nou, canvi de llengua, etc.) — 'now'/'calculations'
   // seguint canviant cada 60s per disseny (calen per refrescar la posició
   // solar i similars).
-  return useMemo(() => ({
+  // Els modals NO hi són (van a part, al final): obrir-ne o tancar-ne un no ha de recrear state/actions/flags, que
+  // AppProvider passa tal qual a useAppContext (vegeu ModalsContext a AppContext.tsx).
+  const core = useMemo(() => ({
       state: {
           // Fusionem estats de Dades i UI, afegint 'favorites' per centralitzar la font de veritat
           weatherData: data.state.weatherData,
@@ -160,7 +162,6 @@ export function useAppController() {
           unit,
           lang
       },
-      modals: ui.modals, // Pas directe
       t
   }), [
       data.state.weatherData, data.state.aqiData, data.state.loading, openingLink, sharedPlace, data.state.error,
@@ -175,6 +176,8 @@ export function useAppController() {
       ui.actions.setShowComfortModal, ui.actions.setShowVisibilityModal, ui.actions.setShowCloudLayersModal,
       ui.actions.setShowSnowLevelModal, ui.actions.setShowWindModal, ui.actions.setShowTemperatureModal, ui.actions.setPlanetModal,
       data.flags.activeRegionalModel, ui.state.showDebug, isFavorite, unit, lang,
-      ui.modals, t
+      t
   ]);
+
+  return useMemo(() => ({ ...core, modals: ui.modals }), [core, ui.modals]);
 }

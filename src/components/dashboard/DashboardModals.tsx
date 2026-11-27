@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 
 // 1. IMPORTEM EL CONTEXT
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, useModals } from '../../context/AppContext';
 import type { LocationMeta } from '../../types/weatherLogicTypes';
 import { getCurrentUV } from '../../utils/uvIndexUtils';
 import { getCurrentDewPoint } from '../../utils/weatherMath';
@@ -34,7 +34,8 @@ const PlanetExtremesModal = lazy(() => import('../planet/PlanetExtremesModal'));
 
 export const DashboardModals = () => {
     // 2. RECUPEREM DADES DEL CONTEXT
-    const { state, actions, flags, modals, t } = useAppContext();
+    const { state, actions, flags, t } = useAppContext();
+    const modals = useModals();
     const { weatherData, aqiData, calculations, sharedPlace } = state;
 
     // L'idioma d'i18next (radar) ja el sincronitza useAppController des de l'arrencada (useI18nLanguageSync).

@@ -1,5 +1,5 @@
 // src/hooks/useViewState.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useModalHistory } from './useModalHistory';
 import { NOTIFICATION_TYPES } from '../constants/errorConstants';
 import type { PlanetEntry } from '../utils/planetNav';
@@ -84,31 +84,39 @@ export function useViewState() {
 
     const dismissNotification = useCallback(() => setNotification(null), []);
 
+    // El mateix objecte mentre cap modal no s'obre ni es tanca: és el valor del context dels modals (AppContext.tsx), i
+    // un objecte nou a cada render (el rellotge, dades noves...) tornaria a renderitzar els qui el llegeixen.
+    const modals = useMemo(() => ({
+        selectedDayIndex,
+        showRadar,
+        showRegionalModel,
+        showSolarModal,
+        showMoonModal,
+        showStormModal,
+        showAqiModal,
+        showUvModal,
+        showPressureModal,
+        showComfortModal,
+        showVisibilityModal,
+        showCloudLayersModal,
+        showSnowLevelModal,
+        showWindModal,
+        showTemperatureModal,
+        planetModal,
+        showShareSheet,
+        showSettings
+    }), [
+        selectedDayIndex, showRadar, showRegionalModel, showSolarModal, showMoonModal, showStormModal, showAqiModal,
+        showUvModal, showPressureModal, showComfortModal, showVisibilityModal, showCloudLayersModal, showSnowLevelModal,
+        showWindModal, showTemperatureModal, planetModal, showShareSheet, showSettings
+    ]);
+
     return {
         state: {
             now,
             showDebug,
             notification,
-            modals: {
-                selectedDayIndex,
-                showRadar,
-                showRegionalModel,
-                showSolarModal,
-                showMoonModal,
-                showStormModal,
-                showAqiModal,
-                showUvModal,
-                showPressureModal,
-                showComfortModal,
-                showVisibilityModal,
-                showCloudLayersModal,
-                showSnowLevelModal,
-                showWindModal,
-                showTemperatureModal,
-                planetModal,
-                showShareSheet,
-                showSettings
-            }
+            modals
         },
         actions: {
             setNow,

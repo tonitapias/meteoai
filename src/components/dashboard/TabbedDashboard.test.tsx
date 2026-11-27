@@ -8,13 +8,16 @@ import { ALL_DETAIL_WIDGETS } from '../detailWidgetIds';
 
 // Cada marca compta quantes vegades s'ha muntat (per veure que canviar de pestanya no torna a muntar res). Les
 // importacions només es fan servir quan la marca es pinta, ja després d'importar-les.
-const { mounts, stub } = vi.hoisted(() => {
+const { mounts, renders, stub } = vi.hoisted(() => {
     const mounts: Record<string, number> = {};
+    // I quantes vegades s'ha renderitzat (un efecte sense dependències corre després de cada render).
+    const renders: Record<string, number> = {};
     const stub = (name: string) => function Stub() {
         useEffect(() => { mounts[name] = (mounts[name] ?? 0) + 1; }, []);
+        useEffect(() => { renders[name] = (renders[name] ?? 0) + 1; });
         return <div data-testid={name} />;
     };
-    return { mounts, stub };
+    return { mounts, renders, stub };
 });
 
 vi.mock('../CurrentWeather', () => ({ default: stub('CurrentWeather') }));
@@ -98,6 +101,7 @@ const COVERAGE: Array<[string, string]> = [
 describe('TabbedDashboard → cap giny perdut (taula giny → pestanya)', () => {
     beforeEach(() => {
         Object.keys(mounts).forEach((key) => delete mounts[key]);
+        Object.keys(renders).forEach((key) => delete renders[key]);
         window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
     });
 
@@ -318,6 +322,45 @@ describe('TabbedDashboard → historial (enrere i endavant)', () => {
         act(() => search.blur());
         expect(bar().className).not.toMatch(/(^|\s)hidden(\s|$)/);
         search.remove();
+    });
+
+    // INP: abans cada canvi de pestanya i cada modal tornava a renderitzar els quatre panells sencers (~200-350
+    // components).
+    it('canviar de pestanya no torna a renderitzar els panells ja muntats', async () => {
+        render(ui(makeController({ latitude: 41.39, longitude: 2.16 }, true)));
+        openTab('Previsió');
+        openTab('Detall');
+        openTab('Cel');
+        openTab('Ara');
+        // Els ginys de dins carreguen amb lazy: s'espera que hi siguin tots abans de comptar.
+        for (const [testId, tab] of COVERAGE) await within(panel(tab)!).findByTestId(testId);
+        const before = { ...renders };
+
+        openTab('Previsió');
+        openTab('Detall');
+        openTab('Cel');
+        openTab('Ara');
+
+        expect(renders).toEqual(before);
+    });
+
+    it('obrir i tancar un modal no torna a renderitzar els panells (només la barra)', async () => {
+        const controller = makeController({ latitude: 41.39, longitude: 2.16 }, true);
+        const { rerender } = render(ui(controller));
+        openTab('Cel');
+        openTab('Ara');
+        for (const [testId, tab] of COVERAGE) {
+            if (tab === 'now' || tab === 'sky') await within(panel(tab)!).findByTestId(testId);
+        }
+        const before = { ...renders };
+
+        // El mateix estat, accions i textos: només canvia quin modal és obert (com fa useAppController).
+        rerender(ui({ ...controller, modals: { ...controller.modals, showRadar: true } }));
+        expect(screen.getByRole('tablist').closest('[inert]')).not.toBeNull();
+        rerender(ui({ ...controller, modals: { ...controller.modals, showRadar: false } }));
+        expect(screen.getByRole('tablist').closest('[inert]')).toBeNull();
+
+        expect(renders).toEqual(before);
     });
 
     it('amb un modal obert, la barra queda inert i no toca l\'historial', () => {

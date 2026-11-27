@@ -1,5 +1,6 @@
 // src/views/DashboardView.tsx
 // Layout & UI Shell
+import { memo } from 'react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -14,7 +15,10 @@ import { DashboardModals } from '../components/dashboard/DashboardModals';
 import { useAppContext } from '../context/AppContext';
 import { isRegionalModelActive } from '../constants/regionalModels';
 
-export default function DashboardView() {
+// Amb memo (no té props): App es torna a renderitzar cada cop que s'obre o es tanca un modal (l'estat dels modals hi
+// viu), i sense memo tot el tauler hi anava darrere. Ara només es torna a pintar quan canvia el context (useAppContext);
+// els modals els pinta DashboardModals, que llegeix el seu propi context (useModals).
+export default memo(function DashboardView() {
   // 1. RECUPEREM EL CONTROLADOR DEL CONTEXT
   const { state, actions, flags } = useAppContext();
   
@@ -74,4 +78,4 @@ export default function DashboardView() {
         </div>
     </DashboardLayout>
   );
-}
+});
