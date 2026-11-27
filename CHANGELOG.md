@@ -1,8 +1,23 @@
 # Registre de canvis
 
-Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.69.0...v3.70.0](https://github.com/tonitapias/meteoai/compare/v3.69.0...v3.70.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
+Totes les novetats de MeteoToni AI, de la versió més recent a la més antiga. Cada versió té la seva etiqueta git (`vX.Y.Z`): per veure el codi d'una versió o comparar-ne dues, per exemple [v3.70.0...v3.71.0](https://github.com/tonitapias/meteoai/compare/v3.70.0...v3.71.0). La *release* de GitHub és la de l'última versió i enllaça aquí.
 
 Les seccions «Millores publicades entre la vX i la vY» recullen el que es va publicar sense canviar de versió. Les de la v3.26.0 i la v3.9.9, al final, són les notes de les primeres *releases*, tal com es van escriure.
+
+## ✍️ Novetats de la v3.71.0: el titular de la benvinguda, escrit a mà
+
+- **Un titular amb lletra pròpia.** «El temps on ets,» va en Fraunces, una lletra amb serifes suaus, i «vist de més a prop.» escrit a mà, del color del moment del dia. Abans, tot el titular anava amb la lletra del sistema.
+- **El temps dins les lletres.** El punt de la «i» és el que hi ha al cel: el sol de dia, a l'alba i a la posta; de nit, la lluna amb la seva fase si ha sortit o, si no n'hi ha, una estrella. Un núvol fa d'accent a «més» (i a «más» i «près»). En francès i en anglès, sense «i», el sol o la lluna fan de punt final.
+- **S'escriu en obrir l'app.** La segona línia s'escriu d'esquerra a dreta un sol cop, i després hi surten l'astre i el núvol. Sense animació si el sistema les té reduïdes; els lectors de pantalla llegeixen el titular normal.
+- **La lluna de la línia de dalt es veu sempre.** Té una vora del color de la nit: quan era un fil, gairebé no es veia sobre el cel negre.
+- Les dues lletres fan uns 25 KB, només es baixen a la benvinguda i funcionen sense connexió. Al mòbil, el titular fa les mateixes línies que abans en tots els idiomes.
+- Als quatre idiomes.
+
+## 🛠️ Millores publicades entre la v3.70.0 i la v3.71.0
+
+- **L'app respon de seguida als tocs.** Canviar de pestanya o tancar un modal ja no torna a pintar tot el tauler; el detall del dia, el gràfic de temperatures i el radar s'obren a l'instant (primer el marc i, just després, el contingut), i els primers segons després d'obrir l'app ja no frenen els tocs.
+- **La IA situa cada fenomen al dia que toca.** Dilluns a partir de les 23:15 deia «demà» d'unes ratxes de dimecres; ara encerta el dia també a prop de mitjanit, esmenta el dia del pic més fort i no copia la data de l'etiqueta.
+- **La lluna petita d'«Aquesta nit»** ja surt de dia si la lluna ha sortit abans de la posta.
 
 ## 🌙 Novetats de la v3.70.0: la pestanya Cel, el sol i la nit
 
