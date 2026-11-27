@@ -106,7 +106,6 @@ export function useAppController() {
           openingLink,
           sharedPlace,
           error: data.state.error,
-          aiAnalysis: data.state.aiAnalysis,
           lightning: data.state.lightning,
           calculations: data.state.calculations,
           favorites,
@@ -165,7 +164,7 @@ export function useAppController() {
       t
   }), [
       data.state.weatherData, data.state.aqiData, data.state.loading, openingLink, sharedPlace, data.state.error,
-      data.state.aiAnalysis, data.state.lightning, data.state.calculations, favorites, recents, addRecent, ui.state.notification, ui.state.now,
+      data.state.lightning, data.state.calculations, favorites, recents, addRecent, ui.state.notification, ui.state.now,
       data.actions.fetchWeatherByCoords, data.actions.refreshLoadedLocation, goHome,
       appActions.handleGetCurrentLocation, appActions.handleToggleFavorite, appActions.handleSharePlace,
       appActions.shareMyPosition, appActions.shareWeatherOnly, appActions.copyCoordinates, setShowShareSheet,
@@ -179,5 +178,10 @@ export function useAppController() {
       t
   ]);
 
-  return useMemo(() => ({ ...core, modals: ui.modals }), [core, ui.modals]);
+  // L'anàlisi de la IA també va a part (vegeu AiAnalysisContext a AppContext.tsx): arriba en dos passos uns segons després
+  // de la previsió i només la llegeix AIInsights.
+  return useMemo(
+    () => ({ ...core, modals: ui.modals, aiAnalysis: data.state.aiAnalysis }),
+    [core, ui.modals, data.state.aiAnalysis]
+  );
 }
