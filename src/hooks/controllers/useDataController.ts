@@ -1,4 +1,5 @@
 // src/hooks/controllers/useDataController.ts
+import { useMemo } from 'react';
 import { useWeather } from '../useWeather';
 import { useWeatherCalculations } from '../useWeatherCalculations';
 import { useWeatherTheme } from '../useWeatherTheme';
@@ -43,10 +44,12 @@ export function useDataController({ lang, unit, now }: DataControllerProps) {
   const { aiAnalysis } = useWeatherAI(weatherData, aqiData, lang, unit, calculations.reliability, calculations.effectiveWeatherCode, calculations.effectiveCloudCover, lightning, lightningSettled);
 
   // Fusionem Theme dins de Calculations (com es feia abans) per consistència
-  const calculationsWithTheme = {
+  // Memoitzat com useWeatherCalculations: és state.calculations del context, i un objecte nou a cada render de l'App
+  // tornava a renderitzar tot el tauler cada cop que s'obria o es tancava un modal.
+  const calculationsWithTheme = useMemo(() => ({
     ...calculations,
     currentBg: theme.currentBg
-  };
+  }), [calculations, theme.currentBg]);
 
   const activeRegionalModel = loc
     ? selectRegionalModel(loc.latitude, loc.longitude)

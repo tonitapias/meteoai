@@ -10,8 +10,8 @@
 // Historial (vegeu tabs/tabHistory.ts): la pestanya va a la URL (?tab=…) i sortir d'Ara n'afegeix una sola entrada,
 // de manera que l'enrere des de Previsió, Detall o Cel torna a Ara i, des d'Ara, surt com sempre. Els modals no hi
 // noten res: el seu enrere i la seva Esc continuen tancant-los i la pestanya no canvia.
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useAppContext, useModals } from '../../context/AppContext';
 import { usePlanetHeadline } from '../../hooks/usePlanetHeadline';
 import { buildDetailTeaser } from '../../utils/detailTeaser';
 import { getSafeLatitude } from '../../utils/weatherMath';
@@ -55,8 +55,12 @@ const DETAIL_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 
 // La pila de cada columna, amb el mateix espai que entre seccions.
 const STACK = 'flex flex-col gap-6 sm:gap-8';
 
+// Els quatre panells van amb memo i no reben cap prop que canviï: canviar de pestanya, o obrir i tancar un modal, ja no
+// els torna a renderitzar (abans, ~195 components per canvi de pestanya). Només es tornen a pintar quan canvien les
+// dades del context (previsió nova, el rellotge de cada minut, l'idioma...).
+
 // --- Ara: la targeta principal, els avisos (només si n'hi ha), l'anàlisi, les pròximes 24 hores i els destacats -----
-const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
+const NowPanel = memo(function NowPanel({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) {
     const { state, actions, flags, t } = useAppContext();
     const { weatherData, calculations } = state;
     const current = weatherData?.current;
@@ -195,10 +199,10 @@ const NowPanel = ({ onGoTo }: { onGoTo: (tab: DashboardTab) => void }) => {
             </div>
         </>
     );
-};
+});
 
 // --- Previsió: els 7 dies, els gràfics horaris i el model regional contra el global -------------------------------------------------
-const ForecastPanel = () => {
+const ForecastPanel = memo(function ForecastPanel() {
     const { state, actions, flags } = useAppContext();
     const { weatherData, calculations } = state;
     // Totes les hores d'avui des de les 00 h (chartDataFull comença ara): la fila «Avui» de la setmana en treu la
@@ -257,7 +261,7 @@ const ForecastPanel = () => {
             </div>
         </>
     );
-};
+});
 
 // Els props de la graella de ginys de Detall: els mateixos que rebia ExpertWidgets.
 const useWidgetGridProps = () => {
@@ -284,7 +288,7 @@ const useWidgetGridProps = () => {
 };
 
 // --- Detall: les condicions d'ara (temperatura, vent, UV, aire, visibilitat, núvols, pressió, rosada, CAPE, cota de neu) --
-const DetailPanel = () => {
+const DetailPanel = memo(function DetailPanel() {
     const { state } = useAppContext();
     const gridProps = useWidgetGridProps();
     if (!state.weatherData) return null;
@@ -293,10 +297,10 @@ const DetailPanel = () => {
             <DetailWidgetsGrid weatherData={state.weatherData} ids={DETAIL_TAB_WIDGETS} className={DETAIL_GRID_CLASS} {...gridProps} />
         </Suspense>
     );
-};
+});
 
 // --- Cel: el sol, aquesta nit i «Més enllà del teu cel» -----------------------------------------------------------------
-const SkyPanel = () => {
+const SkyPanel = memo(function SkyPanel() {
     const { state, actions, flags } = useAppContext();
     if (!state.weatherData) return null;
     return (
@@ -316,13 +320,15 @@ const SkyPanel = () => {
             </Suspense>
         </>
     );
-};
+});
 
-const PANELS: Record<DashboardTab, (goTo: (tab: DashboardTab) => void) => ReactNode> = {
-    now: (goTo) => <NowPanel onGoTo={goTo} />,
-    forecast: () => <ForecastPanel />,
-    detail: () => <DetailPanel />,
-    sky: () => <SkyPanel />,
+const Panel = ({ tab, onGoTo }: { tab: DashboardTab; onGoTo: (tab: DashboardTab) => void }): ReactNode => {
+    switch (tab) {
+        case 'now': return <NowPanel onGoTo={onGoTo} />;
+        case 'forecast': return <ForecastPanel />;
+        case 'detail': return <DetailPanel />;
+        case 'sky': return <SkyPanel />;
+    }
 };
 
 // Algun modal de l'app obert (els que viuen al context: radar, detall del dia, model HD, solar, lluna, ginys, planeta,
@@ -334,13 +340,20 @@ const anyModalOpen = (modals: Record<string, unknown>): boolean =>
     || Object.entries(modals).some(([key, value]) => key.startsWith('show') && value === true);
 
 export const TabbedDashboard = () => {
-    const { state, actions, modals, t } = useAppContext();
+    const { state, actions, t } = useAppContext();
+    const modals = useModals();
     // La pestanya ve de la URL (?tab=…): un refresc o una versió nova (que recarrega) hi tornen. L'app instal·lada
     // i els enllaços compartits no en porten, així que s'obren a Ara.
     const [active, setActive] = useState<DashboardTab>(() => readTabFromSearch(window.location.search));
     // Ara sempre muntada, i la pestanya d'entrada si és una altra.
     const [mounted, setMounted] = useState<ReadonlySet<DashboardTab>>(() => new Set<DashboardTab>(['now', active]));
-    const modalOpen = anyModalOpen((modals ?? {}) as unknown as Record<string, unknown>);
+    const modalOpen = anyModalOpen(modals as unknown as Record<string, unknown>);
+    // `select` arriba a Ara (els destacats): si depengués de modalOpen, obrir o tancar un modal canviaria el prop i
+    // tornaria a renderitzar tot el panell. Es llegeix d'una ref i `select` no canvia mai.
+    const modalOpenRef = useRef(modalOpen);
+    useLayoutEffect(() => {
+        modalOpenRef.current = modalOpen;
+    }, [modalOpen]);
 
     // Un lloc nou (cercador, favorit, GPS) s'obre a Ara: a les altres pestanyes no hi ha la targeta principal i no se
     // sabria de quin lloc són les dades. Un refresc del mateix lloc no hi compta.
@@ -359,13 +372,13 @@ export const TabbedDashboard = () => {
 
     // L'usuari tria una pestanya (barra, fletxes o un destacat).
     const select = useCallback((tab: DashboardTab) => {
-        if (modalOpen) return;
+        if (modalOpenRef.current) return;
         // Sortint d'Ara, l'única entrada d'historial de les pestanyes (vegeu tabHistory.ts); la resta, a l'efecte de sota.
         pushTabEntryIfNeeded(tab);
         show(tab);
         // Cada pestanya comença a dalt. scrollTo(0, 0) és immediat (l'app no té scroll-behavior: smooth).
         window.scrollTo(0, 0);
-    }, [modalOpen, show]);
+    }, [show]);
 
     // La URL segueix la pestanya, sempre reescrivint l'entrada actual (mai n'afegeix cap): entre pestanyes, tornant a Ara
     // amb la barra o amb un lloc nou. Després d'un enrere ja hi coincideix i no fa res.
@@ -428,7 +441,7 @@ export const TabbedDashboard = () => {
                     >
                         {/* Sense la targeta principal, de quin lloc són les dades (el nom i l'hora de la targeta). */}
                         {tab !== 'now' && <PanelPlaceLine name={loc?.name} localTime={state.calculations.shiftedNow ?? state.now} />}
-                        <ErrorBoundary>{PANELS[tab](select)}</ErrorBoundary>
+                        <ErrorBoundary><Panel tab={tab} onGoTo={select} /></ErrorBoundary>
                     </section>
                 );
             })}
