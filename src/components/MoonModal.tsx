@@ -7,8 +7,9 @@
 // modal solar (solarModal.css: full, vel, capçalera, targetes, botons), que no depenen de cap dada solar.
 //
 // Fonts: fase i edat, els instants reals de les fases principals (lunarPhases, Meeus); sortida, posta, posició i
-// distància, suncalc al fus de la UBICACIÓ. Avui es calcula a l'hora real (com la targeta); els altres dies, al
-// migdia UTC del dia. "Pròxima plena/nova" sempre és la real des d'ara, no relativa al dia que es mira.
+// distància, suncalc al fus de la UBICACIÓ. Avui es calcula a l'hora real (com la targeta), també la sortida i la posta
+// (la lluna d'ara, com la fila de la lluna); els altres dies, al migdia UTC del dia i la lluna d'aquell dia. "Pròxima
+// plena/nova" sempre és la real des d'ara, no relativa al dia que es mira.
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from 'react';
 import { X, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ExtendedWeatherData, LocationMeta } from '../types/weatherLogicTypes';
@@ -22,6 +23,7 @@ import { buildLunationView, lunationRangeLabel, weekdayInitials, type PhaseTag }
 import {
   getMoonCompassPosition,
   getMoonPassForDate,
+  getMoonPassNow,
   getMoonIlluminationPercent,
   getNextMoonEvent,
   getMoonDistanceCategory,
@@ -29,7 +31,7 @@ import {
   getCardinalLabel,
   type NextMoonEvent,
 } from '../utils/astronomyMath';
-import { addDays, formatDateStr, localDateOf, makeZoneCtx } from '../utils/solar/solarTime';
+import { addDays, diffDays, formatDateStr, localDateOf, makeZoneCtx } from '../utils/solar/solarTime';
 import { STARS_NIGHT } from '../utils/solar/solarSky';
 import { MoonDisc, MoonWithRing } from './MoonDisc';
 import { SolarDayNav } from './solar/SolarDayNav';
@@ -47,7 +49,7 @@ interface MoonStrings {
   title: string; locationFallback: string; close: string; noData: string;
   dayNav: string; prevDay: string; nextDay: string; today: string; tomorrow: string; inDays: string; backToToday: string;
   illuminated: string; age: string; days: string; now: string; below: string;
-  riseSetTitle: string; rise: string; set: string; nextDayShort: string;
+  riseSetTitle: string; rise: string; set: string; nextDayShort: string; prevDayShort: string;
   distance: string; supermoon: string; micromoon: string; perigee: string; apogee: string;
   nextPhases: string; fullMoon: string; newMoon: string; inDaysShort: string; todayShort: string; tomorrowShort: string;
   folkName: string; calendarTitle: string; chooseDay: string; source: string;
@@ -61,7 +63,7 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     dayNav: 'Navegació per dies', prevDay: 'Dia anterior', nextDay: 'Dia següent', today: 'Avui', tomorrow: 'Demà',
     inDays: "D'aquí a {n} dies", backToToday: 'Torna a avui',
     illuminated: 'il·luminada', age: 'Edat', days: 'dies', now: 'Ara', below: "sota l'horitzó",
-    riseSetTitle: 'Sortida i posta', rise: 'Sortida', set: 'Posta', nextDayShort: "l'endemà",
+    riseSetTitle: 'Sortida i posta', rise: 'Sortida', set: 'Posta', nextDayShort: "l'endemà", prevDayShort: 'el dia abans',
     distance: 'Distància', supermoon: 'Superlluna', micromoon: 'Microlluna', perigee: 'Perigeu', apogee: 'Apogeu',
     nextPhases: 'Pròximes fases', fullMoon: 'Lluna plena', newMoon: 'Lluna nova', inDaysShort: 'en {n} dies',
     todayShort: 'avui', tomorrowShort: 'demà', folkName: 'nom tradicional',
@@ -76,7 +78,7 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     dayNav: 'Navegación por días', prevDay: 'Día anterior', nextDay: 'Día siguiente', today: 'Hoy', tomorrow: 'Mañana',
     inDays: 'Dentro de {n} días', backToToday: 'Volver a hoy',
     illuminated: 'iluminada', age: 'Edad', days: 'días', now: 'Ahora', below: 'bajo el horizonte',
-    riseSetTitle: 'Salida y puesta', rise: 'Salida', set: 'Puesta', nextDayShort: 'al día siguiente',
+    riseSetTitle: 'Salida y puesta', rise: 'Salida', set: 'Puesta', nextDayShort: 'al día siguiente', prevDayShort: 'el día anterior',
     distance: 'Distancia', supermoon: 'Superluna', micromoon: 'Microluna', perigee: 'Perigeo', apogee: 'Apogeo',
     nextPhases: 'Próximas fases', fullMoon: 'Luna llena', newMoon: 'Luna nueva', inDaysShort: 'en {n} días',
     todayShort: 'hoy', tomorrowShort: 'mañana', folkName: 'nombre tradicional',
@@ -91,7 +93,7 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     dayNav: 'Day navigation', prevDay: 'Previous day', nextDay: 'Next day', today: 'Today', tomorrow: 'Tomorrow',
     inDays: 'In {n} days', backToToday: 'Back to today',
     illuminated: 'illuminated', age: 'Age', days: 'days', now: 'Now', below: 'below the horizon',
-    riseSetTitle: 'Moonrise and moonset', rise: 'Rise', set: 'Set', nextDayShort: 'next day',
+    riseSetTitle: 'Moonrise and moonset', rise: 'Rise', set: 'Set', nextDayShort: 'next day', prevDayShort: 'previous day',
     distance: 'Distance', supermoon: 'Supermoon', micromoon: 'Micromoon', perigee: 'Perigee', apogee: 'Apogee',
     nextPhases: 'Next phases', fullMoon: 'Full moon', newMoon: 'New moon', inDaysShort: 'in {n} days',
     todayShort: 'today', tomorrowShort: 'tomorrow', folkName: 'traditional name',
@@ -106,7 +108,7 @@ const T: Readonly<Record<Language, MoonStrings>> = {
     dayNav: 'Navigation par jour', prevDay: 'Jour précédent', nextDay: 'Jour suivant', today: "Aujourd'hui", tomorrow: 'Demain',
     inDays: 'Dans {n} jours', backToToday: "Revenir à aujourd'hui",
     illuminated: 'éclairée', age: 'Âge', days: 'jours', now: 'Maintenant', below: "sous l'horizon",
-    riseSetTitle: 'Lever et coucher', rise: 'Lever', set: 'Coucher', nextDayShort: 'le lendemain',
+    riseSetTitle: 'Lever et coucher', rise: 'Lever', set: 'Coucher', nextDayShort: 'le lendemain', prevDayShort: 'la veille',
     distance: 'Distance', supermoon: 'Superlune', micromoon: 'Microlune', perigee: 'Périgée', apogee: 'Apogée',
     nextPhases: 'Prochaines phases', fullMoon: 'Pleine lune', newMoon: 'Nouvelle lune', inDaysShort: 'dans {n} jours',
     todayShort: "aujourd'hui", tomorrowShort: 'demain', folkName: 'nom traditionnel',
@@ -143,6 +145,8 @@ const getPhaseName = (phase: number, lang: Language): string => {
 };
 
 const fill = (tpl: string, n: number) => tpl.replace('{n}', String(n));
+/** La marca d'una hora d'un altre dia: "+1" l'endemà, "−1" el dia abans. */
+const dayMark = (n: number) => (n > 0 ? `+${n}` : `${MINUS}${-n}`);
 const capitalize = (s: string, locale: string) => (s ? s.charAt(0).toLocaleUpperCase(locale) + s.slice(1) : s);
 const signedDeg = (v: number) => { const r = Math.round(v); return r > 0 ? `+${r}°` : r < 0 ? `${MINUS}${-r}°` : '0°'; };
 const azText = (az: number, lang: Language) => `${((Math.round(az) % 360) + 360) % 360}° ${getCardinalLabel(az, lang)}`;
@@ -224,14 +228,24 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
   const distanceCategory = viewMoonPos ? getMoonDistanceCategory(viewMoonPos.distanceKm) : 'normal';
   const gaugePercent = viewMoonPos ? getMoonDistanceGaugePercent(viewMoonPos.distanceKm) : 50;
 
-  // La lluna d'aquell dia: la sortida del dia i la posta que la segueix (sovint l'endemà). Abans eren la sortida i la
-  // posta que cauen en aquella data: de nit, «Posta 06:26» era la d'aquell matí, ja passada.
-  const riseSet = useMemo(
-    () => (hasValidCoords ? getMoonPassForDate(viewDate, lat, lon, timezone) : null),
-    [hasValidCoords, viewDate, lat, lon, timezone],
-  );
+  // Avui, la lluna d'ara, com la fila de la lluna del plafó «Aquesta nit»: la que és al cel (la seva sortida, de matinada
+  // sovint d'ahir) o la pròxima. Els altres dies, la lluna d'aquell dia: la sortida del dia i la posta que la segueix
+  // (sovint l'endemà). Abans, avui també era la del dia de calendari: de matinada, amb la lluna encara a dalt, el modal
+  // mostrava la que havia de sortir a la tarda.
+  const liveMinuteMs = isToday ? Math.floor(nowMs / 60000) * 60000 : null;
+  const riseSet = useMemo(() => {
+    if (!hasValidCoords) return null;
+    return liveMinuteMs !== null
+      ? getMoonPassNow(liveMinuteMs, lat, lon, timezone)
+      : getMoonPassForDate(viewDate, lat, lon, timezone);
+  }, [hasValidCoords, liveMinuteMs, viewDate, lat, lon, timezone]);
   const riseAz = riseSet?.rise.date ? getMoonCompassPosition(riseSet.rise.date, lat, lon) : null;
   const setAz = riseSet?.set.date ? getMoonCompassPosition(riseSet.set.date, lat, lon) : null;
+  // A quants dies del dia mirat cau cada hora (+1: l'endemà; −1: avui, una sortida d'ahir).
+  const offsetOf = (date: Date | null | undefined) => (date ? diffDays(viewDate, localDateOf(date.getTime(), zone)) : 0);
+  const riseOff = offsetOf(riseSet?.rise.date);
+  const setOff = offsetOf(riseSet?.set.date);
+  const dayTitle = (n: number) => (n === 1 ? t.nextDayShort : n === -1 ? t.prevDayShort : n > 1 ? fill(t.inDays, n) : fill(t.daysAgo, -n));
 
   // Sempre des d'ara (la mateixa funció i el mateix instant de referència que la targeta).
   const nextFull = useMemo(() => getNextMoonEvent('full', now, 45), [now]);
@@ -357,12 +371,12 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
               <section className="sm-card" aria-label={t.riseSetTitle}>
                 <h3 className={LAB}>{t.riseSetTitle}</h3>
                 <div className="mt-2 grid grid-cols-2 gap-3">
-                  {([['rise', riseSet?.rise, riseAz, 'text-cyan-200'], ['set', riseSet?.set, setAz, 'text-amber-200']] as const).map(([k, ev, az, cls]) => (
+                  {([['rise', riseSet?.rise, riseAz, 'text-cyan-200', riseOff], ['set', riseSet?.set, setAz, 'text-amber-200', setOff]] as const).map(([k, ev, az, cls, off]) => (
                     <div key={k} className={k === 'set' ? 'text-right' : ''}>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{k === 'rise' ? t.rise : t.set}</p>
                       <p className={`mt-1 font-mono tabular-nums text-[28px] md:text-[30px] font-semibold leading-none ${ev?.formatted ? cls : 'text-slate-600'}`}>
                         {ev?.formatted ?? '--:--'}
-                        {ev?.isNextDay && <sup className="ml-0.5 text-[11px] text-slate-400" title={t.nextDayShort}>+1d</sup>}
+                        {ev?.formatted && off !== 0 && <sup className="ml-0.5 text-[11px] text-slate-400" title={dayTitle(off)}>{dayMark(off)}d</sup>}
                       </p>
                       <p className="mt-1.5 font-mono text-[12px] text-slate-400">{az ? azText(az.azimuthDeg, safeLang) : '—'}</p>
                     </div>
@@ -445,7 +459,7 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                         })}
                       </ol>
 
-                      {/* El dia triat: fase, il·luminació i la lluna d'aquell dia (la sortida i la posta que la segueix) */}
+                      {/* El dia triat: fase, il·luminació i la seva lluna (la mateixa sortida i posta que la targeta de dalt) */}
                       <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-indigo-500/[0.10] px-3 py-2.5 ring-1 ring-inset ring-indigo-400/35">
                         <div className="min-w-0">
                           <p className="truncate text-[13px] font-semibold leading-5 text-indigo-200">
@@ -454,10 +468,13 @@ export default function MoonModal({ weatherData, onClose, lang = 'ca' }: MoonMod
                           <p className="text-[12px] leading-4 text-slate-400">{phaseName} · <span className="font-mono text-slate-200">{illumination}%</span></p>
                         </div>
                         <p className="flex shrink-0 gap-3 font-mono tabular-nums text-[13px] whitespace-nowrap">
-                          <span><span className="text-slate-500" aria-hidden="true">↑</span><span className="sr-only">{t.rise}</span> <span className={riseSet?.rise.formatted ? 'text-cyan-200' : 'text-slate-500'}>{riseSet?.rise.formatted ?? '—'}</span></span>
+                          <span>
+                            <span className="text-slate-500" aria-hidden="true">↑</span><span className="sr-only">{t.rise}</span> <span className={riseSet?.rise.formatted ? 'text-cyan-200' : 'text-slate-500'}>{riseSet?.rise.formatted ?? '—'}</span>
+                            {riseSet?.rise.formatted && riseOff !== 0 && <sup className="ml-0.5 text-[10px] text-slate-400" title={dayTitle(riseOff)}>{dayMark(riseOff)}</sup>}
+                          </span>
                           <span>
                             <span className="text-slate-500" aria-hidden="true">↓</span><span className="sr-only">{t.set}</span> <span className={riseSet?.set.formatted ? 'text-amber-200' : 'text-slate-500'}>{riseSet?.set.formatted ?? '—'}</span>
-                            {riseSet?.set.isNextDay && <sup className="ml-0.5 text-[10px] text-slate-400" title={t.nextDayShort}>+1</sup>}
+                            {riseSet?.set.formatted && setOff !== 0 && <sup className="ml-0.5 text-[10px] text-slate-400" title={dayTitle(setOff)}>{dayMark(setOff)}</sup>}
                           </span>
                         </p>
                       </div>

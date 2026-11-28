@@ -10,6 +10,7 @@
 // ja ve en graus a la v2 (no radians).
 import * as SunCalc from 'suncalc';
 import { getMoonPhase } from './weatherMath';
+import { moonRiseSetAround } from './sky/moonEvents';
 import { Language } from '../translations';
 
 // --- Aritmètica de dates locals ("YYYY-MM-DD" -> "YYYY-MM-DD" + N dies) ---
@@ -174,6 +175,34 @@ export function getMoonPassForDate(
     // Resultat buit (fallback Risc Zero)
   }
   return result;
+}
+
+/**
+ * La lluna d'ara, per a «Avui» del modal Fase lunar: la mateixa que la fila de la lluna del plafó «Aquesta nit»
+ * (moonRiseSetAround). Si és a dalt, la sortida d'aquest pas (de matinada, sovint d'ahir) i la seva posta; si és a baix,
+ * la pròxima sortida i la posta que la segueix. Amb getMoonPassForDate (la lluna del dia de calendari), de matinada el
+ * modal mostrava la lluna que havia de sortir aquella tarda mentre la d'ara encara era al cel. `isNextDay`: l'hora cau
+ * després del dia local d'ara.
+ */
+export function getMoonPassNow(
+  nowMs: number, lat: number, lon: number, timezone?: string
+): { rise: RiseSetEvent; set: RiseSetEvent } {
+  const result = { rise: { ...EMPTY_EVENT }, set: { ...EMPTY_EVENT } };
+  if (!isValidCoord(lat, lon) || !Number.isFinite(nowMs)) return result;
+  try {
+    const tz = typeof timezone === 'string' && timezone.trim() !== '' ? timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const dateOf = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+    const today = dateOf.format(new Date(nowMs));
+    const { riseMs, setMs } = moonRiseSetAround(nowMs, lat, lon);
+    const eventAt = (ms: number | null): RiseSetEvent => {
+      if (ms === null) return { ...EMPTY_EVENT };
+      const date = new Date(ms);
+      return { date, formatted: formatClockTime(date, tz), isNextDay: dateOf.format(date) > today };
+    };
+    return { rise: eventAt(riseMs), set: eventAt(setMs) };
+  } catch {
+    return result;
+  }
 }
 
 // --- Fase / il·luminació lunar (font única: getMoonPhase, no SunCalc.getMoonIllumination) ---

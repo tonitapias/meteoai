@@ -6,6 +6,7 @@ import {
   getMoonDistanceGaugePercent,
   getMoonRiseSetForDate,
   getMoonPassForDate,
+  getMoonPassNow,
   getNextMoonEvent,
   estimateSunsetQuality,
   getMoonCompassPosition,
@@ -180,5 +181,32 @@ describe('getMoonPassForDate (la lluna d\'aquell dia: la sortida i la posta que 
   it('sense coordenades o data, res', () => {
     expect(getMoonPassForDate(undefined, BCN[0], BCN[1]).rise.date).toBeNull();
     expect(getMoonPassForDate('2026-11-23', NaN, 2).set.date).toBeNull();
+  });
+});
+
+describe('getMoonPassNow (la lluna d\'ara: la que és al cel o la pròxima)', () => {
+  const BCN = [41.38879, 2.15899] as const;
+  const dayOf = (d: Date | null) => (d ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(d) : null);
+
+  it('19-12 a la 01:00, amb la lluna a dalt: va sortir ahir a les 13:11 i es pon a les 02:45 (timeanddate)', () => {
+    const r = getMoonPassNow(Date.parse('2026-12-19T00:00:00Z'), BCN[0], BCN[1], 'Europe/Madrid');
+    expect(r.rise.formatted).toBe('13:11');
+    expect(dayOf(r.rise.date)).toBe('2026-12-18');
+    expect(r.set.formatted).toBe('02:45');
+    expect(r.set.isNextDay).toBe(false);
+    // La del dia de calendari (getMoonPassForDate) és una altra: la que surt aquella tarda.
+    expect(getMoonPassForDate('2026-12-19', BCN[0], BCN[1], 'Europe/Madrid').rise.formatted).toBe('13:35');
+  });
+
+  it('19-12 a les 03:00, ja posta: la pròxima, surt a les 13:35 i es pon l\'endemà a les 03:58', () => {
+    const r = getMoonPassNow(Date.parse('2026-12-19T02:00:00Z'), BCN[0], BCN[1], 'Europe/Madrid');
+    expect(r.rise.formatted).toBe('13:35');
+    expect(r.set.formatted).toBe('03:58');
+    expect(r.set.isNextDay).toBe(true);
+  });
+
+  it('sense coordenades o instant vàlid, res', () => {
+    expect(getMoonPassNow(Date.parse('2026-12-19T00:00:00Z'), NaN, 2).rise.date).toBeNull();
+    expect(getMoonPassNow(NaN, BCN[0], BCN[1]).set.date).toBeNull();
   });
 });

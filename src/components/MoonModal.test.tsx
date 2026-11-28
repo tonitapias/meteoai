@@ -58,6 +58,43 @@ describe('MoonModal — el mateix que el plafó «Aquesta nit»', () => {
   });
 });
 
+describe('MoonModal — «Avui» és la lluna d\'ara (com la fila de la lluna)', () => {
+  // Barcelona, 19-12-2026 a la 01:00: la lluna que va sortir ahir a les 13:11 encara és a dalt i es pon a les 02:45;
+  // la del dia de calendari surt a les 13:35 i es pon l'endemà a les 03:58 (timeanddate).
+  const NIGHT = new Date('2026-12-19T00:00:00Z');
+  const riseSetCard = (c: HTMLElement) => c.querySelector('[aria-label="Sortida i posta"]')!.textContent ?? '';
+
+  it('de matinada, amb la lluna a dalt: la seva sortida (d\'ahir, −1d) i la seva posta, les mateixes que la fila', () => {
+    vi.setSystemTime(NIGHT);
+    const { container } = renderModal();
+    const rs = riseSetCard(container);
+    expect(rs).toContain('13:11−1d');
+    expect(rs).toMatch(/Posta02:45\d/);   // sense marca: avui
+    expect(rs).not.toContain('03:58');
+    expect(container.textContent).toMatch(/↑Sortida 13:11−1↓Posta 02:45/);
+    const card = render(
+      <NightPanel lang="ca" lat={BCN.lat} lon={BCN.lon} timezone="Europe/Madrid" utcOffset={3600} nowMs={NIGHT.getTime()} />,
+    ).container.textContent ?? '';
+    expect(card).toContain('Va sortir ahir a les 13:11 · es pon a les 02:45');
+  });
+
+  it('els altres dies, la lluna d\'aquell dia: ahir, 13:11 i 02:45+1d; demà, 14:05 i 05:15+1d', () => {
+    vi.setSystemTime(NIGHT);
+    const { container } = renderModal();
+    fireEvent.click(screen.getByRole('button', { name: 'Dia anterior' }));
+    expect(riseSetCard(container)).toMatch(/Sortida13:11\d.*Posta02:45\+1d/);
+    fireEvent.click(screen.getByRole('button', { name: 'Torna a avui' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dia següent' }));
+    expect(riseSetCard(container)).toMatch(/Sortida14:05\d.*Posta05:15\+1d/);
+  });
+
+  it('un cop posta, la pròxima: surt a les 13:35 i es pon l\'endemà a les 03:58', () => {
+    vi.setSystemTime(new Date('2026-12-19T02:00:00Z'));
+    const { container } = renderModal();
+    expect(riseSetCard(container)).toMatch(/Sortida13:35\d.*Posta03:58\+1d/);
+  });
+});
+
 describe('MoonModal — navegació per dies', () => {
   it('les fletxes, la tecla → i "Avui" canvien el dia de tot el modal; l\'"Ara" només surt avui', () => {
     const { container } = renderModal();
