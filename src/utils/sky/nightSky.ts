@@ -8,7 +8,7 @@ import { addDays, localClock, localDateOf, wallTimeToUtcMs, zonedDayStartMs, typ
 import { omEdgesFor, type SolarDaily } from '../solar/solarForecast';
 import type { SkyHour, SkyKind } from '../daySky';
 import { getHourlyEffectiveCloudCover } from '../hourlyWeatherCode';
-import { moonRiseSetAround } from './moonEvents';
+import { moonRiseSetAround, moonTimesBetween } from './moonEvents';
 import type { HourlySeries } from '../hourlyWeatherCode';
 
 const MIN = 60000;
@@ -38,7 +38,7 @@ export interface NightSky extends NightWindow {
   moon: MoonSample[];
   /** El punt més alt de la lluna dins de la finestra, si hi surt. */
   moonPeak: { ms: number; alt: number } | null;
-  /** Primera sortida i primera posta de la lluna dins de la finestra (creuant l'horitzó). */
+  /** Primera sortida i primera posta de la lluna dins de la finestra (les de getMoonTimes, com el modal). */
   moonRiseMs: number | null;
   moonSetMs: number | null;
   /** El cel de cada hora (codis del motor, com la franja de Previsió); retallat a la finestra. */
@@ -128,24 +128,17 @@ function moonOf(w: NightWindow, lat: number, lon: number) {
   const n = Math.max(1, Math.round((w.endMs - w.startMs) / (10 * MIN)));
   const moon: MoonSample[] = [];
   let peak: { ms: number; alt: number } | null = null;
-  let riseMs: number | null = null, setMs: number | null = null;
   for (let i = 0; i <= n; i++) {
     const f = i / n;
     const ms = w.startMs + (w.endMs - w.startMs) * f;
     const alt = SunCalc.getMoonPosition(new Date(ms), lat, lon).altitude;
-    const prev = moon[moon.length - 1];
-    if (prev) {
-      const crossMs = () => {
-        const k = prev.alt / (prev.alt - alt);
-        return Math.round(w.startMs + (w.endMs - w.startMs) * (prev.f + (f - prev.f) * k));
-      };
-      if (riseMs === null && prev.alt <= 0 && alt > 0) riseMs = crossMs();
-      if (setMs === null && prev.alt > 0 && alt <= 0) setMs = crossMs();
-    }
     moon.push({ f, alt });
     if (alt > 0 && (peak === null || alt > peak.alt)) peak = { ms, alt };
   }
-  return { moon, peak, riseMs, setMs };
+  // La sortida i la posta, les mateixes que el modal i la fila de la lluna (el limb superior a l'horitzó), no el pas del
+  // centre per 0° de la corba: aquest arriba uns 2,5 min més tard a la sortida i uns 2,5 min abans a la posta.
+  const { rises, sets } = moonTimesBetween(w.startMs, w.endMs, lat, lon);
+  return { moon, peak, riseMs: rises[0] ?? null, setMs: sets[0] ?? null };
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');

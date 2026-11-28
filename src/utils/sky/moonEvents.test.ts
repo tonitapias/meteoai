@@ -2,7 +2,7 @@
 // Sortida i posta de la lluna al voltant d'ara (Barcelona, 23/11/2026, UTC+1): de nit, la posta de DEMÀ (07:46), no la
 // d'aquell matí (06:26) que donava la targeta d'abans.
 import { describe, it, expect } from 'vitest';
-import { moonRiseSetAround } from './moonEvents';
+import { moonRiseSetAround, moonTimesBetween } from './moonEvents';
 import { localClock, localDateOf, makeZoneCtx } from '../solar/solarTime';
 
 const BCN = { lat: 41.38879, lon: 2.15899 };
@@ -32,5 +32,21 @@ describe('moonRiseSetAround', () => {
 
   it('coordenades no vàlides: res', () => {
     expect(moonRiseSetAround(at('2026-11-23T18:26:00Z'), NaN, 2)).toEqual({ up: false, riseMs: null, setMs: null });
+  });
+});
+
+describe('moonTimesBetween', () => {
+  it('les de getMoonTimes dins del tram, ordenades i sense repetir (24 → 28/11: les hores de timeanddate)', () => {
+    const { rises, sets } = moonTimesBetween(at('2026-11-23T23:00:00Z'), at('2026-11-28T23:00:00Z'), BCN.lat, BCN.lon);
+    expect(rises.map(ms => localClock(ms, zone))).toEqual(['16:57', '17:53', '19:02', '20:19', '21:38']);
+    expect(sets.map(ms => localClock(ms, zone))).toEqual(['07:46', '09:04', '10:13', '11:10', '11:54']);
+  });
+
+  it('els extrems hi compten; fora del tram o amb dades no vàlides, res', () => {
+    const [rise] = moonTimesBetween(at('2026-11-28T00:00:00Z'), at('2026-11-29T00:00:00Z'), BCN.lat, BCN.lon).rises;
+    expect(moonTimesBetween(rise, rise, BCN.lat, BCN.lon).rises).toEqual([rise]);
+    expect(moonTimesBetween(rise + 1, rise + 3600000, BCN.lat, BCN.lon).rises).toEqual([]);
+    expect(moonTimesBetween(rise, rise - 1, BCN.lat, BCN.lon)).toEqual({ rises: [], sets: [] });
+    expect(moonTimesBetween(rise, rise + 86400000, NaN, BCN.lon)).toEqual({ rises: [], sets: [] });
   });
 });

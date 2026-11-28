@@ -15,23 +15,39 @@ export interface MoonRiseSetAround {
   setMs: number | null;
 }
 
+/**
+ * Les sortides i postes de la lluna entre dos instants (inclosos), ordenades. Són les de SunCalc.getMoonTimes: el limb
+ * superior a l'horitzó, amb la refracció (la convenció de l'USNO i de timeanddate). Les fan servir el modal Fase lunar, la
+ * fila de la lluna i l'arc del plafó «Aquesta nit», que abans buscava el pas del centre del disc per 0° i donava la
+ * sortida uns 2,5 min més tard i la posta uns 2,5 min abans que el modal.
+ */
+export function moonTimesBetween(fromMs: number, toMs: number, lat: number, lon: number): { rises: number[]; sets: number[] } {
+  const rises: number[] = [];
+  const sets: number[] = [];
+  if (![fromMs, toMs, lat, lon].every(Number.isFinite) || toMs < fromMs) return { rises, sets };
+  const inside = (d: unknown): d is Date => d instanceof Date && d.getTime() >= fromMs && d.getTime() <= toMs;
+  // getMoonTimes mira el dia UTC de la data que rep.
+  for (let day = Math.floor(fromMs / DAY) * DAY; day <= toMs; day += DAY) {
+    const r = SunCalc.getMoonTimes(new Date(day), lat, lon);
+    if (inside(r.rise)) rises.push(r.rise.getTime());
+    if (inside(r.set)) sets.push(r.set.getTime());
+  }
+  // Un esdeveniment a tocar de mitjanit UTC pot sortir als dos dies (dues del mateix tipus disten ~24 h 50 min).
+  const tidy = (list: number[]) => list.sort((a, b) => a - b).filter((t, i, all) => i === 0 || t - all[i - 1] > 3600000);
+  return { rises: tidy(rises), sets: tidy(sets) };
+}
+
 export function moonRiseSetAround(nowMs: number, lat: number, lon: number): MoonRiseSetAround {
   const empty: MoonRiseSetAround = { up: false, riseMs: null, setMs: null };
   if (!Number.isFinite(nowMs) || !Number.isFinite(lat) || !Number.isFinite(lon)) return empty;
-  const rises: number[] = [];
-  const sets: number[] = [];
   const base = Math.floor(nowMs / DAY) * DAY;
+  let rises: number[];
+  let sets: number[];
   try {
-    for (let k = -2; k <= 3; k++) {
-      const r = SunCalc.getMoonTimes(new Date(base + k * DAY), lat, lon);
-      if (r.rise instanceof Date && !isNaN(r.rise.getTime())) rises.push(r.rise.getTime());
-      if (r.set instanceof Date && !isNaN(r.set.getTime())) sets.push(r.set.getTime());
-    }
+    ({ rises, sets } = moonTimesBetween(base - 2 * DAY, base + 4 * DAY - 1, lat, lon));
   } catch {
     return empty;
   }
-  rises.sort((a, b) => a - b);
-  sets.sort((a, b) => a - b);
   const lastRise = [...rises].reverse().find(t => t <= nowMs);
   const lastSet = [...sets].reverse().find(t => t <= nowMs);
   const up = lastRise !== undefined || lastSet !== undefined

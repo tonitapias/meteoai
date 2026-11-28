@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { buildNightSky, cloudHiddenSpans, findNightWindow, moonLaneStart, nextNightWindow, nightFraction, skyCellsFor } from './nightSky';
 import { makeZoneCtx, localClock } from '../solar/solarTime';
 import { clearSolarDayCache } from '../solar/solarDay';
+import { getMoonPassForDate } from '../astronomyMath';
 import type { SkyHour, SkyKind } from '../daySky';
 
 const BCN = { lat: 41.38879, lon: 2.15899 };
@@ -84,9 +85,20 @@ describe('buildNightSky', () => {
     expect(m.moonPeak!.alt).toBeGreaterThan(70);
     expect(m.moonPeak!.alt).toBeLessThan(73);
     expect(minutesApart(clock(m.moonPeak!.ms), '23:55')).toBeLessThanOrEqual(10);
-    expect(minutesApart(clock(m.moonSetMs), '07:46')).toBeLessThanOrEqual(3);
+    expect(clock(m.moonSetMs)).toBe('07:46');
     expect(m.moon[0].f).toBe(0);
     expect(m.moon[m.moon.length - 1].f).toBe(1);
+  });
+
+  it('la sortida i la posta són les del modal Fase lunar (28-11: surt a les 21:38, com a timeanddate; no a les 21:40)', () => {
+    const m = buildNightSky({ nowMs: at('2026-11-28T18:00:00Z'), ...BCN, zone })!;
+    const modal = getMoonPassForDate('2026-11-28', BCN.lat, BCN.lon, 'Europe/Madrid');
+    expect(m.moonRiseMs).toBe(modal.rise.date!.getTime());
+    expect(clock(m.moonRiseMs)).toBe('21:38');
+    // La posta (12:29 de l'endemà) cau fora de la nit.
+    expect(m.moonSetMs).toBeNull();
+    const evening = model();
+    expect(evening.moonSetMs).toBe(getMoonPassForDate('2026-11-23', BCN.lat, BCN.lon, 'Europe/Madrid').set.date!.getTime());
   });
 
   it('el cel de cada hora, retallat a la finestra: la primera hora comença a la posta', () => {
